@@ -13,12 +13,16 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.view.AzquoBook;
+import com.jcraft.jsch.*;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.Selectors;
 import org.apache.commons.vfs2.impl.StandardFileSystemManager;
 import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.method.P;
+import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
@@ -75,17 +79,17 @@ public final class ImportService {
             List<File> files = unZip(tempFile);
             // should be sorting by xls first then size ascending
             Collections.sort(files, (f1, f2) -> {
-                if ((f1.getName().endsWith(".xls") || f1.getName().endsWith(".xlsx")) && (!f2.getName().endsWith(".xls") && !f2.getName().endsWith(".xlsx"))){ // one is xls, the otehr is not
+                if ((f1.getName().endsWith(".xls") || f1.getName().endsWith(".xlsx")) && (!f2.getName().endsWith(".xls") && !f2.getName().endsWith(".xlsx"))) { // one is xls, the otehr is not
                     return -1;
                 }
-                if ((f2.getName().endsWith(".xls") || f2.getName().endsWith(".xlsx")) && (!f1.getName().endsWith(".xls") && !f1.getName().endsWith(".xlsx"))){ // otehr way round
+                if ((f2.getName().endsWith(".xls") || f2.getName().endsWith(".xlsx")) && (!f1.getName().endsWith(".xls") && !f1.getName().endsWith(".xlsx"))) { // otehr way round
                     return 1;
                 }
                 // fall back to file size among the same types
-                if (f1.length() < f2.length()){
+                if (f1.length() < f2.length()) {
                     return -1;
                 }
-                if (f1.length() > f2.length()){
+                if (f1.length() > f2.length()) {
                     return 1;
                 }
                 return 0;
@@ -94,9 +98,9 @@ public final class ImportService {
             // todo - sort the files, small to large xls and xlsx as a group first
             StringBuilder sb = new StringBuilder();
             Iterator<File> fileIterator = files.iterator();
-            while (fileIterator.hasNext()){
+            while (fileIterator.hasNext()) {
                 File f = fileIterator.next();
-                if (fileIterator.hasNext()){
+                if (fileIterator.hasNext()) {
                     sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, false, isData)).append("\n");
                 } else {
                     sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, true, isData)); // persist on the last one
@@ -113,53 +117,53 @@ public final class ImportService {
 
     // factored off to deal with
     String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
-        if (fileName.equals(CreateExcelForDownloadController.USERSPERMISSIONSFILENAME)){ // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
+        if (fileName.equals(CreateExcelForDownloadController.USERSPERMISSIONSFILENAME)) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(fileName), "Report name");
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             Sheet permissionsSheet = book.getSheet("Permissions"); // literals not best practice, could it be factored between this and the xlsx file?
-            if (userSheet != null && permissionsSheet != null){
+            if (userSheet != null && permissionsSheet != null) {
                 int row = 1;
                 // keep them to use if not set. Should I be updating records instead? I'm not sure.
                 Map<String, String> oldPasswordMap = new HashMap<>();
                 Map<String, String> oldSaltMap = new HashMap<>();
                 List<User> userList = adminService.getUserListForBusiness(loggedInUser);
-                for (User user : userList){
-                    if (user.getId() != loggedInUser.getUser().getId()){ // leave the logged in user alone!
+                for (User user : userList) {
+                    if (user.getId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
                         oldPasswordMap.put(user.getEmail(), user.getPassword());
                         oldSaltMap.put(user.getEmail(), user.getSalt());
                         userDAO.removeById(user);
                     }
                 }
-                for (User user : userList){
+                for (User user : userList) {
                     userDAO.removeById(user);
                 }
 
-                while (userSheet.getInternalSheet().getCell(row,0).getStringValue() != null && userSheet.getInternalSheet().getCell(row,0).getStringValue().length() > 0){
-                    String user = userSheet.getInternalSheet().getCell(row,0).getStringValue();
-                    String email = userSheet.getInternalSheet().getCell(row,1).getStringValue();
-                    if (!loggedInUser.getUser().getEmail().equals(email)){ // leave the logged in user alone!
+                while (userSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && userSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
+                    String user = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
+                    String email = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
+                    if (!loggedInUser.getUser().getEmail().equals(email)) { // leave the logged in user alone!
                         LocalDateTime start = LocalDateTime.now();
                         try {
-                            start = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row,2).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
-                        } catch (Exception ignored){
+                            start = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 2).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
+                        } catch (Exception ignored) {
                         }
                         LocalDateTime end = LocalDateTime.now();
                         try {
-                            end = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row,3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
-                        } catch (Exception ignored){
+                            end = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
+                        } catch (Exception ignored) {
                         }
                         // should we allow them to change businesses?
-                        Business b = businessDAO.findByName(userSheet.getInternalSheet().getCell(row,4).getStringValue());
-                        String status = userSheet.getInternalSheet().getCell(row,5).getStringValue();
+                        Business b = businessDAO.findByName(userSheet.getInternalSheet().getCell(row, 4).getStringValue());
+                        String status = userSheet.getInternalSheet().getCell(row, 5).getStringValue();
                         String salt = "";
-                        String password = userSheet.getInternalSheet().getCell(row,5).getStringValue();
-                        if (password == null){
+                        String password = userSheet.getInternalSheet().getCell(row, 5).getStringValue();
+                        if (password == null) {
                             password = "";
                         }
-                        if (password.length() > 0){
+                        if (password.length() > 0) {
                             salt = adminService.shaHash(System.currentTimeMillis() + "salt");
                             password = adminService.encrypt(password, salt);
-                        } else if (oldPasswordMap.get(email) != null){
+                        } else if (oldPasswordMap.get(email) != null) {
                             password = oldPasswordMap.get(email);
                             salt = oldSaltMap.get(email);
                         }
@@ -169,20 +173,20 @@ public final class ImportService {
                     row++;
                 }
                 List<Permission> permissionList = permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId());
-                for (Permission permission : permissionList){
-                    if (permission.getUserId() != loggedInUser.getUser().getId()){ // leave the logged in user alone!
+                for (Permission permission : permissionList) {
+                    if (permission.getUserId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
                         permissionDAO.removeById(permission);
                     }
                 }
                 row = 1;
-                while (permissionsSheet.getInternalSheet().getCell(row,0).getStringValue() != null && permissionsSheet.getInternalSheet().getCell(row,0).getStringValue().length() > 0){
-                    String database = userSheet.getInternalSheet().getCell(row,0).getStringValue();
-                    String email = userSheet.getInternalSheet().getCell(row,1).getStringValue();
+                while (permissionsSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && permissionsSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
+                    String database = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
+                    String email = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
                     if (!loggedInUser.getUser().getEmail().equals(email)) { // leave the logged in user alone!
                         User user = userDAO.findByEmail(email);
-                        if (user != null){
+                        if (user != null) {
                             Database database1 = databaseDAO.findForName(user.getBusinessId(), database);
-                            if (database1 != null){
+                            if (database1 != null) {
                                 LocalDateTime start = LocalDateTime.now();
                                 try {
                                     start = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 2).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
@@ -193,9 +197,9 @@ public final class ImportService {
                                     end = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
                                 } catch (Exception ignored) {
                                 }
-                                String readList = userSheet.getInternalSheet().getCell(row,4).getStringValue();
-                                String writeList = userSheet.getInternalSheet().getCell(row,5).getStringValue();
-                                Permission newPermission = new Permission(0,start,end, user.getId(), database1.getId(), readList, writeList);
+                                String readList = userSheet.getInternalSheet().getCell(row, 4).getStringValue();
+                                String writeList = userSheet.getInternalSheet().getCell(row, 5).getStringValue();
+                                Permission newPermission = new Permission(0, start, end, user.getId(), database1.getId(), readList, writeList);
                                 permissionDAO.store(newPermission);
                             }
                         }
@@ -214,7 +218,7 @@ public final class ImportService {
 
     public List<File> unZip(String zipFile) {
         String outputFolder;
-        if (!zipFile.contains("/")){
+        if (!zipFile.contains("/")) {
             outputFolder = zipFile.substring(0, zipFile.lastIndexOf("\\"));// same dir
         } else { // normal
             outputFolder = zipFile.substring(0, zipFile.lastIndexOf("/"));// same dir
@@ -243,7 +247,7 @@ public final class ImportService {
 
                 //create all non exists folders
                 //else you will hit FileNotFoundException for compressed folder
-                if (ze.isDirectory()){
+                if (ze.isDirectory()) {
                     newFile.mkdirs();
                 } else {
                     toReturn.add(newFile);
@@ -319,17 +323,17 @@ public final class ImportService {
         azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = azquoBook.getReportName();
         if (reportName != null) {
-            if (loggedInUser.getUser().isAdministrator()&& !isData) {
+            if (loggedInUser.getUser().isAdministrator() && !isData) {
                 return uploadReport(loggedInUser, tempName, fileName, reportName, "");
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
             OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
             if (or == null) return "no report named " + reportName + " found";
             azquoBook.calculateAll();
-            Map <String,String> choices = azquoBook.uploadChoices();
-            for (String choice:choices.keySet()) {
+            Map<String, String> choices = azquoBook.uploadChoices();
+            for (String choice : choices.keySet()) {
                 spreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
-             }
+            }
             AzquoBook reportBook = spreadsheetService.loadAzquoBook(loadingUser, or);
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
             String toReturn = azquoBook.fillDataRangesFromCopy(loadingUser, or.getId());
@@ -365,13 +369,15 @@ public final class ImportService {
             return rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
         } else {
             // move it
-            String remoteFilePath = copyFileToDatabaseServer(filePath, databaseServer.getSftpUrl());
+            File f = new File(filePath);
+            String remoteFilePath = copyFileToDatabaseServer(new FileInputStream(f), databaseServer.getSftpUrl());
             return rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, remoteFilePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
         }
     }
 
     // modified internet example
-    public String copyFileToDatabaseServer(String filePath, String sftpDestination) {
+    public String copyFileToDatabaseServer(InputStream inputStream, String sftpDestination) {
+        /*
         StandardFileSystemManager manager = new StandardFileSystemManager();
         String toReturn = null;
         try {
@@ -407,5 +413,109 @@ public final class ImportService {
             manager.close();
         }
         return toReturn;
+    }
+
+    public  void send (String fileName) {
+    */
+
+        int userPos = sftpDestination.indexOf("//") + 2;
+        int passPos = sftpDestination.indexOf(".", userPos);
+        int passEnd = sftpDestination.indexOf("@", passPos);
+        int pathPos = sftpDestination.indexOf("/", passEnd);
+        int pathEnd = sftpDestination.lastIndexOf("/");
+
+        String SFTPHOST = sftpDestination.substring(passEnd + 1, pathPos);
+        int SFTPPORT = 22;
+        String SFTPUSER = sftpDestination.substring(userPos, passPos);
+        String SFTPPASS = sftpDestination.substring(passPos + 1, passEnd);
+        String SFTPWORKINGDIR = sftpDestination.substring(pathPos, pathEnd);
+        String fileName = sftpDestination.substring(pathEnd + 1);
+
+        Session session = null;
+        Channel channel = null;
+        ChannelSftp channelSftp = null;
+        System.out.println("preparing the host information for sftp.");
+        try {
+            JSch jsch = new JSch();
+            session = jsch.getSession(SFTPUSER, SFTPHOST, SFTPPORT);
+            session.setPassword(SFTPPASS);
+            java.util.Properties config = new java.util.Properties();
+            config.put("StrictHostKeyChecking", "no");
+            session.setConfig(config);
+            session.connect();
+            System.out.println("Host connected.");
+            channel = session.openChannel("sftp");
+            channel.connect();
+            System.out.println("sftp channel opened and connected.");
+            channelSftp = (ChannelSftp) channel;
+            sftpCd(channelSftp,SFTPWORKINGDIR);
+            channelSftp.put(inputStream, fileName);
+            //log.info("File transfered successfully to host.");
+        } catch (Exception ex) {
+            System.out.println("Exception found while tranfer the response.");
+        }
+        finally{
+
+            channelSftp.exit();
+            System.out.println("sftp Channel exited.");
+            channel.disconnect();
+            System.out.println("Channel disconnected.");
+            session.disconnect();
+            System.out.println("Host Session disconnected.");
+        }
+
+        return "file copied successfully";
+    }
+
+
+
+    public String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName, String imageStoreName) throws Exception {
+        String success = "image uploaded successfully";
+        String sourceName = sourceFile.getOriginalFilename();
+        String suffix = sourceName.substring(sourceName.indexOf("."));
+        DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
+        String pathOffset = loggedInUser.getDatabase().getMySQLName() + "/images/" + fileName + suffix;
+        String destinationPath = spreadsheetService.getHomeDir() + dbPath + pathOffset;
+        if (databaseServer.getIp().equals(LOCALIP)) {
+             File destination = new File(destinationPath);
+            destination.getParentFile().mkdirs();
+            sourceFile.transferTo(destination);
+         } else {
+            destinationPath = databaseServer.getSftpUrl() + pathOffset;
+            copyFileToDatabaseServer(sourceFile.getInputStream(), destinationPath);
+        }
+        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+
+        String imageList =  rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(),"uploaded images");
+        if (imageList != null) {//check if it's already in the list
+            String[] images = imageList.split(",");
+            for (String image : images) {
+                if (image.trim().equals(fileName + suffix)) {
+                    return success;
+                }
+            }
+            imageList +="," + fileName + suffix;
+        }else{
+            imageList = fileName + suffix;
+        }
+        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).setNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(),"uploaded images", imageList);
+        return success;
+
+
+    }
+
+
+    private void sftpCd(ChannelSftp sftp, String path) throws SftpException {
+        String[] folders = path.split("/");
+        for (String folder : folders) {
+            if (folder.length() > 0) {
+                try {
+                    sftp.cd(folder);
+                } catch (SftpException e) {
+                    sftp.mkdir(folder);
+                    sftp.cd(folder);
+                }
+            }
+        }
     }
 }
