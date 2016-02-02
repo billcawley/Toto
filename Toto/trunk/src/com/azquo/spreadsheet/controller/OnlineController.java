@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by bill on 22/04/14.
@@ -89,6 +90,8 @@ public class OnlineController {
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "datachoice", required = false, defaultValue = "") String dataChoice
+            , @RequestParam(value = "imagestorename", required = false, defaultValue = "") String imageStoreName
+            , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
 
@@ -180,15 +183,24 @@ public class OnlineController {
                             loginService.switchDatabase(loggedInUser, database);
                         }
                         String fileName = uploadfile.getOriginalFilename();
-                        File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
-                        uploadfile.transferTo(moved);
-                        boolean isData = true;
-                        if (dataChoice.equals("report")) isData = false;
-                        //importing here cannot set 'useType' to a value
-                        result = importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages(), isData);
-                         //result = "File imported successfully";
+                        if (imageName.length() > 0){
+                            result = importService.uploadImage(loggedInUser,uploadfile, imageName, imageStoreName);
+                        }else {
+                            if (fileName.length()> 0) {
+                                File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
+                                uploadfile.transferTo(moved);
+                                boolean isData = true;
+                                //if (dataChoice.equals("report")) isData = false;
+                                //importing here cannot set 'useType' to a value
+                                result = importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages(), isData);
+                            }else{
+                                result = "no file to import";
+                            }
+                        }
+                        //result = "File imported successfully";
                     } else {
-                        model.addAttribute("azquodatabaselist", spreadsheetService.createDatabaseSelect(loggedInUser));
+                        model.addAttribute("database", loggedInUser.getDatabase().getName());
+                        model.addAttribute("imagestorename", loggedInUser.getImageStoreName());
                         if (loggedInUser.getUser().isAdministrator()){
                             model.addAttribute("datachoice","Y");
                         }else{
@@ -196,7 +208,7 @@ public class OnlineController {
                         }
                         return "upload";
                     }
-                 }
+                }
                 if (reportId != null && reportId.equals("1")) {
                     if (!loggedInUser.getUser().isAdministrator()) {
                         spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
@@ -244,6 +256,10 @@ public class OnlineController {
                                     pdfMerges.add(name.getName().substring("az_PDF".length()).replace("_", " "));
                                 }
                             }
+                            Map<String, String> images =  spreadsheetService.getImageList(loggedInUser);
+                            model.put("imagestorename", loggedInUser.getImageStoreName());
+
+                            model.put("images", images);
                             model.addAttribute("pdfMerges", pdfMerges);
                             return "zsshowsheet";// show the sheet
                         }
@@ -317,8 +333,10 @@ public class OnlineController {
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "datachoice", required = false, defaultValue = "") String dataChoice
+            , @RequestParam(value = "imagestorename", required = false, defaultValue = "") String imageStoreName
+            , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
     ) {
-        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, opcode, spreadsheetName, database, reportToLoad, dataChoice,submit, null);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, opcode, spreadsheetName, database, reportToLoad, dataChoice,imageStoreName, imageName, submit, null);
     }
 }
