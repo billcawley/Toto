@@ -167,7 +167,7 @@ public class SpreadsheetService {
     // to nload the old AzquoBook. Will be phased out so I'll leave the HTML in here.
     public void readExcel(ModelMap model, LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName) throws Exception {
         String message;
-        String path = getHomeDir() + "/temp/";
+        String imagePath = getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/images/";
         AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this, rmiClient);
         StringBuilder worksheet = new StringBuilder();
         StringBuilder tabs = new StringBuilder();
@@ -266,7 +266,7 @@ public class SpreadsheetService {
             ws = ws.replace("$fileselect", "<input type=\"file\" name=\"uploadfile\">");
         }
         model.addAttribute("workbook", ws);
-        model.addAttribute("charts", azquoBook.drawCharts(loggedInUser, path).toString());
+        model.addAttribute("charts", azquoBook.drawCharts(loggedInUser, imagePath).toString());
     }
 
 /*    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
