@@ -989,11 +989,14 @@ public class AzquoBook {
 
     public StringBuilder drawCharts(LoggedInUser loggedInUser, String basePath) throws Exception {
         StringBuilder sb = new StringBuilder();
+
         for (int i = 0; i < azquoSheet.getCharts().getCount(); i++) {
             Chart chart = azquoSheet.getCharts().get(i);
             String name = chart.getName();
             //File tempchart = File.createTempFile(loggedInConnection.getConnectionId() + name ,".jpg");
             String tempname = (loggedInUser.getUser().getId() + "." + loggedInUser.getReportId() + "." + name + ".png").replace(" ", "");
+            File f = new File(basePath + tempname);
+            f.getParentFile().mkdirs();
             try {
 
                 ImageOrPrintOptions imageOrPrintOptions = new ImageOrPrintOptions();
