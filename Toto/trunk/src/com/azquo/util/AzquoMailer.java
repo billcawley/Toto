@@ -10,6 +10,7 @@ import javax.mail.*;
 import javax.mail.internet.MimeBodyPart;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Properties;
 
 
@@ -24,15 +25,7 @@ public class AzquoMailer {
         return sendEMail(toEmail, toName, subject, body, null, null);
     }
 
-    public boolean sendEMail(String toEmail, String toName, String subject, String body, File attachment) {
-        return  sendEMail(toEmail, toName, subject, body, attachment, null);
-    }
-
-    public boolean sendEMail(String toEmail, String toName, String subject, String body, EmailAttachment emailAttachment) {
-        return  sendEMail(toEmail, toName, subject, body, null, emailAttachment);
-    }
-
-    public boolean sendEMail(String toEmail, String toName, String subject, String body, File attachment, EmailAttachment emailAttachment) {
+    public boolean sendEMail(String toEmail, String toName, String subject, String body, List<File> attachments, List<EmailAttachment> emailAttachments) {
         try {
             HtmlEmail email = new HtmlEmail();
             //email.setDebug(true); // useful stuff if things go wrong
@@ -59,12 +52,15 @@ public class AzquoMailer {
             email.setHtmlMsg(body);
             // set the plain text message - so simple compared to the arse before!
             email.setTextMsg("Your email client does not support HTML messages");
-            if (attachment != null) {
-                email.attach(attachment);
+            if (attachments != null) {
+                for (File attachment : attachments){
+                    email.attach(attachment);
+                }
             }
-            //
-            if (emailAttachment != null) {
-                email.attach(emailAttachment);
+            if (emailAttachments != null) {
+                for (EmailAttachment emailAttachment : emailAttachments){
+                    email.attach(emailAttachment);
+                }
             }
             email.send();
             return true;

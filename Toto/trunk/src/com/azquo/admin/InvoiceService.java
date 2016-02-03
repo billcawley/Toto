@@ -20,6 +20,7 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.StringTokenizer;
 
 /**
@@ -62,8 +63,8 @@ public class InvoiceService {
         TransformerFactory tFactory = TransformerFactory.newInstance();
 //        response.setContentType("application/pdf");
         String invoiceAddress = invoiceDetails.getInvoiceAddress();
-        String address1 = invoiceAddress.contains("\n") ? invoiceAddress.substring(0, invoiceAddress.indexOf("\n")) : invoiceAddress;
-        address1 = address1.contains("\r") ? address1.substring(0, address1.indexOf("\r")) : address1;
+        //String address1 = invoiceAddress.contains("\n") ? invoiceAddress.substring(0, invoiceAddress.indexOf("\n")) : invoiceAddress;
+        //address1 = address1.contains("\r") ? address1.substring(0, address1.indexOf("\r")) : address1;
 //        response.addHeader("Content-Disposition", "attachment; filename=AzquoInvoice" + address1 + month + ".pdf");
         File temp = File.createTempFile(emailAttachment.getName(), "pdf");
         emailAttachment.setPath(temp.getPath()); // I think this will do it?
@@ -184,7 +185,7 @@ public class InvoiceService {
 
         transformer.transform(src, res);
         fos.close();
-        if (azquoMailer.sendEMail(invoiceDetails.getSendTo(), invoiceDetails.getSendTo(), "Azquo Invoice " + invoiceDetails.getInvoiceNo(), "Please find attached", emailAttachment)){
+        if (azquoMailer.sendEMail(invoiceDetails.getSendTo(), invoiceDetails.getSendTo(), "Azquo Invoice " + invoiceDetails.getInvoiceNo(), "Please find attached", null, Collections.singletonList(emailAttachment))){
             InvoiceSent invoiceSent = new InvoiceSent(0,
                     invoiceDetails.getCustomerReference(),
                     invoiceDetails.getServiceDescription(),

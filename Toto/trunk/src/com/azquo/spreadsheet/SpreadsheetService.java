@@ -615,7 +615,12 @@ public class SpreadsheetService {
     // should this be in here?
 
     public void runScheduledReports() throws Exception {
+        Map<String, List<File>> filesToSendForEachEmail = new HashMap<>();
         for (ReportSchedule reportSchedule : reportScheduleDAO.findWhereDueBefore(LocalDateTime.now())) {
+            /* ok we need to group reports by e-mail, as in multiple reports in one email, adapting the old code
+            which had the "sendEMail" in this loop actually makes pretty good sense, I mean queue the reports up in a map
+            in there then send at the end.
+             */
             OnlineReport onlineReport = onlineReportDAO.findById(reportSchedule.getReportId());
             Database database = databaseDAO.findById(reportSchedule.getDatabaseId());
             if (onlineReport != null && database != null) {
@@ -642,7 +647,6 @@ public class SpreadsheetService {
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
                 ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(this, userChoiceDAO, userRegionOptionsDAO, rmiClient);
                 bookUtils.populateBook(book, 0);
-                AzquoMailer azquoMailer = new AzquoMailer();
                 // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
                 if ("PDF".equals(reportSchedule.getType())) {
                     Exporter exporter = Exporters.getExporter("pdf");
@@ -656,8 +660,10 @@ public class SpreadsheetService {
                             fos.close();
                         }
                     }
-                    // now send?
-                    azquoMailer.sendEMail(reportSchedule.getRecipients(), null, onlineReport.getReportName(), "Attached", file);
+                    // queue don't send
+                    for(String email : reportSchedule.getRecipients().split(",")){
+                        filesToSendForEachEmail.computeIfAbsent(email, t -> new ArrayList<>()).add(file);
+                    }
                 }
                 // again copied and only modified slightly - todo, factor these?
                 if ("XLS".equals(reportSchedule.getType())) {
@@ -672,7 +678,9 @@ public class SpreadsheetService {
                             fos.close();
                         }
                     }
-                    azquoMailer.sendEMail(reportSchedule.getRecipients(), null, onlineReport.getReportName(), "Attached", file);
+                    for(String email : reportSchedule.getRecipients().split(",")){
+                        filesToSendForEachEmail.computeIfAbsent(email, t -> new ArrayList<>()).add(file);
+                    }
                 }
                 // adjust the schedule but wait a mo . . .
                 switch (reportSchedule.getPeriod()) {
@@ -691,6 +699,12 @@ public class SpreadsheetService {
                 }
                 reportScheduleDAO.store(reportSchedule);
             }
+        }
+        // now send
+        AzquoMailer azquoMailer = new AzquoMailer();
+        for (String email : filesToSendForEachEmail.keySet()){
+            // might need to tweak subject, body and file names
+            azquoMailer.sendEMail(email, email, "Azquo Reports", "Attached", filesToSendForEachEmail.get(email), null);
         }
     }
 

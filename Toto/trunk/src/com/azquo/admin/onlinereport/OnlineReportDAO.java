@@ -93,6 +93,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         return findOneWithWhereSQLAndParameters(" WHERE `" + DATABASEID + "` = :" + DATABASEID + " and `" + REPORTNAME + "` = :" + REPORTNAME + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams);
     }
 
+    // EFC : I don't think the string splitting stuff should be in here (todo)
     public List<OnlineReport> findForDatabaseIdAndUserStatus(final int databaseId, String userStatus, String databaseType) {
         if (databaseType == null || databaseType.length() == 0){
             databaseType = "none";

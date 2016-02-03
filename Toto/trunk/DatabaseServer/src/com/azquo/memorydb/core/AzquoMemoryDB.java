@@ -9,6 +9,7 @@ import com.azquo.memorydb.service.ValueService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,7 +28,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class AzquoMemoryDB {
 
     // have given up trying this through spring for the moment
-    Properties azquoProperties = new Properties();
+    static Properties azquoProperties = new Properties();
+    // no point doing this on every contructor!
+    static {
+        try {
+            azquoProperties.load(AzquoMemoryDB.class.getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring -
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
 
@@ -55,26 +64,17 @@ public final class AzquoMemoryDB {
 
     // object ids. We handle this here, it's not done by MySQL
     private volatile int maxIdAtLoad; // volatile as it may be hit by multiple threads
-    // should this also be volatile?? Currently only used in synchronized  . . .
-    private int nextId;
+
+    private AtomicInteger nextId;
 
     // when objects are modified they are added to these sets held in a map. AzquoMemoryDBEntity has all functions require to persist.
+    // I could use a queue but there's an advantage to the set : stopping duplicates. Hmmmmmmmmmmm.
     private final Map<String, Set<AzquoMemoryDBEntity>> entitiesToPersist;
-    // how many threads when loading from and saving to MySQL
-/*    private final int loadingThreads;
-    // how many threads when creating a report - possibly could be held in spreadsheet service but can calculate this and loadingThreads at the same time
-    private final int reportFillerThreads;
-
-    public int getLoadingThreads() {
-        return loadingThreads;
-    }*/
-
     // A convenience reference to the user log while loading, null it at the end of the constructor
     private StringBuffer sessionLog;
     // using the new DAO classes or not. Really we should standardise on them
     private boolean fastLoaded = false;
 
-    // Initialising as concurrent hash maps here, needs careful thought as to whether heavy concurrent access is actually a good idea, what could go wrong
     private static AtomicInteger newDatabaseCount = new AtomicInteger(0);
 
     // may need to tweak this - since SQL is IO Bound then ramping it up more may not be the best idea. Also MySQL will be using processors of course.
@@ -98,8 +98,8 @@ public final class AzquoMemoryDB {
         }
     }
 
-    // it is true that having these two as separate pools could make mroe threads than processors but it's not the end of teh worls and it's still
-    // an improvement over the old situation. Not only for thread management but also not creating and destroying the [pp;s is better for garbage.
+    // it is true that having these two as separate pools could make more threads than processors (as visible to the OS) but it's not the end of the world and it's still
+    // an improvement over the old situation. Not only for thread management but also not creating and destroying the thread pools is better for garbage.
 
     public static final ExecutorService mainThreadPool = getMainThreadPool();
     public static final ExecutorService sqlThreadPool = getSQLThreadPool();
@@ -107,16 +107,6 @@ public final class AzquoMemoryDB {
     protected AzquoMemoryDB(String mysqlName, JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valeuDAO, StringBuffer sessionLog) throws Exception {
         newDatabaseCount.incrementAndGet();
         this.sessionLog = sessionLog;
-        azquoProperties.load(getClass().getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
-/*        int availableProcessors = Runtime.getRuntime().availableProcessors();
-        int possibleLoadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
-        if (possibleLoadingThreads > 8) { // I think more than this asks for trouble - processors isn't really the prob with mysql it's IO! I should be asking : is the disk SSD?
-            possibleLoadingThreads = 8;
-        }
-        loadingThreads = possibleLoadingThreads;
-        reportFillerThreads = availableProcessors < 4 ? availableProcessors : ((availableProcessors * 2) / 3); // slightly more for report generation, 2/3. Also used for linking.
-        System.out.println("memory db transport threads : " + loadingThreads);
-        System.out.println("reportFillerThreads : " + reportFillerThreads);*/
         this.mysqlName = mysqlName;
         this.jsonRecordDAO = jsonRecordDAO;
         this.nameDAO = nameDAO;
@@ -150,7 +140,7 @@ public final class AzquoMemoryDB {
             loadData();
         }
         needsLoading = false;
-        nextId = maxIdAtLoad + 1;
+        nextId = new AtomicInteger(maxIdAtLoad + 1);
         this.sessionLog = null; // don't hang onto the reference here
     }
 
@@ -565,11 +555,8 @@ public final class AzquoMemoryDB {
         fastLoaded = true;
     }
 
-    // will block currently! - a concern due to the writing synchronized above?
-
-    protected synchronized int getNextId() {
-        nextId++;
-        return nextId - 1;
+    protected int getNextId() {
+        return nextId.getAndIncrement(); // should correctly replace the old logic, exactly what atomic ints are for.
     }
 
     // for debug purposes, is there a harm in being public??
