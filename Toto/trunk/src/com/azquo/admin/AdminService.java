@@ -138,7 +138,10 @@ public class AdminService {
 
     // ok in new report/database server split creating a database needs distinct bits
 
-    public void createDatabase(final String databaseName, final String databaseType, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
+    public void createDatabase(final String databaseName, String databaseType, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
+        if (databaseType==null){
+            databaseType = "";
+        }
         if (loggedInUser.getUser().isAdministrator()) {
             Database existing = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), databaseName);
             if (existing != null) {
