@@ -297,6 +297,7 @@ public class ZKAzquoBookUtils {
         }
         loggedInUser.setImageStoreName(imageStoreName);
         loggedInUser.setContext(context);
+
         // after stripping off some redundant exception throwing this was the only possibility left, ignore it
         try {
             rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
@@ -542,13 +543,21 @@ public class ZKAzquoBookUtils {
                 e.printStackTrace();
             }
             if (errorMessage != null) {
-                // maybe move to the top left? Unsure
+                // maybe move to the top left? Unsure - YES!
+                int rowNo = 0;
+                int colNo =0;
+                while (sheet.getInternalSheet().getColumn(colNo).isHidden()&& colNo < 100) colNo++;
+                while (sheet.getInternalSheet().getRow(rowNo).isHidden() && rowNo < 100) rowNo++;
+                String eMessage = "Unable to find matching header and context regions for this data region : az_DataRegion" + region + " : " + errorMessage;
+               sheet.getInternalSheet().getCell(rowNo, colNo).setStringValue(eMessage);
+                /*
                 CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
                 if (dataRegion != null) {
                     sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching header and context regions for this data region : az_DataRegion" + region + " : " + errorMessage);
                 } else {
                     System.out.println("no region found for az_DataRegion" + region);
                 }
+                */
             }
         } else {
             CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
@@ -886,5 +895,6 @@ public class ZKAzquoBookUtils {
         }
         return found;
     }
+
 
 }
