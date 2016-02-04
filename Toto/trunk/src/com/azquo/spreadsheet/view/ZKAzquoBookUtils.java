@@ -583,15 +583,20 @@ public class ZKAzquoBookUtils {
     // this works out case insensitive based on the API, I've made this static for convenience? Is is a problem? Maybe the code calling it should be in here
     // todo - reslove static question!
 
-    public static CellRegion getCellRegionForSheetAndName(Sheet sheet, String name) {
+    public static CellRegion getCellRegionForSheetAndName(Sheet sheet, String name){
         SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
-        if (toReturn == null) {// often may fail with explicit sheet name
-            toReturn = sheet.getBook().getInternalBook().getNameByName(name);
+        try {
+            if (toReturn == null) {// often may fail with explicit sheet name
+                toReturn = sheet.getBook().getInternalBook().getNameByName(name);
+            }
+
+            if (toReturn != null && toReturn.getRefersToSheetName().equals(sheet.getSheetName())) {
+                return toReturn.getRefersToCellRegion();
+            }
+            return null;
+        }catch(Exception e){
+            return null;//the name exists, but has a dud pointer to a range
         }
-        if (toReturn != null && toReturn.getRefersToSheetName().equals(sheet.getSheetName())) {
-            return toReturn.getRefersToCellRegion();
-        }
-        return null;
     }
 
     public static final String VALIDATION_SHEET = "VALIDATION_SHEET";
@@ -803,6 +808,7 @@ public class ZKAzquoBookUtils {
             if (name.getName().toLowerCase().endsWith("choice")) {
                 String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
                 CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
+                System.out.println("debug:  trying to find the region " + choiceName + "chosen");
                 CellRegion chosen = getCellRegionForSheetAndName(sheet, choiceName + "chosen"); // as ever I do wonder about these string literals
                 if (choice != null && chosen != null) {
                     List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
