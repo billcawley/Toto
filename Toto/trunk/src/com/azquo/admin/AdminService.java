@@ -94,7 +94,7 @@ public class AdminService {
         }
         businessDAO.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt);
+        final User user = new User(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business");
         userDao.store(user);
         /*
         azquoMailer.sendEMail(user.getEmail()
@@ -183,7 +183,7 @@ public class AdminService {
             , final LoggedInUser loggedInUser) throws Exception {
         if (loggedInUser.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, LocalDateTime.now(), endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt);
+            final User user = new User(0, LocalDateTime.now(), endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail());
             userDao.store(user);
         } else {
             throw new Exception("error: you do not have permission to create a user");
@@ -249,6 +249,9 @@ public class AdminService {
     public List<User> getUserListForBusiness(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
             return userDao.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        }
+        if (loggedInUser.getUser().isMaster()) {
+            return userDao.findForBusinessIdAndCreatedBy(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getEmail());
         }
         return null;
     }

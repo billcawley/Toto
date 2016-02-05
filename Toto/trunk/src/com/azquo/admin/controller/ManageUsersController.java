@@ -73,6 +73,10 @@ public class ManageUsersController {
                     if (email == null || email.isEmpty()){
                         error.append("Email required<br/>");
                     }
+                    email = email.trim();
+                    if (toEdit == null && userDAO.findByEmail(email) != null){
+                        error.append("User Exists<br/>");
+                    }
                     if (name == null || name.isEmpty()){
                         error.append("Name required<br/>");
                     }
@@ -83,7 +87,7 @@ public class ManageUsersController {
                         assert endDate != null;
                         // then store, it might be new
                         if (toEdit == null){
-                            // Have to use  alocadate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
+                            // Have to use  a LocalDate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
                             adminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser);
                         } else {
                             toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());

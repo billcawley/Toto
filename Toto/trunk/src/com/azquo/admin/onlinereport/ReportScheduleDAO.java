@@ -15,6 +15,7 @@ import java.util.Map;
 
 /**
  * Created by edward on 21/09/15.
+ *
  */
 public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
 
@@ -32,6 +33,7 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
     public static final String REPORTID = "report_id";
     public static final String TYPE = "type";
     public static final String PARAMETERS = "parameters";
+    public static final String EMAILSUBJECT = "email_subject";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final ReportSchedule reportSchedule) {
@@ -44,6 +46,7 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
         toReturn.put(REPORTID, reportSchedule.getReportId());
         toReturn.put(TYPE, reportSchedule.getType());
         toReturn.put(PARAMETERS, reportSchedule.getParameters());
+        toReturn.put(EMAILSUBJECT, reportSchedule.getEmailSubject());
         return toReturn;
     }
 
@@ -59,7 +62,9 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
                         , rs.getInt(DATABASEID)
                         , rs.getInt(REPORTID)
                         , rs.getString(TYPE)
-                        , rs.getString(PARAMETERS));
+                        , rs.getString(PARAMETERS)
+                        , rs.getString(EMAILSUBJECT)
+                );
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

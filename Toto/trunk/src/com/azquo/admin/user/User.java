@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 public final class User extends StandardEntity {
 
     public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
+    public static final String STATUS_MASTER = "MASTER";
 
     private LocalDateTime startDate;
     private LocalDateTime endDate;
@@ -22,6 +23,7 @@ public final class User extends StandardEntity {
     private String status;
     private String password;
     private String salt;
+    private String createdBy;
 
     // salt will probably never be passed
     @JsonCreator
@@ -33,7 +35,8 @@ public final class User extends StandardEntity {
             , @JsonProperty("name") String name
             , @JsonProperty("status") String status
             , @JsonProperty("password") String password
-            , @JsonProperty("salt") String salt) {
+            , @JsonProperty("salt") String salt
+            , @JsonProperty("createdBy") String createdBy) {
         this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -43,11 +46,17 @@ public final class User extends StandardEntity {
         this.status = status;
         this.password = password;
         this.salt = salt;
+        this.createdBy = createdBy;
     }
 
     @JsonIgnore
     public boolean isAdministrator() {
         return status.equalsIgnoreCase(STATUS_ADMINISTRATOR);
+    }
+
+    @JsonIgnore
+    public boolean isMaster() {
+        return status.equalsIgnoreCase(STATUS_MASTER);
     }
 
     public LocalDateTime getStartDate() {
@@ -116,11 +125,18 @@ public final class User extends StandardEntity {
         this.salt = salt;
     }
 
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
     @Override
     public String toString() {
         return "User{" +
-                "id=" + id +
-                ", startDate=" + startDate +
+                "startDate=" + startDate +
                 ", endDate=" + endDate +
                 ", businessId=" + businessId +
                 ", email='" + email + '\'' +
@@ -128,6 +144,7 @@ public final class User extends StandardEntity {
                 ", status='" + status + '\'' +
                 ", password='" + password + '\'' +
                 ", salt='" + salt + '\'' +
+                ", createdBy='" + createdBy + '\'' +
                 '}';
     }
 }

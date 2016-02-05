@@ -40,6 +40,7 @@ public class UserDAO extends StandardDAO<User> {
     public static final String STATUS = "status";
     public static final String PASSWORD = "password";
     public static final String SALT = "salt";
+    public static final String CREATEDBY = "created_by";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final User user) {
@@ -53,6 +54,7 @@ public class UserDAO extends StandardDAO<User> {
         toReturn.put(STATUS, user.getStatus());
         toReturn.put(PASSWORD, user.getPassword());
         toReturn.put(SALT, user.getSalt());
+        toReturn.put(CREATEDBY, user.getCreatedBy());
         return toReturn;
     }
 
@@ -68,7 +70,8 @@ public class UserDAO extends StandardDAO<User> {
                         , rs.getString(NAME)
                         , rs.getString(STATUS)
                         , rs.getString(PASSWORD)
-                        , rs.getString(SALT));
+                        , rs.getString(SALT)
+                        , rs.getString(CREATEDBY));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -93,41 +96,13 @@ public class UserDAO extends StandardDAO<User> {
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
 
-    // not using standard update due to extra bits of logic e.g. encryption
-
-    public final void update(int id, int businessId, Map<String, Object> parameters) throws Exception{
-        String email = (String) parameters.get("email");
-        if (id == 0 && email.length() > 0) {
-            User u = findByEmail(email);
-            if (u != null) {
-                id = u.getId();
-            } else {
-                u = new User(0, LocalDateTime.now(), LocalDateTime.now(), businessId, "", "", "", "", "");
-                store(u);
-                id = u.getId();
-            }
-        }
-        String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
-        MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        for (String columnName : parameters.keySet()) {
-            if (columnName.equals(PASSWORD)) {
-                String password = (String) parameters.get(columnName);
-                if (password.length() > 0) {
-                    final String salt = adminService.shaHash(System.currentTimeMillis() + "salt");
-                    password = adminService.encrypt(password, salt);
-                    namedParams.addValue(PASSWORD, password);
-                    namedParams.addValue(SALT, salt);
-                    updateSql += PASSWORD + "= :" + PASSWORD + ", " + SALT + " = :" + SALT + ", ";
-                }
-            } else {
-                namedParams.addValue(columnName, parameters.get(columnName));
-                updateSql += columnName + "= :" + columnName + ", ";
-
-            }
-        }
-        namedParams.addValue(ID, id);
-        updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
-        updateSql += " where " + ID + " = :" + ID;
-        jdbcTemplate.update(updateSql, namedParams);
+    public List<User> findForBusinessIdAndCreatedBy(final int businessId, String createdBy) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(CREATEDBY, createdBy);
+        return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + CREATEDBY + " = :" + CREATEDBY, namedParams, false);
     }
+
+    // removed password encryption here - it should not be handled by the DAO
+
 }

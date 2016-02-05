@@ -138,7 +138,8 @@ CREATE TABLE IF NOT EXISTS `report_schedule` (
   `database_id` int(11) NOT NULL,
   `report_id` int(11) NOT NULL,
   `type` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `parameters` text COLLATE utf8mb4_unicode_ci
+  `parameters` text COLLATE utf8mb4_unicode_ci,
+  `email_subject` varchar(255) COLLATE utf8_unicode_ci NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -173,7 +174,8 @@ CREATE TABLE IF NOT EXISTS `user` (
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `status` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `salt` varchar(255) COLLATE utf8_unicode_ci NOT NULL
+  `salt` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `created_by` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
 ) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------

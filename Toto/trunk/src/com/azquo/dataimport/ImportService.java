@@ -6,6 +6,8 @@ import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.onlinereport.ReportSchedule;
+import com.azquo.admin.onlinereport.ReportScheduleDAO;
 import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
@@ -63,6 +65,8 @@ public final class ImportService {
     private UserDAO userDAO;
     @Autowired
     private DatabaseDAO databaseDAO;
+    @Autowired
+    private ReportScheduleDAO reportScheduleDAO;
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
@@ -79,20 +83,20 @@ public final class ImportService {
             List<File> files = unZip(tempFile);
             // should be sorting by xls first then size ascending
             Collections.sort(files, (f1, f2) -> {
-                if ((f1.getName().endsWith(".xls") || f1.getName().endsWith(".xlsx")) && (!f2.getName().endsWith(".xls") && !f2.getName().endsWith(".xlsx"))) { // one is xls, the otehr is not
-                    return -1;
-                }
-                if ((f2.getName().endsWith(".xls") || f2.getName().endsWith(".xlsx")) && (!f1.getName().endsWith(".xls") && !f1.getName().endsWith(".xlsx"))) { // otehr way round
-                    return 1;
-                }
-                // fall back to file size among the same types
-                if (f1.length() < f2.length()) {
-                    return -1;
-                }
-                if (f1.length() > f2.length()) {
-                    return 1;
-                }
-                return 0;
+                        if ((f1.getName().endsWith(".xls") || f1.getName().endsWith(".xlsx")) && (!f2.getName().endsWith(".xls") && !f2.getName().endsWith(".xlsx"))) { // one is xls, the otehr is not
+                            return -1;
+                        }
+                        if ((f2.getName().endsWith(".xls") || f2.getName().endsWith(".xlsx")) && (!f1.getName().endsWith(".xls") && !f1.getName().endsWith(".xlsx"))) { // otehr way round
+                            return 1;
+                        }
+                        // fall back to file size among the same types
+                        if (f1.length() < f2.length()) {
+                            return -1;
+                        }
+                        if (f1.length() > f2.length()) {
+                            return 1;
+                        }
+                        return 0;
                     }
             );
             // todo - sort the files, small to large xls and xlsx as a group first
@@ -117,7 +121,7 @@ public final class ImportService {
 
     // factored off to deal with
     String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
-        if (fileName.equals(CreateExcelForDownloadController.USERSPERMISSIONSFILENAME)) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
+        if (fileName.equals(CreateExcelForDownloadController.USERSPERMISSIONSFILENAME) && loggedInUser.getUser().isAdministrator()) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(fileName), "Report name");
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             Sheet permissionsSheet = book.getSheet("Permissions"); // literals not best practice, could it be factored between this and the xlsx file?
@@ -134,10 +138,6 @@ public final class ImportService {
                         userDAO.removeById(user);
                     }
                 }
-                for (User user : userList) {
-                    userDAO.removeById(user);
-                }
-
                 while (userSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && userSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
                     String user = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
                     String email = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
@@ -167,7 +167,7 @@ public final class ImportService {
                             password = oldPasswordMap.get(email);
                             salt = oldSaltMap.get(email);
                         }
-                        User user1 = new User(0, start, end, b != null ? b.getId() : loggedInUser.getUser().getBusinessId(), email, user, status, password, salt);
+                        User user1 = new User(0, start, end, b != null ? b.getId() : loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail());
                         userDAO.store(user1);
                     }
                     row++;
@@ -207,9 +207,79 @@ public final class ImportService {
                     row++;
                 }
             }
-
-        }
-        if (fileName.contains(".xls")) {
+            return "User Permissions file uploaded"; // I hope that's what it is looking for.
+        } else if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) && loggedInUser.getUser().isMaster()) {
+            User master = loggedInUser.getUser();
+            Book book = Importers.getImporter().imports(new File(fileName), "Report name");
+            Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
+            if (userSheet != null) {
+                int row = 1;
+                // keep them to use if not set. Should I be updating records instead? I'm not sure.
+                Map<String, String> oldPasswordMap = new HashMap<>();
+                Map<String, String> oldSaltMap = new HashMap<>();
+                List<User> userList = adminService.getUserListForBusiness(loggedInUser); // this will switch logic internally given that the user is a master (only return users created by this one)
+                for (User user : userList) {// as before cache the passwords in case new ones have not been entered
+                    oldPasswordMap.put(user.getEmail(), user.getPassword());
+                    oldSaltMap.put(user.getEmail(), user.getSalt());
+                    userDAO.removeById(user);
+                }
+                while (userSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && userSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
+                    String user = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
+                    String email = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
+                    String salt = "";
+                    String password = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
+                    if (password == null) {
+                        password = "";
+                    }
+                    if (password.length() > 0) {
+                        salt = adminService.shaHash(System.currentTimeMillis() + "salt");
+                        password = adminService.encrypt(password, salt);
+                    } else if (oldPasswordMap.get(email) != null) {
+                        password = oldPasswordMap.get(email);
+                        salt = oldSaltMap.get(email);
+                    }
+                    // copy details from the master user
+                    User user1 = new User(0, master.getStartDate(), master.getEndDate(), master.getBusinessId(), email, user, master.getStatus(), password, salt, master.getEmail());
+                    userDAO.store(user1);
+                    row++;
+                }
+            }
+            return "User Permissions file uploaded"; // I hope that's what it is looking for.
+        } else if (fileName.equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
+            Book book = Importers.getImporter().imports(new File(fileName), "Report name");
+            Sheet schedulesSheet = book.getSheet("ReportSchedules"); // literals not best practice, could it be factored between this and the xlsx file?
+            if (schedulesSheet != null) {
+                int row = 1;
+                final List<ReportSchedule> reportSchedules = adminService.getReportScheduleList(loggedInUser);
+                for (ReportSchedule reportSchedule : reportSchedules) {// as before cache the passwords in case new ones have not been entered
+                    reportScheduleDAO.removeById(reportSchedule);
+                }
+                while (schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
+                    String period = schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue();
+                    String recipients = schedulesSheet.getInternalSheet().getCell(row, 1).getStringValue();
+                    LocalDateTime nextDue = LocalDateTime.now();
+                    try {
+                        nextDue = LocalDateTime.parse(schedulesSheet.getInternalSheet().getCell(row, 2).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
+                    } catch (Exception ignored) {
+                    }
+                    String database = schedulesSheet.getInternalSheet().getCell(row, 3).getStringValue();
+                    Database database1 = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
+                    if (database1 != null){
+                        String report = schedulesSheet.getInternalSheet().getCell(row, 4).getStringValue();
+                        OnlineReport onlineReport = onlineReportDAO.findForDatabaseIdAndName(database1.getId(), report);
+                        if (onlineReport != null){
+                            String type = schedulesSheet.getInternalSheet().getCell(row, 5).getStringValue();
+                            String parameters = schedulesSheet.getInternalSheet().getCell(row, 6).getStringValue();
+                            String emailSubject = schedulesSheet.getInternalSheet().getCell(row, 7).getStringValue();
+                            ReportSchedule rs = new ReportSchedule(0,period,recipients,nextDue,database1.getId(), onlineReport.getId(), type, parameters, emailSubject);
+                            reportScheduleDAO.store(rs);
+                        }
+                    }
+                    row++;
+                }
+            }
+            return "User Permissions file uploaded"; // I hope that's what it is looking for.
+        } else if (fileName.contains(".xls")) {
             return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter, isData);
         } else {
             return readPreparedFile(loggedInUser, filePath, "", attributeNames, persistAfter, false); // no file type
@@ -448,13 +518,12 @@ public final class ImportService {
             channel.connect();
             System.out.println("sftp channel opened and connected.");
             channelSftp = (ChannelSftp) channel;
-            sftpCd(channelSftp,SFTPWORKINGDIR);
+            sftpCd(channelSftp, SFTPWORKINGDIR);
             channelSftp.put(inputStream, fileName);
             //log.info("File transfered successfully to host.");
         } catch (Exception ex) {
             System.out.println("Exception found while tranfer the response.");
-        }
-        finally{
+        } finally {
 
             channelSftp.exit();
             System.out.println("sftp Channel exited.");
@@ -468,7 +537,6 @@ public final class ImportService {
     }
 
 
-
     public String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName, String imageStoreName) throws Exception {
         String success = "image uploaded successfully";
         String sourceName = sourceFile.getOriginalFilename();
@@ -477,16 +545,16 @@ public final class ImportService {
         String pathOffset = loggedInUser.getDatabase().getMySQLName() + "/images/" + fileName + suffix;
         String destinationPath = spreadsheetService.getHomeDir() + dbPath + pathOffset;
         if (databaseServer.getIp().equals(LOCALIP)) {
-             File destination = new File(destinationPath);
+            File destination = new File(destinationPath);
             destination.getParentFile().mkdirs();
             sourceFile.transferTo(destination);
-         } else {
+        } else {
             destinationPath = databaseServer.getSftpUrl() + pathOffset;
             copyFileToDatabaseServer(sourceFile.getInputStream(), destinationPath);
         }
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
 
-        String imageList =  rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(),"uploaded images");
+        String imageList = rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
         if (imageList != null) {//check if it's already in the list
             String[] images = imageList.split(",");
             for (String image : images) {
@@ -494,11 +562,11 @@ public final class ImportService {
                     return success;
                 }
             }
-            imageList +="," + fileName + suffix;
-        }else{
+            imageList += "," + fileName + suffix;
+        } else {
             imageList = fileName + suffix;
         }
-        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).setNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(),"uploaded images", imageList);
+        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).setNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images", imageList);
         return success;
 
 

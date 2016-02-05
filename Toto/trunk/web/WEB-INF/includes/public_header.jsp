@@ -77,6 +77,10 @@
 							<li><a href="#" onclick="return uploadFile();" title="Upload file"><span class="fa fa-cloud-upload"></span> Upload file</a></li>
 							<li><a href="#" onclick="return postAjax('FREEZE');" title="Upload file"><span class="fa fa-link"></span> Freeze</a></li>
 							<li><a href="#" onclick="return postAjax('UNFREEZE');" title="Upload file"><span class="fa fa-unlink"></span> Unfreeze</a></li>
+							<c:if test="${masterUser == true}">
+								<li><a href="/api/CreateExcelForDownload?action=DOWNLOADUSERS" title="Download User List">Download User List</a></li>
+								<li><a href="/api/CreateExcelForDownload?action=DOWNLOADREPORTSCHEDULES" title="Download Report Schedules">Download Report Schedules</a></li>
+							</c:if>
 						</ul>
 					</li>
 				</ul>

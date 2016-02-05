@@ -247,6 +247,7 @@ public class OnlineController {
                             request.setAttribute(OnlineController.BOOK, book); // push the rendered book into the request to be sent to the user
                             session.removeAttribute(reportId);// get rid of it from the session
                             model.put("showSave", session.getAttribute(reportId + SAVE_FLAG));
+                            model.put("masterUser", loggedInUser.getUser().isMaster());
                             session.removeAttribute(reportId + SAVE_FLAG);// get rid of it from the session
                             // sort the pdf merges, had forgotten this . . .
                             final List<SName> names = book.getInternalBook().getNames();

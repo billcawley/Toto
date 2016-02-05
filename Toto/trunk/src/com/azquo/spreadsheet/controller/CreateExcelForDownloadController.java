@@ -2,6 +2,9 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.ReportSchedule;
 import com.azquo.admin.user.Permission;
 import com.azquo.admin.user.User;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -40,17 +43,63 @@ public class CreateExcelForDownloadController {
 
     public static final String USERSPERMISSIONSFILENAME = "AzquoUsersPermissions.xlsx";
 
+    public static final String USERSFILENAME = "AzquoUsers.xlsx";
+
+    public static final String REPORTSCHEDULESFILENAME = "AzquoReportSchedules.xlsx";
+
     @RequestMapping
     public void handleRequest(final HttpServletRequest request, HttpServletResponse response) throws Exception {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
 
-        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
+        if (loggedInUser == null) {
             response.sendRedirect("/api/Login");
-        } else {
-            // really necessary? Maybe check
-            request.setCharacterEncoding("UTF-8");
-//        resp.setCharacterEncoding("UTF-8");
-//        resp.setContentType("application/json");
+        } else if ("DOWNLOADUSERS".equals(request.getParameter("action")) && loggedInUser.getUser().isMaster()){ // then limited users editing for a master user
+            Book book = Importers.getImporter().imports(servletContext.getResourceAsStream("/WEB-INF/" + USERSFILENAME), "Report name");
+            // modify book to add the user
+            Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
+            if (userSheet != null){
+                final List<User> userListForBusiness = adminService.getUserListForBusiness(loggedInUser);
+                int row = 1;
+                for (User user : userListForBusiness){
+                    userSheet.getInternalSheet().getCell(row,0).setStringValue(user.getName());
+                    userSheet.getInternalSheet().getCell(row,1).setStringValue(user.getEmail());
+                    row++;
+                }
+            }
+            response.setContentType("application/vnd.ms-excel"); // Set up mime type
+            response.addHeader("Content-Disposition", "attachment; filename=" + USERSFILENAME);
+            OutputStream out = response.getOutputStream();
+            Exporter exporter = Exporters.getExporter();
+            exporter.export(book, out);
+        } else if ("DOWNLOADREPORTSCHEDULES".equals(request.getParameter("action")) && loggedInUser.getUser().isMaster()){ // then limited users editing for a master user
+            Book book = Importers.getImporter().imports(servletContext.getResourceAsStream("/WEB-INF/" + REPORTSCHEDULESFILENAME), "Report name");
+            // modify book to add the user
+            Sheet schedulesSheet = book.getSheet("ReportSchedules");
+            final List<ReportSchedule> reportSchedules = adminService.getReportScheduleList(loggedInUser);
+            if (schedulesSheet != null){
+                int row = 1;
+                for (ReportSchedule reportSchedule : reportSchedules){
+                    final Database databaseById = adminService.getDatabaseById(reportSchedule.getDatabaseId(), loggedInUser);
+                    final OnlineReport reportById = adminService.getReportById(reportSchedule.getReportId(), loggedInUser);
+                    if (databaseById != null && reportById != null){
+                        schedulesSheet.getInternalSheet().getCell(row,0).setStringValue(reportSchedule.getPeriod());
+                        schedulesSheet.getInternalSheet().getCell(row,1).setStringValue(reportSchedule.getRecipients());
+                        schedulesSheet.getInternalSheet().getCell(row,2).setStringValue(dateTimeFormatter.format(reportSchedule.getNextDue()));
+                        schedulesSheet.getInternalSheet().getCell(row,3).setStringValue(databaseById.getName());
+                        schedulesSheet.getInternalSheet().getCell(row,4).setStringValue(reportById.getReportName());
+                        schedulesSheet.getInternalSheet().getCell(row,5).setStringValue(reportSchedule.getType());
+                        schedulesSheet.getInternalSheet().getCell(row,6).setStringValue(reportSchedule.getParameters());
+                        schedulesSheet.getInternalSheet().getCell(row,7).setStringValue(reportSchedule.getEmailSubject());
+                        row++;
+                    }
+                }
+            }
+            response.setContentType("application/vnd.ms-excel"); // Set up mime type
+            response.addHeader("Content-Disposition", "attachment; filename=" + REPORTSCHEDULESFILENAME);
+            OutputStream out = response.getOutputStream();
+            Exporter exporter = Exporters.getExporter();
+            exporter.export(book, out);
+        } else if (loggedInUser.getUser().isAdministrator()){
             Book book = Importers.getImporter().imports(servletContext.getResourceAsStream("/WEB-INF/" + USERSPERMISSIONSFILENAME), "Report name");
             // modify book to add the users and permissions
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?

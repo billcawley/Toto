@@ -20,8 +20,9 @@ public class ReportSchedule extends StandardEntity{
     private int reportId;
     private String type;
     private String parameters;
+    private String emailSubject;
 
-    public ReportSchedule(int id, String period, String recipients, LocalDateTime nextDue, int databaseId, int reportId, String type, String parameters) {
+    public ReportSchedule(int id, String period, String recipients, LocalDateTime nextDue, int databaseId, int reportId, String type, String parameters, String emailSubject) {
         this.id = id;
         this.period = period;
         this.recipients = recipients;
@@ -30,6 +31,7 @@ public class ReportSchedule extends StandardEntity{
         this.reportId = reportId;
         this.type = type;
         this.parameters = parameters;
+        this.emailSubject = emailSubject;
     }
 
     public String getPeriod() {
@@ -91,5 +93,13 @@ public class ReportSchedule extends StandardEntity{
 
     public void setParameters(String parameters) {
         this.parameters = parameters;
+    }
+
+    public String getEmailSubject() {
+        return emailSubject;
+    }
+
+    public void setEmailSubject(String emailSubject) {
+        this.emailSubject = emailSubject;
     }
 }

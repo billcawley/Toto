@@ -57,7 +57,7 @@ public class ManageReportSchedulesController {
             if (request.getParameter("new") != null){
                 // note, this will fail with no reports or databases
                 ReportSchedule reportSchedule = new ReportSchedule(0,"DAILY", "", LocalDateTime.now().plusYears(30)
-                        , adminService.getDatabaseListForBusiness(loggedInUser).get(0).getId(), adminService.getReportList(loggedInUser).get(0).getId(),"","");
+                        , adminService.getDatabaseListForBusiness(loggedInUser).get(0).getId(), adminService.getReportList(loggedInUser).get(0).getId(),"","","");
                 reportScheduleDAO.store(reportSchedule);
             }
             final List<ReportSchedule> reportSchedules = adminService.getReportScheduleList(loggedInUser);
@@ -116,6 +116,11 @@ public class ManageReportSchedulesController {
                     String parameters = request.getParameter("parameters" + reportSchedule.getId());
                     if (parameters != null && !parameters.equals(reportSchedule.getParameters())) {
                         reportSchedule.setParameters(parameters);
+                        store = true;
+                    }
+                    String emailSubject = request.getParameter("emailsubject" + reportSchedule.getId());
+                    if (emailSubject != null && !emailSubject.equals(reportSchedule.getEmailSubject())) {
+                        reportSchedule.setEmailSubject(emailSubject);
                         store = true;
                     }
                    if (store) {
