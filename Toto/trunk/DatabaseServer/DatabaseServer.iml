@@ -40,6 +40,7 @@
     <orderEntry type="library" name="net.openhft:koloboke-impl-jdk8:0.6.7" level="project" />
     <orderEntry type="library" name="org.codehaus.groovy:groovy-all:2.4.3" level="project" />
     <orderEntry type="library" name="org.apache.httpcomponents:httpclient:4.5.1" level="project" />
+    <orderEntry type="library" name="org.apache.hbase:hbase-client:0.98.0-hadoop2" level="project" />
   </component>
   <component name="org.twodividedbyzero.idea.findbugs">
     <option name="_basePreferences">

@@ -76,7 +76,7 @@ public final class MemoryDBManager {
 
     public void convertDatabase(String mysqlName) throws Exception {
         AzquoMemoryDB check = memoryDatabaseMap.get(mysqlName);
-        if (check != null){
+        if (check != null && !check.getFastLoaded()){ // only convert if it wasn't fast loaded!
             check.saveToNewTables();
         }
     }

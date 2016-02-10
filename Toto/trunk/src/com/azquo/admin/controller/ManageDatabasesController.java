@@ -149,6 +149,16 @@ public class ManageDatabasesController {
                 if (convertId != null && NumberUtils.isNumber(convertId)) {
                     adminService.convertDatabase(loggedInUser, Integer.parseInt(convertId));
                 }
+                if ("ALL".equals(convertId)) {
+                    final List<Database> allDatabases = databaseDAO.findAll();
+                    for (Database database : allDatabases){
+                        try{
+                            adminService.convertDatabase(loggedInUser, database.getId());
+                        } catch (Exception e){
+                            e.printStackTrace();
+                        }
+                    }
+                }
                 if (backupTarget != null) {
                     LoggedInUser loggedInUserTarget = loginService.loginLoggedInUser(request.getSession().getId(), backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB
                     adminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getLanguages());// re languages I should just be followign what was there before . . .

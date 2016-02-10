@@ -37,7 +37,6 @@ public class ShowdataController {
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
             , @RequestParam(value = "chosen", required = false) String chosen
     ) throws Exception
-
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {

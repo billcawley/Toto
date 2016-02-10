@@ -16,14 +16,7 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.jcraft.jsch.*;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.Selectors;
-import org.apache.commons.vfs2.impl.StandardFileSystemManager;
-import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.method.P;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
@@ -524,13 +517,14 @@ public final class ImportService {
         } catch (Exception ex) {
             System.out.println("Exception found while tranfer the response.");
         } finally {
-
-            channelSftp.exit();
-            System.out.println("sftp Channel exited.");
-            channel.disconnect();
-            System.out.println("Channel disconnected.");
-            session.disconnect();
-            System.out.println("Host Session disconnected.");
+            if (channelSftp != null){
+                channelSftp.exit();
+                System.out.println("sftp Channel exited.");
+                channel.disconnect();
+                System.out.println("Channel disconnected.");
+                session.disconnect();
+                System.out.println("Host Session disconnected.");
+            }
         }
 
         return "file copied successfully";

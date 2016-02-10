@@ -284,7 +284,9 @@ public class RMIImplementation implements RMIInterface {
     @Override
     public void convertDatabase(String mysqlName) throws RemoteException {
         try {
+            memoryDBManager.getAzquoMemoryDB(mysqlName, null);
             memoryDBManager.convertDatabase(mysqlName);
+            memoryDBManager.removeDBfromMap(mysqlName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
