@@ -65,10 +65,6 @@ public interface RMIInterface extends Remote {
 
     boolean isDatabaseLoaded(String mysqlName) throws RemoteException;
 
-    boolean wasFastLoaded(String mysqlName) throws RemoteException;
-
-    void convertDatabase(String mysqlName) throws RemoteException;
-
     int getNameCount(String mysqlName) throws RemoteException;
 
     int getValueCount(String mysqlName) throws RemoteException;

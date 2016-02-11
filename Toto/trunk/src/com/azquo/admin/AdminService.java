@@ -434,20 +434,6 @@ public class AdminService {
         return false;
     }
 
-    public boolean wasDatabaseFastLoaded(LoggedInUser loggedInUser,  Database database) throws Exception {
-        if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).wasFastLoaded(database.getMySQLName());
-        }
-        return false;
-    }
-
-    public void convertDatabase(LoggedInUser loggedInUser,  int databaseId) throws Exception {
-        Database db = databaseDAO.findById(databaseId);
-        if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).convertDatabase(db.getMySQLName());
-        }
-    }
-
     public int getNameCount(LoggedInUser loggedInUser,  Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getNameCount(database.getMySQLName());

@@ -58,12 +58,10 @@ public class ManageDatabasesController {
 
     public class DisplayDataBase {
         private final boolean loaded;
-        private final boolean canConvert;
         private final Database database;
 
-        public DisplayDataBase(boolean loaded, boolean canConvert, Database database) {
+        public DisplayDataBase(boolean loaded, Database database) {
             this.loaded = loaded;
-            this.canConvert = canConvert;
             this.database = database;
         }
 
@@ -98,9 +96,6 @@ public class ManageDatabasesController {
         }
         public String getUrlEncodedName(){
             return database.getUrlEncodedName();
-        }
-        public boolean getCanConvert() {
-            return canConvert;
         }
     }
 
@@ -146,19 +141,6 @@ public class ManageDatabasesController {
                 if (unloadId != null && NumberUtils.isNumber(unloadId)) {
                     adminService.unloadDatabase(loggedInUser, Integer.parseInt(unloadId));
                 }
-                if (convertId != null && NumberUtils.isNumber(convertId)) {
-                    adminService.convertDatabase(loggedInUser, Integer.parseInt(convertId));
-                }
-                if ("ALL".equals(convertId)) {
-                    final List<Database> allDatabases = databaseDAO.findAll();
-                    for (Database database : allDatabases){
-                        try{
-                            adminService.convertDatabase(loggedInUser, database.getId());
-                        } catch (Exception e){
-                            e.printStackTrace();
-                        }
-                    }
-                }
                 if (backupTarget != null) {
                     LoggedInUser loggedInUserTarget = loginService.loginLoggedInUser(request.getSession().getId(), backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB
                     adminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getLanguages());// re languages I should just be followign what was there before . . .
@@ -175,8 +157,7 @@ public class ManageDatabasesController {
             try {
                 for (Database database : databaseList){
                     boolean isLoaded = adminService.isDatabaseLoaded(loggedInUser, database);
-                    boolean canConvert = isLoaded && !adminService.wasDatabaseFastLoaded(loggedInUser, database);
-                    displayDataBases.add(new DisplayDataBase(isLoaded, canConvert, database));
+                    displayDataBases.add(new DisplayDataBase(isLoaded, database));
                     if (isLoaded && (adminService.getNameCount(loggedInUser, database) != database.getNameCount()
                             || adminService.getValueCount(loggedInUser, database) != database.getValueCount())){ // then update the counts
                         database.setNameCount(adminService.getNameCount(loggedInUser, database));
@@ -268,8 +249,7 @@ public class ManageDatabasesController {
             try {
                 for (Database database1 : databaseList){
                     boolean isLoaded = adminService.isDatabaseLoaded(loggedInUser, database1);
-                    boolean canConvert = isLoaded && !adminService.wasDatabaseFastLoaded(loggedInUser, database1);
-                    displayDataBases.add(new DisplayDataBase(isLoaded, canConvert, database1));
+                    displayDataBases.add(new DisplayDataBase(isLoaded, database1));
                     if (isLoaded && (adminService.getNameCount(loggedInUser, database1) != database1.getNameCount()
                             || adminService.getValueCount(loggedInUser, database1) != database1.getValueCount())){ // then update the counts
                         database1.setNameCount(adminService.getNameCount(loggedInUser, database1));
