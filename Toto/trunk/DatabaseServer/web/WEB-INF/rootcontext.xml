@@ -52,6 +52,7 @@
     <bean name="jsonRecordDAO" class="com.azquo.memorydb.dao.JsonRecordDAO"/>
     <bean name="nameDAO" class="com.azquo.memorydb.dao.NameDAO"/>
     <bean name="valueDAO" class="com.azquo.memorydb.dao.ValueDAO"/>
+    <bean name="hbaseDAO" class="com.azquo.memorydb.dao.HBaseDAO"/>
     <bean name="provenanceService" class="com.azquo.memorydb.service.ProvenanceService"/>
     <bean name="dsAdminService" class="com.azquo.memorydb.service.DSAdminService"/>
     <bean name="dsImportService" class="com.azquo.dataimport.DSImportService"/>
