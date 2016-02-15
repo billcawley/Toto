@@ -29,10 +29,14 @@ public class AzquoMailer {
         try {
             HtmlEmail email = new HtmlEmail();
             //email.setDebug(true); // useful stuff if things go wrong
-            email.setSSLOnConnect(true);
-            email.setAuthenticator(new DefaultAuthenticator("app@azquo.com", "Yd44d8R4"));
-            email.setHostName("logichound.servers.eqx.misp.co.uk");
-            email.setSmtpPort(465);
+            //email.setSSLOnConnect(true);
+            System.setProperty("mail.smtp.ssl.trust", "mail.azquo.com"); // yeah naughty, I just want it to work
+            email.setSSLCheckServerIdentity(false);
+            email.setAuthenticator(new DefaultAuthenticator("app", "Yd44d8R4"));
+            email.setHostName("mail.azquo.com");
+            email.setStartTLSEnabled(true);
+            email.setSmtpPort(587);
+            //email.setSslSmtpPort("587");
             if (toEmail.contains(",")) {// ignore name
                 for (String to : toEmail.split(",")) {
                     email.addTo(to, to);
