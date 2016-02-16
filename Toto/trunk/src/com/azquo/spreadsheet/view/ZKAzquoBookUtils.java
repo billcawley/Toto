@@ -34,12 +34,18 @@ public class ZKAzquoBookUtils {
     final UserRegionOptionsDAO userRegionOptionsDAO;
     final RMIClient rmiClient;
     final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+    final String reportParameters;
 
     public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, RMIClient rmiClient) {
+        this(spreadsheetService,userChoiceDAO,userRegionOptionsDAO,null,rmiClient);// no report paraemters
+    }
+
+    private ZKAzquoBookUtils(SpreadsheetService spreadsheetService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, String reportParameters, RMIClient rmiClient) {
         this.spreadsheetService = spreadsheetService;
         this.userChoiceDAO = userChoiceDAO;
         this.userRegionOptionsDAO = userRegionOptionsDAO;
         this.rmiClient = rmiClient;
+        this.reportParameters = reportParameters;
     }
 
     public boolean populateBook(Book book, int valueId) {
@@ -62,6 +68,43 @@ public class ZKAzquoBookUtils {
         for (UserChoice uc : allChoices) {
             userChoices.put(uc.getChoiceName().toLowerCase(), uc.getChoiceValue()); // make case insensitive
         }
+        /* right, we need to deal with setting the choices according to report parameters
+        category = `Men's suits`, month = last
+        currently allowing first or last, if first or last required as names add quotes
+        I could rip off the parsing from string utils though it seems rather verbose, really what I want is tokenizing based on , but NOT in the quoted areas
+        */
+
+        final String FIRST_PLACEHOLDER = "||FIRST||";
+        final String LAST_PLACEHOLDER = "||LAST||";
+
+        Map<String, String> reportParamsParsed = new HashMap<>();
+        if (reportParameters != null){
+            boolean inQuotes = false;
+            int ruleStart = 0;
+            int currentIndex = 0;
+            for (char c : reportParameters.toCharArray()){
+                if (c == '`'){ // can't use Name.Quote, it's on the DB server hmmmmm . . .
+                    inQuotes = !inQuotes;
+                } else if (c == ',' && !inQuotes){ // try to parse out the rule
+                    String pair = reportParameters.substring(ruleStart, currentIndex).trim();
+                    if (pair.indexOf("=") > 0){
+                        final String[] split = pair.split("=");
+                        String value = split[1].trim();
+                        if (value.equalsIgnoreCase("first")){
+                            value = FIRST_PLACEHOLDER;
+                        } else if (value.startsWith("last")){
+                            value = LAST_PLACEHOLDER;
+                        } else if (value.startsWith("`")){ // then zap the quotes
+                            value = value.replace('`', ' ').trim();
+                        }
+                        userChoices.put(split[0].toLowerCase().trim(), value); // ok and I need to add special cases for first and last
+                    }
+                    ruleStart = currentIndex + 1;
+                }
+                currentIndex++;
+            }
+        }
+
         String context = "";
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
@@ -100,9 +143,15 @@ public class ZKAzquoBookUtils {
                                 // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
                                 List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
                                 String userChoice = userChoices.get(choiceName);
+                                if (FIRST_PLACEHOLDER.equals(userChoice)){
+                                    userChoice = validOptions.get(0);
+                                }
+                                if (LAST_PLACEHOLDER.equals(userChoice)){
+                                    userChoice = validOptions.get(validOptions.size() - 1);
+                                }
                                 if (userChoice != null && validOptions.contains(userChoice)) {
                                     sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
-                                    context += choiceName + " = " + userChoices.get(choiceName.toLowerCase()) + ";";
+                                    context += choiceName + " = " + userChoice + ";";
                                 } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
                                     sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
                                 }
