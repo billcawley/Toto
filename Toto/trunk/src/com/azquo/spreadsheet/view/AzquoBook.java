@@ -1286,7 +1286,7 @@ public class AzquoBook {
         Cell cell = cells.get(r, c);
         //if (colCount++ > 0) bw.write('\t');
         if (cell != null && cell.getType() != CellValueType.IS_NULL) {
-            String cellFormat = convertDates(cell.getStringValue());
+            String cellFormat = convertDates(cell.getStringValue()).replace("\r\n","~~");//a hack to carry through Excel carriage returns
             if (newNames != null && newNames.get(cellFormat) != null) {
                 csvW.write(newNames.get(cellFormat));
             } else {
