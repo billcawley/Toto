@@ -575,11 +575,6 @@ public class DSImportService {
         }
 
         // keep this one separate so it can be closed at the end
-        MappingIterator<String[]> originalLineIterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));
-        Iterator<String[]> lineIterator = originalLineIterator; // for the data, it might be reassigned in the case of transposing
-        String[] headers = null;
-        // It looks for a name for the file type, this name can have headers and/or the definitions for each header
-        // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         while (!isSpreadsheet && importInterpreter == null && (fileType.contains(" ") || fileType.contains("_"))) { //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
             //There may, though, be separate interpreters for A_B_xxx and A_xxx, so we try A_B first
@@ -590,8 +585,30 @@ public class DSImportService {
             }
             importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         }
+        if (importInterpreter!=null && importInterpreter.getAttribute(GROOVYPROCESSOR) != null){
+            System.out.println("Groovy found! Running  . . . ");
+            Object[] groovyParams = new Object[3];
+            groovyParams[0] = filePath;
+            groovyParams[1] = azquoMemoryDBConnection;
+            groovyParams[2] = nameService;
+            GroovyShell shell = new GroovyShell();
+            try {
+                final Script script = shell.parse(importInterpreter.getAttribute(GROOVYPROCESSOR));
+                filePath = (String) script.invokeMethod("fileProcess", groovyParams);
+            } catch (GroovyRuntimeException e) {
+                e.printStackTrace();
+                throw new Exception("groovy error " + e.getMessage());
+            }
+            System.out.println("Groovy done.");
+
+        }
+        MappingIterator<String[]> originalLineIterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));
+        Iterator<String[]> lineIterator = originalLineIterator; // for the data, it might be reassigned in the case of transposing
+        String[] headers = null;
+        // It looks for a name for the file type, this name can have headers and/or the definitions for each header
+        // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
         int skipLines = 0;
-        if (!isSpreadsheet && importInterpreter != null) {
+           if (!isSpreadsheet && importInterpreter != null) {
             // hack for spark response, I'll leave in here for the moment, it could be useful for others
             if ("true".equalsIgnoreCase(importInterpreter.getAttribute("transpose"))) {
                 // ok we want to transpose, will use similar logic to the server side transpose
@@ -634,23 +651,7 @@ public class DSImportService {
                 System.out.println("has headers " + importHeaders);
                 headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
             }
-            if (importInterpreter.getAttribute(GROOVYPROCESSOR) != null) {
-                System.out.println("Groovy found! Running  . . . ");
-                Object[] groovyParams = new Object[3];
-                groovyParams[0] = filePath;
-                groovyParams[1] = azquoMemoryDBConnection;
-                groovyParams[2] = nameService;
-                GroovyShell shell = new GroovyShell();
-                try {
-                    final Script script = shell.parse(importInterpreter.getAttribute(GROOVYPROCESSOR));
-                    filePath = (String) script.invokeMethod("fileProcess", groovyParams);
-                } catch (GroovyRuntimeException e) {
-                    e.printStackTrace();
-                    throw new Exception("groovy error " + e.getMessage());
-                }
-                System.out.println("Groovy done.");
-            }
-        }
+         }
         // finally we might use the headers on the data file, this is notably used when setting up the headers themselves :)
         if (headers == null) {
             headers = lineIterator.next();
@@ -713,7 +714,9 @@ public class DSImportService {
             int columnIndex = 0;
             for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
                 // intern may save a little memory. Column Index could point past line values for things like composite. Possibly other things but I can't think of them at the moment
-                String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern() : "";
+                String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern().replace("~~","\r\n") : "";//hack to replace carriage returns from Excel sheets
+                if (lineValue.startsWith("\"")&& lineValue.endsWith("\"")) lineValue = lineValue.substring(1,lineValue.length()-1).replace("\"\"","\"");//strip spurious quote marks inserted by Excel
+                //remove spurious quotes (put in when Groovyscript sent)
                 importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null));
                 columnIndex++;
             }
