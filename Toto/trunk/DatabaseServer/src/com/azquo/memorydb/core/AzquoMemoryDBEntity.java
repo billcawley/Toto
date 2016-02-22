@@ -6,14 +6,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Set;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 17/10/13
  * Time: 09:23
- * After some thinking and learning about generics : entity objects should have as little reference to Mysql as possible - the table they live in should be it?
+ * After some thinking and learning about generics : entity objects should have as little reference to persistence (mysql or hbase) as possible - the table they live in should be it?
  * OK with the new in memory DB thing these objects form the in memory database - it would be awkward to make them immutable
  * as I'd kind of like to so instead we want to make it so that it's very clear that modification after creation will
- * AUTOMATICALLY be reflected in MySQL as it catches up . . .
+ * AUTOMATICALLY be reflected in MySQL/HBase as it catches up . . .
  * TODO : how to lock an object while it's being persisted??? Note time of modification?
  * Also, these objects act as data objects hence each object SHOULD only exist in context of a azquo memory db, code here is designed to enforce this
  * id and database id need to be rigidly controlled in this object or all hell could break loose
@@ -60,12 +62,10 @@ public abstract class AzquoMemoryDBEntity {
         needsDeleting = false;
     }
 
-    // each class will say where it's persisted - this seems to be the most simple way to indicate which persistence set to put this in
-    protected abstract String getPersistTable();
-
-    // entities need this to save in a Json store
-    // notably new fast persistence of name and value does not - so maybe this needs to be moved to a separate interface
-    public abstract String getAsJson();
+    // ok, a class that can json serialize needs to override this, not sure if this is best practice but it seems to reduce the amount of code
+    protected String getAsJson(){
+        return "";
+    }
 
     protected final AzquoMemoryDB getAzquoMemoryDB() {
         return azquoMemoryDB;
@@ -83,7 +83,7 @@ public abstract class AzquoMemoryDBEntity {
 
    I know equals being empty is kind of dirty but plain object == is correct for equals in Azquo, this should improve the performance a little (I mean not having the commented equals)
 
-   And this does fulfill the contract - only that equals give the same hash, which is must for ==, not that matching hashes means equals (objects from two different dbs having the same id, they should not be in the same sets anyway)
+   And this does fulfill the contract - only that equals give the same hash, which it must for ==, not that matching hashes means equals (objects from two different dbs having the same id, they should not be in the same sets anyway)
 
    One can do this also on the set instantiation but as the Koloboke author says "if you cannot fix the keys' hashCode() implementation" but we can. .withKeyEquivalence(HashCodeMixingEquivalence.INSTANCE) is how it would be done.
 
@@ -114,16 +114,19 @@ public abstract class AzquoMemoryDBEntity {
         }
     }
 
-    protected final void setAsPersisted() {
+    protected void setAsPersisted(){
         needsInserting = false;
-        azquoMemoryDB.removeEntityNeedsPersisting(getPersistTable(), this);
+        entitySpecificSetAsPersisted();
     }
 
-    protected final void setNeedsPersisting() {
-        if (getPersistTable() != null) {
-            azquoMemoryDB.setEntityNeedsPersisting(getPersistTable(), this);
-        }
+    protected void setNeedsPersisting(){
+        entitySpecificSetNeedsPersisting();
     }
+    // will be fine for the moment, I might change how this is arranged later
+
+    protected abstract void entitySpecificSetAsPersisted();
+
+    protected abstract void entitySpecificSetNeedsPersisting();
 
     // public for the DAOs
     public final boolean getNeedsInserting() {

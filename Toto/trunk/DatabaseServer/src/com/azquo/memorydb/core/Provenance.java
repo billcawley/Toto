@@ -1,6 +1,5 @@
 package com.azquo.memorydb.core;
 
-import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.log4j.Logger;
@@ -45,7 +44,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
 
     protected Provenance(final AzquoMemoryDB azquoMemoryDB, final int id, String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);
-
         JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
         this.user = transport.user;
         this.timeStamp = transport.timeStamp;
@@ -111,11 +109,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
     }
 
     @Override
-    protected String getPersistTable() {
-        return JsonRecordDAO.PersistedTable.provenance.name();
-    }
-
-    @Override
     public String getAsJson() {
         try {
             return jacksonMapper.writeValueAsString(new JsonTransport(user, timeStamp, method, name, context));
@@ -123,5 +116,15 @@ public final class Provenance extends AzquoMemoryDBEntity {
             logger.error("can't get a provenance as json", e);
         }
         return "";
+    }
+
+    @Override
+    protected void entitySpecificSetAsPersisted() {
+        getAzquoMemoryDB().removeJsonEntityNeedsPersisting("provenance", this);
+    }
+
+    @Override
+    protected void entitySpecificSetNeedsPersisting() {
+        getAzquoMemoryDB().setJsonEntityNeedsPersisting("provenance", this);
     }
 }

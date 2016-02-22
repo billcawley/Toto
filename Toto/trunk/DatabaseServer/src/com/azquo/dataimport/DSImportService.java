@@ -29,6 +29,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 20/05/15.
  * <p>
  * Has a fair bit of the logic that was in the original import service.
@@ -65,7 +67,7 @@ public class DSImportService {
      */
 
     public static final String CHILDOF = "child of "; // trailing space I suppose one could otherwise get a false child ofweryhwrs match which can't happen with the others
-    // parent of another heading (as opposed to name), would like the clause to be more explicit,
+    // parent of another heading (as opposed to name), would like the clause to be more explicit, as in differentiate between a name in the database and a column
     public static final String PARENTOF = "parent of ";
     public static final String ATTRIBUTE = "attribute";
     public static final String LANGUAGE = "language";

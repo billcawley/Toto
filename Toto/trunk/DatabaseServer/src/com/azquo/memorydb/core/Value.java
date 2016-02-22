@@ -1,9 +1,7 @@
 package com.azquo.memorydb.core;
 
-import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
@@ -44,36 +42,6 @@ public final class Value extends AzquoMemoryDBEntity {
         names = new Name[0];
         // added 10/12/2014, wasn't there before, why??? I suppose it just worked. Inconsistent though!
         getAzquoMemoryDB().addValueToDb(this);
-    }
-
-    // only to be used by azquomemory db, hence protected. What is notable is the setting of the id from the record in mysql
-
-    private static AtomicInteger newValue2Count = new AtomicInteger(0);
-
-    protected Value(final AzquoMemoryDB azquoMemoryDB, final int id, final String jsonFromDB) throws Exception {
-        super(azquoMemoryDB, id);
-        newValue2Count.incrementAndGet();
-        try {
-            JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
-            this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
-            // tested, .intern here saves memory
-            this.text = transport.text.intern();
-            Set<Name> newNames = HashObjSets.newUpdatableSet(transport.nameIds.size());
-            //System.out.println("name ids" + transport.nameIds);
-            for (Integer nameId : transport.nameIds) {
-                Name name = getAzquoMemoryDB().getNameById(nameId);
-                if (name != null) {
-                    newNames.add(name);
-                } else {
-                    logger.info("Value referenced a name id that did not exist : " + nameId + " skipping");
-                }
-            }
-            names = new Name[0]; // simply to stop the call below getting shirty about possible old names that aren't there
-            setNamesWillBePersisted(newNames); //again I know this looks a bit odd, part of the hack for lists internally
-            getAzquoMemoryDB().addValueToDb(this);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     // todo address this new fast loader one being public
@@ -186,11 +154,6 @@ public final class Value extends AzquoMemoryDBEntity {
         }
     }
 
-    @Override
-    protected String getPersistTable() {
-        return JsonRecordDAO.PersistedTable.value.name();
-    }
-
     private static AtomicInteger getAsJsonCount = new AtomicInteger(0);
 
     @Override
@@ -209,6 +172,16 @@ public final class Value extends AzquoMemoryDBEntity {
         return "";
     }
 
+    @Override
+    protected void entitySpecificSetAsPersisted() {
+        getAzquoMemoryDB().removeValueNeedsPersisting(this);
+    }
+
+    @Override
+    protected void entitySpecificSetNeedsPersisting() {
+        getAzquoMemoryDB().setValueNeedsPersisting(this);
+    }
+
     private static AtomicInteger getNameIdsAsBytesCount = new AtomicInteger(0);
 
     public byte[] getNameIdsAsBytes() {
@@ -223,7 +196,6 @@ public final class Value extends AzquoMemoryDBEntity {
     public static void printFunctionCountStats() {
         System.out.println("######### VALUE FUNCTION COUNTS");
         System.out.println("newValueCount\t\t\t\t\t\t\t\t" + newValueCount.get());
-        System.out.println("newValue2Count\t\t\t\t\t\t\t\t" + newValue2Count.get());
         System.out.println("newValue3COunt\t\t\t\t\t\t\t\t" + newValue3Count.get());
         System.out.println("getNamesCount\t\t\t\t\t\t\t\t" + getNamesCount.get());
         System.out.println("setNamesWillBePersistedCount\t\t\t\t\t\t\t\t" + setNamesWillBePersistedCount.get());
@@ -234,7 +206,6 @@ public final class Value extends AzquoMemoryDBEntity {
 
     public static void clearFunctionCountStats() {
         newValueCount.set(0);
-        newValue2Count.set(0);
         newValue3Count.set(0);
         getNamesCount.set(0);
         setNamesWillBePersistedCount.set(0);

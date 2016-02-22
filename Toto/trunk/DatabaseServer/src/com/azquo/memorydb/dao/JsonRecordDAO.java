@@ -22,6 +22,8 @@ import java.util.concurrent.*;
  *
  * Multi threading is beginning to be added for loads and saves - for loading it's taken care of externally but for saving it seems fine that it's in here. Can concurrently throw
  * updates/inserts/deletes at MySQL. Currently only inserts.
+ *
+ * Also currentlyo only for Provenance
  */
 public class JsonRecordDAO {
 
@@ -39,10 +41,6 @@ public class JsonRecordDAO {
     private static final String JSON = "json";
 
     public static final Map<String,?> EMPTY_PARAMETERS_MAP = new HashMap<>();
-
-    // names there may be for tables in here. I wonder if it should be moved?
-
-    public enum PersistedTable {provenance, name, value}
 
     private static final class JsonRecordTransportRowMapper implements RowMapper<JsonRecordTransport> {
         @Override

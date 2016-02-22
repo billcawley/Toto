@@ -692,7 +692,7 @@ seaports;children   container;children
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
                     String nextContext = st.nextToken().trim();
-                    if (nextContext.replace("`","").length()>0) {
+                    if (nextContext.replace("`","").length() > 0) {
                         final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, nextContext, languages);
                         time = (System.currentTimeMillis() - track);
                         if (time > threshold) System.out.println("Context parsed in " + time + "ms");

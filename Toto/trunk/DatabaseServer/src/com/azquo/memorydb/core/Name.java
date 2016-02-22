@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,13 +57,11 @@ public final class Name extends AzquoMemoryDBEntity {
     // just a cache while the names by id map is being populated. I experimented with various ideas e.g. a parent cache also, this seemed the best compromise
 
     private LoadCache loadCache;
-
+    // todo simplify
     private static final class LoadCache {
-        public final String jsonCache;
         public final byte[] childrenCache;
 
         public LoadCache(String jsonCache, byte[] childrenCache) {
-            this.jsonCache = jsonCache;
             this.childrenCache = childrenCache;
         }
     }
@@ -1101,11 +1098,6 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
-    @Override
-    protected String getPersistTable() {
-        return JsonRecordDAO.PersistedTable.name.name();
-    }
-
     private static AtomicInteger getAsJsonCount = new AtomicInteger(0);
 
     @Override
@@ -1121,6 +1113,16 @@ public final class Name extends AzquoMemoryDBEntity {
             e.printStackTrace();
         }
         return "";
+    }
+
+    @Override
+    final protected void entitySpecificSetAsPersisted() {
+        getAzquoMemoryDB().removeNameNeedsPersisting(this);
+    }
+
+    @Override
+    final protected void entitySpecificSetNeedsPersisting() {
+        getAzquoMemoryDB().setNameNeedsPersisting(this);
     }
 
     // in here is a bit more efficient I think but should it be in the DAO?
@@ -1172,47 +1174,6 @@ public final class Name extends AzquoMemoryDBEntity {
 
     protected void link() throws Exception {
         linkCount.incrementAndGet();
-        if (getAzquoMemoryDB().getNeedsLoading() && loadCache.jsonCache != null) { // during loading and using old json
-            try {
-                /* Must make sure I set initial collection sizes when loading, resizing is not cheap generally.
-                I think the principle is that anything that modifies the state of the object is synchronized. Not a bad one.
-                */
-                synchronized (this) {
-                    JsonTransport transport = jacksonMapper.readValue(loadCache.jsonCache, JsonTransport.class);
-                    loadCache = null;// free the memory
-                    this.provenance = getAzquoMemoryDB().getProvenanceById(transport.provenanceId);
-                    this.additive = transport.additive;
-                    //this.attributes = transport.attributes;
-                    List<String> attributeKeys = new ArrayList<>();
-                    List<String> attributeValues = new ArrayList<>();
-                    for (String key : transport.attributes.keySet()) {
-                        // interning is clearly saving memory and it seems with little performance overhead
-                        attributeKeys.add(key.toUpperCase().intern());
-                        attributeValues.add(transport.attributes.get(key).intern());
-                    }
-                    nameAttributes = new NameAttributes(attributeKeys, attributeValues);
-                    if (transport.childrenIds.size() > ARRAYTHRESHOLD) {
-                        // set the size! Could be quite significant for loading times.
-                        this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(transport.childrenIds.size())); // NOTE! now we're not using linked hash set, position and ordering will be ignored for large sets of children!!
-                        // hesitant to use collect call, I worry about garbage with streams
-                        for (Integer childId : transport.childrenIds) {
-                            this.childrenAsSet.add(getAzquoMemoryDB().getNameById(childId));
-                        }
-                    } else {
-                        Name[] newChildren = new Name[transport.childrenIds.size()];
-                        int index = 0;
-                        for (Integer childId : transport.childrenIds) {
-                            newChildren[index] = getAzquoMemoryDB().getNameById(childId);
-                            index++;
-                        }
-                        this.children = newChildren;
-                    }
-                }
-            } catch (IOException e) {
-                System.out.println("jsoncache = " + loadCache.jsonCache);
-                e.printStackTrace();
-            }
-        }
         if (getAzquoMemoryDB().getNeedsLoading() && loadCache != null) { // the new fast load
             synchronized (this) {
                 // it's things like this that I believe will be way faster and lighter ongarbage than the old json method

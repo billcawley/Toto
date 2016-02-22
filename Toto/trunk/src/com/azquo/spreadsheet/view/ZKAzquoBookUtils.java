@@ -371,13 +371,21 @@ public class ZKAzquoBookUtils {
                     cell.getFormulaResultType();
                     cell.clearFormulaResultCache();
                 }
-                // I assume non null cell has a non null sting value, do I need to check for null?
-                String toShow = null;
+                // I assume non null cell has a non null string value, this may not be true. Also will I get another type of exception?
                 try {
-                    toShow = cell.getStringValue();
+                    if (cell != null){
+                        if (cell.getType() == SCell.CellType.NUMBER){
+                            String numberGuess = cell.getNumberValue() + "";
+                            if (numberGuess.endsWith(".0")){
+                                numberGuess = numberGuess.substring(0, numberGuess.length() - 2);
+                            }
+                            row.add(numberGuess);
+                        } else {
+                            row.add(cell.getStringValue());
+                        }
+                    }
                 } catch (Exception ignored) {
                 }
-                row.add(toShow);
             }
         }
         return toReturn;

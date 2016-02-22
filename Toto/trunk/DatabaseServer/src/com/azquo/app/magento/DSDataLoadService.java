@@ -16,10 +16,13 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 20/05/15.
  * <p/>
  * The new home of Magento loading logic. Much of this was in DataLoadService.
@@ -39,11 +42,8 @@ public class DSDataLoadService {
     private static void logMemUseage() {
         final Runtime runtime = Runtime.getRuntime();
         final int mb = 1024 * 1024;
-        System.out.println("##### Heap utilization statistics [MB] #####");
-        System.out.println("Used Memory:" + (runtime.totalMemory() - runtime.freeMemory()) / mb);
-        System.out.println("Free Memory:" + runtime.freeMemory() / mb);
-        System.out.println("Total Memory:" + runtime.totalMemory() / mb);
-        System.out.println("Max Memory:" + runtime.maxMemory() / mb);
+        NumberFormat nf = NumberFormat.getInstance();
+        System.out.println("--- MEMORY USED :  " + nf.format(runtime.totalMemory() - runtime.freeMemory() / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
     }
 
     @Autowired
@@ -122,7 +122,7 @@ public class DSDataLoadService {
     /* might be a case for koloboke if speed becomes a concern
     this function is too big for intellij to analyse properly, if we want to make this class more correct it should be broken up.
     in terms of logic it's essentially translating Magento into Azquo.
-    I don't think it could be don't by a sheet, too much logic e.g. calculating bundles.
+    I don't think it could be done by standard import rules, too much logic e.g. calculating bundles.
       */
     public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress, String user) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
@@ -144,7 +144,7 @@ public class DSDataLoadService {
                 System.out.print("Initial load of : " + tableName);
                 // I'm not going to support tables being loaded in two chunks I see no point. This would overwrite data if a table were referenced twice.
                 currentTableDataMap = new ArrayList<>(); // and I know this repeats keys for each row, the goal here is ease of use for importing, not efficiency
-                // to try to reduce garbage I'm moving thos to koloboke
+                // to try to reduce garbage I'm moving these to koloboke
                 tableMap.put(tableName, currentTableDataMap);
             } else { // data, is it the first one?
                 if (currentColumnNames == null) {
@@ -274,7 +274,7 @@ public class DSDataLoadService {
         categoryLanguage.add("MAGENTOCATEGORYID");
         Map<String, String> categoryNames = HashObjObjMaps.newMutableMap();
         //name the categories
-        for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in teh right place
+        for (Map<String, String> attributeRow : tableMap.get("catalog_category_entity_varchar")) { // should (!) have us looking in the right place
             //only picking the name from all the category attributes
             if (attributeRow.get("attribute_id").equals(categoryNameId)) {
                 if (attributeRow.get("store_id").equals("0")) {
@@ -284,7 +284,7 @@ public class DSDataLoadService {
         }
         tableMap.remove("catalog_category_entity_varchar");
         for (Map<String, String> entityTypeRecord : tableMap.get("catalog_category_entity")) {
-            //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1` becomes '`bottom`,`higher`,`top`
+            //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1`
             StringTokenizer pathBits = new StringTokenizer(entityTypeRecord.get("path"), "/");
             String path = "";
             String thisCatNo = entityTypeRecord.get("entity_id");
@@ -1025,7 +1025,7 @@ public class DSDataLoadService {
     }
 
     private void calcBundle(AzquoMemoryDBConnection azquoMemoryDBConnection, SaleItem bundleTotal, List<SaleItem> bundleItems, Name priceName, Name taxName) throws Exception {
-        /* Magento does not put prices into bundled items (though this routime checks just in case)
+        /* Magento does not put prices into bundled items (though this routine checks just in case)
         so this routine looks up the bundled price in the bundle table.
         If it fails to find a bundled price, it totals all the 'full' prices for the unaccounted lines, then apportions the rest of the bundle price and tax accordingly
           */

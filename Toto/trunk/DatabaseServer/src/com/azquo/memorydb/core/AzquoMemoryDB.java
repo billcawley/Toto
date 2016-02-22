@@ -7,11 +7,14 @@ import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 25/10/13
@@ -27,7 +30,7 @@ public final class AzquoMemoryDB {
     // have given up trying this through spring for the moment
     static Properties azquoProperties = new Properties();
 
-    // no point doing this on every contructor!
+    // no point doing this on every constructor!
     static {
         try {
             azquoProperties.load(AzquoMemoryDB.class.getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring -
@@ -63,9 +66,10 @@ public final class AzquoMemoryDB {
     // no need to max id at load, it's used for this
     private final AtomicInteger nextId = new AtomicInteger(0); // new java 8 stuff should allow me to safely get the top id regardless of multiple threads
 
-    // when objects are modified they are added to these sets held in a map. AzquoMemoryDBEntity has all functions require to persist.
-    // I could use a queue but there's an advantage to the set : stopping duplicates. Hmmmmmmmmmmm.
-    private final Map<String, Set<AzquoMemoryDBEntity>> entitiesToPersist;
+    // Used to be a map of sets for all entities but since speeding up storing of names and values with custom DAOs I figure it's best to simply have three sets
+    private final Map<String, Set<AzquoMemoryDBEntity>> jsonEntitiesToPersist;
+    private final Set<Name> namesToPersist;
+    private final Set<Value> valuesToPersist;
     // A convenience reference to the user log while loading, null it at the end of the constructor
     private StringBuffer sessionLog;
 
@@ -121,17 +125,12 @@ public final class AzquoMemoryDB {
         System.out.println("number of values : " + numberOfValues);*/
         valueByIdMap = new ConcurrentHashMap<>();
         provenanceByIdMap = new ConcurrentHashMap<>();
-        entitiesToPersist = new ConcurrentHashMap<>();
-        // loop over the possible persisted tables making the empty sets, cunning
-        if (jsonRecordDAO != null) {
-            for (JsonRecordDAO.PersistedTable persistedTable : JsonRecordDAO.PersistedTable.values()) {
-                // wasn't concurrent, surely it should be?
-                entitiesToPersist.put(persistedTable.name(), Collections.newSetFromMap(new ConcurrentHashMap<>()));
-            }
-        }
-        if (jsonRecordDAO != null) {
-            loadData();
-        }
+
+        jsonEntitiesToPersist = new ConcurrentHashMap<>();
+        namesToPersist = Collections.newSetFromMap(new ConcurrentHashMap<>());
+        valuesToPersist = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+        loadData();
         nextId.incrementAndGet(); // bump it up one, the logic later is get and increment;
         needsLoading = false;
         this.sessionLog = null; // don't hang onto the reference here
@@ -152,26 +151,33 @@ public final class AzquoMemoryDB {
     }
 
     final int mb = 1024 * 1024;
-    private static final int PROVENANCE_MODE = 0;
-    private static final int NAME_MODE = 1;
-    private static final int VALUE_MODE = 2;
+
+    /**
+     * Interface to enable initialization of json persisted entities to be more generic.
+     * This sort of solves a language problem I was concerned by before but now it will only be used by Provenance and indeed in here hence why it's internal
+     */
+    public interface JsonSerializableEntityInitializer {
+        void initializeEntity(final AzquoMemoryDB azquoMemoryDB, JsonRecordTransport jsonRecordTransport) throws Exception;
+    }
 
 
-    // task for multi threaded loading of a database, JSON storing style
+    // task for multi threaded loading of a database, JSON storing style, now just for provenance.
 
     private static AtomicInteger newSQLBatchLoaderRunCount = new AtomicInteger(0);
 
     private class SQLBatchLoader implements Callable<Void> {
         private final JsonRecordDAO jsonRecordDAO;
-        private final int mode;
+        private final String tableName;
+        private final JsonSerializableEntityInitializer jsonSerializableEntityInitializer;
         private final int minId;
         private final int maxId;
         private final AzquoMemoryDB memDB;
         private final AtomicInteger loadTracker;
 
-        public SQLBatchLoader(JsonRecordDAO jsonRecordDAO, int mode, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
+        public SQLBatchLoader(JsonRecordDAO jsonRecordDAO, String tableName, JsonSerializableEntityInitializer jsonSerializableEntityInitializer, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
             this.jsonRecordDAO = jsonRecordDAO;
-            this.mode = mode;
+            this.tableName = tableName;
+            this.jsonSerializableEntityInitializer = jsonSerializableEntityInitializer;
             this.minId = minId;
             this.maxId = maxId;
             this.memDB = memDB;
@@ -181,29 +187,10 @@ public final class AzquoMemoryDB {
         @Override
         public Void call() throws Exception {
             newSQLBatchLoaderRunCount.incrementAndGet();
-            // may rearrange this later, could perhaps be more elegant
-            String tableName = "";
-            if (mode == PROVENANCE_MODE) {
-                tableName = JsonRecordDAO.PersistedTable.provenance.name();
-            }
-            if (mode == NAME_MODE) {
-                tableName = JsonRecordDAO.PersistedTable.name.name();
-            }
-            if (mode == VALUE_MODE) {
-                tableName = JsonRecordDAO.PersistedTable.value.name();
-            }
             List<JsonRecordTransport> dataToLoad = jsonRecordDAO.findFromTableMinMaxId(memDB, tableName, minId, maxId);
             for (JsonRecordTransport dataRecord : dataToLoad) {
                 nextId.getAndUpdate(current -> current < dataRecord.id ? dataRecord.id : current);
-                if (mode == PROVENANCE_MODE) {
-                    new Provenance(memDB, dataRecord.id, dataRecord.json);
-                }
-                if (mode == NAME_MODE) {
-                    new Name(memDB, dataRecord.id, dataRecord.json);
-                }
-                if (mode == VALUE_MODE) {
-                    new Value(memDB, dataRecord.id, dataRecord.json);
-                }
+                jsonSerializableEntityInitializer.initializeEntity(memDB, dataRecord);
             }
             if (minId % 100_000 == 0) {
                 loadTracker.addAndGet(dataToLoad.size());
@@ -335,30 +322,33 @@ public final class AzquoMemoryDB {
                 final int step = 100_000; // not so much step now as id range given how we're now querying mysql. CUtting down to 100,000 to reduce the chance of SQL errors
                 marker = System.currentTimeMillis();
                 // create thread pool, rack up the loading tasks and wait for it to finish. Repeat for name and values.
-                // provenance uses old style
-                int from = 0;
-                int maxIdForTable = jsonRecordDAO.findMaxId(this, JsonRecordDAO.PersistedTable.provenance.name());
-                List<Future<?>> futureBatches = new ArrayList<>();
-                while (from < maxIdForTable) {
-                    futureBatches.add(sqlThreadPool.submit(new SQLBatchLoader(jsonRecordDAO, PROVENANCE_MODE, from, from + step, this, provenaceLoaded)));
-                    from += step;
+                // going to set up for multiple json persisted entities even if it's only provenance for the mo
+                Map<String, JsonSerializableEntityInitializer> jsonTablesAndInitializers = new HashMap<>();
+                // add lines like this for loading other json entities. A note is table names repeated, might have a think about that
+                jsonTablesAndInitializers.put("provenance", (azquoMemoryDB, jsonRecordTransport) -> new Provenance(azquoMemoryDB, jsonRecordTransport.id, jsonRecordTransport.json));
+                int from;
+                int maxIdForTable;
+                List<Future<?>> futureBatches;
+                for (String tableName : jsonTablesAndInitializers.keySet()) {
+                    from = 0;
+                    maxIdForTable = jsonRecordDAO.findMaxId(this, tableName);
+                    futureBatches = new ArrayList<>();
+                    while (from < maxIdForTable) {
+                        futureBatches.add(sqlThreadPool.submit(new SQLBatchLoader(jsonRecordDAO, tableName, jsonTablesAndInitializers.get(tableName), from, from + step, this, provenaceLoaded)));
+                        from += step;
+                    }
+                    for (Future future : futureBatches) {
+                        future.get(1, TimeUnit.HOURS);
+                    }
+                    logInSessionLogAndSystem(tableName + " loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                 }
-                for (Future future : futureBatches) {
-                    future.get(1, TimeUnit.HOURS);
-                }
-/*                executor.shutdown();
-                if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
-                    throw new Exception("Database " + getMySQLName() + " took longer than an hour to load");
-                }*/
-                logInSessionLogAndSystem("Provenance loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                 marker = System.currentTimeMillis();
-                // now value and name use dedicated classes, legacy databases have ben converted
                 if (mysqlName.equals("Magen_timeandexpenses")) { // then test new load for names
                     int batch = 100_000;
                     HBaseDAO hBaseDAO = new HBaseDAO();
                     List<Name> names = hBaseDAO.getNamesFromWithLimitSkipStartId(this, 0, batch, namesLoaded); // first set with no from, don't need to knock off the first
                     Name lastName = null;
-                    while (!names.isEmpty()){
+                    while (!names.isEmpty()) {
                         for (Name name : names) {
                             nextId.getAndUpdate(current -> current < name.getId() ? name.getId() : current);
                             lastName = name;
@@ -379,12 +369,13 @@ public final class AzquoMemoryDB {
                 }
                 logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                 marker = System.currentTimeMillis();
+                // todo finish hbase detection and loading!
                 if (mysqlName.equals("Magen_sparkresponse")) { // then test new load for values
                     int batch = 100_000;
                     HBaseDAO hBaseDAO = new HBaseDAO();
                     List<Value> values = hBaseDAO.getValuesFromWithLimitSkipStartId(this, 0, batch, valuesLoaded); // first set with no from, don't need to knock off the first
                     Value lastValue = null;
-                    while (!values.isEmpty()){
+                    while (!values.isEmpty()) {
                         for (Value value : values) {
                             nextId.getAndUpdate(current -> current < value.getId() ? value.getId() : current);
                             lastValue = value;
@@ -427,11 +418,9 @@ public final class AzquoMemoryDB {
                 System.gc();
                 System.out.println("gc time : " + (System.currentTimeMillis() - marker));
                 long newUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
-                System.out.println("Guess at DB size " + (newUsed - usedMB));
-                System.out.println("Used Memory:" + newUsed);
-                System.out.println("Free Memory:" + runtime.freeMemory() / mb);
-                System.out.println("Total Memory:" + runtime.totalMemory() / mb);
-                System.out.println("Max Memory:" + runtime.maxMemory() / mb);
+                NumberFormat nf = NumberFormat.getInstance();
+                System.out.println("Guess at DB size " + nf.format(newUsed - usedMB) + "MB");
+                System.out.println("--- MEMORY USED :  " + nf.format(runtime.totalMemory() - runtime.freeMemory() / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
             }
             logInSessionLogAndSystem("Total load time for " + getMySQLName() + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
             //AzquoMemoryDB.printAllCountStats();
@@ -454,67 +443,71 @@ public final class AzquoMemoryDB {
 
     public synchronized void saveDataToMySQL() {
         saveDataToMySQLCount.incrementAndGet();
+        // todo : write locking the db probably should start here
         // this is where I need to think carefully about concurrency, azquodb has the last say when the sets are modified although the flags are another point
         // just a simple DB write lock should to it
         // for the moment just make it work.
-        // map of sets to persist means that should we add another object type then this code should not need to change
-        for (String tableToStoreIn : entitiesToPersist.keySet()) { // could go back to an enum of persist table names? Only implemented like this due to the old app tables
-            Set<AzquoMemoryDBEntity> entities = entitiesToPersist.get(tableToStoreIn);
+        // ok first do the json bits, as mentioned currently this is just provenance, may well be others
+        for (String tableName : jsonEntitiesToPersist.keySet()) {
+            Set<AzquoMemoryDBEntity> entities = jsonEntitiesToPersist.get(tableName);
             if (!entities.isEmpty()) {
-                // todo : write locking the db probably should start here
                 // multi thread this chunk? It can slow things down a little . . .
-                if (tableToStoreIn.equals(JsonRecordDAO.PersistedTable.provenance.name())) { // provenance is old style regardless
-                    System.out.println("entities to put in " + tableToStoreIn + " : " + entities.size());
-                    List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
-                    for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it. Copy perhaps expensive but consistency is important
-                        JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
-                        if (entity.getNeedsDeleting()) {
-                            state = JsonRecordTransport.State.DELETE;
-                        }
-                        if (entity.getNeedsInserting()) {
-                            state = JsonRecordTransport.State.INSERT;
-                        }
-                        entity.setAsPersisted(); /* ok we do this before setting to save so we don't get a state for save, state changed, then set as persisted (hence not allowing for latest changes)
+                System.out.println("Json entities to put in " + tableName + " : " + entities.size());
+                List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
+                for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it. Copy perhaps expensive but consistency is important
+                    JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
+                    if (entity.getNeedsDeleting()) {
+                        state = JsonRecordTransport.State.DELETE;
+                    }
+                    if (entity.getNeedsInserting()) {
+                        state = JsonRecordTransport.State.INSERT;
+                    }
+                    entity.setAsPersisted(); /* ok we do this before setting to save so we don't get a state for save, state changed, then set as persisted (hence not allowing for latest changes)
                         the multi threaded handling of sets to persist is via concurrent hash map, hence ordering which is important here should be right I hope. The only concern is for the same
                         element being removed being added back into the map and I think the internal locking (via striping?) should deal with this*/
-                        recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
-                    }
-                    // and end here
-                    try {
-                        jsonRecordDAO.persistJsonRecords(this, tableToStoreIn, recordsToStore);// note this is multi threaded internally
-                    } catch (Exception e) {
-                        // currently I'll just stack trace this, not sure of what would be the best strategy
-                        e.printStackTrace();
-                    }
-                } else { // new save on name and value - given new storage methods check this makes sense TODO
-                    if (tableToStoreIn.equals(JsonRecordDAO.PersistedTable.name.name())) {
-                        System.out.println("new name store : " + entities.size());
-                        List<Name> namesToStore = new ArrayList<>(entities.size());
-                        for (AzquoMemoryDBEntity entity : entities) {
-                            namesToStore.add((Name) entity);
-                            entity.setAsPersisted();// the big commented issue above is a moot point here - the actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
-                        }
-                        try {
-                            nameDAO.persistNames(this, namesToStore, false);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    if (tableToStoreIn.equals(JsonRecordDAO.PersistedTable.value.name())) {
-                        System.out.println("new value store : " + entities.size());
-                        List<Value> valuesToStore = new ArrayList<>(entities.size());
-                        for (AzquoMemoryDBEntity entity : entities) {
-                            valuesToStore.add((Value) entity);
-                            entity.setAsPersisted();
-                        }
-                        try {
-                            valueDAO.persistValues(this, valuesToStore, false);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
+                    recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
+                }
+                // and end here
+                try {
+                    jsonRecordDAO.persistJsonRecords(this, tableName, recordsToStore);// note this is multi threaded internally
+                } catch (Exception e) {
+                    // currently I'll just stack trace this, not sure of what would be the best strategy
+                    e.printStackTrace();
                 }
             }
+        }
+        // todo re-examine given new patterns. can genericize? As in pass the DAOs around? Maybe not as they're typed . . .
+        System.out.println("new name store : " + namesToPersist.size());
+        //id check
+        Set<Integer> idCheck = new HashSet<>();
+        for (Name name : namesToPersist){
+            if (!idCheck.add(name.getId())){
+                System.out.println("duplicate id!!! " + name.getId());
+            }
+        }
+        // I think here the copy happens to be defensive, there should be no missed changes or rather entities flagged as persisted that need to be persisted (change right after save but before set as persisted)
+        List<Name> namesToStore = new ArrayList<>(namesToPersist.size());
+        for (Name name : namesToPersist) {
+            namesToStore.add(name);
+            // note! Doing this changes the inserting flag meaning there may be a bunch of unnecessary deletes. Doesn't break anything but not necessary, need to sort that TODO
+            name.setAsPersisted();// The actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
+        }
+        try {
+            nameDAO.persistNames(this, namesToStore, false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("new value store : " + valuesToPersist.size());
+        List<Value> valuesToStore = new ArrayList<>(valuesToPersist.size());
+        for (Value value : valuesToPersist) {
+            valuesToStore.add(value);
+            value.setAsPersisted();
+        }
+        try {
+            valueDAO.persistValues(this, valuesToStore, false);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         System.out.println("persist done.");
     }
@@ -1035,31 +1028,61 @@ public final class AzquoMemoryDB {
         for (Future linkFuture : linkFutures) {
             linkFuture.get(1, TimeUnit.HOURS);
         }
-/*        executor.shutdown();
-        if (!executor.awaitTermination()) {
-            throw new Exception("Database " + getMySQLName() + " took longer than an hour to link");
-        }*/
     }
 
-    /* trying for new more simplified persistence - make functions not linked to classes.
-    maps will be set up in the constructor (of this class) with thread safe sets.
-    throw exception if called when the database is not loaded? */
+    /* Json then custom ones, maybe refactor later*/
 
-    private static AtomicInteger setEntityNeedsPersistingCount = new AtomicInteger(0);
+    private static AtomicInteger setJsonEntityNeedsPersistingCount = new AtomicInteger(0);
 
-    protected void setEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
-        setEntityNeedsPersistingCount.incrementAndGet();
-        if (!needsLoading && entitiesToPersist.size() > 0) {
-            entitiesToPersist.get(tableToPersistIn).add(azquoMemoryDBEntity);
+    protected void setJsonEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity entity) {
+        setJsonEntityNeedsPersistingCount.incrementAndGet();
+        if (!needsLoading) {
+            jsonEntitiesToPersist.computeIfAbsent(tableToPersistIn, t -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(entity);
         }
     }
 
-    private static AtomicInteger removeEntityNeedsPersistingCount = new AtomicInteger(0);
+    private static AtomicInteger removeJsonEntityNeedsPersistingCount = new AtomicInteger(0);
 
-    protected void removeEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity azquoMemoryDBEntity) {
-        removeEntityNeedsPersistingCount.incrementAndGet();
+    protected void removeJsonEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity entity) {
+        removeJsonEntityNeedsPersistingCount.incrementAndGet();
         if (!needsLoading) {
-            entitiesToPersist.get(tableToPersistIn).remove(azquoMemoryDBEntity);
+            jsonEntitiesToPersist.computeIfAbsent(tableToPersistIn, t -> Collections.newSetFromMap(new ConcurrentHashMap<>())).remove(entity);
+        }
+    }
+
+    private static AtomicInteger setNameNeedsPersistingCount = new AtomicInteger(0);
+
+    protected void setNameNeedsPersisting(Name name) {
+        setNameNeedsPersistingCount.incrementAndGet();
+        if (!needsLoading) {
+            namesToPersist.add(name);
+        }
+    }
+
+    private static AtomicInteger removeNameNeedsPersistingCount = new AtomicInteger(0);
+
+    protected void removeNameNeedsPersisting(Name name) {
+        removeNameNeedsPersistingCount.incrementAndGet();
+        if (!needsLoading) {
+            namesToPersist.remove(name);
+        }
+    }
+
+    private static AtomicInteger setValueNeedsPersistingCount = new AtomicInteger(0);
+
+    protected void setValueNeedsPersisting(Value value) {
+        setValueNeedsPersistingCount.incrementAndGet();
+        if (!needsLoading) {
+            valuesToPersist.add(value);
+        }
+    }
+
+    private static AtomicInteger removeValueNeedsPersistingCount = new AtomicInteger(0);
+
+    protected void removeValueNeedsPersisting(Value value) {
+        removeNameNeedsPersistingCount.incrementAndGet();
+        if (!needsLoading) {
+            valuesToPersist.remove(value);
         }
     }
 
@@ -1078,60 +1101,6 @@ public final class AzquoMemoryDB {
             throw new Exception("tried to add a privenance to the database with an existing id!");
         }
     }
-
-    // note : the jmap histogram may make this a little redundant.
-    // leaving here commented for the moment
-
-/*
-    public void memoryReport() {
-        try {
-            // simple by id maps, if an object is in one of these three it's in the database
-            System.out.println("size of nameByIdMap : " + ObjectSizeCalculator.sizeOfForAzquo(nameByIdMap, null));
-            System.out.println("size of nameByAttributeMap : " + ObjectSizeCalculator.sizeOfForAzquo(nameByAttributeMap, null));
-            System.out.println("size of valueByIdMap : " + ObjectSizeCalculator.sizeOfForAzquo(valueByIdMap, null));
-            System.out.println("size of provenanceByIdMap : " + ObjectSizeCalculator.sizeOfForAzquo(provenanceByIdMap, null));
-            // ok I want to size all the names here
-
-            long totalNameSize = 0;
-            Collection<Name> names = nameByIdMap.values();
-            DecimalFormat df = new DecimalFormat("###,###,###,###");
-            for (Name name : names) {
-                //System.out.println("trying for " + name);
-                long nameSize = ObjectSizeCalculator.sizeOfForAzquo(name, null);
-                totalNameSize += nameSize;
-                //if (count%10000 == 0){
-                  //  System.out.println("Example name size : " + name.getDefaultDisplayName() + ", " + df.format(nameSize));
-                  //  List<StringBuilder> report = new ArrayList<StringBuilder>();
-                  //  ObjectSizeCalculator.sizeOfForAzquo(name, report);
-                  //  for (StringBuilder sb : report){
-                  //      System.out.println(sb);
-                  //  }
-
-            }
-            System.out.println("total names size : " + df.format(totalNameSize));
-            System.out.println("size per name : " + totalNameSize / nameByIdMap.size());
-
-
-            long totalValuesSize = 0;
-            Collection<Value> values = valueByIdMap.values();
-            for (Value value : values) {
-                long valueSize = ObjectSizeCalculator.sizeOfForAzquo(value, null);
-                totalValuesSize += valueSize;
-//                if (count%10000 == 0){
- //                   System.out.println("Example value size : " + value + ", " + df.format(valueSize));
-   //                 List<StringBuilder> report = new ArrayList<StringBuilder>();
-     //               ObjectSizeCalculator.sizeOfForAzquo(value, report);
-       //             for (StringBuilder sb : report){
-         //               System.out.println(sb);
-           //         }
-             //   }
-            }
-            System.out.println("total values size : " + df.format(totalValuesSize));
-            System.out.println("size per value : " + totalValuesSize / valueByIdMap.size());
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        }
-    }*/
 
     public static void printFunctionCountStats() {
         System.out.println("######### AZQUO MEMORY DB FUNCTION COUNTS");
@@ -1160,8 +1129,12 @@ public final class AzquoMemoryDB {
         System.out.println("removeAttributeFromNameInAttributeNameMapCount\t\t\t\t" + removeAttributeFromNameInAttributeNameMapCount.get());
         System.out.println("batchLinkerRunCount\t\t\t\t" + batchLinkerRunCount.get());
         System.out.println("linkEntitiesCount\t\t\t\t" + linkEntitiesCount.get());
-        System.out.println("setEntityNeedsPersistingCount\t\t\t\t" + setEntityNeedsPersistingCount.get());
-        System.out.println("removeEntityNeedsPersistingCount\t\t\t\t" + removeEntityNeedsPersistingCount.get());
+        System.out.println("setJsonEntityNeedsPersistingCount\t\t\t\t" + setJsonEntityNeedsPersistingCount.get());
+        System.out.println("removeJsonEntityNeedsPersistingCount\t\t\t\t" + removeJsonEntityNeedsPersistingCount.get());
+        System.out.println("setNameNeedsPersistingCount\t\t\t\t" + setNameNeedsPersistingCount.get());
+        System.out.println("removeNameNeedsPersistingCount\t\t\t\t" + removeNameNeedsPersistingCount.get());
+        System.out.println("setValueNeedsPersistingCount\t\t\t\t" + setValueNeedsPersistingCount.get());
+        System.out.println("removeValueNeedsPersistingCount\t\t\t\t" + removeValueNeedsPersistingCount.get());
     }
 
     public static void clearFunctionCountStats() {
@@ -1190,8 +1163,12 @@ public final class AzquoMemoryDB {
         removeAttributeFromNameInAttributeNameMapCount.set(0);
         batchLinkerRunCount.set(0);
         linkEntitiesCount.set(0);
-        setEntityNeedsPersistingCount.set(0);
-        removeEntityNeedsPersistingCount.set(0);
+        setJsonEntityNeedsPersistingCount.set(0);
+        removeJsonEntityNeedsPersistingCount.set(0);
+        setNameNeedsPersistingCount.set(0);
+        removeNameNeedsPersistingCount.set(0);
+        setValueNeedsPersistingCount.set(0);
+        removeValueNeedsPersistingCount.set(0);
     }
 
     public static void printAllCountStats() {

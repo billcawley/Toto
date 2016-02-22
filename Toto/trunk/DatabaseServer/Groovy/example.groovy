@@ -1,3 +1,6 @@
+// Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+// just a test file to prove the point that we can preprocess using groovy
+
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import com.azquo.memorydb.core.*;

@@ -23,6 +23,7 @@ public class JdbcTemplateUtils {
         try{
             return jdbcTemplate.update(sql, namedParams);
         } catch (DataAccessException e){
+            e.printStackTrace();
             System.out.println("JDBC Error on " + sql);
             System.out.println("\ntrying again");
             return jdbcTemplate.update(sql, namedParams); // if it fails again then fail and throw the exception
@@ -33,6 +34,7 @@ public class JdbcTemplateUtils {
         try{
             return jdbcTemplate.update(sql, namedParams);
         } catch (DataAccessException e){
+            e.printStackTrace();
             System.out.println("JDBC Error on " + sql);
             System.out.println("\ntrying again");
             return jdbcTemplate.update(sql, namedParams); // if it fails again then fail and throw the exception
@@ -43,6 +45,7 @@ public class JdbcTemplateUtils {
         try{
             return jdbcTemplate.query(sql, rowMapper);
         } catch (DataAccessException e){
+            e.printStackTrace();
             System.out.println("JDBC Error on " + sql);
             System.out.println("\ntrying again");
             return jdbcTemplate.query(sql, rowMapper);
@@ -53,6 +56,7 @@ public class JdbcTemplateUtils {
         try{
             return jdbcTemplate.queryForObject(sql,paramMap,requiredType);
         } catch (DataAccessException e){
+            e.printStackTrace();
             System.out.println("JDBC Error on " + sql);
             System.out.println("\ntrying again");
             return jdbcTemplate.queryForObject(sql, paramMap, requiredType);
@@ -63,6 +67,7 @@ public class JdbcTemplateUtils {
         try{
             return jdbcTemplate.queryForList(sql,paramMap);
         } catch (DataAccessException e){
+            e.printStackTrace();
             System.out.println("JDBC Error on " + sql);
             System.out.println("\ntrying again");
             return jdbcTemplate.queryForList(sql,paramMap);
