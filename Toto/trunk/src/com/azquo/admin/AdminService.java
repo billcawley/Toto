@@ -147,15 +147,15 @@ public class AdminService {
             if (existing != null) {
                 throw new Exception("That database already exists");
             }
-            final String mysqlName = getSQLDatabaseName(loggedInUser, databaseName);
+            final String persistenceName = getSQLDatabaseName(loggedInUser, databaseName);
             final Business b = businessDAO.findById(loggedInUser.getUser().getBusinessId());
             if (b == null){
                 throw new Exception("That business does not exist");
             }
-            final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, mysqlName, databaseType, 0, 0, databaseServer.getId());
+            final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId());
             databaseDAO.store(database);
             // will be over to the DB side
-            rmiClient.getServerInterface(databaseServer.getIp()).createDatabase(database.getMySQLName());
+            rmiClient.getServerInterface(databaseServer.getIp()).createDatabase(database.getPersistenceName());
             loggedInUser.setDatabaseWithServer(databaseServer, database);
         } else {
             throw new Exception("Only administrators can create databases");
@@ -164,7 +164,7 @@ public class AdminService {
 
     public void emptyDatabase(DatabaseServer databaseServer, Database database) throws Exception {
         try {
-            rmiClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getMySQLName());
+            rmiClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getPersistenceName());
         }catch(Exception e){
             //ignore error when 'fast_name' and 'fast_value' do not exist.......
         }
@@ -385,7 +385,7 @@ public class AdminService {
         if (onlineReport != null && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             Database database = databaseDAO.findById(onlineReport.getDatabaseId());
             if (database != null){ // should not be!
-                String fullPath = spreadsheetService.getHomeDir() + ImportService.dbPath + database.getMySQLName() + "/onlinereports/" + onlineReport.getFilename();
+                String fullPath = spreadsheetService.getHomeDir() + ImportService.dbPath + database.getPersistenceName() + "/onlinereports/" + onlineReport.getFilename();
                 File file = new File(fullPath);
                 if (file.exists()){
                     file.delete();
@@ -408,42 +408,42 @@ public class AdminService {
             permissionDAO.removeForDatabaseId(db.getId());
             uploadRecordDAO.removeForDatabaseId(db.getId());
             databaseDAO.removeById(db);
-            rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).dropDatabase(db.getMySQLName());
+            rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).dropDatabase(db.getPersistenceName());
         }
     }
 
     public void emptyDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getMySQLName());
+            rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getPersistenceName());
         }
     }
 
     public void unloadDatabase(LoggedInUser loggedInUser,  int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).unloadDatabase(db.getMySQLName());
+            rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).unloadDatabase(db.getPersistenceName());
         }
     }
 
     // a little inconsistent but it will be called using a database object, no point looking up again
     public boolean isDatabaseLoaded(LoggedInUser loggedInUser,  Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).isDatabaseLoaded(database.getMySQLName());
+            return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).isDatabaseLoaded(database.getPersistenceName());
         }
         return false;
     }
 
     public int getNameCount(LoggedInUser loggedInUser,  Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getNameCount(database.getMySQLName());
+            return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getNameCount(database.getPersistenceName());
         }
         return 0;
     }
 
     public int getValueCount(LoggedInUser loggedInUser,  Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getValueCount(database.getMySQLName());
+            return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getValueCount(database.getPersistenceName());
         }
         return 0;
     }

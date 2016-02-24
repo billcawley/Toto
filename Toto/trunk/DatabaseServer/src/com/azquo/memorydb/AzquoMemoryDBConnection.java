@@ -121,7 +121,7 @@ public class AzquoMemoryDBConnection {
     }
 
     public void persist() {
-        azquoMemoryDB.saveDataToMySQL();
+        azquoMemoryDB.persistToDataStore();
     }
 
     public void persistInBackground() {
@@ -138,7 +138,7 @@ public class AzquoMemoryDBConnection {
     public class PersistenceRunner implements Runnable {
         @Override
         public void run() {
-            azquoMemoryDB.saveDataToMySQL();
+            azquoMemoryDB.persistToDataStore();
         }
     }
 

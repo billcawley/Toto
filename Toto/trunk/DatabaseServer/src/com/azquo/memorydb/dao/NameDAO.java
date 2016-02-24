@@ -1,13 +1,11 @@
 package com.azquo.memorydb.dao;
 
 import com.azquo.memorydb.core.AzquoMemoryDB;
-import com.azquo.memorydb.core.AzquoMemoryDBEntity;
 import com.azquo.memorydb.core.Name;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.sql.Blob;
 import java.sql.ResultSet;
@@ -80,7 +78,7 @@ public class NameDAO extends FastDAO{
         public Void call() {
             if (!namesToInsert.isEmpty()) {
                 final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-                final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTNAME + "` (`" + ID + "`,`" + PROVENANCEID + "`,`"
+                final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTNAME + "` (`" + ID + "`,`" + PROVENANCEID + "`,`"
                         + ADDITIVE + "`,`" + ATTRIBUTES + "`,`" + CHILDREN + "`,`" + NOPARENTS + "`,`" + NOVALUES + "`) VALUES ");
                 int count = 1;
 
@@ -159,11 +157,11 @@ public class NameDAO extends FastDAO{
         for (Future<?> futureBatch : futureBatches){
             futureBatch.get(1, TimeUnit.HOURS);
         }
-        System.out.print("Name save complete.");
+        System.out.println("Name save complete.");
     }
 
     public final List<Name> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTNAME + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTNAME + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
+        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTNAME + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTNAME + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
         return jdbcTemplateUtils.query(SQL_SELECT_ALL, new NameRowMapper(azquoMemoryDB));
     }
 

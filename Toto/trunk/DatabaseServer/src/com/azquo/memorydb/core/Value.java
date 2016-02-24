@@ -1,7 +1,5 @@
 package com.azquo.memorydb.core;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
@@ -9,6 +7,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 22/10/13
@@ -138,40 +138,6 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
 
-    // for Jackson mapping, trying to attach to actual fields would be dangerous in terms of allowing unsafe access
-    // think important to use a linked hash map to preserve order.
-    private static class JsonTransport {
-        public int provenanceId;
-        public String text;
-        public Set<Integer> nameIds;
-
-        @JsonCreator
-        private JsonTransport(@JsonProperty("provenanceId") int provenanceId, @JsonProperty("text") String text
-                , @JsonProperty("nameIds") Set<Integer> nameIds) {
-            this.provenanceId = provenanceId;
-            this.text = text;
-            this.nameIds = nameIds;
-        }
-    }
-
-    private static AtomicInteger getAsJsonCount = new AtomicInteger(0);
-
-    @Override
-    public String getAsJson() {
-        getAsJsonCount.incrementAndGet();
-        // yes could probably use list but lets match collection types . . .
-        Set<Integer> nameIds = new LinkedHashSet<>();
-        for (Name name : names) {
-            nameIds.add(name.getId());
-        }
-        try {
-            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), text, nameIds));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
-
     @Override
     protected void entitySpecificSetAsPersisted() {
         getAzquoMemoryDB().removeValueNeedsPersisting(this);
@@ -200,7 +166,6 @@ public final class Value extends AzquoMemoryDBEntity {
         System.out.println("getNamesCount\t\t\t\t\t\t\t\t" + getNamesCount.get());
         System.out.println("setNamesWillBePersistedCount\t\t\t\t\t\t\t\t" + setNamesWillBePersistedCount.get());
         System.out.println("deleteCount\t\t\t\t\t\t\t\t" + deleteCount.get());
-        System.out.println("getAsJsonCount\t\t\t\t\t\t\t\t" + getAsJsonCount.get());
         System.out.println("getNameIdsAsBytesCount\t\t\t\t\t\t\t\t" + getNameIdsAsBytesCount.get());
     }
 
@@ -210,7 +175,6 @@ public final class Value extends AzquoMemoryDBEntity {
         getNamesCount.set(0);
         setNamesWillBePersistedCount.set(0);
         deleteCount.set(0);
-        getAsJsonCount.set(0);
         getNameIdsAsBytesCount.set(0);
     }
 

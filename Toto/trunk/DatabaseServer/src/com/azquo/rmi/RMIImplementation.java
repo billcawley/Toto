@@ -43,27 +43,27 @@ public class RMIImplementation implements RMIInterface {
 
     //Admin stuf
     @Override
-    public void emptyDatabase(String mysqlName) throws RemoteException {
+    public void emptyDatabase(String persistenceName) throws RemoteException {
         try {
-            dsAdminService.emptyDatabase(mysqlName);
+            dsAdminService.emptyDatabase(persistenceName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);// I think this is reasonable for the mo?
         }
     }
 
     @Override
-    public void dropDatabase(String mysqlName) throws RemoteException {
+    public void dropDatabase(String persistenceName) throws RemoteException {
         try {
-            dsAdminService.dropDatabase(mysqlName);
+            dsAdminService.dropDatabase(persistenceName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public void createDatabase(String mysqlName) throws RemoteException {
+    public void createDatabase(String persistenceName) throws RemoteException {
         try {
-            dsAdminService.createDatabase(mysqlName);
+            dsAdminService.createDatabase(persistenceName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -255,27 +255,27 @@ public class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public void unloadDatabase(String mysqlName) throws RemoteException {
+    public void unloadDatabase(String persistenceName) throws RemoteException {
         try {
-            memoryDBManager.removeDBfromMap(mysqlName);
+            memoryDBManager.removeDBfromMap(persistenceName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public boolean isDatabaseLoaded(String mysqlName) throws RemoteException {
+    public boolean isDatabaseLoaded(String persistenceName) throws RemoteException {
         try {
-            return memoryDBManager.isDBLoaded(mysqlName);
+            return memoryDBManager.isDBLoaded(persistenceName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public int getNameCount(String mysqlName) throws RemoteException {
+    public int getNameCount(String persistenceName) throws RemoteException {
         try {
-            return memoryDBManager.getAzquoMemoryDB(mysqlName, null).getNameCount();
+            return memoryDBManager.getAzquoMemoryDB(persistenceName, null).getNameCount();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -301,9 +301,9 @@ public class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public int getValueCount(String mysqlName) throws RemoteException {
+    public int getValueCount(String persistenceName) throws RemoteException {
         try {
-            return memoryDBManager.getAzquoMemoryDB(mysqlName, null).getValueCount();
+            return memoryDBManager.getAzquoMemoryDB(persistenceName, null).getValueCount();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

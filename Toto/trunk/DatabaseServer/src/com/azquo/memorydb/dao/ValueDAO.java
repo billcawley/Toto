@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.sql.Blob;
 import java.sql.ResultSet;
@@ -76,7 +75,7 @@ public class ValueDAO extends FastDAO{
             if (!valuesToInsert.isEmpty()) {
                 long track = System.currentTimeMillis();
                 final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-                final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "` (`" + ID + "`,`" + PROVENANCEID + "`,`"
+                final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "` (`" + ID + "`,`" + PROVENANCEID + "`,`"
                         + TEXT + "`,`" + NAMES + "`) VALUES ");
                 int count = 1;
 
@@ -153,7 +152,7 @@ public class ValueDAO extends FastDAO{
     }
 
     public final List<Value> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + FASTVALUE + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
+        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
         return jdbcTemplateUtils.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));
     }
 

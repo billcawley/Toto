@@ -7,6 +7,8 @@ import org.apache.log4j.Logger;
 import java.util.Date;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 24/10/13
@@ -17,6 +19,8 @@ import java.util.Date;
 public final class Provenance extends AzquoMemoryDBEntity {
 
     private static final Logger logger = Logger.getLogger(Provenance.class);
+
+    public static String PERSIST_TABLE = "provenance";
 
     private final String user;
     private final Date timeStamp;
@@ -120,11 +124,11 @@ public final class Provenance extends AzquoMemoryDBEntity {
 
     @Override
     protected void entitySpecificSetAsPersisted() {
-        getAzquoMemoryDB().removeJsonEntityNeedsPersisting("provenance", this);
+        getAzquoMemoryDB().removeJsonEntityNeedsPersisting(PERSIST_TABLE, this);
     }
 
     @Override
     protected void entitySpecificSetNeedsPersisting() {
-        getAzquoMemoryDB().setJsonEntityNeedsPersisting("provenance", this);
+        getAzquoMemoryDB().setJsonEntityNeedsPersisting(PERSIST_TABLE, this);
     }
 }

@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 30/10/15.
  *
  * Just a way to factor a few things off from the new fast value and name DAO classes.
@@ -31,7 +33,7 @@ public abstract class FastDAO {
     protected void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final List<? extends AzquoMemoryDBEntity> entities) throws DataAccessException {
         if (!entities.isEmpty()) {
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            final StringBuilder updateSql = new StringBuilder("delete from `" + azquoMemoryDB.getMySQLName() + "`.`" + getTableName() + "` where " + ID + " in (");
+            final StringBuilder updateSql = new StringBuilder("delete from `" + azquoMemoryDB.getPersistenceName() + "`.`" + getTableName() + "` where " + ID + " in (");
 
             int count = 1;
             for (AzquoMemoryDBEntity azquoMemoryDBEntity : entities) {
@@ -49,7 +51,7 @@ public abstract class FastDAO {
     }
 
     public final int findMaxId(final AzquoMemoryDB azquoMemoryDB) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getMySQLName() + "`.`" + getTableName() + "`";
+        final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getPersistenceName() + "`.`" + getTableName() + "`";
         Integer toReturn = jdbcTemplateUtils.queryForObject (SQL_SELECT_ALL, JsonRecordDAO.EMPTY_PARAMETERS_MAP, Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }

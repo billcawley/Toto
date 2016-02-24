@@ -208,6 +208,6 @@ public class LoggedInUser {
     }
 
     public DatabaseAccessToken getDataAccessToken(){
-        return new DatabaseAccessToken(sessionId, databaseServer.getIp(), database.getMySQLName(), readPermissions,writePermissions,languages);
+        return new DatabaseAccessToken(sessionId, databaseServer.getIp(), database.getPersistenceName(), readPermissions,writePermissions,languages);
     }
 }

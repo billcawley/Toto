@@ -13,16 +13,16 @@ public class DatabaseAccessToken implements Serializable {
 
     private final String userSessionId; // ok, used for status updates/user interruptions, could be a user id from ZK or maybe just the tomcat session
     private final String serverIp; // not strictly part of the access token but I think it should probably be in here
-    private final String databaseMySQLName;
+    private final String persistenceName;
     private final String readPermissions;
     private final String writePermissions;
     private final List<String> languages;
 //    private final int sessionId;// optional, it might be useful to jam the client side session id in here, certainly useful for jstree initially
 
-    public DatabaseAccessToken(String userSessionId, String serverIp, String databaseMySQLName, String readPermissions, String writePermissions, List<String> languages) {
+    public DatabaseAccessToken(String userSessionId, String serverIp, String persistenceName, String readPermissions, String writePermissions, List<String> languages) {
         this.userSessionId = userSessionId;
         this.serverIp = serverIp;
-        this.databaseMySQLName = databaseMySQLName;
+        this.persistenceName = persistenceName;
         this.readPermissions = readPermissions;
         this.writePermissions = writePermissions;
         this.languages = languages;
@@ -32,8 +32,8 @@ public class DatabaseAccessToken implements Serializable {
         return serverIp;
     }
 
-    public String getDatabaseMySQLName() {
-        return databaseMySQLName;
+    public String getPersistenceName() {
+        return persistenceName;
     }
 
     public String getReadPermissions() {
@@ -57,7 +57,7 @@ public class DatabaseAccessToken implements Serializable {
         return "DatabaseAccessToken{" +
                 "userSessionId='" + userSessionId + '\'' +
                 ", serverIp='" + serverIp + '\'' +
-                ", databaseMySQLName='" + databaseMySQLName + '\'' +
+                ", persistenceName='" + persistenceName + '\'' +
                 ", readPermissions='" + readPermissions + '\'' +
                 ", writePermissions='" + writePermissions + '\'' +
                 ", languages=" + languages +

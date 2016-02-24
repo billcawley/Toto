@@ -70,7 +70,7 @@
 				<td>${upload.comments}</td>
 			</tr>
 		</c:forEach>
-		<t/body>
+		</tbody>
 	</table>
 
 
@@ -113,7 +113,7 @@
 					<td>End Date</td>
 					<!--<td>${database.businessId}</td>-->
 					<td>Name</td>
-					<td>MySQLName</td>
+					<td>Persistence Name</td>
 					<td>Database type</td>
 					<td>Name Count</td>
 					<td>Value Count</td>
@@ -132,7 +132,7 @@
 					<td>${database.endDate}</td>
 					<!--<td>${database.businessId}</td> -->
 					<td>${database.name}</td>
-					<td>${database.mySQLName}</td>
+					<td>${database.persistenceName}</td>
 					<td>${database.databaseType}</td>
 					<td>${database.nameCount}</td>
 					<td>${database.valueCount}</td>

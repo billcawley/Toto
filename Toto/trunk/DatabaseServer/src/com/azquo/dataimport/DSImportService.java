@@ -736,7 +736,7 @@ public class DSImportService {
         }
 /*        executor.shutdown();
         if (!executor.awaitTermination(8, TimeUnit.HOURS)) {
-            throw new Exception("File " + filePath + " took longer than 8 hours to load for : " + azquoMemoryDBConnection.getAzquoMemoryDB().getMySQLName());
+            throw new Exception("File " + filePath + " took longer than 8 hours to load for : " + azquoMemoryDBConnection.getAzquoMemoryDB().getPersistenceName());
         }*/
         // wasn't closing before, maybe why the files stayed there
         originalLineIterator.close();

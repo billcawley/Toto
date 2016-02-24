@@ -312,7 +312,7 @@ public class SpreadsheetService {
 
     public AzquoBook loadAzquoBook(LoggedInUser loggedInUser, OnlineReport onlineReport) throws Exception {
         if (onlineReport.getDatabaseId() > 0) {
-            onlineReport.setPathname(loggedInUser.getDatabase().getMySQLName());
+            onlineReport.setPathname(loggedInUser.getDatabase().getPersistenceName());
         } else {
             onlineReport.setPathname(onlineReport.getDatabaseType());
         }
@@ -624,7 +624,7 @@ public class SpreadsheetService {
             OnlineReport onlineReport = onlineReportDAO.findById(reportSchedule.getReportId());
             Database database = databaseDAO.findById(reportSchedule.getDatabaseId());
             if (onlineReport != null && database != null) {
-                onlineReport.setPathname(database.getMySQLName());
+                onlineReport.setPathname(database.getPersistenceName());
                 List<User> users = userDAO.findForBusinessId(database.getBusinessId());
                 User user = null;
                 for (User possible : users) {

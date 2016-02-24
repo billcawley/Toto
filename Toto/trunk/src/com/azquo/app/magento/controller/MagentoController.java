@@ -10,7 +10,6 @@ import com.azquo.admin.database.Database;
 import com.azquo.app.magento.service.DataLoadService;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.Constants;
-import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.util.AzquoMailer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,7 +137,7 @@ public class MagentoController {
                 if (data != null) {
                     long start = System.currentTimeMillis();
                     // now copying all files, will make it easier for the client/server split. No passing of input streams just the file name
-                    String tempDir = "/temp/" +loggedInUser.getDatabase().getMySQLName()+ "-" + df.format(new Date());
+                    String tempDir = "/temp/" +loggedInUser.getDatabase().getPersistenceName()+ "-" + df.format(new Date());
                     File moved = new File(spreadsheetService.getHomeDir() + tempDir);
                     data.transferTo(moved);
                     dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr(), loggedInUser.getUser().getName());

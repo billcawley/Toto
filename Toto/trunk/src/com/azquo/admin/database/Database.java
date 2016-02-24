@@ -17,7 +17,7 @@ public final class Database extends StandardEntity {
     LocalDateTime endDate;
     int businessId;
     String name;
-    String mySQLName;
+    String persistenceName;
     String databaseType;
     int nameCount;
     int valueCount;
@@ -27,7 +27,7 @@ public final class Database extends StandardEntity {
             , LocalDateTime endDate
             , int businessId
             , String name
-            , String mySQLName
+            , String persistenceName
             , String databaseType
             , int nameCount
             , int valueCount
@@ -38,7 +38,7 @@ public final class Database extends StandardEntity {
         this.endDate = endDate;
         this.businessId = businessId;
         this.name = name;
-        this.mySQLName = mySQLName;
+        this.persistenceName = persistenceName;
         this.databaseType = databaseType;
         this.nameCount = nameCount;
         this.valueCount = valueCount;
@@ -88,12 +88,12 @@ public final class Database extends StandardEntity {
         this.name = name;
     }
 
-    public String getMySQLName() {
-        return mySQLName;
+    public String getPersistenceName() {
+        return persistenceName;
     }
 
-    public void setMySQLName(String mySQLName) {
-        this.mySQLName = mySQLName;
+    public void setPersistenceName(String persistenceName) {
+        this.persistenceName = persistenceName;
     }
 
     public String getDatabaseType() {
@@ -132,7 +132,7 @@ public final class Database extends StandardEntity {
                 ", endDate=" + endDate +
                 ", businessId=" + businessId +
                 ", name='" + name + '\'' +
-                ", mySQLName='" + mySQLName + '\'' +
+                ", persistenceName='" + persistenceName + '\'' +
                 ", databaseType='" + databaseType + '\'' +
                 ", nameCount=" + nameCount +
                 ", valueCount=" + valueCount +

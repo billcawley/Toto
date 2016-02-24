@@ -55,7 +55,7 @@ public class DownloadController {
             int length = 0;
             DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
             if (databaseServer.getIp().equals(LOCALIP)) {
-                String pathOffset = loggedInUser.getDatabase().getMySQLName() + "/images/" + image;
+                String pathOffset = loggedInUser.getDatabase().getPersistenceName() + "/images/" + image;
                 String filePath = spreadsheetService.getHomeDir() + dbPath + pathOffset;
                 try {
                     // new java 8 syntax, a little odd but I'll leave here for the moment

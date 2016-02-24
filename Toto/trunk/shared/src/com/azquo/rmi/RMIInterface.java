@@ -20,11 +20,11 @@ import java.util.Set;
 public interface RMIInterface extends Remote {
     String serviceName = "AzquoRMI";
 
-    void emptyDatabase(String mysqlName) throws RemoteException;
+    void emptyDatabase(String persistenceName) throws RemoteException;
 
-    void dropDatabase(String mysqlName) throws RemoteException;
+    void dropDatabase(String persistenceName) throws RemoteException;
 
-    void createDatabase(String mysqlName) throws RemoteException;
+    void createDatabase(String persistenceName) throws RemoteException;
 
     String findLastUpdate(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws RemoteException;
 
@@ -63,15 +63,15 @@ public interface RMIInterface extends Remote {
 
     TreeNode getJstreeDataForOutputUsingIds(DatabaseAccessToken databaseAccessToken, Set<Integer> nameIds, int maxSize) throws RemoteException;
 
-    boolean isDatabaseLoaded(String mysqlName) throws RemoteException;
+    boolean isDatabaseLoaded(String persistenceName) throws RemoteException;
 
-    int getNameCount(String mysqlName) throws RemoteException;
+    int getNameCount(String persistenceName) throws RemoteException;
 
-    int getValueCount(String mysqlName) throws RemoteException;
+    int getValueCount(String persistenceName) throws RemoteException;
 
     String getMemoryReport(boolean suggestGc) throws RemoteException;
 
-    void unloadDatabase(String mysqlName) throws RemoteException;
+    void unloadDatabase(String persistenceName) throws RemoteException;
 
     void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws RemoteException;
 

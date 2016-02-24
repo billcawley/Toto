@@ -68,7 +68,7 @@ public class JsonRecordDAO {
                 if (!records.isEmpty()) {
                     long track = System.currentTimeMillis();
                     final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-                    final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` (" + ID + "," + JSON + ") VALUES ");
+                    final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "` (" + ID + "," + JSON + ") VALUES ");
                     int count = 1;
 
                     for (JsonRecordTransport record : records) {
@@ -102,7 +102,7 @@ WHERE id IN (1,2,3)
         if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            final StringBuilder updateSql = new StringBuilder("update `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` SET " + JSON + " = CASE " + ID);
+            final StringBuilder updateSql = new StringBuilder("update `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "` SET " + JSON + " = CASE " + ID);
 
             int count = 1;
 
@@ -133,7 +133,7 @@ WHERE id IN (1,2,3)
         if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            final StringBuilder updateSql = new StringBuilder("delete from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` where " + ID + " in (");
+            final StringBuilder updateSql = new StringBuilder("delete from `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "` where " + ID + " in (");
 
             int count = 1;
             for (JsonRecordTransport record : records) {
@@ -198,12 +198,12 @@ WHERE id IN (1,2,3)
     }
 
     public final List<JsonRecordTransport> findFromTableMinMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName, int minId, int maxId) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
+        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
         return jdbcTemplateUtils.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
     }
 
     public final int findMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getMySQLName() + "`.`" + tableName + "`";
+        final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "`";
         Integer toReturn = jdbcTemplateUtils.queryForObject(SQL_SELECT_ALL, new HashMap<>(), Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }

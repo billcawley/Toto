@@ -1,12 +1,15 @@
 package com.azquo.memorydb.core;
 
+import com.azquo.memorydb.dao.HBaseDAO;
 import com.azquo.memorydb.dao.NameDAO;
 import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.azquo.memorydb.dao.ValueDAO;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Oh-kay. While one can spin up a memory db from spring this is probably not the way to go, this will be the object that
  * reads the entries in the database table and spins up the memory databases according to that - it will need support for different servers.
  *
@@ -16,7 +19,7 @@ import java.util.HashMap;
  */
 public final class MemoryDBManager {
 
-    private final HashMap<String, AzquoMemoryDB> memoryDatabaseMap;
+    private final ConcurrentHashMap<String, AzquoMemoryDB> memoryDatabaseMap;
 
     private final JsonRecordDAO jsonRecordDAO;
 
@@ -24,49 +27,39 @@ public final class MemoryDBManager {
 
     private final ValueDAO valueDAO;
 
-    public MemoryDBManager(JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valueDAO) throws Exception {
+    private final HBaseDAO hBaseDAO;
+
+    public MemoryDBManager(JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valueDAO, HBaseDAO hBaseDAO) throws Exception {
         this.jsonRecordDAO = jsonRecordDAO;
         this.nameDAO = nameDAO;
         this.valueDAO = valueDAO;
-        memoryDatabaseMap = new HashMap<>(); // by mysql name. Will be unique.
+        this.hBaseDAO = hBaseDAO;
+        memoryDatabaseMap = new ConcurrentHashMap<>(); // by data store name. Will be unique.
     }
 
-    public synchronized AzquoMemoryDB getAzquoMemoryDB(String mySqlName, StringBuffer sessionLog) throws Exception {
+    public AzquoMemoryDB getAzquoMemoryDB(String persistenceName, StringBuffer sessionLog) throws Exception {
         AzquoMemoryDB loaded;
-        if (mySqlName.equals("temp")) {
-            loaded = new AzquoMemoryDB(mySqlName, jsonRecordDAO, nameDAO,valueDAO, sessionLog);
+        if (persistenceName.equals("temp")) {
+            loaded = new AzquoMemoryDB(persistenceName, jsonRecordDAO, nameDAO,valueDAO, hBaseDAO, sessionLog);
             return loaded;
         }
-        loaded = memoryDatabaseMap.get(mySqlName);
-        if (loaded != null) {
-            return loaded;
-        }
-        loaded = new AzquoMemoryDB(mySqlName, jsonRecordDAO, nameDAO,valueDAO, sessionLog);
-        memoryDatabaseMap.put(mySqlName, loaded);
+        // should be fine. Notably allows
+        return memoryDatabaseMap.computeIfAbsent(persistenceName, t-> new AzquoMemoryDB(persistenceName, jsonRecordDAO, nameDAO,valueDAO, hBaseDAO, sessionLog));
+
         // todo, add back in client side?
 /*        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900, 0, 0).getTime());// should start to get away from date
         openDatabaseDAO.store(openDatabase);*/
-        return loaded;
+
     }
 
     // worth being aware that if the db is still referenced somewhere then the garbage collector won't chuck it (which is what we want)
 
-    public synchronized  void removeDBfromMap(String mysqlName) throws Exception {
-        if (memoryDatabaseMap.get(mysqlName) != null){
-            memoryDatabaseMap.remove(mysqlName);
-        }
+    public void removeDBfromMap(String persistenceName) throws Exception {
+        memoryDatabaseMap.remove(persistenceName);
     }
 
-    public synchronized void addNewToDBMap(String mysqlName) throws Exception {
-        if (memoryDatabaseMap.get(mysqlName) != null) {
-            throw new Exception("cannot create new memory database one attached to that mysql database already exists");
-        }
-        AzquoMemoryDB azquoMemoryDB = new AzquoMemoryDB(mysqlName, jsonRecordDAO, nameDAO,valueDAO, null); // blank session log here unless we really care about telling this to the user?
-        memoryDatabaseMap.put(mysqlName, azquoMemoryDB);
-    }
-
-    public boolean isDBLoaded(String mysqlName) throws Exception {
-        return memoryDatabaseMap.get(mysqlName) != null;
+    public boolean isDBLoaded(String persistenceName) throws Exception {
+        return memoryDatabaseMap.containsKey(persistenceName);
     }
 
 }

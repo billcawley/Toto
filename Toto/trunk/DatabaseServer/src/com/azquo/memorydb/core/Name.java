@@ -1,7 +1,6 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.Constants;
-import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.azquo.memorydb.service.NameService;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -13,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 16/10/13
@@ -56,16 +57,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // name needs this as it links to itself hence have to load all names THEN parse the Load cache which may be Json or blob
     // just a cache while the names by id map is being populated. I experimented with various ideas e.g. a parent cache also, this seemed the best compromise
 
-    private LoadCache loadCache;
-    // todo simplify
-    private static final class LoadCache {
-        public final byte[] childrenCache;
-
-        public LoadCache(String jsonCache, byte[] childrenCache) {
-            this.childrenCache = childrenCache;
-        }
-    }
-
+    private byte[] childrenCache = null;
 
 //    private static final Logger logger = Logger.getLogger(Name.class);
 
@@ -159,26 +151,13 @@ public final class Name extends AzquoMemoryDBEntity {
     private volatile Set<Name> childrenAsSet;
     private volatile Name[] children;
 
-    // for the code to make new names
+    // for the code to make new names - the old json based constructor has been removed. Is additive ever false?
 
     private static AtomicInteger newNameCount = new AtomicInteger(0);
 
     public Name(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance, boolean additive) throws Exception {
-        this(azquoMemoryDB, 0, null);
+        super(azquoMemoryDB, 0);
         newNameCount.incrementAndGet();
-        setProvenanceWillBePersisted(provenance);
-        setAdditiveWillBePersisted(additive);
-    }
-
-    // protected, should only be called by azquo memory db
-    // things not initialised here are sorted when linking
-    private static AtomicInteger newName2Count = new AtomicInteger(0);
-
-    protected Name(final AzquoMemoryDB azquoMemoryDB, int id, String jsonFromDB) throws Exception {
-        super(azquoMemoryDB, id);
-        newName2Count.incrementAndGet();
-        loadCache = new LoadCache(jsonFromDB, null);
-        additive = true; // by default
         valuesAsSet = null;
         values = new Value[0]; // Turning these 3 lists to arrays, memory a priority
         parentsAsSet = null;
@@ -187,6 +166,9 @@ public final class Name extends AzquoMemoryDBEntity {
         children = new Name[0];
         nameAttributes = new NameAttributes(); // attributes will nearly always be written over, this is just a placeholder
         getAzquoMemoryDB().addNameToDb(this);
+        newNameCount.incrementAndGet();
+        setProvenanceWillBePersisted(provenance);
+        setAdditiveWillBePersisted(additive);
     }
 
     // as above but using new fast loading - I'd prefer it if this were not public, it should only be used by the NameDAO. Todo.
@@ -196,7 +178,7 @@ public final class Name extends AzquoMemoryDBEntity {
     public Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, boolean additive, String attributes, byte[] chidrenCache, int noParents, int noValues) throws Exception {
         super(azquoMemoryDB, id);
         newName3Count.incrementAndGet();
-        loadCache = new LoadCache(null, chidrenCache); // link these after
+        this.childrenCache = chidrenCache;
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId); // see no reason not to do this here now
         this.additive = additive;
         //this.attributes = transport.attributes;
@@ -1076,45 +1058,6 @@ public final class Name extends AzquoMemoryDBEntity {
         return false;
     }*/
 
-    // for Jackson mapping, trying to attach to actual fields would be dangerous in terms of allowing unsafe access
-    // this will be pahsed out
-    private static class JsonTransport {
-        public int provenanceId;
-        public boolean additive;
-        public Map<String, String> attributes;
-        // I'm changing this to a list - the transport should preserve order in case that's required but it shouldn't be responsible for
-        // detecting duplicates (shouldn't be a set). If it actually did eliminate duplicates we've got bigger problems.
-        public List<Integer> childrenIds;
-
-        @JsonCreator
-        public JsonTransport(@JsonProperty("provenanceId") int provenanceId
-                , @JsonProperty("additive") boolean additive
-                , @JsonProperty("attributes") Map<String, String> attributes
-                , @JsonProperty("childrenIds") List<Integer> childrenIds) {
-            this.provenanceId = provenanceId;
-            this.additive = additive;
-            this.attributes = attributes;
-            this.childrenIds = childrenIds;
-        }
-    }
-
-    private static AtomicInteger getAsJsonCount = new AtomicInteger(0);
-
-    @Override
-    public String getAsJson() {
-        getAsJsonCount.incrementAndGet();
-        List<Integer> childrenIds = new ArrayList<>(getChildren().size());
-        for (Name child : getChildren()) {
-            childrenIds.add(child.getId());
-        }
-        try {
-            return jacksonMapper.writeValueAsString(new JsonTransport(provenance.getId(), additive, getAttributes(), childrenIds));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
-
     @Override
     final protected void entitySpecificSetAsPersisted() {
         getAzquoMemoryDB().removeNameNeedsPersisting(this);
@@ -1174,11 +1117,11 @@ public final class Name extends AzquoMemoryDBEntity {
 
     protected void link() throws Exception {
         linkCount.incrementAndGet();
-        if (getAzquoMemoryDB().getNeedsLoading() && loadCache != null) { // the new fast load
+        if (getAzquoMemoryDB().getNeedsLoading() && childrenCache != null) { // the new fast load
             synchronized (this) {
                 // it's things like this that I believe will be way faster and lighter ongarbage than the old json method
-                int noChildren = loadCache.childrenCache.length / 4;
-                ByteBuffer byteBuffer = ByteBuffer.wrap(loadCache.childrenCache);
+                int noChildren = childrenCache.length / 4;
+                ByteBuffer byteBuffer = ByteBuffer.wrap(childrenCache);
                 if (noChildren > ARRAYTHRESHOLD) {
                     this.childrenAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(noChildren));
                     for (int i = 0; i < noChildren; i++) {
@@ -1191,7 +1134,7 @@ public final class Name extends AzquoMemoryDBEntity {
                     }
                     this.children = newChildren;
                 }
-                loadCache = null;// free the memory
+                childrenCache = null;// free the memory
             }
         }
         /* need to sort out the parents - I deliberately excluded this from synchronisation or one could theoretically hit a deadlock. Also it's the same regardless of loading for fast or slow tables
@@ -1201,7 +1144,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 newChild.addToParents(this, true);
             }
         } else {
-            for (int i = 0; i < children.length; i++){ // directly hitting the array could cause a problem if it were reassigned while this happened but here it should be fine
+            for (int i = 0; i < children.length; i++){ // directly hitting the array could cause a problem if it were reassigned while this happened but here it should be fine. Again intellij wants an API call but I'm sceptical since this is hammered
                 children[i].addToParents(this, true);
             }
         }
@@ -1243,7 +1186,6 @@ public final class Name extends AzquoMemoryDBEntity {
     public static void printFunctionCountStats() {
         System.out.println("######### NAME FUNCTION COUNTS");
         System.out.println("newNameCount\t\t\t\t" + newNameCount.get());
-        System.out.println("newNameCount2\t\t\t\t" + newName2Count.get());
         System.out.println("newNameCount3\t\t\t\t" + newName3Count.get());
         System.out.println("getDefaultDisplayNameCount\t\t\t\t" + getDefaultDisplayNameCount.get());
         System.out.println("getValuesCount\t\t\t\t" + getValuesCount.get());
@@ -1280,7 +1222,6 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("findParentAttributesCount\t\t\t\t" + findParentAttributesCount.get());
         System.out.println("getAttributeCount\t\t\t\t" + getAttributeCount.get());
         System.out.println("getAttribute2Count\t\t\t\t" + getAttribute2Count.get());
-        System.out.println("getAsJsonCount\t\t\t\t" + getAsJsonCount.get());
         System.out.println("getAttributesForFastStoreCount\t\t\t\t" + getAttributesForFastStoreCount.get());
         System.out.println("getChildrenIdsAsBytesCount\t\t\t\t" + getChildrenIdsAsBytesCount.get());
         System.out.println("linkCount\t\t\t\t" + linkCount.get());
@@ -1289,7 +1230,6 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public static void clearFunctionCountStats() {
         newNameCount.set(0);
-        newName2Count.set(0);
         newName3Count.set(0);
         getDefaultDisplayNameCount.set(0);
         getValuesCount.set(0);
@@ -1326,7 +1266,6 @@ public final class Name extends AzquoMemoryDBEntity {
         findParentAttributesCount.set(0);
         getAttributeCount.set(0);
         getAttribute2Count.set(0);
-        getAsJsonCount.set(0);
         getAttributesForFastStoreCount.set(0);
         getChildrenIdsAsBytesCount.set(0);
         linkCount.set(0);

@@ -356,7 +356,7 @@ public final class ImportService {
         String pathName = reportType;
         if (pathName.length() == 0) {
             databaseId = loggedInUser.getDatabase().getId();
-            pathName = loggedInUser.getDatabase().getMySQLName();
+            pathName = loggedInUser.getDatabase().getPersistenceName();
         }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         if (or == null) {
@@ -536,7 +536,7 @@ public final class ImportService {
         String sourceName = sourceFile.getOriginalFilename();
         String suffix = sourceName.substring(sourceName.indexOf("."));
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
-        String pathOffset = loggedInUser.getDatabase().getMySQLName() + "/images/" + fileName + suffix;
+        String pathOffset = loggedInUser.getDatabase().getPersistenceName() + "/images/" + fileName + suffix;
         String destinationPath = spreadsheetService.getHomeDir() + dbPath + pathOffset;
         if (databaseServer.getIp().equals(LOCALIP)) {
             File destination = new File(destinationPath);

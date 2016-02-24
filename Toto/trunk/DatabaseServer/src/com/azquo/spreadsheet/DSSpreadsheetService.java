@@ -84,7 +84,7 @@ public class DSSpreadsheetService {
                 sessionLog = newSessionLog;
             }
         }
-        AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(databaseAccessToken.getDatabaseMySQLName(), sessionLog);
+        AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(databaseAccessToken.getPersistenceName(), sessionLog);
         // we can't do the lookup for permissions out here as it requires the connection, hence pass things through
 
         return new AzquoMemoryDBConnection(memoryDB, databaseAccessToken, nameService, databaseAccessToken.getLanguages(), sessionLog);

@@ -224,7 +224,7 @@ public class OnlineController {
                     if (onlineReport.getDatabaseId() > 0) {
                         db = databaseDAO.findById(onlineReport.getDatabaseId());
                         loginService.switchDatabase(loggedInUser, db);
-                        onlineReport.setPathname(loggedInUser.getDatabase().getMySQLName());
+                        onlineReport.setPathname(loggedInUser.getDatabase().getPersistenceName());
                     } else {
                         db = loggedInUser.getDatabase();
                         if (db == null && database != null && database.length() > 0) {

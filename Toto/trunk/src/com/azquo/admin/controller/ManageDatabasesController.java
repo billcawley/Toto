@@ -5,14 +5,11 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.DatabaseServerDAO;
-import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.dataimport.ImportService;
-import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
-import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +18,6 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import org.zkoss.zss.api.Importers;
-import org.zkoss.zss.api.model.Book;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -84,8 +79,8 @@ public class ManageDatabasesController {
         public String getName(){
             return database.getName();
         }
-        public String getMySQLName(){
-            return database.getMySQLName();
+        public String getPersistenceName(){
+            return database.getPersistenceName();
         }
         public String getDatabaseType() { return database.getDatabaseType(); }
         public int getNameCount(){

@@ -32,7 +32,7 @@ public final class DatabaseDAO extends StandardDAO<Database> {
     public static final String ENDDATE = "end_date";
     public static final String BUSINESSID = "business_id";
     public static final String NAME = "name";
-    public static final String MYSQLNAME = "mysql_name";
+    public static final String MYSQLNAME = "mysql_name"; // needs renaming! todo
     public static final String DATABASETYPE = "database_type";
     public static final String NAMECOUNT = "name_count";
     public static final String VALUECOUNT = "value_count";
@@ -46,7 +46,7 @@ public final class DatabaseDAO extends StandardDAO<Database> {
         toReturn.put(ENDDATE, Date.from(database.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(BUSINESSID, database.getBusinessId());
         toReturn.put(NAME, database.getName());
-        toReturn.put(MYSQLNAME, database.getMySQLName());
+        toReturn.put(MYSQLNAME, database.getPersistenceName());
         toReturn.put(DATABASETYPE, database.getDatabaseType());
         toReturn.put(NAMECOUNT, database.getNameCount());
         toReturn.put(VALUECOUNT, database.getValueCount());
