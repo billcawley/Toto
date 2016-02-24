@@ -125,7 +125,7 @@ public class LoggedInUser {
         if (region == null || region.isEmpty()) {
             return sentCellsMaps.get(reportId + "-" + defaultRegion);
         } else {
-            return sentCellsMaps.get(reportId + "-" + region);
+            return sentCellsMaps.get(reportId + "-" + region.toLowerCase());
         }
     }
 
@@ -133,7 +133,7 @@ public class LoggedInUser {
         if (region == null || region.isEmpty()) {
             this.sentCellsMaps.put(reportId + "-" + defaultRegion, sentCells);
         } else {
-            this.sentCellsMaps.put(reportId + "-" + region, sentCells);
+            this.sentCellsMaps.put(reportId + "-" + region.toLowerCase(), sentCells);
         }
     }
 
