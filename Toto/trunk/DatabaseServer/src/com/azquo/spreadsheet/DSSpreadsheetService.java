@@ -1642,6 +1642,7 @@ seaports;children   container;children
         for (List<CellForDisplay> row : data) {
             sb = new StringBuffer();
             firstCol = true;
+            boolean blankLine = true;
             for (CellForDisplay cellForDisplay : row) {
                 if (!firstCol) sb.append("\t");
                 else firstCol = false;
@@ -1649,12 +1650,16 @@ seaports;children   container;children
                 if (cellForDisplay.getStringValue() != null) {
                     String val = cellForDisplay.getStringValue().length() > 0 ? cellForDisplay.getStringValue() : cellForDisplay.getDoubleValue() != 0 || cellForDisplay.isChanged() ? cellForDisplay.getDoubleValue() + "" : "";
                     //for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
+                    if (cellForDisplay.getStringValue().length() > 0  || cellForDisplay.getDoubleValue()!= 0){
+                        blankLine = false;
+                    }
                     sb.append(val);
                 }
             }
-            bw.write(sb.toString());
-            bw.newLine();
-
+            if (!blankLine) {
+                bw.write(sb.toString());
+                bw.newLine();
+            }
         }
         bw.flush();
         bw.close();
@@ -1733,7 +1738,7 @@ seaports;children   container;children
                             if (valuesForCell.getNames() != null && valuesForCell.getNames().size() == 1
                                     && valuesForCell.getAttributeNames() != null && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
                                 Name toChange = valuesForCell.getNames().get(0);
-                                String attribute = valuesForCell.getAttributeNames().get(0).substring(1);//remove the initial '.'
+                                String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(Name.QUOTE+"","");//remove the initial '.' and any `
                                 Name attSet = nameService.findByName(azquoMemoryDBConnection, attribute);
                                 if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)) {
                                     /* right : when populating attribute based data findParentttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
