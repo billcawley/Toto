@@ -139,24 +139,26 @@ public class ZKAzquoBookUtils {
                         CellRegion chosen = getCellRegionForSheetAndName(sheet, sName.getName());
                         String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length()).toLowerCase();
                         if (chosen!=null) {
-                            if (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1){
+                            if (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1) {
                                 // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
                                 List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
-                                String userChoice = userChoices.get(choiceName);
-                                if (FIRST_PLACEHOLDER.equals(userChoice)){
-                                    userChoice = validOptions.get(0);
+                                if (validOptions != null) {
+                                    String userChoice = userChoices.get(choiceName);
+                                    if (FIRST_PLACEHOLDER.equals(userChoice)) {
+                                        userChoice = validOptions.get(0);
+                                    }
+                                    if (LAST_PLACEHOLDER.equals(userChoice)) {
+                                        userChoice = validOptions.get(validOptions.size() - 1);
+                                    }
+                                    if (userChoice != null && validOptions.contains(userChoice)) {
+                                        sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
+                                        context += choiceName + " = " + userChoice + ";";
+                                    } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
+                                        sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
+                                    }
+                                } else if (getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()) {
+                                    filterChoices.add(choiceName);
                                 }
-                                if (LAST_PLACEHOLDER.equals(userChoice)){
-                                    userChoice = validOptions.get(validOptions.size() - 1);
-                                }
-                                if (userChoice != null && validOptions.contains(userChoice)) {
-                                    sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
-                                    context += choiceName + " = " + userChoice + ";";
-                                } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
-                                    sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
-                                }
-                            } else if (getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()) {
-                                filterChoices.add(choiceName);
                             }
                         }
                     }
@@ -543,14 +545,23 @@ public class ZKAzquoBookUtils {
                                     // logic I didn't initially implement : don't overwrite if there's a formulae in there
                                     boolean hasValue = false;
                                     if (cell.getType() != SCell.CellType.FORMULA) {
-                                        if (cell.getCellStyle().getDataFormat().toLowerCase().contains("mm")) {//allow users to format their own dates.  All dates on file are yyyy-MM-dd
+                                        String format = cell.getCellStyle().getDataFormat();
+                                        if (format.toLowerCase().contains("m")) {//allow users to format their own dates.  All dates on file as values are yyyy-MM-dd
                                             try {
-                                                Date date = df.parse(cellValue.getStringValue());
+                                                Date date = null;
+                                                if (format.contains("h")){
+                                                    SimpleDateFormat dfLocal = new SimpleDateFormat(format);
+                                                     date = dfLocal.parse(cellValue.getStringValue());
+
+                                                }else{
+                                                    date = df.parse(cellValue.getStringValue());
+                                                }
+
                                                 if (date != null) {
                                                     cell.setValue(date.getTime() / (1000 * 3600 * 24) + 25570);//convert date to days relative to 1970
                                                     hasValue = true;
                                                 }
-                                            } catch (Exception ignored) {
+                                            } catch (Exception e) {
                                             }
                                         }
                                         if (!hasValue) {
