@@ -13,7 +13,7 @@ import java.util.Date;
  * User: cawley
  * Date: 24/10/13
  * Time: 17:38
- * Attached to each value including values that have been deleted.
+ * Attached to each value/name.
  * I think this is immutable, pleasing
  */
 public final class Provenance extends AzquoMemoryDBEntity {
@@ -44,7 +44,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
         getAzquoMemoryDB().addProvenanceToDb(this);
     }
 
-    // protected as only to be called by AzquoMemoryDB, populates from JSON. If provenance had many instances maybe I'd intern here but I don't think there's much point.
+    // protected as only to be called by AzquoMemoryDB, populates from JSON. If provenance had many instances maybe I'd intern strings but I don't think there's much point.
 
     protected Provenance(final AzquoMemoryDB azquoMemoryDB, final int id, String jsonFromDB) throws Exception {
         super(azquoMemoryDB, id);

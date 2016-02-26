@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.HashMap;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 08/01/14.
  * for creating and otherwise manipulating the databases that are used to persist the memory databases
  */

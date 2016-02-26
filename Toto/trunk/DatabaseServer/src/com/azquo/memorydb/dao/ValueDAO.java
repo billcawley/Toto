@@ -15,13 +15,15 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 01/10/15.
  *
  * I want faster storing and loading of values, adapted from the NameDAO
  *
  * todo - factor off common bits?
  */
-public class ValueDAO extends FastDAO{
+public class ValueDAO extends FastDAO {
 
     @Autowired
     protected JdbcTemplateUtils jdbcTemplateUtils;
@@ -155,5 +157,4 @@ public class ValueDAO extends FastDAO{
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
         return jdbcTemplateUtils.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));
     }
-
 }

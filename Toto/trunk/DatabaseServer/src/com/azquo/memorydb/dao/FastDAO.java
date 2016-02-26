@@ -14,7 +14,7 @@ import java.util.Map;
  *
  * Created by edward on 30/10/15.
  *
- * Just a way to factor a few things off from the new fast value and name DAO classes.
+ * Just a way to factor a few things off from the new fast value and name DAO classes. Maybe should be renamed to include MySQL in the name
  *
  */
 public abstract class FastDAO {
@@ -28,7 +28,7 @@ public abstract class FastDAO {
 
     public abstract String getTableName();
 
-    // possibly very similar to what's in JsonRecordDAO. Not sure if it's worth factoring
+    // possibly very similar to what's in JsonRecordDAO. Not sure if it's worth factoring (if so use a list of ids)
 
     protected void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final List<? extends AzquoMemoryDBEntity> entities) throws DataAccessException {
         if (!entities.isEmpty()) {

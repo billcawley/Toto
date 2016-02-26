@@ -331,7 +331,7 @@ public final class AzquoMemoryDB {
                 Map<String, JsonSerializableEntityInitializer> jsonTablesAndInitializers = new HashMap<>();
                 // add lines like this for loading other json entities. A note is table names repeated, might have a think about that
                 jsonTablesAndInitializers.put(Provenance.PERSIST_TABLE, (azquoMemoryDB, jsonRecordTransport) -> new Provenance(azquoMemoryDB, jsonRecordTransport.id, jsonRecordTransport.json));
-                if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)){
+                if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)) {
                     int batch = 100_000;
                     for (String tableName : jsonTablesAndInitializers.keySet()) {
                         jsonRecordsLoaded.set(0);
@@ -384,29 +384,29 @@ public final class AzquoMemoryDB {
                         logInSessionLogAndSystem(tableName + ", " + jsonRecordsLoaded + " records loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                     }
                     marker = System.currentTimeMillis();
-                        from = 0;
-                        maxIdForTable = nameDAO.findMaxId(this);
-                        futureBatches = new ArrayList<>();
-                        while (from < maxIdForTable) {
-                            futureBatches.add(sqlThreadPool.submit(new NameBatchLoader(nameDAO, from, from + step, this, namesLoaded)));
-                            from += step;
-                        }
-                        for (Future future : futureBatches) {
-                            future.get(1, TimeUnit.HOURS);
-                        }
+                    from = 0;
+                    maxIdForTable = nameDAO.findMaxId(this);
+                    futureBatches = new ArrayList<>();
+                    while (from < maxIdForTable) {
+                        futureBatches.add(sqlThreadPool.submit(new NameBatchLoader(nameDAO, from, from + step, this, namesLoaded)));
+                        from += step;
+                    }
+                    for (Future future : futureBatches) {
+                        future.get(1, TimeUnit.HOURS);
+                    }
                     logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                     marker = System.currentTimeMillis();
                     // todo finish hbase detection and loading!
-                        from = 0;
-                        maxIdForTable = valueDAO.findMaxId(this);
-                        futureBatches = new ArrayList<>();
-                        while (from < maxIdForTable) {
-                            futureBatches.add(sqlThreadPool.submit(new ValueBatchLoader(valueDAO, from, from + step, this, valuesLoaded)));
-                            from += step;
-                        }
-                        for (Future future : futureBatches) {
-                            future.get(1, TimeUnit.HOURS);
-                        }
+                    from = 0;
+                    maxIdForTable = valueDAO.findMaxId(this);
+                    futureBatches = new ArrayList<>();
+                    while (from < maxIdForTable) {
+                        futureBatches.add(sqlThreadPool.submit(new ValueBatchLoader(valueDAO, from, from + step, this, valuesLoaded)));
+                        from += step;
+                    }
+                    for (Future future : futureBatches) {
+                        future.get(1, TimeUnit.HOURS);
+                    }
                     logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
 
                 }
@@ -446,7 +446,6 @@ public final class AzquoMemoryDB {
 
     // reads from a list of changed objects
     // should we synchronize on a write lock object? I think it might be a plan.
-    // todo - factor off mysql bits?
 
     private static AtomicInteger persisttoDataStoreCount = new AtomicInteger(0);
 
@@ -458,72 +457,72 @@ public final class AzquoMemoryDB {
         // for the moment just make it work.
         // ok first do the json bits, as mentioned currently this is just provenance, may well be others
         // new switch on habse or not
-            for (String tableName : jsonEntitiesToPersist.keySet()) {
-                Set<AzquoMemoryDBEntity> entities = jsonEntitiesToPersist.get(tableName);
-                if (!entities.isEmpty()) {
-                    // multi thread this chunk? It can slow things down a little . . .
-                    System.out.println("Json entities to put in " + tableName + " : " + entities.size());
-                    List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
-                    for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it. Copy perhaps expensive but consistency is important
-                        JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
-                        if (entity.getNeedsDeleting()) {
-                            state = JsonRecordTransport.State.DELETE;
-                        }
-                        if (entity.getNeedsInserting()) {
-                            state = JsonRecordTransport.State.INSERT;
-                        }
-                        entity.setAsPersisted(); /* ok we do this before setting to save so we don't get a state for save, state changed, then set as persisted (hence not allowing for latest changes)
+        for (String tableName : jsonEntitiesToPersist.keySet()) {
+            Set<AzquoMemoryDBEntity> entities = jsonEntitiesToPersist.get(tableName);
+            if (!entities.isEmpty()) {
+                // multi thread this chunk? It can slow things down a little . . .
+                System.out.println("Json entities to put in " + tableName + " : " + entities.size());
+                List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
+                for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it. Copy perhaps expensive but consistency is important
+                    JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
+                    if (entity.getNeedsDeleting()) {
+                        state = JsonRecordTransport.State.DELETE;
+                    }
+                    if (entity.getNeedsInserting()) {
+                        state = JsonRecordTransport.State.INSERT;
+                    }
+                    entity.setAsPersisted(); /* ok we do this before setting to save so we don't get a state for save, state changed, then set as persisted (hence not allowing for latest changes)
                         the multi threaded handling of sets to persist is via concurrent hash map, hence ordering which is important here should be right I hope. The only concern is for the same
                         element being removed being added back into the map and I think the internal locking (via striping?) should deal with this*/
-                        recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
+                    recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
+                }
+                // and end here
+                try {
+                    if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)) {
+                        hBaseDAO.persistJsonEntities(tableName, this, recordsToStore);
+                    } else {
+                        jsonRecordDAO.persistJsonRecords(this, tableName, recordsToStore);// note this is multi threaded internally
                     }
-                    // and end here
-                    try {
-                        if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)){
-                            hBaseDAO.persistJsonEntities(tableName, this, recordsToStore);
-                        } else {
-                            jsonRecordDAO.persistJsonRecords(this, tableName, recordsToStore);// note this is multi threaded internally
-                        }
-                    } catch (Exception e) {
-                        // currently I'll just stack trace this, not sure of what would be the best strategy
-                        e.printStackTrace();
-                    }
+                } catch (Exception e) {
+                    // currently I'll just stack trace this, not sure of what would be the best strategy
+                    e.printStackTrace();
                 }
             }
-            // todo re-examine given new patterns. can genericize? As in pass the DAOs around? Maybe not as they're typed . . .
-            System.out.println("name store : " + namesToPersist.size());
-            // I think here the copy happens to be defensive, there should be no missed changes or rather entities flagged as persisted that need to be persisted (change right after save but before set as persisted)
-            List<Name> namesToStore = new ArrayList<>(namesToPersist.size());
-            for (Name name : namesToPersist) {
-                namesToStore.add(name);
-                // note! Doing this changes the inserting flag meaning there may be a bunch of unnecessary deletes. Doesn't break anything but not necessary, need to sort that TODO
-                name.setAsPersisted();// The actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
+        }
+        // todo re-examine given new patterns. can genericize? As in pass the DAOs around? Maybe not as they're typed . . .
+        System.out.println("name store : " + namesToPersist.size());
+        // I think here the copy happens to be defensive, there should be no missed changes or rather entities flagged as persisted that need to be persisted (change right after save but before set as persisted)
+        List<Name> namesToStore = new ArrayList<>(namesToPersist.size());
+        for (Name name : namesToPersist) {
+            namesToStore.add(name);
+            // note! Doing this changes the inserting flag meaning there may be a bunch of unnecessary deletes. Doesn't break anything but not necessary, need to sort that TODO
+            name.setAsPersisted();// The actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
+        }
+        try {
+            if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)) {
+                hBaseDAO.persistNames(this, namesToStore, false);
+            } else {
+                nameDAO.persistNames(this, namesToStore, false);
             }
-            try {
-                if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)){
-                    hBaseDAO.persistNames(this, namesToStore, false);
-                } else {
-                    nameDAO.persistNames(this, namesToStore, false);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-            System.out.println("value store : " + valuesToPersist.size());
-            List<Value> valuesToStore = new ArrayList<>(valuesToPersist.size());
-            for (Value value : valuesToPersist) {
-                valuesToStore.add(value);
-                value.setAsPersisted();
+        System.out.println("value store : " + valuesToPersist.size());
+        List<Value> valuesToStore = new ArrayList<>(valuesToPersist.size());
+        for (Value value : valuesToPersist) {
+            valuesToStore.add(value);
+            value.setAsPersisted();
+        }
+        try {
+            if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)) {
+                hBaseDAO.persistValues(this, valuesToStore, false);
+            } else {
+                valueDAO.persistValues(this, valuesToStore, false);
             }
-            try {
-                if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)){
-                    hBaseDAO.persistValues(this, valuesToStore, false);
-                } else {
-                    valueDAO.persistValues(this, valuesToStore, false);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         System.out.println("persist done.");
     }
 
@@ -687,8 +686,6 @@ public final class AzquoMemoryDB {
             }
         }
         return found;
-
-
     }
 
     private static AtomicInteger getNameByAttribute2Count = new AtomicInteger(0);

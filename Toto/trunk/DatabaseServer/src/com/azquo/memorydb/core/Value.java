@@ -1,6 +1,6 @@
 package com.azquo.memorydb.core;
 
-import org.apache.log4j.Logger;
+//import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class Value extends AzquoMemoryDBEntity {
 
-    private static final Logger logger = Logger.getLogger(Value.class);
+    //private static final Logger logger = Logger.getLogger(Value.class);
 
     // issue of final here and bits of the init being in a try block. Need to have a little think about that
     private Provenance provenance;
@@ -44,7 +44,7 @@ public final class Value extends AzquoMemoryDBEntity {
         getAzquoMemoryDB().addValueToDb(this);
     }
 
-    // todo address this new fast loader one being public
+    // todo - can we stop it being public?
     private static AtomicInteger newValue3Count = new AtomicInteger(0);
 
     public Value(final AzquoMemoryDB azquoMemoryDB, final int id, final int provenanceId, String text, byte[] namesCache) throws Exception {
@@ -79,11 +79,6 @@ public final class Value extends AzquoMemoryDBEntity {
     public void setText(String text) {
         this.text = text;
     }
-
-    // notable that this is never used, do we care about undelete functionality?
-/*    public String getDeletedInfo() {
-        return deletedInfo;
-    }*/
 
     @Override
     public String toString() {
@@ -125,7 +120,7 @@ public final class Value extends AzquoMemoryDBEntity {
         setNeedsPersisting();
     }
 
-    // I think that's all that's needed now we're not saving deleted info?
+    // I think that's all that's needed now we're not saving deleted info
     private static AtomicInteger deleteCount = new AtomicInteger(0);
 
     public void delete() throws Exception {
@@ -136,7 +131,6 @@ public final class Value extends AzquoMemoryDBEntity {
         }
         setNeedsPersisting();
     }
-
 
     @Override
     protected void entitySpecificSetAsPersisted() {
@@ -177,5 +171,4 @@ public final class Value extends AzquoMemoryDBEntity {
         deleteCount.set(0);
         getNameIdsAsBytesCount.set(0);
     }
-
 }

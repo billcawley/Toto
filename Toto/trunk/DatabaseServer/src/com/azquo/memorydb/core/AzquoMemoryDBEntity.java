@@ -16,7 +16,7 @@ import java.util.Set;
  * OK with the new in memory DB thing these objects form the in memory database - it would be awkward to make them immutable
  * as I'd kind of like to so instead we want to make it so that it's very clear that modification after creation will
  * AUTOMATICALLY be reflected in MySQL/HBase as it catches up . . .
- * TODO : how to lock an object while it's being persisted??? Note time of modification?
+ * TODO : how to lock an object while it's being persisted??? Note time of modification? Might be a moot point since I mark as persisted then persist, I think the worst that can heppen is persiting more than is necessary.
  * Also, these objects act as data objects hence each object SHOULD only exist in context of a azquo memory db, code here is designed to enforce this
  * id and database id need to be rigidly controlled in this object or all hell could break loose
  * I think I may even go so far as actually holding the object reference to the database as opposed to a database id.
@@ -62,9 +62,9 @@ public abstract class AzquoMemoryDBEntity {
         needsDeleting = false;
     }
 
-    // ok, a class that can json serialize needs to override this, not sure if this is best practice but it seems to reduce the amount of code
+    // ok, a class that can json serialize needs to override this, not sure if this is best practice but it seems to reduce the amount of code. Otherwise could be a few extra interfaces.
     protected String getAsJson(){
-        return "";
+        return null;
     }
 
     protected final AzquoMemoryDB getAzquoMemoryDB() {

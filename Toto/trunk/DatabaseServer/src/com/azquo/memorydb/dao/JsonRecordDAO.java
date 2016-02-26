@@ -13,6 +13,8 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 17/10/13
@@ -23,20 +25,18 @@ import java.util.concurrent.*;
  * Multi threading is beginning to be added for loads and saves - for loading it's taken care of externally but for saving it seems fine that it's in here. Can concurrently throw
  * updates/inserts/deletes at MySQL. Currently only inserts.
  *
- * Also currentlyo only for Provenance
+ * Also currently only for Provenance
  */
 public class JsonRecordDAO {
 
     @Autowired
     protected JdbcTemplateUtils jdbcTemplateUtils;
-/*    @Autowired
-    protected NamedParameterJdbcTemplate jdbcTemplate;*/
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
 //    public static final int UPDATELIMIT = 5000;
     public static final int UPDATELIMIT = 2500; // going to 2.5k as now some of the records can be quite large! Also simultaneous.
 
-    // the basic data persistence tables have but two columns, these two :)
+    // the basic data persistence tables have but two columns. Well suited to a key pair store.
     private static final String ID = "id";
     private static final String JSON = "json";
 

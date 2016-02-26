@@ -27,6 +27,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * To enable persisting to HBase, currently (early 2016) an SQL database is still required for the report server
  *
+ * This perhaps could be factored and/or broken off into different classes.
+ *
  */
 public class HBaseDAO {
 
@@ -37,7 +39,6 @@ public class HBaseDAO {
     public HBaseDAO(String confFile) {
         this.confFile = confFile;
     }
-
 
     protected void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final List<Integer> ids, String tableName) throws IOException {
         Configuration conf = new Configuration();

@@ -43,7 +43,7 @@ public final class MemoryDBManager {
             loaded = new AzquoMemoryDB(persistenceName, jsonRecordDAO, nameDAO,valueDAO, hBaseDAO, sessionLog);
             return loaded;
         }
-        // should be fine. Notably allows
+        // should be fine. Notably allows concurrent loading of databases. Two big ones might be a prob but we don't want to jam up loading of small ones while a big one loads.
         return memoryDatabaseMap.computeIfAbsent(persistenceName, t-> new AzquoMemoryDB(persistenceName, jsonRecordDAO, nameDAO,valueDAO, hBaseDAO, sessionLog));
 
         // todo, add back in client side?
