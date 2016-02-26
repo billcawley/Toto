@@ -9,6 +9,8 @@ import com.azquo.memorydb.service.NameService;
 import java.util.*;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 21/10/14.
  * I need a simple superclass to chuck around outside this package
  * but which will stop code outside this package getting to the DB object itself
@@ -17,7 +19,7 @@ import java.util.*;
  *
  * has been stripped right down to the db and permissions I think that makes sense
  *
- * Adding in a user session as this should make it easier to log stuff back to the user
+ * Adding in a user session as this should make it easier to log stuff back to the user in the browser
  *
  */
 public class AzquoMemoryDBConnection {
@@ -83,7 +85,6 @@ public class AzquoMemoryDBConnection {
             }
         }
         return provenance;
-
     }
 
     public void setProvenance(final String user,final String method, final String name,final String context)throws Exception{
@@ -92,7 +93,6 @@ public class AzquoMemoryDBConnection {
             if(this.provenance.getMethod().equals(method) && this.provenance.getContext().equals(context) &&elapsed < 600000) {// ten minutes
                 return;
             }
-
         }
         this.provenance = new Provenance(getAzquoMemoryDB(),user,new Date(),method, name, context);
     }

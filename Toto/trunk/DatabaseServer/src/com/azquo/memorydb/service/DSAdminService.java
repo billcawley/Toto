@@ -1,14 +1,9 @@
 package com.azquo.memorydb.service;
 
-//import com.azquo.memorydb.AzquoMemoryDBConnection;
-//import com.azquo.memorydb.Constants;
-//import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.MemoryDBManager;
-//import com.azquo.memorydb.core.Name;
-//import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.dao.HBaseDAO;
@@ -18,9 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
 
-//import java.util.*;
-
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 20/05/15.
  *
  * New admin stuff, we're no longer doing it via the rendered excel files. Basic functions called from the controllers

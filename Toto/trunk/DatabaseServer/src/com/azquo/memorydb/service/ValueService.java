@@ -10,7 +10,6 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -19,11 +18,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 23/10/13
  * Time: 16:49
- * Workhorse hammering away at the memory DB.
+ * Workhorse hammering away at the memory DB, things like findValueForNames are crucial.
  */
 public final class ValueService {
 
@@ -164,7 +165,7 @@ public final class ValueService {
         return values;
     }
 
-    /* while the above is what would be used to check if data exists for a specific name combination (e.g. when inserting data) this will navigate down through the names
+    /* While the above is what would be used to check if data exists for a specific name combination (e.g. when inserting data) this will navigate down through the names
     this has been a major bottleneck, caching values against names helped a lot, also using similar logic to retainall but creating a new list seemed to double performance and with less garbage I hope!
     not to mention a list is better for iterator I think and .contains is NOT used in the one place this is called. Changing the return type to list.
     As mentioned in comments in the function a lot of effort went in to speeding up this function and reducing garbage, be very careful before changing it.
@@ -213,8 +214,8 @@ public final class ValueService {
         // When we zap it there may be a case for having this funciton return a double according to whether min max sum etc is required. Performance is pretty good at the moment though.
         boolean add; // declare out here, save reinitialising each time
         int index; // ditto that, should help
-        for (Value value : smallestValuesSet) { // because this could be a whacking great loop!
-            // stopping the iterator in here and moving the declarations out of here made a MASSIVE difference! Be careful doing anything with this loop,
+        for (Value value : smallestValuesSet) { // because this could be a whacking great loop! I mean many millions.
+            // stopping the iterator in here and moving the declarations out of here made a MASSIVE difference! Be careful doing anything inside this loop,
             add = true;
             for (index = 0; index < setsToCheck.length; index++){
                 if (!setsToCheck[index].contains(value)) {
@@ -257,7 +258,6 @@ public final class ValueService {
         String calcString = null; // whether this is null replaces hasCalc
         // add all names to calcnames except the the one with CALCULATION
         // and here's a thing : if more than one name has CALCULATION then only the first will be used
-        // todo : I think this logic could be cleaned up a little - the way hascalc is set seems wrong but initial attempts to simplify were also wrong
         for (Name name : names) {
             if (calcString == null) {// then try and find one - can only happen once
                 String calc = name.getAttribute(Name.CALCULATION, false, new HashSet<>()); // using extra parameters to stop parent checking for this attribute
@@ -318,12 +318,7 @@ public final class ValueService {
                         // so get the name and add it to the other names
                         Name name = nameService.getNameFromListAndMarker(term, formulaNames);
                         Set<Name> seekSet = new HashSet<>(calcnames);
-                        //if (name.getPeers().size() == 0 || name.getPeers().size() == calcnames.size()) {
                         seekSet.add(name);
-                        //} else {
-                        //    seekSet = nameService.trimNames(name, seekSet);
-                        //    seekSet.add(name);
-                        //}
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
                         values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesHook, attributeNames, function);
@@ -393,7 +388,8 @@ public final class ValueService {
 
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
-    public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive, DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, MutableBoolean locked) {
+    public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive
+            , DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, MutableBoolean locked) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
@@ -435,7 +431,6 @@ public final class ValueService {
         } else {
             valuesHook.values = values;
         }
-
         part2NanoCallTime += (System.nanoTime() - point);
         totalNanoCallTime += (System.nanoTime() - start);
         numberOfTimesCalled++;

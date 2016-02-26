@@ -5,7 +5,6 @@ import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.spreadsheet.StringUtils;
-import net.openhft.koloboke.collect.impl.InternalByteByteMapOps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +16,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 17/10/13
@@ -24,10 +25,10 @@ import java.util.regex.Pattern;
  * <p>
  * Ok, outside of the memorydb package this may be the the most fundamental class.
  * <p>
- * We need to consider how much string parsing should go on in here - I think StringUtils may be better.
- *
+ * I've tried to move most of the string parsing to StringUtils.
+ * <p>
  * While this has been tidied a fair bit it could do with more I think, arranging of logic, checking of function/variable names etc.
- *
+ * <p>
  * I mentioned the string parsing above - it can lead to code that's doing something fairly simple but looks complex if we're not careful.
  */
 public final class NameService {
@@ -168,7 +169,6 @@ public final class NameService {
 
     private static AtomicInteger findByName2Count = new AtomicInteger(0);
 
-
     public Name findParentAttributesName(Name child, String attributeName, Set<Name> checked) {
         attributeName = attributeName.trim().toUpperCase();
         for (Name parent : child.getParents()) {
@@ -177,7 +177,7 @@ public final class NameService {
                 if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
                     return child;
                 }
-                Name attribute = findParentAttributesName(parent,attributeName, checked);
+                Name attribute = findParentAttributesName(parent, attributeName, checked);
                 if (attribute != null) {
                     return attribute;
                 }
@@ -186,46 +186,44 @@ public final class NameService {
         return null;
     }
 
-    private Name findNameAndAttribute(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String>attributeNames) throws Exception{
+    private Name findNameAndAttribute(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String> attributeNames) throws Exception {
         int attPos = qualifiedName.lastIndexOf("`.`");
         if (attPos > 0) {
-            Name parentFound = findNameAndAttribute(azquoMemoryDBConnection, qualifiedName.substring(0,attPos+1),attributeNames);
+            Name parentFound = findNameAndAttribute(azquoMemoryDBConnection, qualifiedName.substring(0, attPos + 1), attributeNames);
             if (parentFound == null) return null;
-            String attribute = qualifiedName.substring(attPos + 2).replace("`","");
-            Name attName = findParentAttributesName(parentFound,attribute, HashObjSets.newMutableSet());
+            String attribute = qualifiedName.substring(attPos + 2).replace("`", "");
+            Name attName = findParentAttributesName(parentFound, attribute, HashObjSets.newMutableSet());
             if (attName == null) {//see if we can find a name from the string value
                 String attVal = parentFound.getAttribute(attribute);
                 if (attVal != null) {
-                    return findByName(azquoMemoryDBConnection,attVal);
+                    return findByName(azquoMemoryDBConnection, attVal);
                 }
             }
             return attName;
-        }else{
-            return findByName(azquoMemoryDBConnection, qualifiedName,attributeNames);
+        } else {
+            return findByName(azquoMemoryDBConnection, qualifiedName, attributeNames);
         }
     }
 
     public Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, String qualifiedName, final List<String> attributeNames) throws Exception {
         findByName2Count.incrementAndGet();
-     /*
-        This routine accepts multiple 'memberof (->) symbols.  It also checks for the 'language indicator' (<-)
-
-         */
+        // This routine accepts multiple 'memberof (->) symbols.  It also checks for the 'language indicator' (<-)
+        // note if qualifiedName is null this will NPE - not sure if this is a problem
         int langPos = qualifiedName.indexOf(languageIndicator);
-        if (langPos > 0){
+        if (langPos > 0) {
             int quotePos = qualifiedName.indexOf(Name.QUOTE);
-            if (quotePos < 0 || quotePos> langPos){
+            if (quotePos < 0 || quotePos > langPos) {
                 attributeNames.clear();
-                attributeNames.add(qualifiedName.substring(0,langPos));
+                attributeNames.add(qualifiedName.substring(0, langPos));
                 qualifiedName = qualifiedName.substring(langPos + 2);
             }
         }
 
-        if (qualifiedName == null || qualifiedName.length() == 0) return null;
+        if (qualifiedName.length() == 0) return null;
         List<String> parents = stringUtils.parseNameQualifiedWithParents(qualifiedName); // should never return an empty array given the check just now on qualified name
         String name = parents.remove(parents.size() - 1); // get the name off the end of the list now should just be parents in top to bottom order
         Set<Name> possibleParents = null;
-        for (String parent : parents){
+        for (String parent : parents) {
             if (possibleParents == null) { // will happen on the first one
                 // most of the time would only be one but the name on the right (top for this expression) might not be a top name in the DB hence there could be multiple
                 possibleParents = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parent, null);
@@ -277,7 +275,6 @@ public final class NameService {
             return azquoMemoryDBConnection.getAzquoMemoryDB().findTopNames(language);
         }
     }
-
 
     private static AtomicInteger findOrCreateNameStructureCount = new AtomicInteger(0);
 
@@ -386,7 +383,8 @@ public final class NameService {
                         existing = null;
                     }
                 }
-                if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
+                if (profile)
+                    marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
             } else {// so we ignore parent if not local, we'll grab what we can to move it into the right parent set
                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
             }
@@ -426,7 +424,7 @@ public final class NameService {
 
     // in order to avoid unnecessary collection copying (we could be talking millions of names) I made this little container to move a collection that could be a list or set and possibly mutable
 
-    public static class NameSetList{
+    public static class NameSetList {
         public final Set<Name> set;
         public final List<Name> list;
         public final boolean mutable;
@@ -436,14 +434,15 @@ public final class NameService {
             this.list = list;
             this.mutable = mutable;
         }
+
         // make from an existing (probably immutable) one
-        public NameSetList(NameSetList nameSetList){
+        public NameSetList(NameSetList nameSetList) {
             set = nameSetList.set != null ? HashObjSets.newMutableSet(nameSetList.set) : null;
             list = nameSetList.list != null ? new ArrayList<>(nameSetList.list) : null;
             mutable = true;
         }
 
-        public Collection<Name> getAsCollection(){
+        public Collection<Name> getAsCollection() {
             return set != null ? set : list != null ? list : null;
         }
     }
@@ -469,7 +468,7 @@ public final class NameService {
             }
         }
         if (level == 1) { // then no need to get clever, just return the children
-            if (name.hasChildrenAsSet()){
+            if (name.hasChildrenAsSet()) {
                 return new NameSetList(name.getChildrenAsSet(), null, false);
             } else {
                 return new NameSetList(null, name.getChildrenAsList(), false);
@@ -483,16 +482,16 @@ public final class NameService {
             return new NameSetList(toReturn, null, true); // at least we're now flagging this up : you can modify this set
         }
         /* To explain the nasty hack here with the linked hash set : it was just list but we don't want duplicates. So use LinkedHashSet
-            which is still ordered but unfortunately is not sortable, need a list for that, hence why it's re-wrtapped in an array list below.
+            which is still ordered but unfortunately is not sortable, need a list for that, hence why it's re-wrapped in an array list below.
            This is probably not efficient but I'm assuming a non all or level one ordered is fairly rare
           */
         Set<Name> namesFoundOrderedSet = new LinkedHashSet<>();
         Set<Name> namesFoundSet = HashObjSets.newMutableSet();
         boolean ordered = false;
-        if (!name.hasChildrenAsSet()){
+        if (!name.hasChildrenAsSet()) {
             ordered = true;
-            for (Name check : name.getChildren()){
-                if (check.hasChildrenAsSet()){ // then these children are unordered, I'm going to say the whole lot doesn't need to be ordered
+            for (Name check : name.getChildren()) {
+                if (check.hasChildrenAsSet()) { // then these children are unordered, I'm going to say the whole lot doesn't need to be ordered
                     ordered = false;
                     break;
                 }
@@ -539,7 +538,7 @@ public final class NameService {
     private static AtomicInteger findChildrenFromToCount = new AtomicInteger(0);
 
     public NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String countBackString, final String compareWithString, List<Name> referencedNames) throws Exception {
-        if (nameSetList.list == null){
+        if (nameSetList.list == null) {
             return nameSetList; // don't bother trying to constrain a non list
         }
         findChildrenFromToCount.incrementAndGet();
@@ -552,15 +551,15 @@ public final class NameService {
         int space = 1; //spacing between 'compare with' fields
         //first look for integers and encoded names...
 
-        if (toString.length()> 0 && count > 0 ){
-            if (!nameSetList.mutable){
+        if (toString.length() > 0 && count > 0) {
+            if (!nameSetList.mutable) {
                 nameSetList = new NameSetList(null, new ArrayList<>(nameSetList.list), true);// then make it mutable
             }
             //invert the list
             Collections.reverse(nameSetList.list);
             fromString = toString;
             toString = "";
-         }
+        }
 
         if (fromString.length() > 0) {
             from = -1;
@@ -572,7 +571,6 @@ public final class NameService {
                     fromString = fromName.getDefaultDisplayName();
                 }
             }
-
         }
         if (toString.length() > 0) {
             boolean fromEnd = false;
@@ -589,18 +587,15 @@ public final class NameService {
                     toString = toName.getDefaultDisplayName();
                 }
             }
-
         }
         int position = 1;
         boolean inSet = false;
         if (to != -1000 && to < 0) {
             to = nameSetList.list.size() + to;
         }
-
         int added = 0;
-
         for (int i = offset; i < nameSetList.list.size() + offset; i++) {
-            if (position == from || (i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(fromString))){
+            if (position == from || (i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(fromString))) {
                 inSet = true;
             }
             if (inSet) {
@@ -613,7 +608,7 @@ public final class NameService {
                 }
                 added++;
             }
-            if (position == to || (i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(toString)) || added == count){
+            if (position == to || (i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(toString)) || added == count) {
                 inSet = false;
             }
             position++;
@@ -641,13 +636,13 @@ public final class NameService {
         return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null);
     }
 
-    // todo : sort exceptions? Move to another class?
-    // todo - cache option in here
     Runtime runtime = Runtime.getRuntime();
     int mb = 1024 * 1024;
 
-    // now uses NameSetList to move commections of names around and only copy them as necessary. Has made the logic a little more complex
-    // in places but performance should be better and garbage generation reduced
+    /* todo : sort exceptions? Move to another class?
+    todo - cache option in here
+    now uses NameSetList to move connections of names around and only copy them as necessary. Has made the logic a little more complex
+    in places but performance should be better and garbage generation reduced*/
     private static AtomicInteger parseQuery3Count = new AtomicInteger(0);
 
     public final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn) throws Exception {
@@ -672,17 +667,17 @@ public final class NameService {
         }
         List<String> languages = new ArrayList<>(attributeNames);
         int languagePos = setFormula.indexOf(languageIndicator);
-        if (languagePos>0){
+        if (languagePos > 0) {
             int namePos = setFormula.indexOf(Name.QUOTE);
-            if (namePos < 0 || namePos > languagePos){
+            if (namePos < 0 || namePos > languagePos) {
                 //change the language
                 languages.clear();
-                languages.add(setFormula.substring(0,languagePos));
+                languages.add(setFormula.substring(0, languagePos));
                 setFormula = setFormula.substring(languagePos + 2);
             }
         }
 
-        List<NameSetList> nameStack = new ArrayList<>(); // now use the container object, means we only create new collecitons at the last minute as required
+        List<NameSetList> nameStack = new ArrayList<>(); // now use the container object, means we only create new collections at the last minute as required
         List<String> formulaStrings = new ArrayList<>();
         List<String> nameStrings = new ArrayList<>();
         List<String> attributeStrings = new ArrayList<>(); // attribute names is taken. Perhaps need to think about function parameter names
@@ -700,10 +695,10 @@ public final class NameService {
             return toReturn;
         }
         //todo - find a better way of using 'parseQuery` for other operations
-        if (setFormula.toLowerCase().startsWith("edit:")){
-            return handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(),languages);
+        if (setFormula.toLowerCase().startsWith("edit:")) {
+            return handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(), languages);
         }
-         setFormula = stringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
+        setFormula = stringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames;
         try {
             referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, languages);
@@ -752,7 +747,7 @@ public final class NameService {
                 // for the moment create a new collection, list or set based on the type of "previous set"
                 Set<Name> setIntersectionSet = null;
                 List<Name> setIntersectionList = null;
-                if (previousSet.set != null){ // not ordered
+                if (previousSet.set != null) { // not ordered
                     setIntersectionSet = HashObjSets.newMutableSet();
                     Set<Name> previousSetSet = previousSet.set;
                     for (Name name : nameStack.get(stackCount).getAsCollection()) { // if the last one on the stack is a list or set it doens't matter I'm not doing a contains on it
@@ -766,14 +761,14 @@ public final class NameService {
                         }
                     }
                 } else { // I need to use previous set as the outside loop for ordering
-                    setIntersectionList = new ArrayList<>(); // kepp it as a list
+                    setIntersectionList = new ArrayList<>(); // keep it as a list
                     Set<Name> lastSet = nameStack.get(stackCount).set != null ? nameStack.get(stackCount).set : HashObjSets.newMutableSet(nameStack.get(stackCount).list); // wrap the last one in a set if it's not a set
-                    for (Name name : previousSet.list){
+                    for (Name name : previousSet.list) {
                         if (lastSet.contains(name)) {
                             setIntersectionList.add(name);
                         } else { // we've already checked the top members, check all children to see if it's in there also
-                            for (Name intersectName : lastSet){
-                                if (intersectName.findAllChildren(false).contains(name)){
+                            for (Name intersectName : lastSet) {
+                                if (intersectName.findAllChildren(false).contains(name)) {
                                     setIntersectionList.add(name);
                                 }
                             }
@@ -783,7 +778,7 @@ public final class NameService {
                 nameStack.set(stackCount - 1, new NameSetList(setIntersectionSet, setIntersectionList, true)); // replace the previous NameSetList
                 System.out.println("after new retainall " + (System.currentTimeMillis() - start) + "ms");
                 nameStack.remove(stackCount);
-            } else if (op == '/') { // a possible perfoamnce hit here, not sure of other possible optimseations
+            } else if (op == '/') { // a possible performance hit here, not sure of other possible optimseations
                 // ok what's on the stack may be mutable but I'm going to have to make a copy - if I modify it the iterator on the loop below will break
                 Set<Name> parents = HashObjSets.newMutableSet(nameStack.get(stackCount).getAsCollection());
                 long start = System.currentTimeMillis();
@@ -799,8 +794,8 @@ public final class NameService {
                 //nameStack.get(stackCount - 1).retainAll(parents); //can't do this any more, need to make a new one
                 NameSetList previousSet = nameStack.get(stackCount - 1);
                 // ok going to try to get a little clever here since it can be mutable
-                if (previousSet.mutable){
-                    if (previousSet.list != null){
+                if (previousSet.mutable) {
+                    if (previousSet.list != null) {
                         previousSet.list.retainAll(parents);
                     } else { // I keep assuming set won't be null. I guess we'll see
                         previousSet.set.retainAll(parents);
@@ -808,7 +803,7 @@ public final class NameService {
                 } else { // need to make a new one
                     Set<Name> setIntersectionSet = null;
                     List<Name> setIntersectionList = null;
-                    if (previousSet.list != null){ // ordered
+                    if (previousSet.list != null) { // ordered
                         setIntersectionList = new ArrayList<>();
                         // we must use previous set on the outside
                         for (Name name : previousSet.list) {
@@ -819,7 +814,7 @@ public final class NameService {
                     } else { // need to make a new set, unordered, check set sizes in an attempt to keep speed high
                         setIntersectionSet = HashObjSets.newMutableSet(); // testing shows no harm, should be a bit faster and better on memory
                         Set<Name> previousSetSet = previousSet.set;
-                        if (previousSetSet.size() < parents.size()){ // since contains should be the same regardless of set size we want to iterate the smaller one to create the intersection
+                        if (previousSetSet.size() < parents.size()) { // since contains should be the same regardless of set size we want to iterate the smaller one to create the intersection
                             for (Name name : previousSetSet) {
                                 if (parents.contains(name)) {
                                     setIntersectionSet.add(name);
@@ -840,12 +835,11 @@ public final class NameService {
                 nameStack.remove(stackCount);
             } else if (op == '-') {
                 // using immutable sets on the stack causes more code here but populating the stack should be MUCH faster
-                //nameStack.get(stackCount - 1).removeAll(nameStack.get(stackCount));
                 // ok I have the mutable option now
-                if (nameStack.get(stackCount - 1).mutable){
+                if (nameStack.get(stackCount - 1).mutable) {
                     nameStack.get(stackCount - 1).getAsCollection().removeAll(nameStack.get(stackCount).getAsCollection());
                 } else { // make a new one
-                    Set<Name> currentSet =  nameStack.get(stackCount).set != null ? nameStack.get(stackCount).set : HashObjSets.newMutableSet(nameStack.get(stackCount).list); // convert to a set if it's not. Faster contains.
+                    Set<Name> currentSet = nameStack.get(stackCount).set != null ? nameStack.get(stackCount).set : HashObjSets.newMutableSet(nameStack.get(stackCount).list); // convert to a set if it's not. Faster contains.
                     NameSetList previousSet = nameStack.get(stackCount - 1);
                     // standard list or set check
                     Set<Name> resultAsSet = null;
@@ -863,7 +857,7 @@ public final class NameService {
                 nameStack.remove(stackCount);
             } else if (op == '+') {
                 //nameStack.get(stackCount - 1).addAll(nameStack.get(stackCount));
-                if (nameStack.get(stackCount - 1).mutable){ // can use the old simple call :)
+                if (nameStack.get(stackCount - 1).mutable) { // can use the old simple call :)
                     nameStack.get(stackCount - 1).getAsCollection().addAll(nameStack.get(stackCount).getAsCollection()); // simple - note lists won't detect duplicates but I guess they never did
                 } else { // need to make a new one preserving type for ordering
                     NameSetList previousSet = nameStack.get(stackCount - 1);
@@ -884,9 +878,9 @@ public final class NameService {
                 The point being that the result of "blah blah blah as 'Period Chosen'" will now mean different 'Period Chosen's for each user
                 Need to watch out regarding creating user specific sets : when we get the name see if it's for this user, if so then just change it otherwise make a new one
                 */
-                if (attributeNames.size() > 1){ // just checking we have have the user added to the list
+                if (attributeNames.size() > 1) { // just checking we have have the user added to the list
                     String userEmail = attributeNames.get(0);
-                    if (totalName.getAttribute(userEmail) == null){ // there is no specific set for this user yet, need to do something
+                    if (totalName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
                         Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), totalName.getAdditive()); // a basic copy of the set
                         //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
                         userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
@@ -920,29 +914,29 @@ public final class NameService {
         if (time > 50) {
             System.out.println("Parse query : " + formulaCopy + " took : " + time + "ms");
         }
-        if (resetDefs){
-            //currently recalculates ALL definitons regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
+        if (resetDefs) {
+            //currently recalculates ALL definitions regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
             Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDB().namesForAttribute("DEFINITION");
-            if (defNames!=null) {
+            if (defNames != null) {
                 for (Name defName : defNames) {
                     String definition = defName.getAttribute("DEFINITION");
-                     if (definition!=null) {
-                         if (attributeNames.size()>1) {
-                             String userEmail = attributeNames.get(0);
-                             if (defName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
-                                 List<String> localLanguages = new ArrayList<>();
-                                 localLanguages.add(userEmail);
-                                 Name userSpecificSet = findByName(azquoMemoryDBConnection,defName.getDefaultDisplayName(),localLanguages);
-                                 if (userSpecificSet==null) {
-                                     userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), defName.getAdditive()); // a basic copy of the set
-                                     //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
-                                     userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
-                                     defName.addChildWillBePersisted(userSpecificSet);
-                                 }
-                                 defName = userSpecificSet; // switch the new one in, it will be used as normal
-                             }
-                         }
-                         Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition,attributeNames);
+                    if (definition != null) {
+                        if (attributeNames.size() > 1) {
+                            String userEmail = attributeNames.get(0);
+                            if (defName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
+                                List<String> localLanguages = new ArrayList<>();
+                                localLanguages.add(userEmail);
+                                Name userSpecificSet = findByName(azquoMemoryDBConnection, defName.getDefaultDisplayName(), localLanguages);
+                                if (userSpecificSet == null) {
+                                    userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), defName.getAdditive()); // a basic copy of the set
+                                    //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
+                                    userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
+                                    defName.addChildWillBePersisted(userSpecificSet);
+                                }
+                                defName = userSpecificSet; // switch the new one in, it will be used as normal
+                            }
+                        }
+                        Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition, attributeNames);
                         if (defSet != null) {
                             defName.setChildrenWillBePersisted(defSet);
                         }
@@ -953,12 +947,12 @@ public final class NameService {
         return toReturn;
     }
 
-    private List<Name> handleEdit(AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String>languages)throws Exception{
+    private List<Name> handleEdit(AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> languages) throws Exception {
         List<Name> toReturn = new ArrayList<>();
-            if (setFormula.startsWith("deduplicate")) {
+        if (setFormula.startsWith("deduplicate")) {
             return deduplicate(azquoMemoryDBConnection, setFormula.substring(12));
         }
-        if (setFormula.startsWith("findduplicates")){
+        if (setFormula.startsWith("findduplicates")) {
             return findDuplicateNames(azquoMemoryDBConnection, setFormula);
         }
         if (setFormula.startsWith("zap ")) {
@@ -969,7 +963,7 @@ public final class NameService {
             }
         }
         throw new Exception(setFormula + " not understood");
-   }
+    }
 
     private static AtomicInteger attributeListCount = new AtomicInteger(0);
 
@@ -1017,12 +1011,12 @@ public final class NameService {
 
     private static AtomicInteger deduplicateCount = new AtomicInteger(0);
 
-    private List<Name> findDuplicateNames(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions){
+    private List<Name> findDuplicateNames(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions) {
         Set<String> attributeExceptions = new HashSet<>();
-        if (instructions.toLowerCase().contains("except ")){
+        if (instructions.toLowerCase().contains("except ")) {
             String exceptionList = instructions.toUpperCase().substring(instructions.toUpperCase().indexOf("EXCEPT ") + 7).trim();
             String[] eList = exceptionList.split(",");
-            for (String exception:eList){
+            for (String exception : eList) {
                 attributeExceptions.add(exception.trim());
             }
         }
@@ -1189,9 +1183,7 @@ public final class NameService {
         return toReturn; // its appropriate member collection should have been modified via namesToFilter above, return it
     }
 
-    // Ok I'm now making this a set with the caveat that it may be a linked hash set if there's ordering. Also we assume that returned sets won't be modified.
-    // Some use of instanceof depending on whether we need ordering. Feels a bit hacky, might be able to clean up the logic
-    // I wanted this to return a custom object but in doing so the complexity began to spiral, I've reverted for the moment
+    // Managed to convert to returning NameSetList, the key being using fast collection operations where possible depending on what has been passed
 
     private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
 
@@ -1207,11 +1199,8 @@ public final class NameService {
         String countString = stringUtils.getInstruction(setTerm, COUNT);
         final String countbackString = stringUtils.getInstruction(setTerm, COUNTBACK);
         final String compareWithString = stringUtils.getInstruction(setTerm, COMPAREWITH);
-        //String totalledAsString = stringUtils.getInstruction(setTerm, AS);
         String selectString = stringUtils.getInstruction(setTerm, SELECT);
-        // removed totalled as
 
-        //final String associatedString = stringUtils.getInstruction(setTerm, ASSOCIATED);
         int wherePos = setTerm.toLowerCase().indexOf(WHERE.toLowerCase());
         String whereString = null;
         if (wherePos >= 0) {
@@ -1239,11 +1228,8 @@ public final class NameService {
             if (fromString == null) fromString = "";
             if (toString == null) toString = "";
             if (countString == null) countString = "";
-            // SECOND  Sort if necessary
-
-            //THIRD  trim that down to the subset defined by from, to, count
             if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
-                if (namesFound.list != null){ // yeah I know some say this is not best practice but hey ho
+                if (namesFound.list != null) { // yeah I know some say this is not best practice but hey ho
                     namesFound = constrainNameListFromToCount(namesFound, fromString, toString, countString, countbackString, compareWithString, referencedNames);
                 } else {
                     System.out.println("can't from/to/count a non-list, " + setTerm);
@@ -1257,25 +1243,25 @@ public final class NameService {
         // could parents and select be more efficient?
         if (parentsString != null) {
             // make mutable if it isn't
-            if (!namesFound.mutable){
+            if (!namesFound.mutable) {
                 namesFound = new NameSetList(namesFound);
             }
             Iterator<Name> withChildrenOnlyIterator = namesFound.getAsCollection().iterator();
-            while (withChildrenOnlyIterator.hasNext()){
+            while (withChildrenOnlyIterator.hasNext()) {
                 Name check = withChildrenOnlyIterator.next();
-                if (!check.hasChildren()){// use iterator remove for childless names
+                if (!check.hasChildren()) {// use iterator remove for childless names
                     withChildrenOnlyIterator.remove();
                 }
             }
         }
         if (selectString != null) {
             String toFind = strings.get(Integer.parseInt(selectString.substring(1, 3))).toLowerCase();
-            // make mutbale if not
-            if (!namesFound.mutable){
+            // make mutable if not
+            if (!namesFound.mutable) {
                 namesFound = new NameSetList(namesFound);
             }
             Iterator<Name> selectedNamesIterator = namesFound.getAsCollection().iterator();
-            while (selectedNamesIterator.hasNext()){
+            while (selectedNamesIterator.hasNext()) {
                 Name check = selectedNamesIterator.next();
                 if (check == null || check.getDefaultDisplayName() == null
                         || !check.getDefaultDisplayName().toLowerCase().contains(toFind)) { // reversing logic from before to use iterator remove to get rid of non relevant names
@@ -1284,7 +1270,7 @@ public final class NameService {
             }
         }
         if (sorted != null) { // I guess force list
-            if (namesFound.list == null || !namesFound.mutable){ // then force to a mutable list, don't see that we have a choice
+            if (namesFound.list == null || !namesFound.mutable) { // then force to a mutable list, don't see that we have a choice
                 namesFound = new NameSetList(null, new ArrayList<>(namesFound.getAsCollection()), true);
             }
             Collections.sort(namesFound.list, defaultLanguageCaseInsensitiveNameComparator);
