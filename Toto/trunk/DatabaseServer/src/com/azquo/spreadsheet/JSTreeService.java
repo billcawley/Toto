@@ -201,11 +201,15 @@ public class JSTreeService {
             text = name.getAttribute(language);
             if (parents) {
                 for (Name nameParent : name.getParents()) {
-                    children.add(nameParent);
+                    if (nameParent!=null){//in case of corruption - this should not happen
+                        children.add(nameParent);
+                    }
                 }
             } else {
                 for (Name child : name.getChildren()) {
-                    children.add(child);
+                    if (child != null){
+                        children.add(child);//see above - in case of corruption
+                    }
                 }
             }
         }
