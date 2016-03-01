@@ -614,7 +614,7 @@ public final class ValueService {
                     }
                 }
                 values.removeAll(extract);
-                nodeList.add(new TreeNode("", heading.getDefaultDisplayName(), "", roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract, maxSize)));
+                nodeList.add(new TreeNode("", heading.getDefaultDisplayName(), roundValue(dValue), dValue, getTreeNodesFromDummyValues(slimExtract, maxSize)));
                 dValue = 0;
             }
         }
@@ -645,7 +645,7 @@ public final class ValueService {
             method += " " + p.getName();
         }
         if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
-        TreeNode toReturn = new TreeNode(source, method, null, null, 0, getTreeNodesFromValues(values, maxSize));
+        TreeNode toReturn = new TreeNode(source, method, null, 0, getTreeNodesFromValues(values, maxSize));
         addNodeValues(toReturn);
         return toReturn;
     }

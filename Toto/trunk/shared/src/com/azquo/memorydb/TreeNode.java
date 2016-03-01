@@ -5,7 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by bill on 05/08/15.
+ *
+ * To facilitate navigating around a database. A result of the reporting server/database server split, it might be worth considering how this would be coded from scratch given the split.
  *
  */
 public class TreeNode implements Serializable{
@@ -35,7 +39,7 @@ public class TreeNode implements Serializable{
         this.valueId = valueId;
     }
 
-    public TreeNode(String heading, String name, String link, String value, double dValue, List<TreeNode> children){
+    public TreeNode(String heading, String name, String value, double dValue, List<TreeNode> children){
         this.heading = heading;
         this.children = children;
         this.name = name;

@@ -27,6 +27,7 @@
         <!--<property name="url" value="jdbc:mysql://localhost:3306/azquo?jdbcCompliantTruncation=false&amp;useUnicode=true&amp;characterEncoding=UTF-8"/>-->
         <property name="url"
                   value="jdbc:mysql://localhost:3306/?jdbcCompliantTruncation=false&amp;useUnicode=true"/>
+        <!--  -->
         <property name="username" value="toto"/>
         <property name="password" value="ark"/>
     </bean>
@@ -48,7 +49,6 @@
     <bean name="dsSpreadsheetService" class="com.azquo.spreadsheet.DSSpreadsheetService"/>
     <bean name="jsTreeService" class="com.azquo.spreadsheet.JSTreeService"/>
     <bean name="mySQLDatabaseManager" class="com.azquo.memorydb.dao.MySQLDatabaseManager"/>
-
     <bean name="magentoService" class="com.azquo.app.magento.DSDataLoadService"/>
     <bean name="memoryDBManager" class="com.azquo.memorydb.core.MemoryDBManager">
         <constructor-arg type="com.azquo.memorydb.dao.JsonRecordDAO" ref="jsonRecordDAO"/>
@@ -64,5 +64,4 @@
         <constructor-arg index="4" ref="jsTreeService"/>
         <constructor-arg index="5" ref="memoryDBManager"/>
     </bean>
-
 </beans>

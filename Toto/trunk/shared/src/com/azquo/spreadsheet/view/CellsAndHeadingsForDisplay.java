@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * 
  * Created by cawley on 11/05/15.
  *
  * I don't see much reason for this class to be mutable though the data cells can be changed

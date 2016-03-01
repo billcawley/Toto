@@ -4,9 +4,11 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 18/05/15.
  *
- * Passed from client to database server after establishing credentials etc
+ * Passed from client to database server after establishing credentials etc, what the DB server uses to create a connection internally.
  *
  */
 public class DatabaseAccessToken implements Serializable {
@@ -17,7 +19,6 @@ public class DatabaseAccessToken implements Serializable {
     private final String readPermissions;
     private final String writePermissions;
     private final List<String> languages;
-//    private final int sessionId;// optional, it might be useful to jam the client side session id in here, certainly useful for jstree initially
 
     public DatabaseAccessToken(String userSessionId, String serverIp, String persistenceName, String readPermissions, String writePermissions, List<String> languages) {
         this.userSessionId = userSessionId;

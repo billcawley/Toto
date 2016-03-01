@@ -10,11 +10,14 @@ import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 20/05/15.
+ *
+ * I decided to use RMI to communicate between the servers, it seems to work.
  *
  */
 public interface RMIInterface extends Remote {

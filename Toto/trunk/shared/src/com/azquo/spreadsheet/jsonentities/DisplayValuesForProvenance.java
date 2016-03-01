@@ -6,10 +6,11 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 14/07/15.
  *
  * object to be passed to the front end to display provenance. Might need to be refactored after zapping AzquoBook.
- *
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class DisplayValuesForProvenance implements Serializable{

@@ -4,10 +4,11 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 11/11/15.
  *
- * This was a local class but now it's
- *
+ * This was a local class but now it needs to be moved betweeen the DB/Report servers, the problem is that the tree UI needs close access to the DB.
  */
 public class JsonChildStructure implements Serializable {
     // public for jackson to see them

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 11/11/15.
  *
  * Used to be local as part of teh tree service, now it will be part of communication between the client and db server
