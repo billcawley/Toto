@@ -5,6 +5,8 @@ import com.azquo.memorydb.core.Name;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 16/04/15.
  * <p/>
  * all we may need to know about a cell as seen on the screen by a user.

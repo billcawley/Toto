@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 03/02/15.
  * <p/>
  * Headers of Rows and Columns and Context fields used to be Names, plain and simple.

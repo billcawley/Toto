@@ -12,20 +12,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * <p>
  * Edd trying to factor off some functions. We want functions that are fairly simple and do not require database access.
- *
+ * <p>
  * Generally stateless functions that could be static.
  */
 public class StringUtils {
 
     public static final String MEMBEROF = "->"; // used to qualify names, no longer using ","
+
     // returns parsed names from a name qualified with parents, the parents are returned first. Note, support for "," removed
 
-    public List<String> parseNameQualifiedWithParents(String source){
+    public List<String> parseNameQualifiedWithParents(String source) {
         List<String> toReturn = new ArrayList<>();
         if (source == null || source.isEmpty()) return toReturn;
-
-        while (source.contains(MEMBEROF) && !source.endsWith(MEMBEROF)){
+        while (source.contains(MEMBEROF) && !source.endsWith(MEMBEROF)) {
             toReturn.add(source.substring(0, source.indexOf(MEMBEROF)).replace(Name.QUOTE, ' ').trim());
             source = source.substring(source.indexOf(MEMBEROF) + MEMBEROF.length()); // chop that one off source
         }
@@ -47,7 +49,6 @@ public class StringUtils {
         if (iPos >= 0) {
             //find to the next semicolon, or line end
             int commandStart = iPos + instructionName.length() + 1;
-
             if (commandStart < instructions.length()) {
                 int commandEnd = instructions.indexOf(" ", commandStart + 1);
                 if (commandEnd < 0) {
@@ -69,7 +70,7 @@ public class StringUtils {
         return pos >= len + 2 && searchText.substring(pos - len - 1, pos).toLowerCase().equals(testItem + " ");
     }
 
-    /* rewriting the parsing, it needs to deal with this sort of thing :
+/* rewriting the parsing, it needs to deal with this sort of thing :
 
 `All months` level 2 from `2014-01-01` to `2015-01-01` as `Period Chosen`
 `High Street`,London,Ontario level 2 from `2014-01-01` to `2015-01-01` as `Period Chosen`
@@ -95,7 +96,6 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
     DecimalFormat twoDigit = new DecimalFormat("00");
 
     public String prepareStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
-
         /* sort the name quotes - what is replaced is just needed here, the way names can be referenced
          with hierarchy and commas makes things more interesting e.g. `High Street`,London,Ontario. In this case we'll have !01,London,Ontario instead
          that will be resolved more properly below. Also note that this takes care of attribute quotes. Distinguished by starting with a . e.g. .`some attribute name` */
@@ -111,7 +111,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
                 modifiedStatement.append(statement.substring(lastEnd, matcher.start()));
             }
             lastEnd = matcher.end();
-            while (lastEnd < statement.length() - 2 && statement.substring(lastEnd-1,lastEnd + 2).equals("`.`")) {
+            while (lastEnd < statement.length() - 2 && statement.substring(lastEnd - 1, lastEnd + 2).equals("`.`")) {
                 int nextQuote = statement.indexOf("`", lastEnd + 2);
                 if (nextQuote > 0) {
                     matcher.find();//skip the next field
@@ -119,7 +119,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
                 }
             }
             quotedNameCache.add(statement.substring(matcher.start(), lastEnd));
-              // it should never be more and it breaks our easy fixed length marker thing here
+            // it should never be more and it breaks our easy fixed length marker thing here
             if (quotedNameCache.size() > 100) {
                 throw new Exception("More than 100 quoted names.");
             }
@@ -192,7 +192,6 @@ Entities children
 !1 children level 1 sorted
 !1 level lowest WHERE !2 >= 54 * order level lowest * !3 level lowest 114 thing thing
 
-
 I should be ok for StringTokenizer at this point
         */
 
@@ -244,39 +243,12 @@ I should be ok for StringTokenizer at this point
                 || term.equalsIgnoreCase(NameService.DELETE) || term.equalsIgnoreCase(NameService.WHERE);
     }
 
-    // reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
+    /*
+     reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
+    this function assumes a string ready to parse, quoted areas dealt with
+    */
 
     public String shuntingYardAlgorithm(String calc) {
-        // note from Edd, this function assumes a string ready to parse, quoted areas dealt with
-        // I have a strong suspicion this was yoinked from t'internet and modified
-/*
-        Routine to convert a formula (if it exists) to reverse polish.
-
-        Read a token.
-                If the token is a number, then add it to the output queue.
-        If the token is a function token, then push it onto the stack.
-                If the token is a function argument separator (e.g., a comma):
-        Until the token at the top of the stack is a left parenthesis, pop operators off the stack onto the output queue.
-        If no left parentheses are encountered, either the separator was misplaced or parentheses were mismatched.
-        If the token is an operator, o1, then:
-        while there is an operator token, o2, at the top of the stack, and
-        either o1 is left-associative and its precedence is equal to that of o2,
-                or o1 has precedence less than that of o2,
-        pop o2 off the stack, onto the output queue;
-        push o1 onto the stack.
-                If the token is a left parenthesis, then push it onto the stack.
-                If the token is a right parenthesis:
-        Until the token at the top of the stack is a left parenthesis, pop operators off the stack onto the output queue.
-        Pop the left parenthesis from the stack, but not onto the output queue.
-                If the token at the top of the stack is a function token, pop it onto the output queue.
-                If the stack runs out without finding a left parenthesis, then there are mismatched parentheses.
-        When there are no more tokens to read:
-        While there are still operator tokens in the stack:
-        If the operator token on the top of the stack is a parenthesis, then there are mismatched parentheses.
-        Pop the operator onto the output queue.
-                Exit.
-*/
-
         Pattern p = Pattern.compile("[" + NameService.ASSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
@@ -292,7 +264,6 @@ I should be ok for StringTokenizer at this point
             }
             char lastOffStack = ' ';
             while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && ")+-/*(".indexOf(thisOp) <= "(+-/*".indexOf(stack.charAt(0)))) {
-
                 if (stack.charAt(0) != '(') {
                     sb.append(stack.charAt(0)).append(" ");
                 }
@@ -306,7 +277,6 @@ I should be ok for StringTokenizer at this point
                 stack = thisOp + stack;
             }
             startPos = m.end();
-
         }
         // the last term...
         if (calc.substring(startPos).trim().length() > 0) {
@@ -319,6 +289,4 @@ I should be ok for StringTokenizer at this point
         }
         return sb.toString();
     }
-
-
 }

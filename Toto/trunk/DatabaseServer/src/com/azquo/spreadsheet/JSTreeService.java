@@ -13,12 +13,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.*;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * <p>
  * Created by cawley on 13/05/15.
- * <p/>
+ * <p>
  * All JSTree code that deals with DB objects to go in here.
- *
+ * <p>
  * It had controller like code in here but this has been mvoed out. Might take a few more passes before the representation is up to scratch.
- *
  */
 public class JSTreeService {
 
@@ -27,41 +28,42 @@ public class JSTreeService {
     @Autowired
     NameService nameService;
 
-    public Set<Name> interpretNameFromStrings(DatabaseAccessToken databaseAccessToken, Set<String> nameStrings)throws Exception{
+    public Set<Name> interpretNameFromStrings(DatabaseAccessToken databaseAccessToken, Set<String> nameStrings) throws Exception {
         Set<Name> names = new HashSet<>();
-            AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-            for (String nString : nameStrings){
-                Name name = nameService.findByName(azquoMemoryDBConnection, nString);
-                if (name != null) names.add(name);
-            }
+        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        for (String nString : nameStrings) {
+            Name name = nameService.findByName(azquoMemoryDBConnection, nString);
+            if (name != null) names.add(name);
+        }
         return names;
     }
 
-    public Set<Name> interpretNameFromIds(DatabaseAccessToken databaseAccessToken, Set<Integer> ids)throws Exception{
+    public Set<Name> interpretNameFromIds(DatabaseAccessToken databaseAccessToken, Set<Integer> ids) throws Exception {
         Set<Name> names = new HashSet<>();
-            AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-            for (int id : ids){
-                Name name = nameService.findById(azquoMemoryDBConnection, id);
-                if (name != null) names.add(name);
-            }
+        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        for (int id : ids) {
+            Name name = nameService.findById(azquoMemoryDBConnection, id);
+            if (name != null) names.add(name);
+        }
         return names;
     }
 
-    public List<String>getAttributeList(DatabaseAccessToken databaseAccessToken)throws Exception{
+    public List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         return nameService.attributeList(azquoMemoryDBConnection);
     }
 
     // pretty much replaced the original set of functions to do basic name manipulation
-    // this function can stay server side although I wonder about it taking Json - sort later!
+    // should more functionality be pushed forward? The errors being in here for example are probably not correct.
+    // also it's taking a json object parsed directly from the front end. Hmmm.
 
     public String processJsonRequest(DatabaseAccessToken databaseAccessToken, NameJsonRequest nameJsonRequest) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         String toReturn = "";
         if (nameJsonRequest.operation.equalsIgnoreCase(NameService.DELETE)) {
-            if (nameJsonRequest.name.equals("all"))
+            if (nameJsonRequest.name.equals("all")) {
                 azquoMemoryDBConnection.getAzquoMemoryDB().zapUnusedNames();
-            else {
+            } else {
                 if (nameJsonRequest.id == 0) {
                     return "error: id not passed for delete";
                 } else {
@@ -77,7 +79,6 @@ public class JSTreeService {
                 }
             }
         }
-
         if (nameJsonRequest.operation.equalsIgnoreCase(NameService.EDIT) || nameJsonRequest.operation.equalsIgnoreCase(NameService.NEW)) {
             if (nameJsonRequest.id == 0 && nameJsonRequest.operation.equalsIgnoreCase(NameService.EDIT)) {
                 return "error: id not passed for edit";
@@ -152,7 +153,7 @@ public class JSTreeService {
         final AzquoMemoryDBConnection connectionFromAccessToken = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Name parent = nameService.findById(connectionFromAccessToken, parentId);
         Name child = nameService.findById(connectionFromAccessToken, childId);
-        if(parent != null && child != null){
+        if (parent != null && child != null) {
             parent.addChildWillBePersisted(child);
             return true;
         }
@@ -174,16 +175,15 @@ public class JSTreeService {
         return true;
     }
 
-    /*
-    Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
-     */
+    // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
+    // Another one where maybe it should not be passed a json object
     public JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        Map<String,Boolean> state = new HashMap<>();
+        Map<String, Boolean> state = new HashMap<>();
         state.put("opened", true);
         String text = "";
         Collection<Name> children = new ArrayList<>();
-        Name name = nameId > 0 ? nameService.findById(azquoMemoryDBConnection,nameId) : null;
+        Name name = nameId > 0 ? nameService.findById(azquoMemoryDBConnection, nameId) : null;
         if (jsTreeId == 0 && name == null) {// will be true on the initial call
             text = "root";
             if (searchTerm == null || searchTerm.length() == 0) {// also true on the initial call
@@ -219,7 +219,7 @@ public class JSTreeService {
             for (Name child : children) {
                 boolean childrenBoolean = child.hasChildren() || child.hasValues() || child.getAttributes().size() > 1;
                 if (count > 100) {
-                    childNodes.add(new JsonChildren.Node(-1, (children.size() - 100) + " more....", childrenBoolean, -1,-1));
+                    childNodes.add(new JsonChildren.Node(-1, (children.size() - 100) + " more....", childrenBoolean, -1, -1));
                     break;
                 }
                 childNodes.add(new JsonChildren.Node(-1, child.getAttribute(language), childrenBoolean, child.getId(), name != null ? name.getId() : 0));
@@ -250,23 +250,21 @@ public class JSTreeService {
         return new JsonChildren(jsTreeId, state, text, childNodes, type);
     }
 
-   public String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute)throws Exception{
+    public String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Name name = nameService.findByName(azquoMemoryDBConnection, nameString);
-        if (name != null){
+        if (name != null) {
             return name.getAttribute(attribute);
         }
         return null;
 
     }
 
-    public void setNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute, String attVal)throws Exception{
+    public void setNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute, String attVal) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Name name = nameService.findByName(azquoMemoryDBConnection, nameString);
-        if (name != null){
+        if (name != null) {
             name.setAttributeWillBePersisted(attribute, attVal);
         }
     }
-
-
 }

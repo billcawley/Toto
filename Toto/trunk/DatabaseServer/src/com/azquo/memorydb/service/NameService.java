@@ -714,6 +714,7 @@ public final class NameService {
         int pos = 0;
         int stackCount = 0;
         //int stringCount = 0;
+        // now to act on the formulae which has been converted to Reverse Polish, hence stack based parsing and no brackets etc.
         while (pos < setFormula.length()) {
             Matcher m = p.matcher(setFormula.substring(pos + 2));
             // HANDLE SET INTERSECTIONS UNIONS AND EXCLUSIONS (* + - )
@@ -721,8 +722,8 @@ public final class NameService {
             int nextTerm = setFormula.length() + 1;
             if (m.find()) {
                 nextTerm = m.start() + pos + 2;
-                //PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
-                //  need to check for this....
+                // PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
+                // need to check for this....
                 while (nextTerm < setFormula.length() && (stringUtils.precededBy(setFormula, AS, nextTerm) || stringUtils.precededBy(setFormula, TO, nextTerm) || stringUtils.precededBy(setFormula, FROM, nextTerm) || stringUtils.precededBy(setFormula, AS, nextTerm))) {
                     int startPos = nextTerm + 1;
                     nextTerm = setFormula.length() + 1;

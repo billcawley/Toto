@@ -6,12 +6,15 @@ import com.azquo.memorydb.core.Value;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 16/04/15.
  *
+ * for the map of values for a region. Used to be just a list of values for each cell but now given attributes it could
+ * be a lit of names and and attributes - typically will be just one attribute and name
+ * a little similar to name or value I suppose though this needs attributes specified
  */
 public class ListOfValuesOrNamesAndAttributeName {
-    // for the map of values for a region. Used to be just a list of values for each cell but now given attributes it could be a lit of names and and attributes - typically will be just one attribute and name
-    // a little similar to name or value I suppose though this needs attributes specified
     private final List<Value> values;
     private final List<Name> names;
     private final List<String> attributeNames;

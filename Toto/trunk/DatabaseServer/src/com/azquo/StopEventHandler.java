@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 15/01/16.
  *
  * Created simply to clean up the new thread pools in AzquoMemoryDB

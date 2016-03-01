@@ -15,6 +15,8 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 20/05/15.
  *
  * Just the minimum to make RMI work. Creating a restiry seems to avoid all sorts or problems.
@@ -51,5 +53,4 @@ public class RMIServer {
             }
         }
     }
-
 }

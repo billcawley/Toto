@@ -14,11 +14,16 @@ import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 
 import java.rmi.RemoteException;
+import java.text.NumberFormat;
 import java.util.List;
 import java.util.Set;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 20/05/15.
+ *
+ * Proxying through. I wonder if there should be multiple implementations, much point?
  *
  */
 public class RMIImplementation implements RMIInterface {
@@ -41,7 +46,7 @@ public class RMIImplementation implements RMIInterface {
         this.memoryDBManager = memoryDBManager;
     }
 
-    //Admin stuf
+    //Admin stuff
     @Override
     public void emptyDatabase(String persistenceName) throws RemoteException {
         try {
@@ -284,6 +289,7 @@ public class RMIImplementation implements RMIInterface {
     @Override
     public String getMemoryReport(boolean suggestGc) throws RemoteException {
         if (suggestGc){
+            // note : on Azquo recommended production JVM settings this will be ignored!
             System.gc();
         }
         StringBuilder toReturn = new StringBuilder();
@@ -292,11 +298,8 @@ public class RMIImplementation implements RMIInterface {
         if (suggestGc){
             toReturn.append("##### Garbage Collection Suggested #####<br/>");
         }
-        toReturn.append("##### Heap utilization statistics [MB] #####<br/>");
-        toReturn.append("Used Memory:" + (runtime.totalMemory() - runtime.freeMemory()) / mb + "<br/>");
-        toReturn.append("Free Memory:" + runtime.freeMemory() / mb + "<br/>");
-        toReturn.append("Total Memory:" + runtime.totalMemory() / mb + "<br/>");
-        toReturn.append("Max Memory:" + runtime.maxMemory() / mb + "<br/>");
+        NumberFormat nf = NumberFormat.getInstance();
+        toReturn.append("--- MEMORY USED :  " + nf.format(runtime.totalMemory() - runtime.freeMemory() / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
         return toReturn.toString();
     }
 
@@ -362,8 +365,4 @@ public class RMIImplementation implements RMIInterface {
             throw new RemoteException("Database Server Exception", e);
         }
     }
-
-
-
-    //memoryDBManager.getAzquoMemoryDB(databaseAccessT)
 }
