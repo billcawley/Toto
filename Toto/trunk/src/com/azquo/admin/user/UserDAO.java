@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 07/01/14.
  * Users as in those who login
  */
@@ -102,7 +104,4 @@ public class UserDAO extends StandardDAO<User> {
         namedParams.addValue(CREATEDBY, createdBy);
         return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + CREATEDBY + " = :" + CREATEDBY, namedParams, false);
     }
-
-    // removed password encryption here - it should not be handled by the DAO
-
 }

@@ -19,8 +19,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created 07/01/14 by edd
- * to factor off common bits on vanilla db access
+ * to factor off common bits on vanilla DAO stuff
  */
 public abstract class StandardDAO<EntityType extends StandardEntity> {
 
@@ -108,7 +110,6 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         return results.get(0);
     }
 
-
     public final List<EntityType> findAll() throws DataAccessException {
         return findListWithWhereSQLAndParameters(null, null, false);
     }
@@ -158,6 +159,4 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         Integer toReturn = jdbcTemplate.queryForObject(SQL_SELECT_ALL, new HashMap<>(), Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }
-
-
 }

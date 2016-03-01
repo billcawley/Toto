@@ -22,6 +22,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 31/10/13
@@ -29,7 +31,6 @@ import java.util.*;
  * Used for admin functions. Register, validate etc
  * pretty simple with calls to the vanilla admin dao classes
  * <p/>
- * some functions stopped being used when the admin was moved from excel to azquo book. WHen it's moved back then they may be used again
  */
 public class AdminService {
 
@@ -163,11 +164,7 @@ public class AdminService {
     }
 
     public void emptyDatabase(DatabaseServer databaseServer, Database database) throws Exception {
-        try {
-            rmiClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getPersistenceName());
-        }catch(Exception e){
-            //ignore error when 'fast_name' and 'fast_value' do not exist.......
-        }
+        rmiClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getPersistenceName());
     }
 
     public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
@@ -399,8 +396,6 @@ public class AdminService {
         }
     }
 
-
-
     // code adapted from spreadsheet service which it wilol be removed from
     public void removeDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
@@ -451,5 +446,4 @@ public class AdminService {
         }
         return 0;
     }
-
 }

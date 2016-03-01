@@ -24,8 +24,10 @@ import java.util.Collections;
 import java.util.StringTokenizer;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 11/01/16.
- * code moved from the old JSP, probably should be tidied in time
+ * Code moved from the old JSP, probably should be tidied in time. Hacky code for invoices not part of standard Azquo functionality.
  */
 public class InvoiceService {
 
@@ -36,7 +38,6 @@ public class InvoiceService {
     InvoiceSentDAO invoiceSentDAO;
 
     public boolean sendInvoiceEmail(InvoiceDetails invoiceDetails) throws TransformerException, IOException, FOPException {
-
         // note : I'm not allowing currency to be overridden
         double currencyValue = invoiceDetails.getUnitCost() * invoiceDetails.getQuantity();
         double vat = currencyValue * 0.2;

@@ -3,8 +3,11 @@ package com.azquo.admin.user;
 import com.azquo.admin.StandardEntity;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 29/06/15.
  *
+ * Options against a report data region.
  */
 public class UserRegionOptions extends StandardEntity{
     final int userId;
@@ -52,8 +55,6 @@ public class UserRegionOptions extends StandardEntity{
         this.userId = userId;
         this.reportId = reportId;
         this.region = region;
-
-
         hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS, spreadsheetSource));
         if (hideRows == 0) {
             hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS2, spreadsheetSource));
@@ -82,9 +83,7 @@ public class UserRegionOptions extends StandardEntity{
         if (sortColumn != null) {
             this.sortColumnAsc = true;
             this.sortColumn = sortColumn;
-
-
-            if (sortColumn.toLowerCase().endsWith(" desc")) {
+           if (sortColumn.toLowerCase().endsWith(" desc")) {
                 this.sortColumnAsc = false;
                 this.sortColumn = sortColumn.substring(0, sortColumn.length() - 5);
             }

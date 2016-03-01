@@ -9,6 +9,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Representing access a user can have
  * Considered immutability but things like dates may be adjusted
  */
@@ -117,7 +119,6 @@ public final class Permission extends StandardEntity {
         private final String writeList;
         private final String databaseName;
         private final String userEmail;
-
         // todo - maybe move the DAO calls out?
         public PermissionForDisplay(Permission permission, DatabaseDAO databaseDAO, UserDAO userDAO){
             this.id = permission.getId();

@@ -1,6 +1,5 @@
 package com.azquo.admin.user;
 
-
 import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -11,6 +10,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by bill on 22/04/14.
  *
  */
@@ -100,5 +101,4 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
         namedParams.addValue(REPORTID, reportId);
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID, namedParams);
     }
-
 }

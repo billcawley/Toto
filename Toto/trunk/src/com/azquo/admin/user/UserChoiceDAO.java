@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by bill on 22/04/14.
  *
  * Modified by edd to remove report specifity, this was per report and included standard options such as sorting etc. Now it does not and options are shared across reports.
@@ -76,5 +78,4 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
         namedParams.addValue(USERID, userId);
         return findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID, namedParams, false);
     }
-
 }
