@@ -7,7 +7,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 07/01/14.
+ *
  * Details of an Azquo customer, mutable as almost certainly will be updated
  */
 public final class Business extends StandardEntity {

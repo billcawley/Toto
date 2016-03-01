@@ -20,6 +20,8 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 24/04/15.
  *
  * User CRUD.
@@ -49,6 +51,7 @@ public class ManageUsersController {
 
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {

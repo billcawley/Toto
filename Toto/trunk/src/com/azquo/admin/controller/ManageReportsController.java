@@ -16,6 +16,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 24/04/15.
  *
  * No delete or create but updating of reports. Simple as all on one page, a list. May need pagination at some point.
@@ -38,7 +40,7 @@ public class ManageReportsController {
     )
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-
+        // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {

@@ -22,7 +22,9 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
- * Created by edward on 07/01/16.
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
+ * Created by edward on 07/01/16. Not relevant to core Azquo functionality, we just needed a way of managing our invoices.
  *
  */
 
@@ -43,6 +45,7 @@ public class ManageInvoiceDetailsController {
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
 
+        // I assume secure until we move to proper spring security
         if (loggedInUser == null
                 || !loggedInUser.getUser().getEmail().contains("@azquo.com")
                 ) {

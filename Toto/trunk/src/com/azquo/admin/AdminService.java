@@ -334,6 +334,10 @@ public class AdminService {
         User user = userDao.findById(userId);
         if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
             userDao.removeById(user);
+            final List<Permission> forUserId = permissionDAO.findForUserId(userId);
+            for (Permission permission : forUserId){
+                permissionDAO.removeById(permission);
+            }
         }
     }
 

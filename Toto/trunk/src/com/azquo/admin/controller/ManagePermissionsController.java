@@ -21,8 +21,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * <p>
  * Created by cawley on 24/04/15.
- *
+ * <p>
  * Permissions CRUD. Need to add pagination though now we'd need to check with Visual Code about this.
  */
 @Controller
@@ -46,72 +48,67 @@ public class ManagePermissionsController {
             , @RequestParam(value = "readList", required = false) String readList
             , @RequestParam(value = "writeList", required = false) String writeList
             , @RequestParam(value = "submit", required = false) String submit
-    ) throws Exception
-
-    {
+    ) throws Exception {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-            if (deleteId != null && NumberUtils.isDigits(deleteId)){
+            if (deleteId != null && NumberUtils.isDigits(deleteId)) {
                 adminService.deletePermissionById(Integer.parseInt(deleteId), loggedInUser);
             }
-
-
-            if (editId != null && NumberUtils.isDigits(editId)){
+            if (editId != null && NumberUtils.isDigits(editId)) {
                 Permission toEdit = adminService.getPermissionById(Integer.parseInt(editId), loggedInUser);
                 // ok check to see if data was submitted
                 StringBuilder error = new StringBuilder();
-                if (submit != null){
-                    if (startDate == null || startDate.isEmpty()){
+                if (submit != null) {
+                    if (startDate == null || startDate.isEmpty()) {
                         error.append("Start date required (yyyy-MM-dd)<br/>");
                     } else {
-                        try{
+                        try {
                             formatter.parse(startDate);
                         } catch (DateTimeParseException e) {
                             error.append("Start date format not yyyy-MM-dd<br/>");
                         }
                     }
-                    if (endDate == null || endDate.isEmpty()){
+                    if (endDate == null || endDate.isEmpty()) {
                         error.append("End date required (yyyy-MM-dd)<br/>");
                     } else {
-                        try{
+                        try {
                             formatter.parse(endDate);
                         } catch (DateTimeParseException e) {
                             error.append("End date format not yyyy-MM-dd<br/>");
                         }
                     }
-                    if (userId == null || !NumberUtils.isNumber(userId)){
+                    if (userId == null || !NumberUtils.isNumber(userId)) {
                         error.append("User Id Required<br/>");
                     } else {
                         User user = adminService.getUserById(Integer.parseInt(userId), loggedInUser);
-                        if (user == null){
+                        if (user == null) {
                             error.append("Applicable User Id Required<br/>");
                         }
                     }
-                    if (databaseId == null || !NumberUtils.isNumber(databaseId)){
+                    if (databaseId == null || !NumberUtils.isNumber(databaseId)) {
                         error.append("Database Id Required<br/>");
                     } else {
                         Database database = adminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
-                        if (database == null){
+                        if (database == null) {
                             error.append("Applicable Database Id Required<br/>");
                         }
                     }
                     // no error checking on read and write list??
-                    if (error.length() == 0){
+                    if (error.length() == 0) {
                         // to keep intelliJ happy, I'm not sure if this is a good idea or not? I suppose protects against logic above being changed unpredictably
                         assert userId != null;
                         assert databaseId != null;
                         assert startDate != null;
                         assert endDate != null;
                         // then store, it might be new
-                        if (toEdit == null){
+                        if (toEdit == null) {
                             // Have to use  alocadate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
                             adminService.createUserPermission(Integer.parseInt(userId), Integer.parseInt(databaseId), LocalDate.parse(startDate, formatter).atStartOfDay()
-                                    ,LocalDate.parse(endDate, formatter).atStartOfDay(), readList, writeList, loggedInUser);
+                                    , LocalDate.parse(endDate, formatter).atStartOfDay(), readList, writeList, loggedInUser);
                         } else {
                             toEdit.setUserId(Integer.parseInt(userId));
                             toEdit.setDatabaseId(Integer.parseInt(databaseId));
@@ -134,7 +131,7 @@ public class ManagePermissionsController {
                     model.put("readList", readList);
                     model.put("writeList", writeList);
                 } else {
-                    if (toEdit != null){
+                    if (toEdit != null) {
                         model.put("id", toEdit.getId());
                         model.put("databaseId", toEdit.getDatabaseId());
                         model.put("userId", toEdit.getUserId());

@@ -20,6 +20,8 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 21/09/15.
  *
  * Report Schedule CRUD.
@@ -36,11 +38,9 @@ public class ManageReportSchedulesController {
     @Autowired
     private SpreadsheetService spreadsheetService;
     private static final Logger logger = Logger.getLogger(ManageReportsController.class);
-
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
     )
-
     {
         if (request.getParameter("testsend") != null){
             try {
@@ -50,7 +50,7 @@ public class ManageReportSchedulesController {
             }
         }
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-
+        // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {

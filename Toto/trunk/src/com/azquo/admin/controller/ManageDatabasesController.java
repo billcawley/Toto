@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 24/04/15.
  *
  * New HTML admin, upload files and manage databases
@@ -51,6 +53,7 @@ public class ManageDatabasesController {
 
     private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
 
+    // to play nice with velocity or JSP
     public class DisplayDataBase {
         private final boolean loaded;
         private final Database database;
@@ -102,14 +105,13 @@ public class ManageDatabasesController {
             , @RequestParam(value = "emptyId", required = false) String emptyId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "unloadId", required = false) String unloadId
-            , @RequestParam(value = "convertId", required = false) String convertId
             , @RequestParam(value = "backupTarget", required = false) String backupTarget
             , @RequestParam(value = "summaryLevel", required = false) String summaryLevel
     )
 
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-
+        // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
@@ -164,7 +166,6 @@ public class ManageDatabasesController {
                 e.printStackTrace();
                 error.append(e.getMessage());
             }
-
             if (error.length() > 0) {
                 String exceptionError = error.toString();
                 //trim off the javaspeak
@@ -195,6 +196,7 @@ public class ManageDatabasesController {
             request.getSession().setAttribute("lastSelected", database);
         }
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {

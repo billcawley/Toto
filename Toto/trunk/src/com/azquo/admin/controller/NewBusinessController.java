@@ -14,9 +14,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.servlet.http.HttpServletRequest;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 09/07/15.
  * <p/>
- * A simple page to create a new business. Currently fo our own use, it has not been beautified.
+ * A simple page to create a new business. Currently for internal use, it has not been beautified.
  */
 @Controller
 @RequestMapping("/NewBusiness")
@@ -47,6 +49,7 @@ public class NewBusinessController {
 
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
@@ -75,9 +78,7 @@ public class NewBusinessController {
                 } else {
                     model.put("error", error.toString());
                 }
-
             }
-
             model.put("businessName", businessName);
             model.put("address1", address1);
             model.put("address2", address2);
@@ -91,5 +92,4 @@ public class NewBusinessController {
             return "newbusiness";
         }
     }
-
 }

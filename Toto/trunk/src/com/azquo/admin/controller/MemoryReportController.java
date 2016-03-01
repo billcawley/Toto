@@ -1,6 +1,5 @@
 package com.azquo.admin.controller;
 
-import com.azquo.admin.AdminService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
@@ -13,9 +12,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.servlet.http.HttpServletRequest;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 30/09/15.
  *
- * Pushes a database server memory report through to the user, I don't think many non Azquo people would look at this at the moment.
+ * For users to see how much memory a database server is using. Notable that under recommended production settings the JVM won't listen to System.gc().
  */
 @Controller
 @RequestMapping("/MemoryReport")

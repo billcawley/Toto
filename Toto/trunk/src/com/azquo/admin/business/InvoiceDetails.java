@@ -3,34 +3,18 @@ package com.azquo.admin.business;
 import com.azquo.admin.StandardEntity;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 07/01/16.
  *
- * As in details from whichy an invoice can be generated.
+ * As in details from which an invoice can be generated. Not relevant to core Azquo functionality, we just needed a way of managing our invoices.
  */
 public class InvoiceDetails extends StandardEntity {
     
     public static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-    /*
-  `id` int(11) NOT NULL,
-  `customer_reference` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `service_description` text COLLATE utf8_unicode_ci NOT NULL default '',
-  `quantity` int(11) NOT NULL default '0',
-  `unit_cost` int(11) NOT NULL default '0',
-  `payment_terms` int(11) NOT NULL default '',
-  `po_reference` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `invoice_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `invoice_period` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `invoice_no` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `invoice_address` text COLLATE utf8_unicode_ci NOT NULL default '',
-  `no_vat` TINYINT(1) NOT NULL DEFAULT '0',
-  `send_to` varchar(255) COLLATE utf8_unicode_ci NOT NULL default ''
-
-     */
 
     String customerReference;
     String serviceDescription;

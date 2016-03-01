@@ -17,9 +17,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by bill on 05/08/15.
  *
- * Used by JSTree
+ * Used by JSTree, inspect database.
  */
 
 @Controller
@@ -38,6 +40,7 @@ public class ShowdataController {
             , @RequestParam(value = "chosen", required = false) String chosen
     ) throws Exception
     {
+        // I assume secure until we move to proper spring security
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
