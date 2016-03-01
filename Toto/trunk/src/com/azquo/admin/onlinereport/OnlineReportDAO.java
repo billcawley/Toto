@@ -10,6 +10,8 @@ import java.time.ZoneId;
 import java.util.*;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by bill on 15/04/14.
  *
  */
@@ -55,7 +57,6 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     }
 
     public final class OnlineReportRowMapper implements RowMapper<OnlineReport> {
-
         @Override
         public OnlineReport mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
@@ -108,9 +109,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
             namedParams.addValue(USERSTATUS + count, "%" + statuses[count].trim() + "%");
             statusSelect.append(USERSTATUS + " like :" + USERSTATUS).append(count);
         }
-
         statusSelect.append(")");
-
         namedParams.addValue(DATABASEID, databaseId);
         namedParams.addValue(DATABASETYPE, databaseType);
         namedParams.addValue(USERSTATUS, "%" + userStatus + "%");
@@ -130,9 +129,6 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         return toReturn;
     }
 
-
-
-
     public List<OnlineReport> findForDatabaseId(final int databaseId, String databaseType) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         if (databaseType == null || databaseType.length() == 0){
@@ -144,17 +140,9 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         return findListWithWhereSQLAndParameters("WHERE " + DATABASETYPE + " = :" + DATABASETYPE + " OR (" + DATABASEID + " = :" + DATABASEID + " and " + ACTIVE + " = :" + ACTIVE + ")", namedParams, false);
     }
 
-
-
-
     public void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
         jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
     }
-
-
-
 }
-
-

@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 21/09/15.
  *
  */
@@ -51,7 +53,6 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
     }
 
     public final class ReportScheduleRowMapper implements RowMapper<ReportSchedule> {
-
         @Override
         public ReportSchedule mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
@@ -88,5 +89,4 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
         namedParams.addValue(NEXTDUE, Date.from(due.atZone(ZoneId.systemDefault()).toInstant()));
         return findListWithWhereSQLAndParameters("WHERE " + NEXTDUE + " <= :" + NEXTDUE, namedParams, false);
     }
-
 }

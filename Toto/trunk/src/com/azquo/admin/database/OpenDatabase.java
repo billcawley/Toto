@@ -5,10 +5,13 @@ import com.azquo.admin.StandardEntity;
 import java.util.Date;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 18/02/14.
  * have made immutable which simplifies the code
  *
- * notably not used after the initial client/server code split
+ * Recording which databases are being accessed, not actually being used since the report/DB server split, need to get rid of it or start using it again. Todo
+ *
  */
 public final class OpenDatabase extends StandardEntity {
     // name user time db, email user when logged in

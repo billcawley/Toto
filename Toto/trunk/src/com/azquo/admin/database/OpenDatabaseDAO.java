@@ -12,7 +12,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by bill on 01/04/14.
+ *
+ * Recording which databases are being accessed, not actually being used since the report/DB server split, need to get rid of it or start using it again. Todo
  *
  */
 public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
@@ -40,7 +44,6 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
     }
 
     public static final class OpenDatabaseRowMapper implements RowMapper<OpenDatabase> {
-
         @Override
         public OpenDatabase mapRow(final ResultSet rs, final int row) throws SQLException {
             try {

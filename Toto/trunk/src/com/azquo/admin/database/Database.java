@@ -7,9 +7,11 @@ import java.net.URLEncoder;
 import java.time.LocalDateTime;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by Cawley on 08/01/14.
  * <p/>
- * Representing an Azquo memory database. These records are scanned on startup and teh databases loaded into memory
+ * Representing information on the report server about an Azquo memory database.
  */
 public final class Database extends StandardEntity {
 

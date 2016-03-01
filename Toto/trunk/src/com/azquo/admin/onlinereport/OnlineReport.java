@@ -7,9 +7,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by bill on 15/04/14.
  *
- * Called OnlineReport back when there may have still been the Excel interface but all reports are online now.
+ * All reports are online now, we used to have Excel ones.
  */
 public class OnlineReport extends StandardEntity {
 

@@ -5,6 +5,8 @@ import com.azquo.admin.StandardEntity;
 import java.util.Date;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 09/01/14
  * An entry for each uploaded file
  * Going to make immutable
