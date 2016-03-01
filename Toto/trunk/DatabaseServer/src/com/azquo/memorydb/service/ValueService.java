@@ -379,7 +379,7 @@ public final class ValueService {
                 }
             }
         }
-        if (count == 1) return attValue;//don't allow long numbers to be converted to standard form.
+        if (count <= 1) return attValue;//don't allow long numbers to be converted to standard form.
         return (stringResult != null) ? stringResult : numericResult + "";
     }
 
