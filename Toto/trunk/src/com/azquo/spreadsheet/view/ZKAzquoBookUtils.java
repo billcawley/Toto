@@ -150,6 +150,10 @@ public class ZKAzquoBookUtils {
                                     if (LAST_PLACEHOLDER.equals(userChoice)) {
                                         userChoice = validOptions.get(validOptions.size() - 1);
                                     }
+                                    while (userChoice!=null && !validOptions.contains(userChoice) && userChoice.contains("->")){
+                                        //maybe the user choice is over -specified. (e.g from drilldown or removal of conflicting names)  Try removing the super-sets
+                                        userChoice = userChoice.substring(userChoice.indexOf("->")+2);
+                                    }
                                     if (userChoice != null && validOptions.contains(userChoice)) {
                                         sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
                                         context += choiceName + " = " + userChoice + ";";
@@ -272,6 +276,10 @@ public class ZKAzquoBookUtils {
                                                         cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
                                                         showSave = true;
                                                     }
+
+                                                }
+                                                if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length()==0){
+                                                    cellForDisplay.setStringValue(df.format(sCell.getDateValue()));//set a string value as our date for saving purposes
                                                 }
                                             } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
                                                 if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
@@ -558,7 +566,7 @@ public class ZKAzquoBookUtils {
                                                 }
 
                                                 if (date != null) {
-                                                    cell.setValue(date.getTime() / (1000 * 3600 * 24) + 25570);//convert date to days relative to 1970
+                                                    cell.setValue(date.getTime() / (1000 * 3600 * 24) + 25569);//convert date to days relative to 1970
                                                     hasValue = true;
                                                 }
                                             } catch (Exception e) {
