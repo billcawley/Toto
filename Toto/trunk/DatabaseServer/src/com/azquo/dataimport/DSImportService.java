@@ -239,7 +239,11 @@ public class DSImportService {
 
     private String findOrigName(String filePath) {
         //provenance should not show the temporary file name....
-        String provFile = filePath.substring(filePath.lastIndexOf("/") + 1);
+        int dirEnd = filePath.lastIndexOf("/");
+        if (dirEnd < 0){
+            dirEnd = filePath.lastIndexOf("\\");
+        }
+        String provFile = filePath.substring(dirEnd + 1);
         String suffix = provFile.substring(provFile.indexOf(".") + 1);
         provFile = provFile.substring(0, provFile.indexOf(".") + 1);
         String finalSuffix = suffix.substring(suffix.indexOf(".") + 1);
@@ -253,7 +257,7 @@ public class DSImportService {
             provFile += finalSuffix;
         } else {
             //probably should look for the first number, but usually this would be OK.
-            provFile += suffix.substring(0, 3);
+            provFile += finalSuffix;
         }
         return provFile;
     }
@@ -729,7 +733,9 @@ public class DSImportService {
             }
         }
         // load leftovers
-        futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - batchSize)));// line no should be the start
+        int loadLine = lineNo - batchSize;
+        if (loadLine < 1) loadLine = 1;
+        futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, loadLine)));// line no should be the start
         // check all work is done and memory is in sync
         for (Future<?> futureBatch : futureBatches) {
             futureBatch.get(1, TimeUnit.HOURS);
@@ -947,11 +953,14 @@ public class DSImportService {
     private int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo) throws Exception {
         int valueCount = 0;
         // initial pass to deal with defaults, dates and local parents
+        //set defaults before dealing with local parent/child
         for (ImportCellWithHeading importCellWithHeading : cells) {
-            // this basic value checking was outside, I see no reason it shouldn't be in here
             if (importCellWithHeading.immutableImportHeading.defaultValue != null && importCellWithHeading.lineValue.length() == 0) {
                 importCellWithHeading.lineValue = importCellWithHeading.immutableImportHeading.defaultValue;
             }
+        }
+        for (ImportCellWithHeading importCellWithHeading : cells) {
+            // this basic value checking was outside, I see no reason it shouldn't be in here
             if (importCellWithHeading.immutableImportHeading.attribute != null && importCellWithHeading.immutableImportHeading.isDate) {
                     /*
                     interpret the date and change to standard form
