@@ -27,9 +27,11 @@ import java.util.Collections;
 import java.util.Date;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by bill on 28/10/14
  * <p/>
- * Created to handle requests from the plugin.
+ * Created to handle requests from the plugin. Want to zap the connection ID, depends on what the plugin allows
  *
  */
 
@@ -100,14 +102,13 @@ public class MagentoController {
             if (op.equals("connect")) {
                 if (dataLoadService.findLastUpdate(loggedInUser.getDataAccessToken(), request.getRemoteAddr()) != null) {
                     // was connection id here, hacking ths back in to get the logged in connection. We're dealing with the legacy of the conneciton id still in the plugin.
-                    String tempConnectionId = System.currentTimeMillis() + "";
+                    String tempConnectionId = System.currentTimeMillis() + "" + hashCode(); // adding the hashcode to make it much harder for someone to hack the connection id (which we need to zap)
                     request.getServletContext().setAttribute(tempConnectionId, loggedInUser);
                     return tempConnectionId;
                 } else {
                     findRequiredTables(loggedInUser, request.getRemoteAddr());
                 }
             }
-
             if (op.equals("restart")) {
                 Database existingDb = loggedInUser.getDatabase();
                 if (existingDb != null){
@@ -123,17 +124,14 @@ public class MagentoController {
                 loginService.switchDatabase(loggedInUser, existingDb);
                 return findRequiredTables(loggedInUser, request.getRemoteAddr());
             }
-
             if (op.equals("lastupdate") || op.equals("requiredtables")) { // 'lastupdate' applies only to versions 1.1.0 and 1.1.1  (LazySusan and Lyco)
                 return findRequiredTables(loggedInUser, request.getRemoteAddr());
             }
             if (op.equals("updatedb")) {
                 findRequiredTables(loggedInUser, request.getRemoteAddr());//for curl commands only to load dates etc.
-
                 if (loggedInUser.getDatabase() != null) {
                     System.out.println("Running a magento update, memory db : " + loggedInUser.getDatabase().getName() + " don't currently have access to max id, need to add that back in");
                 }
-
                 if (data != null) {
                     long start = System.currentTimeMillis();
                     // now copying all files, will make it easier for the client/server split. No passing of input streams just the file name

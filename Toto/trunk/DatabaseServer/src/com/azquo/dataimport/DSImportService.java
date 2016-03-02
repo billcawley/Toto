@@ -15,6 +15,7 @@ import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import groovy.lang.GroovyRuntimeException;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -30,7 +31,7 @@ import java.util.stream.Collectors;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 20/05/15.
  * <p>
  * Has a fair bit of the logic that was in the original import service.
@@ -79,6 +80,7 @@ public class DSImportService {
     public static final String DATELANG = "date";
     public static final String ONLY = "only";
     public static final String EXCLUSIVE = "exclusive";
+    public static final String EXISTING = "existing"; // only works in in context of child of
 
     // these two are not for clauses, it's to do with reading the file in the first place, do we read the headers or not, how many lines to skip before data
     public static final String HEADINGSSTRING = "HEADINGS";
@@ -144,6 +146,8 @@ public class DSImportService {
         , if it has a value it references a set higher up e.g. if a product is being moved in a structure (this heading is parent of the product) with many levels then the
         set referenced in the exclusive clause might be "Categories", the top set, so that the product would be removed from any names in Categories before being added to this heading*/
         String exclusive = null;
+        // in context of childof - only load the line if this name is in the set already
+        boolean existing = false;
     }
 
     /* I see no reason for getters here. Class members only, saves a load of space. Note added later : getters and setters may make the code clearer though this could be done by better names also I think
@@ -171,6 +175,7 @@ public class DSImportService {
         final boolean blankZeroes;
         final boolean lineNameRequired;
         final String exclusive;
+        final boolean existing;
 
         public ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
             this.heading = mutableImportHeading.heading;
@@ -192,6 +197,7 @@ public class DSImportService {
             this.blankZeroes = mutableImportHeading.blankZeroes;
             this.lineNameRequired = mutableImportHeading.lineNameRequired;
             this.exclusive = mutableImportHeading.exclusive;
+            this.existing = mutableImportHeading.existing;
         }
     }
 
@@ -240,7 +246,7 @@ public class DSImportService {
     private String findOrigName(String filePath) {
         //provenance should not show the temporary file name....
         int dirEnd = filePath.lastIndexOf("/");
-        if (dirEnd < 0){
+        if (dirEnd < 0) {
             dirEnd = filePath.lastIndexOf("\\");
         }
         String provFile = filePath.substring(dirEnd + 1);
@@ -367,6 +373,9 @@ public class DSImportService {
                 break;
             case EXCLUSIVE:// it can be blank OR have a value
                 heading.exclusive = "";
+                break;
+            case EXISTING: // currently simply a boolean that can work with childof
+                heading.existing = true;
                 break;
             default:
                 throw new Exception(firstWord + " not understood");
@@ -508,7 +517,7 @@ public class DSImportService {
                    happy for the check to remain in here - more stuff for the multi threaded bit */
                 ImportCellWithHeading first = lineToLoad.get(0);
                 if (first.lineValue.length() > 0 || first.immutableImportHeading.heading == null) {
-                    if (getCompositeValuesAndCheckOnly(lineToLoad)) {
+                    if (getCompositeValuesCheckOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, lineNo, attributeNames)) {
                         try {
                             // valueTracker simply the number of values imported
                             valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo));
@@ -589,7 +598,7 @@ public class DSImportService {
             }
             importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         }
-        if (importInterpreter!=null && importInterpreter.getAttribute(GROOVYPROCESSOR) != null){
+        if (importInterpreter != null && importInterpreter.getAttribute(GROOVYPROCESSOR) != null) {
             System.out.println("Groovy found! Running  . . . ");
             Object[] groovyParams = new Object[3];
             groovyParams[0] = filePath;
@@ -612,7 +621,7 @@ public class DSImportService {
         // It looks for a name for the file type, this name can have headers and/or the definitions for each header
         // in this case looking for a list of headers. Could maybe make this make a bit more sense . . .
         int skipLines = 0;
-           if (!isSpreadsheet && importInterpreter != null) {
+        if (!isSpreadsheet && importInterpreter != null) {
             // hack for spark response, I'll leave in here for the moment, it could be useful for others
             if ("true".equalsIgnoreCase(importInterpreter.getAttribute("transpose"))) {
                 // ok we want to transpose, will use similar logic to the server side transpose
@@ -655,7 +664,7 @@ public class DSImportService {
                 System.out.println("has headers " + importHeaders);
                 headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
             }
-         }
+        }
         // finally we might use the headers on the data file, this is notably used when setting up the headers themselves :)
         if (headers == null) {
             headers = lineIterator.next();
@@ -718,8 +727,9 @@ public class DSImportService {
             int columnIndex = 0;
             for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
                 // intern may save a little memory. Column Index could point past line values for things like composite. Possibly other things but I can't think of them at the moment
-                String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern().replace("~~","\r\n") : "";//hack to replace carriage returns from Excel sheets
-                if (lineValue.startsWith("\"")&& lineValue.endsWith("\"")) lineValue = lineValue.substring(1,lineValue.length()-1).replace("\"\"","\"");//strip spurious quote marks inserted by Excel
+                String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern().replace("~~", "\r\n") : "";//hack to replace carriage returns from Excel sheets
+                if (lineValue.startsWith("\"") && lineValue.endsWith("\""))
+                    lineValue = lineValue.substring(1, lineValue.length() - 1).replace("\"\"", "\"");//strip spurious quote marks inserted by Excel
                 //remove spurious quotes (put in when Groovyscript sent)
                 importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null));
                 columnIndex++;
@@ -1159,10 +1169,12 @@ public class DSImportService {
         }
     }
 
-    // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
-    // now seems to support basic excel like string operations, left right and mid
+    private final String LINENO = "LINENO";
 
-    private boolean getCompositeValuesAndCheckOnly(List<ImportCellWithHeading> cells) {
+    // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
+    // now seems to support basic excel like string operations, left right and mid. Checking only and existing means "should we import the line at all" bases on these criteria
+
+    private boolean getCompositeValuesCheckOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, int lineNo, List<String> attributeNames) {
         int adjusted = 2;
         //loops in case there are multiple levels of dependencies
         while (adjusted > 1) {
@@ -1170,6 +1182,8 @@ public class DSImportService {
             for (ImportCellWithHeading cell : cells) {
                 if (cell.immutableImportHeading.compositionPattern != null) {
                     String result = cell.immutableImportHeading.compositionPattern;
+                    // do line number first, I see no reason not to
+                    result = result.replace(LINENO, lineNo + "");
                     int headingMarker = result.indexOf("`");
                     while (headingMarker >= 0) {
                         int headingEnd = result.indexOf("`", headingMarker + 1);
@@ -1248,6 +1262,19 @@ public class DSImportService {
                             return false;
                         }
                     }
+                }
+                // we could be deriving the name from composite so check existing here
+                if (cell.immutableImportHeading.existing) {
+                    if (attributeNames == null) { // same logic as used when creating the line names, not sure of this
+                        attributeNames = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
+                    }
+                    // note I'm not going to check parentNames are not empty here, if someone put existing wihthout specifying child of then I think it's fair to say the line isn't valid
+                    for (Name parent : cell.immutableImportHeading.parentNames) { // try to find any names from anywhere
+                        if (!azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, cell.lineValue, parent).isEmpty()) { // NOT empty, we found one!
+                            return true; // no point carrying on
+                        }
+                    }
+                    return false; // none found
                 }
             }
         }
