@@ -43,6 +43,7 @@ public class AzquoBook {
     private UserRegionOptionsDAO userRegionOptionsDAO;
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     private SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
+    private SimpleDateFormat ukdflong = new SimpleDateFormat("dd/MM/yy hh:mm:ss");
     private RMIClient rmiClient;
 
     public static final String azDataRegion = "az_dataregion";
@@ -1343,13 +1344,18 @@ public class AzquoBook {
     }
 
     private String convertDates(String possibleDate) {
+        //this routine should probably be generalised to recognise more forms of date
         int slashPos = possibleDate.indexOf("/");
         if (slashPos < 0) return possibleDate;
         Date date;
         try {
-            date = ukdf.parse(possibleDate);
-        } catch (Exception e) {
-            return possibleDate;
+            date = ukdflong.parse(possibleDate);// try with time
+         } catch (Exception e) {
+            try {
+                date = ukdf.parse(possibleDate); //try without time
+            }catch(Exception e2){
+                return possibleDate;
+            }
         }
         return df.format(date);
     }
