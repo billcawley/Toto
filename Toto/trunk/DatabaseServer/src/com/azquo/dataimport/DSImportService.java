@@ -310,7 +310,7 @@ public class DSImportService {
                 firstWord = firstWord.substring(0, firstWord.indexOf(" "));
             }
         }
-        if (clause.length() == firstWord.length() && !firstWord.equals(LOCAL) && !firstWord.equals(NONZERO) && !firstWord.equals(EXCLUSIVE)) { // empty clause, exception unless one which allows blank
+        if (clause.length() == firstWord.length() && !firstWord.equals(LOCAL) && !firstWord.equals(NONZERO) && !firstWord.equals(EXCLUSIVE) && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading); // other clauses cannot be blank!
         }
         String result = clause.substring(firstWord.length()).trim();
