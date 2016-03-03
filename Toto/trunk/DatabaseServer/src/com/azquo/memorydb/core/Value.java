@@ -25,6 +25,7 @@ public final class Value extends AzquoMemoryDBEntity {
 
     // issue of final here and bits of the init being in a try block. Need to have a little think about that
     private Provenance provenance;
+    // todo, test DB size with char arrays? Smaller but not pooled.
     private String text;//no longer final.   May be adjusted during imports (if duplicate lines are found will sum...)
 
     // changing to array to save memory

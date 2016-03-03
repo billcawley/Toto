@@ -3,6 +3,7 @@ package com.azquo.spreadsheet;
 import com.azquo.memorydb.core.Name;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -31,8 +32,13 @@ public class DataRegionHeading {
     private final Set<Name> valueParentCountSet;
     // an identifier,
     private final String description;
+    private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
 
     public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function, Set<Name> nameCountSet, Set<Name> valueParentCountSet, String description) {
+        this(name, writeAllowed,function,nameCountSet,valueParentCountSet,description, null);
+    }
+
+    public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function, Set<Name> nameCountSet, Set<Name> valueParentCountSet, String description, List<DataRegionHeading> offsetHeadings) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
@@ -40,6 +46,7 @@ public class DataRegionHeading {
         this.nameCountSet =  nameCountSet != null ? Collections.unmodifiableSet(nameCountSet) : null;
         this.valueParentCountSet =  valueParentCountSet != null ? Collections.unmodifiableSet(valueParentCountSet) : null;
         this.description = description;
+        this.offsetHeadings = offsetHeadings;
     }
 
     // no functions with attributes for the moment
@@ -51,6 +58,7 @@ public class DataRegionHeading {
         this.nameCountSet = null;
         this.valueParentCountSet = null;
         this.description = null;
+        this.offsetHeadings = null;
     }
 
     public Name getName() {
@@ -90,5 +98,9 @@ public class DataRegionHeading {
 
     public String getDescription() {
         return description;
+    }
+
+    public List<DataRegionHeading> getOffsetHeadings() {
+        return offsetHeadings;
     }
 }

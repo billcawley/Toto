@@ -115,6 +115,7 @@ public class DSSpreadsheetService {
     }
 
     // now has the option to exception based on large sets being returned by parse query. Used currently on columns, if these name sets are more than a few hundred then that's clearly unworkable - you wouldn't want more than a few hundred columns
+    private static final String HIERARCHY = "hierarchy";
 
     private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, int namesQueryLimit) throws Exception {
         List<List<List<DataRegionHeading>>> nameLists = new ArrayList<>(headingRegion.size());
@@ -190,7 +191,22 @@ public class DSSpreadsheetService {
                                 forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, null, selectionSet, sourceCell));
                             }
                             row.add(forNameCount);
-                        } else { // most of the time it will be a vanilla query
+                            // ok this is the kind of thing that would typically be in name service but it needs to set some formatting info so
+                            // it will be in here with limited parsing support e.g. `All customers` hierarchy 3 that is to say name, hierarchy, number
+                        } else if (sourceCell.toLowerCase().contains(HIERARCHY)){
+                            String name = sourceCell.substring(0, sourceCell.toLowerCase().indexOf(HIERARCHY)).replace("`", "").trim();
+                            int level = Integer.parseInt(sourceCell.substring(sourceCell.toLowerCase().indexOf(HIERARCHY) + HIERARCHY.length()).trim()); // fragile?
+                            Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
+                            if (!names.isEmpty()){// it should be jsut one
+                                List<DataRegionHeading> hierarchyList = new ArrayList<>();
+                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function); // I assume this will be only one!
+                                resolveHierarchyForHeading(azquoMemoryDBConnection, offsetHeadings.get(0), hierarchyList,function, new ArrayList<>(), level);
+                                if (namesQueryLimit > 0 && hierarchyList.size() > namesQueryLimit) {
+                                    throw new Exception("While creating headings " + sourceCell + " resulted in " + hierarchyList.size() + " names, more than the specified limit of " + namesQueryLimit);
+                                }
+                                row.add(hierarchyList);
+                            }
+                        }else { // most of the time it will be a vanilla query
                             final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
                             if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
@@ -203,6 +219,19 @@ public class DSSpreadsheetService {
         }
         return nameLists;
     }
+
+    public void resolveHierarchyForHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading heading, List<DataRegionHeading> target
+            , DataRegionHeading.BASIC_RESOLVE_FUNCTION function, List<DataRegionHeading> offsetHeadings, int levelLimit){
+        if (offsetHeadings.size() < levelLimit){// then get the children
+            List<DataRegionHeading> offsetHeadingsCopy = new ArrayList<>(offsetHeadings);
+            offsetHeadingsCopy.add(heading);
+            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), azquoMemoryDBConnection, function, offsetHeadingsCopy)){
+                resolveHierarchyForHeading(azquoMemoryDBConnection, child, target,function,offsetHeadingsCopy,levelLimit);
+            }
+        }
+        target.add(heading); // the "parent" is added after
+    }
+
 
     /* ok we're passed a list of lists
     what is returned is a 2d array (also a list of lists) featuring every possible variation in order
@@ -314,6 +343,8 @@ public class DSSpreadsheetService {
     I renamed the function headingDefinitionRowHasOnlyTheRightCellPopulated to help make this clear.
 
     That logic just described is the bulk of the function I think. Permutation is handed off to get2DPermutationOfLists, then those permuted lists are simply stacked together.
+
+    Right, this also needs to deal with
 
      */
 
@@ -533,19 +564,56 @@ public class DSSpreadsheetService {
         return flipped;
     }
 
-    // return headings as strings for display, I'm going to put blanks in here if null.
+    /* return headings as strings for display, I'm going to put blanks in here if null.
+    I need to add support for the hierarchy offset here (hierarchy requiring blank cells to help the user understand the structure). Should this be a flag somewhere?
+     */
 
     public List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languagesSent) {
+        // first I need to check max offsets for each column - need to check on whether the 2d arrays are the same orientation for row or column headings or not todo
+        List<Integer> maxColOffsets = new ArrayList<>();
+        for (List<DataRegionHeading> row : source) {
+            if (maxColOffsets.isEmpty()){
+                for (DataRegionHeading ignored : row) {
+                    maxColOffsets.add(0);
+                }
+            }
+            int index = 0;
+            for (DataRegionHeading heading : row) {
+                if (heading.getOffsetHeadings() != null &&  maxColOffsets.get(index) < heading.getOffsetHeadings().size()){
+                    maxColOffsets.set(index, heading.getOffsetHeadings().size());
+                }
+                index++;
+            }
+        }
+        int extraColsFromOffsets = 0; // need to know this before making each row
+        for (int offset : maxColOffsets){
+            extraColsFromOffsets += offset;
+        }
+
         List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);//for displaying headings always look for DEFAULT_DISPLAY_NAME first - otherwise may look up the chain for local names
         languages.addAll(languagesSent);
         List<List<String>> toReturn = new ArrayList<>(source.size());
         for (List<DataRegionHeading> row : source) {
-            List<String> returnRow = new ArrayList<>(row.size());
+            List<String> returnRow = new ArrayList<>(row.size() + extraColsFromOffsets);
             toReturn.add(returnRow);
+            int colIndex = 0;
             for (DataRegionHeading heading : row) {
                 String cellValue = null;
                 if (heading != null) {
+                    if (heading.getOffsetHeadings() != null){
+                        for (DataRegionHeading offsetHeading : heading.getOffsetHeadings()){
+                            String offsetString = "";
+                            for (String language : languages) {
+                                if (offsetHeading.getName().getAttribute(language) != null) {
+                                    offsetString = offsetHeading.getName().getAttribute(language);
+                                    break;
+                                }
+                                // used to check default display name here but that's redundant, it's set above
+                            }
+                            returnRow.add(offsetString);
+                        }
+                    }
                     Name name = heading.getName();
                     if (name != null) {
                         for (String language : languages) {
@@ -553,15 +621,18 @@ public class DSSpreadsheetService {
                                 cellValue = name.getAttribute(language);
                                 break;
                             }
-                        }
-                        if (cellValue == null) {
-                            cellValue = name.getDefaultDisplayName();
+                            // used to check default display name here but that's redundant, it's set above
                         }
                     } else {
                         cellValue = heading.getAttribute();
                     }
                 }
                 returnRow.add(cellValue != null ? cellValue : "");
+                int extraColsForThisRow = maxColOffsets.get(colIndex);
+                for (int i = 0; i < extraColsForThisRow - (heading != null && heading.getOffsetHeadings() != null ? heading.getOffsetHeadings().size() : 0) ; i++){
+                    returnRow.add("");
+                }
+                colIndex++;
             }
         }
         return toReturn;
@@ -1705,19 +1776,23 @@ public class DSSpreadsheetService {
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
     }
 
-    // Five little utility functions added by Edd, required now headings are not names
+    // Utility functions added by Edd, required now headings are not names
 
     public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) {
+        return dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null);
+    }
+
+    public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, List<DataRegionHeading> offsetHeadings) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
             for (Name name : names) {
                 // will the new write permissions cause an overhead?
-                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null, null, null));
+                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null, null, null, offsetHeadings));
             }
         } else { // don't bother checking permissions, write permissions to true
             for (Name name : names) {
-                dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, null, null));
+                dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, null, null, offsetHeadings));
             }
         }
         return dataRegionHeadings;
