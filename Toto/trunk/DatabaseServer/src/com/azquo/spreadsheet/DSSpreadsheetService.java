@@ -579,7 +579,7 @@ public class DSSpreadsheetService {
             }
             int index = 0;
             for (DataRegionHeading heading : row) {
-                if (heading.getOffsetHeadings() != null &&  maxColOffsets.get(index) < heading.getOffsetHeadings().size()){
+                if (heading != null && heading.getOffsetHeadings() != null &&  maxColOffsets.get(index) < heading.getOffsetHeadings().size()){
                     maxColOffsets.set(index, heading.getOffsetHeadings().size());
                 }
                 index++;
