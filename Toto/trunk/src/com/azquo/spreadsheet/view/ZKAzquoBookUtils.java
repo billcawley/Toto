@@ -484,18 +484,28 @@ public class ZKAzquoBookUtils {
                     int row;
                     // ok there should be the right space for the headings
                     if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
+                        boolean isHierarchy = isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
                         row = displayRowHeadings.getRow();
                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
                             int col = displayRowHeadings.getColumn();
+                            boolean lastEmpty = false;
                             for (String heading : rowHeading) {
                                 if (heading != null && (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                                     sheet.getInternalSheet().getCell(row, col).setValue(heading);
                                 }
                                 col++;
+                                if (heading == null || heading.length()==0){
+                                    lastEmpty = true;
+                                }
+                            }
+                            if (isHierarchy && lastEmpty){
+                                //this is a total line
+                                Range selection = Ranges.range(sheet,row, displayRowHeadings.getColumn(), row, displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1);
+                                CellOperationUtil.applyFontBoldweight(selection,Font.Boldweight.BOLD);
                             }
                             row++;
                         }
-                    }
+                       }
                     //← → ↑ ↓ ↔ ↕ ah I can just paste it here, thanks IntelliJ :)
                     if (displayColumnHeadings != null) {
                         row = displayColumnHeadings.getRow();
@@ -654,6 +664,19 @@ public class ZKAzquoBookUtils {
         }
         Collections.sort(names, (o1, o2) -> (o1.getName().toUpperCase().compareTo(o2.getName().toUpperCase())));
         return names;
+    }
+
+
+
+    private boolean isHierarchy(List<List<String>> headings){
+        for (List<String>oneCol:headings){
+            for(String oneHeading:oneCol){
+                if (oneHeading.toLowerCase().contains("hierarchy ")){
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // this works out case insensitive based on the API, I've made this static for convenience? Is is a problem? Maybe the code calling it should be in here
