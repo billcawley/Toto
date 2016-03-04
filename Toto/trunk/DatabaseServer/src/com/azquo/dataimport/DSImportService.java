@@ -712,6 +712,9 @@ public class DSImportService {
         List<Future> futureBatches = new ArrayList<>();
         while (lineIterator.hasNext()) {
             String[] lineValues = lineIterator.next();
+      /*  CHANGE OF RULES - WE'LL NEED TO MAKE IT EXPLICIT IF WE ARE TO ACCEPT CARRIAGE RETURNS IN THE MIDDLE OF LINES
+          EXPORTS FROM MICROSOFT SQL TRUNCATE NULLS AT THE END OF LINES
+
             while (lineValues.length < colCount && lineIterator.hasNext()) { // if there are carriage returns in columns, we'll assume on this import that every line must have the same number of columns (may need an option later to miss this)
                 String[] additionalValues = lineIterator.next();
                 if (additionalValues.length == 0) break;
@@ -722,24 +725,33 @@ public class DSImportService {
                     lineValues = (String[]) ArrayUtils.addAll(lineValues, ArrayUtils.subarray(additionalValues, 1, additionalValues.length)); // not sure I like this cast here, will have a think
                 }
             }
+            */
             lineNo++;
             List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
             int columnIndex = 0;
+            boolean corrupt = false;
             for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
                 // intern may save a little memory. Column Index could point past line values for things like composite. Possibly other things but I can't think of them at the moment
                 String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern().replace("~~", "\r\n") : "";//hack to replace carriage returns from Excel sheets
+                if (lineValue.equals("\"")){
+                    //this has happened
+                    corrupt = true;
+                    break;
+                }
                 if (lineValue.startsWith("\"") && lineValue.endsWith("\""))
                     lineValue = lineValue.substring(1, lineValue.length() - 1).replace("\"\"", "\"");//strip spurious quote marks inserted by Excel
                 //remove spurious quotes (put in when Groovyscript sent)
                 importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null));
                 columnIndex++;
             }
-            //batch it up!
-            linesBatched.add(importCellsWithHeading);
-            // rack up the futures to check in a mo to see that things are complete
-            if (linesBatched.size() == batchSize) {
-                futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - batchSize)));// line no should be the start
-                linesBatched = new ArrayList<>(batchSize);
+            if (!corrupt) {
+                //batch it up!
+                linesBatched.add(importCellsWithHeading);
+                // rack up the futures to check in a mo to see that things are complete
+                if (linesBatched.size() == batchSize) {
+                    futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - batchSize)));// line no should be the start
+                    linesBatched = new ArrayList<>(batchSize);
+                }
             }
         }
         // load leftovers
@@ -1135,7 +1147,7 @@ public class DSImportService {
         if (cellWithHeading.immutableImportHeading.indexForChild != -1) {
             ImportCellWithHeading childCell = cells.get(cellWithHeading.immutableImportHeading.indexForChild);
             if (childCell.lineValue.length() == 0) {
-                throw new Exception("Line " + lineNo + ": blank value for child of " + cellWithHeading.lineValue);
+                throw new Exception("Line " + lineNo + ": blank value for child of " + cellWithHeading.lineValue + " " + cellWithHeading.immutableImportHeading.heading);
             }
 
             // ok got the child cell, need to find the child cell name to add it to this cell's children
