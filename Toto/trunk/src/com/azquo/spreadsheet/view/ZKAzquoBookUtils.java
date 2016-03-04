@@ -414,6 +414,8 @@ public class ZKAzquoBookUtils {
         CellRegion columnHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_ColumnHeadings" + region);
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
+        CellRegion totalFormatCell =  getCellRegionForSheetAndName(sheet, "az_totalFormat" + region);
+
 
         String errorMessage = null;
         if (columnHeadingsDescription != null && rowHeadingsDescription == null) {
@@ -501,7 +503,12 @@ public class ZKAzquoBookUtils {
                             if (isHierarchy && lastEmpty){
                                 //this is a total line
                                 Range selection = Ranges.range(sheet,row, displayRowHeadings.getColumn(), row, displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1);
-                                CellOperationUtil.applyFontBoldweight(selection,Font.Boldweight.BOLD);
+                                if (totalFormatCell!=null){
+                                    CellOperationUtil.applyBackColor(selection,sheet.getInternalSheet().getCell(totalFormatCell.getRow(), totalFormatCell.getColumn()).getCellStyle().getBackColor().getHtmlColor());
+                                    CellOperationUtil.applyFontColor(selection,sheet.getInternalSheet().getCell(totalFormatCell.getRow(), totalFormatCell.getColumn()).getCellStyle().getFont().getColor().getHtmlColor());
+                                }else{
+                                    CellOperationUtil.applyFontBoldweight(selection,Font.Boldweight.BOLD);
+                                }
                             }
                             row++;
                         }
