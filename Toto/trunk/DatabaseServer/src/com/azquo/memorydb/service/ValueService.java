@@ -250,7 +250,7 @@ public final class ValueService {
     private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
 
     public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked
-            , final boolean payAttentionToAdditive, DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) throws Exception {
+            , final boolean payAttentionToAdditive, DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function) throws Exception {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
@@ -389,7 +389,7 @@ public final class ValueService {
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
     public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive
-            , DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, MutableBoolean locked) {
+            , DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
@@ -437,19 +437,19 @@ public final class ValueService {
         if (values.size() > 1) {
             locked.isTrue = true;
         }
-        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.COUNT) {
+        if (function == DataRegionHeading.FUNCTION.COUNT) {
             return values.size();
         }
-        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.AVERAGE) {
+        if (function == DataRegionHeading.FUNCTION.AVERAGE) {
             if (values.size() == 0) {
                 return 0; // avoid dividing by zero
             }
             return sumValue / values.size();
         }
-        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.MAX) {
+        if (function == DataRegionHeading.FUNCTION.MAX) {
             return max;
         }
-        if (function == DataRegionHeading.BASIC_RESOLVE_FUNCTION.MIN) {
+        if (function == DataRegionHeading.FUNCTION.MIN) {
             return min;
         }
         return sumValue; // default to sum, no function

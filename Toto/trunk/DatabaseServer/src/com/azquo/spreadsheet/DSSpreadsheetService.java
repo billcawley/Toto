@@ -132,86 +132,48 @@ public class DSSpreadsheetService {
                         // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
                         row.add(Collections.singletonList(new DataRegionHeading(sourceCell, true))); // we say that an attribute heading defaults to writable, it will defer to the name
                     } else {
-                        DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;// that's sum practically speaking
+                        DataRegionHeading.FUNCTION function = null;// that's sum practically speaking
                         // now allow functions
-                        for (DataRegionHeading.BASIC_RESOLVE_FUNCTION basic_resolve_function : DataRegionHeading.BASIC_RESOLVE_FUNCTION.values()) {
-                            if (sourceCell.toUpperCase().startsWith(basic_resolve_function.name())) {
-                                function = basic_resolve_function;
+                        for (DataRegionHeading.FUNCTION _function : DataRegionHeading.FUNCTION.values()) {
+                            if (sourceCell.toUpperCase().startsWith(_function.name())) {
+                                function = _function;
                                 sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1, sourceCell.trim().length() - 1);// +1 - 1 to get rid of the brackets
                             }
                         }
-                        String NAMECOUNT = "NAMECOUNT";
-                        String TOTALNAMECOUNT = "TOTALNAMECOUNT";
-                        String VALUEPARENTCOUNT = "VALUEPARENTCOUNT";
-                        // for these two I need the descriptions so I can make a useful cache key for counts
-                        if (sourceCell.toUpperCase().startsWith(NAMECOUNT)) {
-                            // should strip off the function
-                            sourceCell = sourceCell.substring(sourceCell.indexOf("(", NAMECOUNT.length()) + 1); // chop off the beginning
-                            sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
-                            // ok these could be heavy so let's cache them, feels a bit dodgy but we'll see how it goes.
-                            Set<Name> nameCountSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(sourceCell);
-                            if (nameCountSet == null) {
-                                nameCountSet = HashObjSets.newMutableSet();
-                                nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames, nameCountSet); // namecount set will be populated internally - the last parameter passed
-                                azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(sourceCell, nameCountSet);
-                            }
-                            List<DataRegionHeading> forNameCount = new ArrayList<>();
-                            forNameCount.add(new DataRegionHeading(null, false, function, nameCountSet, null, sourceCell));
-                            row.add(forNameCount);
-                        } else if (sourceCell.toUpperCase().startsWith(TOTALNAMECOUNT) || sourceCell.toUpperCase().startsWith(VALUEPARENTCOUNT)) {
-                            // ok I used to loook for the first "(" after TOTALNAMECOUNT or VALUEPARENTCOUNT but that was unnecessarily strict,
-                            // first ( will be fine, also it does not currently support nested brackets, just one set
-                            sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1); // chop off the beginning
-                            sourceCell = sourceCell.substring(0, sourceCell.indexOf(")"));
-                            String selectionType = sourceCell.substring(0, sourceCell.indexOf(","));
-                            // edd trying some caching
-                            // this type set is an odd one - we only use the first one. Which would mean it's either a vanilla name or an as set in which case caching may not be a thing. TODO. Also, compute if absent on the cache?
-                            Set<Name> typeSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(selectionType);
-                            if (typeSet == null) {
-                                typeSet = HashObjSets.newMutableSet();
-                                nameService.parseQuery(azquoMemoryDBConnection, selectionType, attributeNames, typeSet); // set will be populated internally - the last parameter passed
-                                azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(sourceCell, typeSet);
-                            }
-                            if (typeSet.size() != 1) {
-                                throw new Exception("selection types must be single cells = use 'as'");
-                            }
-
-                            String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1);
-                            Set<Name> selectionSet = azquoMemoryDBConnection.getAzquoMemoryDB().getSetFromCache(secondSet);
-                            if (selectionSet == null) {
-                                selectionSet = HashObjSets.newMutableSet();
-                                nameService.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, selectionSet); // set will be populated internally - the last parameter passed
-                                azquoMemoryDBConnection.getAzquoMemoryDB().setSetInCache(secondSet, selectionSet);
-                            }
-                            List<DataRegionHeading> forNameCount = new ArrayList<>();
-                            // note! this is where the difference is between the functions - where the set is put in the data region heading for TOTALNAMECOUNT or VALUEPARENTCOUNT
-                            if (sourceCell.toUpperCase().startsWith(TOTALNAMECOUNT)) {
-                                forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, selectionSet, null, sourceCell));
-                            } else {
-                                forNameCount.add(new DataRegionHeading(typeSet.iterator().next(), false, function, null, selectionSet, sourceCell));
-                            }
-                            row.add(forNameCount);
+                        /* The way name functions work is going to change to allow [ROWHEADING] and [COLUMNHEADING] which work with set operators, / * - + etc.
+                           This means that in the case of name functions the heading can't cache sets, it needs to evalue the formulae on each line and it means that each
+                           heading needs to have its description populated even if it's a simple name. Caching of heading will be broken, this would slow down Damart
+                           for example but that's not such a concern right now. Later when evaluating cells it will look for a function in the row heading first then the column heading (column not added yet)
+                           and it will evaluate the first it finds taking into account [ROWHEADING] and [COLUMNHEADING], it can't evaluate both. And [ROWHEADING] means the first row heading
+                           if there are more than one we may later allow [ROWHEADING1], [ROWHEADING2] etc.
+                           Thus a fair bit of code has been chopped out of here to be resolved later.
+                           */
+                        if (DataRegionHeading.isNameFunction(function)) { // then just set the descirption to be resolved later
+                            List<DataRegionHeading> forFunction = new ArrayList<>();
+                            forFunction.add(new DataRegionHeading(null, false, function, sourceCell, null)); // in this case the heading is just a placeholder for the forumula to be evaluated later
+                            row.add(forFunction);
                             // ok this is the kind of thing that would typically be in name service but it needs to set some formatting info so
                             // it will be in here with limited parsing support e.g. `All customers` hierarchy 3 that is to say name, hierarchy, number
-                        } else if (sourceCell.toLowerCase().contains(HIERARCHY)){
+                        } else if (sourceCell.toLowerCase().contains(HIERARCHY)) { // kind of a special case, supports a name not an expression
                             String name = sourceCell.substring(0, sourceCell.toLowerCase().indexOf(HIERARCHY)).replace("`", "").trim();
                             int level = Integer.parseInt(sourceCell.substring(sourceCell.toLowerCase().indexOf(HIERARCHY) + HIERARCHY.length()).trim()); // fragile?
                             Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
-                            if (!names.isEmpty()){// it should be jsut one
+                            if (!names.isEmpty()) {// it should be jsut one
                                 List<DataRegionHeading> hierarchyList = new ArrayList<>();
-                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function); // I assume this will be only one!
-                                resolveHierarchyForHeading(azquoMemoryDBConnection, offsetHeadings.get(0), hierarchyList,function, new ArrayList<>(), level);
+                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null, null); // I assume this will be only one!
+                                resolveHierarchyForHeading(azquoMemoryDBConnection, offsetHeadings.get(0), hierarchyList, function, new ArrayList<>(), level);
                                 if (namesQueryLimit > 0 && hierarchyList.size() > namesQueryLimit) {
                                     throw new Exception("While creating headings " + sourceCell + " resulted in " + hierarchyList.size() + " names, more than the specified limit of " + namesQueryLimit);
                                 }
                                 row.add(hierarchyList);
                             }
-                        }else { // most of the time it will be a vanilla query
+                        } else { // most of the time it will be a vanilla query
+                            // todo, value parent count in here . . .
                             final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
                             if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
                             }
-                            row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function));
+                            row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null, null));
                         }
                     }
                 }
@@ -221,12 +183,12 @@ public class DSSpreadsheetService {
     }
 
     public void resolveHierarchyForHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading heading, List<DataRegionHeading> target
-            , DataRegionHeading.BASIC_RESOLVE_FUNCTION function, List<DataRegionHeading> offsetHeadings, int levelLimit){
-        if (offsetHeadings.size() < levelLimit){// then get the children
+            , DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, int levelLimit) {
+        if (offsetHeadings.size() < levelLimit) {// then get the children
             List<DataRegionHeading> offsetHeadingsCopy = new ArrayList<>(offsetHeadings);
             offsetHeadingsCopy.add(heading);
-            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), azquoMemoryDBConnection, function, offsetHeadingsCopy)){
-                resolveHierarchyForHeading(azquoMemoryDBConnection, child, target,function,offsetHeadingsCopy,levelLimit);
+            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), azquoMemoryDBConnection, function, offsetHeadingsCopy, null)) {
+                resolveHierarchyForHeading(azquoMemoryDBConnection, child, target, function, offsetHeadingsCopy, levelLimit);
             }
         }
         target.add(heading); // the "parent" is added after
@@ -572,21 +534,21 @@ public class DSSpreadsheetService {
         // first I need to check max offsets for each column - need to check on whether the 2d arrays are the same orientation for row or column headings or not todo
         List<Integer> maxColOffsets = new ArrayList<>();
         for (List<DataRegionHeading> row : source) {
-            if (maxColOffsets.isEmpty()){
+            if (maxColOffsets.isEmpty()) {
                 for (DataRegionHeading ignored : row) {
                     maxColOffsets.add(0);
                 }
             }
             int index = 0;
             for (DataRegionHeading heading : row) {
-                if (heading != null && heading.getOffsetHeadings() != null &&  maxColOffsets.get(index) < heading.getOffsetHeadings().size()){
+                if (heading != null && heading.getOffsetHeadings() != null && maxColOffsets.get(index) < heading.getOffsetHeadings().size()) {
                     maxColOffsets.set(index, heading.getOffsetHeadings().size());
                 }
                 index++;
             }
         }
         int extraColsFromOffsets = 0; // need to know this before making each row
-        for (int offset : maxColOffsets){
+        for (int offset : maxColOffsets) {
             extraColsFromOffsets += offset;
         }
 
@@ -601,8 +563,8 @@ public class DSSpreadsheetService {
             for (DataRegionHeading heading : row) {
                 String cellValue = null;
                 if (heading != null) {
-                    if (heading.getOffsetHeadings() != null){
-                        for (DataRegionHeading offsetHeading : heading.getOffsetHeadings()){
+                    if (heading.getOffsetHeadings() != null) {
+                        for (DataRegionHeading offsetHeading : heading.getOffsetHeadings()) {
                             String offsetString = "";
                             for (String language : languages) {
                                 if (offsetHeading.getName().getAttribute(language) != null) {
@@ -629,7 +591,7 @@ public class DSSpreadsheetService {
                 }
                 returnRow.add(cellValue != null ? cellValue : "");
                 int extraColsForThisRow = maxColOffsets.get(colIndex);
-                for (int i = 0; i < extraColsForThisRow - (heading != null && heading.getOffsetHeadings() != null ? heading.getOffsetHeadings().size() : 0) ; i++){
+                for (int i = 0; i < extraColsForThisRow - (heading != null && heading.getOffsetHeadings() != null ? heading.getOffsetHeadings().size() : 0); i++) {
                     returnRow.add("");
                 }
                 colIndex++;
@@ -1120,10 +1082,11 @@ public class DSSpreadsheetService {
 
     /* only called by itself and total name count, we want to know the number of intersecting names between containsSet
     and all its children and selectionSet, recursive to deal with containsSet down to the bottom. alreadyTested is
-    simply to stop checking names that have already been checked.
+    simply to stop checking names that have already been checked. Note already tested doens't mean intersections are unique,
+    the number on intersections is on alreadyTested's children, it's when there is an intersection there that a name is considered tested.
 
     Worth pointing out that findOverlap for Name Count is a total of unique names and hence can use a contains on findAllChildren which returns a set
-     whereas this, on the other hand, requires the non unique intersection, a single name could contribute to the count more than once by bing in more than one set.
+     whereas this, on the other hand, requires the non unique intersection, a single name could contribute to the count more than once by being in more than one set.
 
     Note : if this is really hammered there would be a case for moving it inside name to directly access the array and hence avoid Iterator instantiation.
 
@@ -1152,208 +1115,185 @@ public class DSSpreadsheetService {
         return count;
     }
 
-    /* the total name count function is the intersection count of its first parameter (a name) and all it's children and the second parameter which is a set
-     the key being that that second parameter set is modified by being intersected with the row heading and all its children
-     so number of intersections between the first parameter and all its children and (the second parameter set intersected with the row name and all its children)
-     */
-
-    private int getTotalNameCount(AzquoMemoryDBConnection connection, Set<DataRegionHeading> headings) {
-        String cacheKey = "";
-        for (DataRegionHeading heading : headings) {
-            if (heading.getDescription() != null) {
-                cacheKey += heading.getDescription();
-            } else if (heading.getName() != null) {
-                cacheKey += heading.getName().getDefaultDisplayName();
-            }
-        }
-        Integer cached = connection.getAzquoMemoryDB().getCountFromCache(cacheKey);
-        if (cached != null) {
-            return cached;
-        }
-        Name memberSet = null;
-        Name containsSet = null;
-        Set<Name> selectionSet = null;
-        for (DataRegionHeading heading : headings) {
-            if (heading.getName() != null) {
-                if (heading.getNameCountSet() != null) { // the heading with the function, typically a column heading I think
-                    containsSet = heading.getName(); // the first parameter of the function in the report  - a single name but it could well be defined in an "as"
-                    selectionSet = heading.getNameCountSet(); // the second parameter of the function in the report, a set
-                } else { // a vanilla name heading, typically a row heading
-                    memberSet = heading.getName();
-                }
-            }
-        }
-        int toReturn = 0;
-        Set<Name> alreadyTested = HashObjSets.newMutableSet();
-        // todo - alternative to retainall again? Creation of new set?
-        if (containsSet != null && memberSet != null) {
-            Set<Name> remainder = HashObjSets.newMutableSet(selectionSet); // so take the second function parameter set
-            remainder.retainAll(memberSet.findAllChildren(false)); // intersect with the row heading name and all it's children
-            toReturn = totalSetIntersectionCount(containsSet, remainder, alreadyTested, 0); // and get the set intersection of that and the first parameter and all its children
-        }
-        connection.getAzquoMemoryDB().setCountInCache(cacheKey, toReturn);
-        return toReturn;
-    }
-
     // hacky, I just need a way to pass the values without doing a redundant addAll
     public static class ValuesHook {
         public List<Value> values = null;
     }
 
-    // factored this off to enable getting a single cell, also useful to be called from the multi threading
+    /* factored this off to enable getting a single cell, also useful to be called from the multi threading. Noe we have what I'll call "complex functions"
+    then there will be a bit more going on in here as these functions need to be evaluated here not when creating the data region headings, as they were before
+     */
+
+    public static String ROWHEADING = "[ROWHEADING]";
+    public static String COLUMNHEADING = "[COLUMNHEADING]";
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<Name> contextNames, int rowNo, int colNo, List<String> languages, int valueId) throws Exception {
-        Value valueToTestFor = null;
         boolean selected = false;
-        if (valueId > 0) {
-            valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
-        }
         String stringValue = "";
         double doubleValue = 0;
-        Set<DataRegionHeading> headingsForThisCell = HashObjSets.newMutableSet(rowHeadings.size()); // I wonder a little how important having them as sets is . . .
-        Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
-        ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
-        //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
-        for (DataRegionHeading heading : rowHeadings) {
-            if (heading != null && (heading.getName() != null || (heading.getAttribute() != null && !heading.getAttribute().equals(".")) || heading.getNameCountSet() != null)) {
-                headingsForThisCell.add(heading);
-            }
-        }
-        int hCount = headingsForThisCell.size();
-        boolean checked = true;
-        if (hCount > 0) {
-            for (DataRegionHeading heading : columnHeadings) {
-                if (heading != null && (heading.getName() != null || (heading.getAttribute() != null && !heading.getAttribute().equals(".")) || heading.getNameCountSet() != null)) {
-                    headingsForThisCell.add(heading);
-                }
-            }
-            rowAndColumnHeadingsForThisCell = new HashSet<>(headingsForThisCell);
-            if (headingsForThisCell.size() > hCount) {
-                headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection, null)); // no functions (including namecount) for context
-            } else {
-                headingsForThisCell.clear();
-                checked = false;
-            }
-        }
         MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
-        for (DataRegionHeading heading : headingsForThisCell) {
-            if (heading.getName() == null && heading.getAttribute() == null && heading.getNameCountSet() == null) {
-                checked = false;
-            }
-            if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values
-                locked.isTrue = true;
+        ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
+        // ok under new logic the complex functions will work very differently evaluating a query for each cell rather than gathering headings as below. Hence a big if here
+        DataRegionHeading nameFunctionColumnHeading = null;
+        for (DataRegionHeading columnHeading : columnHeadings) { // currently just check the columns, may add row support later
+            if (columnHeading != null && columnHeading.isNameFunction()) {
+                nameFunctionColumnHeading = columnHeading;
             }
         }
-        if (!checked) { // not a valid peer set? Lock and no values set (blank)
-            locked.isTrue = true;
-        } else {
-            // ok new logic here, we need to know if we're going to use attributes or values or namecount!
-            DataRegionHeading.BASIC_RESOLVE_FUNCTION function = null;
-            for (DataRegionHeading heading : headingsForThisCell) {
-                if (heading.getFunction() != null) {
-                    function = heading.getFunction();
-                }
-            }
-            DataRegionHeading nameCountHeading = getHeadingWithNameCount(headingsForThisCell);
-            DataRegionHeading valueParentCountHeading = getHeadingWithValueParentCount(headingsForThisCell);
-            if (nameCountHeading != null && headingsForThisCell.size() == 2) {//these functions only work if there's no context
-                if (nameCountHeading.getName() != null) {
-                    //System.out.println("going for total name set " + nameCountHeading.getNameCountSet().size() + " name we're using " + nameCountHeading.getName());
-                    doubleValue = getTotalNameCount(connection, headingsForThisCell);
-                } else {// without the name set that means name count - practically speaking after dealing with the caching this is really about calling findOverlap with the set and all the children of the row
-                    Set<Name> nameCountSet = nameCountHeading.getNameCountSet();
-                    doubleValue = 0.0;
-                    for (DataRegionHeading dataRegionHeading : headingsForThisCell) {
-                        if (dataRegionHeading != nameCountHeading && dataRegionHeading.getName() != null) { // should be the non function heading, the row heading with a name
-                            // we know this is a cached set internally, no need to create a new set - might be expensive
-                            Collection<Name> nameCountSet2 = dataRegionHeading.getName().findAllChildren(false);
-                            String cacheKey = nameCountHeading.getDescription() + dataRegionHeading.getName().getDefaultDisplayName();
-                            Integer cached = connection.getAzquoMemoryDB().getCountFromCache(cacheKey);
-                            if (cached != null) {
-                                doubleValue = cached;
-                            } else {
-                                int valueAsInt;
-                                if (nameCountSet.size() < nameCountSet2.size()) {
-                                    valueAsInt = findOverlap(nameCountSet, nameCountSet2);
-                                } else {
-                                    valueAsInt = findOverlap(nameCountSet2, nameCountSet);
-                                }
-                                connection.getAzquoMemoryDB().setCountInCache(cacheKey, valueAsInt);
-                                doubleValue = valueAsInt;
+        // todo re-implement cacheing here if there are performance problems - also find overlap?
+        if (nameFunctionColumnHeading != null) {
+            if (!rowHeadings.isEmpty()) { // functions all will deal with row headings
+                String cellQuery = nameFunctionColumnHeading.getDescription().replace(ROWHEADING, rowHeadings.get(0).getDescription()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
+                locked.isTrue = true; // they cant edit the results from complex functions
+                if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
+                    Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
+                    nameService.parseQuery(connection, cellQuery, languages, namesToCount);
+                    doubleValue = namesToCount.size();
+                    stringValue = doubleValue + "";
+                } else if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
+                    String[] twoSets = nameFunctionColumnHeading.getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
+                    Set<Name> leftSet = HashObjSets.newMutableSet();
+                    Set<Name> rightSet = HashObjSets.newMutableSet();
+                    nameService.parseQuery(connection, twoSets[0], languages, leftSet);
+                    nameService.parseQuery(connection, twoSets[1], languages, rightSet);
+                    // ok I have the two sets, I got rid of total name count (which featured caching), I'm going to do the nuts and bolts here, need to think a little
+                    Set<Name> alreadyTested = HashObjSets.newMutableSet();
+                    // ok this should be like the inside of totalSetIntersectionCount but dealing with left set as the first parameter not a name.
+                    // Notable that the left set is expanded out to try intersecting with the right set which is "as is", this needs testing
+                    int count = 0;
+                    for (Name child : leftSet) {
+                        if (rightSet.contains(child)) {
+                            count++;
+                        }
+                    }
+                    if (count == 0) { // I think we only go ahead if there was no intersection at the top level - need to discuss with WFC
+                        for (Name child : leftSet) {
+                            if (child.hasChildren()) {
+                                count += totalSetIntersectionCount(child, rightSet, alreadyTested, 0);
                             }
                         }
                     }
+                    doubleValue = count;
+                    stringValue = count + "";
                 }
-                stringValue = doubleValue + "";
-                // again this block copy pasted from above to make valueparent count work,
-            } else if (valueParentCountHeading != null && valueParentCountHeading.getName() != null) {//this will work with context
-                ValuesHook valuesHook = new ValuesHook();
-                valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function);// so resolve as we usually would to get the values
-                // now, find all the parents and cross them with the valueParentCountHeading set
-                Set<Name> allValueParents = HashObjSets.newMutableSet();
-                for (Value v : valuesHook.values) {
-                    for (Name n : v.getNames()) {
-                        allValueParents.add(n); // add the name
-                        allValueParents.addAll(n.findAllParents()); // and all it's parents
+            }
+        } else {// conventional type or value function
+            Set<DataRegionHeading> headingsForThisCell = HashObjSets.newMutableSet(rowHeadings.size()); // I wonder a little how important having them as sets is . . .
+            Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
+            //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
+            for (DataRegionHeading heading : rowHeadings) {
+                if (heading != null && (heading.getName() != null || (heading.getAttribute() != null && !heading.getAttribute().equals(".")))) {
+                    headingsForThisCell.add(heading);
+                }
+            }
+            int hCount = headingsForThisCell.size();
+            boolean checked = true;
+            if (hCount > 0) {
+                for (DataRegionHeading heading : columnHeadings) {
+                    if (heading != null && (heading.getName() != null || (heading.getAttribute() != null && !heading.getAttribute().equals(".")))) {
+                        headingsForThisCell.add(heading);
                     }
                 }
-                // now find the overlap between the value parents and the set in the heading
-                if (valueParentCountHeading.getValueParentCountSet().size() < allValueParents.size()) {
-                    doubleValue = findOverlap(valueParentCountHeading.getValueParentCountSet(), allValueParents);
+                rowAndColumnHeadingsForThisCell = new HashSet<>(headingsForThisCell);
+                if (headingsForThisCell.size() > hCount) {
+                    headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection, null, null, null)); // context is just names, add them in here
                 } else {
-                    doubleValue = findOverlap(allValueParents, valueParentCountHeading.getValueParentCountSet());
+                    headingsForThisCell.clear();
+                    checked = false;
                 }
-                stringValue = doubleValue + "";
-            } else if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
-                ValuesHook valuesHook = new ValuesHook();
-                // now , get the function from the headings
-                if (function != null) {
+            }
+            for (DataRegionHeading heading : headingsForThisCell) {
+                if (heading.getName() == null && heading.getAttribute() == null) { // a redundant check? todo : confirm
+                    checked = false;
+                }
+                if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values
                     locked.isTrue = true;
                 }
-                if (headingsForThisCell.size() > 0) {
-                    doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function); // true = pay attention to names additive flag
-                    //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                    if (valuesHook.values.size() == 1 && !locked.isTrue) {
-                        Value value = valuesHook.values.get(0);
-                        selected = valueToTestFor == value; // I think this is the right logic - is the value the one drilled down from?
-                        stringValue = value.getText();
-                        if (stringValue.contains("\n")) {
-                            stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
-                        }
-                        // was isnumber test here to add a double to the
-                    } else if (valuesHook.values.size() > 0) {
-                        stringValue = doubleValue + "";
-                    }
-                } else {
-                    stringValue = "";
-                    doubleValue = 0;
-                }
-                listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(valuesHook.values);// can we zap the values from here? It might be a bit of a saving if there are loads of values per cell
-            } else {  // now, new logic for attributes
-                List<Name> names = new ArrayList<>();
-                List<String> attributes = new ArrayList<>();
+            }
+            if (!checked) { // no valid row/col combo
+                locked.isTrue = true;
+            } else {
+                // ok new logic here, we need to know if we're going to use attributes or values
+                DataRegionHeading.FUNCTION function = null;
+                Set<Name> valueFunctionSet = null;
                 for (DataRegionHeading heading : headingsForThisCell) {
-                    if (heading.getName() != null) {
-                        names.add(heading.getName());
-                    }
-                    if (heading.getAttribute() != null) {
-                        attributes.add(heading.getAttribute());
+                    if (heading.getFunction() != null) { // should NOT be a complex function, that should have been caught before
+                        function = heading.getFunction();
+                        valueFunctionSet = heading.getValueFunctionSet();
+                        break; // can't combine functions I don't think
                     }
                 }
-                listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
-                String attributeResult = valueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked);
-                try {
-                    doubleValue = Double.parseDouble(attributeResult);
-                } catch (Exception e) {
-                    //ignore
-                }
-                // ZK would want this typed? Maybe just sort out later? EFC later : what does this mean?
-                if (attributeResult != null) {
-                    attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
-                    stringValue = attributeResult;
-                } else {
-                    stringValue = "";
+                if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
+                    ValuesHook valuesHook = new ValuesHook();
+                    // now , get the function from the headings
+                    if (function != null) {
+                        locked.isTrue = true;
+                    }
+                    if (headingsForThisCell.size() > 0) {
+                        Value valueToTestFor = null;
+                        if (valueId > 0) {
+                            valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
+                        }
+                        doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function); // true = pay attention to names additive flag
+                        if (function == DataRegionHeading.FUNCTION.VALUEPARENTCOUNT && valueFunctionSet != null) { // then value parent count, we're going to override the double value just set
+                            // now, find all the parents and cross them with the valueParentCountHeading set
+                            Set<Name> allValueParents = HashObjSets.newMutableSet();
+                            for (Value v : valuesHook.values) {
+                                for (Name n : v.getNames()) {
+                                    allValueParents.add(n); // add the name
+                                    allValueParents.addAll(n.findAllParents()); // and all it's parents
+                                }
+                            }
+                            // now find the overlap between the value parents and the set in the heading
+                            if (valueFunctionSet.size() < allValueParents.size()) {
+                                doubleValue = findOverlap(valueFunctionSet, allValueParents);
+                            } else {
+                                doubleValue = findOverlap(allValueParents, valueFunctionSet);
+                            }
+                        }
+                        //if there's only one value, treat it as text (it may be text, or may include £,$,%)
+                        if (valuesHook.values.size() == 1 && !locked.isTrue) {
+                            Value value = valuesHook.values.get(0);
+                            selected = valueToTestFor == value; // I think this is the right logic - is the value the one drilled down from?
+                            stringValue = value.getText();
+                            if (stringValue.contains("\n")) {
+                                stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
+                            }
+                            // was isnumber test here to add a double to the
+                        } else if (valuesHook.values.size() > 0) {
+                            stringValue = doubleValue + "";
+                        }
+                    } else {
+                        stringValue = "";
+                        doubleValue = 0;
+                    }
+                    listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(valuesHook.values);// can we zap the values from here? It might be a bit of a saving if there are loads of values per cell
+                } else {  // now, new logic for attributes
+                    List<Name> names = new ArrayList<>();
+                    List<String> attributes = new ArrayList<>();
+                    for (DataRegionHeading heading : headingsForThisCell) {
+                        if (heading.getName() != null) {
+                            names.add(heading.getName());
+                        }
+                        if (heading.getAttribute() != null) {
+                            attributes.add(heading.getAttribute());
+                        }
+                    }
+                    listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
+                    String attributeResult = valueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked);
+                    try {
+                        doubleValue = Double.parseDouble(attributeResult);
+                    } catch (Exception e) {
+                        //ignore
+                    }
+                    // ZK would want this typed? Maybe just sort out later? EFC later : what does this mean?
+                    if (attributeResult != null) {
+                        attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
+                        stringValue = attributeResult;
+                    } else {
+                        stringValue = "";
+                    }
                 }
             }
         }
@@ -1518,7 +1458,7 @@ public class DSSpreadsheetService {
         Set<Name> cellNames = new HashSet<Name>();
         Name nameCountHeading = null;
         for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()) {
-            if (rowHeading.getNameCountSet() != null) {
+            if (rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
                 provString += "namecount(" + rowHeading.getDescription();
                 nameCountHeading = rowHeading.getName();
             }
@@ -1527,7 +1467,7 @@ public class DSSpreadsheetService {
             }
         }
         for (DataRegionHeading colHeading : azquoCell.getColumnHeadings()) {
-            if (colHeading.getNameCountSet() != null) {
+            if (colHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
                 provString += "namecount(" + colHeading.getDescription();
                 nameCountHeading = colHeading.getName();
                 break;
@@ -1658,7 +1598,7 @@ public class DSSpreadsheetService {
                 if (cellForDisplay.getStringValue() != null) {
                     String val = cellForDisplay.getStringValue().length() > 0 ? cellForDisplay.getStringValue() : cellForDisplay.getDoubleValue() != 0 ? cellForDisplay.getDoubleValue() + "" : "";
                     //for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
-                    if (cellForDisplay.getStringValue().length() > 0){
+                    if (cellForDisplay.getStringValue().length() > 0) {
                         blankLine = false;
                     }
                     sb.append(val);
@@ -1703,12 +1643,13 @@ public class DSSpreadsheetService {
                         final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
                         // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
                         // first align text and numbers where appropriate
+                        /* edd commenting 07/03/2016, this was stopping deleting a cell and I think it makes no sense looking at the ZK code that happens on editing, maybe a hangover from Aspose?
                         try {
                             if (cell.getDoubleValue() != 0.0) {
                                 cell.setStringValue(cell.getDoubleValue() + "");
                             }
                         } catch (Exception ignored) {
-                        }
+                        }*/
                         if (cell.getStringValue() != null && cell.getStringValue().endsWith("%")) {
                             String percent = cell.getStringValue().substring(0, cell.getStringValue().length() - 1);
                             try {
@@ -1746,7 +1687,7 @@ public class DSSpreadsheetService {
                             if (valuesForCell.getNames() != null && valuesForCell.getNames().size() == 1
                                     && valuesForCell.getAttributeNames() != null && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
                                 Name toChange = valuesForCell.getNames().get(0);
-                                String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(Name.QUOTE+"","");//remove the initial '.' and any `
+                                String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(Name.QUOTE + "", "");//remove the initial '.' and any `
                                 Name attSet = nameService.findByName(azquoMemoryDBConnection, attribute);
                                 if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)) {
                                     /* right : when populating attribute based data findParentttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
@@ -1776,23 +1717,17 @@ public class DSSpreadsheetService {
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
     }
 
-    // Utility functions added by Edd, required now headings are not names
-
-    public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.BASIC_RESOLVE_FUNCTION function) {
-        return dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null);
-    }
-
-    public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.BASIC_RESOLVE_FUNCTION function, List<DataRegionHeading> offsetHeadings) {
+    public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
             for (Name name : names) {
                 // will the new write permissions cause an overhead?
-                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null, null, null, offsetHeadings));
+                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, "" + NameService.NAMEMARKER + name.getId(), offsetHeadings, valueFunctionSet));
             }
         } else { // don't bother checking permissions, write permissions to true
             for (Name name : names) {
-                dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, null, null, offsetHeadings));
+                dataRegionHeadings.add(new DataRegionHeading(name, true, function, "" + NameService.NAMEMARKER + name.getId(), offsetHeadings, valueFunctionSet));
             }
         }
         return dataRegionHeadings;
@@ -1828,18 +1763,9 @@ public class DSSpreadsheetService {
         return false;
     }
 
-    public DataRegionHeading getHeadingWithNameCount(Collection<DataRegionHeading> dataRegionHeadings) {
+    public DataRegionHeading getHeadingWithFunction(Collection<DataRegionHeading> dataRegionHeadings, DataRegionHeading.FUNCTION function) {
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
-            if (dataRegionHeading.getNameCountSet() != null) {
-                return dataRegionHeading;
-            }
-        }
-        return null;
-    }
-
-    public DataRegionHeading getHeadingWithValueParentCount(Collection<DataRegionHeading> dataRegionHeadings) {
-        for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
-            if (dataRegionHeading.getValueParentCountSet() != null) {
+            if (dataRegionHeading.getFunction() == function) {
                 return dataRegionHeading;
             }
         }

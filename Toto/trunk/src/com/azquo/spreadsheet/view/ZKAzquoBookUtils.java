@@ -77,7 +77,6 @@ public class ZKAzquoBookUtils {
         final String FIRST_PLACEHOLDER = "||FIRST||";
         final String LAST_PLACEHOLDER = "||LAST||";
 
-        Map<String, String> reportParamsParsed = new HashMap<>();
         if (reportParameters != null){
             boolean inQuotes = false;
             int ruleStart = 0;

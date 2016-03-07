@@ -2,7 +2,6 @@ package com.azquo.spreadsheet;
 
 import com.azquo.memorydb.core.Name;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -20,33 +19,29 @@ import java.util.Set;
  *
  */
 public class DataRegionHeading {
-
-    public enum BASIC_RESOLVE_FUNCTION {COUNT, AVERAGE, MAX, MIN}
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, NAMECOUNT, PATHCOUNT, VALUEPARENTCOUNT}
 
     private final Name name;
     private final String attribute;
     private final boolean writeAllowed;
-    private final BASIC_RESOLVE_FUNCTION function;
-    private final Set<Name> nameCountSet;
-    // easiest way to add this without disrupting - if we add more may need to just have a set and a flag for what it is for
-    private final Set<Name> valueParentCountSet;
-    // an identifier,
+    private final FUNCTION function;
+    // either the name (normally) or the function as written in the case of name count path count etc.
     private final String description;
     private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
+    private final Set<Name> valueFunctionSet;
 
-    public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function, Set<Name> nameCountSet, Set<Name> valueParentCountSet, String description) {
-        this(name, writeAllowed,function,nameCountSet,valueParentCountSet,description, null);
+    public DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, Set<Name> valueFunctionSet) {
+        this(name, writeAllowed,function,description, null, valueFunctionSet);
     }
 
-    public DataRegionHeading(Name name, boolean writeAllowed, BASIC_RESOLVE_FUNCTION function, Set<Name> nameCountSet, Set<Name> valueParentCountSet, String description, List<DataRegionHeading> offsetHeadings) {
+    public DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
         this.function = function;
-        this.nameCountSet =  nameCountSet != null ? Collections.unmodifiableSet(nameCountSet) : null;
-        this.valueParentCountSet =  valueParentCountSet != null ? Collections.unmodifiableSet(valueParentCountSet) : null;
         this.description = description;
         this.offsetHeadings = offsetHeadings;
+        this.valueFunctionSet = valueFunctionSet;
     }
 
     // no functions with attributes for the moment
@@ -55,10 +50,9 @@ public class DataRegionHeading {
         this.attribute = attribute;
         this.writeAllowed = writeAllowed;
         this.function = null;
-        this.nameCountSet = null;
-        this.valueParentCountSet = null;
         this.description = null;
         this.offsetHeadings = null;
+        this.valueFunctionSet = null;
     }
 
     public Name getName() {
@@ -73,15 +67,7 @@ public class DataRegionHeading {
         return writeAllowed;
     }
 
-    public Set<Name> getNameCountSet() {
-        return nameCountSet;
-    }
-
-    public Set<Name> getValueParentCountSet() {
-        return valueParentCountSet;
-    }
-
-    public BASIC_RESOLVE_FUNCTION getFunction() {
+    public FUNCTION getFunction() {
         return function;
     }
 
@@ -92,7 +78,6 @@ public class DataRegionHeading {
                 ", attribute='" + attribute + '\'' +
                 ", writeAllowed=" + writeAllowed +
                 ", function=" + function +
-                ", nameCountSetSize=" + (nameCountSet != null ? nameCountSet.size() : "") +
                 '}';
     }
 
@@ -102,5 +87,17 @@ public class DataRegionHeading {
 
     public List<DataRegionHeading> getOffsetHeadings() {
         return offsetHeadings;
+    }
+
+    public Set<Name> getValueFunctionSet() {
+        return valueFunctionSet;
+    }
+
+    public boolean isNameFunction(){
+        return isNameFunction(function);
+    }
+    // useful to be called outside if an instance
+    public static boolean isNameFunction(FUNCTION function){
+        return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT);
     }
 }

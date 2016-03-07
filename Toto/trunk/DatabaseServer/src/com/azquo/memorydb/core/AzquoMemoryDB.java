@@ -846,6 +846,7 @@ public final class AzquoMemoryDB {
         setCache.put(key, set);
     }
 
+    // TODO. Also, compute if absent?
     public Set<Name> getSetFromCache(String key) {
         return setCache.get(key);
     }
