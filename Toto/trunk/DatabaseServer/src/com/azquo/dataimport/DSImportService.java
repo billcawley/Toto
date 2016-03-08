@@ -856,6 +856,7 @@ public class DSImportService {
                 // this had a check that is wasn't a context heading so presumably we don't need to do this to context headings
                 if (mutableImportHeading.name != null && mutableImportHeading.peers.size() > 0) { // has peers (of course) and a name. Little unsure on the name criteria - could one define peers against no name?
                     for (String peer : mutableImportHeading.peers) {
+                        peer = peer.trim();
                         //three possibilities to find the peer:
                         int peerHeadingIndex = findMutableHeadingIndex(peer, headings);
                         if (peerHeadingIndex >= 0) {
