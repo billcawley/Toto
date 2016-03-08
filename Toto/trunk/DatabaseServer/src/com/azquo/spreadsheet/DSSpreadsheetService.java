@@ -1549,7 +1549,7 @@ public class DSSpreadsheetService {
     // for provenance?
     public List<TreeNode> nodify(List<Value> values, int maxSize) {
         List<TreeNode> toReturn = new ArrayList<>();
-        if (values.size() > 1 || (values.size() > 0 && values.get(0) != null)) {
+        if (values!=null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
             valueService.sortValues(values);
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
             Date provdate = values.get(0).getProvenance().getTimeStamp();
