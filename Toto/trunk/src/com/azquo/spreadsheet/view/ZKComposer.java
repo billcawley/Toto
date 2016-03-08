@@ -505,7 +505,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
                             final Toolbarbutton button = new Toolbarbutton("Download Full Audit");
                             button.addEventListener("onClick",
-                                    event -> Filedownload.save(fullProvenance, "text/csv", "audit " + name.getRefersToSheetName() + ".csv"));
+                                    event -> Filedownload.save(fullProvenance, "text/csv", "audit " + name.getRefersToSheetName() + ".txt"));
                             provenancePopup.appendChild(button);
                             Menuitem auditItem = new Menuitem("Audit");
                             editPopup.appendChild(auditItem);
