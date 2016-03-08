@@ -1176,6 +1176,30 @@ public class DSSpreadsheetService {
                     }
                     doubleValue = count;
                     stringValue = count + "";
+                } else if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.SET) {
+                    final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
+                    doubleValue = 0;
+                    StringBuilder sb = new StringBuilder();
+                    boolean first = true;
+                    for (Name name : set){
+                        if (!first){
+                            sb.append(", ");
+                        }
+                        sb.append(name.getDefaultDisplayName()); // make use the languages? Maybe later.
+                        first = false;
+                    }
+                    stringValue = sb.toString();
+                } else if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.FIRST) { // we may have to pass a hint about ordering to the query parser, let's see how it goes without it
+                    final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
+                    doubleValue = 0;
+                    stringValue = set.isEmpty() ? "" : set.iterator().next().getDefaultDisplayName();
+                } else if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.LAST) {
+                    final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
+                    doubleValue = 0;
+                    stringValue = "";
+                    for (Name name : set){ //a bit of a lazy way of doing things but it should be fine, plus with only a collection interface not sure of how to get the last!
+                        stringValue = name.getDefaultDisplayName();
+                    }
                 }
             }
         } else {// conventional type or value function

@@ -19,7 +19,7 @@ import java.util.Set;
  *
  */
 public class DataRegionHeading {
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, NAMECOUNT, PATHCOUNT, VALUEPARENTCOUNT}
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT}
 
     private final Name name;
     private final String attribute;
@@ -98,6 +98,6 @@ public class DataRegionHeading {
     }
     // useful to be called outside if an instance
     public static boolean isNameFunction(FUNCTION function){
-        return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT);
+        return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT || function == FUNCTION.SET || function == FUNCTION.FIRST || function == FUNCTION.LAST);
     }
 }
