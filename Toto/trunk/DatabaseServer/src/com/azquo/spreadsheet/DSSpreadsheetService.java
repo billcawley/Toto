@@ -44,17 +44,14 @@ public class DSSpreadsheetService {
 
     final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
 
-
     private static final Logger logger = Logger.getLogger(DSSpreadsheetService.class);
 
     @Autowired
     NameService nameService;
-
     @Autowired
     ValueService valueService;
     @Autowired
     MemoryDBManager memoryDBManager;
-
     @Autowired
     DSImportService importService;
 
@@ -106,7 +103,7 @@ public class DSSpreadsheetService {
 
     for example returns a list of 1 as there's only 1 row passed, with a list of 2 as there's two cells in that row with lists of something like 90 and 3 names in the two cell list items
 
-    we're not permuting, just saying "here is what that 2d excel region looks like in names"
+    we're not permuting, just saying "here is what that 2d excel region looks like in DataRegionHeadings"
 
     */
 
@@ -130,7 +127,10 @@ public class DSSpreadsheetService {
                     // was just a name expression, now we allow an attribute also. May be more in future.
                     if (sourceCell.startsWith(".")) { //
                         // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
-                        row.add(Collections.singletonList(new DataRegionHeading(sourceCell, true))); // we say that an attribute heading defaults to writable, it will defer to the name
+                        // do NOT use singleton list as nice as the code looks! The list may be modified later . . .
+                        List<DataRegionHeading> single = new ArrayList<>();
+                        single.add(new DataRegionHeading(sourceCell, true));// we say that an attribute heading defaults to writable, it will defer to the name
+                        row.add(single);
                     } else {
                         DataRegionHeading.FUNCTION function = null;// that's sum practically speaking
                         // now allow functions
@@ -141,24 +141,23 @@ public class DSSpreadsheetService {
                             }
                         }
                         /* The way name functions work is going to change to allow [ROWHEADING] and [COLUMNHEADING] which work with set operators, / * - + etc.
-                           This means that in the case of name functions the heading can't cache sets, it needs to evalue the formulae on each line and it means that each
-                           heading needs to have its description populated even if it's a simple name. Caching of heading will be broken, this would slow down Damart
+                           This means that in the case of name functions the heading can't cache sets, it needs to evalueate the formulae on each line and it means that each
+                           heading needs to have its description populated even if it's a simple name. Caching of heading will be broken, this would slow down Damart (which will be broken anyway due to changing syntax)
                            for example but that's not such a concern right now. Later when evaluating cells it will look for a function in the row heading first then the column heading (column not added yet)
                            and it will evaluate the first it finds taking into account [ROWHEADING] and [COLUMNHEADING], it can't evaluate both. And [ROWHEADING] means the first row heading
-                           if there are more than one we may later allow [ROWHEADING1], [ROWHEADING2] etc.
-                           Thus a fair bit of code has been chopped out of here to be resolved later.
+                           if there are more than one we may later allow [ROWHEADING1], [ROWHEADING2] etc. Thus a fair bit of code has been chopped out of here to be resolved later.
                            */
-                        if (DataRegionHeading.isNameFunction(function)) { // then just set the descirption to be resolved later
+                        if (DataRegionHeading.isNameFunction(function)) { // then just set the description to be resolved later
                             List<DataRegionHeading> forFunction = new ArrayList<>();
-                            forFunction.add(new DataRegionHeading(null, false, function, sourceCell, null)); // in this case the heading is just a placeholder for the forumula to be evaluated later
+                            forFunction.add(new DataRegionHeading(null, false, function, sourceCell, null)); // in this case the heading is just a placeholder for the formula to be evaluated later - that forumla being held in the description of the heading
                             row.add(forFunction);
-                            // ok this is the kind of thing that would typically be in name service but it needs to set some formatting info so
+                            // ok this is the kind of thing that would typically be in name service but it needs to set some formatting info (visually indentation) so
                             // it will be in here with limited parsing support e.g. `All customers` hierarchy 3 that is to say name, hierarchy, number
                         } else if (sourceCell.toLowerCase().contains(HIERARCHY)) { // kind of a special case, supports a name not an expression
                             String name = sourceCell.substring(0, sourceCell.toLowerCase().indexOf(HIERARCHY)).replace("`", "").trim();
                             int level = Integer.parseInt(sourceCell.substring(sourceCell.toLowerCase().indexOf(HIERARCHY) + HIERARCHY.length()).trim()); // fragile?
                             Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
-                            if (!names.isEmpty()) {// it should be jsut one
+                            if (!names.isEmpty()) {// it should be just one
                                 List<DataRegionHeading> hierarchyList = new ArrayList<>();
                                 List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null, null); // I assume this will be only one!
                                 resolveHierarchyForHeading(azquoMemoryDBConnection, offsetHeadings.get(0), hierarchyList, function, new ArrayList<>(), level);
@@ -167,8 +166,7 @@ public class DSSpreadsheetService {
                                 }
                                 row.add(hierarchyList);
                             }
-                        } else { // most of the time it will be a vanilla query
-                            // todo, value parent count in here . . .
+                        } else { // most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
                             if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
@@ -182,6 +180,7 @@ public class DSSpreadsheetService {
         return nameLists;
     }
 
+    // recursive, the key is to add the offset to allow formatting of the hierarchy
     public void resolveHierarchyForHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading heading, List<DataRegionHeading> target
             , DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, int levelLimit) {
         if (offsetHeadings.size() < levelLimit) {// then get the children
@@ -288,10 +287,9 @@ public class DSSpreadsheetService {
     }
 
     /*
-
     This is called after the names are loaded by createHeadingArraysFromSpreadsheetRegion. in the case of columns it is transposed first
 
-    The dynamic namecalls e.g. Seaports; children; have their lists populated but they have not been expanded out into the 2d set itself
+    The dynamic name calls e.g. Seaports; children; have their lists populated but they have not been expanded out into the 2d set itself
 
     So in the case of row headings for the export example it's passed a list or 1 (the outermost list of row headings defined)
 
@@ -306,8 +304,6 @@ public class DSSpreadsheetService {
 
     That logic just described is the bulk of the function I think. Permutation is handed off to get2DPermutationOfLists, then those permuted lists are simply stacked together.
 
-    Right, this also needs to deal with
-
      */
 
     private List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists) {
@@ -320,9 +316,9 @@ public class DSSpreadsheetService {
         // we would just run through the rows running a 2d permutation on each row BUT there's a rule that if there's
         // a row below blank except the right most one then add that right most one to the one above
         boolean starting = true;
-        // ok the reason I'm doing this is to avoid unnecessary array copying and resizing. If the size is 1 can just return that otherwise create an arraylist of the right size and copy in
+        // ok the reason I'm doing this is to avoid unnecessary array copying and resizing. If the size is 1 can just return that otherwise create an ArrayList of the right size and copy in
         ArrayList<List<List<DataRegionHeading>>> permutedLists = new ArrayList<>(noOfHeadingDefinitionRows); // could be slightly less elements than this but it's unlikely to be a biggy.
-        for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) {
+        for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) { // not using a vanilla for loop as we want to skip forward to allow folding of rows with one cell on the right into the list above
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
             if (lastHeadingDefinitionCellIndex > 0 && !headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex)))
                 starting = false;// Don't permute until you have something to permute!
@@ -330,7 +326,8 @@ public class DSSpreadsheetService {
                     && headingLists.get(headingDefinitionRowIndex + 1).size() > 1 // the next row is not a single cell (will all rows be the same length?)
                     && headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex + 1)) // and the last cell is the only not null one
                     ) {
-                if (headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex) == null) {
+                // add the single last cell from the next row to the end of this row
+                if (headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex) == null) { // note if it's completely empty headingDefinitionRowHasOnlyTheRightCellPopulated would return true, not sure if this logic is completely correct, left over from the old code, I think having nulls in the permuations is allowed
                     headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
                 } else {
                     headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
@@ -340,7 +337,7 @@ public class DSSpreadsheetService {
             List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
             permutedLists.add(permuted);
         }
-        if (permutedLists.size() == 1) { // it may often be
+        if (permutedLists.size() == 1) { // it was just one row to permute, return it as is rather than combining the permuted results together which might result in a bit of garbage due to array copying
             return permutedLists.get(0);
         }
         // the point is I only want to make a new ArrayList if there are lists to be combined and then I want it to be the right size. Some reports have had millions in here . . .
@@ -362,7 +359,7 @@ public class DSSpreadsheetService {
                 return cellIndex == numberOfCellsInThisHeadingDefinition - 1; // if the first to trip the not null is the last in the row then true!
             }
         }
-        return true; // All null - treat as last cell populated
+        return true; // All null - treat as last cell populated - is this logical?
     }
 
     // Filter set being a multi selection area as opposed to a drop down list to constrain data in a data region
@@ -380,7 +377,7 @@ public class DSSpreadsheetService {
         }
     }
 
-    // to help making names on a drop down.
+    // This class and two functions are to make qualified listings on a drop down, adding parents to qualify where necessary.
     static class UniqueName {
         Name topName; // often topName is name and the description will just be left as the basic name
         String description; // when the name becomes qualified the description will become name, parent, parent of parent etc. And top name will be the highest parent, held in case we need to qualify up another level.
@@ -444,11 +441,11 @@ public class DSSpreadsheetService {
             }
             triesLeft--;
         }
-        return toCheck.stream().map(uniqueName -> uniqueName.description).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that fine
+        return toCheck.stream().map(uniqueName -> uniqueName.description).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
     }
 
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
-        //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices)
+        //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
         int dotPos = query.indexOf(".");
         if (dotPos > 0) {//todo check that it's not part of a name
             Name possibleName = nameService.findByName(getConnectionFromAccessToken(databaseAccessToken), query.substring(0, dotPos));
@@ -493,7 +490,7 @@ public class DSSpreadsheetService {
     }
 
     /* ok so transposing happens here
-    this is because the expand headings function is orientated for for headings and the column heading definitions are unsurprisingly set up for columns
+    this is because the expand headings function is orientated for row headings and the column heading definitions are unsurprisingly set up for columns
     what is notable here is that the headings are then stored this way in column headings, we need to say "give me the headings for column x"
 
     NOTE : this means the column heading are not stored according to the orientation used in the above function hence, to output them we have to transpose them again!
@@ -502,9 +499,9 @@ public class DSSpreadsheetService {
     generics ensure that the return type will match the sent type now rather similar to the stacktrace example :)
 
     Variable names assume first list is of rows and the second is each row. down then across.
-    So the size of the first list is the ysize (number of rows) and the size of the nested list the xsize (number of columns)
+    So the size of the first list is the y size (number of rows) and the size of the nested list the xsize (number of columns)
     I'm going to model it that way round as when reading data from excel that's the default (we go line by line through each row, that's how the data is delivered), the rows is the outside list
-    of course could reverse all descriptions and teh function could still work
+    of course could reverse all descriptions and the function could still work
 
     */
 
@@ -526,9 +523,7 @@ public class DSSpreadsheetService {
         return flipped;
     }
 
-    /* return headings as strings for display, I'm going to put blanks in here if null.
-    I need to add support for the hierarchy offset here (hierarchy requiring blank cells to help the user understand the structure). Should this be a flag somewhere?
-     */
+    // return headings as strings for display, I'm going to put blanks in here if null. Called after permuting/expanding
 
     public List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languagesSent) {
         // first I need to check max offsets for each column - need to check on whether the 2d arrays are the same orientation for row or column headings or not todo
@@ -613,7 +608,10 @@ public class DSSpreadsheetService {
         getConnectionFromAccessToken(databaseAccessToken).setStopInUserLog();
     }
 
-    // function that can be called by the front end to deliver the data and headings
+    /* function that can be called by the front end to deliver the data and headings
+    Region name as defined in the Excel. valueId if it's to be the default selected cell. Row and Column headings and context as parsed straight off the sheet (2d array of cells).
+      Filtercount is to remove sets of blank rows, what size chunks we look for. Highlightdays means highlight data where the provenance is less than x days old.
+     */
 
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int filterCount, int maxRows, int maxCols
@@ -630,6 +628,7 @@ public class DSSpreadsheetService {
             displayData.add(displayDataRow);
             for (AzquoCell sourceCell : sourceRow) {
                 // I suppose a little overhead from this - if it's a big problem can store lists of ignored rows and cols above and use that
+                // ignored just means space I think, as in allow the cell to be populated by a spreadsheet formula for example
                 boolean ignored = false;
                 //todo check this null heading business
                 for (DataRegionHeading dataRegionHeading : sourceCell.getColumnHeadings()) {
@@ -686,32 +685,11 @@ public class DSSpreadsheetService {
             //create a single row heading
             rowHeadings.add(new ArrayList<>());
             rowHeadings.get(0).add(new DataRegionHeading(null, false));
-            //return new ArrayList<>();
         }
-        final List<Name> contextNames = new ArrayList<>();
-        for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell. Rather arbitrary, remove at some point? Also should be using get context names?
-            for (String contextItem : contextItems) {
-                final StringTokenizer st = new StringTokenizer(contextItem, "\n");
-                while (st.hasMoreTokens()) {
-                    String nextContext = st.nextToken().trim();
-                    if (nextContext.replace("`", "").length() > 0) {
-                        final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBCOnnection, nextContext, languages);
-                        time = (System.currentTimeMillis() - track);
-                        if (time > threshold) System.out.println("Context parsed in " + time + "ms");
-                        track = System.currentTimeMillis();
-                        if (thisContextNames.size() > 1) {
-                            throw new Exception("error: context names must be individual - use 'as' to put sets in context");
-                        }
-                        if (thisContextNames.size() > 0) {
-                            //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
-                            contextNames.add(thisContextNames.iterator().next());
-                        }
-                    }
-                }
-            }
-        }
-        // note, didn't se the context against the logged in connection, should I?
-        // ok going to try to use the new function
+        final List<Name> contextNames = getContextNames(azquoMemoryDBCOnnection,contextSource,languages);
+        time = (System.currentTimeMillis() - track);
+        if (time > threshold) System.out.println("Context parsed in " + time + "ms");
+        track = System.currentTimeMillis();
         List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings, columnHeadings, contextNames, languages, valueId);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
@@ -735,13 +713,15 @@ public class DSSpreadsheetService {
             for (String contextItem : contextItems) {
                 final StringTokenizer st = new StringTokenizer(contextItem, "\n");
                 while (st.hasMoreTokens()) {
-                    final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBConnection, st.nextToken().trim(), languages);
-                    if (thisContextNames.size() > 1) {
-                        throw new Exception("error: context names must be individual - use 'as' to put sets in context");
-                    }
-                    if (thisContextNames.size() > 0) {
-                        //Name contextName = nameService.findByName(loggedInConnection, st.nextToken().trim(), loggedInConnection.getLanguages());
-                        contextNames.add(thisContextNames.iterator().next());
+                    String nextContext = st.nextToken().trim();
+                    if (nextContext.replace("`", "").length() > 0) {
+                        final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBConnection, nextContext, languages);
+                        if (thisContextNames.size() > 1) {
+                            throw new Exception("error: context names must be individual - use 'as' to put sets in context");
+                        }
+                        if (thisContextNames.size() > 0) {
+                            contextNames.add(thisContextNames.iterator().next());
+                        }
                     }
                 }
             }
@@ -768,10 +748,10 @@ public class DSSpreadsheetService {
         if (unsortedRow < rowHeadings.size() && unsortedCol < columnHeadings.size()) {
             return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextNames, unsortedRow, unsortedCol, languages, 0);
         }
-        return null; // couldn't find it . . .
+        return null; // no headings match the row/col passed
     }
 
-    // for looking up a heading given a string. Used to find the col/row index to sort on
+    // for looking up a heading given a string. Used to find the col/row index to sort on (as in I want to sort on "Colour", ok what's the column number?)
 
     private int findPosition(List<List<DataRegionHeading>> headings, String toFind, List<String> languages) {
         if (toFind == null || toFind.length() == 0) {
@@ -929,12 +909,9 @@ public class DSSpreadsheetService {
                 for (int j = 0; j < filterCount; j++) {
                     List<AzquoCell> rowToCheck = toReturn.get(rowNo + j); // size - 1 for the last index
                     for (AzquoCell cellToCheck : rowToCheck) {
-                          /*
-                        if ((cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getNames().isEmpty())
-                                || (cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty())) {// there were values or names for the call
-                            */
-                        //CHECKING VALUES ONLY
-                        if (cellToCheck.getListOfValuesOrNamesAndAttributeName() != null && cellToCheck.getListOfValuesOrNamesAndAttributeName().getAttributeNames() == null && cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {// there were values or names for the call
+                        //Values found = non blank row. I think filter will generally only be used in the context of values.
+                        if (cellToCheck.getListOfValuesOrNamesAndAttributeName() != null && cellToCheck.getListOfValuesOrNamesAndAttributeName().getAttributeNames() == null
+                                && cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {
                             rowsBlank = false;
                             break;
                         }
@@ -991,9 +968,9 @@ public class DSSpreadsheetService {
 
     So,it's going to return relevant data to the region. The values actually shown, (typed?) objects for ZKspreadsheet, locked or not, the headings are useful (though one could perhaps derive them)
     it seems that there should be a cell map or object and that's what this should return rather than having a bunch of multidimensional arrays
-
     ok I'm going for that object type (AzquoCell), outer list rows inner items on those rows, hope that's standard. Outside this function the sorting etc will happen.
 
+Callable interface sorts the memory "happens before" using future gets which runnable did not guarantee I don't think (though it did work).
     */
 
     public class RowFiller implements Callable<List<AzquoCell>> {
@@ -1040,7 +1017,8 @@ public class DSSpreadsheetService {
         }
     }
 
-    // for less than 1000 rows, probably typical use. On Damart for example we had 26*9 taking a while and it was reasonable to assume that rows were not even in terms of processing required
+    // More granular version of the above, less than 1000 rows, probably typical use.
+    // On Damart for example we had 26*9 taking a while and it was reasonable to assume that rows were not even in terms of processing required
     public class CellFiller implements Callable<AzquoCell> {
         private final int row;
         private final int col;
@@ -1080,12 +1058,12 @@ public class DSSpreadsheetService {
         }
     }
 
-    /* only called by itself and total name count, we want to know the number of intersecting names between containsSet
+    /* only called by itself and path intersection, we want to know the number of intersecting names between containsSet
     and all its children and selectionSet, recursive to deal with containsSet down to the bottom. alreadyTested is
-    simply to stop checking names that have already been checked. Note already tested doens't mean intersections are unique,
+    simply to stop checking names that have already been checked. Note already tested doesn't mean intersections are unique,
     the number on intersections is on alreadyTested's children, it's when there is an intersection there that a name is considered tested.
 
-    Worth pointing out that findOverlap for Name Count is a total of unique names and hence can use a contains on findAllChildren which returns a set
+    Worth pointing out that findOverlap which was used on total name count is a total of unique names and hence can use a contains on findAllChildren which returns a set
      whereas this, on the other hand, requires the non unique intersection, a single name could contribute to the count more than once by being in more than one set.
 
     Note : if this is really hammered there would be a case for moving it inside name to directly access the array and hence avoid Iterator instantiation.
@@ -1120,12 +1098,12 @@ public class DSSpreadsheetService {
         public List<Value> values = null;
     }
 
-    /* factored this off to enable getting a single cell, also useful to be called from the multi threading. Noe we have what I'll call "complex functions"
-    then there will be a bit more going on in here as these functions need to be evaluated here not when creating the data region headings, as they were before
+    /* factored this off to enable getting a single cell, also useful to be called from the multi threading. Now deals with name functions which
+    evaluate a name expression for each cell as opposed to value functions which work off names already resolved in the DataRegionHeadings
      */
 
     public static String ROWHEADING = "[ROWHEADING]";
-    public static String COLUMNHEADING = "[COLUMNHEADING]";
+    //public static String COLUMNHEADING = "[COLUMNHEADING]"; unused for the moment but we may need to add in at some point
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<Name> contextNames, int rowNo, int colNo, List<String> languages, int valueId) throws Exception {
@@ -1141,7 +1119,7 @@ public class DSSpreadsheetService {
                 nameFunctionColumnHeading = columnHeading;
             }
         }
-        // todo re-implement cacheing here if there are performance problems - also find overlap?
+        // todo re-implement caching here if there are performance problems - I did use findOverlap before here but I don't think is applicable now the name query is much more flexible
         if (nameFunctionColumnHeading != null) {
             if (!rowHeadings.isEmpty()) { // functions all will deal with row headings
                 String cellQuery = nameFunctionColumnHeading.getDescription().replace(ROWHEADING, rowHeadings.get(0).getDescription()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
@@ -1202,7 +1180,7 @@ public class DSSpreadsheetService {
                     }
                 }
             }
-        } else {// conventional type or value function
+        } else {// conventional type (sum) or value function
             Set<DataRegionHeading> headingsForThisCell = HashObjSets.newMutableSet(rowHeadings.size()); // I wonder a little how important having them as sets is . . .
             Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
             //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
@@ -1242,13 +1220,13 @@ public class DSSpreadsheetService {
                 DataRegionHeading.FUNCTION function = null;
                 Set<Name> valueFunctionSet = null;
                 for (DataRegionHeading heading : headingsForThisCell) {
-                    if (heading.getFunction() != null) { // should NOT be a complex function, that should have been caught before
+                    if (heading.getFunction() != null) { // should NOT be a name function, that should have been caught before
                         function = heading.getFunction();
-                        valueFunctionSet = heading.getValueFunctionSet();
+                        valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
                         break; // can't combine functions I don't think
                     }
                 }
-                if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (the standard/old one), need the headings as names,
+                if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (as iot was before allowing attributes), need the headings as names,
                     ValuesHook valuesHook = new ValuesHook();
                     // now , get the function from the headings
                     if (function != null) {
@@ -1259,7 +1237,7 @@ public class DSSpreadsheetService {
                         if (valueId > 0) {
                             valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
                         }
-                        doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function); // true = pay attention to names additive flag
+                        doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function); // true = pay attention to names additive flag - I want to get rid of this. We'll see.
                         if (function == DataRegionHeading.FUNCTION.VALUEPARENTCOUNT && valueFunctionSet != null) { // then value parent count, we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             Set<Name> allValueParents = HashObjSets.newMutableSet();
@@ -1293,7 +1271,7 @@ public class DSSpreadsheetService {
                         doubleValue = 0;
                     }
                     listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(valuesHook.values);// can we zap the values from here? It might be a bit of a saving if there are loads of values per cell
-                } else {  // now, new logic for attributes
+                } else {  // attributes in the cells
                     List<Name> names = new ArrayList<>();
                     List<String> attributes = new ArrayList<>();
                     for (DataRegionHeading heading : headingsForThisCell) {
@@ -1311,7 +1289,7 @@ public class DSSpreadsheetService {
                     } catch (Exception e) {
                         //ignore
                     }
-                    // ZK would want this typed? Maybe just sort out later? EFC later : what does this mean?
+                    // ZK would want this typed as in number or string? Maybe just sort out later?
                     if (attributeResult != null) {
                         attributeResult = attributeResult.replace("\n", "<br/>");//unsatisfactory....
                         stringValue = attributeResult;
@@ -1326,8 +1304,7 @@ public class DSSpreadsheetService {
         return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextNames, rowNo, colNo, stringValue, doubleValue, false, selected);
     }
 
-    // we were doing retainAll().size() but this is less expensive
-    // todo : put the size check of each set and hence which way we run through the loop in here
+    // todo : put the size check of each set and hence which way we run through the loop in here, should improve performance if required
     private int findOverlap(Collection<Name> set1, Collection<Name> set2) {
         int count = 0;
         for (Name name : set1) {
@@ -1354,13 +1331,10 @@ public class DSSpreadsheetService {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
         ExecutorService executor = AzquoMemoryDB.mainThreadPool;
-        //connection.addToUserLog("Populating using " + threads + " thread(s)");
-        // tried multi-threaded, abandoning big chunks
-        // different style, just chuck every row in the queue
         int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
         // I was passing an ArrayList through to the tasks. This did seem to work but as I understand a Callable is what's required here, takes care of memory sync and exceptions
-        if (totalRows < 1000) { // arbitrary cut off for the moment
+        if (totalRows < 1000) { // arbitrary cut off for the moment, Future per cell. I wonder if it should be lower than 1000?
             List<List<Future<AzquoCell>>> futureCellArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
@@ -1385,7 +1359,7 @@ public class DSSpreadsheetService {
                 }
                 toReturn.add(row);
             }
-        } else {
+        } else { // Future per row
             List<Future<List<AzquoCell>>> futureRowArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 // row passed twice as
@@ -1404,7 +1378,7 @@ public class DSSpreadsheetService {
         return toReturn;
     }
 
-    // new logic, derive the headings from the data, no need to resort to resorting etc.
+    // new logic, derive the headings from the data, so after sorting the data one can get headings for each cell rather than pushing the sort over to the headings as well
     private List<List<DataRegionHeading>> getColumnHeadingsAsArray(List<List<AzquoCell>> cellArray) {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>(cellArray.get(0).size());
         for (AzquoCell cell : cellArray.get(0)) {
@@ -1452,7 +1426,6 @@ public class DSSpreadsheetService {
         return false;
     }
 
-    // todo, when cell contents are from attributes??
     public List<TreeNode> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
@@ -1460,6 +1433,7 @@ public class DSSpreadsheetService {
         if (azquoCell != null) {
             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
             //Set<Name> specialForProvenance = new HashSet<Name>();
+            // todo, deal with name functions properly, will need to check through the DataRegionHeadings
             if (valuesForCell == null) {
                 return nameCountProvenance(azquoCell);
             }
@@ -1522,7 +1496,7 @@ public class DSSpreadsheetService {
         return toReturn;
     }
 
-    // for inspect database I think
+    // for inspect database I think - should be moved to the JStree service maybe?
     public TreeNode getDataList(Set<Name> names, int maxSize) throws Exception {
         List<Value> values = null;
         String heading = "";
@@ -1572,6 +1546,7 @@ public class DSSpreadsheetService {
         return toReturn;
     }
 
+    // another not very helpfully named function, might be able to be rewritten after we zap Azquo Book (the Aspose based functionality)
     public List<TreeNode> nodify(Name name, String attribute) {
         attribute = attribute.substring(1).replace("`", "");
         List<TreeNode> toReturn = new ArrayList<>();
@@ -1591,6 +1566,7 @@ public class DSSpreadsheetService {
         return toReturn;
     }
 
+    // create a file to import from a populated region in the spreadsheet
     public void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
         //write the column headings and data to a temporary file, then import it
         String fileName = "temp_" + user;
@@ -1714,7 +1690,7 @@ public class DSSpreadsheetService {
                                 String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(Name.QUOTE + "", "");//remove the initial '.' and any `
                                 Name attSet = nameService.findByName(azquoMemoryDBConnection, attribute);
                                 if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)) {
-                                    /* right : when populating attribute based data findParentttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
+                                    /* right : when populating attribute based data findParentAttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
                                     returned is not in fact attributes but the name of an intermediate set in the hierarchy - suppose you want the category of a product the structure is
                                     all categories -> category -> product and .all categories is the column heading and the products are row headings then you'll get the category for the product as the cell value
                                      So attSet following that example is "All Categories", category is a (possibly) new name that's a child of all categories and then we need to add the product
@@ -1785,14 +1761,5 @@ public class DSSpreadsheetService {
             }
         }
         return false;
-    }
-
-    public DataRegionHeading getHeadingWithFunction(Collection<DataRegionHeading> dataRegionHeadings, DataRegionHeading.FUNCTION function) {
-        for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
-            if (dataRegionHeading.getFunction() == function) {
-                return dataRegionHeading;
-            }
-        }
-        return null;
     }
 }
