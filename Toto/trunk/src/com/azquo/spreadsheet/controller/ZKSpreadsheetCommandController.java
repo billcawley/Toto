@@ -39,9 +39,11 @@ import java.io.Writer;
 import java.util.*;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 05/03/15
  * .
- * Adapted from a ZK example
+ * Adapted from a ZK example - so buttons in the jsp can interact with the ZK sheet object
  */
 @Controller
 @RequestMapping("/ZKSpreadsheetCommand")
@@ -107,7 +109,6 @@ public class ZKSpreadsheetCommandController {
                                 fos.close();
                             }
                         }
-
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".xlsx", null, null, file, true));
                     }
 
@@ -125,7 +126,6 @@ public class ZKSpreadsheetCommandController {
                                 choices.add(st.nextToken().trim());
                             }
                         }
-
 
                         if (!choices.isEmpty()) {
                             PDFMergerUtility merger = new PDFMergerUtility();
@@ -145,7 +145,8 @@ public class ZKSpreadsheetCommandController {
 
                     if ("PDF".equals(action) || pdfDefault) {
                         Exporter exporter = Exporters.getExporter("pdf");
-                        Book book = ss.getBook();
+                        // I think these bits are commented as we're exporting the sheet not the book
+                        //Book book = ss.getBook();
                         // zapping validation in this way throws an arror, it is annoying
 /*                        Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
                         if (validationSheet != null) {
@@ -311,5 +312,4 @@ public class ZKSpreadsheetCommandController {
         }
         return file.getAbsolutePath();
     }
-
 }

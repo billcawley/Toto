@@ -8,7 +8,6 @@ import com.azquo.admin.onlinereport.ReportSchedule;
 import com.azquo.admin.user.Permission;
 import com.azquo.admin.user.User;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,8 +25,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by edward on 19/01/16.
  *
+ * To allow downloading of some admin info in an Excel file that can then be reuploaded. Simply a more convenient way of managing things like user accounts.
  */
 @Controller
 @RequestMapping("/CreateExcelForDownload")

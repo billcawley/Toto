@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 20/05/15.
  *
  * Accessing the database server. Need to make this work for multiple DBs, going for a simple map initialls
@@ -18,23 +20,7 @@ public class RMIClient {
 
     private Map<String, RMIInterface> rmiInterfaceMap = new ConcurrentHashMap<>();
 
-/*    public RMIClient() throws Exception{
-        Registry registry = LocateRegistry.getRegistry("127.0.0.1", 12345);
-        for (int i = 0; i < 5; i++){
-            try{
-                this.serverInterface = (RMIInterface) registry.lookup(RMIInterface.serviceName);
-                break;
-            } catch (Exception e){
-                if (i == 4){
-                    throw e;
-                }
-                Thread.sleep(3000); // try again in 3 seconds
-            }
-        }
-        System.out.println("Rmi client set up");
-    }*/
-
-    // this perhaps could be more robust if an unused database is tried fpr the first time concurrently?
+    // this perhaps could be more robust if an unused database is tried for the first time concurrently?
     // is it really a big problem?
 
     public RMIInterface getServerInterface(String ip) throws Exception{

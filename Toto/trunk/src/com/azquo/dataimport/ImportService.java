@@ -29,7 +29,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * <p>
  * Created by bill on 13/12/13.
+ * <p>
  * Preliminary processing before being sent over to the database server for loading.
  */
 
@@ -69,7 +72,7 @@ public final class ImportService {
             throw new Exception("error: no database set");
         }
         String tempFile = tempFileWithoutDecoding(uploadFile, fileName);
-        uploadFile.close(); // windows requires this (though windows will never be used in production), perhaps not a bad idea anyway
+        uploadFile.close(); // windows requires this (though windows should not be used in production), perhaps not a bad idea anyway
         String toReturn;
         if (fileName.endsWith(".zip")) {
             fileName = fileName.substring(0, fileName.length() - 4);
@@ -112,7 +115,6 @@ public final class ImportService {
         return toReturn;
     }
 
-    // factored off to deal with
     String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         if (fileName.equals(CreateExcelForDownloadController.USERSPERMISSIONSFILENAME) && loggedInUser.getUser().isAdministrator()) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(fileName), "Report name");
@@ -153,6 +155,7 @@ public final class ImportService {
                         if (password == null) {
                             password = "";
                         }
+                        // Probably could be factored somewhere
                         if (password.length() > 0) {
                             salt = adminService.shaHash(System.currentTimeMillis() + "salt");
                             password = adminService.encrypt(password, salt);
@@ -244,7 +247,7 @@ public final class ImportService {
             if (schedulesSheet != null) {
                 int row = 1;
                 final List<ReportSchedule> reportSchedules = adminService.getReportScheduleList(loggedInUser);
-                for (ReportSchedule reportSchedule : reportSchedules) {// as before cache the passwords in case new ones have not been entered
+                for (ReportSchedule reportSchedule : reportSchedules) {
                     reportScheduleDAO.removeById(reportSchedule);
                 }
                 while (schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
@@ -257,22 +260,22 @@ public final class ImportService {
                     }
                     String database = schedulesSheet.getInternalSheet().getCell(row, 3).getStringValue();
                     Database database1 = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
-                    if (database1 != null){
+                    if (database1 != null) {
                         String report = schedulesSheet.getInternalSheet().getCell(row, 4).getStringValue();
                         OnlineReport onlineReport = onlineReportDAO.findForDatabaseIdAndName(database1.getId(), report);
-                        if (onlineReport != null){
+                        if (onlineReport != null) {
                             String type = schedulesSheet.getInternalSheet().getCell(row, 5).getStringValue();
                             String parameters = schedulesSheet.getInternalSheet().getCell(row, 6).getStringValue();
                             String emailSubject = schedulesSheet.getInternalSheet().getCell(row, 7).getStringValue();
-                            ReportSchedule rs = new ReportSchedule(0,period,recipients,nextDue,database1.getId(), onlineReport.getId(), type, parameters, emailSubject);
+                            ReportSchedule rs = new ReportSchedule(0, period, recipients, nextDue, database1.getId(), onlineReport.getId(), type, parameters, emailSubject);
                             reportScheduleDAO.store(rs);
                         }
                     }
                     row++;
                 }
             }
-            return "User Permissions file uploaded"; // I hope that's what it is looking for.
-        } else if (fileName.contains(".xls")) {
+            return "Report schedules file uploaded"; // I hope that's what it is looking for.
+        } else if (fileName.contains(".xls")) { // normal. I'm not entirely sure the code for users etc above should be in this file, maybe a different importer?
             return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter, isData);
         } else {
             return readPreparedFile(loggedInUser, filePath, "", attributeNames, persistAfter, false); // no file type
@@ -289,25 +292,20 @@ public final class ImportService {
         byte[] buffer = new byte[1024];
         List<File> toReturn = new ArrayList<>();
         try {
-
             //create output directory is not exists
             File folder = new File(outputFolder);
             if (!folder.exists()) {
                 folder.mkdir();
             }
-
             //get the zip file content
             ZipInputStream zis =
                     new ZipInputStream(new FileInputStream(zipFile));
             //get the zipped file list entry
             ZipEntry ze = zis.getNextEntry();
-
             while (ze != null) {
                 String fileName = ze.getName();
                 File newFile = new File(outputFolder + File.separator + fileName);
-
                 System.out.println("file unzip : " + newFile.getAbsoluteFile());
-
                 //create all non exists folders
                 //else you will hit FileNotFoundException for compressed folder
                 if (ze.isDirectory()) {
@@ -323,12 +321,9 @@ public final class ImportService {
                 }
                 ze = zis.getNextEntry();
             }
-
             zis.closeEntry();
             zis.close();
-
             System.out.println("Done");
-
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -438,7 +433,6 @@ public final class ImportService {
         }
     }
 
-    // modified internet example
     public String copyFileToDatabaseServer(InputStream inputStream, String sftpDestination) {
         /*
         StandardFileSystemManager manager = new StandardFileSystemManager();
@@ -517,7 +511,7 @@ public final class ImportService {
         } catch (Exception ex) {
             System.out.println("Exception found while tranfer the response.");
         } finally {
-            if (channelSftp != null){
+            if (channelSftp != null) {
                 channelSftp.exit();
                 System.out.println("sftp Channel exited.");
                 channel.disconnect();
@@ -526,12 +520,10 @@ public final class ImportService {
                 System.out.println("Host Session disconnected.");
             }
         }
-
         return "file copied successfully";
     }
 
-
-    public String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName, String imageStoreName) throws Exception {
+    public String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName) throws Exception {
         String success = "image uploaded successfully";
         String sourceName = sourceFile.getOriginalFilename();
         String suffix = sourceName.substring(sourceName.indexOf("."));
@@ -562,10 +554,7 @@ public final class ImportService {
         }
         rmiClient.getServerInterface(databaseAccessToken.getServerIp()).setNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images", imageList);
         return success;
-
-
     }
-
 
     private void sftpCd(ChannelSftp sftp, String path) throws SftpException {
         String[] folders = path.split("/");

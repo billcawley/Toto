@@ -27,12 +27,13 @@ import org.zkoss.zss.model.SName;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by bill on 22/04/14.
  * <p>
  * Currently deals with a fair bit for AzquoBook, this may shrink in time.
@@ -89,8 +90,8 @@ public class OnlineController {
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
-            , @RequestParam(value = "datachoice", required = false, defaultValue = "") String dataChoice
-            , @RequestParam(value = "imagestorename", required = false, defaultValue = "") String imageStoreName
+//            , @RequestParam(value = "datachoice", required = false, defaultValue = "") String dataChoice
+//            , @RequestParam(value = "imagestorename", required = false, defaultValue = "") String imageStoreName
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
@@ -98,9 +99,6 @@ public class OnlineController {
     ) {
         try {
             String callerId = request.getRemoteAddr();
-            if (callerId != null && user != null && user.equals("demo@user.com")) { // for reports linked directly from the website
-                user += callerId;
-            }
             if (reportToLoad != null && reportToLoad.length() > 0) {
                 reportId = reportToLoad;
             }
@@ -111,9 +109,6 @@ public class OnlineController {
                 if (loggedInUser == null) {
                     if (user == null) {
                         return "redirect:/api/Login";// I guess redirect to login page
-                    }
-                    if (user.equals("demo@user.com")) {
-                        user += request.getRemoteAddr();
                     }
                     loggedInUser = loginService.loginLoggedInUser(request.getSession().getId(), database, user, password, false);
                     if (loggedInUser == null) {
@@ -184,7 +179,7 @@ public class OnlineController {
                         }
                         String fileName = uploadfile.getOriginalFilename();
                         if (imageName.length() > 0){
-                            result = importService.uploadImage(loggedInUser,uploadfile, imageName, imageStoreName);
+                            result = importService.uploadImage(loggedInUser,uploadfile, imageName);
                         }else {
                             if (fileName.length()> 0) {
                                 File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
@@ -242,6 +237,11 @@ public class OnlineController {
                     final int valueId = ServletRequestUtils.getIntParameter(request, "valueid", 0); // the value to be selected if it's in any of the regions . . . how to select?
                     if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK) {
                         HttpSession session = request.getSession();
+                        if (session.getAttribute(reportId + "error") != null) { // push exception to the user
+                            model.addAttribute("content", session.getAttribute(reportId + "error")); // for a simple display
+                            session.removeAttribute(reportId + "error");// get rid of it from the session
+                            return "utf8page"; // just return now, show the error and stop
+                        }
                         if (session.getAttribute(reportId) != null) {
                             Book book = (Book) session.getAttribute(reportId);
                             request.setAttribute(OnlineController.BOOK, book); // push the rendered book into the request to be sent to the user
@@ -291,8 +291,9 @@ public class OnlineController {
                                     System.out.println();
                                     oldHeapMarker = newHeapMarker;
                                     session.setAttribute(finalReportId, book);
-                                } catch (IOException e) {
+                                } catch (Exception e) { // changed to overall exception handling
                                     e.printStackTrace(); // Could be when importing the book, just log it
+                                    session.setAttribute(finalReportId + "error", e.getMessage()); // put it here to puck up instead of the report
                                     // todo - put an error book here? That could hold the results of an exception . . .
                                 }
                             }).start();
@@ -306,8 +307,6 @@ public class OnlineController {
                     return "onlineReport";
                     // was provenance setting here,
                 }
-
-
                 model.addAttribute("content", result);
             } catch (Exception e) {
                 logger.error("online controller error", e);
@@ -333,11 +332,11 @@ public class OnlineController {
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
-            , @RequestParam(value = "datachoice", required = false, defaultValue = "") String dataChoice
-            , @RequestParam(value = "imagestorename", required = false, defaultValue = "") String imageStoreName
+//            , @RequestParam(value = "datachoice", required = false, defaultValue = "") String dataChoice
+//            , @RequestParam(value = "imagestorename", required = false, defaultValue = "") String imageStoreName
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
     ) {
-        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, opcode, spreadsheetName, database, reportToLoad, dataChoice,imageStoreName, imageName, submit, null);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, opcode, spreadsheetName, database, reportToLoad, /*dataChoice,imageStoreName, */ imageName, submit, null);
     }
 }

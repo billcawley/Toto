@@ -16,9 +16,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 
 /*
-
-Edd note : this class will probably be redundant after zapping AzquoBook.
-
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
+ * Edd note : this class will probably be redundant after zapping AzquoBook, the old non ZK spreadsheet renderer
+ *
  */
 
 @Controller

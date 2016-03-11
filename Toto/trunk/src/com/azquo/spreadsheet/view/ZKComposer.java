@@ -522,7 +522,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                                     final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
                                     String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
                                     String colHeading = colHeadings.get(cellCol - name.getRefersToCellRegion().getColumn());
-                                    // rather unelegant way to be case insensetive
+                                    // rather inelegant way to be case insensitive
                                     drillDownString = drillDownString.replace("[rowHeading]", rowHeading);
                                     drillDownString = drillDownString.replace("[rowheading]", rowHeading);
                                     drillDownString = drillDownString.replace("[ROWHEADING]", rowHeading);

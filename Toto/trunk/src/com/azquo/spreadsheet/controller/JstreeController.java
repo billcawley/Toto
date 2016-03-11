@@ -24,6 +24,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by bill on 22/04/14.
  *
  * For inspecting databases
@@ -81,7 +83,6 @@ public class JstreeController {
             model.addAttribute("content", "error:not logged in");
             return "utf8page";
         }
-
         try {
             if ((database == null || database.length() == 0) && loggedInUser.getDatabase() != null) {
                 database = loggedInUser.getDatabase().getName();

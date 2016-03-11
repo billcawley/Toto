@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import javax.servlet.http.HttpServletRequest;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 18/08/15.
  *
  * Will be used to inform the user what's going on on the database server and to allow them to stop it if necessary.
