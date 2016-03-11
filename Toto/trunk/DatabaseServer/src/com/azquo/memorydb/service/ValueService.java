@@ -69,6 +69,20 @@ public final class ValueService {
 
     public String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
+        // ok there's an issue of numbers with "," in them, in that case I should remove on the way in
+        if (valueString.contains(",")){
+            try{
+                String replaced = valueString.replace(",","");
+                Double.parseDouble(replaced);// intellij warns annoyingly
+
+
+                // so without "," it IS a valid number (no exception), take commas out of valueString
+                valueString = replaced;
+            }catch (Exception ignored){
+
+            }
+        }
+
         //long marker = System.currentTimeMillis();
         String toReturn = "";
         final List<Value> existingValues = findForNames(names);
