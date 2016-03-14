@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet.view;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 24/02/15
  * <p/>
  * After a little thinking I want this to simply deliver a book prepared by the controller. The point here is to implement the interface.

@@ -38,6 +38,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * <p>
+ * Used to programatically configure the ZK Sheet as we'd like it. Some of this, for example adding additional context menus, might be rather hacky and prone to breaking as ZK is updated.
+ * <p>
  * Created by cawley on 02/03/15
  */
 public class ZKComposer extends SelectorComposer<Component> {
@@ -123,49 +127,49 @@ public class ZKComposer extends SelectorComposer<Component> {
             g.appendChild(highlightPopup);
         }
         // maybe improve moving this number?
-        if (myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT) != null){
-            String cellSelect  = (String)myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT);
+        if (myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT) != null) {
+            String cellSelect = (String) myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT);
             myzss.getBook().getInternalBook().setAttribute(OnlineController.CELL_SELECT, null); // zap it
             int row = Integer.parseInt(cellSelect.substring(0, cellSelect.indexOf(",")));
             int col = Integer.parseInt(cellSelect.substring(cellSelect.indexOf(",") + 1));
 //            myzss.setSelection(new AreaRef(row, col, row, col));
 //            myzss.setCellFocus(new CellRef(row,col));
-            myzss.focusTo(row,col);
+            myzss.focusTo(row, col);
         }
 
         Map<String, SChart> usefulChartObjects = new HashMap<>();
         final List<SSheet> sheets = myzss.getSBook().getSheets();
-        for (SSheet sSheet : sheets){
+        for (SSheet sSheet : sheets) {
             final List<SChart> charts = sSheet.getCharts();
-            for (SChart chart : charts){
+            for (SChart chart : charts) {
                 usefulChartObjects.put(chart.getId(), chart);
             }
         }
-        for (Component component : myzss.getChildren()){
-            for (Component component1 : component.getChildren()){
-                if (component1 instanceof WidgetCtrl ){ // hacky, I just need to get to the sodding event listener
-                    WidgetCtrl widgetCtrl = (WidgetCtrl)component1; // should work??
-                    if (widgetCtrl.getWidget().getWidgetType().equalsIgnoreCase("chart")){
+        for (Component component : myzss.getChildren()) {
+            for (Component component1 : component.getChildren()) {
+                if (component1 instanceof WidgetCtrl) { // hacky, I just need to get to the sodding event listener
+                    WidgetCtrl widgetCtrl = (WidgetCtrl) component1; // should work??
+                    if (widgetCtrl.getWidget().getWidgetType().equalsIgnoreCase("chart")) {
                         ChartsWidget chartsWidget = (ChartsWidget) widgetCtrl.getWidget();
                         final SChart usefulChart = usefulChartObjects.get(chartsWidget.getId());
                         chartsWidget.addEventListener("onPlotClick", event -> {
-                            ChartsEvent chartsEvent = (ChartsEvent)event;
-                            if (usefulChart != null){
+                            ChartsEvent chartsEvent = (ChartsEvent) event;
+                            if (usefulChart != null) {
                                 final SChartData data = usefulChart.getData();
-                                if (data instanceof GeneralChartDataImpl){
-                                    GeneralChartDataImpl generalChartData = (GeneralChartDataImpl)data;
+                                if (data instanceof GeneralChartDataImpl) {
+                                    GeneralChartDataImpl generalChartData = (GeneralChartDataImpl) data;
                                     final SSeries series = generalChartData.getSeries(0);
-                                    try{
+                                    try {
                                         final Range range = Ranges.range(myzss.getSelectedSheet(), series.getValuesFormula());
                                         int pointIndex = chartsEvent.getPointIndex();
-                                        if (range.getRowCount() == 0){
+                                        if (range.getRowCount() == 0) {
                                             provenanceForRowAndColumn(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getTarget());
                                             //myzss.focusTo(range.getRow() + pointIndex, range.getColumn());
                                         } else {
                                             //myzss.focusTo(range.getRow(), range.getColumn() + pointIndex);
                                             provenanceForRowAndColumn(range.getRow(), range.getColumn() + pointIndex, chartsEvent.getTarget());
                                         }
-                                    } catch (Exception e){
+                                    } catch (Exception e) {
                                         e.printStackTrace();
                                     }
                                 }
@@ -177,8 +181,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-
-    /* Bit of an odd one this : on a cell click "wake" the log back up as there may be activity shortly
+    /* Bit of an odd one this : on a cell click "wake" the log between the client and report server back up as there may be activity shortly
     In addition I now want to now deal with the new filter things
      */
 
@@ -190,39 +193,39 @@ public class ZKComposer extends SelectorComposer<Component> {
         List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
         boolean reload = false;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-         for (SName name : names) {
-              if (name.getName().toLowerCase().endsWith("chosen") && (name.getRefersToCellRegion().getRowCount() * name.getRefersToCellRegion().getColumnCount()) > 1
+        for (SName name : names) {
+            if (name.getName().toLowerCase().endsWith("chosen") && (name.getRefersToCellRegion().getRowCount() * name.getRefersToCellRegion().getColumnCount()) > 1
                     && ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn(), sheet).isEmpty()) {
                 // they clicked on a filter region, need to update the choice. Also we check it's not a data region also
                 String choice = name.getName().substring(0, name.getName().length() - "chosen".length());
                 final SCell clickedCell = sheet.getInternalSheet().getCell(event.getRow(), event.getColumn());
-                if (!clickedCell.getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#888888")){ // it was white therefore this is the cell being selected
+                if (!clickedCell.getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#888888")) { // it was white therefore this is the cell being selected
                     spreadsheetService.addFilterChoice(loggedInUser.getUser().getId(), choice, clickedCell.getStringValue());
                 } else {
                     spreadsheetService.removeFilterChoice(loggedInUser.getUser().getId(), choice, clickedCell.getStringValue());
                 }
                 reload = true;
-            } else if (name.getName().toLowerCase().endsWith("clear")){ // more string literals . . .:P
+            } else if (name.getName().toLowerCase().endsWith("clear")) { // more string literals . . .:P
                 final String choice = name.getName().substring(0, name.getName().length() - "clear".length());
                 final CellRegion chosenRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(sheet, choice + "Chosen");
-                if (chosenRegion != null){
+                if (chosenRegion != null) {
                     boolean fillAll = false;
-                    for (int row = chosenRegion.getRow(); row <= chosenRegion.getLastRow(); row++){
-                        for (int col = chosenRegion.getColumn(); col <= chosenRegion.getLastColumn(); col++){
-                            if (!sheet.getInternalSheet().getCell(row, col).isNull() && !sheet.getInternalSheet().getCell(row, col).getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#888888")){ // we just found one unselected
+                    for (int row = chosenRegion.getRow(); row <= chosenRegion.getLastRow(); row++) {
+                        for (int col = chosenRegion.getColumn(); col <= chosenRegion.getLastColumn(); col++) {
+                            if (!sheet.getInternalSheet().getCell(row, col).isNull() && !sheet.getInternalSheet().getCell(row, col).getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#888888")) { // we just found one unselected
                                 fillAll = true;
                                 break;
                             }
                         }
-                        if (fillAll){
+                        if (fillAll) {
                             break;
                         }
                     }
-                    for (int row = chosenRegion.getRow(); row <= chosenRegion.getLastRow(); row++){
-                        for (int col = chosenRegion.getColumn(); col <= chosenRegion.getLastColumn(); col++){
+                    for (int row = chosenRegion.getRow(); row <= chosenRegion.getLastRow(); row++) {
+                        for (int col = chosenRegion.getColumn(); col <= chosenRegion.getLastColumn(); col++) {
                             final SCell cell = sheet.getInternalSheet().getCell(row, col);
-                            if (!cell.isNull()){
-                                if (fillAll){
+                            if (!cell.isNull()) {
+                                if (fillAll) {
                                     spreadsheetService.addFilterChoice(loggedInUser.getUser().getId(), choice, cell.getStringValue());
                                 } else {
                                     spreadsheetService.removeFilterChoice(loggedInUser.getUser().getId(), choice, cell.getStringValue());
@@ -243,6 +246,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
                 if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
+                    // direct calls to the HTML are perhaps not ideal. Could be replaced with calls to expected functions?
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                 }
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
@@ -267,7 +271,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
         boolean reload = false;
-        for (SName name:names){
+        for (SName name : names) {
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// would have been a one cell name
                 String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                 spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
@@ -409,7 +413,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
         Book book = sheetSelectEvent.getSheet().getBook();
         final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptions(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
-        zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(),choiceOptions,null);
+        zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), choiceOptions, null);
     }
 
     // to deal with provenance
@@ -417,18 +421,19 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         provenanceForRowAndColumn(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
     }
+
     private void provenanceForRowAndColumn(int cellRow, int cellCol, int mouseX, int mouseY) {
-        provenanceForRowAndColumn(cellRow,cellCol,mouseX,mouseY, null);
+        provenanceForRowAndColumn(cellRow, cellCol, mouseX, mouseY, null);
     }
 
     private void provenanceForRowAndColumn(int cellRow, int cellCol, Component ref) {
-        provenanceForRowAndColumn(cellRow,cellCol,0,0, ref);
+        provenanceForRowAndColumn(cellRow, cellCol, 0, 0, ref);
     }
 
     private void provenanceForRowAndColumn(int cellRow, int cellCol, int mouseX, int mouseY, Component ref) {
         // right now a right click gets provenance ready, dunno if I need to do this
         List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());
-        while (editPopup.getChildren().size() > 0){ // clear it out
+        while (editPopup.getChildren().size() > 0) { // clear it out
             editPopup.removeChild(editPopup.getLastChild());
         }
         Component popupChild = provenancePopup.getFirstChild();
@@ -436,8 +441,8 @@ public class ZKComposer extends SelectorComposer<Component> {
             provenancePopup.removeChild(popupChild);
             popupChild = provenancePopup.getFirstChild();
         }
-        SCell sCell = myzss.getSelectedSheet().getInternalSheet().getCell(cellRow,cellCol);
-        if (sCell.getType() == SCell.CellType.FORMULA){
+        SCell sCell = myzss.getSelectedSheet().getInternalSheet().getCell(cellRow, cellCol);
+        if (sCell.getType() == SCell.CellType.FORMULA) {
             String formula = sCell.getFormulaValue();
             Label provenanceLabel = new Label();
             provenanceLabel.setMultiline(true);
@@ -448,8 +453,8 @@ public class ZKComposer extends SelectorComposer<Component> {
             auditItem.setPopup(provenancePopup);
 //            auditItem.addEventListener("onClick",
 //                    event -> System.out.println("audit menu item clicked, formula bit . . ."));
-            if (ref != null){
-                editPopup.open(ref,"at_pointer");
+            if (ref != null) {
+                editPopup.open(ref, "at_pointer");
             } else {
                 editPopup.open(mouseX - 140, mouseY);
             }
@@ -462,7 +467,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
                     try {
                         // ok this is a bit nasty, after Azquobook is zapped we could try something different
-                        int regionRow =  cellRow - name.getRefersToCellRegion().getRow();
+                        int regionRow = cellRow - name.getRefersToCellRegion().getRow();
                         int regionColumn = cellCol - name.getRefersToCellRegion().getColumn();
                         List<TreeNode> treeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
                         if (!treeNodes.isEmpty()) {
@@ -604,15 +609,14 @@ public class ZKComposer extends SelectorComposer<Component> {
                     Menuitem highlightItem = new Menuitem("Highlight");
                     editPopup.appendChild(highlightItem);
                     highlightItem.setPopup(highlightPopup);
-                    if (ref != null){
-                        editPopup.open(ref,"at_pointer");
+                    if (ref != null) {
+                        editPopup.open(ref, "at_pointer");
                     } else {
                         editPopup.open(mouseX - 140, mouseY);
                     }
                 }
             }
         }
-
     }
 
     private void showProvenance(String provline, int valueId) {
@@ -655,12 +659,10 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
     private String trimString(String stringToShow) {
-
         if (stringToShow.length() > 200) {
             stringToShow = stringToShow.substring(0, 200) + " . . .\n";
         }
         return stringToShow;
-
     }
 
     public static void resolveTreeNode(int tab, StringBuilder stringBuilder, com.azquo.memorydb.TreeNode treeNode) {

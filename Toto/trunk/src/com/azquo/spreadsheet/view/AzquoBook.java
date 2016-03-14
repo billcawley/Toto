@@ -28,6 +28,10 @@ import java.util.*;
 import java.util.List;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
+ * Uses Aspose to then create a spreadsheet GUI, in time this class should be removed, I'm not going to be too bothered about rewriting code/commenting etc.
+ *
  * Created by bill on 29/04/14
  */
 
