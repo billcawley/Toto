@@ -2,8 +2,10 @@ package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.service.NameService;
+import com.azquo.spreadsheet.StringUtils;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -201,6 +203,22 @@ public final class Name extends AzquoMemoryDBEntity {
     public String getDefaultDisplayName() {
         getDefaultDisplayNameCount.incrementAndGet();
         return nameAttributes.getAttribute(Constants.DEFAULT_DISPLAY_NAME);
+    }
+
+    private static AtomicInteger getFullyQualifiedDefaultDisplayNameCount = new AtomicInteger(0);
+
+    public String getFullyQualifiedDefaultDisplayName() {
+        if (getParents().isEmpty()){
+            return getDefaultDisplayName();
+        }
+        Collection<Name> parents = getParents();
+        String qualified = getDefaultDisplayName();
+        while (!parents.isEmpty()){
+            Name parent = parents.iterator().next();
+            qualified = parent.getDefaultDisplayName() + StringUtils.MEMBEROF + qualified;
+            parents = parent.getParents();
+        }
+        return QUOTE + qualified + QUOTE;
     }
 
     // provenance immutable. If it were not then would need to clone
@@ -1104,25 +1122,40 @@ public final class Name extends AzquoMemoryDBEntity {
         return stringBuilder.toString();
     }
 
+    public byte[] getChildrenIdsAsBytes() {
+        return getChildrenIdsAsBytes(0);
+    }
+
     // not really bothered about factoring at the moment - it would involve using the getChildren and getNames functions which needlesly create garbage (this function will be hammered when persisting, would rather not make the garbage)
 
     private static AtomicInteger getChildrenIdsAsBytesCount = new AtomicInteger(0);
 
-    public byte[] getChildrenIdsAsBytes() {
+    public byte[] getChildrenIdsAsBytes(int tries) {
         getChildrenIdsAsBytesCount.incrementAndGet();
-        if (childrenAsSet != null) {
-            // theoretical possibility of size changing between allocate and creating the byte array
-            ByteBuffer buffer = ByteBuffer.allocate(childrenAsSet.size() * 4);
-            for (Name name : childrenAsSet) {
-                buffer.putInt(name.getId());
+        try {
+            if (childrenAsSet != null) {
+                // theoretical possibility of size changing between allocate and creating the byte array
+                // my initial method to sort this will be to catch the exception and try again. TODO
+                ByteBuffer buffer = ByteBuffer.allocate(childrenAsSet.size() * 4);
+                for (Name name : childrenAsSet) {
+                    buffer.putInt(name.getId());
+                }
+                return buffer.array();
+            } else {
+                ByteBuffer buffer = ByteBuffer.allocate(children.length * 4);
+                for (Name name : children) {
+                    buffer.putInt(name.getId());
+                }
+                return buffer.array();
             }
-            return buffer.array();
-        } else {
-            ByteBuffer buffer = ByteBuffer.allocate(children.length * 4);
-            for (Name name : children) {
-                buffer.putInt(name.getId());
+        } catch (BufferOverflowException e){
+            if (tries < 5){ // a bit arbitrary
+                tries++;
+                System.out.println("retrying after buffer overflow in getChildrenIdsAsBytes on " + getDefaultDisplayName() + " try number " + tries);
+                return getChildrenIdsAsBytes(tries);
+            } else {
+                throw  e;
             }
-            return buffer.array();
         }
     }
 
@@ -1207,6 +1240,7 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("newNameCount\t\t\t\t" + newNameCount.get());
         System.out.println("newNameCount3\t\t\t\t" + newName3Count.get());
         System.out.println("getDefaultDisplayNameCount\t\t\t\t" + getDefaultDisplayNameCount.get());
+        System.out.println("getFullyQualifiedDefaultDisplayNameCount\t\t\t\t" + getFullyQualifiedDefaultDisplayNameCount.get());
         System.out.println("getValuesCount\t\t\t\t" + getValuesCount.get());
         System.out.println("transferValuesCount\t\t\t\t" + transferValuesCount.get());
         System.out.println("addToValuesCount\t\t\t\t" + addToValuesCount.get());

@@ -1103,6 +1103,7 @@ Callable interface sorts the memory "happens before" using future gets which run
      */
 
     public static String ROWHEADING = "[ROWHEADING]";
+    public static String ROWHEADINGLOWERCASE = "[rowheading]";
     //public static String COLUMNHEADING = "[COLUMNHEADING]"; unused for the moment but we may need to add in at some point
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
@@ -1122,7 +1123,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         // todo re-implement caching here if there are performance problems - I did use findOverlap before here but I don't think is applicable now the name query is much more flexible
         if (nameFunctionColumnHeading != null) {
             if (!rowHeadings.isEmpty()) { // functions all will deal with row headings
-                String cellQuery = nameFunctionColumnHeading.getDescription().replace(ROWHEADING, rowHeadings.get(0).getDescription()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
+                String cellQuery = nameFunctionColumnHeading.getDescription().replace(ROWHEADING, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(ROWHEADINGLOWERCASE, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
                 locked.isTrue = true; // they cant edit the results from complex functions
                 if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
                     Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
@@ -1723,11 +1724,11 @@ Callable interface sorts the memory "happens before" using future gets which run
             // then check permissions
             for (Name name : names) {
                 // will the new write permissions cause an overhead?
-                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, "" + NameService.NAMEMARKER + name.getId(), offsetHeadings, valueFunctionSet));
+                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null, offsetHeadings, valueFunctionSet));
             }
         } else { // don't bother checking permissions, write permissions to true
             for (Name name : names) {
-                dataRegionHeadings.add(new DataRegionHeading(name, true, function, "" + NameService.NAMEMARKER + name.getId(), offsetHeadings, valueFunctionSet));
+                dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, offsetHeadings, valueFunctionSet));
             }
         }
         return dataRegionHeadings;

@@ -742,7 +742,7 @@ public final class NameService {
             } else if (op == '*') { // * meaning intersection here . . .
                 //assume that the second term implies 'level all'
                 long start = System.currentTimeMillis();
-                System.out.println("starting * set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
+//                System.out.println("starting * set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
                 NameSetList previousSet = nameStack.get(stackCount - 1);
                 // preserving ordering important - retainall on a mutable set, if available, might save a bit vs creating a new one
                 // for the moment create a new collection, list or set based on the type of "previous set"
@@ -777,7 +777,7 @@ public final class NameService {
                     }
                 }
                 nameStack.set(stackCount - 1, new NameSetList(setIntersectionSet, setIntersectionList, true)); // replace the previous NameSetList
-                System.out.println("after new retainall " + (System.currentTimeMillis() - start) + "ms");
+                //System.out.println("after new retainall " + (System.currentTimeMillis() - start) + "ms");
                 nameStack.remove(stackCount);
             } else if (op == '/') { // a possible performance hit here, not sure of other possible optimseations
                 // ok what's on the stack may be mutable but I'm going to have to make a copy - if I modify it the iterator on the loop below will break
@@ -785,12 +785,12 @@ public final class NameService {
                 long start = System.currentTimeMillis();
                 long heapMarker = ((runtime.totalMemory() - runtime.freeMemory()) / mb);
                 //System.out.println("aft mutable init " + heapMarker);
-                System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
+                //System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
                 for (Name child : nameStack.get(stackCount).getAsCollection()) {
                     Name.findAllParents(child, parents); // new call to static function cuts garbage generation a lot
                 }
                 long now = System.currentTimeMillis();
-                System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
+                //System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
                 start = now;
                 //nameStack.get(stackCount - 1).retainAll(parents); //can't do this any more, need to make a new one
                 NameSetList previousSet = nameStack.get(stackCount - 1);
@@ -832,7 +832,7 @@ public final class NameService {
                     }
                     nameStack.set(stackCount - 1, new NameSetList(setIntersectionSet, setIntersectionList, true)); // replace the previous NameSetList
                 }
-                System.out.println("after retainall " + (System.currentTimeMillis() - start));
+                //System.out.println("after retainall " + (System.currentTimeMillis() - start));
                 nameStack.remove(stackCount);
             } else if (op == '-') {
                 // using immutable sets on the stack causes more code here but populating the stack should be MUCH faster
