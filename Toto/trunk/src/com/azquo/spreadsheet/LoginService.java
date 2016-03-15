@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 31/10/13

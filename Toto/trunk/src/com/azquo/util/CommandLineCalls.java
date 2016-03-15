@@ -3,6 +3,8 @@ package com.azquo.util;
 import java.io.*;
 
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
  * Created by cawley on 21/01/14.
  *
  * currently unused but no harm in it being here

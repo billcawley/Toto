@@ -35,8 +35,14 @@ import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.util.*;
 
-// it seems that trying to configure the properties in spring is a problem
-// this works but I'm a bit fed up of something that should be simple, go to a simple classpath read??
+/*
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ *
+ * Class split now database/report server
+ *
+ * it seems that trying to configure the properties in spring is a problem
+ * this works but I'm a bit fed up of something that should be simple, go to a simple classpath read??
+*/
 @Configuration
 @PropertySource({"classpath:azquo.properties"})
 
@@ -164,7 +170,7 @@ public class SpreadsheetService {
 
     }
 
-    // to nload the old AzquoBook. Will be phased out so I'll leave the HTML in here.
+    // to load the old AzquoBook. Will be phased out so I'll leave the HTML in here.
     public void readExcel(ModelMap model, LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName) throws Exception {
         String message;
         String imagePath = getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/images/";
@@ -393,20 +399,20 @@ public class SpreadsheetService {
         UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(userId, choiceName);
         if (userChoice != null) {
             List<String> existingList = Arrays.asList(userChoice.getChoiceValue().split(FILTERCHOICEDIVIDERFORREGEX));
-                if (existingList.contains(choiceValue)) { // it's in there need to remove
-                    StringBuilder newList = new StringBuilder();
-                    for (String filterChoice : existingList){
-                        if (!filterChoice.equals(choiceValue)){
-                            if (newList.length() != 0){ // not first one, need divider
-                                newList.append(FILTERCHOICEDIVIDER);
-                            }
-                            newList.append(filterChoice);
+            if (existingList.contains(choiceValue)) { // it's in there need to remove
+                StringBuilder newList = new StringBuilder();
+                for (String filterChoice : existingList) {
+                    if (!filterChoice.equals(choiceValue)) {
+                        if (newList.length() != 0) { // not first one, need divider
+                            newList.append(FILTERCHOICEDIVIDER);
                         }
+                        newList.append(filterChoice);
                     }
-                    userChoice.setChoiceValue(newList.toString());
-                    userChoice.setTime(new Date());
-                    userChoiceDAO.store(userChoice);
                 }
+                userChoice.setChoiceValue(newList.toString());
+                userChoice.setTime(new Date());
+                userChoiceDAO.store(userChoice);
+            }
         }
     }
 
@@ -508,7 +514,7 @@ public class SpreadsheetService {
         if (inSpreadPos < 0) return null;
         int withPos = provline.indexOf(" with ", inSpreadPos);
         if (withPos < 0) return null;
-        String reportName = provline.substring(inSpreadPos + 14, withPos).trim().replace("`","");//strip any spurious `
+        String reportName = provline.substring(inSpreadPos + 14, withPos).trim().replace("`", "");//strip any spurious `
         String paramString = provline.substring(withPos + 6);
         int equalsPos = paramString.indexOf(" = ");
         while (equalsPos > 0) {
@@ -661,7 +667,7 @@ public class SpreadsheetService {
                         }
                     }
                     // queue don't send
-                    for(String email : reportSchedule.getRecipients().split(",")){
+                    for (String email : reportSchedule.getRecipients().split(",")) {
                         filesToSendForEachEmail.computeIfAbsent(email, t -> new ArrayList<>()).add(file);
                     }
                 }
@@ -678,7 +684,7 @@ public class SpreadsheetService {
                             fos.close();
                         }
                     }
-                    for(String email : reportSchedule.getRecipients().split(",")){
+                    for (String email : reportSchedule.getRecipients().split(",")) {
                         filesToSendForEachEmail.computeIfAbsent(email, t -> new ArrayList<>()).add(file);
                     }
                 }
@@ -702,16 +708,16 @@ public class SpreadsheetService {
         }
         // now send
         AzquoMailer azquoMailer = new AzquoMailer();
-        for (String email : filesToSendForEachEmail.keySet()){
+        for (String email : filesToSendForEachEmail.keySet()) {
             // might need to tweak subject, body and file names
             azquoMailer.sendEMail(email, email, "Azquo Reports", "Attached", filesToSendForEachEmail.get(email), null);
         }
     }
 
-    public Map<String, String>getImageList(LoggedInUser loggedInUser) throws Exception{
+    public Map<String, String> getImageList(LoggedInUser loggedInUser) throws Exception {
         Map<String, String> images = new HashMap<>();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-        String imageList =  rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(),"uploaded images");
+        String imageList = rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
         if (imageList != null) {
             String[] imageArray = imageList.split(",");
             for (String image : imageArray) {

@@ -4,8 +4,13 @@ import com.sun.mail.imap.IMAPFolder;
 import org.apache.commons.mail.DefaultAuthenticator;
 import org.apache.commons.mail.EmailAttachment;
 import org.apache.commons.mail.HtmlEmail;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.env.AbstractEnvironment;
+import org.springframework.core.env.CompositePropertySource;
+import org.springframework.core.env.Environment;
 
-import javax.activation.DataSource;
 import javax.mail.*;
 import javax.mail.internet.MimeBodyPart;
 import java.io.File;
@@ -13,13 +18,32 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
-
 /**
+ * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * <p>
  * Created by cawley on 16/01/14.
  * Quick google showed the apache libraries to be a pretty easy way to do things. Email so unimportant compared to Feefo.
  * I've not made the functions static, I don't know if there will ever be multiple implementations but meh, why not
+ * <p>
+ * Configuration like SpreadsheetService, not ideal but I want mail server details out of here
  */
+@Configuration
+@PropertySource({"classpath:azquo.properties"})
 public class AzquoMailer {
+    @Autowired
+    private Environment env;
+
+    public static final String MAILPREFIX = "mail.";
+    public static final String MAILSERVER = "mail.server";
+    public static final String MAILUSER = "mail.user";
+    public static final String MAILPASSWORD = "mail.password";
+    public static final String MAILFROMADDRESS = "mail.fromaddress";
+    public static final String MAILFROMNAME = "mail.fromname";
+
+    // for reading in data, could well be a different server
+    public static final String MAILBOXIP = "mailbox.ip";
+    public static final String MAILBOXUSER = "mailbox.user";
+    public static final String MAILBOXPASSWORD = "mailbox.password";
 
     public boolean sendEMail(String toEmail, String toName, String subject, String body) {
         return sendEMail(toEmail, toName, subject, body, null, null);
@@ -29,14 +53,43 @@ public class AzquoMailer {
         try {
             HtmlEmail email = new HtmlEmail();
             //email.setDebug(true); // useful stuff if things go wrong
-            //email.setSSLOnConnect(true);
-            System.setProperty("mail.smtp.ssl.trust", "mail.azquo.com"); // yeah naughty, I just want it to work
-            email.setSSLCheckServerIdentity(false);
-            email.setAuthenticator(new DefaultAuthenticator("app", "Yd44d8R4"));
-            email.setHostName("mail.azquo.com");
+            // ok there was a bunch of stuff hardcoded, have moved it to azquo.properties
+            // nasty hack as env won't list property keys. This should only be set up once.
+            String user = "";
+            String password = "";
+            String fromaddress = "";
+            String fromname = "";
+            int port = 587; // could set from properties?
+            for (org.springframework.core.env.PropertySource<?> propertySource : ((AbstractEnvironment) env).getPropertySources()) {
+                if (propertySource instanceof CompositePropertySource) {// composite being azquo.properties and the like
+                    for (String key : ((CompositePropertySource) propertySource).getPropertyNames()) {
+                        if (key.startsWith(MAILPREFIX)) {
+                            switch (key) {
+                                case MAILSERVER:
+                                    email.setHostName((String) propertySource.getProperty(key));
+                                    break;
+                                case MAILUSER:
+                                    user = (String) propertySource.getProperty(key);
+                                    break;
+                                case MAILPASSWORD:
+                                    password = (String) propertySource.getProperty(key);
+                                    break;
+                                case MAILFROMADDRESS:
+                                    fromaddress = (String) propertySource.getProperty(key);
+                                    break;
+                                case MAILFROMNAME:
+                                    fromname = (String) propertySource.getProperty(key);
+                                    break;
+                                default:
+                                    System.setProperty(key, (String) propertySource.getProperty(key)); // push extras through
+                            }
+                        }
+                    }
+                }
+            }
+            email.setAuthenticator(new DefaultAuthenticator(user, password));
             email.setStartTLSEnabled(true);
-            email.setSmtpPort(587);
-            //email.setSslSmtpPort("587");
+            email.setSmtpPort(port);
             if (toEmail.contains(",")) {// ignore name
                 for (String to : toEmail.split(",")) {
                     email.addTo(to, to);
@@ -48,21 +101,21 @@ public class AzquoMailer {
             } else {
                 email.addTo(toEmail, toName != null ? toName : toEmail);
             }
-            email.setFrom("info@azquo.com", "Azquo Support");
+            email.setFrom(fromaddress, fromname);
             email.setSubject(subject);
-            // embed the image and get the content id
+            //  embed the image and get the content id
             //  URL url = new URL("http://www.azquo.com/wp-content/uploads/2013/12/logo42.png");
             //  String cid = email.embed(url, "Azquo logo");
             email.setHtmlMsg(body);
             // set the plain text message - so simple compared to the arse before!
             email.setTextMsg("Your email client does not support HTML messages");
             if (attachments != null) {
-                for (File attachment : attachments){
+                for (File attachment : attachments) {
                     email.attach(attachment);
                 }
             }
             if (emailAttachments != null) {
-                for (EmailAttachment emailAttachment : emailAttachments){
+                for (EmailAttachment emailAttachment : emailAttachments) {
                     email.attach(emailAttachment);
                 }
             }
@@ -75,23 +128,20 @@ public class AzquoMailer {
     }
 
     // yoinked from tinternet and modified
-
     public void readGoogleAnalyticsEmail() {
         Store store = null;
         IMAPFolder folder = null;
         try {
             Properties props = System.getProperties();
             props.setProperty("mail.store.protocol", "imap");
-
             Session session = Session.getDefaultInstance(props, null);
-
             store = session.getStore("imap");
-//            store.connect("logichound.servers.eqx.misp.co.uk", "edd@azquo.com", "qPF34d95zzZq");
+            String mailboxIp = env.getProperty(MAILBOXIP);
+            String mailboxUser = env.getProperty(MAILBOXUSER);
+            String mailboxPassword = env.getProperty(MAILBOXPASSWORD);
 
-            store.connect("192.168.1.10", "nic2", "salasana");
+            store.connect(mailboxIp, mailboxUser, mailboxPassword);
             folder = (IMAPFolder) store.getFolder("inbox");
-
-
             if (!folder.isOpen())
                 folder.open(Folder.READ_WRITE);
 //            Message[] messages = folder.getMessages(folder.getMessageCount() - 20, folder.getMessageCount());
@@ -100,7 +150,6 @@ public class AzquoMailer {
             System.out.println("No of Unread Messages : " + folder.getUnreadMessageCount());
             System.out.println(messages.length);
             for (int i = 0; i < messages.length; i++) {
-
                 Message msg = messages[i];
                 //System.out.println(msg.getMessageNumber());
                 //Object String;
@@ -157,5 +206,4 @@ public class AzquoMailer {
             }
         }
     }
-
 }
