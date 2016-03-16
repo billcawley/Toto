@@ -56,12 +56,6 @@ public abstract class FastDAO {
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }
 
-    public void clearTable(final String databaseName){
-        if (checkFastTableExists(databaseName)){
-            jdbcTemplateUtils.update("delete from `" + databaseName + "`.`" + getTableName() + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
-        }
-    }
-
     public boolean checkFastTableExists(final String databaseName){
         final List<Map<String, Object>> maps = jdbcTemplateUtils.queryForList("show tables from  `" + databaseName + "` like 'fast_value' ", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         return !maps.isEmpty();

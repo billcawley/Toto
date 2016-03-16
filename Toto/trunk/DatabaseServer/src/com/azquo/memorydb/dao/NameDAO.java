@@ -181,4 +181,12 @@ public class NameDAO extends FastDAO{
 
     }
 
+    // was delete from but drop create is faster
+    public void clearTable(final String databaseName){
+        if (checkFastTableExists(databaseName)){
+            jdbcTemplateUtils.update("drop table `" + databaseName + "`.`" + getTableName() + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        }
+        createFastTableIfItDoesntExist(databaseName);
+    }
+
 }
