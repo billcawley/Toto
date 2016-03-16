@@ -1,5 +1,7 @@
 <%--
-  Created by IntelliJ IDEA.
+Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+
+Created by IntelliJ IDEA.
   User: cawley
   Date: 09/07/15
   Time: 15:19
