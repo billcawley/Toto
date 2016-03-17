@@ -135,7 +135,7 @@ public class DSSpreadsheetService {
                         DataRegionHeading.FUNCTION function = null;// that's sum practically speaking
                         // now allow functions
                         for (DataRegionHeading.FUNCTION _function : DataRegionHeading.FUNCTION.values()) {
-                            if (sourceCell.toUpperCase().startsWith(_function.name())) {
+                            if (sourceCell.toUpperCase().startsWith(_function.name() + "(")) { // function name bracket no sapce
                                 function = _function;
                                 sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1, sourceCell.trim().length() - 1);// +1 - 1 to get rid of the brackets
                             }
