@@ -66,8 +66,14 @@
 
 
 				<ul>
-					<li id="saveDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if>><a href="#" onclick="postAjax('Save'); return false;">Save Data</a></li>
-					<li id="restoreDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if>><a href="#" onclick="postAjax('RestoreSavedValues'); return false;">Restore Saved Values</a></li>
+					<c:if test="${templateMode == true}">
+						<li ><a href="#" onclick="postAjax('SaveTemplate'); return false;">Save Template</a></li>
+					</c:if>
+					<c:if test="${templateMode == false}">
+						<c:if test="${showTemplate == true}"><li><a href="#" onclick="window.location.assign(window.location.href+='&template=true')">View Template</a></li></c:if>
+						<li id="saveDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if>><a href="#" onclick="postAjax('Save'); return false;">Save Data</a></li>
+						<li id="restoreDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if>><a href="#" onclick="postAjax('RestoreSavedValues'); return false;">Restore Saved Values</a></li>
+					</c:if>
 					<li id="logoff"><a href="/api/Login?logoff=true">Log Off</a></li>
 					<li><a href="#"><span class="fa fa-bars"></span></a>
 						<ul>

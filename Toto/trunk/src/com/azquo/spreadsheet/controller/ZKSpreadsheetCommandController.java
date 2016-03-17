@@ -1,9 +1,12 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserRegionOptionsDAO;
+import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -59,6 +62,9 @@ public class ZKSpreadsheetCommandController {
     private OnlineReportDAO onlineReportDAO;
 
     @Autowired
+    private DatabaseDAO databaseDAO;
+
+    @Autowired
     private UserRegionOptionsDAO userRegionOptionsDAO;
 
     @Autowired
@@ -96,7 +102,6 @@ public class ZKSpreadsheetCommandController {
                         Ranges.range(ss.getSelectedSheet()).setFreezePanel(0,0);
                     }
                     if ("XLS".equals(action)) {
-
                         Exporter exporter = Exporters.getExporter();
                         Book book = ss.getBook();
                         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
@@ -110,6 +115,37 @@ public class ZKSpreadsheetCommandController {
                             }
                         }
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".xlsx", null, null, file, true));
+                    }
+                    if ("SaveTemplate".equals(action)) { // similar to above but we're overwriting the report
+                        LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+                        if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster()){
+                            Exporter exporter = Exporters.getExporter();
+                            Book book = ss.getBook();
+                            int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+                            OnlineReport onlineReport = onlineReportDAO.findById(reportId);
+                            // similar to some code in onlinecontroller. A bit hacky, hopefully can neaten later
+                            // yes can NPE, not so bothered at the mo
+                            if (onlineReport.getDatabaseId() > 0) {
+                                Database db = databaseDAO.findById(onlineReport.getDatabaseId());
+                                onlineReport.setPathname(db.getPersistenceName());
+                            } else {
+                                onlineReport.setPathname(onlineReport.getDatabaseType());
+                            }
+
+
+                            String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename(); // as in the online controller
+                            FileOutputStream fos = null;
+                            try {
+                                fos = new FileOutputStream(bookPath); // overwrite the report, should work
+                                exporter.export(book, fos);
+                            } finally {
+                                if (fos != null) {
+                                    fos.close();
+                                }
+                            }
+                            // /api/Online?reportid=1&amp;opcode=loadsheet&amp;reporttoload=${report.id}&amp;database=${report.database}
+                            Clients.evalJavaScript("window.location.assign(\"/api/Online?reportid=1&opcode=loadsheet&reporttoload=" + reportId + "&database=" + onlineReport.getDatabase() + "\")");
+                        }
                     }
 
                     boolean pdfDefault = false;

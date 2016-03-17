@@ -95,6 +95,7 @@ public class OnlineController {
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
+            , @RequestParam(value = "template", required = false) String template
 
     ) {
         try {
@@ -248,6 +249,10 @@ public class OnlineController {
                             session.removeAttribute(reportId);// get rid of it from the session
                             model.put("showSave", session.getAttribute(reportId + SAVE_FLAG));
                             model.put("masterUser", loggedInUser.getUser().isMaster());
+                            model.put("templateMode", "TRUE".equalsIgnoreCase(template) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster()));
+                            model.put("showTemplate", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster());
+
+
                             session.removeAttribute(reportId + SAVE_FLAG);// get rid of it from the session
                             // sort the pdf merges, had forgotten this . . .
                             final List<SName> names = book.getInternalBook().getNames();
@@ -272,6 +277,7 @@ public class OnlineController {
                             final String finalReportId = reportId;
                             final OnlineReport finalOnlineReport = onlineReport;
                             final LoggedInUser finalLoggedInUser = loggedInUser;
+                            final boolean templateMode = "TRUE".equalsIgnoreCase(template) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster());
                             new Thread(() -> {
                                 // so in here the new thread we set up the loading as it was originally before
                                 try {
@@ -283,8 +289,12 @@ public class OnlineController {
                                     book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);
                                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                                     book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
-                                    ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
-                                    session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book, valueId));
+                                    if (!templateMode){
+                                        ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+                                        session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book, valueId));
+                                    } else {
+                                        finalLoggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
+                                    }
                                     newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                     System.out.println();
                                     System.out.println("Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
@@ -336,7 +346,8 @@ public class OnlineController {
 //            , @RequestParam(value = "imagestorename", required = false, defaultValue = "") String imageStoreName
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
+            , @RequestParam(value = "template", required = false, defaultValue = "") String template
     ) {
-        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, opcode, spreadsheetName, database, reportToLoad, /*dataChoice,imageStoreName, */ imageName, submit, null);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, opcode, spreadsheetName, database, reportToLoad, /*dataChoice,imageStoreName, */ imageName, submit, null, template);
     }
 }
