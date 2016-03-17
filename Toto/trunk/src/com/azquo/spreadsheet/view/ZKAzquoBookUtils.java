@@ -7,6 +7,7 @@ import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Range;
@@ -413,6 +414,8 @@ public class ZKAzquoBookUtils {
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
         CellRegion totalFormatCell = getCellRegionForSheetAndName(sheet, "az_totalFormat" + region);
+        CellRegion totalFormatCell2 = getCellRegionForSheetAndName(sheet,"az_totalFormat2" + region);
+        CellRegion totalFormatCell3 = getCellRegionForSheetAndName(sheet,"az_totalFormat3" + region);
 
 
         String errorMessage = null;
@@ -486,24 +489,38 @@ public class ZKAzquoBookUtils {
                     if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
                         boolean isHierarchy = isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
                         row = displayRowHeadings.getRow();
+                        Map<Integer,String> lastHeadings = new HashedMap();
                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
                             int col = displayRowHeadings.getColumn();
-                            boolean lastEmpty = false;
+                            int emptyCount = 0;
                             for (String heading : rowHeading) {
                                 if (heading != null && (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                                     sheet.getInternalSheet().getCell(row, col).setValue(heading);
+                                    if (lastHeadings.get(col) != null && lastHeadings.get(col).equals(heading)){
+                                        //disguise the heading by making foreground colour = background colour
+                                        Range selection = Ranges.range(sheet, row, col, row,col);
+                                        CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row,col).getCellStyle().getBackColor().getHtmlColor());
+
+                                    }
+                                    lastHeadings.put(col,heading);
                                 }
                                 col++;
-                                if (heading == null || heading.length() == 0) {
-                                    lastEmpty = true;
+
+                                if (heading !=null && heading.length() > 0){
+                                    emptyCount = 0;
+                                }else{
+                                    emptyCount++;
                                 }
                             }
-                            if (isHierarchy && lastEmpty) {
+                            if (isHierarchy && emptyCount > 0) {
                                 //this is a total line
                                 Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1);
-                                if (totalFormatCell != null) {
-                                    CellOperationUtil.applyBackColor(selection, sheet.getInternalSheet().getCell(totalFormatCell.getRow(), totalFormatCell.getColumn()).getCellStyle().getBackColor().getHtmlColor());
-                                    CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(totalFormatCell.getRow(), totalFormatCell.getColumn()).getCellStyle().getFont().getColor().getHtmlColor());
+                                CellRegion lineFormat = totalFormatCell;
+                                if (emptyCount == 2 && totalFormatCell2 != null) lineFormat = totalFormatCell2;
+                                if (emptyCount == 3 && totalFormatCell3 != null) lineFormat = totalFormatCell3;
+                                if (lineFormat != null) {
+                                    CellOperationUtil.applyBackColor(selection, sheet.getInternalSheet().getCell(lineFormat.getRow(), lineFormat.getColumn()).getCellStyle().getBackColor().getHtmlColor());
+                                    CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(lineFormat.getRow(), lineFormat.getColumn()).getCellStyle().getFont().getColor().getHtmlColor());
                                 } else {
                                     CellOperationUtil.applyFontBoldweight(selection, Font.Boldweight.BOLD);
                                 }
