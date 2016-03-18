@@ -24,7 +24,7 @@ public class AzquoCell {
     private final ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName;
     private final List<DataRegionHeading> rowHeadings;
     private final List<DataRegionHeading> columnHeadings;
-    private final List<Name> contexts;
+    private final List<DataRegionHeading> contexts;
     // where this cell was before sorting, can be passed on through to the front end, makes finding a specifric cell later easier
     private final int unsortedRow;
     private final int unsortedCol;
@@ -36,7 +36,7 @@ public class AzquoCell {
     private boolean selected;
 
     public AzquoCell(boolean locked, ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName, List<DataRegionHeading> rowHeadings
-            , List<DataRegionHeading> columnHeadings, List<Name> contexts, int unsortedRow, int unsortedCol, String stringValue, double doubleValue, boolean highlighted, boolean selected) {
+            , List<DataRegionHeading> columnHeadings, List<DataRegionHeading> contexts, int unsortedRow, int unsortedCol, String stringValue, double doubleValue, boolean highlighted, boolean selected) {
         this.locked = locked;
         this.listOfValuesOrNamesAndAttributeName = listOfValuesOrNamesAndAttributeName;
         this.rowHeadings = rowHeadings;
@@ -66,7 +66,7 @@ public class AzquoCell {
         return columnHeadings;
     }
 
-    public List<Name> getContexts() {
+    public List<DataRegionHeading> getContexts() {
         return contexts;
     }
 

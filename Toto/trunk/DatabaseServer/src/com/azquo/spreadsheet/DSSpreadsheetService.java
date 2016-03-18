@@ -686,11 +686,12 @@ public class DSSpreadsheetService {
             rowHeadings.add(new ArrayList<>());
             rowHeadings.get(0).add(new DataRegionHeading(null, false));
         }
-        final List<Name> contextNames = getContextNames(azquoMemoryDBCOnnection, contextSource, languages);
+        // the context is changing to data region headings to support name function permutations - unlike the column and row headings it has to be flat, a resultant one dimensional list from createHeadingArraysFromSpreadsheetRegion
+        final List<DataRegionHeading> contextHeadings = getContextHeadings(azquoMemoryDBCOnnection,contextSource,languages);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Context parsed in " + time + "ms");
         track = System.currentTimeMillis();
-        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings, columnHeadings, contextNames, languages, valueId);
+        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings, columnHeadings, contextHeadings, languages, valueId);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
         if (time > 5000) { // a bit arbitrary
@@ -706,29 +707,6 @@ public class DSSpreadsheetService {
         return dataToShow;
     }
 
-    private List<Name> getContextNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception {
-        final List<Name> contextNames = new ArrayList<>();
-        if (contextSource == null) return contextNames;
-        for (List<String> contextItems : contextSource) { // context is flattened and it has support for carriage returned lists in a single cell
-            for (String contextItem : contextItems) {
-                final StringTokenizer st = new StringTokenizer(contextItem, "\n");
-                while (st.hasMoreTokens()) {
-                    String nextContext = st.nextToken().trim();
-                    if (nextContext.replace("`", "").length() > 0) {
-                        final Collection<Name> thisContextNames = nameService.parseQuery(azquoMemoryDBConnection, nextContext, languages);
-                        if (thisContextNames.size() > 1) {
-                            throw new Exception("error: context names must be individual - use 'as' to put sets in context");
-                        }
-                        if (thisContextNames.size() > 0) {
-                            contextNames.add(thisContextNames.iterator().next());
-                        }
-                    }
-                }
-            }
-        }
-        return contextNames;
-    }
-
     // when doing things like saving/provenance the client needs to say "here's a region description and original position" to locate a cell server side
 
     private AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
@@ -742,11 +720,11 @@ public class DSSpreadsheetService {
         if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
             return null;
         }
-        final List<Name> contextNames = getContextNames(azquoMemoryDBCOnnection, contextSource, languages);
+        final List<DataRegionHeading> contextHeadings = getContextHeadings(azquoMemoryDBCOnnection,contextSource,languages);
         // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
         // that is to say : the outside list's size is the number of columns or headings. So, do we have the row and col?
         if (unsortedRow < rowHeadings.size() && unsortedCol < columnHeadings.size()) {
-            return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextNames, unsortedRow, unsortedCol, languages, 0);
+            return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextHeadings, unsortedRow, unsortedCol, languages, 0);
         }
         return null; // no headings match the row/col passed
     }
@@ -977,7 +955,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         private final int row;
         private final List<List<DataRegionHeading>> headingsForEachColumn;
         private final List<List<DataRegionHeading>> headingsForEachRow;
-        private final List<Name> contextNames;
+        private final List<DataRegionHeading> contextHeadings;
         private final List<String> languages;
         private final int valueId;
         private final AzquoMemoryDBConnection connection;
@@ -986,11 +964,11 @@ Callable interface sorts the memory "happens before" using future gets which run
 
 
         public RowFiller(int row, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow
-                , List<Name> contextNames, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
+                , List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
             this.row = row;
             this.headingsForEachColumn = headingsForEachColumn;
             this.headingsForEachRow = headingsForEachRow;
-            this.contextNames = contextNames;
+            this.contextHeadings = contextHeadings;
             this.languages = languages;
             this.valueId = valueId;
             this.connection = connection;
@@ -1006,7 +984,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             int colNo = 0;
             for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                 // values I need to build the CellUI
-                returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextNames, row, colNo, languages, valueId));
+                returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextHeadings, row, colNo, languages, valueId));
                 // for some reason this was before, it buggered up the ability to find the right column!
                 colNo++;
                 if (counter.incrementAndGet() % progressBarStep == 0) {
@@ -1024,7 +1002,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         private final int col;
         private final List<DataRegionHeading> headingsForColumn;
         private final List<DataRegionHeading> headingsForRow;
-        private final List<Name> contextNames;
+        private final List<DataRegionHeading> contextHeadings;
         private final List<String> languages;
         private final int valueId;
         private final AzquoMemoryDBConnection connection;
@@ -1032,12 +1010,12 @@ Callable interface sorts the memory "happens before" using future gets which run
         private final int progressBarStep;
 
         public CellFiller(int row, int col, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow,
-                          List<Name> contextNames, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
+                          List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
             this.row = row;
             this.col = col;
             this.headingsForColumn = headingsForColumn;
             this.headingsForRow = headingsForRow;
-            this.contextNames = contextNames;
+            this.contextHeadings = contextHeadings;
             this.languages = languages;
             this.valueId = valueId;
             this.connection = connection;
@@ -1050,7 +1028,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         @Override
         public AzquoCell call() throws Exception {
             // connection.addToUserLog(".", false);
-            final AzquoCell azquoCell = getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextNames, row, col, languages, valueId);
+            final AzquoCell azquoCell = getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextHeadings, row, col, languages, valueId);
             if (counter.incrementAndGet() % progressBarStep == 0) {
                 connection.addToUserLog("=", false);
             }
@@ -1104,11 +1082,11 @@ Callable interface sorts the memory "happens before" using future gets which run
 
     public static String ROWHEADING = "[ROWHEADING]";
     public static String ROWHEADINGLOWERCASE = "[rowheading]";
-    public static String COLUMNHEADING = "[ROWHEADING]";
-    public static String COLUMNHEADINGLOWERCASE = "[rowheading]";
+    public static String COLUMNHEADING = "[COLUMNHEADING]";
+    public static String COLUMNHEADINGLOWERCASE = "[columnheading]";
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
-            , List<Name> contextNames, int rowNo, int colNo, List<String> languages, int valueId) throws Exception {
+            , List<DataRegionHeading> contextHeadings, int rowNo, int colNo, List<String> languages, int valueId) throws Exception {
         boolean selected = false;
         String stringValue = "";
         double doubleValue = 0;
@@ -1119,12 +1097,22 @@ Callable interface sorts the memory "happens before" using future gets which run
         for (DataRegionHeading columnHeading : columnHeadings) { // try column headings first
             if (columnHeading != null && columnHeading.isNameFunction()) {
                 nameFunctionHeading = columnHeading;
+                break;
             }
         }
         if (nameFunctionHeading == null) { // then check the row headings
             for (DataRegionHeading rowHeading : rowHeadings) {
                 if (rowHeading != null && rowHeading.isNameFunction()) {
                     nameFunctionHeading = rowHeading;
+                    break;
+                }
+            }
+        }
+        if (nameFunctionHeading == null) { // finally context for permuted name functions
+            for (DataRegionHeading contextHeading : contextHeadings) {
+                if (contextHeading != null && contextHeading.isNameFunction()) {
+                    nameFunctionHeading = contextHeading;
+                    break;
                 }
             }
         }
@@ -1132,10 +1120,10 @@ Callable interface sorts the memory "happens before" using future gets which run
         // todo re-implement caching here if there are performance problems - I did use findOverlap before here but I don't think is applicable now the name query is much more flexible. Caching fragments of the query would be the thing
         if (nameFunctionHeading != null) {
             String cellQuery = nameFunctionHeading.getDescription();
-            if (!rowHeadings.isEmpty()) {
+            if (!rowHeadings.isEmpty() && (cellQuery.contains(ROWHEADING) || cellQuery.contains(ROWHEADINGLOWERCASE))) {
                 cellQuery = cellQuery.replace(ROWHEADING, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(ROWHEADINGLOWERCASE, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
             }
-            if (!columnHeadings.isEmpty()) {
+            if (!columnHeadings.isEmpty() && (cellQuery.contains(COLUMNHEADING) || cellQuery.contains(COLUMNHEADINGLOWERCASE))) {
                 cellQuery = cellQuery.replace(COLUMNHEADING, columnHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(COLUMNHEADINGLOWERCASE, columnHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // and now the col headings
             }
             locked.isTrue = true; // they cant edit the results from complex functions
@@ -1213,7 +1201,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 }
                 rowAndColumnHeadingsForThisCell = new HashSet<>(headingsForThisCell);
                 if (headingsForThisCell.size() > hCount) {
-                    headingsForThisCell.addAll(dataRegionHeadingsFromNames(contextNames, connection, null, null, null)); // context is just names, add them in here
+                    headingsForThisCell.addAll(contextHeadings);
                 } else {
                     headingsForThisCell.clear();
                     checked = false;
@@ -1315,7 +1303,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         }
                 /* something to note : in the old model there was a map of headings used for each cell. I could add headingsForThisCell to the cell which would be a unique set for each cell
                  but instead I'll just add the headings and row and context, I think it would be less memory. 3 object references vs a set*/
-        return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextNames, rowNo, colNo, stringValue, doubleValue, false, selected);
+        return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextHeadings, rowNo, colNo, stringValue, doubleValue, false, selected);
     }
 
     // todo : put the size check of each set and hence which way we run through the loop in here, should improve performance if required
@@ -1329,7 +1317,7 @@ Callable interface sorts the memory "happens before" using future gets which run
 
     private List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
-            , final List<Name> contextNames, List<String> languages, int valueId) throws Exception {
+            , final List<DataRegionHeading> contextHeadings, List<String> languages, int valueId) throws Exception {
         long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
         long newHeapMarker = oldHeapMarker;
         long track = System.currentTimeMillis();
@@ -1359,7 +1347,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 int colNo = 0;
                 for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                     // inconsistent parameter ordering?
-                    futureRow.add(executor.submit(new CellFiller(row, colNo, columnHeadings, rowHeadings, contextNames, languages, valueId, connection, counter, progressBarStep)));
+                    futureRow.add(executor.submit(new CellFiller(row, colNo, columnHeadings, rowHeadings, contextHeadings, languages, valueId, connection, counter, progressBarStep)));
                     colNo++;
                 }
                 futureCellArray.add(futureRow);
@@ -1377,7 +1365,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             List<Future<List<AzquoCell>>> futureRowArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 // row passed twice as
-                futureRowArray.add(executor.submit(new RowFiller(row, headingsForEachColumn, headingsForEachRow, contextNames, languages, valueId, connection, counter, progressBarStep)));
+                futureRowArray.add(executor.submit(new RowFiller(row, headingsForEachColumn, headingsForEachRow, contextHeadings, languages, valueId, connection, counter, progressBarStep)));
             }
             for (Future<List<AzquoCell>> futureRow : futureRowArray) {
                 toReturn.add(futureRow.get(1, TimeUnit.HOURS));
@@ -1639,7 +1627,6 @@ Callable interface sorts the memory "happens before" using future gets which run
             return;
         }
         int numberOfValuesModified = 0;
-        List<Name> contextNames = getContextNames(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getContextSource(), databaseAccessToken.getLanguages());
         int rowCounter = 0;
         for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
             int columnCounter = 0;
@@ -1690,8 +1677,8 @@ Callable interface sorts the memory "happens before" using future gets which run
                                 final Set<DataRegionHeading> headingsForCell = HashObjSets.newMutableSet(azquoCell.getColumnHeadings().size() + azquoCell.getRowHeadings().size());
                                 headingsForCell.addAll(azquoCell.getColumnHeadings());
                                 headingsForCell.addAll(azquoCell.getRowHeadings());
+                                headingsForCell.addAll(azquoCell.getContexts());
                                 Set<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
-                                cellNames.addAll(contextNames);
                                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), cellNames);
                                 numberOfValuesModified++;
                             }
@@ -1729,6 +1716,17 @@ Callable interface sorts the memory "happens before" using future gets which run
         // clear the caches after, if we do before then some will be recreated as part of saving.
         // Is this a bit overkill given that it should clear as it goes? I suppose there's the query and count caches, plus parents of the changed names
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
+    }
+
+    private List<DataRegionHeading> getContextHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception {
+        final List<List<List<DataRegionHeading>>> contextArraysFromSpreadsheetRegion = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, contextSource, languages);
+        final List<DataRegionHeading> contextHeadings = new ArrayList<>();
+        for (List<List<DataRegionHeading>> list1 : contextArraysFromSpreadsheetRegion){
+            for (List<DataRegionHeading> list2 : list1){
+                contextHeadings.addAll(list2);
+            }
+        }
+        return contextHeadings;
     }
 
     public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
