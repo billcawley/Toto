@@ -141,9 +141,9 @@ public class DSSpreadsheetService {
                             }
                         }
                         /* The way name functions work is going to change to allow [ROWHEADING] and [COLUMNHEADING] which work with set operators, / * - + etc.
-                           This means that in the case of name functions the heading can't cache sets, it needs to evalueate the formulae on each line and it means that each
+                           This means that in the case of name functions the heading can't cache sets, it needs to evaluate the formulae on each line and it means that each
                            heading needs to have its description populated even if it's a simple name. Caching of heading will be broken, this would slow down Damart (which will be broken anyway due to changing syntax)
-                           for example but that's not such a concern right now. Later when evaluating cells it will look for a function in the row heading first then the column heading (column not added yet)
+                           for example but that's not such a concern right now. Later when evaluating cells it will look for a function in the row heading first then the column heading
                            and it will evaluate the first it finds taking into account [ROWHEADING] and [COLUMNHEADING], it can't evaluate both. And [ROWHEADING] means the first row heading
                            if there are more than one we may later allow [ROWHEADING1], [ROWHEADING2] etc. Thus a fair bit of code has been chopped out of here to be resolved later.
                            */
@@ -686,7 +686,7 @@ public class DSSpreadsheetService {
             rowHeadings.add(new ArrayList<>());
             rowHeadings.get(0).add(new DataRegionHeading(null, false));
         }
-        final List<Name> contextNames = getContextNames(azquoMemoryDBCOnnection,contextSource,languages);
+        final List<Name> contextNames = getContextNames(azquoMemoryDBCOnnection, contextSource, languages);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Context parsed in " + time + "ms");
         track = System.currentTimeMillis();
@@ -1104,7 +1104,8 @@ Callable interface sorts the memory "happens before" using future gets which run
 
     public static String ROWHEADING = "[ROWHEADING]";
     public static String ROWHEADINGLOWERCASE = "[rowheading]";
-    //public static String COLUMNHEADING = "[COLUMNHEADING]"; unused for the moment but we may need to add in at some point
+    public static String COLUMNHEADING = "[ROWHEADING]";
+    public static String COLUMNHEADINGLOWERCASE = "[rowheading]";
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<Name> contextNames, int rowNo, int colNo, List<String> languages, int valueId) throws Exception {
@@ -1114,71 +1115,83 @@ Callable interface sorts the memory "happens before" using future gets which run
         MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
         // ok under new logic the complex functions will work very differently evaluating a query for each cell rather than gathering headings as below. Hence a big if here
-        DataRegionHeading nameFunctionColumnHeading = null;
-        for (DataRegionHeading columnHeading : columnHeadings) { // currently just check the columns, may add row support later
+        DataRegionHeading nameFunctionHeading = null;
+        for (DataRegionHeading columnHeading : columnHeadings) { // try column headings first
             if (columnHeading != null && columnHeading.isNameFunction()) {
-                nameFunctionColumnHeading = columnHeading;
+                nameFunctionHeading = columnHeading;
             }
         }
-        // todo re-implement caching here if there are performance problems - I did use findOverlap before here but I don't think is applicable now the name query is much more flexible
-        if (nameFunctionColumnHeading != null) {
-            if (!rowHeadings.isEmpty()) { // functions all will deal with row headings
-                String cellQuery = nameFunctionColumnHeading.getDescription().replace(ROWHEADING, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(ROWHEADINGLOWERCASE, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
-                locked.isTrue = true; // they cant edit the results from complex functions
-                if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
-                    Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
-                    nameService.parseQuery(connection, cellQuery, languages, namesToCount);
-                    doubleValue = namesToCount.size();
-                    stringValue = doubleValue + "";
-                } else if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
-                    String[] twoSets = nameFunctionColumnHeading.getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
-                    Set<Name> leftSet = HashObjSets.newMutableSet();
-                    Set<Name> rightSet = HashObjSets.newMutableSet();
-                    nameService.parseQuery(connection, twoSets[0], languages, leftSet);
-                    nameService.parseQuery(connection, twoSets[1], languages, rightSet);
-                    // ok I have the two sets, I got rid of total name count (which featured caching), I'm going to do the nuts and bolts here, need to think a little
-                    Set<Name> alreadyTested = HashObjSets.newMutableSet();
-                    // ok this should be like the inside of totalSetIntersectionCount but dealing with left set as the first parameter not a name.
-                    // Notable that the left set is expanded out to try intersecting with the right set which is "as is", this needs testing
-                    int count = 0;
+        if (nameFunctionHeading == null) { // then check the row headings
+            for (DataRegionHeading rowHeading : rowHeadings) {
+                if (rowHeading != null && rowHeading.isNameFunction()) {
+                    nameFunctionHeading = rowHeading;
+                }
+            }
+        }
+
+        // todo re-implement caching here if there are performance problems - I did use findOverlap before here but I don't think is applicable now the name query is much more flexible. Caching fragments of the query would be the thing
+        if (nameFunctionHeading != null) {
+            String cellQuery = nameFunctionHeading.getDescription();
+            if (!rowHeadings.isEmpty()) {
+                cellQuery = cellQuery.replace(ROWHEADING, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(ROWHEADINGLOWERCASE, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
+            }
+            if (!columnHeadings.isEmpty()) {
+                cellQuery = cellQuery.replace(COLUMNHEADING, columnHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(COLUMNHEADINGLOWERCASE, columnHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // and now the col headings
+            }
+            locked.isTrue = true; // they cant edit the results from complex functions
+            if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
+                Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
+                nameService.parseQuery(connection, cellQuery, languages, namesToCount);
+                doubleValue = namesToCount.size();
+                stringValue = doubleValue + "";
+            } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
+                String[] twoSets = nameFunctionHeading.getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
+                Set<Name> leftSet = HashObjSets.newMutableSet();
+                Set<Name> rightSet = HashObjSets.newMutableSet();
+                nameService.parseQuery(connection, twoSets[0], languages, leftSet);
+                nameService.parseQuery(connection, twoSets[1], languages, rightSet);
+                // ok I have the two sets, I got rid of total name count (which featured caching), I'm going to do the nuts and bolts here, need to think a little
+                Set<Name> alreadyTested = HashObjSets.newMutableSet();
+                // ok this should be like the inside of totalSetIntersectionCount but dealing with left set as the first parameter not a name.
+                // Notable that the left set is expanded out to try intersecting with the right set which is "as is", this needs testing
+                int count = 0;
+                for (Name child : leftSet) {
+                    if (rightSet.contains(child)) {
+                        count++;
+                    }
+                }
+                if (count == 0) { // I think we only go ahead if there was no intersection at the top level - need to discuss with WFC
                     for (Name child : leftSet) {
-                        if (rightSet.contains(child)) {
-                            count++;
+                        if (child.hasChildren()) {
+                            count += totalSetIntersectionCount(child, rightSet, alreadyTested, 0);
                         }
                     }
-                    if (count == 0) { // I think we only go ahead if there was no intersection at the top level - need to discuss with WFC
-                        for (Name child : leftSet) {
-                            if (child.hasChildren()) {
-                                count += totalSetIntersectionCount(child, rightSet, alreadyTested, 0);
-                            }
-                        }
+                }
+                doubleValue = count;
+                stringValue = count + "";
+            } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.SET) {
+                final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
+                doubleValue = 0;
+                StringBuilder sb = new StringBuilder();
+                boolean first = true;
+                for (Name name : set) {
+                    if (!first) {
+                        sb.append(", ");
                     }
-                    doubleValue = count;
-                    stringValue = count + "";
-                } else if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.SET) {
-                    final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
-                    doubleValue = 0;
-                    StringBuilder sb = new StringBuilder();
-                    boolean first = true;
-                    for (Name name : set){
-                        if (!first){
-                            sb.append(", ");
-                        }
-                        sb.append(name.getDefaultDisplayName()); // make use the languages? Maybe later.
-                        first = false;
-                    }
-                    stringValue = sb.toString();
-                } else if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.FIRST) { // we may have to pass a hint about ordering to the query parser, let's see how it goes without it
-                    final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
-                    doubleValue = 0;
-                    stringValue = set.isEmpty() ? "" : set.iterator().next().getDefaultDisplayName();
-                } else if (nameFunctionColumnHeading.getFunction() == DataRegionHeading.FUNCTION.LAST) {
-                    final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
-                    doubleValue = 0;
-                    stringValue = "";
-                    for (Name name : set){ //a bit of a lazy way of doing things but it should be fine, plus with only a collection interface not sure of how to get the last!
-                        stringValue = name.getDefaultDisplayName();
-                    }
+                    sb.append(name.getDefaultDisplayName()); // make use the languages? Maybe later.
+                    first = false;
+                }
+                stringValue = sb.toString();
+            } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.FIRST) { // we may have to pass a hint about ordering to the query parser, let's see how it goes without it
+                final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
+                doubleValue = 0;
+                stringValue = set.isEmpty() ? "" : set.iterator().next().getDefaultDisplayName();
+            } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.LAST) {
+                final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
+                doubleValue = 0;
+                stringValue = "";
+                for (Name name : set) { //a bit of a lazy way of doing things but it should be fine, plus with only a collection interface not sure of how to get the last!
+                    stringValue = name.getDefaultDisplayName();
                 }
             }
         } else {// conventional type (sum) or value function
@@ -1524,7 +1537,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     // for provenance?
     public List<TreeNode> nodify(List<Value> values, int maxSize) {
         List<TreeNode> toReturn = new ArrayList<>();
-        if (values!=null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
+        if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
             valueService.sortValues(values);
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
             Date provdate = values.get(0).getProvenance().getTimeStamp();
