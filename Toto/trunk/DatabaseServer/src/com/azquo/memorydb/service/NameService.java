@@ -467,6 +467,10 @@ public final class NameService {
                 //carry on regardless!
             }
         }
+        if (level < 0){
+            return findParentsAtLevel(name,-level);
+        }
+
         if (level == 1) { // then no need to get clever, just return the children
             if (name.hasChildrenAsSet()) {
                 return new NameSetList(name.getChildrenAsSet(), null, false);
@@ -500,6 +504,22 @@ public final class NameService {
         // has been moved to name to directly access contents of name hopefully increasing speed and saving on garbage generation
         Name.addNames(name, ordered ? namesFoundOrderedSet : namesFoundSet, 0, level);
         return new NameSetList(ordered ? null : namesFoundSet, ordered ? new ArrayList<>(namesFoundOrderedSet) : null, true); // it will be mutable either way
+    }
+
+    public NameSetList findParentsAtLevel(final Name name, int level) throws Exception {
+        findChildrenAtLevelCount.incrementAndGet();
+        if (level == 1) { // then no need to get clever, just return the parents
+            if (name.hasParentsAsSet()) {
+                return new NameSetList(name.getParentsAsSet(), null, false);
+            } else {
+                return new NameSetList(null, name.getParentsAsList(), false);
+            }
+        }
+        // parents are not ordered like children, use a Set
+        Set<Name> namesFoundSet = HashObjSets.newMutableSet();
+        // has been moved to name to directly access contents of name hopefully increasing speed and saving on garbage generation
+        Name.addParentNames(name, namesFoundSet, 0, level);
+        return new NameSetList(namesFoundSet, null, true); // it will be mutable either way
     }
 
     private static AtomicInteger addNamesCount = new AtomicInteger(0);

@@ -402,6 +402,25 @@ public final class Name extends AzquoMemoryDBEntity {
         return parentsAsSet != null || parents.length > 0;
     }
 
+    public boolean hasParentsAsSet() {
+        return parentsAsSet != null;
+    }
+
+    private static AtomicInteger getParentsAsSetCount = new AtomicInteger(0);
+
+    // if used incorrectly means NPE, I don't mind about this for the mo. We're allowing interpretSetTerm low level access to the list and sets to stop unnecessary collection copying in the query parser
+    public Set<Name> getParentsAsSet() {
+        getChildrenAsSetCount.incrementAndGet();
+        return Collections.unmodifiableSet(parentsAsSet);
+    }
+
+    private static AtomicInteger getParentsAsListCount = new AtomicInteger(0);
+
+    public List<Name> getParentsAsList() {
+        getParentsAsListCount.incrementAndGet();
+        return parents.length > 0 ? Collections.unmodifiableList(Arrays.asList(parents)) : Collections.emptyList();
+    }
+
     // note these two should be called in synchronized blocks if acting on things like parents, children etc
     // doesn't check contains, there is logic after the contains when adding which can't go in here (as in are we going to switch to set?)
     private static AtomicInteger nameArrayAppendCount = new AtomicInteger(0);
@@ -580,6 +599,30 @@ public final class Name extends AzquoMemoryDBEntity {
             } else {
                 for (Name child : name.getChildren()) {// Accessing children as above might save a bit of garbage but I think the big wins have been done
                     addNames(child, namesFound, currentLevel + 1, level);
+                }
+            }
+        }
+    }
+
+    // to support negative levels on children clause, level is seen as parent level, same as above but moving in the opposite direction
+    public static void addParentNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
+        addNamesCount.incrementAndGet();
+        if (!name.hasParents()) {
+            if (level == NameService.LOWEST_LEVEL_INT) { // misnomer but same logic
+                namesFound.add(name);
+            }
+        } else {
+            if (currentLevel == (level - 1)) { // then we want the next one up, just add it all . . .
+                if (name.parentsAsSet != null) {
+                    namesFound.addAll(name.parentsAsSet);
+                } else if (name.parents.length > 0) {
+                    for (int i = 0; i < name.parents.length; i++) { // intellij wants to use the collections implementation, I think this is slightly more efficient
+                        namesFound.add(name.parents[i]);
+                    }
+                }
+            } else {
+                for (Name child : name.getParents()) {
+                    addParentNames(child, namesFound, currentLevel + 1, level);
                 }
             }
         }
@@ -1277,6 +1320,10 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("getAttribute2Count\t\t\t\t" + getAttribute2Count.get());
         System.out.println("getAttributesForFastStoreCount\t\t\t\t" + getAttributesForFastStoreCount.get());
         System.out.println("getChildrenIdsAsBytesCount\t\t\t\t" + getChildrenIdsAsBytesCount.get());
+        System.out.println("getChildrenAsSet\t\t\t\t" + getChildrenAsSetCount.get());
+        System.out.println("getChildrenAsList\t\t\t\t" + getChildrenAsListCount.get());
+        System.out.println("getParentsAsSet\t\t\t\t" + getParentsAsSetCount.get());
+        System.out.println("getParentsAsList\t\t\t\t" + getParentsAsListCount.get());
         System.out.println("linkCount\t\t\t\t" + linkCount.get());
         System.out.println("deleteCount\t\t\t\t" + deleteCount.get());
     }
@@ -1321,6 +1368,10 @@ public final class Name extends AzquoMemoryDBEntity {
         getAttribute2Count.set(0);
         getAttributesForFastStoreCount.set(0);
         getChildrenIdsAsBytesCount.set(0);
+        getChildrenAsSetCount.set(0);
+        getChildrenAsListCount.set(0);
+        getParentsAsSetCount.set(0);
+        getParentsAsListCount.set(0);
         linkCount.set(0);
         deleteCount.set(0);
     }

@@ -179,6 +179,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
         // this assumes that the , will be taken care of after the parsing
         statement = statement.replace(",", " , ").replace("  ", " ");
         statement = statement.replaceAll("(?i)level lowest", "level 100");
+        statement = statement.replaceAll("(?i)level highest", "level -100");
         statement = statement.replaceAll("(?i)level all", "level 101");
 
  /* so now we have things like this, should be ready for a basic test
