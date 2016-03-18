@@ -755,17 +755,13 @@ public class DSImportService {
             }
         }
         // load leftovers
-        int loadLine = lineNo - batchSize;
-        if (loadLine < 1) loadLine = 1;
+        int loadLine = lineNo - linesBatched.size(); // NOT batch size!
+        if (loadLine < 1) loadLine = 1; // could it ever be? Need to confirm this check
         futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, loadLine)));// line no should be the start
         // check all work is done and memory is in sync
         for (Future<?> futureBatch : futureBatches) {
             futureBatch.get(1, TimeUnit.HOURS);
         }
-/*        executor.shutdown();
-        if (!executor.awaitTermination(8, TimeUnit.HOURS)) {
-            throw new Exception("File " + filePath + " took longer than 8 hours to load for : " + azquoMemoryDBConnection.getAzquoMemoryDB().getPersistenceName());
-        }*/
         // wasn't closing before, maybe why the files stayed there
         originalLineIterator.close();
         // edd adding a delete check for tomcat temp files, if read from the other temp directly then leave it alone

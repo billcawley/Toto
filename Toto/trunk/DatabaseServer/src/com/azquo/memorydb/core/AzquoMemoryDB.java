@@ -12,6 +12,7 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -1113,6 +1114,15 @@ public final class AzquoMemoryDB {
         if (provenanceByIdMap.putIfAbsent(newProvenance.getId(), newProvenance) != null) {
             throw new Exception("tried to add a privenance to the database with an existing id!");
         }
+    }
+
+    // I may change these later, for the mo I just want to stop drops and clears at the same time as persistence
+    public synchronized void synchronizedClear(DSAdminService dsAdminService) throws Exception {
+        dsAdminService.emptyDatabaseInPersistence(getPersistenceName());
+    }
+
+    public synchronized void synchronizedDrop(DSAdminService dsAdminService) throws Exception {
+        dsAdminService.dropDatabaseInPersistence(getPersistenceName());
     }
 
     public static void printFunctionCountStats() {

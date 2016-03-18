@@ -157,12 +157,4 @@ public class ValueDAO extends FastDAO {
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
         return jdbcTemplateUtils.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));
     }
-
-    // was delete from but drop create is faster
-    public void clearTable(final String databaseName){
-        if (checkFastTableExists(databaseName)){
-            jdbcTemplateUtils.update("drop table `" + databaseName + "`.`" + getTableName() + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
-        }
-        createFastTableIfItDoesntExist(databaseName);
-    }
 }

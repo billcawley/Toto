@@ -180,13 +180,4 @@ public class NameDAO extends FastDAO{
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
 
     }
-
-    // was delete from but drop create is faster
-    public void clearTable(final String databaseName){
-        if (checkFastTableExists(databaseName)){
-            jdbcTemplateUtils.update("drop table `" + databaseName + "`.`" + getTableName() + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
-        }
-        createFastTableIfItDoesntExist(databaseName);
-    }
-
 }

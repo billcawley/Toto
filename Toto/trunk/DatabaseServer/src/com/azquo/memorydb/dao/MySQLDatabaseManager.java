@@ -39,8 +39,8 @@ public class MySQLDatabaseManager {
     public void emptyDatabase(String databaseName) throws IOException {
         databaseName = databaseName.replace("`", "oh no you don't");
         jdbcTemplateUtils.update("truncate `" + databaseName + "`.provenance", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
-        nameDAO.clearTable(databaseName);
-        valueDAO.clearTable(databaseName);
+        jdbcTemplateUtils.update("truncate `" + databaseName + "`." + nameDAO.getTableName(), JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        jdbcTemplateUtils.update("truncate `" + databaseName + "`." + valueDAO.getTableName(), JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
     public void dropDatabase(String databaseName) throws IOException {
@@ -48,5 +48,4 @@ public class MySQLDatabaseManager {
         databaseName = databaseName.replace("`", "oh no you don't");
         jdbcTemplateUtils.update("drop database `" + databaseName + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
-
 }

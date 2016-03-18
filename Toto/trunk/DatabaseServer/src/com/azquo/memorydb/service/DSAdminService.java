@@ -3,6 +3,7 @@ package com.azquo.memorydb.service;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.MemoryDBManager;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
@@ -106,22 +107,39 @@ public class DSAdminService {
     }
 
     public void emptyDatabase(String persistenceName) throws Exception {
+        if (memoryDBManager.isDBLoaded(persistenceName)){ // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
+            final AzquoMemoryDB azquoMemoryDB = memoryDBManager.getAzquoMemoryDB(persistenceName, null);
+            azquoMemoryDB.synchronizedClear(this);
+            memoryDBManager.removeDBfromMap(persistenceName);
+        } else {
+            emptyDatabaseInPersistence(persistenceName);
+        }
+    }
+
+    public void emptyDatabaseInPersistence(String persistenceName) throws Exception {
         if (persistenceName.endsWith(HBASE_PERSISTENCE_SUFFIX)){
             hBaseDAO.clearTables(persistenceName);
         } else {
             mySQLDatabaseManager.emptyDatabase(persistenceName);
         }
-        memoryDBManager.removeDBfromMap(persistenceName);
     }
 
-
     public void dropDatabase(String persistenceName) throws Exception {
+        if (memoryDBManager.isDBLoaded(persistenceName)){ // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
+            final AzquoMemoryDB azquoMemoryDB = memoryDBManager.getAzquoMemoryDB(persistenceName, null);
+            azquoMemoryDB.synchronizedDrop(this);
+            memoryDBManager.removeDBfromMap(persistenceName);
+        } else {
+            dropDatabaseInPersistence(persistenceName);
+        }
+    }
+
+    public void dropDatabaseInPersistence(String persistenceName) throws Exception {
         if (persistenceName.endsWith(HBASE_PERSISTENCE_SUFFIX)){
             hBaseDAO.removeRequiredTables(persistenceName);
         } else {
             mySQLDatabaseManager.dropDatabase(persistenceName);
         }
-        memoryDBManager.removeDBfromMap(persistenceName);
     }
 
     public void createDatabase(final String persistenceName) throws Exception {
