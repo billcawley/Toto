@@ -45,7 +45,7 @@ public class NameDAO extends FastDAO{
     private static final class NameRowMapper implements RowMapper<Name> {
         final AzquoMemoryDB azquoMemoryDB;
 
-        public NameRowMapper(AzquoMemoryDB azquoMemoryDB) {
+        NameRowMapper(AzquoMemoryDB azquoMemoryDB) {
             this.azquoMemoryDB = azquoMemoryDB;
         }
 
@@ -70,7 +70,7 @@ public class NameDAO extends FastDAO{
         private final List<Name> namesToInsert;
         private final String message;
 
-        public BulkNameInserter(final AzquoMemoryDB azquoMemoryDB, final List<Name> namesToInsert, String message) {
+        BulkNameInserter(final AzquoMemoryDB azquoMemoryDB, final List<Name> namesToInsert, String message) {
             this.azquoMemoryDB = azquoMemoryDB;
             this.namesToInsert = namesToInsert;
             this.message = message;

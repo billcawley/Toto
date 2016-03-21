@@ -38,7 +38,7 @@ public final class NameService {
     @Autowired
     DSSpreadsheetService dsSpreadsheetService;//used only in formatting children for output
 
-    public StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
+    private StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
 
     private static final Logger logger = Logger.getLogger(NameService.class);
 
@@ -63,12 +63,12 @@ public final class NameService {
     public static final String AS = "as";
     public static final char ASSYMBOL = '@';
     public static final String WHERE = "where";
-    public static final String languageIndicator = "<-";
+    private static final String languageIndicator = "<-";
 
     // hopefully thread safe??
     private static AtomicInteger nameCompareCount = new AtomicInteger(0);
 
-    public final Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = (n1, n2) -> {
+    private final Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = (n1, n2) -> {
         nameCompareCount.incrementAndGet();
         // null checks to keep intellij happy, probably not a bad thing
         boolean n1Null = n1 == null || n1.getDefaultDisplayName() == null;
@@ -113,7 +113,7 @@ public final class NameService {
 
     private static AtomicInteger getNameListFromStringListCount = new AtomicInteger(0);
 
-    public List<Name> getNameListFromStringList(List<String> nameStrings, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames) throws Exception {
+    List<Name> getNameListFromStringList(List<String> nameStrings, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames) throws Exception {
         getNameListFromStringListCount.incrementAndGet();
         List<Name> referencedNames = new ArrayList<>(nameStrings.size());
         for (String nameString : nameStrings) {
@@ -151,7 +151,7 @@ public final class NameService {
 
     private static AtomicInteger getNameByAttributeCount = new AtomicInteger(0);
 
-    public Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent, final List<String> attributeNames) throws Exception {
+    private Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent, final List<String> attributeNames) throws Exception {
         getNameByAttributeCount.incrementAndGet();
         // attribute value null? Can it happen?
         if (attributeValue.length() > 0 && attributeValue.charAt(0) == NAMEMARKER) {
@@ -169,7 +169,7 @@ public final class NameService {
 
     private static AtomicInteger findByName2Count = new AtomicInteger(0);
 
-    public Name findParentAttributesName(Name child, String attributeName, Set<Name> checked) {
+    private Name findParentAttributesName(Name child, String attributeName, Set<Name> checked) {
         attributeName = attributeName.trim().toUpperCase();
         for (Name parent : child.getParents()) {
             if (!checked.contains(parent)) {
@@ -310,7 +310,7 @@ public final class NameService {
 
     private static AtomicInteger includeInSetCount = new AtomicInteger(0);
 
-    public void includeInSet(Name name, Name set) throws Exception {
+    private void includeInSet(Name name, Name set) throws Exception {
         includeInSetCount.incrementAndGet();
         set.addChildWillBePersisted(name);//ok add as asked
         Collection<Name> setParents = set.findAllParents();
@@ -331,7 +331,7 @@ public final class NameService {
         return findOrCreateNameInParent(azquoMemoryDBConnection, name, newParent, local, null);
     }
 
-    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
+    private Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
 
     private long addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long marker) {
         long now = System.currentTimeMillis();
@@ -424,37 +424,37 @@ public final class NameService {
 
     // in order to avoid unnecessary collection copying (we could be talking millions of names) I made this little container to move a collection that could be a list or set and possibly mutable
 
-    public static class NameSetList {
+    private static class NameSetList {
         public final Set<Name> set;
         public final List<Name> list;
-        public final boolean mutable;
+        final boolean mutable;
 
-        public NameSetList(Set<Name> set, List<Name> list, boolean mutable) {
+        NameSetList(Set<Name> set, List<Name> list, boolean mutable) {
             this.set = set;
             this.list = list;
             this.mutable = mutable;
         }
 
         // make from an existing (probably immutable) one
-        public NameSetList(NameSetList nameSetList) {
+        NameSetList(NameSetList nameSetList) {
             set = nameSetList.set != null ? HashObjSets.newMutableSet(nameSetList.set) : null;
             list = nameSetList.list != null ? new ArrayList<>(nameSetList.list) : null;
             mutable = true;
         }
 
-        public Collection<Name> getAsCollection() {
+        Collection<Name> getAsCollection() {
             return set != null ? set : list != null ? list : null;
         }
     }
 
     public static final int LOWEST_LEVEL_INT = 100;
-    public static final int ALL_LEVEL_INT = 101;
+    private static final int ALL_LEVEL_INT = 101;
 
     // a loose type of return as we might be pulling sets or lists from names - todo - custom object
 
     private static AtomicInteger findChildrenAtLevelCount = new AtomicInteger(0);
 
-    public NameSetList findChildrenAtLevel(final Name name, final String levelString) throws Exception {
+    private NameSetList findChildrenAtLevel(final Name name, final String levelString) throws Exception {
         findChildrenAtLevelCount.incrementAndGet();
         // level 100 means get me the lowest
         // level 101 means 'ALL' (including the top level
@@ -506,7 +506,7 @@ public final class NameService {
         return new NameSetList(ordered ? null : namesFoundSet, ordered ? new ArrayList<>(namesFoundOrderedSet) : null, true); // it will be mutable either way
     }
 
-    public NameSetList findParentsAtLevel(final Name name, int level) throws Exception {
+    private NameSetList findParentsAtLevel(final Name name, int level) throws Exception {
         findChildrenAtLevelCount.incrementAndGet();
         if (level == 1) { // then no need to get clever, just return the parents
             if (name.hasParentsAsSet()) {
@@ -538,7 +538,7 @@ public final class NameService {
 
     private static AtomicInteger getNameFromListAndMarkerCount = new AtomicInteger(0);
 
-    public Name getNameFromListAndMarker(String nameMarker, List<Name> nameList) throws Exception {
+    Name getNameFromListAndMarker(String nameMarker, List<Name> nameList) throws Exception {
         getNameFromListAndMarkerCount.incrementAndGet();
         if (nameMarker.charAt(0) == NAMEMARKER) {
             try {
@@ -557,7 +557,7 @@ public final class NameService {
     // note : in default language!
     private static AtomicInteger findChildrenFromToCount = new AtomicInteger(0);
 
-    public NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String countBackString, final String compareWithString, List<Name> referencedNames) throws Exception {
+    private NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String countBackString, final String compareWithString, List<Name> referencedNames) throws Exception {
         if (nameSetList.list == null) {
             return nameSetList; // don't bother trying to constrain a non list
         }
@@ -656,8 +656,7 @@ public final class NameService {
         return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null);
     }
 
-    Runtime runtime = Runtime.getRuntime();
-    int mb = 1024 * 1024;
+    private Runtime runtime = Runtime.getRuntime();
 
     /* todo : sort exceptions? Move to another class?
     todo - cache option in here
@@ -669,6 +668,7 @@ public final class NameService {
         parseQuery3Count.incrementAndGet();
         long track = System.currentTimeMillis();
         String formulaCopy = setFormula;
+        int mb = 1024 * 1024;
         long startUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
 
         /*
@@ -809,9 +809,8 @@ public final class NameService {
                 for (Name child : nameStack.get(stackCount).getAsCollection()) {
                     Name.findAllParents(child, parents); // new call to static function cuts garbage generation a lot
                 }
-                long now = System.currentTimeMillis();
                 //System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
-                start = now;
+                start = System.currentTimeMillis();
                 //nameStack.get(stackCount - 1).retainAll(parents); //can't do this any more, need to make a new one
                 NameSetList previousSet = nameStack.get(stackCount - 1);
                 // ok going to try to get a little clever here since it can be mutable
@@ -1060,9 +1059,7 @@ public final class NameService {
             Map<String, Set<Name>> nameMap = new HashMap<>();
             for (Name name : names) {
                 String nameString = name.getDefaultDisplayName();
-                if (nameMap.get(nameString) == null) {
-                    nameMap.put(nameString, new HashSet<>());
-                }
+                nameMap.putIfAbsent(nameString, new HashSet<>());
                 nameMap.get(nameString).add(name);
             }
             for (String nameString : nameMap.keySet()) {
@@ -1092,7 +1089,7 @@ public final class NameService {
 
     private static AtomicInteger inParentSetCount = new AtomicInteger(0);
 
-    public Name inParentSet(Name name, Collection<Name> maybeParents) {
+    Name inParentSet(Name name, Collection<Name> maybeParents) {
         inParentSetCount.incrementAndGet();
         if (maybeParents.contains(name)) {
             return name;

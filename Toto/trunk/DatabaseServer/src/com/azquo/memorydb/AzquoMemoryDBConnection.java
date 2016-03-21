@@ -128,14 +128,14 @@ public class AzquoMemoryDBConnection {
         (new Thread(new PersistenceRunner())).start();
     }
 
-    public static String STOP = "STOP";
+    private static String STOP = "STOP";
     public void setStopInUserLog() {
         userLog.setLength(0);
         userLog.append(STOP);
     }
 
     // change to callable for consistency?
-    public class PersistenceRunner implements Runnable {
+    private class PersistenceRunner implements Runnable {
         @Override
         public void run() {
             azquoMemoryDB.persistToDataStore();

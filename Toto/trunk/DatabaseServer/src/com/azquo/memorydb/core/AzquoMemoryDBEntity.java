@@ -26,7 +26,7 @@ import java.util.Set;
 
 public abstract class AzquoMemoryDBEntity {
 
-    protected static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     // I am going to hold a reference here, then we simply compare objects by == to check that objects are in their created databases
 
@@ -36,10 +36,10 @@ public abstract class AzquoMemoryDBEntity {
     // it's a new object, this is private as all dealt with here
     private boolean needsInserting;
     // flag for deletion, to be picked up by the persistence
-    protected boolean needsDeleting;
+    boolean needsDeleting;
 
     //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
-    protected AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id) throws Exception {
+    AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id) throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
         // This getNeedsLoading is important, an instance of AzquoMemoryDB should only be in needsLoading during the constructor and hence it will stop
         // other bits of code overriding the entities ID
@@ -98,28 +98,28 @@ public abstract class AzquoMemoryDBEntity {
 
     // should be called pretty much wherever objects are going to be added to each others maps/sets/lists
 
-    protected final void checkDatabaseMatches(final AzquoMemoryDB azquoMemoryDB) throws Exception {
+    final void checkDatabaseMatches(final AzquoMemoryDB azquoMemoryDB) throws Exception {
         if (this.azquoMemoryDB != azquoMemoryDB) {
             throw new Exception("Error, objects from different databases interacting!");
         }
     }
 
-    protected final void checkDatabaseMatches(final AzquoMemoryDBEntity azquoMemoryDBEntity) throws Exception {
+    final void checkDatabaseMatches(final AzquoMemoryDBEntity azquoMemoryDBEntity) throws Exception {
         checkDatabaseMatches(azquoMemoryDBEntity.azquoMemoryDB);
     }
 
-    protected final void checkDatabaseForSet(final Set<? extends AzquoMemoryDBEntity> entities) throws Exception {
+    final void checkDatabaseForSet(final Set<? extends AzquoMemoryDBEntity> entities) throws Exception {
         for (AzquoMemoryDBEntity toCheck : entities) {
             checkDatabaseMatches(toCheck);
         }
     }
 
-    protected void setAsPersisted(){
+    void setAsPersisted(){
         needsInserting = false;
         entitySpecificSetAsPersisted();
     }
 
-    protected void setNeedsPersisting(){
+    void setNeedsPersisting(){
         entitySpecificSetNeedsPersisting();
     }
     // will be fine for the moment, I might change how this is arranged later

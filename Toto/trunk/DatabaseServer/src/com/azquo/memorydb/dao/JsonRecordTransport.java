@@ -11,7 +11,7 @@ public class JsonRecordTransport {
 
     public final int id;
     public final String json;
-    public final State state;
+    final State state;
 
     public JsonRecordTransport(int id, String json, State state) {
         this.id = id;

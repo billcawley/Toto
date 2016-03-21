@@ -42,7 +42,7 @@ public class ValueDAO extends FastDAO {
     private static final class ValueRowMapper implements RowMapper<Value> {
         final AzquoMemoryDB azquoMemoryDB;
 
-        public ValueRowMapper(AzquoMemoryDB azquoMemoryDB) {
+        ValueRowMapper(AzquoMemoryDB azquoMemoryDB) {
             this.azquoMemoryDB = azquoMemoryDB;
         }
 
@@ -66,7 +66,7 @@ public class ValueDAO extends FastDAO {
         private final List<Value> valuesToInsert;
         private final int totalCount;
 
-        public BulkValuesInserter(final AzquoMemoryDB azquoMemoryDB, final List<Value> valuesToInsert, int totalCount) {
+        BulkValuesInserter(final AzquoMemoryDB azquoMemoryDB, final List<Value> valuesToInsert, int totalCount) {
             this.azquoMemoryDB = azquoMemoryDB;
             this.valuesToInsert = valuesToInsert;
             this.totalCount = totalCount;
@@ -143,7 +143,7 @@ public class ValueDAO extends FastDAO {
 
     }
 
-    public void createFastTableIfItDoesntExist(final String databaseName){
+    void createFastTableIfItDoesntExist(final String databaseName){
         jdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + FASTVALUE + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +

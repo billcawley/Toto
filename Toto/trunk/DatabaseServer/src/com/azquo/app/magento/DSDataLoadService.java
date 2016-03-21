@@ -61,13 +61,13 @@ public class DSDataLoadService {
     // convenience local object, don't see a need for getters/setters
 
     private static class SaleItem {
-        public Name itemName;
-        public double price;
-        public double tax;
-        public double origPrice;
-        public double qty;
+        Name itemName;
+        double price;
+        double tax;
+        double origPrice;
+        double qty;
 
-        public SaleItem() {
+        SaleItem() {
             itemName = null;
             price = 0.0;
             tax = 0.0;

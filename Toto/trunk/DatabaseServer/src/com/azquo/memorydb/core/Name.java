@@ -46,12 +46,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class Name extends AzquoMemoryDBEntity {
 
     public static final String CALCULATION = "CALCULATION";
-    public static final String LOCAL = "LOCAL";
+    private static final String LOCAL = "LOCAL";
     private static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
 
     public static final char QUOTE = '`';
 
-    public static final int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
+    private static final int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
 
     // just a cache while the names by id map is being populated. I experimented with various ideas e.g. a parent cache also, this seemed the best compromise
 
@@ -81,7 +81,7 @@ public final class Name extends AzquoMemoryDBEntity {
         private final String[] attributeKeys;
         private final String[] attributeValues;
 
-        public NameAttributes(List<String> attributeKeys, List<String> attributeValues) throws Exception {
+        NameAttributes(List<String> attributeKeys, List<String> attributeValues) throws Exception {
             if (attributeKeys.size() != attributeValues.size()) {
                 throw new Exception("Keys and values for attributes must match!");
             }
@@ -92,21 +92,21 @@ public final class Name extends AzquoMemoryDBEntity {
         }
 
         // faster init - note this is kind of dangerous in that the arrays could be externally modified, used by the new fast loader
-        public NameAttributes(String[] attributeKeys, String[] attributeValues) throws Exception {
+        NameAttributes(String[] attributeKeys, String[] attributeValues) throws Exception {
             this.attributeKeys = attributeKeys;
             this.attributeValues = attributeValues;
         }
 
-        public NameAttributes() { // blank default. Fine.
+        NameAttributes() { // blank default. Fine.
             attributeKeys = new String[0];
             attributeValues = new String[0];
         }
 
-        public List<String> getAttributeKeys() {
+        List<String> getAttributeKeys() {
             return Arrays.asList(attributeKeys);
         }
 
-        public List<String> getAttributeValues() {
+        List<String> getAttributeValues() {
             return Arrays.asList(attributeValues);
         }
 
@@ -119,7 +119,7 @@ public final class Name extends AzquoMemoryDBEntity {
             return null;
         }
 
-        public Map<String, String> getAsMap() {
+        Map<String, String> getAsMap() {
             Map<String, String> attributesAsMap = new HashMap<>(attributeKeys.length);
             int count = 0;
             for (String key : attributeKeys) { // hmm, can still access and foreach on the internal array. Np I suppose!
@@ -231,14 +231,14 @@ public final class Name extends AzquoMemoryDBEntity {
         return additive;
     }
 
-    public synchronized void setAdditiveWillBePersisted(final boolean additive) throws Exception {
+    private synchronized void setAdditiveWillBePersisted(final boolean additive) throws Exception {
         if (this.additive != additive) {
             this.additive = additive;
             setNeedsPersisting();
         }
     }
 
-    public synchronized void setProvenanceWillBePersisted(final Provenance provenance) throws Exception {
+    private synchronized void setProvenanceWillBePersisted(final Provenance provenance) throws Exception {
         if (this.provenance == null || !this.provenance.equals(provenance)) {
             this.provenance = provenance;
             setNeedsPersisting();
@@ -294,14 +294,14 @@ public final class Name extends AzquoMemoryDBEntity {
     // these two are becoming protected so they can be set by Value.
     // Value will be the reference point for the value name link, the ones here are for fast lookup, no need for persistence
     // following parent pattern re switching to sets etc
-    protected void addToValues(final Value value) throws Exception {
+    void addToValues(final Value value) throws Exception {
         addToValues(value, false);
     }
 
     // no duplication is while loading, to reduce work
     private static AtomicInteger addToValuesCount = new AtomicInteger(0);
 
-    protected void addToValues(final Value value, boolean noDuplicationCheck) throws Exception {
+    void addToValues(final Value value, boolean noDuplicationCheck) throws Exception {
         addToValuesCount.incrementAndGet();
         checkDatabaseMatches(value);
         // may make this more clever as in clearing only if there's a change but not now
@@ -355,7 +355,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger removeFromValuesCount = new AtomicInteger(0);
 
-    protected void removeFromValues(final Value value) throws Exception {
+    void removeFromValues(final Value value) throws Exception {
         removeFromValuesCount.incrementAndGet();
         if (valuesAsSet != null) {
             if (valuesAsSet.remove(value)) {
@@ -809,7 +809,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // The read uses synchronized to stop creating the cache more than necessary rather than to be totally up to date
     private static AtomicInteger clearChildrenCachesCount = new AtomicInteger(0);
 
-    public void clearChildrenCaches() {
+    void clearChildrenCaches() {
         clearChildrenCachesCount.incrementAndGet();
         findAllChildrenCache = null;
         findAllChildrenPayAttentionToAdditiveCache = null;
@@ -986,11 +986,11 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // to be used in loading - could cause corruption so protected. In fact this if for indexing in AzquoMemoryDB, using getAttributes() above would be much better but that means garbage, need a solution to that TODO
-    protected List<String> getAttributeKeys() {
+    List<String> getAttributeKeys() {
         return nameAttributes.getAttributeKeys();
     }
 
-    protected List<String> getAttributeValues() {
+    List<String> getAttributeValues() {
         return nameAttributes.getAttributeValues();
     }
 
@@ -1054,7 +1054,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger removeAttributeWillBePersistedCount = new AtomicInteger(0);
 
-    public synchronized void removeAttributeWillBePersisted(String attributeName) throws Exception {
+    private synchronized void removeAttributeWillBePersisted(String attributeName) throws Exception {
         removeAttributeWillBePersistedCount.incrementAndGet();
         attributeName = attributeName.trim().toUpperCase();
         int index = nameAttributes.getAttributeKeys().indexOf(attributeName);
@@ -1173,7 +1173,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger getChildrenIdsAsBytesCount = new AtomicInteger(0);
 
-    public byte[] getChildrenIdsAsBytes(int tries) {
+    private byte[] getChildrenIdsAsBytes(int tries) {
         getChildrenIdsAsBytesCount.incrementAndGet();
         try {
             if (childrenAsSet != null) {
@@ -1208,7 +1208,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger linkCount = new AtomicInteger(0);
 
-    protected void link() throws Exception {
+    void link() throws Exception {
         linkCount.incrementAndGet();
         if (getAzquoMemoryDB().getNeedsLoading() && childrenCache != null) { // if called and these conditions are not true then there's a problem
             synchronized (this) {
@@ -1278,7 +1278,7 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
-    public static void printFunctionCountStats() {
+    static void printFunctionCountStats() {
         System.out.println("######### NAME FUNCTION COUNTS");
         System.out.println("newNameCount\t\t\t\t" + newNameCount.get());
         System.out.println("newNameCount3\t\t\t\t" + newName3Count.get());
@@ -1328,7 +1328,7 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("deleteCount\t\t\t\t" + deleteCount.get());
     }
 
-    public static void clearFunctionCountStats() {
+    static void clearFunctionCountStats() {
         newNameCount.set(0);
         newName3Count.set(0);
         getDefaultDisplayNameCount.set(0);

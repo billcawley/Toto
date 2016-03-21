@@ -40,12 +40,12 @@ public final class ValueService {
 
     private static AtomicInteger nameCompareCount = new AtomicInteger(0);
 
-    public Value createValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Provenance provenance, final String text) throws Exception {
+    private Value createValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Provenance provenance, final String text) throws Exception {
         nameCompareCount.incrementAndGet();
         return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text);
     }
 
-    Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
+    private Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
 
  /*   private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd) {
         long current = 0;
@@ -148,7 +148,7 @@ public final class ValueService {
 
     private static AtomicInteger findForNamesCount = new AtomicInteger(0);
 
-    public List<Value> findForNames(final Set<Name> names) {
+    private List<Value> findForNames(final Set<Name> names) {
         findForNamesCount.incrementAndGet();
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
         final List<Value> values = new ArrayList<>();
@@ -185,14 +185,14 @@ public final class ValueService {
     As mentioned in comments in the function a lot of effort went in to speeding up this function and reducing garbage, be very careful before changing it.
     */
 
-    long part1NanoCallTime1 = 0;
-    long part2NanoCallTime1 = 0;
-    long part3NanoCallTime1 = 0;
-    int numberOfTimesCalled1 = 0;
+    private long part1NanoCallTime1 = 0;
+    private long part2NanoCallTime1 = 0;
+    private long part3NanoCallTime1 = 0;
+    private int numberOfTimesCalled1 = 0;
 
     private static AtomicInteger findForNamesIncludeChildrenCount = new AtomicInteger(0);
 
-    public List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
+    private List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
         findForNamesIncludeChildrenCount.incrementAndGet();
         long start = System.nanoTime();
         // first get the shortest value list taking into account children
@@ -255,10 +255,10 @@ public final class ValueService {
         }
     }
 
-    long totalNanoCallTime = 0;
-    long part1NanoCallTime = 0;
-    long part2NanoCallTime = 0;
-    int numberOfTimesCalled = 0;
+    private long totalNanoCallTime = 0;
+    private long part1NanoCallTime = 0;
+    private long part2NanoCallTime = 0;
+    private int numberOfTimesCalled = 0;
 
     // the function that populates each cell.
     private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
@@ -402,7 +402,7 @@ public final class ValueService {
 
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
-    public double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive
+    private double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive
             , DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
@@ -529,13 +529,13 @@ public final class ValueService {
         private final String valueText;
         private final Collection<Name> names;
 
-        public DummyValue(int id, String valueText, Collection<Name> names) {
+        DummyValue(int id, String valueText, Collection<Name> names) {
             this.id = id;
             this.valueText = valueText;
             this.names = names;
         }
 
-        public String getValueText() {
+        String getValueText() {
             return valueText;
         }
 
@@ -638,7 +638,7 @@ public final class ValueService {
 
     private static AtomicInteger roundValueCount = new AtomicInteger(0);
 
-    public String roundValue(double dValue) {
+    private String roundValue(double dValue) {
         roundValueCount.incrementAndGet();
         Locale locale = Locale.getDefault();
         NumberFormat nf = NumberFormat.getInstance(locale);
@@ -647,7 +647,7 @@ public final class ValueService {
     }
 
     // jam this outside to stop instantiation in each function call
-    DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
+    private DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
 
     private static AtomicInteger getTreeNodeCount = new AtomicInteger(0);
 
@@ -695,7 +695,7 @@ public final class ValueService {
     private static AtomicInteger findForSearchNamesIncludeChildrenCount = new AtomicInteger(0);
 
     // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
-    public Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
+    private Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
         findForSearchNamesIncludeChildrenCount.incrementAndGet();
         long start = System.nanoTime();
 
@@ -743,7 +743,7 @@ public final class ValueService {
 
     private static AtomicInteger getSearchValuesCount = new AtomicInteger(0);
 
-    public Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
+    Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
         getSearchValuesCount.incrementAndGet();
         if (searchNames == null) return null;
         Set<Value> values = findForSearchNamesIncludeChildren(searchNames, false);
@@ -770,7 +770,7 @@ public final class ValueService {
 
     private static AtomicInteger addValuesCount = new AtomicInteger(0);
 
-    public String addValues(Set<Value> values) {
+    String addValues(Set<Value> values) {
         addValuesCount.incrementAndGet();
         String stringVal = null;
         Double doubleVal = 0.0;

@@ -26,7 +26,7 @@ import java.util.Set;
  * Proxying through. I wonder if there should be multiple implementations, much point?
  *
  */
-public class RMIImplementation implements RMIInterface {
+class RMIImplementation implements RMIInterface {
 
     private final DSSpreadsheetService dsSpreadsheetService;
     private final DSAdminService dsAdminService;
@@ -36,7 +36,7 @@ public class RMIImplementation implements RMIInterface {
     private final MemoryDBManager memoryDBManager;
 
 
-    public RMIImplementation(DSSpreadsheetService dsSpreadsheetService, DSAdminService dsAdminService, DSDataLoadService dsDataLoadService
+    RMIImplementation(DSSpreadsheetService dsSpreadsheetService, DSAdminService dsAdminService, DSDataLoadService dsDataLoadService
             , DSImportService dsImportService, JSTreeService jsTreeService, MemoryDBManager memoryDBManager) {
         this.dsSpreadsheetService = dsSpreadsheetService;
         this.dsAdminService = dsAdminService;

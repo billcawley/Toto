@@ -1723,7 +1723,9 @@ Callable interface sorts the memory "happens before" using future gets which run
         final List<DataRegionHeading> contextHeadings = new ArrayList<>();
         for (List<List<DataRegionHeading>> list1 : contextArraysFromSpreadsheetRegion){
             for (List<DataRegionHeading> list2 : list1){
-                contextHeadings.addAll(list2);
+                if (list2 != null){ // seems it can be
+                    contextHeadings.addAll(list2);
+                }
             }
         }
         return contextHeadings;

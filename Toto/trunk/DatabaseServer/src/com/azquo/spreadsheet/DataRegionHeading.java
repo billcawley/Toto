@@ -30,11 +30,11 @@ public class DataRegionHeading {
     private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
     private final Set<Name> valueFunctionSet;
 
-    public DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, Set<Name> valueFunctionSet) {
+    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, Set<Name> valueFunctionSet) {
         this(name, writeAllowed,function,description, null, valueFunctionSet);
     }
 
-    public DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
+    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
@@ -45,7 +45,7 @@ public class DataRegionHeading {
     }
 
     // no functions with attributes for the moment
-    public DataRegionHeading(String attribute, boolean writeAllowed) {
+    DataRegionHeading(String attribute, boolean writeAllowed) {
         this.name = null;
         this.attribute = attribute;
         this.writeAllowed = writeAllowed;
@@ -63,7 +63,7 @@ public class DataRegionHeading {
         return attribute;
     }
 
-    public boolean isWriteAllowed() {
+    boolean isWriteAllowed() {
         return writeAllowed;
     }
 
@@ -81,23 +81,23 @@ public class DataRegionHeading {
                 '}';
     }
 
-    public String getDescription() {
+    String getDescription() {
         return description;
     }
 
-    public List<DataRegionHeading> getOffsetHeadings() {
+    List<DataRegionHeading> getOffsetHeadings() {
         return offsetHeadings;
     }
 
-    public Set<Name> getValueFunctionSet() {
+    Set<Name> getValueFunctionSet() {
         return valueFunctionSet;
     }
 
-    public boolean isNameFunction(){
+    boolean isNameFunction(){
         return isNameFunction(function);
     }
     // useful to be called outside if an instance
-    public static boolean isNameFunction(FUNCTION function){
+    static boolean isNameFunction(FUNCTION function){
         return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT || function == FUNCTION.SET || function == FUNCTION.FIRST || function == FUNCTION.LAST);
     }
 }

@@ -12,7 +12,6 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -30,7 +29,7 @@ import java.util.function.Function;
 public final class AzquoMemoryDB {
 
     // have given up trying this through spring for the moment
-    static Properties azquoProperties = new Properties();
+    private static Properties azquoProperties = new Properties();
 
     // no point doing this on every constructor!
     static {
@@ -151,11 +150,9 @@ public final class AzquoMemoryDB {
         persistenceName = null;
     }*/
 
-    public boolean getNeedsLoading() {
+    boolean getNeedsLoading() {
         return needsLoading;
     }
-
-    final int mb = 1024 * 1024;
 
     /**
      * Interface to enable initialization of json persisted entities to be more generic.
@@ -179,7 +176,7 @@ public final class AzquoMemoryDB {
         private final AzquoMemoryDB memDB;
         private final AtomicInteger loadTracker;
 
-        public SQLBatchLoader(JsonRecordDAO jsonRecordDAO, String tableName, JsonSerializableEntityInitializer jsonSerializableEntityInitializer, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
+        SQLBatchLoader(JsonRecordDAO jsonRecordDAO, String tableName, JsonSerializableEntityInitializer jsonSerializableEntityInitializer, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
             this.jsonRecordDAO = jsonRecordDAO;
             this.tableName = tableName;
             this.jsonSerializableEntityInitializer = jsonSerializableEntityInitializer;
@@ -218,7 +215,7 @@ public final class AzquoMemoryDB {
         private final AzquoMemoryDB memDB;
         private final AtomicInteger loadTracker;
 
-        public NameBatchLoader(NameDAO nameDAO, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
+        NameBatchLoader(NameDAO nameDAO, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
             this.nameDAO = nameDAO;
             this.minId = minId;
             this.maxId = maxId;
@@ -253,7 +250,7 @@ public final class AzquoMemoryDB {
         private final AzquoMemoryDB memDB;
         private final AtomicInteger loadTracker;
 
-        public ValueBatchLoader(ValueDAO valueDAO, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
+        ValueBatchLoader(ValueDAO valueDAO, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
             this.valueDAO = valueDAO;
             this.minId = minId;
             this.maxId = maxId;
@@ -297,6 +294,7 @@ public final class AzquoMemoryDB {
             long marker = System.currentTimeMillis();
             Runtime runtime = Runtime.getRuntime();
             long usedMB = 0;
+            int mb = 1024 * 1024;
             if (memoryTrack) {
                 System.gc(); // assuming of course the JVM actually listens :)
                 System.out.println("gc time : " + (System.currentTimeMillis() - marker));
@@ -527,7 +525,7 @@ public final class AzquoMemoryDB {
         System.out.println("persist done.");
     }
 
-    protected int getNextId() {
+    int getNextId() {
         return nextId.getAndIncrement(); // should correctly replace the old logic, exactly what atomic ints are for.
     }
 
@@ -856,7 +854,7 @@ public final class AzquoMemoryDB {
     // headings should be sorted after the options so hopefully ok? Watch for this
     private static AtomicInteger clearSetAndCountCacheForNameCount = new AtomicInteger(0);
 
-    public void clearSetAndCountCacheForName(Name name) {
+    void clearSetAndCountCacheForName(Name name) {
         clearSetAndCountCacheForNameCount.incrementAndGet();
         for (Name parent : name.findAllParents()) { // I hope this isn't too expensive
             clearSetAndCountCacheForString(parent.getDefaultDisplayName()); // in another language could cause a problem. If we could get the ids this would be more reliable.
@@ -885,13 +883,13 @@ public final class AzquoMemoryDB {
         }
     }
 
-    public Provenance getProvenanceById(final int id) {
+    Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);
     }
 
     // would need to be synchronized if not on a concurrent map
 
-    protected void addNameToDb(final Name newName) throws Exception {
+    void addNameToDb(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         // there was a check that the name had an Id greater than 0, I don't know why
@@ -902,7 +900,7 @@ public final class AzquoMemoryDB {
 
     }
 
-    protected void removeNameFromDb(final Name toRemove) throws Exception {
+    void removeNameFromDb(final Name toRemove) throws Exception {
         toRemove.checkDatabaseMatches(this);
         nameByIdMap.remove(toRemove.getId());
     }
@@ -912,7 +910,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger addNameToAttributeNameMapCount = new AtomicInteger(0);
 
-    protected void addNameToAttributeNameMap(final Name newName) throws Exception {
+    private void addNameToAttributeNameMap(final Name newName) throws Exception {
         addNameToAttributeNameMapCount.incrementAndGet();
         newName.checkDatabaseMatches(this);
         // skip the map to save the memory
@@ -940,7 +938,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger setAttributeForNameInAttributeNameMapCount = new AtomicInteger(0);
 
-    public void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
+    void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
         setAttributeForNameInAttributeNameMapCount.incrementAndGet();
         // upper and lower seems a bit arbitrary, I need a way of making it case insensitive.
         // these interns have been tested as helping memory usage.
@@ -976,7 +974,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger removeAttributeFromNameInAttributeNameMapCount = new AtomicInteger(0);
 
-    protected void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
+    void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
         removeAttributeFromNameInAttributeNameMapCount.incrementAndGet();
         String ucAttributeName = attributeName.toUpperCase().trim();
         String lcAttributeValue = attributeValue.toLowerCase().trim();
@@ -996,7 +994,7 @@ public final class AzquoMemoryDB {
         private final AtomicInteger loadTracker;
         private final List<Name> batchToLink;
 
-        public BatchLinker(AtomicInteger loadTracker, List<Name> batchToLink) {
+        BatchLinker(AtomicInteger loadTracker, List<Name> batchToLink) {
             this.loadTracker = loadTracker;
             this.batchToLink = batchToLink;
         }
@@ -1017,13 +1015,12 @@ public final class AzquoMemoryDB {
     going to try a basic multi-thread - it was 100,000 but I wonder if this is as efficient as it could be given that at the end leftover threads
     can hang around (particularly hefty child sets). Trying for 50,000 */
 
-    int batchLinkSize = 50_000;
-
     private static AtomicInteger linkEntitiesCount = new AtomicInteger(0);
 
     private synchronized void linkEntities() throws Exception {
         linkEntitiesCount.incrementAndGet();
         // there may be a certain overhead to building the batches but otherwise it's dealing with millions of callables
+        int batchLinkSize = 50_000;
         ArrayList<Name> batchLink = new ArrayList<>(batchLinkSize);
         List<Future<?>> linkFutures = new ArrayList<>();
         AtomicInteger loadTracker = new AtomicInteger(0);
@@ -1048,7 +1045,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger setJsonEntityNeedsPersistingCount = new AtomicInteger(0);
 
-    protected void setJsonEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity entity) {
+    void setJsonEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity entity) {
         setJsonEntityNeedsPersistingCount.incrementAndGet();
         if (!needsLoading) {
             jsonEntitiesToPersist.computeIfAbsent(tableToPersistIn, t -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(entity);
@@ -1057,7 +1054,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger removeJsonEntityNeedsPersistingCount = new AtomicInteger(0);
 
-    protected void removeJsonEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity entity) {
+    void removeJsonEntityNeedsPersisting(String tableToPersistIn, AzquoMemoryDBEntity entity) {
         removeJsonEntityNeedsPersistingCount.incrementAndGet();
         if (!needsLoading) {
             jsonEntitiesToPersist.computeIfAbsent(tableToPersistIn, t -> Collections.newSetFromMap(new ConcurrentHashMap<>())).remove(entity);
@@ -1066,7 +1063,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger setNameNeedsPersistingCount = new AtomicInteger(0);
 
-    protected void setNameNeedsPersisting(Name name) {
+    void setNameNeedsPersisting(Name name) {
         setNameNeedsPersistingCount.incrementAndGet();
         if (!needsLoading) {
             namesToPersist.add(name);
@@ -1075,7 +1072,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger removeNameNeedsPersistingCount = new AtomicInteger(0);
 
-    protected void removeNameNeedsPersisting(Name name) {
+    void removeNameNeedsPersisting(Name name) {
         removeNameNeedsPersistingCount.incrementAndGet();
         if (!needsLoading) {
             namesToPersist.remove(name);
@@ -1084,7 +1081,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger setValueNeedsPersistingCount = new AtomicInteger(0);
 
-    protected void setValueNeedsPersisting(Value value) {
+    void setValueNeedsPersisting(Value value) {
         setValueNeedsPersistingCount.incrementAndGet();
         if (!needsLoading) {
             valuesToPersist.add(value);
@@ -1093,14 +1090,14 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger removeValueNeedsPersistingCount = new AtomicInteger(0);
 
-    protected void removeValueNeedsPersisting(Value value) {
+    void removeValueNeedsPersisting(Value value) {
         removeNameNeedsPersistingCount.incrementAndGet();
         if (!needsLoading) {
             valuesToPersist.remove(value);
         }
     }
 
-    protected void addValueToDb(final Value newValue) throws Exception {
+    void addValueToDb(final Value newValue) throws Exception {
         newValue.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (valueByIdMap.putIfAbsent(newValue.getId(), newValue) != null) { // != null means there was something in there, this really should not happen hence the exception
@@ -1108,7 +1105,7 @@ public final class AzquoMemoryDB {
         }
     }
 
-    protected void addProvenanceToDb(final Provenance newProvenance) throws Exception {
+    void addProvenanceToDb(final Provenance newProvenance) throws Exception {
         newProvenance.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (provenanceByIdMap.putIfAbsent(newProvenance.getId(), newProvenance) != null) {
@@ -1125,7 +1122,7 @@ public final class AzquoMemoryDB {
         dsAdminService.dropDatabaseInPersistence(getPersistenceName());
     }
 
-    public static void printFunctionCountStats() {
+    private static void printFunctionCountStats() {
         System.out.println("######### AZQUO MEMORY DB FUNCTION COUNTS");
         System.out.println("newDatabaseCount\t\t\t\t" + newDatabaseCount.get());
         System.out.println("newSQLBatchLoaderRunCount\t\t\t\t" + newSQLBatchLoaderRunCount.get());
@@ -1160,7 +1157,7 @@ public final class AzquoMemoryDB {
         System.out.println("removeValueNeedsPersistingCount\t\t\t\t" + removeValueNeedsPersistingCount.get());
     }
 
-    public static void clearFunctionCountStats() {
+    private static void clearFunctionCountStats() {
         newDatabaseCount.set(0);
         newSQLBatchLoaderRunCount.set(0);
         newNameBatchLoaderRunCount.set(0);

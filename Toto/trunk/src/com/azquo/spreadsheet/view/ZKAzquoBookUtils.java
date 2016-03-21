@@ -162,9 +162,9 @@ public class ZKAzquoBookUtils {
                                     } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
                                         sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
                                     }
-                                } else if (getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()) {
-                                    filterChoices.add(choiceName);
                                 }
+                            } else if (getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()) {
+                                filterChoices.add(choiceName);
                             }
                         }
                     }
@@ -489,7 +489,7 @@ public class ZKAzquoBookUtils {
                     if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
                         boolean isHierarchy = isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
                         row = displayRowHeadings.getRow();
-                        Map<Integer,String> lastHeadings = new HashedMap();
+                        Map<Integer,String> lastHeadings = new HashMap<>();
                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
                             int col = displayRowHeadings.getColumn();
                             int emptyCount = 0;
@@ -884,7 +884,7 @@ public class ZKAzquoBookUtils {
     public void createFilterSets(LoggedInUser loggedInUser, Set<String> filters, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
         for (String filter : filters) {
             List<String> namesForSet = new ArrayList<>();
-            List<String> validOptions = choiceOptionsMap.get(filter + "Choice");
+            List<String> validOptions = choiceOptionsMap.get(filter + "choice");
             String selectedString = userChoices.get(filter.toLowerCase());
             if (validOptions != null && !validOptions.isEmpty() && selectedString != null) {
                 List<String> selectedNames = Arrays.asList(selectedString.split(SpreadsheetService.FILTERCHOICEDIVIDERFORREGEX));
@@ -951,7 +951,6 @@ public class ZKAzquoBookUtils {
                             }
                         } else {
                             dependentRanges.add(name);
-
                         }
                             /*Unlike above where the setting of the choice has already been done we need to set the
                             existing choices here, hence why user choices is required for this. The check for userChoices not being null

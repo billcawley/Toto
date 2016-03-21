@@ -43,7 +43,7 @@ public class JdbcTemplateUtils {
         }
     }
 
-    public <T> List<T> query(String sql, RowMapper<T> rowMapper){
+    <T> List<T> query(String sql, RowMapper<T> rowMapper){
         try{
             return jdbcTemplate.query(sql, rowMapper);
         } catch (DataAccessException e){
@@ -54,7 +54,7 @@ public class JdbcTemplateUtils {
         }
     }
 
-    public <T> T queryForObject(String sql, Map<String, ?> paramMap, Class<T> requiredType) {
+    <T> T queryForObject(String sql, Map<String, ?> paramMap, Class<T> requiredType) {
         try{
             return jdbcTemplate.queryForObject(sql,paramMap,requiredType);
         } catch (DataAccessException e){

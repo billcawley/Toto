@@ -154,7 +154,7 @@ public final class Value extends AzquoMemoryDBEntity {
         return buffer.array();
     }
 
-    public static void printFunctionCountStats() {
+    static void printFunctionCountStats() {
         System.out.println("######### VALUE FUNCTION COUNTS");
         System.out.println("newValueCount\t\t\t\t\t\t\t\t" + newValueCount.get());
         System.out.println("newValue3COunt\t\t\t\t\t\t\t\t" + newValue3Count.get());
@@ -164,7 +164,7 @@ public final class Value extends AzquoMemoryDBEntity {
         System.out.println("getNameIdsAsBytesCount\t\t\t\t\t\t\t\t" + getNameIdsAsBytesCount.get());
     }
 
-    public static void clearFunctionCountStats() {
+    static void clearFunctionCountStats() {
         newValueCount.set(0);
         newValue3Count.set(0);
         getNamesCount.set(0);

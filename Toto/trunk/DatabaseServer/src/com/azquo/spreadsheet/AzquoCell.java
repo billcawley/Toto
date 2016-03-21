@@ -1,6 +1,5 @@
 package com.azquo.spreadsheet;
 
-import com.azquo.memorydb.core.Name;
 
 import java.util.List;
 
@@ -19,7 +18,7 @@ import java.util.List;
  * todo : not that important but consider the unused functions
  *
  */
-public class AzquoCell {
+class AzquoCell {
     private final boolean locked;
     private final ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName;
     private final List<DataRegionHeading> rowHeadings;
@@ -35,7 +34,7 @@ public class AzquoCell {
     // after drilldown or provenance an opened spreadsheet might have a cell selected
     private boolean selected;
 
-    public AzquoCell(boolean locked, ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName, List<DataRegionHeading> rowHeadings
+    AzquoCell(boolean locked, ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName, List<DataRegionHeading> rowHeadings
             , List<DataRegionHeading> columnHeadings, List<DataRegionHeading> contexts, int unsortedRow, int unsortedCol, String stringValue, double doubleValue, boolean highlighted, boolean selected) {
         this.locked = locked;
         this.listOfValuesOrNamesAndAttributeName = listOfValuesOrNamesAndAttributeName;
@@ -50,27 +49,27 @@ public class AzquoCell {
         this.selected = selected;
     }
 
-    public boolean isLocked() {
+    boolean isLocked() {
         return locked;
     }
 
-    public ListOfValuesOrNamesAndAttributeName getListOfValuesOrNamesAndAttributeName() {
+    ListOfValuesOrNamesAndAttributeName getListOfValuesOrNamesAndAttributeName() {
         return listOfValuesOrNamesAndAttributeName;
     }
 
-    public List<DataRegionHeading> getRowHeadings() {
+    List<DataRegionHeading> getRowHeadings() {
         return rowHeadings;
     }
 
-    public List<DataRegionHeading> getColumnHeadings() {
+    List<DataRegionHeading> getColumnHeadings() {
         return columnHeadings;
     }
 
-    public List<DataRegionHeading> getContexts() {
+    List<DataRegionHeading> getContexts() {
         return contexts;
     }
 
-    public String getStringValue() {
+    String getStringValue() {
         return stringValue;
     }
 
@@ -79,7 +78,7 @@ public class AzquoCell {
         changed = true;
     }
 
-    public double getDoubleValue() {
+    double getDoubleValue() {
         return doubleValue;
     }
 
@@ -96,23 +95,23 @@ public class AzquoCell {
         this.changed = changed;
     }
 
-    public boolean isHighlighted() {
+    boolean isHighlighted() {
         return highlighted;
     }
 
-    public void setHighlighted(boolean highlighted) {
+    void setHighlighted(boolean highlighted) {
         this.highlighted = highlighted;
     }
 
-    public int getUnsortedRow() {
+    int getUnsortedRow() {
         return unsortedRow;
     }
 
-    public int getUnsortedCol() {
+    int getUnsortedCol() {
         return unsortedCol;
     }
 
-    public boolean isSelected() {
+    boolean isSelected() {
         return selected;
     }
 

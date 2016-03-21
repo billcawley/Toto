@@ -32,15 +32,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class HBaseDAO {
 
-    public static byte[] COLUMN_FAMILY = Bytes.toBytes("cf");
-    public static final int UPDATELIMIT = 2500; // not entirely sure what's relevant for hbase
+    private static byte[] COLUMN_FAMILY = Bytes.toBytes("cf");
+    private static final int UPDATELIMIT = 2500; // not entirely sure what's relevant for hbase
     private final String confFile;
 
     public HBaseDAO(String confFile) {
         this.confFile = confFile;
     }
 
-    protected void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final List<Integer> ids, String tableName) throws IOException {
+    private void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final List<Integer> ids, String tableName) throws IOException {
         Configuration conf = new Configuration();
         conf.addResource(new Path(confFile));
         // use the memory db persistence for the moment as the table name prefix? Possible clashes if a load of databases on the same Hbase
@@ -54,12 +54,12 @@ public class HBaseDAO {
     }
 
     // I think deleting and recreating would be the simple thing
-    public void clearTable(final String persistenceName, String tableName) throws IOException {
+    private void clearTable(final String persistenceName, String tableName) throws IOException {
         deleteTable(persistenceName, tableName);
         createTableIfItDoesntExist(persistenceName, tableName);
     }
 
-    public void createTableIfItDoesntExist(final String persistenceName, String tableName) throws IOException {
+    private void createTableIfItDoesntExist(final String persistenceName, String tableName) throws IOException {
         tableName = persistenceName + "_" + tableName;
         Configuration conf = new Configuration();
         conf.addResource(new Path(confFile));
@@ -92,7 +92,7 @@ public class HBaseDAO {
         clearTable(persistenceName, Provenance.PERSIST_TABLE);
     }
 
-    public void deleteTable(final String persistenceName, String tableName) throws IOException {
+    private void deleteTable(final String persistenceName, String tableName) throws IOException {
         tableName = persistenceName + "_" + tableName;
         Configuration conf = new Configuration();
         conf.addResource(new Path(confFile));

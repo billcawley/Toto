@@ -15,8 +15,6 @@ import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import groovy.lang.GroovyRuntimeException;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
-import net.openhft.koloboke.collect.set.hash.HashObjSets;
-import org.apache.commons.lang.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -67,26 +65,26 @@ public class DSImportService {
     How these are used is described in more detail in the heading fields and the clause interpreter.
      */
 
-    public static final String CHILDOF = "child of "; // trailing space I suppose one could otherwise get a false child ofweryhwrs match which can't happen with the others
+    private static final String CHILDOF = "child of "; // trailing space I suppose one could otherwise get a false child ofweryhwrs match which can't happen with the others
     // parent of another heading (as opposed to name), would like the clause to be more explicit, as in differentiate between a name in the database and a column
-    public static final String PARENTOF = "parent of ";
-    public static final String ATTRIBUTE = "attribute";
-    public static final String LANGUAGE = "language";
-    public static final String PEERS = "peers";
-    public static final String LOCAL = "local";
-    public static final String COMPOSITION = "composition";
-    public static final String DEFAULT = "default";
-    public static final String NONZERO = "nonzero";
-    public static final String DATELANG = "date";
-    public static final String ONLY = "only";
-    public static final String EXCLUSIVE = "exclusive";
-    public static final String EXISTING = "existing"; // only works in in context of child of
+    private static final String PARENTOF = "parent of ";
+    private static final String ATTRIBUTE = "attribute";
+    private static final String LANGUAGE = "language";
+    private static final String PEERS = "peers";
+    private static final String LOCAL = "local";
+    private static final String COMPOSITION = "composition";
+    private static final String DEFAULT = "default";
+    private static final String NONZERO = "nonzero";
+    private static final String DATELANG = "date";
+    private static final String ONLY = "only";
+    private static final String EXCLUSIVE = "exclusive";
+    private static final String EXISTING = "existing"; // only works in in context of child of
 
     // these two are not for clauses, it's to do with reading the file in the first place, do we read the headers or not, how many lines to skip before data
-    public static final String HEADINGSSTRING = "HEADINGS";
-    public static final String SKIPLINESSTRING = "SKIPLINES";
+    private static final String HEADINGSSTRING = "HEADINGS";
+    private static final String SKIPLINESSTRING = "SKIPLINES";
     // new functionality for pre processing of the file to be handed to a groovy script
-    public static final String GROOVYPROCESSOR = "GROOVYPROCESSOR";
+    private static final String GROOVYPROCESSOR = "GROOVYPROCESSOR";
     /*
     To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't do this initially.
     No problem, make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.
@@ -177,7 +175,7 @@ public class DSImportService {
         final String exclusive;
         final boolean existing;
 
-        public ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
+        ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
             this.heading = mutableImportHeading.heading;
             this.name = mutableImportHeading.name;
             this.indexForAttribute = mutableImportHeading.indexForAttribute;
@@ -204,12 +202,12 @@ public class DSImportService {
     // going to follow the pattern above, no getters
     // I'd have liked to make this immutable but existing logic for things like composite mean this may be changed before loading
 
-    public class ImportCellWithHeading {
+    private class ImportCellWithHeading {
         private final ImmutableImportHeading immutableImportHeading;
         private String lineValue;// prefix  line to try to avoid confusion
         private Name lineName;
 
-        public ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value, Name name) {
+        ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value, Name name) {
             this.immutableImportHeading = immutableImportHeading;
             this.lineValue = value;
             this.lineName = name;
@@ -218,10 +216,10 @@ public class DSImportService {
 
     // Switched to Java 8 API calls. I zapped ukdf5, it was a duplicate of 3.
 
-    static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd/MM/yy");
-    static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd MMM yyyy");
-    static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd/MM/yy");
+    private static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd MMM yyyy");
+    private static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
         try {
@@ -498,7 +496,7 @@ public class DSImportService {
         private final Map<String, Name> namesFoundCache;
         private final List<String> attributeNames;
 
-        public BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection, AtomicInteger valueTracker, List<List<ImportCellWithHeading>> dataToLoad, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo) {
+        BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection, AtomicInteger valueTracker, List<List<ImportCellWithHeading>> dataToLoad, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo) {
             this.azquoMemoryDBConnection = azquoMemoryDBConnection;
             this.valueTracker = valueTracker;
             this.dataToLoad = dataToLoad;
@@ -545,7 +543,7 @@ public class DSImportService {
     There was a "name per heading" option that might have facilitated columns being shifted around but thi seems to have been removed
     */
 
-    public String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
+    private String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
         // Preparatory stuff
         if (!isSpreadsheet && fileType.length() == 0) {
             //need a file type to know which header to use
@@ -1178,8 +1176,6 @@ public class DSImportService {
         }
     }
 
-    private final String LINENO = "LINENO";
-
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
     // now seems to support basic excel like string operations, left right and mid. Checking only and existing means "should we import the line at all" bases on these criteria
 
@@ -1192,6 +1188,7 @@ public class DSImportService {
                 if (cell.immutableImportHeading.compositionPattern != null) {
                     String result = cell.immutableImportHeading.compositionPattern;
                     // do line number first, I see no reason not to
+                    String LINENO = "LINENO";
                     result = result.replace(LINENO, lineNo + "");
                     int headingMarker = result.indexOf("`");
                     while (headingMarker >= 0) {
@@ -1299,7 +1296,7 @@ public class DSImportService {
         }
     }
 
-    public String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames, String fileName) throws Exception {
+    private String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final InputStream uploadFile, List<String> attributeNames, String fileName) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(uploadFile));
         if (fileName.length() > 4 && fileName.charAt(4) == '-') {
             String sheetLanguage = fileName.substring(5);

@@ -34,13 +34,13 @@ public class JsonRecordDAO {
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
 //    public static final int UPDATELIMIT = 5000;
-    public static final int UPDATELIMIT = 2500; // going to 2.5k as now some of the records can be quite large! Also simultaneous.
+    private static final int UPDATELIMIT = 2500; // going to 2.5k as now some of the records can be quite large! Also simultaneous.
 
     // the basic data persistence tables have but two columns. Well suited to a key pair store.
     private static final String ID = "id";
     private static final String JSON = "json";
 
-    public static final Map<String,?> EMPTY_PARAMETERS_MAP = new HashMap<>();
+    static final Map<String,?> EMPTY_PARAMETERS_MAP = new HashMap<>();
 
     private static final class JsonRecordTransportRowMapper implements RowMapper<JsonRecordTransport> {
         @Override
@@ -56,7 +56,7 @@ public class JsonRecordDAO {
         private final List<JsonRecordTransport> records;
         private int totalCount;
 
-        public BulkInserter(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records, int totalCount) {
+        BulkInserter(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records, int totalCount) {
             this.azquoMemoryDB = azquoMemoryDB;
             this.tableName = tableName;
             this.records = records;
