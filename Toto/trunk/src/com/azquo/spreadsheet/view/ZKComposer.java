@@ -531,9 +531,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                                     drillDownString = drillDownString.replace("[rowHeading]", rowHeading);
                                     drillDownString = drillDownString.replace("[rowheading]", rowHeading);
                                     drillDownString = drillDownString.replace("[ROWHEADING]", rowHeading);
-                                    drillDownString = drillDownString.replace("[colHeading]", colHeading);
-                                    drillDownString = drillDownString.replace("[colheading]", colHeading);
-                                    drillDownString = drillDownString.replace("[COLHEADING]", colHeading);
+                                    drillDownString = drillDownString.replace("[columnHeading]", colHeading);
+                                    drillDownString = drillDownString.replace("[columnheading]", colHeading);
+                                    drillDownString = drillDownString.replace("[COLUMNHEADING]", colHeading);
                                     final String stringToPass = drillDownString;
                                     Menuitem ddItem = new Menuitem("Drill Down");
                                     editPopup.appendChild(ddItem);

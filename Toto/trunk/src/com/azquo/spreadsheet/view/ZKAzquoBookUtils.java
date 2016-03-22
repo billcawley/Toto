@@ -895,7 +895,7 @@ public class ZKAzquoBookUtils {
                 }
             }
             try {
-                rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), filter + "Choice", namesForSet);
+                rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), filter + "Chosen", namesForSet);
             } catch (Exception e) {
                 e.printStackTrace();
             }
