@@ -226,10 +226,12 @@ public class AzquoBook {
         chosenMap = new HashMap<>();
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
-            if (name.getText().toLowerCase().endsWith("chosen") && name.getRange().getWorksheet() == azquoSheet) {
-                Range range = name.getRange();
-                // if range was null it would have null pointered by now!
-                chosenMap.put(range, name.getText().substring(0, name.getText().length() - 6).toLowerCase());
+            if (name != null && name.getText() != null){
+                if (name.getText().toLowerCase().endsWith("chosen") && name.getRange().getWorksheet() == azquoSheet) {
+                    Range range = name.getRange();
+                    // if range was null it would have null pointered by now!
+                    chosenMap.put(range, name.getText().substring(0, name.getText().length() - 6).toLowerCase());
+                }
             }
         }
     }
