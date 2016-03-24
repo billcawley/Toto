@@ -39,10 +39,9 @@ import java.util.stream.Collectors;
 
 public class DSSpreadsheetService {
 
-    final Runtime runtime = Runtime.getRuntime();
-    final int mb = 1024 * 1024;
+    private final Runtime runtime = Runtime.getRuntime();
 
-    final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
+    private final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
 
     private static final Logger logger = Logger.getLogger(DSSpreadsheetService.class);
 
@@ -55,8 +54,6 @@ public class DSSpreadsheetService {
     @Autowired
     DSImportService importService;
 
-    public final StringUtils stringUtils;
-
     // todo, clean this up when sessions are expired, maybe a last accessed time?
     private final Map<String, StringBuffer> sessionLogs;
 
@@ -68,7 +65,6 @@ public class DSSpreadsheetService {
             e.printStackTrace(); // Not exactly sure what it might be
         }
         System.out.println("host : " + thost);
-        stringUtils = new StringUtils();
         sessionLogs = new ConcurrentHashMap<>(); // may as well make concurrent to be safe.
     }
 
@@ -181,7 +177,7 @@ public class DSSpreadsheetService {
     }
 
     // recursive, the key is to add the offset to allow formatting of the hierarchy
-    public void resolveHierarchyForHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading heading, List<DataRegionHeading> target
+    private void resolveHierarchyForHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading heading, List<DataRegionHeading> target
             , DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, int levelLimit) {
         if (offsetHeadings.size() < levelLimit) {// then get the children
             List<DataRegionHeading> offsetHeadingsCopy = new ArrayList<>(offsetHeadings);
@@ -192,7 +188,6 @@ public class DSSpreadsheetService {
         }
         target.add(heading); // the "parent" is added after
     }
-
 
     /* ok we're passed a list of lists
     what is returned is a 2d array (also a list of lists) featuring every possible variation in order
@@ -378,11 +373,11 @@ public class DSSpreadsheetService {
     }
 
     // This class and two functions are to make qualified listings on a drop down, adding parents to qualify where necessary.
-    static class UniqueName {
+    private static class UniqueName {
         Name topName; // often topName is name and the description will just be left as the basic name
         String description; // when the name becomes qualified the description will become name, parent, parent of parent etc. And top name will be the highest parent, held in case we need to qualify up another level.
 
-        public UniqueName(Name topName, String description) {
+        UniqueName(Name topName, String description) {
             this.topName = topName;
             this.description = description;
         }
@@ -525,7 +520,7 @@ public class DSSpreadsheetService {
 
     // return headings as strings for display, I'm going to put blanks in here if null. Called after permuting/expanding
 
-    public List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languagesSent) {
+    private List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languagesSent) {
         // first I need to check max offsets for each column - need to check on whether the 2d arrays are the same orientation for row or column headings or not todo
         List<Integer> maxColOffsets = new ArrayList<>();
         for (List<DataRegionHeading> row : source) {
@@ -654,8 +649,6 @@ public class DSSpreadsheetService {
                 , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource);
     }
 
-    long threshold = 1000;// we log if a section takes longer
-
     private List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, List<String> languages, int highlightDays, int valueId) throws Exception {
@@ -664,6 +657,7 @@ public class DSSpreadsheetService {
         long start = track;
         final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
         long time = (System.currentTimeMillis() - track);
+        long threshold = 1000;
         if (time > threshold) System.out.println("Row headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists);
@@ -951,7 +945,7 @@ public class DSSpreadsheetService {
 Callable interface sorts the memory "happens before" using future gets which runnable did not guarantee I don't think (though it did work).
     */
 
-    public class RowFiller implements Callable<List<AzquoCell>> {
+    private class RowFiller implements Callable<List<AzquoCell>> {
         private final int row;
         private final List<List<DataRegionHeading>> headingsForEachColumn;
         private final List<List<DataRegionHeading>> headingsForEachRow;
@@ -963,7 +957,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         private final int progressBarStep;
 
 
-        public RowFiller(int row, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow
+        RowFiller(int row, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow
                 , List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
             this.row = row;
             this.headingsForEachColumn = headingsForEachColumn;
@@ -997,7 +991,7 @@ Callable interface sorts the memory "happens before" using future gets which run
 
     // More granular version of the above, less than 1000 rows, probably typical use.
     // On Damart for example we had 26*9 taking a while and it was reasonable to assume that rows were not even in terms of processing required
-    public class CellFiller implements Callable<AzquoCell> {
+    private class CellFiller implements Callable<AzquoCell> {
         private final int row;
         private final int col;
         private final List<DataRegionHeading> headingsForColumn;
@@ -1009,8 +1003,8 @@ Callable interface sorts the memory "happens before" using future gets which run
         private final AtomicInteger counter;
         private final int progressBarStep;
 
-        public CellFiller(int row, int col, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow,
-                          List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
+        CellFiller(int row, int col, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow,
+                   List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
             this.row = row;
             this.col = col;
             this.headingsForColumn = headingsForColumn;
@@ -1080,11 +1074,6 @@ Callable interface sorts the memory "happens before" using future gets which run
     evaluate a name expression for each cell as opposed to value functions which work off names already resolved in the DataRegionHeadings
      */
 
-    public static String ROWHEADING = "[ROWHEADING]";
-    public static String ROWHEADINGLOWERCASE = "[rowheading]";
-    public static String COLUMNHEADING = "[COLUMNHEADING]";
-    public static String COLUMNHEADINGLOWERCASE = "[columnheading]";
-
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<DataRegionHeading> contextHeadings, int rowNo, int colNo, List<String> languages, int valueId) throws Exception {
         boolean selected = false;
@@ -1120,9 +1109,13 @@ Callable interface sorts the memory "happens before" using future gets which run
         // todo re-implement caching here if there are performance problems - I did use findOverlap before here but I don't think is applicable now the name query is much more flexible. Caching fragments of the query would be the thing
         if (nameFunctionHeading != null) {
             String cellQuery = nameFunctionHeading.getDescription();
+            String ROWHEADING = "[ROWHEADING]";
+            String ROWHEADINGLOWERCASE = "[rowheading]";
             if (!rowHeadings.isEmpty() && (cellQuery.contains(ROWHEADING) || cellQuery.contains(ROWHEADINGLOWERCASE))) {
                 cellQuery = cellQuery.replace(ROWHEADING, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(ROWHEADINGLOWERCASE, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
             }
+            String COLUMNHEADING = "[COLUMNHEADING]";
+            String COLUMNHEADINGLOWERCASE = "[columnheading]";
             if (!columnHeadings.isEmpty() && (cellQuery.contains(COLUMNHEADING) || cellQuery.contains(COLUMNHEADINGLOWERCASE))) {
                 cellQuery = cellQuery.replace(COLUMNHEADING, columnHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(COLUMNHEADINGLOWERCASE, columnHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // and now the col headings
             }
@@ -1373,6 +1366,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         }
         newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
         System.out.println();
+        int mb = 1024 * 1024;
         System.out.println("Heap cost to make on multi thread : " + (newHeapMarker - oldHeapMarker) / mb);
         System.out.println();
         //oldHeapMarker = newHeapMarker;
@@ -1455,7 +1449,7 @@ Callable interface sorts the memory "happens before" using future gets which run
 
     private List<TreeNode> nameCountProvenance(AzquoCell azquoCell) {
         String provString = "";
-        Set<Name> cellNames = new HashSet<Name>();
+        Set<Name> cellNames = new HashSet<>();
         Name nameCountHeading = null;
         for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()) {
             if (rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
@@ -1520,10 +1514,9 @@ Callable interface sorts the memory "happens before" using future gets which run
         return toReturn;
     }
 
-
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
     // for provenance?
-    public List<TreeNode> nodify(List<Value> values, int maxSize) {
+    private List<TreeNode> nodify(List<Value> values, int maxSize) {
         List<TreeNode> toReturn = new ArrayList<>();
         if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
             valueService.sortValues(values);
@@ -1549,7 +1542,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     // another not very helpfully named function, might be able to be rewritten after we zap Azquo Book (the Aspose based functionality)
-    public List<TreeNode> nodify(Name name, String attribute) {
+    private List<TreeNode> nodify(Name name, String attribute) {
         attribute = attribute.substring(1).replace("`", "");
         List<TreeNode> toReturn = new ArrayList<>();
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
@@ -1569,7 +1562,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     // create a file to import from a populated region in the spreadsheet
-    public void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
+    private void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
         //write the column headings and data to a temporary file, then import it
         String fileName = "temp_" + user;
         File temp = File.createTempFile(fileName + ".csv", "csv");
@@ -1731,7 +1724,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         return contextHeadings;
     }
 
-    public List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
+    private List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
@@ -1768,7 +1761,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         return names;
     }
 
-    public boolean headingsHaveAttributes(Collection<DataRegionHeading> dataRegionHeadings) {
+    private boolean headingsHaveAttributes(Collection<DataRegionHeading> dataRegionHeadings) {
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
             if (dataRegionHeading != null && dataRegionHeading.getAttribute() != null) {
                 return true;

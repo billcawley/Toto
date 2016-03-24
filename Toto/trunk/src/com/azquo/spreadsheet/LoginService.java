@@ -88,22 +88,20 @@ public class LoginService {
         return loggedInUser;
     }
 
+    // todo - switch to using a list not a map?
+
     public Map<String, Database> foundDatabases(User user) {
         final List<Permission> userAcceses = permissionDao.findForUserId(user.getId());
         final Map<String, Database> okDatabases = new HashMap<>();
         if (user.isAdministrator() || user.getEmail().startsWith("demo@user")) { // automatically has all dbs regardless of permission
             for (Database database : databaseDao.findForBusinessId(user.getBusinessId())) {
-                if (database.getEndDate().isAfter(LocalDateTime.now())) {
                     okDatabases.put(database.getName(), database);
-                }
             }
         } else {
             for (Permission permission : userAcceses) {
                 if (permission.getEndDate().isAfter(LocalDateTime.now())) {
                     Database database = databaseDao.findById(permission.getDatabaseId());
-                    if (database != null && database.getEndDate().isAfter(LocalDateTime.now())) {
                         okDatabases.put(database.getName(), database);
-                    }
                 }
             }
         }

@@ -14,18 +14,18 @@ import java.util.List;
  * be a lit of names and and attributes - typically will be just one attribute and name
  * a little similar to name or value I suppose though this needs attributes specified
  */
-public class ListOfValuesOrNamesAndAttributeName {
+class ListOfValuesOrNamesAndAttributeName {
     private final List<Value> values;
     private final List<Name> names;
     private final List<String> attributeNames;
 
-    public ListOfValuesOrNamesAndAttributeName(List<Name> names, List<String> attributeNames) {
+    ListOfValuesOrNamesAndAttributeName(List<Name> names, List<String> attributeNames) {
         this.names = names;
         this.attributeNames = attributeNames;
         this.values = null;
     }
 
-    public ListOfValuesOrNamesAndAttributeName(List<Value> values) {
+    ListOfValuesOrNamesAndAttributeName(List<Value> values) {
         this.values = values;
         this.names = null;
         this.attributeNames = null;
@@ -39,7 +39,7 @@ public class ListOfValuesOrNamesAndAttributeName {
         return names;
     }
 
-    public List<String> getAttributeNames() {
+    List<String> getAttributeNames() {
         return attributeNames;
     }
 }

@@ -10,21 +10,21 @@ import com.azquo.admin.StandardEntity;
  * Options against a report data region.
  */
 public class UserRegionOptions extends StandardEntity{
-    final int userId;
-    final int reportId;
-    final String region;
-    int hideRows;
-    boolean sortable;
+    private final int userId;
+    private final int reportId;
+    private final String region;
+    private int hideRows;
+    private boolean sortable;
     // if set these will default to a total descending sort
-    int rowLimit;
-    int columnLimit;
-    String sortRow;
-    boolean sortRowAsc;
-    String sortColumn;
-    boolean sortColumnAsc;
-    int highlightDays;
+    private int rowLimit;
+    private int columnLimit;
+    private String sortRow;
+    private boolean sortRowAsc;
+    private String sortColumn;
+    private boolean sortColumnAsc;
+    private int highlightDays;
 
-    public UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, boolean sortable
+    UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn, boolean sortColumnAsc, int highlightDays) {
         this.id = id;
         this.userId = userId;
@@ -44,19 +44,15 @@ public class UserRegionOptions extends StandardEntity{
     // to read the format of options from the spreadsheet, code adapted from azquobook.
     // Maybe these things could be better represented by a key pair two column region
 
-    public static String SPREADSHEETHIDEROWS = "hiderows";
-    public static String SPREADSHEETHIDEROWS2 = "hiderowvalues";
-    public static String ROWLIMIT = "maxrows";
-    public static String COLUMNLIMIT = "maxcols";
-    public static String HIGHLIGHT = "highlight";
-
     public UserRegionOptions(int id, int userId, int reportId, String region, String spreadsheetSource) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
         this.region = region;
+        String SPREADSHEETHIDEROWS = "hiderows";
         hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS, spreadsheetSource));
         if (hideRows == 0) {
+            String SPREADSHEETHIDEROWS2 = "hiderowvalues";
             hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS2, spreadsheetSource));
         }
         // todo : find out why this is so! (legacy logic)
@@ -65,8 +61,11 @@ public class UserRegionOptions extends StandardEntity{
         }
         if (spreadsheetSource != null) {
             this.sortable = spreadsheetSource.contains("sortable"); // the get option thing is no good for just an "exists with no value" check, this is the same
+            String ROWLIMIT = "maxrows";
             this.rowLimit = asNumber(getOptionFromSpreadsheetOptions(ROWLIMIT, spreadsheetSource));
+            String COLUMNLIMIT = "maxcols";
             this.columnLimit = asNumber(getOptionFromSpreadsheetOptions(COLUMNLIMIT, spreadsheetSource));
+            String HIGHLIGHT = "highlight";
             this.highlightDays = asNumber(getOptionFromSpreadsheetOptions(HIGHLIGHT, spreadsheetSource));
         } else {
             this.sortable = false;
@@ -101,7 +100,7 @@ public class UserRegionOptions extends StandardEntity{
 
     // should this be in here? Does it matter that much?
 
-    public String getOptionFromSpreadsheetOptions(String optionName, String optionsForRegion) {
+    private String getOptionFromSpreadsheetOptions(String optionName, String optionsForRegion) {
         if (optionsForRegion != null) {
             int foundPos = optionsForRegion.toLowerCase().indexOf(optionName.toLowerCase());
             if (foundPos != -1){

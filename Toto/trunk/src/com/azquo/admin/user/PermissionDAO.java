@@ -27,16 +27,16 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         return PERMISSION;
     }
 
-    public static final String PERMISSION = "permission";
+    private static final String PERMISSION = "permission";
 
     // column names except ID which is in the superclass
 
-    public static final String STARTDATE = "start_date";
-    public static final String ENDDATE = "end_date";
-    public static final String USERID = "user_id";
-    public static final String DATABASEID = "database_id";
-    public static final String READLIST = "read_list";
-    public static final String WRITELIST = "write_list";
+    private static final String STARTDATE = "start_date";
+    private static final String ENDDATE = "end_date";
+    private static final String USERID = "user_id";
+    private static final String DATABASEID = "database_id";
+    private static final String READLIST = "read_list";
+    private static final String WRITELIST = "write_list";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final Permission permission) {
@@ -73,7 +73,7 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         jdbcTemplate.update(SQL_DELETE, namedParams);
     }*/
 
-    public final class PermissionRowMapper implements RowMapper<Permission> {
+    private final class PermissionRowMapper implements RowMapper<Permission> {
 
         @Override
         public Permission mapRow(final ResultSet rs, final int row) throws SQLException {
@@ -104,7 +104,7 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         return findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID, namedParams, false);
     }
 
-    public Permission findForUserIdAndDatabaseId(final int userId, int databaseId) {
+    private Permission findForUserIdAndDatabaseId(final int userId, int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
         namedParams.addValue(DATABASEID, databaseId);

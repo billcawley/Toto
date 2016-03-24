@@ -61,7 +61,7 @@ public class JstreeController {
 
     private static final Logger logger = Logger.getLogger(JstreeController.class);
 
-    protected static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response

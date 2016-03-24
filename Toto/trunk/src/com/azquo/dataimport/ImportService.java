@@ -115,7 +115,7 @@ public final class ImportService {
         return toReturn;
     }
 
-    String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
+    private String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         if (fileName.equals(CreateExcelForDownloadController.USERSPERMISSIONSFILENAME) && loggedInUser.getUser().isAdministrator()) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(fileName), "Report name");
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
@@ -137,11 +137,6 @@ public final class ImportService {
                     String user = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
                     String email = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
                     if (!loggedInUser.getUser().getEmail().equals(email)) { // leave the logged in user alone!
-                        LocalDateTime start = LocalDateTime.now();
-                        try {
-                            start = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 2).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
-                        } catch (Exception ignored) {
-                        }
                         LocalDateTime end = LocalDateTime.now();
                         try {
                             end = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
@@ -163,7 +158,7 @@ public final class ImportService {
                             password = oldPasswordMap.get(email);
                             salt = oldSaltMap.get(email);
                         }
-                        User user1 = new User(0, start, end, b != null ? b.getId() : loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail());
+                        User user1 = new User(0, end, b != null ? b.getId() : loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail());
                         userDAO.store(user1);
                     }
                     row++;
@@ -235,7 +230,7 @@ public final class ImportService {
                         salt = oldSaltMap.get(email);
                     }
                     // copy details from the master user
-                    User user1 = new User(0, master.getStartDate(), master.getEndDate(), master.getBusinessId(), email, user, master.getStatus(), password, salt, master.getEmail());
+                    User user1 = new User(0, master.getEndDate(), master.getBusinessId(), email, user, master.getStatus(), password, salt, master.getEmail());
                     userDAO.store(user1);
                     row++;
                 }
@@ -282,7 +277,7 @@ public final class ImportService {
         }
     }
 
-    public List<File> unZip(String zipFile) {
+    private List<File> unZip(String zipFile) {
         String outputFolder;
         if (!zipFile.contains("/")) {
             outputFolder = zipFile.substring(0, zipFile.lastIndexOf("\\"));// same dir
@@ -417,9 +412,9 @@ public final class ImportService {
         return readPreparedFile(loggedInUser, tempName, fileType, attributeNames, persistAfter, true);
     }
 
-    static String LOCALIP = "127.0.0.1";
+    private static String LOCALIP = "127.0.0.1";
 
-    public String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileType, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
+    private String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileType, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         // right - here we're going to have to move the file if the DB server is not local.
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
@@ -433,7 +428,7 @@ public final class ImportService {
         }
     }
 
-    public String copyFileToDatabaseServer(InputStream inputStream, String sftpDestination) {
+    private String copyFileToDatabaseServer(InputStream inputStream, String sftpDestination) {
         /*
         StandardFileSystemManager manager = new StandardFileSystemManager();
         String toReturn = null;

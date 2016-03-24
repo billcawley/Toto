@@ -34,13 +34,10 @@ public class DownloadController {
 
     @Autowired
     SpreadsheetService spreadsheetService;
-    static String LOCALIP = "127.0.0.1";
-    static String dbPath = "/databases/";
 
     @RequestMapping
     public void handleRequest(HttpServletRequest request
             , HttpServletResponse response
-            , @RequestParam(value = "macros", required = false, defaultValue = "false") boolean withMacros
             , @RequestParam(value = "pdf", required = false, defaultValue = "false") boolean pdf
             , @RequestParam(value = "image", required = false) String image
     ) throws Exception {
@@ -55,8 +52,10 @@ public class DownloadController {
             byte[] bucket = new byte[32 * 1024];
             int length = 0;
             DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
+            String LOCALIP = "127.0.0.1";
             if (databaseServer.getIp().equals(LOCALIP)) {
                 String pathOffset = loggedInUser.getDatabase().getPersistenceName() + "/images/" + image;
+                String dbPath = "/databases/";
                 String filePath = spreadsheetService.getHomeDir() + dbPath + pathOffset;
                 try {
                     // new java 8 syntax, a little odd but I'll leave here for the moment

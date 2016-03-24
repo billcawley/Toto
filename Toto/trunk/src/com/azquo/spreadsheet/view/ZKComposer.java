@@ -1,6 +1,5 @@
 package com.azquo.spreadsheet.view;
 
-import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
@@ -48,18 +47,16 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Wire
     Spreadsheet myzss;
 
-    Menupopup editPopup = new Menupopup();
+    private Menupopup editPopup = new Menupopup();
     //Label provenanceLabel = new Label();
-    Label instructionsLabel = new Label();
-    SpreadsheetService spreadsheetService;
-    RMIClient rmiClient;
-    UserChoiceDAO userChoiceDAO;
-    OnlineReportDAO onlineReportDAO;
-    UserRegionOptionsDAO userRegionOptionsDAO;
-    AdminService adminService;
-    Popup provenancePopup = null;
-    Popup highlightPopup = null;
-    Popup instructionsPopup = null;
+    private Label instructionsLabel = new Label();
+    private SpreadsheetService spreadsheetService;
+    private RMIClient rmiClient;
+    private UserChoiceDAO userChoiceDAO;
+    private UserRegionOptionsDAO userRegionOptionsDAO;
+    private Popup provenancePopup = null;
+    private Popup highlightPopup = null;
+    private Popup instructionsPopup = null;
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
@@ -70,7 +67,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         spreadsheetService = (SpreadsheetService) applicationContext.getBean("spreadsheetService");
         userChoiceDAO = (UserChoiceDAO) applicationContext.getBean("userChoiceDao");
         userRegionOptionsDAO = (UserRegionOptionsDAO) applicationContext.getBean("userRegionOptionsDao");
-        adminService = (AdminService) applicationContext.getBean("adminService");
         rmiClient = (RMIClient) applicationContext.getBean("rmiClient");
         editPopup.setId("editPopup");
         editPopup.setStyle("background-color:#ffffff");
@@ -275,8 +271,9 @@ public class ZKComposer extends SelectorComposer<Component> {
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// would have been a one cell name
                 String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                 spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
-                List<String> changedChoice = new ArrayList<>();
-                changedChoice.add(choice);
+                // I'm not sure exactly why blankDependantChoices was commented, commenting the other two redundant lines
+                //List<String> changedChoice = new ArrayList<>();
+                //changedChoice.add(choice);
                 // hopefully self explanatory :)
                 //zkAzquoBookUtils.blankDependantChoices(loggedInUser, changedChoice, event.getSheet());
                 reload = true;
@@ -628,7 +625,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             Session session = Sessions.getCurrent();
             int databaseId = loggedInUser.getDatabase().getId();
             ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
-            onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
+            OnlineReportDAO onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
             or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
             if (or == null) {
                 or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
@@ -665,7 +662,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         return stringToShow;
     }
 
-    public static void resolveTreeNode(int tab, StringBuilder stringBuilder, com.azquo.memorydb.TreeNode treeNode) {
+    private static void resolveTreeNode(int tab, StringBuilder stringBuilder, com.azquo.memorydb.TreeNode treeNode) {
         for (int i = 0; i < tab; i++) {
             stringBuilder.append("\t");
         }
@@ -689,7 +686,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    public static int getLastValueInt(com.azquo.memorydb.TreeNode treeNode) {
+    private static int getLastValueInt(com.azquo.memorydb.TreeNode treeNode) {
         if (treeNode.getHeading() != null && !treeNode.getChildren().isEmpty()) { // then assume we have items too!
             return getLastValueInt(treeNode.getChildren().get(treeNode.getChildren().size() - 1));
         }

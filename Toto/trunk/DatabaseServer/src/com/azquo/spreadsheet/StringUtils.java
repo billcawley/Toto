@@ -93,7 +93,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
 
      */
 
-    DecimalFormat twoDigit = new DecimalFormat("00");
+    private DecimalFormat twoDigit = new DecimalFormat("00");
 
     public String prepareStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
         /* sort the name quotes - what is replaced is just needed here, the way names can be referenced
@@ -227,7 +227,7 @@ I should be ok for StringTokenizer at this point
         return statement;
     }
 
-    public boolean isKeywordOrOperator(String term) {
+    private boolean isKeywordOrOperator(String term) {
         return term.equals("*") || term.equals("/") || term.equals("+") || term.equals("-") || term.equals(">")
                 || term.equals("<") || term.equals("=") || term.equals(",")
                 || term.equals("(") || term.equals(")")

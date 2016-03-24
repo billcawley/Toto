@@ -14,10 +14,10 @@ import java.util.Date;
  */
 public class UserChoice extends StandardEntity {
 
-    final int userId;
-    final String choiceName;
-    String choiceValue;
-    Date time;
+    private final int userId;
+    private final String choiceName;
+    private String choiceValue;
+    private Date time;
 
     public UserChoice(int id, int userId, String choiceName, String choiceValue, Date time) {
         this.id = id;

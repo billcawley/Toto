@@ -15,18 +15,15 @@ import java.time.LocalDateTime;
  */
 public final class Database extends StandardEntity {
 
-    LocalDateTime startDate;
-    LocalDateTime endDate;
-    int businessId;
-    String name;
-    String persistenceName;
-    String databaseType;
-    int nameCount;
-    int valueCount;
-    int databaseServerId;
+    private int businessId;
+    private String name;
+    private String persistenceName;
+    private String databaseType;
+    private int nameCount;
+    private int valueCount;
+    private int databaseServerId;
 
-    public Database(int id, LocalDateTime startDate
-            , LocalDateTime endDate
+    public Database(int id
             , int businessId
             , String name
             , String persistenceName
@@ -36,8 +33,6 @@ public final class Database extends StandardEntity {
             , int databaseServerId
                     ) {
         this.id = id;
-        this.startDate = startDate;
-        this.endDate = endDate;
         this.businessId = businessId;
         this.name = name;
         this.persistenceName = persistenceName;
@@ -45,22 +40,6 @@ public final class Database extends StandardEntity {
         this.nameCount = nameCount;
         this.valueCount = valueCount;
         this.databaseServerId = databaseServerId;
-    }
-
-    public LocalDateTime getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(LocalDateTime startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDateTime getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDateTime endDate) {
-        this.endDate = endDate;
     }
 
     public int getBusinessId() {
@@ -130,8 +109,6 @@ public final class Database extends StandardEntity {
     public String toString() {
         return "Database{" +
                 "id=" + id +
-                ", startDate=" + startDate +
-                ", endDate=" + endDate +
                 ", businessId=" + businessId +
                 ", name='" + name + '\'' +
                 ", persistenceName='" + persistenceName + '\'' +

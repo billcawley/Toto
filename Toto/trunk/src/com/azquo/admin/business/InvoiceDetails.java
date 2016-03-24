@@ -16,18 +16,18 @@ public class InvoiceDetails extends StandardEntity {
     
     public static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    String customerReference;
-    String serviceDescription;
-    int quantity;
-    int unitCost;
-    int paymentTerms;
-    String poReference;
-    LocalDate invoiceDate;
-    String invoicePeriod;
-    String invoiceNo;
-    String invoiceAddress;
-    boolean noVat;
-    String sendTo;
+    private String customerReference;
+    private String serviceDescription;
+    private int quantity;
+    private int unitCost;
+    private int paymentTerms;
+    private String poReference;
+    private LocalDate invoiceDate;
+    private String invoicePeriod;
+    private String invoiceNo;
+    private String invoiceAddress;
+    private boolean noVat;
+    private String sendTo;
 
     public InvoiceDetails(int id, String customerReference, String serviceDescription, int quantity, int unitCost,
                           int paymentTerms, String poReference, LocalDate invoiceDate, String invoicePeriod,

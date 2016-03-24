@@ -4,7 +4,6 @@ import com.azquo.admin.StandardEntity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.time.LocalDateTime;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -15,40 +14,15 @@ import java.time.LocalDateTime;
  */
 public final class Business extends StandardEntity {
 
-    LocalDateTime startDate;
-    LocalDateTime endDate;
-    String businessName;
-    int parentId;
-    BusinessDetails businessDetails;
+    private String businessName;
+    private BusinessDetails businessDetails;
 
     public Business(int id
-            , LocalDateTime startDate
-            , LocalDateTime endDate
             , String businessName
-            , int parentId
             , BusinessDetails businessDetails) {
         this.id = id;
-        this.startDate = startDate;
-        this.endDate = endDate;
         this.businessName = businessName;
-        this.parentId = parentId;
         this.businessDetails = businessDetails;
-    }
-
-    public LocalDateTime getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(LocalDateTime startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDateTime getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDateTime endDate) {
-        this.endDate = endDate;
     }
 
     public String getBusinessName() {
@@ -59,15 +33,7 @@ public final class Business extends StandardEntity {
         this.businessName = businessName;
     }
 
-    public int getParentId() {
-        return parentId;
-    }
-
-    public void setParentId(int parentId) {
-        this.parentId = parentId;
-    }
-
-    public BusinessDetails getBusinessDetails() {
+    BusinessDetails getBusinessDetails() {
         return businessDetails;
     }
 
@@ -79,24 +45,21 @@ public final class Business extends StandardEntity {
     public String toString() {
         return "Business{" +
                 "id=" + id +
-                ", startDate=" + startDate +
-                ", endDate=" + endDate +
                 ", businessName='" + businessName + '\'' +
-                ", parentId=" + parentId +
                 ", businessDetails=" + businessDetails +
                 '}';
     }
 
     // for Jackson mapping, these bits of data will be as json in the DB. Hence if you want a new one you should just be able to add it here :)
     public static class BusinessDetails {
-        public String address1;
-        public String address2;
-        public String address3;
-        public String address4;
-        public String postcode;
-        public String telephone;
-        public String website;
-        public String validationKey; // temporary place to store validation key
+        String address1;
+        String address2;
+        String address3;
+        String address4;
+        String postcode;
+        String telephone;
+        String website;
+        String validationKey; // temporary place to store validation key
 
         @JsonCreator
         public BusinessDetails(@JsonProperty("address1") String address1

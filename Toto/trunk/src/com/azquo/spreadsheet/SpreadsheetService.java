@@ -105,11 +105,11 @@ public class SpreadsheetService {
     private int devMachine = -1;
     private int asposeLicense = -1;
 
-    public static final String AZQUOHOME = "azquo.home";
-    public static final String ASPOSELICENSE = "aspose.license";
-    public static final String DEVMACHINE = "dev.machine";
+    private static final String AZQUOHOME = "azquo.home";
+    private static final String ASPOSELICENSE = "aspose.license";
+    private static final String DEVMACHINE = "dev.machine";
 
-    public static final String FILTERCHOICEDIVIDER = "|||"; // let's hope it's not used in the choices
+    private static final String FILTERCHOICEDIVIDER = "|||"; // let's hope it's not used in the choices
     public static final String FILTERCHOICEDIVIDERFORREGEX = "\\|\\|\\|"; // maybe reconsider this later
 
     public String getHomeDir() {
@@ -145,9 +145,6 @@ public class SpreadsheetService {
         return devMachine == 1;
     }
 
-    public final int availableProcessors;
-    public final int threadsToTry;
-
     public SpreadsheetService() {
         String current = null;
         try {
@@ -163,11 +160,8 @@ public class SpreadsheetService {
             e.printStackTrace(); // may as well in case it goes wrong
         }
         System.out.println("host : " + thost);
-        availableProcessors = Runtime.getRuntime().availableProcessors();
-        System.out.println("Available processors : " + availableProcessors);
+        System.out.println("Available processors : " + Runtime.getRuntime().availableProcessors());
         host = thost;
-        threadsToTry = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
-
     }
 
     // to load the old AzquoBook. Will be phased out so I'll leave the HTML in here.
@@ -291,7 +285,7 @@ public class SpreadsheetService {
     // to put a referenced CSS inline for example
     // edd changing to read from web-inf
 
-    StringBuilder readFile(String filename) {
+    private StringBuilder readFile(String filename) {
         // First, copy the base css
         StringBuilder sb = new StringBuilder();
         BufferedReader in = null;
@@ -416,7 +410,7 @@ public class SpreadsheetService {
         }
     }
 
-    public StringBuilder createDatabaseSelect(LoggedInUser loggedInUser) {
+    private StringBuilder createDatabaseSelect(LoggedInUser loggedInUser) {
         StringBuilder sb = new StringBuilder();
         String chosen = "";
         Map<String, Database> foundDatabases = loginService.foundDatabases(loggedInUser.getUser());

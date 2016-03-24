@@ -27,10 +27,10 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
 
     // column names except ID which is in the superclass
 
-    public static final String USERID = "user_id";
-    public static final String CHOICENAME = "choice_name";
-    public static final String CHOICEVALUE = "choice_value";
-    public static final String TIME = "time";
+    private static final String USERID = "user_id";
+    private static final String CHOICENAME = "choice_name";
+    private static final String CHOICEVALUE = "choice_value";
+    private static final String TIME = "time";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(UserChoice ucr) {
@@ -43,7 +43,7 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
         return toReturn;
     }
 
-    public static final class UserChoiceRowMapper implements RowMapper<UserChoice> {
+    private static final class UserChoiceRowMapper implements RowMapper<UserChoice> {
 
         @Override
         public UserChoice mapRow(final ResultSet rs, final int row) throws SQLException {

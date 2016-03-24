@@ -76,14 +76,10 @@ public class AdminService {
         // we need to check for existing businesses
         final String key = shaHash(System.currentTimeMillis() + "");
         final Business.BusinessDetails bd = new Business.BusinessDetails(address1, address2, address3, address4, postcode, telephone, website, key);
-        final Business business = new Business(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), businessName, 0, bd);
+        final Business business = new Business(0, businessName, bd);
         final Business existing = businessDAO.findByName(businessName);
-        if (existing != null) { // ok new criteria, overwrite if the business was not already key validated
-            if (existing.getEndDate().isAfter(LocalDateTime.now())) {
+        if (existing != null) {
                 throw new Exception(businessName + " already registered");
-            } else {
-                businessDAO.removeById(existing); // it will be created again
-            }
         }
         User existingUser = userDao.findByEmail(email);
         if (existingUser != null) {
@@ -95,7 +91,7 @@ public class AdminService {
         }
         businessDAO.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, LocalDateTime.now(), LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business");
+        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business");
         userDao.store(user);
         /*
         azquoMailer.sendEMail(user.getEmail()
@@ -109,6 +105,8 @@ public class AdminService {
                 , "<html>Dear " + user.getName() + "<br/><br/>Welcome to Azquo!<br/><br/>Your account key is : " + key + "</html>");*/
     }
 /*
+this may now not work at all, perhaps delete?
+
     public String confirmKey(final String businessName, final String email, final String password, final String key, String spreadsheetName) throws Exception{
         final Business business = businessDAO.findByName(businessName);
         if (business != null && business.getBusinessDetails().validationKey.equals(key)) {
@@ -127,12 +125,12 @@ public class AdminService {
         return "error:  incorrect key";
     }*/
 
-    public String getSQLDatabaseName(final LoggedInUser loggedInUser, final String databaseName) {
+    private String getSQLDatabaseName(final LoggedInUser loggedInUser, final String databaseName) {
         //TODO  Check name below is unique.
         return getBusinessPrefix(loggedInUser) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
     }
 
-    public String getBusinessPrefix(final LoggedInUser loggedInUser) {
+    private String getBusinessPrefix(final LoggedInUser loggedInUser) {
         Business b = businessDAO.findById(loggedInUser.getUser().getBusinessId());
         return b != null ? (b.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "") : null;
     }
@@ -153,7 +151,7 @@ public class AdminService {
             if (b == null){
                 throw new Exception("That business does not exist");
             }
-            final Database database = new Database(0, LocalDateTime.now(), LocalDateTime.now().plusYears(10), b.getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId());
+            final Database database = new Database(0, b.getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId());
             databaseDAO.store(database);
             // will be over to the DB side
             rmiClient.getServerInterface(databaseServer.getIp()).createDatabase(database.getPersistenceName());
@@ -180,7 +178,7 @@ public class AdminService {
             , final LoggedInUser loggedInUser) throws Exception {
         if (loggedInUser.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, LocalDateTime.now(), endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail());
+            final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail());
             userDao.store(user);
         } else {
             throw new Exception("error: you do not have permission to create a user");

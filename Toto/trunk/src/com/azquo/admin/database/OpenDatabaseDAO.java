@@ -29,9 +29,9 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
 
     // column names except ID which is in the superclass
 
-    public static final String DATABASEID = "database_id";
-    public static final String OPEN = "open";
-    public static final String CLOSE = "close";
+    private static final String DATABASEID = "database_id";
+    private static final String OPEN = "open";
+    private static final String CLOSE = "close";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(OpenDatabase openDatabase) {
@@ -43,7 +43,7 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
         return toReturn;
     }
 
-    public static final class OpenDatabaseRowMapper implements RowMapper<OpenDatabase> {
+    private static final class OpenDatabaseRowMapper implements RowMapper<OpenDatabase> {
         @Override
         public OpenDatabase mapRow(final ResultSet rs, final int row) throws SQLException {
             try {

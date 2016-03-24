@@ -111,7 +111,6 @@ public class CreateExcelForDownloadController {
                 for (User user : userListForBusiness){
                     userSheet.getInternalSheet().getCell(row,0).setStringValue(user.getName());
                     userSheet.getInternalSheet().getCell(row,1).setStringValue(user.getEmail());
-                    userSheet.getInternalSheet().getCell(row,2).setStringValue(dateTimeFormatter.format(user.getStartDate()));
                     userSheet.getInternalSheet().getCell(row,3).setStringValue(dateTimeFormatter.format(user.getEndDate()));
                     final Business businessById = adminService.getBusinessById(user.getBusinessId());
                     userSheet.getInternalSheet().getCell(row,4).setStringValue(businessById != null ? businessById.getBusinessName() : "");

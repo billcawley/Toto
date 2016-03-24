@@ -84,11 +84,9 @@ public class ZKSpreadsheetCommandController {
         final String action = req.getParameter("action");
         // use utility class to wrap zk in servlet request and
         // get access and response result
-
         // prepare a json result object, it can contain your ajax result and
         // also the necessary zk component update result
         final JSONObject result = new JSONObject();
-
         JsonUpdateBridge bridge = new JsonUpdateBridge(req.getServletContext(), req, resp,
                 desktopId) {
             @Override
@@ -116,6 +114,7 @@ public class ZKSpreadsheetCommandController {
                         }
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".xlsx", null, null, file, true));
                     }
+
                     if ("SaveTemplate".equals(action)) { // similar to above but we're overwriting the report
                         LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster()){
@@ -131,8 +130,6 @@ public class ZKSpreadsheetCommandController {
                             } else {
                                 onlineReport.setPathname(onlineReport.getDatabaseType());
                             }
-
-
                             String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename(); // as in the online controller
                             FileOutputStream fos = null;
                             try {
@@ -147,9 +144,7 @@ public class ZKSpreadsheetCommandController {
                             Clients.evalJavaScript("window.location.assign(\"/api/Online?reportid=1&opcode=loadsheet&reporttoload=" + reportId + "&database=" + onlineReport.getDatabase() + "\")");
                         }
                     }
-
                     boolean pdfDefault = false;
-
                     if (action != null && action.startsWith("PDFMerge")) {
                         Book book = ss.getBook();
                         // Look for the relevant name in the sheet
@@ -162,7 +157,6 @@ public class ZKSpreadsheetCommandController {
                                 choices.add(st.nextToken().trim());
                             }
                         }
-
                         if (!choices.isEmpty()) {
                             PDFMergerUtility merger = new PDFMergerUtility();
                             // ok this is where things get interesting, need to work out how to express the logic.
@@ -296,7 +290,7 @@ public class ZKSpreadsheetCommandController {
         }
     }
 
-    List<String> getChoiceList(Book book, String choice) {
+    private List<String> getChoiceList(Book book, String choice) {
         List<String> toReturn = new ArrayList<>();
         Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
         if (validationSheet != null) {
@@ -325,7 +319,7 @@ public class ZKSpreadsheetCommandController {
         return toReturn;
     }
 
-    public String renderBook(Book book) throws IOException {
+    private String renderBook(Book book) throws IOException {
         Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
         if (validationSheet != null) {
             try{

@@ -26,9 +26,9 @@ public final class LoginRecordDAO extends StandardDAO<LoginRecord> {
 
     // column names except ID which is in the superclass
 
-    public static final String USERID = "user_id";
-    public static final String DATABASEID = "database_id";
-    public static final String TIME = "time";
+    private static final String USERID = "user_id";
+    private static final String DATABASEID = "database_id";
+    private static final String TIME = "time";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(LoginRecord lir) {
@@ -40,7 +40,7 @@ public final class LoginRecordDAO extends StandardDAO<LoginRecord> {
         return toReturn;
     }
 
-    public static final class LoginRecordRowMapper implements RowMapper<LoginRecord> {
+    private static final class LoginRecordRowMapper implements RowMapper<LoginRecord> {
         @Override
         public LoginRecord mapRow(final ResultSet rs, final int row) throws SQLException {
             try {

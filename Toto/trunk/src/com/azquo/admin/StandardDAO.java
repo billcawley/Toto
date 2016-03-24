@@ -46,7 +46,7 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         }
     }
 
-    public final void updateById(final EntityType entity) throws DataAccessException {
+    private void updateById(final EntityType entity) throws DataAccessException {
 //        final NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplateFactory.getJDBCTemplateForEntity(entity);
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
@@ -63,7 +63,7 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         jdbcTemplate.update(updateSql, namedParams);
     }
 
-    public final void insert(final EntityType entity) throws DataAccessException {
+    private void insert(final EntityType entity) throws DataAccessException {
         String columnsCommaList = "";
         String valuesCommaList = "";
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -131,7 +131,7 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
         }
     }
 
-    public final EntityType findOneWithWhereSQLAndParameters(final String whereCondition, final MapSqlParameterSource namedParams) throws DataAccessException {
+    protected final EntityType findOneWithWhereSQLAndParameters(final String whereCondition, final MapSqlParameterSource namedParams) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select `" + MASTER_DB + "`.`" + getTableName() + "`.* from `" + MASTER_DB + "`.`" + getTableName() + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT 0,1";
         final List<EntityType> results = jdbcTemplate.query(SQL_SELECT_ALL, namedParams, getRowMapper());
         if (results.size() == 0) {

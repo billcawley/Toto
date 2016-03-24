@@ -44,8 +44,8 @@ import java.util.Map;
 @Controller
 @RequestMapping("/Online")
 public class OnlineController {
-    final Runtime runtime = Runtime.getRuntime();
-    final int mb = 1024 * 1024;
+    private final Runtime runtime = Runtime.getRuntime();
+    private final int mb = 1024 * 1024;
     // note : I'm now thinking dao objects are acceptable in controllers if moving the call to the service would just be a proxy
 
     @Autowired
@@ -73,7 +73,7 @@ public class OnlineController {
 
     public static final String BOOK = "BOOK";
     public static final String BOOK_PATH = "BOOK_PATH";
-    public static final String SAVE_FLAG = "SAVE_FLAG";
+    private static final String SAVE_FLAG = "SAVE_FLAG";
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
     public static final String REPORT_ID = "REPORT_ID";
     public static final String CELL_SELECT = "CELL_SELECT";
@@ -99,7 +99,6 @@ public class OnlineController {
 
     ) {
         try {
-            String callerId = request.getRemoteAddr();
             if (reportToLoad != null && reportToLoad.length() > 0) {
                 reportId = reportToLoad;
             }

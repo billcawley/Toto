@@ -25,18 +25,18 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
 
     // column names except ID which is in the superclass
 
-    public static final String USERID = "user_id";
-    public static final String REPORTID = "report_id";
-    public static final String REGION = "region";
-    public static final String HIDE_ROWS = "hide_rows";
-    public static final String SORTABLE = "sortable";
-    public static final String ROW_LIMIT = "row_limit";
-    public static final String COLUMN_LIMIT = "column_limit";
-    public static final String SORT_ROW = "sort_row";
-    public static final String SORT_ROW_ASC = "sort_row_asc";
-    public static final String SORT_COLUMN = "sort_column";
-    public static final String SORT_COLUMN_ASC = "sort_column_asc";
-    public static final String HIGHLIGHT_DAYS = "highlight_days";
+    private static final String USERID = "user_id";
+    private static final String REPORTID = "report_id";
+    private static final String REGION = "region";
+    private static final String HIDE_ROWS = "hide_rows";
+    private static final String SORTABLE = "sortable";
+    private static final String ROW_LIMIT = "row_limit";
+    private static final String COLUMN_LIMIT = "column_limit";
+    private static final String SORT_ROW = "sort_row";
+    private static final String SORT_ROW_ASC = "sort_row_asc";
+    private static final String SORT_COLUMN = "sort_column";
+    private static final String SORT_COLUMN_ASC = "sort_column_asc";
+    private static final String HIGHLIGHT_DAYS = "highlight_days";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(UserRegionOptions uro) {
@@ -57,7 +57,7 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
         return toReturn;
     }
 
-    public static final class UserRegionOptionRowMapper implements RowMapper<UserRegionOptions> {
+    private static final class UserRegionOptionRowMapper implements RowMapper<UserRegionOptions> {
 
         @Override
         public UserRegionOptions mapRow(final ResultSet rs, final int row) throws SQLException {

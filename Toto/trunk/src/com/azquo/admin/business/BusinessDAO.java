@@ -7,8 +7,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,20 +26,14 @@ public final class BusinessDAO extends StandardDAO<Business> {
 
     // column names (except ID)
 
-    public static final String STARTDATE = "start_date";
-    public static final String ENDDATE = "end_date";
-    public static final String BUSINESSNAME = "business_name";
-    public static final String PARENTID = "parent_id";
-    public static final String BUSINESSDETAILS = "business_details";
+    private static final String BUSINESSNAME = "business_name";
+    private static final String BUSINESSDETAILS = "business_details";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final Business business) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, business.getId());
-        toReturn.put(STARTDATE, Date.from(business.getStartDate().atZone(ZoneId.systemDefault()).toInstant()));
-        toReturn.put(ENDDATE, Date.from(business.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(BUSINESSNAME, business.getBusinessName());
-        toReturn.put(PARENTID, business.getParentId());
         try {
             toReturn.put(BUSINESSDETAILS, jacksonMapper.writeValueAsString(business.getBusinessDetails()));
         } catch (Exception e) {
@@ -50,15 +42,12 @@ public final class BusinessDAO extends StandardDAO<Business> {
         return toReturn;
     }
 
-    public final class BusinessRowMapper implements RowMapper<Business> {
+    private final class BusinessRowMapper implements RowMapper<Business> {
         @Override
         public Business mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 return new Business(rs.getInt(ID)
-                        , getLocalDateTimeFromDate(rs.getDate(STARTDATE))
-                        , getLocalDateTimeFromDate(rs.getDate(ENDDATE))
                         , rs.getString(BUSINESSNAME)
-                        , rs.getInt(PARENTID)
                         , jacksonMapper.readValue(rs.getString(BUSINESSDETAILS)
                         , Business.BusinessDetails.class));
             } catch (Exception e) {

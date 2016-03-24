@@ -15,9 +15,8 @@ import java.time.LocalDateTime;
 public final class User extends StandardEntity {
 
     public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
-    public static final String STATUS_MASTER = "MASTER";
+    private static final String STATUS_MASTER = "MASTER";
 
-    private LocalDateTime startDate;
     private LocalDateTime endDate;
     private int businessId;
     private String email;
@@ -30,7 +29,6 @@ public final class User extends StandardEntity {
     // salt will probably never be passed
     @JsonCreator
     public User(@JsonProperty("id") int id
-            , @JsonProperty("startDate") LocalDateTime startDate
             , @JsonProperty("endDate") LocalDateTime endDate
             , @JsonProperty("businessId") int businessId
             , @JsonProperty("email") String email
@@ -40,7 +38,6 @@ public final class User extends StandardEntity {
             , @JsonProperty("salt") String salt
             , @JsonProperty("createdBy") String createdBy) {
         this.id = id;
-        this.startDate = startDate;
         this.endDate = endDate;
         this.businessId = businessId;
         this.email = email;
@@ -61,20 +58,12 @@ public final class User extends StandardEntity {
         return status.equalsIgnoreCase(STATUS_MASTER);
     }
 
-    public LocalDateTime getStartDate() {
-        return startDate;
-    }
-
     public void setEndDate(LocalDateTime endDate) {
         this.endDate = endDate;
     }
 
     public LocalDateTime getEndDate() {
         return endDate;
-    }
-
-    public void setStartDate(LocalDateTime startDate) {
-        this.startDate = startDate;
     }
 
     public int getBusinessId() {
@@ -138,7 +127,6 @@ public final class User extends StandardEntity {
     @Override
     public String toString() {
         return "User{" +
-                "startDate=" + startDate +
                 ", endDate=" + endDate +
                 ", businessId=" + businessId +
                 ", email='" + email + '\'' +

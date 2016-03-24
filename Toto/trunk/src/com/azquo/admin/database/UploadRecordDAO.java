@@ -26,13 +26,13 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
 
     // column names except ID which is in the superclass
 
-    public static final String DATE = "date";
-    public static final String BUSINESSID = "business_id";
-    public static final String DATABASEID = "database_id";
-    public static final String USERID = "user_id";
-    public static final String FILENAME = "file_name";
-    public static final String FILETYPE = "file_type";
-    public static final String COMMENTS = "comments";
+    private static final String DATE = "date";
+    private static final String BUSINESSID = "business_id";
+    private static final String DATABASEID = "database_id";
+    private static final String USERID = "user_id";
+    private static final String FILENAME = "file_name";
+    private static final String FILETYPE = "file_type";
+    private static final String COMMENTS = "comments";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final UploadRecord uploadRecord) {
@@ -48,7 +48,7 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
         return toReturn;
     }
 
-    public static final class UploadRecordRowMapper implements RowMapper<UploadRecord> {
+    private static final class UploadRecordRowMapper implements RowMapper<UploadRecord> {
         @Override
         public UploadRecord mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment

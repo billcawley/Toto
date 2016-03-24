@@ -22,7 +22,7 @@ public final class InvoiceSentDAO extends StandardDAO<InvoiceSent> {
         return "invoice_sent";
     }
 
-    public static final String DATETIMESENT = "date_time_sent";
+    private static final String DATETIMESENT = "date_time_sent";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final InvoiceSent invoiceSent) {
@@ -44,7 +44,7 @@ public final class InvoiceSentDAO extends StandardDAO<InvoiceSent> {
         return toReturn;
     }
 
-    public final class InvoiceSentRowMapper implements RowMapper<InvoiceSent> {
+    private final class InvoiceSentRowMapper implements RowMapper<InvoiceSent> {
         @Override
         public InvoiceSent mapRow(final ResultSet rs, final int row) throws SQLException {
             try {

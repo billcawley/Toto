@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -61,9 +62,7 @@ public class ShowdataController {
                 modelMap.addAttribute("node", node);
             } else {
                 Set<String> nameNames = new HashSet<>();
-                for (String nString : namesString){
-                    nameNames.add(nString);
-                }
+                Collections.addAll(nameNames, namesString);
                 TreeNode node = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingNames(loggedInUser.getDataAccessToken(), nameNames, 1000);
                 modelMap.addAttribute("node", node);
             }

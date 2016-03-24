@@ -73,7 +73,7 @@ public class InvoiceService {
         Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF,  fos);
         Transformer transformer = tFactory.newTransformer();
         StringBuilder template = new StringBuilder();
-        String inputLine = null;
+        String inputLine;
         try {
             DataInputStream in = new DataInputStream(getClass().getClassLoader().getResourceAsStream("azquoinvoice.fop"));// used to have a hard coded link, now it's moved to /src this should be better
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
@@ -110,8 +110,6 @@ public class InvoiceService {
         invoiceFOP = invoiceFOP.replace("INVOICEQUANT1", invoiceDetails.getQuantity() + "");
         invoiceFOP = invoiceFOP.replace("INVOICEMON1", invoiceDetails.getUnitCost() + "");
         invoiceFOP = invoiceFOP.replace("INVOICEN1", nf.format(currencyValue));
-
-        lineNo = 2;
 
         // hack for 2 lines . . .
 /*    currencyValue += 1100;

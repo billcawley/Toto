@@ -33,17 +33,17 @@ public class AzquoMailer {
     @Autowired
     private Environment env;
 
-    public static final String MAILPREFIX = "mail.";
-    public static final String MAILSERVER = "mail.server";
-    public static final String MAILUSER = "mail.user";
-    public static final String MAILPASSWORD = "mail.password";
-    public static final String MAILFROMADDRESS = "mail.fromaddress";
-    public static final String MAILFROMNAME = "mail.fromname";
+    private static final String MAILPREFIX = "mail.";
+    private static final String MAILSERVER = "mail.server";
+    private static final String MAILUSER = "mail.user";
+    private static final String MAILPASSWORD = "mail.password";
+    private static final String MAILFROMADDRESS = "mail.fromaddress";
+    private static final String MAILFROMNAME = "mail.fromname";
 
     // for reading in data, could well be a different server
-    public static final String MAILBOXIP = "mailbox.ip";
-    public static final String MAILBOXUSER = "mailbox.user";
-    public static final String MAILBOXPASSWORD = "mailbox.password";
+    private static final String MAILBOXIP = "mailbox.ip";
+    private static final String MAILBOXUSER = "mailbox.user";
+    private static final String MAILBOXPASSWORD = "mailbox.password";
 
     public boolean sendEMail(String toEmail, String toName, String subject, String body) {
         return sendEMail(toEmail, toName, subject, body, null, null);

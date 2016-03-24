@@ -81,19 +81,19 @@ public final class UploadRecord extends StandardEntity {
                 '}';
     }
 
-    // Saw for JSON, now JSTL, neeed the getters
+    // Saw for JSON, now JSTL, need the getters
 
     public static class UploadRecordForDisplay {
         public final Date date;
-        public final String businessName;
-        public final String databaseName;
-        public final String userName;
-        public final String fileName;
-        public final String fileType;
-        public final String comments;
+        final String businessName;
+        final String databaseName;
+        final String userName;
+        final String fileName;
+        final String fileType;
+        final String comments;
 
         public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName) {
-            date = ur.date;
+            this.date = ur.date;
             this.businessName = businessName;
             this.databaseName = databaseName;
             this.userName = userName;

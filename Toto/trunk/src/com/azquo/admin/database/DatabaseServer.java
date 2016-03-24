@@ -18,7 +18,7 @@ public final class DatabaseServer extends StandardEntity {
     private final String ip;
     private final String sftpUrl;
 
-    public DatabaseServer(int id, String name, String ip, String sftpUrl) {
+    DatabaseServer(int id, String name, String ip, String sftpUrl) {
         this.id = id;
         this.name = name;
         this.ip = ip;

@@ -22,7 +22,6 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,7 +52,7 @@ public class ManageDatabasesController {
 
     private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
 
-    // to play nice with velocity or JSP
+    // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
     public class DisplayDataBase {
         private final boolean loaded;
         private final Database database;
@@ -69,12 +68,6 @@ public class ManageDatabasesController {
 
         public int getId(){
             return database.getId();
-        }
-        public LocalDateTime getStartDate(){
-            return database.getStartDate();
-        }
-        public LocalDateTime getEndDate(){
-            return database.getEndDate();
         }
         public int getBusinessId(){
             return database.getBusinessId();
@@ -217,7 +210,7 @@ public class ManageDatabasesController {
                             new Thread(() -> {
                                 // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
                                 try {
-                                    List<String> languages = new ArrayList<String>(loggedInUser.getLanguages());
+                                    List<String> languages = new ArrayList<>(loggedInUser.getLanguages());
                                     languages.remove(loggedInUser.getUser().getEmail());
                                     session.setAttribute("importResult",
                                             importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false)

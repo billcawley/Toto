@@ -2,7 +2,6 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.SpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,8 +23,6 @@ import javax.servlet.http.HttpServletRequest;
 
 public class SpreadsheetStatusController {
 
-    @Autowired
-    private SpreadsheetService spreadsheetService;
     @Autowired
     private RMIClient rmiClient;
 

@@ -28,14 +28,14 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
     }
 
     // column names except ID which is in the superclass
-    public static final String PERIOD = "period";
-    public static final String RECIPIENTS = "recipients";
-    public static final String NEXTDUE = "next_due";
-    public static final String DATABASEID = "database_id";
-    public static final String REPORTID = "report_id";
-    public static final String TYPE = "type";
-    public static final String PARAMETERS = "parameters";
-    public static final String EMAILSUBJECT = "email_subject";
+    private static final String PERIOD = "period";
+    private static final String RECIPIENTS = "recipients";
+    private static final String NEXTDUE = "next_due";
+    private static final String DATABASEID = "database_id";
+    private static final String REPORTID = "report_id";
+    private static final String TYPE = "type";
+    private static final String PARAMETERS = "parameters";
+    private static final String EMAILSUBJECT = "email_subject";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final ReportSchedule reportSchedule) {
@@ -52,7 +52,7 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
         return toReturn;
     }
 
-    public final class ReportScheduleRowMapper implements RowMapper<ReportSchedule> {
+    private final class ReportScheduleRowMapper implements RowMapper<ReportSchedule> {
         @Override
         public ReportSchedule mapRow(final ResultSet rs, final int row) throws SQLException {
             try {

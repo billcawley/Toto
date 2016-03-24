@@ -7,7 +7,6 @@ import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Range;
@@ -29,16 +28,16 @@ import java.util.*;
  */
 public class ZKAzquoBookUtils {
 
-    public static final String azDataRegion = "az_DataRegion";
-    public static final String azOptions = "az_Options";
+    private static final String azDataRegion = "az_DataRegion";
+    static final String azOptions = "az_Options";
     private static final String CONTENTS = "contents(";
 
-    final SpreadsheetService spreadsheetService;
-    final UserChoiceDAO userChoiceDAO;
-    final UserRegionOptionsDAO userRegionOptionsDAO;
-    final RMIClient rmiClient;
-    final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-    final String reportParameters;
+    private final SpreadsheetService spreadsheetService;
+    private final UserChoiceDAO userChoiceDAO;
+    private final UserRegionOptionsDAO userRegionOptionsDAO;
+    private final RMIClient rmiClient;
+    private final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+    private final String reportParameters;
 
     public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, RMIClient rmiClient) {
         this(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, null, rmiClient);// no report parameters
@@ -400,7 +399,7 @@ public class ZKAzquoBookUtils {
         return toReturn;
     }
 
-    public static String getRegionValue(Sheet sheet, CellRegion region) {
+    static String getRegionValue(Sheet sheet, CellRegion region) {
         try {
             return sheet.getInternalSheet().getCell(region.getRow(), region.getColumn()).getStringValue();
         } catch (Exception e) {
@@ -416,8 +415,6 @@ public class ZKAzquoBookUtils {
         CellRegion totalFormatCell = getCellRegionForSheetAndName(sheet, "az_totalFormat" + region);
         CellRegion totalFormatCell2 = getCellRegionForSheetAndName(sheet,"az_totalFormat2" + region);
         CellRegion totalFormatCell3 = getCellRegionForSheetAndName(sheet,"az_totalFormat3" + region);
-
-
         String errorMessage = null;
         if (columnHeadingsDescription != null && rowHeadingsDescription == null) {
             List<List<String>> colHeadings = regionToStringLists(columnHeadingsDescription, sheet);
@@ -675,7 +672,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public static List<SName> getNamesForSheet(Sheet sheet) {
+    static List<SName> getNamesForSheet(Sheet sheet) {
         List<SName> names = new ArrayList<>();
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
             if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(sheet.getSheetName())) {
@@ -721,7 +718,7 @@ public class ZKAzquoBookUtils {
      This adds one caveat : the options match the choice name at the time the function ran - if the query in the choice cell updates this needs to be run again
        */
 
-    public Map<String, List<String>> resolveChoiceOptions(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
+    Map<String, List<String>> resolveChoiceOptions(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
         Map<String, List<String>> toReturn = new HashMap<>();
         for (SName name : namesForSheet) {
             if (name.getRefersToSheetName().equals(sheet.getSheetName())) { // why am I checking this again? A little confused
@@ -775,7 +772,7 @@ public class ZKAzquoBookUtils {
     }
 
 
-    public void resolveDependentChoiceOptions(List<SName> dependentRanges, Sheet sheet, LoggedInUser loggedInUser) {
+    private void resolveDependentChoiceOptions(List<SName> dependentRanges, Sheet sheet, LoggedInUser loggedInUser) {
         Sheet validationSheet = sheet.getBook().getSheet(VALIDATION_SHEET);
         SSheet vSheet = validationSheet.getInternalSheet();
         for (SName name : dependentRanges) {
@@ -852,7 +849,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public void resolveQueries(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
+    private void resolveQueries(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
         for (SName name : namesForSheet) {
             if (name.getRefersToSheetName().equals(sheet.getSheetName())) { // why am I checking this again? A little confused
                 if (name.getName().endsWith("Query")) {
@@ -881,7 +878,7 @@ public class ZKAzquoBookUtils {
     selected filters against valid options then create the set from them
     todo : even before writing this function I'm aware of messing around with strings in a way that isn't ideal
     */
-    public void createFilterSets(LoggedInUser loggedInUser, Set<String> filters, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
+    private void createFilterSets(LoggedInUser loggedInUser, Set<String> filters, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
         for (String filter : filters) {
             List<String> namesForSet = new ArrayList<>();
             List<String> validOptions = choiceOptionsMap.get(filter + "choice");
@@ -902,7 +899,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public List<SName> addValidation(List<SName> namesForSheet, Sheet sheet, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
+    List<SName> addValidation(List<SName> namesForSheet, Sheet sheet, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
         if (sheet.getBook().getSheet(VALIDATION_SHEET) == null) {
             sheet.getBook().getInternalBook().createSheet(VALIDATION_SHEET);
         }
@@ -989,7 +986,7 @@ public class ZKAzquoBookUtils {
     }
 
     // moved/adapted from ZKComposer and made static
-    public static List<SName> getNamedDataRegionForRowAndColumnSelectedSheet(int row, int col, Sheet sheet) {
+    static List<SName> getNamedDataRegionForRowAndColumnSelectedSheet(int row, int col, Sheet sheet) {
         List<SName> found = new ArrayList<>();
         for (SName name : getNamesForSheet(sheet)) { // seems best to loop through names checking which matches I think
             if (name.getName().toLowerCase().startsWith("az_dataregion")

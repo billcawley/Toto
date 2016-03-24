@@ -23,18 +23,18 @@ public final class InvoiceDetailsDAO extends StandardDAO<InvoiceDetails> {
         return "invoice_details";
     }
 
-    public static final String CUSTOMERREFERENCE = "customer_reference";
-    public static final String SERVICEDESCRIPTION = "service_description";
-    public static final String QUANTITY = "quantity";
-    public static final String UNITCOST = "unit_cost";
-    public static final String PAYMENTTERMS = "payment_terms";
-    public static final String POREFERENCE = "po_reference";
-    public static final String INVOICEDATE = "invoice_date";
-    public static final String INVOICEPERIOD = "invoice_period";
-    public static final String INVOICENO = "invoice_no";
-    public static final String INVOICEADDRESS = "invoice_address";
-    public static final String NOVAT = "no_vat";
-    public static final String SENDTO = "send_to";
+    static final String CUSTOMERREFERENCE = "customer_reference";
+    static final String SERVICEDESCRIPTION = "service_description";
+    static final String QUANTITY = "quantity";
+    static final String UNITCOST = "unit_cost";
+    static final String PAYMENTTERMS = "payment_terms";
+    static final String POREFERENCE = "po_reference";
+    static final String INVOICEDATE = "invoice_date";
+    static final String INVOICEPERIOD = "invoice_period";
+    static final String INVOICENO = "invoice_no";
+    static final String INVOICEADDRESS = "invoice_address";
+    static final String NOVAT = "no_vat";
+    static final String SENDTO = "send_to";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final InvoiceDetails invoiceDetails) {
@@ -55,7 +55,7 @@ public final class InvoiceDetailsDAO extends StandardDAO<InvoiceDetails> {
         return toReturn;
     }
 
-    public final class InvoiceDetailsRowMapper implements RowMapper<InvoiceDetails> {
+    private final class InvoiceDetailsRowMapper implements RowMapper<InvoiceDetails> {
         @Override
         public InvoiceDetails mapRow(final ResultSet rs, final int row) throws SQLException {
             try {

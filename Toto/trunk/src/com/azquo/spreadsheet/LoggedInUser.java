@@ -143,7 +143,7 @@ public class LoggedInUser {
         return this.azquoBook;
     }
 
-    public void setAzquoBook(AzquoBook azquoBook) {
+    void setAzquoBook(AzquoBook azquoBook) {
         this.azquoBook = azquoBook;
     }
 

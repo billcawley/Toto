@@ -6,8 +6,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,22 +28,18 @@ public final class DatabaseDAO extends StandardDAO<Database> {
 
     public static final String DATABASE = "database"; // need to see it externally
 
-    public static final String STARTDATE = "start_date";
-    public static final String ENDDATE = "end_date";
     public static final String BUSINESSID = "business_id";
-    public static final String NAME = "name";
-    public static final String MYSQLNAME = "mysql_name"; // needs renaming! todo
-    public static final String DATABASETYPE = "database_type";
-    public static final String NAMECOUNT = "name_count";
-    public static final String VALUECOUNT = "value_count";
-    public static final String DATABASESERVERID = "database_server_id";
+    private static final String NAME = "name";
+    private static final String MYSQLNAME = "mysql_name"; // needs renaming! todo
+    private static final String DATABASETYPE = "database_type";
+    private static final String NAMECOUNT = "name_count";
+    private static final String VALUECOUNT = "value_count";
+    private static final String DATABASESERVERID = "database_server_id";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(Database database) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, database.getId());
-        toReturn.put(STARTDATE, Date.from(database.getStartDate().atZone(ZoneId.systemDefault()).toInstant()));
-        toReturn.put(ENDDATE, Date.from(database.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(BUSINESSID, database.getBusinessId());
         toReturn.put(NAME, database.getName());
         toReturn.put(MYSQLNAME, database.getPersistenceName());
@@ -56,14 +50,12 @@ public final class DatabaseDAO extends StandardDAO<Database> {
         return toReturn;
     }
 
-    public final class DatabaseRowMapper implements RowMapper<Database> {
+    private final class DatabaseRowMapper implements RowMapper<Database> {
 
         @Override
         public Database mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 return new Database(rs.getInt(ID)
-                        , getLocalDateTimeFromDate(rs.getDate(STARTDATE))
-                        , getLocalDateTimeFromDate(rs.getDate(ENDDATE))
                         , rs.getInt(BUSINESSID)
                         , rs.getString(NAME)
                         , rs.getString(MYSQLNAME)

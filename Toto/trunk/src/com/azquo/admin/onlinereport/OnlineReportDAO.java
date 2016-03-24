@@ -23,20 +23,20 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     }
 
     // column names except ID which is in the superclass
-    public static final String  DATECREATED = "date_created";
+    private static final String  DATECREATED = "date_created";
 
-    public static final String BUSINESSID = "business_id";
-    public static final String DATABASEID = "database_id";
+    private static final String BUSINESSID = "business_id";
+    private static final String DATABASEID = "database_id";
     // edd: hmm, what's going on with database?
     //public static final String DATABASE = "database";
-    public static final String REPORTNAME = "report_name";
-    public static final String DATABASETYPE = "database_type";
-    public static final String REPORTCATEGORY = "report_category";
-    public static final String USERSTATUS = "user_status";
-    public static final String FILENAME = "filename";
-    public static final String EXPLANATION = "explanation";
-    public static final String RENDERER = "renderer";
-    public static final String ACTIVE = "active";
+    private static final String REPORTNAME = "report_name";
+    private static final String DATABASETYPE = "database_type";
+    private static final String REPORTCATEGORY = "report_category";
+    private static final String USERSTATUS = "user_status";
+    private static final String FILENAME = "filename";
+    private static final String EXPLANATION = "explanation";
+    private static final String RENDERER = "renderer";
+    private static final String ACTIVE = "active";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
@@ -56,7 +56,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         return toReturn;
     }
 
-    public final class OnlineReportRowMapper implements RowMapper<OnlineReport> {
+    private final class OnlineReportRowMapper implements RowMapper<OnlineReport> {
         @Override
         public OnlineReport mapRow(final ResultSet rs, final int row) throws SQLException {
             try {

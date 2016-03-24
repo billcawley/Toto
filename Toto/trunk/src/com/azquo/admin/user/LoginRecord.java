@@ -13,9 +13,9 @@ import java.util.Date;
 public final class LoginRecord extends StandardEntity {
     // name user time db, email user when logged in
 
-    final int userId;
-    final int databaseId;
-    final Date time;
+    private final int userId;
+    private final int databaseId;
+    private final Date time;
 
     public LoginRecord(int id, int userId, int databaseId, Date time) {
         this.id = id;

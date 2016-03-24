@@ -25,9 +25,9 @@ public class DatabaseServerDAO extends StandardDAO<DatabaseServer> {
 
     // column names except ID which is in the superclass
 
-    public static final String NAME = "name";
-    public static final String IP = "ip";
-    public static final String SFTPURL = "sftp_url";
+    private static final String NAME = "name";
+    private static final String IP = "ip";
+    private static final String SFTPURL = "sftp_url";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(DatabaseServer databaseServer) {
@@ -39,7 +39,7 @@ public class DatabaseServerDAO extends StandardDAO<DatabaseServer> {
         return toReturn;
     }
 
-    public static final class DatabaseServerRowMapper implements RowMapper<DatabaseServer> {
+    private static final class DatabaseServerRowMapper implements RowMapper<DatabaseServer> {
         @Override
         public DatabaseServer mapRow(final ResultSet rs, final int row) throws SQLException {
             try {

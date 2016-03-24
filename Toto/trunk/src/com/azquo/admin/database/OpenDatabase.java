@@ -13,13 +13,13 @@ import java.util.Date;
  * Recording which databases are being accessed, not actually being used since the report/DB server split, need to get rid of it or start using it again. Todo
  *
  */
-public final class OpenDatabase extends StandardEntity {
+final class OpenDatabase extends StandardEntity {
     // name user time db, email user when logged in
 
-    final int id;
-    final int databaseId;
-    final Date open;
-    final Date close;
+    private final int id;
+    private final int databaseId;
+    private final Date open;
+    private final Date close;
 
     public OpenDatabase(int id, int databaseId, Date open, Date close) {
         this.id = id;
