@@ -74,8 +74,6 @@ public final class ValueService {
             try{
                 String replaced = valueString.replace(",","");
                 Double.parseDouble(replaced);// intellij warns annoyingly
-
-
                 // so without "," it IS a valid number (no exception), take commas out of valueString
                 valueString = replaced;
             }catch (Exception ignored){
@@ -133,8 +131,17 @@ public final class ValueService {
     // called when altering values in a spreadsheet
     private static AtomicInteger overWriteExistingValueCount = new AtomicInteger(0);
 
-    public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, final String newValueString) throws Exception {
+    public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, String newValueString) throws Exception {
         overWriteExistingValueCount.incrementAndGet();
+        if (newValueString.contains(",")){
+            try{
+                String replaced = newValueString.replace(",","");
+                Double.parseDouble(replaced);// intellij warns annoyingly
+                // so without "," it IS a valid number (no exception), take commas out of valueString
+                newValueString = replaced;
+            }catch (Exception ignored){
+            }
+        }
         if (newValueString.equals(existingValue.getText())) {
             return true;
         }
