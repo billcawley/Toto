@@ -245,6 +245,19 @@ public final class ValueService {
                 }
             }
             if (add) {
+                //new rule added by WFC March 2015:  if one element found is identical to the search set, use that one only.
+                boolean identical = true;
+                for (Name test:names){
+                    if (!value.getNames().contains(test)){
+                        identical = false;
+                        break;
+                    }
+                }
+                if (identical){
+                    toReturn.clear();
+                    toReturn.add(value);
+                    break;
+                }
                 toReturn.add(value);
             }
         }
