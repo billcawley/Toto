@@ -111,8 +111,6 @@ Created by IntelliJ IDEA.
 			<thead>
 				<tr>
 					<!--<td>${database.id}</td> -->
-					<td>Start Date</td>
-					<td>End Date</td>
 					<!--<td>${database.businessId}</td>-->
 					<td>Name</td>
 					<td>Persistence Name</td>
@@ -130,8 +128,6 @@ Created by IntelliJ IDEA.
 				<c:forEach items="${databases}" var="database">
 				<tr>
 					<!--<td>${database.id}</td>-->
-					<td>${database.startDate}</td>
-					<td>${database.endDate}</td>
 					<!--<td>${database.businessId}</td> -->
 					<td>${database.name}</td>
 					<td>${database.persistenceName}</td>

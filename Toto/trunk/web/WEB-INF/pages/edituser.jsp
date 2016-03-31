@@ -31,12 +31,8 @@
 						</div>
 					</td>
 					<td width="33%">
-						<h3>Start / End Date</h3>
+						<h3>End Date</h3>
 						<div class="well">
-							<div>
-								<label for="startDate">Start Date</label>
-								<input name="startDate" id="startDate" value="${startDate}">
-							</div>
 							<div>
 								<label for="endDate">End Date</label>
 								<input name="endDate" id="endDate" value="${endDate}">

@@ -180,14 +180,11 @@ public class OnlineController {
                         String fileName = uploadfile.getOriginalFilename();
                         if (imageName.length() > 0){
                             result = importService.uploadImage(loggedInUser,uploadfile, imageName);
-                        }else {
+                        } else {
                             if (fileName.length()> 0) {
                                 File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
                                 uploadfile.transferTo(moved);
-                                boolean isData = true;
-                                //if (dataChoice.equals("report")) isData = false;
-                                //importing here cannot set 'useType' to a value
-                                result = importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages(), isData);
+                                result = importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages(), true); // always a data upload from here
                             }else{
                                 result = "no file to import";
                             }

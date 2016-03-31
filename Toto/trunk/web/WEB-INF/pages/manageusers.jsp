@@ -12,7 +12,6 @@
 				<td>Id</td>
 				<td>Name</td>
 				<td>User Email</td>
-				<td>Start Date</td>
 				<td>End Date</td>
 				<td>Business Id</td>
 				
@@ -29,7 +28,6 @@
 				<td>${user.name}</td>
 				<td>${user.email}</td>
 				
-				<td>${user.startDate}</td>
 				<td>${user.endDate}</td>
 				<td>${user.businessId}</td>
 				
