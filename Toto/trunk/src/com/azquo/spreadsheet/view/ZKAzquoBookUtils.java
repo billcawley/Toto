@@ -31,6 +31,13 @@ public class ZKAzquoBookUtils {
     private static final String azDataRegion = "az_DataRegion";
     static final String azOptions = "az_Options";
     private static final String CONTENTS = "contents(";
+    /*
+    CONTENTS is used to handle dependent ranges within the data region.   Thus one column in the data region may ask for a category, and the next a subcategory, which should be determined by the category
+    For single cell 'chosen' ranges there is no problem - the choice for the subcategory may be defined as an Excel formula.
+    For multicell ranges, use 'CONTENTS(rangechosen) to specify the subcategory....
+
+
+     */
 
     private final SpreadsheetService spreadsheetService;
     private final UserChoiceDAO userChoiceDAO;
@@ -109,7 +116,6 @@ public class ZKAzquoBookUtils {
         String context = "";
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
-
             // these two lines moved from below the unmerge command, shouldn't be a big problem - I need the options to check that we're setting valid options directly below
             // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
             List<SName> namesForSheet = getNamesForSheet(sheet);
@@ -222,7 +228,7 @@ public class ZKAzquoBookUtils {
                         userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                     }
 
-                    fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
+                    fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, userChoices);
                 }
             }
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
@@ -408,7 +414,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private void fillRegion(Sheet sheet, int reportId, String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
+    private void fillRegion(Sheet sheet, int reportId, String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, Map<String,String> userChoices) {
         CellRegion columnHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_ColumnHeadings" + region);
         CellRegion rowHeadingsDescription = getCellRegionForSheetAndName(sheet, "az_RowHeadings" + region);
         CellRegion contextDescription = getCellRegionForSheetAndName(sheet, "az_Context" + region);
@@ -434,13 +440,29 @@ public class ZKAzquoBookUtils {
 
         if (columnHeadingsDescription != null) {
             try {
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, regionToStringLists(rowHeadingsDescription, sheet), regionToStringLists(columnHeadingsDescription, sheet),
-                        regionToStringLists(contextDescription, sheet), userRegionOptions);
+
+                List<List<String>> contextList = regionToStringLists(contextDescription, sheet);
+                List<List<String>> rowHeadingList = regionToStringLists(rowHeadingsDescription,sheet);
+                //check if this is a pivot - if so, then add in any additional filter needed
+                CellRegion pivotFilters = getCellRegionForSheetAndName(sheet,"az_PivotFilters");
+                if (pivotFilters!=null){
+                    String[] filters = sheet.getInternalSheet().getCell(pivotFilters.getRow(), pivotFilters.getColumn()).getStringValue().split(",");
+                    for (String filter:filters){
+                        String chosen = userChoices.get(filter.toLowerCase());
+                        if (chosen!=null && chosen.length() > 0 && !chosen.equals("[all]")){
+                            List<String>additionalContext = new ArrayList<>();
+                            additionalContext.add(chosen);
+                            contextList.add(additionalContext);
+                        }
+                    }
+
+                }
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, regionToStringLists(columnHeadingsDescription, sheet),
+                        contextList, userRegionOptions);
                 loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
                 // might be factored into fill range in a bit
-                CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayColumnHeadings" + region);
-                CellRegion displayRowHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayRowHeadings" + region);
+                 CellRegion displayRowHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayRowHeadings" + region);
                 CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
 
                 int rowsToAdd;
@@ -485,6 +507,12 @@ public class ZKAzquoBookUtils {
                     // ok there should be the right space for the headings
                     if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
                         boolean isHierarchy = isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
+                        colsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().get(0).size()-displayRowHeadings.getColumnCount();
+                        if (colsToAdd > 0) {
+                            int insertCol = displayRowHeadings.getColumn() + displayRowHeadings.getColumnCount() -1;
+                           Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); //
+                           CellOperationUtil.insert(insertRange.toColumnRange(), Range.InsertShift.RIGHT, Range.InsertCopyOrigin.FORMAT_LEFT_ABOVE);
+                        }
                         row = displayRowHeadings.getRow();
                         Map<Integer,String> lastHeadings = new HashMap<>();
                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
@@ -526,6 +554,7 @@ public class ZKAzquoBookUtils {
                         }
                     }
                     //← → ↑ ↓ ↔ ↕ ah I can just paste it here, thanks IntelliJ :)
+                    CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayColumnHeadings" + region);
                     if (displayColumnHeadings != null) {
                         row = displayColumnHeadings.getRow();
                         for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
@@ -568,6 +597,7 @@ public class ZKAzquoBookUtils {
 /*                if (sortable != null && sortable.equalsIgnoreCase("all")) { // criteria from azquobook to make row heading sortable
                 }*/
                     }
+                    displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
 
                     row = displayDataRegion.getRow();
                     List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
@@ -721,44 +751,64 @@ public class ZKAzquoBookUtils {
     Map<String, List<String>> resolveChoiceOptions(List<SName> namesForSheet, Sheet sheet, LoggedInUser loggedInUser) {
         Map<String, List<String>> toReturn = new HashMap<>();
         for (SName name : namesForSheet) {
-            if (name.getRefersToSheetName().equals(sheet.getSheetName())) { // why am I checking this again? A little confused
-                if (name.getName().endsWith("Choice")) {
-                    CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
-                    if (choice != null) {
-                        // ok I assume choice is a single cell
-                        List<String> choiceOptions = new ArrayList<>(); // was null, see no help in that
-                        // new lines from edd to try to resolve choice stuff
-                        SCell choiceCell = sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn());
-                        // as will happen to the whole sheet later
-                        if (choiceCell.getType() == SCell.CellType.FORMULA) {
-                            //System.out.println("doing the cell thing on " + cell);
-                            choiceCell.getFormulaResultType();
-                            choiceCell.clearFormulaResultCache();
+            //check to create pivot filter choices....
+            if (name.getName().equalsIgnoreCase("az_PivotFilters")){
+                CellRegion pivotFilters = getCellRegionForSheetAndName(sheet, name.getName());
+
+                String[] filters = sheet.getInternalSheet().getCell(pivotFilters.getRow(),pivotFilters.getColumn()).getStringValue().split(",");
+                for (String filter : filters) {
+                    List<String> choiceOptions = new ArrayList<>();
+                    try {
+                        choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "` children", loggedInUser.getLanguages());
+                        choiceOptions.add(0,"[all]");
+                    } catch (Exception e) {
+
+                        choiceOptions.add(e.getMessage());
+                    }
+
+                    toReturn.put(filter.toLowerCase(), choiceOptions);
+                }
+             }
+
+
+            if (name.getName().endsWith("Choice")) {
+                CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
+                if (choice != null) {
+                    // ok I assume choice is a single cell
+                    List<String> choiceOptions = new ArrayList<>(); // was null, see no help in that
+                    // new lines from edd to try to resolve choice stuff
+                    SCell choiceCell = sheet.getInternalSheet().getCell(choice.getRow(), choice.getColumn());
+                    // as will happen to the whole sheet later
+                    if (choiceCell.getType() == SCell.CellType.FORMULA) {
+                        //System.out.println("doing the cell thing on " + cell);
+                        choiceCell.getFormulaResultType();
+                        choiceCell.clearFormulaResultCache();
+                    }
+                    //System.out.println("Choice cell : " + choiceCell);
+                    String query = choiceCell.getStringValue();
+                    if (!query.toLowerCase().contains("contents(")) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
+                        if (query.toLowerCase().contains("default")) {
+                            query = query.substring(0, query.toLowerCase().indexOf("default"));
                         }
-                        //System.out.println("Choice cell : " + choiceCell);
-                        String query = choiceCell.getStringValue();
-                        if (!query.toLowerCase().contains("contents(")) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
-                            if (query.toLowerCase().contains("default")) {
-                                query = query.substring(0, query.toLowerCase().indexOf("default"));
+                        try {
+                            if (query.startsWith("\"") || query.startsWith("“")) {
+                                //crude - if there is a comma in any option this will fail
+                                query = query.replace("\"", "").replace("“", "").replace("”", "");
+                                String[] choices = query.split(",");
+                                Collections.addAll(choiceOptions, choices);
+                            } else {
+                                choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
                             }
-                            try {
-                                if (query.startsWith("\"") || query.startsWith("“")) {
-                                    //crude - if there is a comma in any option this will fail
-                                    query = query.replace("\"", "").replace("“", "").replace("”", "");
-                                    String[] choices = query.split(",");
-                                    Collections.addAll(choiceOptions, choices);
-                                } else {
-                                    choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                            .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
-                                }
-                            } catch (Exception e) {
-                                choiceOptions.add(e.getMessage());
-                            }
-                            toReturn.put(name.getName().toLowerCase(), choiceOptions);
+                        } catch (Exception e) {
+                            choiceOptions.add(e.getMessage());
                         }
+                        toReturn.put(name.getName().toLowerCase(), choiceOptions);
                     }
                 }
             }
+
         }
         return toReturn;
     }
@@ -908,6 +958,53 @@ public class ZKAzquoBookUtils {
         int numberOfValidationsAdded = 0;
         List<SName> dependentRanges = new ArrayList<>();
         for (SName name : namesForSheet) {
+            if (name.getName().toLowerCase().equalsIgnoreCase("az_pivotfilters")) {
+                String[] filters = sheet.getInternalSheet().getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn()).getStringValue().split(",");
+                CellRegion pivotHeadings = getCellRegionForSheetAndName(sheet,"az_PivotHeadings");
+                if (pivotHeadings!=null){
+                    int headingRow = pivotHeadings.getRow();
+                    int headingCol = pivotHeadings.getColumn();
+                    int headingRows = pivotHeadings.getRowCount();
+                    int filterCount = 0;
+                    //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
+                    for (String filter:filters) {
+                        int rowOffset = filterCount % headingRows;
+                        int colOffset = filterCount / headingRows;
+                        int chosenRow = headingRow + rowOffset;
+                        int chosenCol = headingCol + 3 * colOffset;
+                        if (filterCount > 0) {
+                            Range copySource = Ranges.range(sheet, headingRow, headingCol, headingRow, headingCol + 1);
+                            Range copyTarget = Ranges.range(sheet, chosenRow, chosenCol, chosenRow, chosenCol + 1);
+                            CellOperationUtil.paste(copySource, copyTarget);
+                             //Ranges.range(sheet, chosenRow, chosenCol + 1).setNameName(filter + "Chosen");
+
+                        }
+                        sheet.getInternalSheet().getCell(chosenRow, chosenCol).setStringValue(filter);
+                        String selected = userChoices.get(filter.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
+                        if (selected==null){
+                            selected="[all]";
+                        }
+                        sheet.getInternalSheet().getCell(chosenRow, chosenCol + 1).setStringValue(selected);
+                        validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(filter);
+                        int row = 0;
+                        List<String> choiceOptions = choiceOptionsMap.get(filter.toLowerCase());
+                        for (String choiceOption : choiceOptions) {
+                            row++;// like starting at 1
+                            validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(choiceOption);
+                        }
+                        if (row > 0) { // if choice options is empty this will not work
+                            Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
+                            Ranges.range(sheet, chosenRow, chosenCol+1, chosenRow, chosenCol+1).setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
+                                    //true, "title", "msg",
+                                    true, "", "",
+                                    false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+
+                        }
+                        numberOfValidationsAdded++;
+                        filterCount++;
+                    }
+                }
+            }
             if (name.getName().toLowerCase().endsWith("choice")) {
                 String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
                 CellRegion choice = getCellRegionForSheetAndName(sheet, name.getName());
