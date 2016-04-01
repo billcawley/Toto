@@ -19,7 +19,7 @@ import java.util.Set;
  *
  */
 public class DataRegionHeading {
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT}
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE}
 
     private final Name name;
     private final String attribute;
