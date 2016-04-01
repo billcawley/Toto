@@ -79,6 +79,8 @@ public class DSImportService {
     private static final String ONLY = "only";
     private static final String EXCLUSIVE = "exclusive";
     private static final String EXISTING = "existing"; // only works in in context of child of
+    private static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table
+    private static final String LINEDATA   = "linedata";
 
     // these two are not for clauses, it's to do with reading the file in the first place, do we read the headers or not, how many lines to skip before data
     private static final String HEADINGSSTRING = "HEADINGS";
@@ -786,6 +788,7 @@ public class DSImportService {
         Name importInterpreter = nameService.findByName(azquoMemoryDBConnection, "dataimport " + fileType, attributeNames);
         String lastHeading = "";
         int colWithContext = 0;
+        boolean pivot = false;
         for (String header : headers) {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 MutableImportHeading heading = new MutableImportHeading();
@@ -799,6 +802,22 @@ public class DSImportService {
                 }
 
                 head = head.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
+                if (head.contains(LINEHEADING) && head.indexOf(";") > 0){
+                    pivot = true;
+                    String headname = head.substring(0,head.indexOf(";"));
+                    Name headset = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All headings", null, false);
+
+                    Name thisheading = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,headname.replace("_"," "),headset,true);//note - headings in different import files will be considered the same if they have the same name
+                    head = head.replace(LINEHEADING,";parent of LINENO;child of " + headname.replace("_"," ") + ";language " + headname);
+                }
+                if (head.contains(LINEDATA) && head.indexOf(";") > 0){
+                    pivot = true;
+                    String headname = head.substring(0,head.indexOf(";"));
+                    Name alldataset = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All data", null, false);
+                    Name thisDataSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,fileType + " data", alldataset, false);
+                    Name thisData = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,headname.replace("_"," "),thisDataSet,false);
+                    head = head.replace(LINEDATA,";peers {LINENO}").replace("_"," ");
+                }
                 int dividerPos = head.lastIndexOf(headingDivider);
 
                 if (dividerPos == -1 && col > 0) { // no context headings defined for this one, copy the previous (may well be empty)
@@ -834,6 +853,13 @@ public class DSImportService {
                 headings.add(new MutableImportHeading());
             }
             col++;
+        }
+        if (pivot){
+            Name allLines = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"All lines", null, false);
+            Name thisFileLines = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,fileType + " lines", allLines,false);
+            MutableImportHeading pivotHeading = new MutableImportHeading();
+            interpretHeading(azquoMemoryDBConnection,"LINENO;composition LINENO;language " + fileType +";child of " + fileType + " lines",pivotHeading,attributeNames);
+            headings.add(pivotHeading);
         }
     }
 
