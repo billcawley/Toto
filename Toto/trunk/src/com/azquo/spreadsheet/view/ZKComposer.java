@@ -202,6 +202,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
                 reload = true;
             } else if (name.getName().toLowerCase().endsWith("clear")) { // more string literals . . .:P
+                //this is to handle clearing choices from multi-choice ranges
                 final String choice = name.getName().substring(0, name.getName().length() - "clear".length());
                 final CellRegion chosenRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(sheet, choice + "Chosen");
                 if (chosenRegion != null) {
@@ -317,6 +318,32 @@ public class ZKComposer extends SelectorComposer<Component> {
                     }
                 }
             }
+        }
+        //check if one of the pivot filters has changed
+        Sheet sheet = event.getSheet();
+        CellRegion pivotFilters = zkAzquoBookUtils.getCellRegionForSheetAndName(sheet,"az_PivotFilters");
+        if (pivotFilters != null){
+            String[] filters = sheet.getInternalSheet().getCell(pivotFilters.getRow(), pivotFilters.getColumn()).getStringValue().split(",");
+            CellRegion pivotHeadings = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(),"az_PivotHeadings");
+            if (pivotHeadings!=null){
+                int headingRow = pivotHeadings.getRow();
+                int headingCol = pivotHeadings.getColumn();
+                int headingRows = pivotHeadings.getRowCount();
+                int filterCount = 0;
+                //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
+                for (String filter:filters) {
+                    int rowOffset = filterCount % headingRows;
+                    int colOffset = filterCount / headingRows;
+                    int chosenRow = headingRow +  rowOffset;
+                    int chosenCol = headingCol + 3 * colOffset + 1;
+                    if (chosenRow==event.getRow() && chosenCol==event.getColumn()) {
+                        spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), filter.toLowerCase(), chosen);
+                        reload = true;
+                    }
+                    filterCount++;
+                }
+            }
+
         }
         if (reload) {
             try {
