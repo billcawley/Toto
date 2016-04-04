@@ -285,10 +285,10 @@ public class ZKComposer extends SelectorComposer<Component> {
                 String region = name.getName().substring("az_DisplayColumnHeadings".length());
                 UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
-                    CellRegion optionsRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), ZKAzquoBookUtils.azOptions + region);
+                    SName optionsRegion = event.getSheet().getBook().getInternalBook().getNameByName(ZKAzquoBookUtils.azOptions + region);
                     String source = null;
                     if (optionsRegion != null) {
-                        source = event.getSheet().getInternalSheet().getCell(optionsRegion.getRow(), optionsRegion.getColumn()).getStringValue();
+                        source = zkAzquoBookUtils.getSnameCell(optionsRegion).getStringValue();
                     }
                     userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
                 }
@@ -321,9 +321,9 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
         //check if one of the pivot filters has changed
         Sheet sheet = event.getSheet();
-        CellRegion pivotFilters = zkAzquoBookUtils.getCellRegionForSheetAndName(sheet,"az_PivotFilters");
+        SName pivotFilters = event.getSheet().getBook().getInternalBook().getNameByName("az_PivotFilters");
         if (pivotFilters != null){
-            String[] filters = sheet.getInternalSheet().getCell(pivotFilters.getRow(), pivotFilters.getColumn()).getStringValue().split(",");
+            String[] filters = zkAzquoBookUtils.getSnameCell(pivotFilters).getStringValue().split(",");
             CellRegion pivotHeadings = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(),"az_PivotHeadings");
             if (pivotHeadings!=null){
                 int headingRow = pivotHeadings.getRow();
@@ -436,8 +436,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
         ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
         Book book = sheetSelectEvent.getSheet().getBook();
-        final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptions(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
-        zkAzquoBookUtils.addValidation(ZKAzquoBookUtils.getNamesForSheet(sheetSelectEvent.getSheet()), sheetSelectEvent.getSheet(), choiceOptions, null);
+        final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptions(sheetSelectEvent.getSheet().getBook(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
+        zkAzquoBookUtils.addValidation(sheetSelectEvent.getSheet().getBook(), choiceOptions, null);
     }
 
     // to deal with provenance
@@ -484,7 +484,8 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
         } else {
             for (SName name : names) {
-                if (ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_rowheadings" + name.getName().substring(13)) != null) {
+                SName rowHeadingsName = myzss.getSelectedSheet().getBook().getInternalBook().getNameByName("az_rowheadings" + name.getName().substring(13));
+                if (rowHeadingsName != null) {
                     String region = name.getName().substring("az_DataRegion".length());
                     Book book = myzss.getBook();
                     int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
@@ -542,9 +543,9 @@ public class ZKComposer extends SelectorComposer<Component> {
 //                            auditItem.addEventListener("onClick",
 //                                    event -> System.out.println("audit menu item clicked"));
                             // only check for drilldown on proper data, that which could have provenance
-                            CellRegion drillDown = ZKAzquoBookUtils.getCellRegionForSheetAndName(myzss.getSelectedSheet(), "az_DrillDown" + region);
+                            SName drillDown = myzss.getBook().getInternalBook().getNameByName("az_DrillDown" + region);
                             if (drillDown != null) {
-                                String drillDownString = ZKAzquoBookUtils.getRegionValue(myzss.getSelectedSheet(), drillDown);
+                                String drillDownString = ZKAzquoBookUtils.getSnameCell(drillDown).getStringValue();
                                 if (drillDownString.length() > 0) {
                                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
                                     final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(cellRow - name.getRefersToCellRegion().getRow());
