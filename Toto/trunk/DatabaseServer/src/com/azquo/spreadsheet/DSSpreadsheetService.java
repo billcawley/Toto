@@ -261,6 +261,58 @@ public class DSSpreadsheetService {
         return toReturn;
     }
 
+    List<List<DataRegionHeading>> sortCombos(Collection<List<Name>> foundCombinations, int position, DataRegionHeading topSort,List<Map<Integer,Integer>> sortLists){
+         Map<Integer,Integer> sortList = sortLists.get(position);
+         Map<Integer,Collection<List<Name>>> sortMap = new TreeMap<>();
+          for (List<Name> foundCombination:foundCombinations){
+            int pos = sortList.get(foundCombination.get(position).getId());
+            Collection<List<Name>> sortItem = sortMap.get(pos);
+            if (sortItem == null){
+                sortItem = new HashSet<List<Name>>();
+                sortMap.put(pos, sortItem);
+            }
+            sortItem.add(foundCombination);
+        }
+        position++;
+        List<List<DataRegionHeading>> toReturn = new ArrayList<>();
+        for (int key : sortMap.keySet()){
+            if (position == sortLists.size()){
+                for (List<Name> entry : sortMap.get(key)){
+                     List<DataRegionHeading> drhEntry = new ArrayList<>();
+                    for (Name name:entry){
+                        drhEntry.add(new DataRegionHeading(name,true,null,null, null));
+                    }
+                    toReturn.add(drhEntry);
+
+
+                }
+                //extract list and convert to dataregion heading
+            }else{
+                toReturn.addAll(sortCombos(sortMap.get(key),position,topSort,sortLists));
+
+            }
+
+        }
+        if (toReturn.size() > 0){
+            //create a total line
+            List<DataRegionHeading> drhEntry = new ArrayList<>();
+            List<DataRegionHeading> lastEntry = toReturn.get(toReturn.size()-1);
+            if (position==1){
+                drhEntry.add(topSort);
+            }else {
+
+                for (int i = 0; i < position - 1; i++) {
+                    drhEntry.add(lastEntry.get(i));
+                }
+            }
+            toReturn.add(drhEntry);
+         }
+
+
+        return toReturn;
+
+    }
+
 
     private List<List<DataRegionHeading>> findPermutedItems2(Collection<Name> sharedNames,   final List<DataRegionHeading> listToPermute ){
 
@@ -279,25 +331,18 @@ public class DSSpreadsheetService {
             foundCombinations.add(foundCombination);
 
         }
-        Map<String, List<Name>> sortList = new TreeMap();
-        for (List<Name> foundCombination:foundCombinations){
-            String sortString = "";
-            for (Name name:foundCombination){
-                sortString += name.getDefaultDisplayName();
+        //now need to sort the list into the order in the individual permute sets. ... by stagess
+        // create some sort lists;
+        List<Map<Integer,Integer>> sortLists = new ArrayList<>();
+        for (Name permuteName:permuteNames){
+            Map<Integer,Integer>sortList = new HashedMap();
+            int sortPos = 0;
+            for (Name name:permuteName.getChildren()){
+                sortList.put(name.getId(),sortPos++);
             }
-            sortList.put(sortString, foundCombination);
+            sortLists.add(sortList);
         }
-        List<List<DataRegionHeading>> toReturn = new ArrayList<>();
-        for (String key:sortList.keySet()){
-            List<Name> entry = sortList.get(key);
-            List<DataRegionHeading> drhEntry = new ArrayList<>();
-            for (Name name:entry){
-                drhEntry.add(new DataRegionHeading(name,true,null,null, null));
-            }
-            toReturn.add(drhEntry);
-
-        }
-        return toReturn;
+        return sortCombos(foundCombinations,0,listToPermute.get(0),sortLists);
 
     }
 
@@ -453,10 +498,11 @@ public class DSSpreadsheetService {
                     headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
                 } else {
                     headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
+                    headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
                 }
                 headingDefinitionRowIndex++;
             }
-            if (headingDefinitionRow.get(0).get(0).getFunction()== DataRegionHeading.FUNCTION.PERMUTE) {
+            if (headingDefinitionRow.size() > 0 && headingDefinitionRow.get(0).size() > 0 && headingDefinitionRow.get(0).get(0).getFunction()== DataRegionHeading.FUNCTION.PERMUTE) {
                 List<List<DataRegionHeading>> permuted = findPermutedItems2(sharedNames, headingDefinitionRow.get(0));//assumes only one row of headings
                 permutedLists.add(permuted);
             }else{
