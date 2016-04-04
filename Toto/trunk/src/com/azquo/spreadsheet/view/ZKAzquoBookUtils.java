@@ -548,7 +548,7 @@ public class ZKAzquoBookUtils {
                                 if (rowHeading.size() < rowHeadingCols) {
                                     if (lineNo == cellsAndHeadingsForDisplay.getRowHeadings().size()) totalCount ++;
                                     //this is a total line
-                                    Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1);
+                                    Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayDataRegion.getColumn() + displayDataRegion.getColumnCount());
                                     SCell lineFormat = getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + totalCount + region));
 
                                     if (lineFormat != null) {
