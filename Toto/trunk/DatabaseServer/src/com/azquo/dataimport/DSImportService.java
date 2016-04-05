@@ -277,6 +277,10 @@ public class DSImportService {
         System.out.println("reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         String provFile = findOrigName(filePath);
+        if (!isSpreadsheet) {
+            //fileType is the truncated file name
+            provFile = fileType + filePath.substring(filePath.indexOf("."));
+        }
         azquoMemoryDBConnection.setProvenance(user, "imported", provFile, "");
         return readPreparedFile(azquoMemoryDBConnection, filePath, fileType, attributeNames, persistAfter, isSpreadsheet);
     }
@@ -310,7 +314,7 @@ public class DSImportService {
                 firstWord = firstWord.substring(0, firstWord.indexOf(" "));
             }
         }
-        if (clause.length() == firstWord.length() && !firstWord.equals(LOCAL) && !firstWord.equals(NONZERO) && !firstWord.equals(EXCLUSIVE) && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
+        if (clause.length() == firstWord.length() &&!firstWord.equals(COMPOSITION) && !firstWord.equals(LOCAL) && !firstWord.equals(NONZERO) && !firstWord.equals(EXCLUSIVE) && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading); // other clauses cannot be blank!
         }
         String result = clause.substring(firstWord.length()).trim();
@@ -346,7 +350,7 @@ public class DSImportService {
                 heading.only = result;
                 break;
             case COMPOSITION:// combine more than one column
-                heading.compositionPattern = result;
+                  heading.compositionPattern = result;
                 break;
             case DEFAULT: // if there's no value on the line a default
                 if (result.length() > 0) {
@@ -547,17 +551,9 @@ public class DSImportService {
 
     private String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
         // Preparatory stuff
-        if (!isSpreadsheet && fileType.length() == 0) {
-            //need a file type to know which header to use
-            int dotPos = filePath.lastIndexOf(".");
-            int strokePos = filePath.lastIndexOf("/");
-            if (strokePos < 0) strokePos = filePath.lastIndexOf("\\");// for testing on a Windows machine
-            if (strokePos > 0 && dotPos > strokePos) {
-                fileType = filePath.substring(strokePos + 1, dotPos);
-                if (fileType.contains(" ")) {
-                    fileType = fileType.substring(0, fileType.indexOf(" "));
-                }
-            }
+        String fileName = "";
+        if (fileType.length()>10){
+            fileName = fileType;
         }
         // Local cache of names just to speed things up, the name name could be referenced millions of times in one file
         final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
@@ -693,7 +689,7 @@ public class DSImportService {
         */
         List<MutableImportHeading> mutableImportHeadings = new ArrayList<>();
         // read the clauses, assign the heading.name if you can find it, add on the context headings
-        readHeaders(azquoMemoryDBConnection, headers, mutableImportHeadings, fileType, attributeNames);
+        readHeaders(azquoMemoryDBConnection, headers, mutableImportHeadings, fileType, attributeNames, fileName);
         // further information put into the ImportHeadings based off the initial info
         fillInHeaderInformation(azquoMemoryDBConnection, mutableImportHeadings);
         // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC) - we do NOT want this info changed by actual data loading
@@ -781,7 +777,7 @@ public class DSImportService {
 
     // run through the headers. Mostly this means running through clauses,
 
-    private void readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<MutableImportHeading> headings, String fileType, List<String> attributeNames) throws Exception {
+    private void readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<MutableImportHeading> headings, String fileType, List<String> attributeNames, String fileName) throws Exception {
         int col = 0;
         //  if the file is of type (e.g.) 'sales' and there is a name 'dataimport sales', this is used as an interpreter.
         //  It need not interpret every column heading, but any attribute of the same name as a column heading will be used.
@@ -845,6 +841,27 @@ public class DSImportService {
                         lastHeading = head;
                     }
                 }
+                int fileNamePos = head.toLowerCase().indexOf("right(filename,");
+                if (fileNamePos > 0){
+                    //extract this part of the file name.  This is currently limited to this format
+                    int functionEnd = head.indexOf(")", fileNamePos);
+                    if (functionEnd > 0) {
+                        try {
+                            int len = Integer.parseInt(head.substring(fileNamePos + "right(filename,".length(), functionEnd));
+                            String replacement = "";
+                            if (len < fileName.length()) {
+                                replacement = fileName.substring(fileName.length()-len);
+
+                            }
+                            head = head.replace(head.substring(fileNamePos-1, functionEnd+2), replacement);// accomodating the quote marks
+                        } catch (Exception ignored) {
+
+                        }
+                    }
+
+                }
+
+
                 if (head.length() > 0) {
                     interpretHeading(azquoMemoryDBConnection, head, heading, attributeNames);
                 }
@@ -925,8 +942,8 @@ public class DSImportService {
          worth noting that after the above the headings were made immutable so the state of the headers should be the same
          Since the above loop will populate some context names I'm going to leave this as a separate loop below
          */
-        for (MutableImportHeading mutableImportHeading : headings) {
-            if (mutableImportHeading.contextHeadings.size() > 0 && mutableImportHeading.name != null) { // ok so some context headings and a name for this column? I guess as in not an attribute column for example
+         for (MutableImportHeading mutableImportHeading : headings) {
+              if (mutableImportHeading.contextHeadings.size() > 0 && mutableImportHeading.name != null) { // ok so some context headings and a name for this column? I guess as in not an attribute column for example
                 MutableImportHeading contextPeersHeading = null;
                 List<Name> contextNames = new ArrayList<>();
                 // gather the context names and peers
@@ -934,10 +951,13 @@ public class DSImportService {
                     contextNames.add(immutableImportHeading.name);
                     if (!immutableImportHeading.peers.isEmpty()) {
                         contextPeersHeading = immutableImportHeading;
+                        if (immutableImportHeading.blankZeroes){
+                            mutableImportHeading.blankZeroes = true;
+                        }
                     }
                 }
                 contextNames.add(mutableImportHeading.name);// add this name onto the context stack - "this" referenced below will mean it's added again but only the first time, on subsequent headings it will be that heading (what with headings inheriting contexts)
-                if (contextPeersHeading != null) { // a value cell HAS to have peers, context headings are only for values
+                   if (contextPeersHeading != null) { // a value cell HAS to have peers, context headings are only for values
                     final Set<Name> namesForValue = new HashSet<>(); // the names we're preparing for values
                     namesForValue.add(contextPeersHeading.name);// ok the "defining" name with the peers.
                     final Set<Integer> possiblePeerIndexes = new HashSet<>(); // the names we're preparing for values
