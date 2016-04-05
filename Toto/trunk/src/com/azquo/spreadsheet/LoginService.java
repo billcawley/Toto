@@ -101,7 +101,9 @@ public class LoginService {
             for (Permission permission : userAcceses) {
                 if (permission.getEndDate().isAfter(LocalDateTime.now())) {
                     Database database = databaseDao.findById(permission.getDatabaseId());
+                    if (database != null){
                         okDatabases.put(database.getName(), database);
+                    }
                 }
             }
         }
