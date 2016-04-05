@@ -1297,12 +1297,15 @@ public class AzquoBook {
             if (newNames != null && newNames.get(cellFormat) != null) {
                 csvW.write(newNames.get(cellFormat));
             } else {
-                try{
-                    double d = cell.getDoubleValue();
-                    csvW.write(d + "");
-                }catch(Exception e){
-                    csvW.write(cellFormat);
+                String style = cell.getStyle().getCustom();
+                if (style.contains("$")|| style.contains("£")){
+                    try {
+                        cellFormat = cell.getDoubleValue() + "";
+                    }catch(Exception e){
+
+                    }
                 }
+                 csvW.write(cellFormat);
             }
         } else {
             csvW.write("");
