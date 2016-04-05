@@ -273,7 +273,7 @@ public final class ImportService {
         } else if (fileName.contains(".xls")) { // normal. I'm not entirely sure the code for users etc above should be in this file, maybe a different importer?
             return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter, isData);
         } else {
-            return readPreparedFile(loggedInUser, filePath, "", attributeNames, persistAfter, false); // no file type
+             return readPreparedFile(loggedInUser, filePath, fileName.substring(0, fileName.indexOf(".")), attributeNames, persistAfter, false); // no file type
         }
     }
 
