@@ -109,9 +109,6 @@ public class SpreadsheetService {
     private static final String ASPOSELICENSE = "aspose.license";
     private static final String DEVMACHINE = "dev.machine";
 
-    private static final String FILTERCHOICEDIVIDER = "|||"; // let's hope it's not used in the choices
-    public static final String FILTERCHOICEDIVIDERFORREGEX = "\\|\\|\\|"; // maybe reconsider this later
-
     public String getHomeDir() {
         if (homeDir == null) {
             homeDir = env.getProperty(host + "." + AZQUOHOME);
@@ -357,55 +354,6 @@ public class SpreadsheetService {
         } else {
             if (userChoice != null) {
                 userChoiceDAO.removeById(userChoice);
-            }
-        }
-    }
-
-    // currently just using strings for this, maybe get a bit mroe clever later
-
-    public void addFilterChoice(int userId, String choiceName, String choiceValue) {
-        if (choiceName == null || choiceName.length() == 0 || choiceValue == null || choiceValue.length() == 0) { // since this is for adding there's no the option to send a blank value to remove the option
-            return;
-        }
-        UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(userId, choiceName);
-        if (userChoice == null) {// then it's the first, add as above
-            userChoice = new UserChoice(0, userId, choiceName, choiceValue, new Date());
-            userChoiceDAO.store(userChoice);
-        } else {// we need to add it
-            if (userChoice.getChoiceValue().trim().length() == 0) { // could happen I suppose
-                userChoice.setChoiceValue(choiceValue);
-                userChoice.setTime(new Date());
-                userChoiceDAO.store(userChoice);
-            } else { // ok need to check this properly
-                if (!Arrays.asList(userChoice.getChoiceValue().split(FILTERCHOICEDIVIDERFORREGEX)).contains(choiceValue)) { // it's not in the string already
-                    userChoice.setChoiceValue(userChoice.getChoiceValue() + FILTERCHOICEDIVIDER + choiceValue);
-                    userChoice.setTime(new Date());
-                    userChoiceDAO.store(userChoice);
-                }
-            }
-        }
-    }
-
-    public void removeFilterChoice(int userId, String choiceName, String choiceValue) {
-        if (choiceName == null || choiceName.length() == 0 || choiceValue == null || choiceValue.length() == 0) { // as above need all the options
-            return;
-        }
-        UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(userId, choiceName);
-        if (userChoice != null) {
-            List<String> existingList = Arrays.asList(userChoice.getChoiceValue().split(FILTERCHOICEDIVIDERFORREGEX));
-            if (existingList.contains(choiceValue)) { // it's in there need to remove
-                StringBuilder newList = new StringBuilder();
-                for (String filterChoice : existingList) {
-                    if (!filterChoice.equals(choiceValue)) {
-                        if (newList.length() != 0) { // not first one, need divider
-                            newList.append(FILTERCHOICEDIVIDER);
-                        }
-                        newList.append(filterChoice);
-                    }
-                }
-                userChoice.setChoiceValue(newList.toString());
-                userChoice.setTime(new Date());
-                userChoiceDAO.store(userChoice);
             }
         }
     }

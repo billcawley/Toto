@@ -11,10 +11,10 @@ import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.view.FilterTriple;
 import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
-import org.apache.commons.collections.ArrayStack;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -542,16 +542,18 @@ public class DSSpreadsheetService {
         return true; // All null - treat as last cell populated - is this logical?
     }
 
-    // Filter set being a multi selection area as opposed to a drop down list to constrain data in a data region
+    // Filter set being a multi selection list
 
-    public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, List<String> children) throws Exception {
+    public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, List<Integer> childrenIds) throws Exception {
         final AzquoMemoryDBConnection connectionFromAccessToken = getConnectionFromAccessToken(databaseAccessToken);
-        Name filterSets = nameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false);
-        Name set = nameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true);//must be a local name in 'Filter sets'
+        List<String> justUserNameLanguages = new ArrayList<>();
+        justUserNameLanguages.add(userName);
+        Name filterSets = nameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
+        Name set = nameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
         set.setChildrenWillBePersisted(Collections.emptyList()); // easiest way to clear them
-        for (String child : children) {
-            Name childName = nameService.findByName(connectionFromAccessToken, child);
-            if (childName != null) {
+        for (Integer childId : childrenIds) {
+            Name childName = nameService.findById(connectionFromAccessToken, childId);
+            if (childName != null) { // it really should not be!
                 set.addChildWillBePersisted(childName); // and that should be it!
             }
         }
@@ -559,10 +561,12 @@ public class DSSpreadsheetService {
 
     // This class and two functions are to make qualified listings on a drop down, adding parents to qualify where necessary.
     private static class UniqueName {
+        final Name bottomName;
         Name topName; // often topName is name and the description will just be left as the basic name
         String description; // when the name becomes qualified the description will become name, parent, parent of parent etc. And top name will be the highest parent, held in case we need to qualify up another level.
 
         UniqueName(Name topName, String description) {
+            bottomName = topName; // topName may be changed but this won't
             this.topName = topName;
             this.description = description;
         }
@@ -595,8 +599,8 @@ public class DSSpreadsheetService {
     }
 
     // for the drop down, essentially given a collection of names for a query need to give a meaningful list qualifying names with parents where they are duplicates (I suppose high streets in different towns)
-    // it was assumed that names were sorted, one can't guarantee this though preserving the order is important. EFC going to rewrite, won't require ordering
-    private List<String> getUniqueNameStrings(Collection<Name> names) {
+    // it was assumed that names were sorted, one can't guarantee this though preserving the order is important. EFC going to rewrite, won't require ordering, now this returns the unique nnames to enable "selected" for filter lists
+    private List<UniqueName> getUniqueNames(Collection<Name> names) {
         List<UniqueName> toCheck = names.stream().map(name -> new UniqueName(name, name.getDefaultDisplayName())).collect(Collectors.toList()); // java 8 should be ok here, basically copy the names to unique names to check
         int triesLeft = 10; // just in case there's a chance of infinite loops
         boolean keepChecking = true;
@@ -621,8 +625,17 @@ public class DSSpreadsheetService {
             }
             triesLeft--;
         }
-        return toCheck.stream().map(uniqueName -> uniqueName.description).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
+        return toCheck;
     }
+
+    private List<String> getUniqueNameStrings(Collection<UniqueName> names) {
+        return names.stream().map(uniqueName -> uniqueName.description).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
+    }
+
+    private List<FilterTriple> getFilterPairsFromUniqueNames(Collection<UniqueName> names, Name filterSet) {
+        return names.stream().map(uniqueName -> new FilterTriple(uniqueName.bottomName.getId(), uniqueName.description, filterSet.getChildren().contains(uniqueName.bottomName)) ).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
+    }
+
 
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
         //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
@@ -636,7 +649,28 @@ public class DSSpreadsheetService {
                 return toReturn;
             }
         }
-        return getUniqueNameStrings(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages));
+        return getUniqueNameStrings(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages)));
+    }
+
+    public List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws Exception {
+        //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
+        List<String> justUserNameLanguages = new ArrayList<>();
+        justUserNameLanguages.add(userName);
+        final AzquoMemoryDBConnection connectionFromAccessToken = getConnectionFromAccessToken(databaseAccessToken);
+        Name filterSets = nameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
+        Name filterSet = nameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
+        int dotPos = query.indexOf(".");
+        if (dotPos > 0) {//todo check that it's not part of a name
+            Name possibleName = nameService.findByName(connectionFromAccessToken, query.substring(0, dotPos));
+            if (possibleName != null) {
+                String result = possibleName.getAttribute(query.substring(dotPos + 1));
+                List<FilterTriple> toReturn = new ArrayList<>();
+                toReturn.add(new FilterTriple(possibleName.getId(), result, filterSet.getChildren().contains(possibleName)));
+                return toReturn;
+            }
+        }
+        final Collection<Name> names = nameService.parseQuery(connectionFromAccessToken, query, languages);
+        return getFilterPairsFromUniqueNames(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages)), filterSet);
     }
 
     // it doesn't return anything, for things like setting up "as" criteria

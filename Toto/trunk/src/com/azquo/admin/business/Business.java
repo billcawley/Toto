@@ -52,6 +52,7 @@ public final class Business extends StandardEntity {
 
     // for Jackson mapping, these bits of data will be as json in the DB. Hence if you want a new one you should just be able to add it here :)
     public static class BusinessDetails {
+        // I think these need to be public for json
         public String address1;
         public String address2;
         public String address3;

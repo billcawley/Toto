@@ -12,6 +12,7 @@ import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
 import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.view.FilterTriple;
 
 import java.rmi.RemoteException;
 import java.text.NumberFormat;
@@ -206,9 +207,18 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, List<String> children) throws RemoteException {
+    public List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws RemoteException {
         try {
-            dsSpreadsheetService.createFilterSet(databaseAccessToken, setName, children);
+            return dsSpreadsheetService.getFilterListForQuery(databaseAccessToken, query, filterName, userName, languages);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, List<Integer> childrenIds) throws RemoteException {
+        try {
+            dsSpreadsheetService.createFilterSet(databaseAccessToken, setName, userName, childrenIds);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

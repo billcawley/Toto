@@ -6,6 +6,7 @@ import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
 import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.view.FilterTriple;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -55,7 +56,9 @@ public interface RMIInterface extends Remote {
 
     List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 
-    void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, List<String> children) throws RemoteException;
+    List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws RemoteException;
+
+    void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, List<Integer> childrenIds) throws RemoteException;
 
     void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 

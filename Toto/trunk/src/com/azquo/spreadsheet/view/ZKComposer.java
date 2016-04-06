@@ -31,10 +31,7 @@ import org.zkoss.zul.*;
 import com.azquo.memorydb.TreeNode;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -57,6 +54,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     private Popup provenancePopup = null;
     private Popup highlightPopup = null;
     private Popup instructionsPopup = null;
+    private Popup filterPopup = null;
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
@@ -107,12 +105,18 @@ public class ZKComposer extends SelectorComposer<Component> {
         //item3.setPopup(highlightPopup);
 
         // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
+        filterPopup = new Popup();
+        filterPopup.setId("filterPopup");
+        filterPopup.setStyle("background-color:#ffffff");
+        filterPopup.setStyle("border: 5px solid #F58030");
+
 
         if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(editPopup);
             myzss.getFirstChild().appendChild(provenancePopup);
             myzss.getFirstChild().appendChild(instructionsPopup);
             myzss.getFirstChild().appendChild(highlightPopup);
+            myzss.getFirstChild().appendChild(filterPopup);
         } else { // it took some considerable time to work out this hack
             Ghost g = new Ghost();
             g.setAttribute("zsschildren", "");
@@ -121,6 +125,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             g.appendChild(provenancePopup);
             g.appendChild(instructionsPopup);
             g.appendChild(highlightPopup);
+            g.appendChild(filterPopup);
         }
         // maybe improve moving this number?
         if (myzss.getBook().getInternalBook().getAttribute(OnlineController.CELL_SELECT) != null) {
@@ -178,80 +183,102 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
     /* Bit of an odd one this : on a cell click "wake" the log between the client and report server back up as there may be activity shortly
-    In addition I now want to now deal with the new filter things
+    In addition I now want to now deal with the new filter things - this was by an area a la WASPS but now we'll do it by a popup
      */
 
     @Listen("onCellClick = #myzss")
     public void onCellClick(CellMouseEvent event) {
         final Book book = event.getSheet().getBook();
-        final Sheet sheet = event.getSheet();
         final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
         List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
-        boolean reload = false;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         for (SName name : names) {
-            if (name.getName().toLowerCase().endsWith("chosen") && (name.getRefersToCellRegion().getRowCount() * name.getRefersToCellRegion().getColumnCount()) > 1
-                    && ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn(), sheet).isEmpty()) {
-                // they clicked on a filter region, need to update the choice. Also we check it's not a data region also
-                String choice = name.getName().substring(0, name.getName().length() - "chosen".length());
-                final SCell clickedCell = sheet.getInternalSheet().getCell(event.getRow(), event.getColumn());
-                if (!clickedCell.getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#888888")) { // it was white therefore this is the cell being selected
-                    spreadsheetService.addFilterChoice(loggedInUser.getUser().getId(), choice, clickedCell.getStringValue());
+            if (name.getName().toLowerCase().endsWith("filter")) { // a new style
+                while (filterPopup.getChildren().size() > 0) { // clear it out
+                    filterPopup.removeChild(filterPopup.getLastChild());
+                }
+                Listbox listbox = new Listbox();
+                Listhead listhead = new Listhead();
+                Listheader listheader = new Listheader();
+                listheader.setAlign("left");
+                listhead.appendChild(listheader);
+/*                Listitem test1 = new Listitem();
+                Listcell listcell = new Listcell();
+                Checkbox checkbox = new Checkbox();
+                checkbox.setName("Edd test");
+                listcell.appendChild(checkbox);
+                test1.appendChild(listcell);
+                listbox.app(test1);*/
+                listbox.setMultiple(true);
+                listbox.setCheckmark(true);
+                listbox.setWidth("200px");
+                listbox.appendChild(listhead);
+                final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName() + "Query");
+                if (filterQueryCell != null){
+                    try {
+                        final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(filterQueryCell.getRefersToCellRegion().getRow(), filterQueryCell.getRefersToCellRegion().getColumn());
+                        List<FilterTriple> filterOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                .getFilterListForQuery(loggedInUser.getDataAccessToken(), cell.getStringValue(), name.getName(), loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
+                        Set<Listitem> selectedItems = new HashSet<>();
+                        int index = 0;
+                        for (FilterTriple filterTriple : filterOptions){
+                            listbox.appendItem(filterTriple.name, filterTriple.nameId + ""); // can I puit the name id in there?
+                            if (filterTriple.selected){
+                                selectedItems.add(listbox.getItemAtIndex(index));
+                            }
+                            index++;
+                        }
+                        listbox.setSelectedItems(selectedItems);
+                    } catch (Exception e) {
+                        listbox.appendItem("error : " + e.getMessage(), "");
+                        e.printStackTrace();
+                    }
                 } else {
-                    spreadsheetService.removeFilterChoice(loggedInUser.getUser().getId(), choice, clickedCell.getStringValue());
+                    listbox.appendItem(name.getName() + "Query not found", "");
                 }
-                reload = true;
-            } else if (name.getName().toLowerCase().endsWith("clear")) { // more string literals . . .:P
-                //this is to handle clearing choices from multi-choice ranges
-                final String choice = name.getName().substring(0, name.getName().length() - "clear".length());
-                final CellRegion chosenRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(sheet, choice + "Chosen");
-                if (chosenRegion != null) {
-                    boolean fillAll = false;
-                    for (int row = chosenRegion.getRow(); row <= chosenRegion.getLastRow(); row++) {
-                        for (int col = chosenRegion.getColumn(); col <= chosenRegion.getLastColumn(); col++) {
-                            if (!sheet.getInternalSheet().getCell(row, col).isNull() && !sheet.getInternalSheet().getCell(row, col).getCellStyle().getBackColor().getHtmlColor().equalsIgnoreCase("#888888")) { // we just found one unselected
-                                fillAll = true;
-                                break;
-                            }
-                        }
-                        if (fillAll) {
-                            break;
-                        }
-                    }
-                    for (int row = chosenRegion.getRow(); row <= chosenRegion.getLastRow(); row++) {
-                        for (int col = chosenRegion.getColumn(); col <= chosenRegion.getLastColumn(); col++) {
-                            final SCell cell = sheet.getInternalSheet().getCell(row, col);
-                            if (!cell.isNull()) {
-                                if (fillAll) {
-                                    spreadsheetService.addFilterChoice(loggedInUser.getUser().getId(), choice, cell.getStringValue());
-                                } else {
-                                    spreadsheetService.removeFilterChoice(loggedInUser.getUser().getId(), choice, cell.getStringValue());
-                                }
-                            }
-                        }
-                    }
-                    reload = true;
-                }
-            }
-        }
-        // factor?
-        if (reload) {
-            try {
-                // new book from same source
-                final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
-                for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
-                    newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
-                }
-                if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
-                    // direct calls to the HTML are perhaps not ideal. Could be replaced with calls to expected functions?
-                    Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
-                }
-                myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+                filterPopup.appendChild(listbox);
+                Button ok = new Button();
+                ok.setWidth("80px");
+                ok.setLabel("OK");
 
+                ok.addEventListener("onClick",
+                        event1 -> {
+                            List<Integer> childIds = new ArrayList<>();
+                            for (Listitem listItem : listbox.getSelectedItems()){
+                                childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
+                            }
+                            rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), name.getName(), loggedInUser.getUser().getEmail(), childIds);
+                            filterPopup.close();
+                            // factor the reload here?
+                            try {
+                                // new book from same source
+                                final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                                for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
+                                    newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                                }
+                                if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
+                                    // direct calls to the HTML are perhaps not ideal. Could be replaced with calls to expected functions?
+                                    Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
+                                }
+                                myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+
+                Button cancel = new Button();
+                cancel.setWidth("80px");
+                cancel.setLabel("Cancel");
+                cancel.addEventListener("onClick",
+                        event1 -> filterPopup.close());
+                filterPopup.appendChild(new Separator());
+                filterPopup.appendChild(ok);
+                filterPopup.appendChild(new Space());
+                filterPopup.appendChild(cancel);
+                // "after_start" is the position we'd want
+                filterPopup.open(event.getPageX(), event.getPageY());
+            }
+        }
         Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");
     }
 
