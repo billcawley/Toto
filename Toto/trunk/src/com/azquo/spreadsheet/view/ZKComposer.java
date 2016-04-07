@@ -182,6 +182,9 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
+    static String MULTI = "Multi";
+    static String CHOICE = "Choice";
+
     /* Bit of an odd one this : on a cell click "wake" the log between the client and report server back up as there may be activity shortly
     In addition I now want to now deal with the new filter things - this was by an area a la WASPS but now we'll do it by a popup
      */
@@ -193,7 +196,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         for (SName name : names) {
-            if (name.getName().toLowerCase().endsWith("filter")) { // a new style
+            if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
                 while (filterPopup.getChildren().size() > 0) { // clear it out
                     filterPopup.removeChild(filterPopup.getLastChild());
                 }
@@ -202,18 +205,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                 Listheader listheader = new Listheader();
                 listheader.setAlign("left");
                 listhead.appendChild(listheader);
-/*                Listitem test1 = new Listitem();
-                Listcell listcell = new Listcell();
-                Checkbox checkbox = new Checkbox();
-                checkbox.setName("Edd test");
-                listcell.appendChild(checkbox);
-                test1.appendChild(listcell);
-                listbox.app(test1);*/
                 listbox.setMultiple(true);
                 listbox.setCheckmark(true);
                 listbox.setWidth("200px");
                 listbox.appendChild(listhead);
-                final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName() + "Query");
+                final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
                 if (filterQueryCell != null){
                     try {
                         final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(filterQueryCell.getRefersToCellRegion().getRow(), filterQueryCell.getRefersToCellRegion().getColumn());
@@ -244,7 +240,38 @@ public class ZKComposer extends SelectorComposer<Component> {
                 ok.addEventListener("onClick",
                         event1 -> {
                             List<Integer> childIds = new ArrayList<>();
-                            for (Listitem listItem : listbox.getSelectedItems()){
+                            StringBuilder resultDescription = new StringBuilder();
+                            final Set<Listitem> selectedItems = listbox.getSelectedItems();
+                            if (selectedItems.size() == 0){
+                                resultDescription.append("None");
+                            } else if (selectedItems.size() == listbox.getItems().size()){
+                                resultDescription.append("All");
+                            } else if (selectedItems.size() <= 5){
+                                boolean first = true;
+                                for (Listitem listItem : selectedItems){
+                                    if (!first){
+                                        resultDescription.append(", ");
+                                    }
+                                    resultDescription.append(listItem.getLabel());
+                                    first = false;
+                                }
+                            } else if ((listbox.getItems().size() - selectedItems.size()) <= 5){
+                                resultDescription.append("All Except ");
+                                boolean first = true;
+                                for (Listitem listItem : listbox.getItems()){
+                                    // could maybe be more efficient? Not sure I'm bothered
+                                    if (!selectedItems.contains(listItem)){
+                                        if (!first){
+                                            resultDescription.append(", ");
+                                        }
+                                        resultDescription.append(listItem.getLabel());
+                                        first = false;
+                                    }
+                                }
+                            } else {
+                                resultDescription.append(MULTI);
+                            }
+                            for (Listitem listItem : selectedItems){
                                 childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
                             }
                             rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), name.getName(), loggedInUser.getUser().getEmail(), childIds);
@@ -261,6 +288,18 @@ public class ZKComposer extends SelectorComposer<Component> {
                                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                                 }
                                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+
+                                // check to see if we need to set the selected values in a cell - or in the main cell?
+                                final SName queryResultCell = myzss.getBook().getInternalBook().getNameByName(name.getName() + "Result");
+                                if (queryResultCell != null){
+                                    try {
+                                        final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(queryResultCell.getRefersToCellRegion().getRow(), queryResultCell.getRefersToCellRegion().getColumn());
+                                        cell.setStringValue(resultDescription.toString());
+                                    } catch (Exception e) {
+                                        listbox.appendItem("error : " + e.getMessage(), "");
+                                        e.printStackTrace();
+                                    }
+                                }
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
