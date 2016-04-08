@@ -350,7 +350,7 @@ public class ZKAzquoBookUtils {
                 CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), false);
             }
          }
-        List<SName> dependentRanges = addValidation(book, choiceOptionsMap, userChoices);
+        List<SName> dependentRanges = addValidation(loggedInUser, book, choiceOptionsMap, userChoices);
         if (dependentRanges.size() > 0) {
             resolveDependentChoiceOptions(dependentRanges, book, loggedInUser);
         }
@@ -447,11 +447,15 @@ public class ZKAzquoBookUtils {
                 if (pivotFilters!=null){
                     String[] filters = getSnameCell(pivotFilters).getStringValue().split(",");
                     for (String filter:filters){
-                        String chosen = userChoices.get(filter.toLowerCase());
-                        if (chosen!=null && chosen.length() > 0 && !chosen.equals("[all]")){
+                        filter = filter.trim();
+                        try{
+                            List<String> choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`az_" + filter + "`", loggedInUser.getLanguages());
                             List<String>additionalContext = new ArrayList<>();
-                            additionalContext.add(chosen);
+                            additionalContext.add("az_" + filter);
                             contextList.add(additionalContext);
+                        }catch (Exception e){
+                            //ignore - no choices yet made
                         }
                     }
 
@@ -516,34 +520,38 @@ public class ZKAzquoBookUtils {
                            CellOperationUtil.insert(insertRange.toColumnRange(), Range.InsertShift.RIGHT, Range.InsertCopyOrigin.FORMAT_LEFT_ABOVE);
                         }
                         row = displayRowHeadings.getRow();
-                        Map<Integer,String> lastHeadings = new HashMap<>();
-                        int lineNo= 0;
-                        int lastTotal = rowHeadingCols;
+                         int lineNo= 0;
+                        List<String> lastRowHeadings = new ArrayList<>(cellsAndHeadingsForDisplay.getRowHeadings().size());
                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
                            int col = displayRowHeadings.getColumn();
                               for (String heading : rowHeading) {
                                 if (heading != null && (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                                     sheet.getInternalSheet().getCell(row, col).setValue(heading);
-                                    if (lastHeadings.get(col) != null && lastHeadings.get(col).equals(heading)){
+                                    if (lineNo > 0 && lastRowHeadings.get(col) != null && lastRowHeadings.get(col).equals(heading)){
                                         //disguise the heading by making foreground colour = background colour
                                         Range selection = Ranges.range(sheet, row, col, row,col);
                                         CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row,col).getCellStyle().getBackColor().getHtmlColor());
 
                                     }
-                                    lastHeadings.put(col,heading);
                                 }
                                 col++;
 
                             }
                             lineNo++;
                             if (isHierarchy) {
+                                int sameValues = 0;
+                                if (lineNo > 0)
+                                    for (sameValues=0;sameValues < lastRowHeadings.size();sameValues++){
+                                        if (!rowHeading.get(sameValues).equals(lastRowHeadings.get(sameValues))){
+                                             break;
+                                        }
+                                    }
 
                                 //format the row headings for hierarchy.  Each total level has a different format.   clear visible names in all but on eheading
-                                int totalCount = rowHeadingCols - rowHeading.size();
-                                if (rowHeading.size() < rowHeadingCols) {
-                                    if (lineNo == cellsAndHeadingsForDisplay.getRowHeadings().size()) totalCount ++;
+                                if (sameValues < rowHeading.size()-1){
+                                    int totalCount = rowHeading.size()- sameValues;
                                     //this is a total line
-                                    Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayDataRegion.getColumn() + displayDataRegion.getColumnCount());
+                                    Range selection = Ranges.range(sheet, row-1, displayRowHeadings.getColumn(), row-1, displayDataRegion.getColumn() + displayDataRegion.getColumnCount());
                                     SCell lineFormat = getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + totalCount + region));
 
                                     if (lineFormat != null) {
@@ -552,19 +560,16 @@ public class ZKAzquoBookUtils {
                                     } else {
                                         CellOperationUtil.applyFontBoldweight(selection, Font.Boldweight.BOLD);
                                     }
+                                    Ranges.range(sheet, row-1, displayRowHeadings.getColumn() + sameValues + 1,row - 1, displayRowHeadings.getColumn() + displayRowHeadings.getColumnCount()).clearContents();
                                  }
-                                int toClear =  rowHeading.size() - 1;
-                                if (lastTotal > 0){
-                                    toClear = rowHeadingCols - lastTotal - 1;
-                                }
-                                if (toClear >0){
-                                    Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayRowHeadings.getColumn() + toClear - 1);
+                                  if (sameValues >0){
+                                    Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayRowHeadings.getColumn() + sameValues - 1);
                                     CellOperationUtil.clearStyles(selection);
                                     CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row,displayRowHeadings.getColumn()).getCellStyle().getBackColor().getHtmlColor());
 
                                 }
-                                lastTotal = totalCount;
-                            }
+                             }
+                            lastRowHeadings = rowHeading;
                             row++;
                         }
                         if (isHierarchy){
@@ -771,6 +776,7 @@ public class ZKAzquoBookUtils {
     }
 
     public static SCell getSnameCell(SName sName){
+        if (sName==null) return null;
         return sName.getBook().getSheetByName(sName.getRefersToSheetName()).getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
     }
 
@@ -786,24 +792,6 @@ public class ZKAzquoBookUtils {
         Map<String, List<String>> toReturn = new HashMap<>();
         for (SName name : book.getInternalBook().getNames()) {
             //check to create pivot filter choices....
-            if (name.getName().equalsIgnoreCase("az_PivotFilters")){
-
-                String[] filters = getSnameCell(name).getStringValue().split(",");
-                for (String filter : filters) {
-                    List<String> choiceOptions = new ArrayList<>();
-                    try {
-                        choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "` children", loggedInUser.getLanguages());
-                        choiceOptions.add(0,"[all]");
-                    } catch (Exception e) {
-
-                        choiceOptions.add(e.getMessage());
-                    }
-
-                    toReturn.put(filter.toLowerCase(), choiceOptions);
-                }
-             }
-
 
             if (name.getName().endsWith("Choice") && name.getRefersToCellRegion()!=null) {
                      // ok I assume choice is a single cell
@@ -955,7 +943,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    List<SName> addValidation(Book book, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
+    List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
         if (book.getSheet(VALIDATION_SHEET) == null) {
             book.getInternalBook().createSheet(VALIDATION_SHEET);
         }
@@ -977,6 +965,7 @@ public class ZKAzquoBookUtils {
                     int filterCount = 0;
                     //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                     for (String filter:filters) {
+                        filter = filter.trim();
                         int rowOffset = filterCount % headingRows;
                         int colOffset = filterCount / headingRows;
                         int chosenRow = headingRow + rowOffset;
@@ -989,11 +978,12 @@ public class ZKAzquoBookUtils {
 
                         }
                         pSheet.getInternalSheet().getCell(chosenRow, chosenCol).setStringValue(filter);
-                        String selected = userChoices.get(filter.toLowerCase()); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
-                        if (selected==null){
+                        String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children"); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
+                        if (selected==null || selected.length()==0){
                             selected="[all]";
                         }
                         pSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1).setStringValue(selected);
+                         /*
                         validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(filter);
                         int row = 0;
                         List<String> choiceOptions = choiceOptionsMap.get(filter.toLowerCase());
@@ -1010,10 +1000,12 @@ public class ZKAzquoBookUtils {
 
                         }
                         numberOfValidationsAdded++;
+                         */
                         filterCount++;
                     }
                 }
             }
+
             if (name.getName().toLowerCase().endsWith("choice")) {
                 String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
                 System.out.println("debug:  trying to find the region " + choiceName + "chosen");
@@ -1082,4 +1074,49 @@ public class ZKAzquoBookUtils {
         }
         return found;
     }
+
+    public String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet){
+        List<String> choiceOptions = new ArrayList<>();
+        try {
+            List<String> chosenOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`" + filterName + "` children", loggedInUser.getLanguages());
+            List<String> allOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), sourceSet, loggedInUser.getLanguages());
+            if (chosenOptions.size()==0 || chosenOptions.size() == allOptions.size()) return "[all]";
+            if (chosenOptions.size() < 6) {
+                StringBuilder toReturn = new StringBuilder();
+                boolean firstElement = true;
+                for (String chosen : chosenOptions) {
+                    if (!firstElement) {
+                        toReturn.append(", ");
+                    }
+                    toReturn.append(chosen);
+                    firstElement = false;
+                }
+                return toReturn.toString();
+            }
+
+            if (allOptions.size() - chosenOptions.size() > 5) return "[various]";
+            StringBuilder toReturn = new StringBuilder();
+            toReturn.append ("[all] but ");
+            List<String> remaining = new ArrayList<String>(allOptions);
+            boolean firstElement = true;
+            remaining.removeAll(chosenOptions);
+            for (String choice:remaining) {
+                if (!firstElement) {
+                    toReturn.append(", ");
+                }
+                toReturn.append(choice);
+                firstElement = false;
+            }
+            return toReturn.toString();
+
+        } catch (Exception e) {
+
+            return "[all]";
+        }
+    }
 }
+
+
+
