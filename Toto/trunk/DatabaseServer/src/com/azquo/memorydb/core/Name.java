@@ -563,6 +563,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // public and stateless, in here as it accesses things I don't want accessed outside
     public static void findAllParents(Name name, final Set<Name> allParents) {
         findAllParents2Count.incrementAndGet();
+
         if (name.parentsAsSet != null) {
             for (Name parent : name.parentsAsSet) { // we'll allow this kind of access in here
                 if (allParents.add(parent)) {
@@ -571,8 +572,12 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         } else if (name.parents.length > 0) {
             for (int i = 0; i < name.parents.length; i++) {
-                if (allParents.add(name.parents[i])) { // the function was moved in here to access this array directly. Externally it would need to be wrapped in an unmodifiable List. Means garbage!
-                    findAllParents(name.parents[i], allParents);
+                if (name.parents[i]==null){
+                    System.out.println("DATABASE CORRUPTION " + name.getDefaultDisplayName() + " id " + name.getId() + " has a null parent");
+                }else {
+                    if (allParents.add(name.parents[i])) { // the function was moved in here to access this array directly. Externally it would need to be wrapped in an unmodifiable List. Means garbage!
+                        findAllParents(name.parents[i], allParents);
+                    }
                 }
             }
         }
