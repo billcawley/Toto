@@ -426,6 +426,7 @@ public final class AzquoMemoryDB {
                 logInSessionLogAndSystem("Names init/linked in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
             } catch (Exception e) {
                 logger.error("could not load data for " + getPersistenceName() + "!", e);
+                // todo, stop the threads
             }
             needsLoading = false;
             if (memoryTrack) {
@@ -449,6 +450,7 @@ public final class AzquoMemoryDB {
     private static AtomicInteger persisttoDataStoreCount = new AtomicInteger(0);
 
     public synchronized void persistToDataStore() {
+        System.out.println("PERSIST STARTING");
         persisttoDataStoreCount.incrementAndGet();
         // todo : write locking the db probably should start here
         // this is where I need to think carefully about concurrency, azquodb has the last say when the sets are modified although the flags are another point
