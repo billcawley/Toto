@@ -288,6 +288,10 @@ public class DSImportService {
     }
 
     public String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
+        // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
+        System.out.println("Preparing to import, lock test");
+        azquoMemoryDBConnection.lockTest();
+        System.out.println("Import lock passed");
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         String toReturn;
         if (fileType.toLowerCase().startsWith("sets")) {

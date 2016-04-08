@@ -444,6 +444,9 @@ public final class AzquoMemoryDB {
         }
     }
 
+    // I'm going to force the import to wait if persisting or the like is going on
+    public synchronized void lockTest(){};
+
     // reads from a list of changed objects
     // should we synchronize on a write lock object? I think it might be a plan.
 

@@ -124,6 +124,10 @@ public class AzquoMemoryDBConnection {
         azquoMemoryDB.persistToDataStore();
     }
 
+    public void lockTest() {
+        azquoMemoryDB.lockTest();
+    }
+
     public void persistInBackground() {
         (new Thread(new PersistenceRunner())).start();
     }
