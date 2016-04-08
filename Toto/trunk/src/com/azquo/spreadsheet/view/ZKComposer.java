@@ -12,6 +12,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.chart.ChartsEvent;
 import org.zkoss.zk.ui.*;
+import org.zkoss.zk.ui.event.CheckEvent;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
@@ -229,13 +230,25 @@ public class ZKComposer extends SelectorComposer<Component> {
                 filterPopup.removeChild(filterPopup.getLastChild());
             }
             Listbox listbox = new Listbox();
+            // this is to make select all go across hidden pages
+            listbox.addEventListener("onCheckSelectAll", event1 -> {
+                CheckEvent event2 = (CheckEvent)event1;
+                if (event2.isChecked()){
+                    listbox.selectAll();
+                } else {
+                    listbox.clearSelection();
+                }
+            });
+            listbox.setMold("paging");
+            listbox.setPageSize(10);
             Listhead listhead = new Listhead();
             Listheader listheader = new Listheader();
+            listheader.setLabel("Select All");
             listheader.setAlign("left");
             listhead.appendChild(listheader);
             listbox.setMultiple(true);
             listbox.setCheckmark(true);
-            listbox.setWidth("200px");
+            listbox.setWidth("350px");
             listbox.appendChild(listhead);
             try{
 
