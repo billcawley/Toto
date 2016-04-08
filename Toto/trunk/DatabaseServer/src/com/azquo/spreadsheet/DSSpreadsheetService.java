@@ -168,7 +168,13 @@ public class DSSpreadsheetService {
                             String[] permutedNames = sourceCell.split(",");
                             List<Name> permuteNames = new ArrayList<>();
                             for (String permutedName:permutedNames) {
-                                Name pName = nameService.findByName(azquoMemoryDBConnection, permutedName);
+                                //find the set chosen
+                                Name pName = nameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`","").trim());
+                                // if no set chosen, find the original set
+                                if (pName==null|| pName.getChildren().size()==0){
+                                    pName = nameService.findByName(azquoMemoryDBConnection, permutedName);
+
+                                }
                                 permuteNames.add(pName);
                             }
                             row.clear();
@@ -261,7 +267,7 @@ public class DSSpreadsheetService {
         return toReturn;
     }
 
-    List<List<DataRegionHeading>> sortCombos(Collection<List<Name>> foundCombinations, int position, DataRegionHeading topSort,List<Map<Integer,Integer>> sortLists){
+    List<List<DataRegionHeading>> sortCombos(List<DataRegionHeading> listToPermute,Collection<List<Name>> foundCombinations, int position, List<Map<Integer,Integer>> sortLists){
          Map<Integer,Integer> sortList = sortLists.get(position);
          Map<Integer,Collection<List<Name>>> sortMap = new TreeMap<>();
           for (List<Name> foundCombination:foundCombinations){
@@ -288,22 +294,20 @@ public class DSSpreadsheetService {
                 }
                 //extract list and convert to dataregion heading
             }else{
-                toReturn.addAll(sortCombos(sortMap.get(key),position,topSort,sortLists));
+                toReturn.addAll(sortCombos(listToPermute,sortMap.get(key),position,sortLists));
 
             }
 
         }
-        if (toReturn.size() > 0){
+        if (toReturn.size() > 0){//maybe should be 1 - no need for totals if there's only one item
             //create a total line
             List<DataRegionHeading> drhEntry = new ArrayList<>();
             List<DataRegionHeading> lastEntry = toReturn.get(toReturn.size()-1);
-            if (position==1){
-                drhEntry.add(topSort);
-            }else {
-
-                for (int i = 0; i < position - 1; i++) {
-                    drhEntry.add(lastEntry.get(i));
-                }
+            for (int i = 0; i < position - 1; i++) {
+                drhEntry.add(lastEntry.get(i));
+            }
+            for (int i=position-1;i<listToPermute.size();i++){
+                drhEntry.add(listToPermute.get(i));
             }
             toReturn.add(drhEntry);
          }
@@ -320,7 +324,11 @@ public class DSSpreadsheetService {
         List<Name> permuteNames = new ArrayList<>();
         for (DataRegionHeading drh:listToPermute){
             permuteNames.add(drh.getName());
-            sharedNames.retainAll(drh.getName().findAllChildren(false));
+            if (sharedNames==null){
+                sharedNames = new HashSet<Name>(drh.getName().findAllChildren(false));
+            }else{
+                sharedNames.retainAll(drh.getName().findAllChildren(false));
+            }
         }
         Collection<List<Name>> foundCombinations = new HashSet<>();
         for (Name name :sharedNames){
@@ -342,7 +350,7 @@ public class DSSpreadsheetService {
             }
             sortLists.add(sortList);
         }
-        return sortCombos(foundCombinations,0,listToPermute.get(0),sortLists);
+        return sortCombos(listToPermute, foundCombinations,0,sortLists);
 
     }
 
