@@ -78,6 +78,7 @@ public class RemoteController {
         public final String password;
         public final String database;
         public final String reportName;
+        public final String regions;
         public final Map<String, String> choices;
 
         @JsonCreator
@@ -85,11 +86,13 @@ public class RemoteController {
                 ,@JsonProperty("password")  String password
                 ,@JsonProperty("database")  String database
                 ,@JsonProperty("reportName")  String reportName
+                ,@JsonProperty("regions") String regions
                 ,@JsonProperty("choices")  Map<String, String> choices) {
             this.logon = logon;
             this.password = password;
             this.database = database;
             this.reportName = reportName;
+            this.regions = regions;
             this.choices = choices;
         }
     }
@@ -209,10 +212,15 @@ public class RemoteController {
                     List<JsonRegion> jsonRegions = new ArrayList<>();
                     List<JsonChoice> jsonChoices = new ArrayList<>();
                     final List<SName> names = book.getInternalBook().getNames();
+                    String[] regions = null;
+                    if (jsonParameters.regions!=null&& jsonParameters.regions.length() > 0){
+                        regions = jsonParameters.regions.split(",");
+                    }
                     for (SName name : names){
                         final SSheet internalSheet = book.getSheet(name.getRefersToSheetName()).getInternalSheet();
                         final CellRegion refersToCellRegion = name.getRefersToCellRegion();
-                        if (name.getName().toLowerCase().startsWith("az_dataregion")) {
+                        if ((regions==null && name.getName().toLowerCase().startsWith("az_dataregion"))
+                                  ||(regions!=null && inSet(name.getName(), regions))){
                             List<List<String>> data = new ArrayList<>();
                             for (int i = refersToCellRegion.getRow(); i <= refersToCellRegion.getLastRow(); i++) {
                                 List<String> row = new ArrayList<>();
@@ -274,5 +282,15 @@ public class RemoteController {
             e.printStackTrace();
             return e.getMessage();
         }
+    }
+
+    boolean inSet(String toTest, String[] set){
+        for (String element:set ){
+            if (element.trim().equalsIgnoreCase(toTest)){
+                return true;
+            }
+        }
+        return false;
+
     }
 }
