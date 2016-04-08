@@ -25,6 +25,8 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -1288,6 +1290,33 @@ public class DSImportService {
                         }
                         headingMarker = result.indexOf("`", headingMarker + 1);
                     }
+                    if (result.toLowerCase().startsWith("calc")){
+                        result = result.substring(5);
+                        Pattern p = Pattern.compile("[\\+\\-\\*\\/]");
+                        Matcher m = p.matcher(result);
+                        if (m.find()){
+                            double dresult = 0.0;
+                            try{
+                                double first = Double.parseDouble(result.substring(0,m.start()));
+                                double second = Double.parseDouble(result.substring(m.end()));
+                                char c = m.group().charAt(0);
+                                switch (c) {
+                                    case '+':dresult = first + second;
+                                        break;
+                                    case '-':dresult = first - second;
+                                        break;
+                                    case '*':dresult = first * second;
+                                        break;
+                                    case '/':dresult = first / second;
+                                        break;
+
+                                }
+                            }catch (Exception e){
+
+                            }
+                            result = dresult + "";
+                        }
+                   }
                     if (!result.equals(cell.lineValue)) {
                         cell.lineValue = result;
                         adjusted++;
