@@ -192,131 +192,119 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onCellClick = #myzss")
     public void onCellClick(CellMouseEvent event) {
         final Book book = event.getSheet().getBook();
-        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
-        List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        for (SName name : names) {
-            if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
-                while (filterPopup.getChildren().size() > 0) { // clear it out
-                    filterPopup.removeChild(filterPopup.getLastChild());
-                }
-                Listbox listbox = new Listbox();
-                Listhead listhead = new Listhead();
-                Listheader listheader = new Listheader();
-                listheader.setAlign("left");
-                listhead.appendChild(listheader);
-                listbox.setMultiple(true);
-                listbox.setCheckmark(true);
-                listbox.setWidth("200px");
-                listbox.appendChild(listhead);
-                final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
-                if (filterQueryCell != null){
-                    try {
+        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
+        String selectionName = pivotItem(zkAzquoBookUtils, event);
+        String selectionList = null;
+        String resultName = null;
+        CellRegion queryResultRegion =null;
+        if (selectionName!=null){
+            selectionList = "`" + selectionName + "` children";
+            selectionName = "az_" + selectionName.trim();
+            queryResultRegion = new CellRegion(event.getRow(), event.getColumn());
+        }else{
+             List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
+            for (SName name : names) {
+                if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
+                    selectionName = name.getName();
+                    queryResultRegion = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), selectionName + "Result");
+
+                    final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
+                    if (filterQueryCell != null) {
                         final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(filterQueryCell.getRefersToCellRegion().getRow(), filterQueryCell.getRefersToCellRegion().getColumn());
-                        List<FilterTriple> filterOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                .getFilterListForQuery(loggedInUser.getDataAccessToken(), cell.getStringValue(), name.getName(), loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
-                        Set<Listitem> selectedItems = new HashSet<>();
-                        int index = 0;
-                        for (FilterTriple filterTriple : filterOptions){
-                            listbox.appendItem(filterTriple.name, filterTriple.nameId + ""); // can I puit the name id in there?
-                            if (filterTriple.selected){
-                                selectedItems.add(listbox.getItemAtIndex(index));
-                            }
-                            index++;
-                        }
-                        listbox.setSelectedItems(selectedItems);
-                    } catch (Exception e) {
-                        listbox.appendItem("error : " + e.getMessage(), "");
-                        e.printStackTrace();
+                        selectionList = cell.getStringValue();
                     }
-                } else {
-                    listbox.appendItem(name.getName() + "Query not found", "");
+                    break;
                 }
-                filterPopup.appendChild(listbox);
-                Button ok = new Button();
-                ok.setWidth("80px");
-                ok.setLabel("OK");
-
-                ok.addEventListener("onClick",
-                        event1 -> {
-                            List<Integer> childIds = new ArrayList<>();
-                            StringBuilder resultDescription = new StringBuilder();
-                            final Set<Listitem> selectedItems = listbox.getSelectedItems();
-                            if (selectedItems.size() == 0){
-                                resultDescription.append("None");
-                            } else if (selectedItems.size() == listbox.getItems().size()){
-                                resultDescription.append("All");
-                            } else if (selectedItems.size() <= 5){
-                                boolean first = true;
-                                for (Listitem listItem : selectedItems){
-                                    if (!first){
-                                        resultDescription.append(", ");
-                                    }
-                                    resultDescription.append(listItem.getLabel());
-                                    first = false;
-                                }
-                            } else if ((listbox.getItems().size() - selectedItems.size()) <= 5){
-                                resultDescription.append("All Except ");
-                                boolean first = true;
-                                for (Listitem listItem : listbox.getItems()){
-                                    // could maybe be more efficient? Not sure I'm bothered
-                                    if (!selectedItems.contains(listItem)){
-                                        if (!first){
-                                            resultDescription.append(", ");
-                                        }
-                                        resultDescription.append(listItem.getLabel());
-                                        first = false;
-                                    }
-                                }
-                            } else {
-                                resultDescription.append(MULTI);
-                            }
-                            for (Listitem listItem : selectedItems){
-                                childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
-                            }
-                            rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), name.getName(), loggedInUser.getUser().getEmail(), childIds);
-                            filterPopup.close();
-                            // factor the reload here?
-                            try {
-                                // new book from same source
-                                final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
-                                for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
-                                    newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
-                                }
-                                if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
-                                    // direct calls to the HTML are perhaps not ideal. Could be replaced with calls to expected functions?
-                                    Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
-                                }
-                                myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
-
-                                // check to see if we need to set the selected values in a cell - or in the main cell?
-                                final SName queryResultCell = myzss.getBook().getInternalBook().getNameByName(name.getName() + "Result");
-                                if (queryResultCell != null){
-                                    try {
-                                        final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(queryResultCell.getRefersToCellRegion().getRow(), queryResultCell.getRefersToCellRegion().getColumn());
-                                        cell.setStringValue(resultDescription.toString());
-                                    } catch (Exception e) {
-                                        listbox.appendItem("error : " + e.getMessage(), "");
-                                        e.printStackTrace();
-                                    }
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        });
-
-                Button cancel = new Button();
-                cancel.setWidth("80px");
-                cancel.setLabel("Cancel");
-                cancel.addEventListener("onClick",
-                        event1 -> filterPopup.close());
-                filterPopup.appendChild(new Separator());
-                filterPopup.appendChild(ok);
-                filterPopup.appendChild(new Space());
-                filterPopup.appendChild(cancel);
-                // "after_start" is the position we'd want
-                filterPopup.open(event.getPageX(), event.getPageY());
             }
+        }
+        final CellRegion queryResultRegion2 = queryResultRegion;
+        if (selectionList!=null){
+            final String selectionName2 = selectionName;
+            final String resultName2 = resultName;
+            final String selectionList2 = selectionList;
+
+
+            while (filterPopup.getChildren().size() > 0) { // clear it out
+                filterPopup.removeChild(filterPopup.getLastChild());
+            }
+            Listbox listbox = new Listbox();
+            Listhead listhead = new Listhead();
+            Listheader listheader = new Listheader();
+            listheader.setAlign("left");
+            listhead.appendChild(listheader);
+            listbox.setMultiple(true);
+            listbox.setCheckmark(true);
+            listbox.setWidth("200px");
+            listbox.appendChild(listhead);
+            try{
+
+                List<FilterTriple> filterOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                        .getFilterListForQuery(loggedInUser.getDataAccessToken(), selectionList, selectionName, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
+                Set<Listitem> selectedItems = new HashSet<>();
+                int index = 0;
+                for (FilterTriple filterTriple : filterOptions){
+                    listbox.appendItem(filterTriple.name, filterTriple.nameId + ""); // can I puit the name id in there?
+                    if (filterTriple.selected){
+                        selectedItems.add(listbox.getItemAtIndex(index));
+                    }
+                    index++;
+                }
+                listbox.setSelectedItems(selectedItems);
+                } catch (Exception e) {
+                    listbox.appendItem("error : " + e.getMessage(), "");
+                    e.printStackTrace();
+                }
+            filterPopup.appendChild(listbox);
+            Button ok = new Button();
+            ok.setWidth("80px");
+            ok.setLabel("OK");
+
+            ok.addEventListener("onClick",
+                    event1 -> {
+                        List<Integer> childIds = new ArrayList<>();
+                        final Set<Listitem> selectedItems = listbox.getSelectedItems();
+                        for (Listitem listItem : selectedItems){
+                            childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
+                        }
+                         rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
+                        filterPopup.close();
+                        // factor the reload here?
+                        try {
+                            // new book from same source
+                            final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+                            for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
+                                newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+                            }
+
+                            if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
+                                // direct calls to the HTML are perhaps not ideal. Could be replaced with calls to expected functions?
+                                Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
+                            }
+                            myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+
+                            // check to see if we need to set the selected values in a cell - or in the main cell?
+                            if (queryResultRegion2 != null){
+                                String resultDescription = zkAzquoBookUtils.multiList(loggedInUser,selectionName2, selectionList2);
+                                final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(queryResultRegion2.getRow(), queryResultRegion2.getColumn());
+                                cell.setStringValue(resultDescription);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
+
+            Button cancel = new Button();
+            cancel.setWidth("80px");
+            cancel.setLabel("Cancel");
+            cancel.addEventListener("onClick",
+                    event1 -> filterPopup.close());
+            filterPopup.appendChild(new Separator());
+            filterPopup.appendChild(ok);
+            filterPopup.appendChild(new Space());
+            filterPopup.appendChild(cancel);
+            // "after_start" is the position we'd want
+            filterPopup.open(event.getPageX(), event.getPageY());
         }
         Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");
     }
@@ -384,32 +372,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                     }
                 }
             }
-        }
-        //check if one of the pivot filters has changed
-        Sheet sheet = event.getSheet();
-        SName pivotFilters = event.getSheet().getBook().getInternalBook().getNameByName("az_PivotFilters");
-        if (pivotFilters != null){
-            String[] filters = zkAzquoBookUtils.getSnameCell(pivotFilters).getStringValue().split(",");
-            CellRegion pivotHeadings = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(),"az_PivotHeadings");
-            if (pivotHeadings!=null){
-                int headingRow = pivotHeadings.getRow();
-                int headingCol = pivotHeadings.getColumn();
-                int headingRows = pivotHeadings.getRowCount();
-                int filterCount = 0;
-                //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
-                for (String filter:filters) {
-                    int rowOffset = filterCount % headingRows;
-                    int colOffset = filterCount / headingRows;
-                    int chosenRow = headingRow +  rowOffset;
-                    int chosenCol = headingCol + 3 * colOffset + 1;
-                    if (chosenRow==event.getRow() && chosenCol==event.getColumn()) {
-                        spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), filter.toLowerCase(), chosen);
-                        reload = true;
-                    }
-                    filterCount++;
-                }
-            }
-
         }
         if (reload) {
             try {
@@ -500,16 +462,67 @@ public class ZKComposer extends SelectorComposer<Component> {
     @Listen("onSheetSelect = #myzss")
     public void onSheetSelect(SheetSelectEvent sheetSelectEvent) {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
-        Book book = sheetSelectEvent.getSheet().getBook();
-        final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptions(sheetSelectEvent.getSheet().getBook(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
-        zkAzquoBookUtils.addValidation(sheetSelectEvent.getSheet().getBook(), choiceOptions, null);
+        //ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+       // Book book = sheetSelectEvent.getSheet().getBook();
+       // final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptions(sheetSelectEvent.getSheet().getBook(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
+       // zkAzquoBookUtils.addValidation(sheetSelectEvent.getSheet().getBook(), choiceOptions, null);
     }
 
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         provenanceForRowAndColumn(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
+    }
+
+
+    private String pivotItem(ZKAzquoBookUtils zkAzquoBookUtils, CellMouseEvent event){
+        SName pivotFilters = event.getSheet().getBook().getInternalBook().getNameByName("az_PivotFilters");
+        if (pivotFilters != null){
+            String[] filters = zkAzquoBookUtils.getSnameCell(pivotFilters).getStringValue().split(",");
+            CellRegion pivotHeadings = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(),"az_PivotHeadings");
+            if (pivotHeadings!=null){
+                int headingRow = pivotHeadings.getRow();
+                int headingCol = pivotHeadings.getColumn();
+                int headingRows = pivotHeadings.getRowCount();
+                int filterCount = 0;
+                //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
+                for (String filter:filters) {
+                    int rowOffset = filterCount % headingRows;
+                    int colOffset = filterCount / headingRows;
+                    int chosenRow = headingRow +  rowOffset;
+                    int chosenCol = headingCol + 3 * colOffset + 1;
+                    if (chosenRow==event.getRow() && chosenCol==event.getColumn()) {
+                        return filters[filterCount].trim();
+                    }
+                    filterCount++;
+                }
+            }
+
+        }
+        //look in the row headings.   probably should also be in the column headings....
+        for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
+            if (name.getName().toLowerCase().startsWith("az_rowheadings")){
+                //surely there must be a better way of getting the first cell off a region!
+                String firstItem = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn()).getStringValue();
+                if (firstItem.toLowerCase().startsWith("permute(")) {
+
+                    String[] rowHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
+                    String displayRowHeadingsString = "az_Display" + name.getName().substring(3);
+                    CellRegion displayRowHeadings = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), displayRowHeadingsString);
+                    int hrow = displayRowHeadings.getRow() - 1;
+                    int hcol = displayRowHeadings.getColumn();
+                    for (String rowHeading : rowHeadings) {
+                        if (hrow == event.getRow() && hcol++ == event.getColumn()) {
+                            return rowHeading.replace("`","");
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+
+
     }
 
     private void provenanceForRowAndColumn(int cellRow, int cellCol, int mouseX, int mouseY) {
