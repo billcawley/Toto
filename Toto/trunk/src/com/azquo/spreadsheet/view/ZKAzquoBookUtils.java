@@ -523,11 +523,13 @@ public class ZKAzquoBookUtils {
                          int lineNo= 0;
                         List<String> lastRowHeadings = new ArrayList<>(cellsAndHeadingsForDisplay.getRowHeadings().size());
                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
-                           int col = displayRowHeadings.getColumn();
+
+                            int col = displayRowHeadings.getColumn();
+                            int startCol = col;
                               for (String heading : rowHeading) {
                                 if (heading != null && (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                                     sheet.getInternalSheet().getCell(row, col).setValue(heading);
-                                    if (lineNo > 0 && lastRowHeadings.get(col) != null && lastRowHeadings.get(col).equals(heading)){
+                                    if (lineNo > 0 && lastRowHeadings.get(col - startCol) != null && lastRowHeadings.get(col - startCol).equals(heading)){
                                         //disguise the heading by making foreground colour = background colour
                                         Range selection = Ranges.range(sheet, row, col, row,col);
                                         CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row,col).getCellStyle().getBackColor().getHtmlColor());
