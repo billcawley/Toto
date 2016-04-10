@@ -268,7 +268,7 @@ public class DSSpreadsheetService {
     }
 
     List<List<DataRegionHeading>> sortCombos(List<DataRegionHeading> listToPermute,Collection<List<Name>> foundCombinations, int position, List<Map<Integer,Integer>> sortLists){
-         Map<Integer,Integer> sortList = sortLists.get(position);
+          Map<Integer,Integer> sortList = sortLists.get(position);
          Map<Integer,Collection<List<Name>>> sortMap = new TreeMap<>();
           for (List<Name> foundCombination:foundCombinations){
             int pos = sortList.get(foundCombination.get(position).getId());
@@ -321,6 +321,7 @@ public class DSSpreadsheetService {
     private List<List<DataRegionHeading>> findPermutedItems2(Collection<Name> sharedNames,   final List<DataRegionHeading> listToPermute ){
 
 
+        long startTime = System.currentTimeMillis();
         List<Name> permuteNames = new ArrayList<>();
         for (DataRegionHeading drh:listToPermute){
             permuteNames.add(drh.getName());
@@ -330,6 +331,7 @@ public class DSSpreadsheetService {
                 sharedNames.retainAll(drh.getName().findAllChildren(false));
             }
         }
+        //this is the part that takes a long time...
         Collection<List<Name>> foundCombinations = new HashSet<>();
         for (Name name :sharedNames){
             List<Name> foundCombination = new ArrayList<>();
@@ -339,6 +341,8 @@ public class DSSpreadsheetService {
             foundCombinations.add(foundCombination);
 
         }
+        System.out.println("time for getting combinations " + (System.currentTimeMillis() - startTime));
+        startTime = System.currentTimeMillis();
         //now need to sort the list into the order in the individual permute sets. ... by stagess
         // create some sort lists;
         List<Map<Integer,Integer>> sortLists = new ArrayList<>();
@@ -350,7 +354,10 @@ public class DSSpreadsheetService {
             }
             sortLists.add(sortList);
         }
-        return sortCombos(listToPermute, foundCombinations,0,sortLists);
+
+        List<List<DataRegionHeading>> toReturn =  sortCombos(listToPermute, foundCombinations,0,sortLists);
+        System.out.println("Headings sorted in " + (System.currentTimeMillis() - startTime));
+        return toReturn;
 
     }
 
@@ -930,6 +937,7 @@ public class DSSpreadsheetService {
     }
 
     private Collection<Name> getSharedNames(List<DataRegionHeading>headingList){
+        long startTime = System.currentTimeMillis();
         Set<Name> shared = null;
         for (DataRegionHeading heading:headingList){
             if (heading.getName()!=null && heading.getName().getChildren().size() > 0){
@@ -941,6 +949,9 @@ public class DSSpreadsheetService {
                 }
             }
         }
+        int size = 0;
+        if (shared!=null) size = shared.size();
+        System.out.println("time to get shared names " + (System.currentTimeMillis() - startTime) + " count = " + size);
 
         return shared;
     }
@@ -1971,6 +1982,7 @@ Callable interface sorts the memory "happens before" using future gets which run
 
     private List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
+        long startTime = System.currentTimeMillis();
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
             for (Name name : names) {
@@ -1982,6 +1994,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, offsetHeadings, valueFunctionSet));
             }
         }
+        System.out.println("time for dataRegionHeadingsFromNames " + (System.currentTimeMillis() - startTime));
         return dataRegionHeadings;
     }
 
