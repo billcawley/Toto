@@ -200,7 +200,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         String resultName = null;
         CellRegion queryResultRegion =null;
         if (selectionName!=null){
-            selectionList = "`" + selectionName + "` children";
+            selectionList = "`" + selectionName + "` children sorted";
             selectionName = "az_" + selectionName.trim();
             queryResultRegion = new CellRegion(event.getRow(), event.getColumn());
         }else{
