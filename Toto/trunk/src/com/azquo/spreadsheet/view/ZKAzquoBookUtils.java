@@ -449,11 +449,15 @@ public class ZKAzquoBookUtils {
                     for (String filter:filters){
                         filter = filter.trim();
                         try{
+                            List<String> possibleOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "`", loggedInUser.getLanguages());
                             List<String> choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                                     .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`az_" + filter + "`", loggedInUser.getLanguages());
-                            List<String>additionalContext = new ArrayList<>();
-                            additionalContext.add("az_" + filter);
-                            contextList.add(additionalContext);
+                            if (possibleOptions.size() != choiceOptions.size() && choiceOptions.size() > 0) {
+                                List<String> additionalContext = new ArrayList<>();
+                                additionalContext.add("az_" + filter);
+                                contextList.add(additionalContext);
+                            }
                         }catch (Exception e){
                             //ignore - no choices yet made
                         }
