@@ -928,22 +928,20 @@ public class ZKAzquoBookUtils {
 
     private void resolveQueries(Sheet sheet, LoggedInUser loggedInUser) {
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
-            if (name.getRefersToSheetName().equals(sheet.getSheetName())) { // why am I checking this again? A little confused
-                if (name.getName().endsWith("Query")) {
-                    SCell queryCell = getSnameCell(name);
-                    // as will happen to the whole sheet later
-                    if (queryCell.getType() == SCell.CellType.FORMULA) {
-                        //System.out.println("doing the cell thing on " + cell);
-                        queryCell.getFormulaResultType();
-                        queryCell.clearFormulaResultCache();
-                    }
-                    String queryString = queryCell.getStringValue();
-                    try {
-                        rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+            if (name.getName().endsWith("Query")) {
+                SCell queryCell = getSnameCell(name);
+                // as will happen to the whole sheet later
+                if (queryCell.getType() == SCell.CellType.FORMULA) {
+                    //System.out.println("doing the cell thing on " + cell);
+                    queryCell.getFormulaResultType();
+                    queryCell.clearFormulaResultCache();
+                }
+                String queryString = queryCell.getStringValue();
+                try {
+                    rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                            .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
         }
