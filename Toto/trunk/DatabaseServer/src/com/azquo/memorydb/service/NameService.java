@@ -362,7 +362,9 @@ public final class NameService {
         findOrCreateNameInParent2Count.incrementAndGet();
         long marker = System.currentTimeMillis();
         if (name == null || name.length() == 0) {
-            throw new Exception("Name to be created is blank or null!");
+            return null;
+            // dammit can't throw this just yet, caused a problem for callum, to invstigate
+//            throw new Exception("Name to be created is blank or null!");
         }
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an dataimport),and insert a structure into it*/
         if (attributeNames == null) {
