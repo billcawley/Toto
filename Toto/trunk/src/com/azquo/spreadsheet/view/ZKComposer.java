@@ -185,6 +185,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     static String MULTI = "Multi";
     static String CHOICE = "Choice";
+    static String RESULT = "Result";
 
     /* Bit of an odd one this : on a cell click "wake" the log between the client and report server back up as there may be activity shortly
     In addition I now want to now deal with the new filter things - this was by an area a la WASPS but now we'll do it by a popup
@@ -208,7 +209,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (SName name : names) {
                 if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
                     selectionName = name.getName();
-                    queryResultRegion = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), selectionName + "Result");
+                    queryResultRegion = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), selectionName + RESULT);
 
                     final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
                     if (filterQueryCell != null) {
@@ -269,18 +270,31 @@ public class ZKComposer extends SelectorComposer<Component> {
                     e.printStackTrace();
                 }
             filterPopup.appendChild(listbox);
-            Button ok = new Button();
-            ok.setWidth("80px");
-            ok.setLabel("OK");
-
-            ok.addEventListener("onClick",
+            Button save = new Button();
+            save.setWidth("80px");
+            save.setLabel("Save");
+            save.addEventListener("onClick",
                     event1 -> {
                         List<Integer> childIds = new ArrayList<>();
                         final Set<Listitem> selectedItems = listbox.getSelectedItems();
                         for (Listitem listItem : selectedItems){
                             childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
                         }
-                         rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
+                        rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
+                        filterPopup.close();
+                    });
+
+            Button saveAndReload = new Button();
+//            saveAndReload.setWidth("80px");
+            saveAndReload.setLabel("Save and reload");
+            saveAndReload.addEventListener("onClick",
+                    event1 -> {
+                        List<Integer> childIds = new ArrayList<>();
+                        final Set<Listitem> selectedItems = listbox.getSelectedItems();
+                        for (Listitem listItem : selectedItems){
+                            childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
+                        }
+                        rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
                         filterPopup.close();
                         // factor the reload here?
                         try {
@@ -313,9 +327,11 @@ public class ZKComposer extends SelectorComposer<Component> {
             cancel.addEventListener("onClick",
                     event1 -> filterPopup.close());
             filterPopup.appendChild(new Separator());
-            filterPopup.appendChild(ok);
+            filterPopup.appendChild(save);
             filterPopup.appendChild(new Space());
             filterPopup.appendChild(cancel);
+            filterPopup.appendChild(new Separator());
+            filterPopup.appendChild(saveAndReload);
             // "after_start" is the position we'd want
             filterPopup.open(event.getPageX(), event.getPageY());
         }
