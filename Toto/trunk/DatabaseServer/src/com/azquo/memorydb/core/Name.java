@@ -583,6 +583,35 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    // as above being made static in here due to performance
+    private static AtomicInteger memberNameCount = new AtomicInteger(0);
+
+    public static Name memberName(Name element, Name topSet) {
+        if (element.parentsAsSet != null) {
+            for (Name parent : element.parentsAsSet) {
+                if (parent.equals(topSet)) {
+                    return element;
+                }
+                Name ancestor = memberName(parent, topSet);
+                if (ancestor != null) {
+                    return ancestor;
+                }
+            }
+        } else if (element.parents.length > 0) {
+            for (int i = 0; i < element.parents.length; i++) {
+                if (element.parents[i].equals(topSet)) {
+                    return element;
+                }
+                Name ancestor = memberName(element.parents[i], topSet);
+                if (ancestor != null) {
+                    return ancestor;
+                }
+            }
+        }
+        return null;
+    }
+
+
     private static AtomicInteger addNamesCount = new AtomicInteger(0);
 
     // was in name service, added in here as a static function to give it direct access to the private arrays. Again an effort to reduce garbage.
@@ -1302,6 +1331,7 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("removeFromParentsCount\t\t\t\t" + removeFromParentsCount.get());
         System.out.println("findAllParentsCount\t\t\t\t" + findAllParentsCount.get());
         System.out.println("findAllParents2Count\t\t\t\t" + findAllParents2Count.get());
+        System.out.println("memberNameCount\t\t\t\t" + memberNameCount.get());
         System.out.println("addNamesCount\t\t\t\t" + addNamesCount.get());
         System.out.println("findATopParentCount\t\t\t\t" + findATopParentCount.get());
         System.out.println("findTopParentsCount\t\t\t\t" + findTopParentsCount.get());
@@ -1350,6 +1380,7 @@ public final class Name extends AzquoMemoryDBEntity {
         removeFromParentsCount.set(0);
         findAllParentsCount.set(0);
         findAllParents2Count.set(0);
+        memberNameCount.set(0);
         addNamesCount.set(0);
         findATopParentCount.set(0);
         findTopParentsCount.set(0);
