@@ -15,7 +15,6 @@ import com.azquo.spreadsheet.view.FilterTriple;
 import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.io.*;
 import java.net.InetAddress;
 import java.text.DateFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -164,23 +164,23 @@ public class DSSpreadsheetService {
                                 }
                                 row.add(hierarchyList);
                             }
-                        } else if (function== DataRegionHeading.FUNCTION.PERMUTE) {
+                        } else if (function == DataRegionHeading.FUNCTION.PERMUTE) {
                             String[] permutedNames = sourceCell.split(",");
                             List<Name> permuteNames = new ArrayList<>();
-                            for (String permutedName:permutedNames) {
+                            for (String permutedName : permutedNames) {
                                 //find the set chosen
-                                Name pName = nameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`","").trim());
+                                Name pName = nameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim());
                                 // if no set chosen, find the original set
-                                if (pName==null|| pName.getChildren().size()==0){
+                                if (pName == null || pName.getChildren().size() == 0) {
                                     pName = nameService.findByName(azquoMemoryDBConnection, permutedName);
 
                                 }
                                 permuteNames.add(pName);
                             }
                             row.clear();
-                            row.add(dataRegionHeadingsFromNames(permuteNames,azquoMemoryDBConnection,function,null,null));
+                            row.add(dataRegionHeadingsFromNames(permuteNames, azquoMemoryDBConnection, function, null, null));
 
-                        }else{// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
+                        } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
                             if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
@@ -246,7 +246,7 @@ public class DSSpreadsheetService {
 
     private <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
         //this version does full permute
-          List<List<T>> toReturn = null;
+        List<List<T>> toReturn = null;
         for (List<T> permutationDimension : listsToPermute) {
             if (permutationDimension == null) {
                 permutationDimension = new ArrayList<>();
@@ -267,173 +267,94 @@ public class DSSpreadsheetService {
         return toReturn;
     }
 
-    List<List<DataRegionHeading>> sortCombos(List<DataRegionHeading> listToPermute,Collection<List<Name>> foundCombinations, int position, List<Map<Integer,Integer>> sortLists){
-          Map<Integer,Integer> sortList = sortLists.get(position);
-         Map<Integer,Collection<List<Name>>> sortMap = new TreeMap<>();
-          for (List<Name> foundCombination:foundCombinations){
+    private List<List<DataRegionHeading>> sortCombos(List<DataRegionHeading> listToPermute, Collection<List<Name>> foundCombinations, int position, List<Map<Integer, Integer>> sortLists) {
+        Map<Integer, Integer> sortList = sortLists.get(position);
+        Map<Integer, Collection<List<Name>>> sortMap = new TreeMap<>();
+        for (List<Name> foundCombination : foundCombinations) {
             int pos = sortList.get(foundCombination.get(position).getId());
             Collection<List<Name>> sortItem = sortMap.get(pos);
-            if (sortItem == null){
-                sortItem = new HashSet<List<Name>>();
+            if (sortItem == null) {
+                sortItem = new HashSet<>();
                 sortMap.put(pos, sortItem);
             }
             sortItem.add(foundCombination);
         }
         position++;
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
-        for (int key : sortMap.keySet()){
-            if (position == sortLists.size()){
-                for (List<Name> entry : sortMap.get(key)){
-                     List<DataRegionHeading> drhEntry = new ArrayList<>();
-                    for (Name name:entry){
-                        drhEntry.add(new DataRegionHeading(name,true,null,null, null));
+        for (int key : sortMap.keySet()) {
+            if (position == sortLists.size()) {
+                for (List<Name> entry : sortMap.get(key)) {
+                    List<DataRegionHeading> drhEntry = new ArrayList<>();
+                    for (Name name : entry) {
+                        drhEntry.add(new DataRegionHeading(name, true, null, null, null));
                     }
                     toReturn.add(drhEntry);
-
-
                 }
                 //extract list and convert to dataregion heading
-            }else{
-                toReturn.addAll(sortCombos(listToPermute,sortMap.get(key),position,sortLists));
-
+            } else {
+                toReturn.addAll(sortCombos(listToPermute, sortMap.get(key), position, sortLists));
             }
-
         }
-        if (toReturn.size() > 0){//maybe should be 1 - no need for totals if there's only one item
+        if (toReturn.size() > 0) {//maybe should be 1 - no need for totals if there's only one item
             //create a total line
             List<DataRegionHeading> drhEntry = new ArrayList<>();
-            List<DataRegionHeading> lastEntry = toReturn.get(toReturn.size()-1);
+            List<DataRegionHeading> lastEntry = toReturn.get(toReturn.size() - 1);
             for (int i = 0; i < position - 1; i++) {
                 drhEntry.add(lastEntry.get(i));
             }
-            for (int i=position-1;i<listToPermute.size();i++){
+            for (int i = position - 1; i < listToPermute.size(); i++) {
                 drhEntry.add(listToPermute.get(i));
             }
             toReturn.add(drhEntry);
-         }
-
-
+        }
         return toReturn;
-
     }
 
 
-    private List<List<DataRegionHeading>> findPermutedItems2(Collection<Name> sharedNames,   final List<DataRegionHeading> listToPermute ){
-
-
+    private List<List<DataRegionHeading>> findPermutedItems(Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute) {
+        NumberFormat nf = NumberFormat.getInstance();
         long startTime = System.currentTimeMillis();
         List<Name> permuteNames = new ArrayList<>();
-        for (DataRegionHeading drh:listToPermute){
+        // edd note these shared headings can be big . . .
+        for (DataRegionHeading drh : listToPermute) {
             permuteNames.add(drh.getName());
-            if (sharedNames==null){
-                sharedNames = new HashSet<Name>(drh.getName().findAllChildren(false));
-            }else{
+            if (sharedNames == null) {
+                sharedNames = HashObjSets.newMutableSet(drh.getName().findAllChildren(false));
+            } else {
                 sharedNames.retainAll(drh.getName().findAllChildren(false));
             }
         }
+        System.out.println("time for building shared " + nf.format(System.currentTimeMillis() - startTime));
+        startTime = System.currentTimeMillis();
         //this is the part that takes a long time...
-        Collection<List<Name>> foundCombinations = new HashSet<>();
-        for (Name name :sharedNames){
-            List<Name> foundCombination = new ArrayList<>();
-            for (Name pName:permuteNames){
-                foundCombination.add(memberName(name, pName));
+        Collection<List<Name>> foundCombinations = HashObjSets.newMutableSet();
+        int comboSize = permuteNames.size();
+        for (Name name : sharedNames) {
+            List<Name> foundCombination = new ArrayList<>(comboSize);
+            for (Name pName : permuteNames) {
+                foundCombination.add(Name.memberName(name, pName));
             }
             foundCombinations.add(foundCombination);
-
         }
-        System.out.println("time for getting combinations " + (System.currentTimeMillis() - startTime));
+        System.out.println("time for getting combinations " + nf.format((System.currentTimeMillis() - startTime)));
         startTime = System.currentTimeMillis();
         //now need to sort the list into the order in the individual permute sets. ... by stagess
         // create some sort lists;
-        List<Map<Integer,Integer>> sortLists = new ArrayList<>();
-        for (Name permuteName:permuteNames){
-            Map<Integer,Integer>sortList = new HashedMap();
+        List<Map<Integer, Integer>> sortLists = new ArrayList<>();
+        for (Name permuteName : permuteNames) {
+            Map<Integer, Integer> sortList = new HashMap<>();
             int sortPos = 0;
-            for (Name name:permuteName.getChildren()){
-                sortList.put(name.getId(),sortPos++);
+            for (Name name : permuteName.getChildren()) {
+                sortList.put(name.getId(), sortPos++);
             }
             sortLists.add(sortList);
         }
-
-        List<List<DataRegionHeading>> toReturn =  sortCombos(listToPermute, foundCombinations,0,sortLists);
-        System.out.println("Headings sorted in " + (System.currentTimeMillis() - startTime));
+        List<List<DataRegionHeading>> toReturn = sortCombos(listToPermute, foundCombinations, 0, sortLists);
+        System.out.println("Headings sorted in " + nf.format((System.currentTimeMillis() - startTime)));
         return toReturn;
-
     }
-
-
-    private Name memberName(Name element, Name topSet){
-         for (Name parent:element.getParents()){
-            if (parent.equals(topSet)){
-                return element;
-            }
-            Name ancestor = memberName(parent, topSet);
-             if (ancestor!=null){
-                 return ancestor;
-             }
-        }
-        return null;
-    }
-
-
-        private List<List<DataRegionHeading>> findPermutedItems(List<DataRegionHeading> currentList, Collection<Name> children, int position, final List<List<DataRegionHeading>> listsToPermute){
-        List<DataRegionHeading> toPermute = listsToPermute.get(position);
-        List<List<DataRegionHeading>> toReturn = new ArrayList<>();
-        position++;
-         for (DataRegionHeading drh:toPermute){
-
-            if (drh.getName() != null && drh.getName().getChildren().size() > 0){
-                int startSize = toReturn.size();
-                for (Name child : drh.getName().getChildren()) {
-                    Collection<Name> commonChildren = null;
-                    if (children != null) {
-                        commonChildren = new HashSet<>(children);
-                    }
-                    if (child.getChildren().size() > 0) {
-                        if (commonChildren != null) {
-                            commonChildren.retainAll(child.findAllChildren(false));
-                        } else {
-                            commonChildren = (Set) child.findAllChildren(false);
-                        }
-                    }
-                    if (commonChildren == null || commonChildren.size() > 0) {
-                        List<DataRegionHeading> newCurrent = new ArrayList<>(currentList);
-                        DataRegionHeading childHeading = new DataRegionHeading(child, true, null, null, null, null);
-                        newCurrent.add(childHeading);
-                        if (position == listsToPermute.size()) {
-                            toReturn.add(newCurrent);
-                        } else {
-                            toReturn.addAll(findPermutedItems(newCurrent, commonChildren, position, listsToPermute));
-                        }
-                    }
-                }
-                if (toReturn.size() > startSize  && position < listsToPermute.size()){
-                    List<DataRegionHeading> newCurrent= new ArrayList<>(currentList);
-                    newCurrent.add(drh);
-                    while (++position < listsToPermute.size()){
-                        newCurrent.add(null);
-                    }
-                    toReturn.add(newCurrent);
-
-                }
-            }else {
-                List<DataRegionHeading> newCurrent= new ArrayList<>(currentList);
-                newCurrent.add(drh);
-                if (position==listsToPermute.size()){
-                    toReturn.add(newCurrent);
-                }else {
-                    toReturn.addAll(findPermutedItems(newCurrent, children, position , listsToPermute));
-                }
-            }
-
-        }
-        return toReturn;
-       }
-
-
 
     /*
-
 
     so say we already have
     a,1
@@ -519,19 +440,19 @@ public class DSSpreadsheetService {
             }
             try {
                 if (headingDefinitionRow.get(0).get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) {
-                    List<List<DataRegionHeading>> permuted = findPermutedItems2(sharedNames, headingDefinitionRow.get(0));//assumes only one row of headings
+                    List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, headingDefinitionRow.get(0));//assumes only one row of headings
                     permutedLists.add(permuted);
-                }else{
+                } else {
                     List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
                     permutedLists.add(permuted);
 
                 }
-            }catch(Exception e){
-                    List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
-                    permutedLists.add(permuted);
+            } catch (Exception e) {
+                List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
+                permutedLists.add(permuted);
 
             }
-         }
+        }
         if (permutedLists.size() == 1) { // it was just one row to permute, return it as is rather than combining the permuted results together which might result in a bit of garbage due to array copying
             return permutedLists.get(0);
         }
@@ -648,7 +569,7 @@ public class DSSpreadsheetService {
     }
 
     private List<FilterTriple> getFilterPairsFromUniqueNames(Collection<UniqueName> names, Name filterSet) {
-        return names.stream().map(uniqueName -> new FilterTriple(uniqueName.bottomName.getId(), uniqueName.description, filterSet.getChildren().contains(uniqueName.bottomName)) ).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
+        return names.stream().map(uniqueName -> new FilterTriple(uniqueName.bottomName.getId(), uniqueName.description, filterSet.getChildren().contains(uniqueName.bottomName))).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
     }
 
 
@@ -684,7 +605,7 @@ public class DSSpreadsheetService {
                 return toReturn;
             }
         }
-        final Collection<Name> names = nameService.parseQuery(connectionFromAccessToken, query, languages);
+        //final Collection<Name> names = nameService.parseQuery(connectionFromAccessToken, query, languages);
         return getFilterPairsFromUniqueNames(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages)), filterSet);
     }
 
@@ -891,7 +812,7 @@ public class DSSpreadsheetService {
         long start = track;
         long threshold = 1000;
         // the context is changing to data region headings to support name function permutations - unlike the column and row headings it has to be flat, a resultant one dimensional list from createHeadingArraysFromSpreadsheetRegion
-        final List<DataRegionHeading> contextHeadings = getContextHeadings(azquoMemoryDBCOnnection,contextSource,languages);
+        final List<DataRegionHeading> contextHeadings = getContextHeadings(azquoMemoryDBCOnnection, contextSource, languages);
         long time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Context parsed in " + time + "ms");
         track = System.currentTimeMillis();
@@ -920,7 +841,7 @@ public class DSSpreadsheetService {
             rowHeadings.add(new ArrayList<>());
             rowHeadings.get(0).add(new DataRegionHeading(null, false));
         }
-          List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings, columnHeadings, contextHeadings, languages, valueId);
+        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings, columnHeadings, contextHeadings, languages, valueId);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
         if (time > 5000) { // a bit arbitrary
@@ -936,21 +857,21 @@ public class DSSpreadsheetService {
         return dataToShow;
     }
 
-    private Collection<Name> getSharedNames(List<DataRegionHeading>headingList){
+    private Collection<Name> getSharedNames(List<DataRegionHeading> headingList) {
         long startTime = System.currentTimeMillis();
         Set<Name> shared = null;
-        for (DataRegionHeading heading:headingList){
-            if (heading.getName()!=null && heading.getName().getChildren().size() > 0){
-                if (shared==null){
-                    shared = new HashSet(heading.getName().findAllChildren(false));
-                }else{
+        for (DataRegionHeading heading : headingList) {
+            if (heading.getName() != null && heading.getName().getChildren().size() > 0) {
+                if (shared == null) {
+                    shared = new HashSet<>(heading.getName().findAllChildren(false));
+                } else {
                     shared.retainAll(heading.getName().findAllChildren(false));
 
                 }
             }
         }
         int size = 0;
-        if (shared!=null) size = shared.size();
+        if (shared != null) size = shared.size();
         System.out.println("time to get shared names " + (System.currentTimeMillis() - startTime) + " count = " + size);
 
         return shared;
@@ -962,7 +883,7 @@ public class DSSpreadsheetService {
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int unsortedRow, int unsortedCol, List<String> languages) throws Exception {
         // these 25 lines or so are used elsewhere, maybe normalise?
-        final List<DataRegionHeading> contextHeadings = getContextHeadings(azquoMemoryDBCOnnection,contextSource,languages);
+        final List<DataRegionHeading> contextHeadings = getContextHeadings(azquoMemoryDBCOnnection, contextSource, languages);
         Collection<Name> sharedNames = getSharedNames(contextHeadings);//sharedNames only required for permutations
         final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists, sharedNames);
@@ -1970,9 +1891,9 @@ Callable interface sorts the memory "happens before" using future gets which run
     private List<DataRegionHeading> getContextHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception {
         final List<List<List<DataRegionHeading>>> contextArraysFromSpreadsheetRegion = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, contextSource, languages);
         final List<DataRegionHeading> contextHeadings = new ArrayList<>();
-        for (List<List<DataRegionHeading>> list1 : contextArraysFromSpreadsheetRegion){
-            for (List<DataRegionHeading> list2 : list1){
-                if (list2 != null){ // seems it can be
+        for (List<List<DataRegionHeading>> list1 : contextArraysFromSpreadsheetRegion) {
+            for (List<DataRegionHeading> list2 : list1) {
+                if (list2 != null) { // seems it can be
                     contextHeadings.addAll(list2);
                 }
             }
