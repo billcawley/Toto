@@ -94,8 +94,13 @@ public final class AzquoMemoryDB {
         if (availableProcessors == 1) {
             return Executors.newFixedThreadPool(availableProcessors);
         } else {
-            System.out.println("reportFillerThreads : " + (availableProcessors - 1));
-            return Executors.newFixedThreadPool(availableProcessors - 1);
+            if (availableProcessors > 20){
+                System.out.println("reportFillerThreads : " + 20);
+                return Executors.newFixedThreadPool(20);
+            } else {
+                System.out.println("reportFillerThreads : " + (availableProcessors - 1));
+                return Executors.newFixedThreadPool(availableProcessors - 1);
+            }
         }
     }
 
