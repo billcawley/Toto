@@ -527,7 +527,12 @@ public class DSImportService {
                    happy for the check to remain in here - more stuff for the multi threaded bit */
                 ImportCellWithHeading first = lineToLoad.get(0);
                 if (first.lineValue.length() > 0 || first.immutableImportHeading.heading == null) {
-                    if (getCompositeValuesCheckOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, lineNo, attributeNames)) {
+                    List<String> languages = attributeNames;
+                    if (first.immutableImportHeading.attribute!=null&& first.immutableImportHeading.attribute.length() > 0){
+                        languages = new ArrayList<String>();
+                        languages.add(first.immutableImportHeading.attribute);
+                    }
+                    if (getCompositeValuesCheckOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, lineNo, languages)) {
                         try {
                             // valueTracker simply the number of values imported
                             valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo));
@@ -1231,7 +1236,7 @@ public class DSImportService {
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
     // now seems to support basic excel like string operations, left right and mid. Checking only and existing means "should we import the line at all" bases on these criteria
 
-    private boolean getCompositeValuesCheckOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, int lineNo, List<String> attributeNames) {
+    private boolean getCompositeValuesCheckOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, int lineNo, List<String> languages) {
         int adjusted = 2;
         //loops in case there are multiple levels of dependencies
         while (adjusted > 1) {
@@ -1350,12 +1355,12 @@ public class DSImportService {
                 }
                 // we could be deriving the name from composite so check existing here
                 if (cell.immutableImportHeading.existing) {
-                    if (attributeNames == null) { // same logic as used when creating the line names, not sure of this
-                        attributeNames = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
+                    if (languages == null) { // same logic as used when creating the line names, not sure of this
+                        languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
                     }
                     // note I'm not going to check parentNames are not empty here, if someone put existing wihthout specifying child of then I think it's fair to say the line isn't valid
                     for (Name parent : cell.immutableImportHeading.parentNames) { // try to find any names from anywhere
-                        if (!azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, cell.lineValue, parent).isEmpty()) { // NOT empty, we found one!
+                        if (!azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(languages, cell.lineValue, parent).isEmpty()) { // NOT empty, we found one!
                             return true; // no point carrying on
                         }
                     }
