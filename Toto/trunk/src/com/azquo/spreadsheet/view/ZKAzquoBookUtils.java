@@ -585,7 +585,10 @@ public class ZKAzquoBookUtils {
                                 int hrow = displayRowHeadings.getRow() - 1;
                                 int hcol = displayRowHeadings.getColumn();
                                 for (String rowHeading : rowHeadings) {
-                                    sheet.getInternalSheet().getCell(hrow, hcol++).setStringValue(rowHeading.replace("`", ""));
+                                    rowHeading = rowHeading.replace("`","");
+                                    String colHeading = multiList(loggedInUser,"az_" + rowHeading,"`" + rowHeading + "` children");
+                                    if (colHeading.equals("[all]")) colHeading = rowHeading;
+                                    sheet.getInternalSheet().getCell(hrow, hcol++).setStringValue(colHeading);
                                 }
 
                             }
@@ -1010,6 +1013,7 @@ public class ZKAzquoBookUtils {
 
             if (name.getName().toLowerCase().endsWith("choice")) {
                 String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
+                SCell choiceCell = getSnameCell(name);
                 System.out.println("debug:  trying to find the region " + choiceName + "chosen");
                 SName chosen = book.getInternalBook().getNameByName(choiceName + "chosen"); // as ever I do wonder about these string literals
                 if (name.getRefersToCellRegion() != null && chosen != null) {
@@ -1019,8 +1023,7 @@ public class ZKAzquoBookUtils {
                         List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
                         boolean dataRegionDropdown = !getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if (chosenRegion.getRowCount() == 1 || dataRegionDropdown) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
-                            SCell choiceCell = getSnameCell(name);
-                            String query = choiceCell.getStringValue();
+                              String query = choiceCell.getStringValue();
                             int contentPos = query.toLowerCase().indexOf(CONTENTS);
                             if (contentPos < 0) {//not a dependent range
                                 validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
@@ -1058,7 +1061,15 @@ public class ZKAzquoBookUtils {
                              */
                         }
                     }
+                }else {
+                    SName multi = book.getInternalBook().getNameByName(choiceName + "multiresult"); // as ever I do wonder about these string literals
+                    if (multi != null) {
+                        SCell resultCell = getSnameCell(multi);
+                        resultCell.setStringValue(multiList(loggedInUser, choiceName + "Multi", choiceCell.getStringValue()));
+
+                    }
                 }
+
             } else if (name.getName().toLowerCase().endsWith(ZKComposer.RESULT.toLowerCase())) {
                 final SName filterQueryCell = book.getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - ZKComposer.RESULT.length()) + ZKComposer.CHOICE);
                 if (filterQueryCell != null) {
@@ -1068,6 +1079,7 @@ public class ZKAzquoBookUtils {
                     resultCell.setStringValue(choiceString);
                 }
             }
+
         }
         return dependentRanges;
     }
