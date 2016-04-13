@@ -1506,7 +1506,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
         // I was passing an ArrayList through to the tasks. This did seem to work but as I understand a Callable is what's required here, takes care of memory sync and exceptions
-        if (totalRows < 50) { // arbitrary cut off for the moment, Future per cell. I wonder if it should be lower than 1000?
+        if (totalRows < 1000) { // arbitrary cut off for the moment, Future per cell. I wonder if it should be lower than 1000?
             List<List<Future<AzquoCell>>> futureCellArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
