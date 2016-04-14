@@ -1496,6 +1496,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         }*/
         List<List<AzquoCell>> toReturn = new ArrayList<>(totalRows); // make it the right size so multithreading changes the values but not the structure
         connection.addToUserLog("Size = " + totalRows + " * " + totalCols);
+        connection.addToUserLog("1%--------25%---------50%---------75%--------100%");
         int maxRegionSize = 2000000;//random!  set by WFC 29/6/15
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
