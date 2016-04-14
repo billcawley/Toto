@@ -169,7 +169,7 @@ public class DSSpreadsheetService {
                             List<Name> permuteNames = new ArrayList<>();
                             for (String permutedName : permutedNames) {
                                 //find the set chosen
-                                Name pName = nameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim());
+                                Name pName = nameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
                                 // if no set chosen, find the original set
                                 if (pName == null || pName.getChildren().size() == 0) {
                                     pName = nameService.findByName(azquoMemoryDBConnection, permutedName);
@@ -1058,9 +1058,7 @@ public class DSSpreadsheetService {
                 for (int j = 0; j < filterCount; j++) {
                     List<AzquoCell> rowToCheck = toReturn.get(rowNo + j); // size - 1 for the last index
                     for (AzquoCell cellToCheck : rowToCheck) {
-                        //Values found = non blank row. I think filter will generally only be used in the context of values.
-                        if (cellToCheck.getListOfValuesOrNamesAndAttributeName() != null && cellToCheck.getListOfValuesOrNamesAndAttributeName().getAttributeNames() == null
-                                && cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues() != null && !cellToCheck.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {
+                         if (cellToCheck.getStringValue()!=null && cellToCheck.getStringValue().length() > 0) {
                             rowsBlank = false;
                             break;
                         }
