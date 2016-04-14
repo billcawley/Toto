@@ -585,7 +585,7 @@ public class ZKAzquoBookUtils {
                                 int hrow = displayRowHeadings.getRow() - 1;
                                 int hcol = displayRowHeadings.getColumn();
                                 for (String rowHeading : rowHeadings) {
-                                    rowHeading = rowHeading.replace("`","");
+                                    rowHeading = rowHeading.replace("`","").trim();
                                     String colHeading = multiList(loggedInUser,"az_" + rowHeading,"`" + rowHeading + "` children");
                                     if (colHeading.equals("[all]")) colHeading = rowHeading;
                                     sheet.getInternalSheet().getCell(hrow, hcol++).setStringValue(colHeading);
@@ -970,24 +970,23 @@ public class ZKAzquoBookUtils {
                     int filterCount = 0;
                     //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                     for (String filter : filters) {
-                        filter = filter.trim();
-                        int rowOffset = filterCount % headingRows;
-                        int colOffset = filterCount / headingRows;
-                        int chosenRow = headingRow + rowOffset;
-                        int chosenCol = headingCol + 3 * colOffset;
-                        if (filterCount > 0) {
-                            Range copySource = Ranges.range(pSheet, headingRow, headingCol, headingRow, headingCol + 1);
-                            Range copyTarget = Ranges.range(pSheet, chosenRow, chosenCol, chosenRow, chosenCol + 1);
-                            CellOperationUtil.paste(copySource, copyTarget);
-                            //Ranges.range(pSheet, chosenRow, chosenCol + 1).setNameName(filter + "Chosen");
+                        List<String> optionsList = optionsList(loggedInUser,  "`" + filter + "` children");
+                        if (optionsList!=null && optionsList.size() > 1) {
+                            String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children");//leave out any with single choices
+                            filter = filter.trim();
+                            int rowOffset = filterCount % headingRows;
+                            int colOffset = filterCount / headingRows;
+                            int chosenRow = headingRow + rowOffset;
+                            int chosenCol = headingCol + 3 * colOffset;
+                            if (filterCount > 0) {
+                                Range copySource = Ranges.range(pSheet, headingRow, headingCol, headingRow, headingCol + 1);
+                                Range copyTarget = Ranges.range(pSheet, chosenRow, chosenCol, chosenRow, chosenCol + 1);
+                                CellOperationUtil.paste(copySource, copyTarget);
+                                //Ranges.range(pSheet, chosenRow, chosenCol + 1).setNameName(filter + "Chosen");
 
-                        }
-                        pSheet.getInternalSheet().getCell(chosenRow, chosenCol).setStringValue(filter);
-                        String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children"); // forced case insensitive, a bit hacky but names in excel are case insensetive I think
-                        if (selected == null || selected.length() == 0) {
-                            selected = "[all]";
-                        }
-                        pSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1).setStringValue(selected);
+                            }
+                            pSheet.getInternalSheet().getCell(chosenRow, chosenCol).setStringValue(filter);
+                            pSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1).setStringValue(selected);
                          /*
                         validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(filter);
                         int row = 0;
@@ -1006,7 +1005,8 @@ public class ZKAzquoBookUtils {
                         }
                         numberOfValidationsAdded++;
                          */
-                        filterCount++;
+                            filterCount++;
+                        }
                     }
                 }
             }
@@ -1070,16 +1070,7 @@ public class ZKAzquoBookUtils {
                     }
                 }
 
-            } else if (name.getName().toLowerCase().endsWith(ZKComposer.RESULT.toLowerCase())) {
-                final SName filterQueryCell = book.getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - ZKComposer.RESULT.length()) + ZKComposer.CHOICE);
-                if (filterQueryCell != null) {
-                    final SCell choiceCell = getSnameCell(filterQueryCell);
-                    final SCell resultCell = getSnameCell(name);
-                    String choiceString = multiList(loggedInUser, name.getName(), choiceCell.getStringValue());
-                    resultCell.setStringValue(choiceString);
-                }
             }
-
         }
         return dependentRanges;
     }
@@ -1099,12 +1090,21 @@ public class ZKAzquoBookUtils {
         return found;
     }
 
+    public List<String> optionsList(LoggedInUser loggedInUser, String sourceSet){
+        try {
+            return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), sourceSet, loggedInUser.getLanguages());
+        }catch(Exception e){
+            return null;
+        }
+    }
+
     public String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
         try {
             List<String> chosenOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                     .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`" + filterName + "` children", loggedInUser.getLanguages());
-            List<String> allOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), sourceSet, loggedInUser.getLanguages());
+            List<String> allOptions = optionsList(loggedInUser, sourceSet);
+            if (allOptions.size() < 2) return null;
             if (chosenOptions.size() == 0 || chosenOptions.size() == allOptions.size()) return "[all]";
             if (chosenOptions.size() < 6) {
                 StringBuilder toReturn = new StringBuilder();
