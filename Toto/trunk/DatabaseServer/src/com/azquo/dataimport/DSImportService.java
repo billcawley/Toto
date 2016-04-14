@@ -528,10 +528,6 @@ public class DSImportService {
                 ImportCellWithHeading first = lineToLoad.get(0);
                 if (first.lineValue.length() > 0 || first.immutableImportHeading.heading == null) {
                     List<String> languages = attributeNames;
-                    if (first.immutableImportHeading.attribute!=null&& first.immutableImportHeading.attribute.length() > 0){
-                        languages = new ArrayList<String>();
-                        languages.add(first.immutableImportHeading.attribute);
-                    }
                     if (getCompositeValuesCheckOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, lineNo, languages)) {
                         try {
                             // valueTracker simply the number of values imported
@@ -1355,6 +1351,9 @@ public class DSImportService {
                 }
                 // we could be deriving the name from composite so check existing here
                 if (cell.immutableImportHeading.existing) {
+                    if (cell.immutableImportHeading.attribute!=null&& cell.immutableImportHeading.attribute.length() > 0){
+                        languages = Collections.singletonList(cell.immutableImportHeading.attribute);
+                    }
                     if (languages == null) { // same logic as used when creating the line names, not sure of this
                         languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
                     }
