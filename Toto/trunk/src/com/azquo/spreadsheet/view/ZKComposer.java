@@ -516,14 +516,17 @@ public class ZKComposer extends SelectorComposer<Component> {
                 int filterCount = 0;
                 //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                 for (String filter:filters) {
-                    int rowOffset = filterCount % headingRows;
-                    int colOffset = filterCount / headingRows;
-                    int chosenRow = headingRow +  rowOffset;
-                    int chosenCol = headingCol + 3 * colOffset + 1;
-                    if (chosenRow==event.getRow() && chosenCol==event.getColumn()) {
-                        return filters[filterCount].trim();
+                    List<String> optionsList = zkAzquoBookUtils.optionsList( (LoggedInUser)event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
+                    if (optionsList != null && optionsList.size() > 1) {
+                        int rowOffset = filterCount % headingRows;
+                        int colOffset = filterCount / headingRows;
+                        int chosenRow = headingRow + rowOffset;
+                        int chosenCol = headingCol + 3 * colOffset + 1;
+                        if (chosenRow == event.getRow() && chosenCol == event.getColumn()) {
+                            return filters[filterCount].trim();
+                        }
+                        filterCount++;
                     }
-                    filterCount++;
                 }
             }
 
