@@ -530,7 +530,7 @@ public class ZKAzquoBookUtils {
                             int col = displayRowHeadings.getColumn();
                             int startCol = col;
                             for (String heading : rowHeading) {
-                                if (heading != null && (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
+                                if (heading != null && (sheet.getInternalSheet().getCell(row, col).getType() != SCell.CellType.STRING || sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                                     sheet.getInternalSheet().getCell(row, col).setValue(heading);
                                     if (lineNo > 0 && lastRowHeadings.get(col - startCol) != null && lastRowHeadings.get(col - startCol).equals(heading)) {
                                         //disguise the heading by making foreground colour = background colour
@@ -610,7 +610,7 @@ public class ZKAzquoBookUtils {
                                     if (heading.equals(userRegionOptions.getSortColumn())) {
                                         sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
                                     }
-                                    if (sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) {
+                                    if (sheet.getInternalSheet().getCell(row, col).getType() == SCell.CellType.STRING && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) {
                                         sheet.getInternalSheet().getCell(row, col).setValue(heading + sortArrow);
                                     } else {
                                         sheet.getInternalSheet().getCell(row, col).setValue(sheet.getInternalSheet().getCell(row, col).getValue() + sortArrow);
