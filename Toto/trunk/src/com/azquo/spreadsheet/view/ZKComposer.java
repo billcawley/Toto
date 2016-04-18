@@ -523,7 +523,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         int chosenRow = headingRow + rowOffset;
                         int chosenCol = headingCol + 3 * colOffset + 1;
                         if (chosenRow == event.getRow() && chosenCol == event.getColumn()) {
-                            return filters[filterCount].trim();
+                            return filter.trim();
                         }
                         filterCount++;
                     }
