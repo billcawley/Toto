@@ -521,9 +521,12 @@ public class ZKAzquoBookUtils {
                             int insertCol = displayRowHeadings.getColumn() + displayRowHeadings.getColumnCount() - 1;
                             Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); //
                             CellOperationUtil.insert(insertRange.toColumnRange(), Range.InsertShift.RIGHT, Range.InsertCopyOrigin.FORMAT_LEFT_ABOVE);
+                            displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
                         }
                         row = displayRowHeadings.getRow();
                         int lineNo = 0;
+                        int lastTotalRow = row -1;
+                        int totalRow = -1;
                         List<String> lastRowHeadings = new ArrayList<>(cellsAndHeadingsForDisplay.getRowHeadings().size());
                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
 
@@ -554,18 +557,36 @@ public class ZKAzquoBookUtils {
 
                                 //format the row headings for hierarchy.  Each total level has a different format.   clear visible names in all but on eheading
                                 if (sameValues < rowHeading.size() - 1) {
-                                    int totalCount = rowHeading.size() - sameValues;
+                                     int totalCount = rowHeading.size() - sameValues;
                                     //this is a total line
-                                    Range selection = Ranges.range(sheet, row - 1, displayRowHeadings.getColumn(), row - 1, displayDataRegion.getColumn() + displayDataRegion.getColumnCount());
-                                    SCell lineFormat = getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + totalCount + region));
-
-                                    if (lineFormat != null) {
+                                    int selStart = displayRowHeadings.getColumn();
+                                    int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1;
+                                    SCell lineFormat = getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + (sameValues + 1) + region));
+                                    Range selection = Ranges.range(sheet, row - 1, selStart, row - 1, selEnd);
+                                    if (lineFormat == null){
+                                        CellOperationUtil.applyFontBoldweight(selection, Font.Boldweight.BOLD);
+                                    }else{
+                                        if (sameValues == 1 && totalRow == -1){
+                                            totalRow = lineFormat.getRowIndex();
+                                        }
+                                        if (sameValues == 1 && totalRow > displayRowHeadings.getRow()){
+                                            //copy the total row and the line above to the current position, then copy the line above into the intermediate rows
+                                            int dataStart = displayDataRegion.getColumn();
+                                            Range copySource = Ranges.range(sheet, totalRow - 1, dataStart, totalRow, selEnd);
+                                            Range destination = Ranges.range(sheet, row - 2, dataStart, row-1, selEnd);
+                                            int tempStart = selEnd + 10;
+                                            Range tempPos = Ranges.range(sheet,totalRow- 1, tempStart, totalRow, tempStart + selEnd - selStart);
+                                            CellOperationUtil.paste(copySource,tempPos );
+                                            CellOperationUtil.cut(tempPos, destination);
+                                            if (row - lastTotalRow > 3){
+                                                CellOperationUtil.paste(Ranges.range(sheet, row - 2, dataStart, row - 2, selEnd), Ranges.range(sheet,lastTotalRow, dataStart, row - 3, selEnd));
+                                            }
+                                        }
                                         CellOperationUtil.applyBackColor(selection, lineFormat.getCellStyle().getBackColor().getHtmlColor());
                                         CellOperationUtil.applyFontColor(selection, lineFormat.getCellStyle().getFont().getColor().getHtmlColor());
-                                    } else {
-                                        CellOperationUtil.applyFontBoldweight(selection, Font.Boldweight.BOLD);
-                                    }
-                                    Ranges.range(sheet, row - 1, displayRowHeadings.getColumn() + sameValues + 1, row - 1, displayRowHeadings.getColumn() + displayRowHeadings.getColumnCount()).clearContents();
+                                     }
+                                    Ranges.range(sheet, row - 1, selStart + sameValues + 1, row - 1, selStart + displayRowHeadings.getColumnCount()).clearContents();
+                                    lastTotalRow = row;
                                 }
                                 if (sameValues > 0) {
                                     Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayRowHeadings.getColumn() + sameValues - 1);
@@ -937,9 +958,9 @@ public class ZKAzquoBookUtils {
                     queryCell.getFormulaResultType();
                     queryCell.clearFormulaResultCache();
                 }
-                String queryString = queryCell.getStringValue();
-                try {
-                    rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                 try {
+                     String queryString = queryCell.getStringValue();
+                     rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                             .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
                 } catch (Exception e) {
                     e.printStackTrace();
