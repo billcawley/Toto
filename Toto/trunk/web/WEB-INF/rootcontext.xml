@@ -71,6 +71,7 @@
     <bean name="openDatabaseDao" class="com.azquo.admin.database.OpenDatabaseDAO"/>
     <bean name="onlineReportDao" class="com.azquo.admin.onlinereport.OnlineReportDAO"/>
     <bean name="reportScheduleDao" class="com.azquo.admin.onlinereport.ReportScheduleDAO"/>
+    <bean name="databaseReportLinkDAO" class="com.azquo.admin.onlinereport.DatabaseReportLinkDAO"/>
 
     <bean name="magentoService" class="com.azquo.app.magento.service.DataLoadService"/>
     <bean name="invoiceService" class="com.azquo.admin.InvoiceService"/>

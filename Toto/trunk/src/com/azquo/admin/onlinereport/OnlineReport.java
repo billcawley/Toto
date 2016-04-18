@@ -19,12 +19,9 @@ public class OnlineReport extends StandardEntity {
 
     private LocalDateTime dateCreated;
     private int businessId;
-    private int databaseId;
-    private String database; // for sending parameters only
+    private String database; // for sending parameters only, I think visually, need to think on this given new structure, TODO
     private String reportName;
-    private String databaseType;
     private String reportCategory;
-    private String userStatus;
     private String filename;
     private String pathName; //internal use
     private String explanation;
@@ -38,12 +35,9 @@ public class OnlineReport extends StandardEntity {
     public OnlineReport(@JsonProperty("id") int id
             , @JsonProperty("businessId") LocalDateTime dateCreated
             , @JsonProperty("businessId") int businessId
-            , @JsonProperty("databaseId") int databaseId
             , @JsonProperty("database") String database
             , @JsonProperty("reportName") String reportName
-            , @JsonProperty("databaseType") String databaseType
             , @JsonProperty("reportCategory") String reportCategory
-            , @JsonProperty("userStatus") String userStatus
             , @JsonProperty("filename") String filename
             , @JsonProperty("pathName") String pathName
             , @JsonProperty("explanation") String explanation
@@ -52,12 +46,9 @@ public class OnlineReport extends StandardEntity {
         this.id = id;
         this.dateCreated = dateCreated;
         this.businessId = businessId;
-        this.databaseId = databaseId;
         this.database = database;
         this.reportName = reportName;
-        this.databaseType = databaseType;
         this.reportCategory = reportCategory;
-        this.userStatus = userStatus;
         this.filename = filename;
         this.pathName = pathName;
         this.explanation = explanation;
@@ -82,15 +73,6 @@ public class OnlineReport extends StandardEntity {
         this.dateCreated = dateCreated;
     }
 
-
-    public int getDatabaseId() {
-        return databaseId;
-    }
-
-    public void setDatabaseId(int databaseId) {
-        this.databaseId = databaseId;
-    }
-
     public String getDatabase() {
         return database;
     }
@@ -107,25 +89,10 @@ public class OnlineReport extends StandardEntity {
         this.reportName = reportName;
     }
 
-    public String getDatabaseType() { return databaseType;  }
-
-    public void setDatabaseType(String databaseType) {
-        this.databaseType = databaseType;
-    }
-
     public String getReportCategory() { return reportCategory;  }
 
     public void setReportCategory(String reportCategory) {
         this.reportCategory = reportCategory;
-    }
-
-
-    public String getUserStatus() {
-        return userStatus;
-    }
-
-    public void setUserStatus(String userStatus) {
-        this.userStatus = userStatus;
     }
 
     public String getFilename() {
@@ -174,12 +141,9 @@ public class OnlineReport extends StandardEntity {
         return "OnlineReport{" +
                 "dateCreated=" + dateCreated +
                 "businessId=" + businessId +
-                ", databaseId=" + databaseId +
                 ", database='" + database + '\'' +
                 ", reportName='" + reportName + '\'' +
-                ", businessType='" + databaseType + '\'' +
                 ", reportCategory='" + reportCategory + '\'' +
-                ", userStatus='" + userStatus + '\'' +
                 ", filename='" + filename + '\'' +
                 ", pathName='" + pathName + '\'' +
                 ", explanation='" + explanation + '\'' +

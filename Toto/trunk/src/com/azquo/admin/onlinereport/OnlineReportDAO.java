@@ -26,13 +26,10 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     private static final String  DATECREATED = "date_created";
 
     private static final String BUSINESSID = "business_id";
-    private static final String DATABASEID = "database_id";
-    // edd: hmm, what's going on with database?
-    //public static final String DATABASE = "database";
     private static final String REPORTNAME = "report_name";
-    private static final String DATABASETYPE = "database_type";
+//    private static final String DATABASETYPE = "database_type";
     private static final String REPORTCATEGORY = "report_category";
-    private static final String USERSTATUS = "user_status";
+//    private static final String USERSTATUS = "user_status";
     private static final String FILENAME = "filename";
     private static final String EXPLANATION = "explanation";
     private static final String RENDERER = "renderer";
@@ -44,11 +41,8 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         toReturn.put(ID, onlineReport.getId());
         toReturn.put(DATECREATED,  Date.from(onlineReport.getDateCreated().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(BUSINESSID, onlineReport.getBusinessId());
-        toReturn.put(DATABASEID, onlineReport.getDatabaseId());
         toReturn.put(REPORTNAME, onlineReport.getReportName());
-        toReturn.put(DATABASETYPE,onlineReport.getDatabaseType());
         toReturn.put(REPORTCATEGORY,onlineReport.getReportCategory());
-        toReturn.put(USERSTATUS, onlineReport.getUserStatus());
         toReturn.put(FILENAME, onlineReport.getFilename());
         toReturn.put(EXPLANATION, onlineReport.getExplanation());
         toReturn.put(RENDERER, onlineReport.getRenderer());
@@ -63,12 +57,9 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
                 return new OnlineReport(rs.getInt(ID)
                         , getLocalDateTimeFromDate(rs.getDate(DATECREATED))
                         , rs.getInt(BUSINESSID)
-                        , rs.getInt(DATABASEID)
                         , ""
                         , rs.getString(REPORTNAME)
-                        , rs.getString(DATABASETYPE)
                         , rs.getString(REPORTCATEGORY)
-                        , rs.getString(USERSTATUS)
                         , rs.getString(FILENAME)
                         , ""
                         , rs.getString(EXPLANATION)
@@ -88,61 +79,43 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
 
     public OnlineReport findForDatabaseIdAndName(final int databaseId, String reportName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(DATABASEID, databaseId);
+        namedParams.addValue(DatabaseReportLinkDAO.DATABASE_ID, databaseId);
         namedParams.addValue(REPORTNAME, reportName);
         namedParams.addValue(ACTIVE, true);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + DATABASEID + "` = :" + DATABASEID + " and `" + REPORTNAME + "` = :" + REPORTNAME + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams);
+        return findOneWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
+                +  "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
+                + " and `" + REPORTNAME + "` = :" + REPORTNAME + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams);
     }
 
-    // EFC : I don't think the string splitting stuff should be in here (todo)
-    public List<OnlineReport> findForDatabaseIdAndUserStatus(final int databaseId, String userStatus, String databaseType) {
-        if (databaseType == null || databaseType.length() == 0){
-            databaseType = "none";
-        }
-        String[] statuses = userStatus.split(",");
-        StringBuilder statusSelect = new StringBuilder("(");
+    public OnlineReport findForIdAndBusinessId(final int id, int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        for (int count = 0; count < statuses.length; count++) {
-            if (count > 0) {
-                statusSelect.append(" or ");
-            }
-            namedParams.addValue(USERSTATUS + count, "%" + statuses[count].trim() + "%");
-            statusSelect.append(USERSTATUS + " like :" + USERSTATUS).append(count);
-        }
-        statusSelect.append(")");
-        namedParams.addValue(DATABASEID, databaseId);
-        namedParams.addValue(DATABASETYPE, databaseType);
-        namedParams.addValue(USERSTATUS, "%" + userStatus + "%");
+        namedParams.addValue(ID, id);
+        namedParams.addValue(BUSINESSID, businessId);
         namedParams.addValue(ACTIVE, true);
-        List<OnlineReport> possibles =  findListWithWhereSQLAndParameters(" WHERE (`" + DATABASETYPE + "` = :" + DATABASETYPE + " OR `" + DATABASEID + "` = :" + DATABASEID + ") and " + ACTIVE + " = :" + ACTIVE + " and " + statusSelect + " order by " + REPORTCATEGORY + ", " + REPORTNAME, namedParams, false);
-        List<OnlineReport> toReturn = new ArrayList<>();
-        for (OnlineReport possible:possibles){
-            String[] foundStatuses = possible.getUserStatus().split(",");
-            for (String foundStatus:foundStatuses){
-                if (foundStatus.trim().equalsIgnoreCase(userStatus)){
-                    toReturn.add(possible);
-                    break;
-                }
-            }
-
-        }
-        return toReturn;
+        return findOneWithWhereSQLAndParameters("  WHERE " + ID + " = :" + ID + " and " + BUSINESSID + " = :" + BUSINESSID + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams);
     }
 
-    public List<OnlineReport> findForDatabaseId(final int databaseId, String databaseType) {
+    public OnlineReport findForNameAndBusinessId(final String name, int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        if (databaseType == null || databaseType.length() == 0){
-            databaseType = "none";
-        }
-        namedParams.addValue(DATABASEID, databaseId);
-        namedParams.addValue(DATABASETYPE, databaseType);
+        namedParams.addValue(REPORTNAME, name);
+        namedParams.addValue(BUSINESSID, businessId);
         namedParams.addValue(ACTIVE, true);
-        return findListWithWhereSQLAndParameters("WHERE " + DATABASETYPE + " = :" + DATABASETYPE + " OR (" + DATABASEID + " = :" + DATABASEID + " and " + ACTIVE + " = :" + ACTIVE + ")", namedParams, false);
+        return findOneWithWhereSQLAndParameters("  WHERE " + REPORTNAME + " = :" + REPORTNAME + " and " + BUSINESSID + " = :" + BUSINESSID + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams);
     }
 
-    public void removeForDatabaseId(int databaseId) {
+    public List<OnlineReport> findForBusinessId(int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(DATABASEID, databaseId);
-        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
+        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(ACTIVE, true);
+        return findListWithWhereSQLAndParameters("  WHERE " + BUSINESSID + " = :" + BUSINESSID + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams, false);
+    }
+
+    public List<OnlineReport> findForDatabaseId(final int databaseId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DatabaseReportLinkDAO.DATABASE_ID, databaseId);
+        namedParams.addValue(ACTIVE, true);
+        return findListWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
+                +  "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
+                + " and `" + ACTIVE + "` = :" + ACTIVE + " order by " + REPORTNAME, namedParams, false);
     }
 }

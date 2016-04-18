@@ -4,6 +4,8 @@
     <form name="azquoform" onsubmit="submit();"  $enctype method="post" action="/api/Online">
         <div class="excelDefaults" style="height:$maxheight;overflow:auto" id="spreadsheet">
             <input type="hidden" name="reportid" id="reportId" value="$reportid"/>
+            <input type="hidden" name="databaseid" id="databaseId" value="$databaseid"/>
+            <input type="hidden" name="permissionid" id="permissionId" value="$permissionid"/>
             <input type="hidden" name="reporttoload" id="reportToLoad" value="$reportid"/>
             <input type="hidden" name="editedname" id="editedName" value=""/>
             <input type="hidden" name="editedvalue" id="editedValue" value=""/>

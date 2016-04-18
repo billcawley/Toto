@@ -10,9 +10,8 @@
 		<thead>
 			<tr>
 				<td>Database</td>
+				<td>Report</td>
 				<td>Email</td>
-				<td>Start Date</td>
-				<td>End Date</td>
 				<td>Read List</td>
 				<td>Write List</td>
 				<td width="30"></td>
@@ -24,9 +23,8 @@
 		<c:forEach items="${permissions}" var="permission">
 			<tr>
 				<td>${permission.databaseName}</td>
+				<td>${permission.reportId}</td>
 				<td>${permission.userEmail}</td>
-				<td>${permission.startDate}</td>
-				<td>${permission.endDate}</td>
 				<td>${permission.readList}</td>
 				<td>${permission.writeList}</td>
 				<td><a href="/api/ManagePermissions?deleteId=${permission.id}" title="Delete Permission" onclick="return confirm('Are you sure?')" class="button small alt fa fa-trash"></a></td>

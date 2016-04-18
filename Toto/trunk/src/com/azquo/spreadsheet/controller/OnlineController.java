@@ -2,12 +2,11 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServerDAO;
+import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.user.UserChoiceDAO;
+import com.azquo.admin.user.*;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
-import com.azquo.admin.user.UserRegionOptions;
-import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
@@ -55,7 +54,9 @@ public class OnlineController {
     @Autowired
     private DatabaseDAO databaseDAO;
     @Autowired
-    private DatabaseServerDAO databaseServerDAO;
+    private PermissionDAO permissionDAO;
+    @Autowired
+    private DatabaseReportLinkDAO databaseReportLinkDAO;
     @Autowired
     private UserChoiceDAO userChoiceDAO;
     @Autowired
@@ -86,6 +87,8 @@ public class OnlineController {
             , @RequestParam(value = "editedname", required = false) String choiceName
             , @RequestParam(value = "editedvalue", required = false) String choiceValue
             , @RequestParam(value = "reportid", required = false) String reportId
+            , @RequestParam(value = "databaseid", required = false) String databaseId
+            , @RequestParam(value = "permissionid", required = false) String permissionId
             , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
@@ -103,7 +106,7 @@ public class OnlineController {
                 reportId = reportToLoad;
             }
             //long startTime = System.currentTimeMillis();
-            Database db;
+            Permission permission = null;
             try {
                 LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 if (loggedInUser == null) {
@@ -118,10 +121,33 @@ public class OnlineController {
                         request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, loggedInUser);
                     }
                 }
+                // dealing with the report/database combo WAS below but I see no reason for this, try and resolve it now
                 OnlineReport onlineReport = null;
-                if (reportId != null && reportId.length() > 0 && !reportId.equals("1")) {
+                if (loggedInUser.getUser().isAdministrator() && reportId != null && reportId.length() > 0 && !reportId.equals("1")) { // admin, we allow a report and possibly db to be set
                     //report id is assumed to be integer - sent from the website
-                    onlineReport = onlineReportDAO.findById(Integer.parseInt(reportId));
+                    onlineReport = onlineReportDAO.findForIdAndBusinessId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
+                    // todo - deciude which method to switch databases
+                    if (databaseId != null && databaseId.length() > 0){
+                        final List<Integer> databaseIdsForReportId = databaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
+                        for (int dbId : databaseIdsForReportId){
+                            if (dbId == Integer.parseInt(databaseId)){
+                                loginService.switchDatabase(loggedInUser, databaseDAO.findById(dbId));
+                            }
+                        }
+                    }
+                    if (database != null){
+                        loginService.switchDatabase(loggedInUser, database);
+                    }
+                } else if (permissionId != null && permissionId.length() > 0) {
+                    //report id is assumed to be integer - sent from the website
+                    permission = permissionDAO.findById(Integer.parseInt(permissionId));
+                    if (permission != null && permission.getUserId() == loggedInUser.getUser().getId()){
+                        onlineReport = onlineReportDAO.findById(permission.getReportId());
+                        loginService.switchDatabase(loggedInUser, databaseDAO.findById(permission.getDatabaseId()));
+                    }
+                }
+                if (onlineReport != null){
+                    onlineReport.setPathname(loggedInUser.getBusinessDirectory()); // todo - sort this, it makes no sense
                 }
                 String result = "error: no action taken";
                 if (opcode.equals("savedata")) {
@@ -201,38 +227,19 @@ public class OnlineController {
                         return "upload";
                     }
                 }
-                if (reportId != null && reportId.equals("1")) {
+                if ("1".equals(reportId)) {
                     if (!loggedInUser.getUser().isAdministrator()) {
                         spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
                         return "azquoReports";
                     } else {
                         return "redirect:/api/ManageReports";
                     }
-
                 }
+                // db and report should be sorted by now
                 if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
-                    // logic here is going to change to support the different renderers
-                    loggedInUser.setReportId(onlineReport.getId());// that was below, whoops!
-                    if (onlineReport.getDatabaseId() > 0) {
-                        db = databaseDAO.findById(onlineReport.getDatabaseId());
-                        loginService.switchDatabase(loggedInUser, db);
-                        onlineReport.setPathname(loggedInUser.getDatabase().getPersistenceName());
-                    } else {
-                        db = loggedInUser.getDatabase();
-                        if (db == null && database != null && database.length() > 0) {
-                            db = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
-                            if (db != null) {
-                                loggedInUser.setDatabaseWithServer(databaseServerDAO.findById(db.getDatabaseServerId()), db);
-                            }
-                        }
-                        onlineReport.setPathname(onlineReport.getDatabaseType());
-                    }
-                    if (db != null) {
-                        onlineReport.setDatabase(db.getName());
-                    }
                     // ok the new sheet and the loading screen have added chunks of code here, should it be in a service or can it "live" here?
                     final int valueId = ServletRequestUtils.getIntParameter(request, "valueid", 0); // the value to be selected if it's in any of the regions . . . how to select?
-                    if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK) {
+                    if (onlineReport.getRenderer() == OnlineReport.ZK_AZQUO_BOOK) { // new style
                         HttpSession session = request.getSession();
                         if (session.getAttribute(reportId + "error") != null) { // push exception to the user
                             model.addAttribute("content", session.getAttribute(reportId + "error")); // for a simple display
@@ -247,8 +254,6 @@ public class OnlineController {
                             model.put("masterUser", loggedInUser.getUser().isMaster());
                             model.put("templateMode", "TRUE".equalsIgnoreCase(template) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster()));
                             model.put("showTemplate", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster());
-
-
                             session.removeAttribute(reportId + SAVE_FLAG);// get rid of it from the session
                             // sort the pdf merges, had forgotten this . . .
                             final List<SName> names = book.getInternalBook().getNames();
@@ -309,7 +314,7 @@ public class OnlineController {
                         return "zsloading";
                     }
                     // default to old one. THis does a fair bit of work adding info for velocity so I passed the model through. Perhaps not best practice.
-                    spreadsheetService.readExcel(model, loggedInUser, onlineReport, spreadsheetName);
+                    spreadsheetService.readExcel(model, loggedInUser, onlineReport, spreadsheetName, databaseId != null ? databaseId : "", permissionId != null ? permissionId : "");
                     return "onlineReport";
                     // was provenance setting here,
                 }
@@ -334,6 +339,8 @@ public class OnlineController {
             , @RequestParam(value = "editedname", required = false) String choiceName
             , @RequestParam(value = "editedvalue", required = false) String choiceValue
             , @RequestParam(value = "reportid", required = false) String reportId
+            , @RequestParam(value = "databaseid", required = false) String databaseId
+            , @RequestParam(value = "permissionid", required = false) String permissionId
             , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
             , @RequestParam(value = "spreadsheetname", required = false, defaultValue = "") String spreadsheetName
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
@@ -344,6 +351,6 @@ public class OnlineController {
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "template", required = false, defaultValue = "") String template
     ) {
-        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, opcode, spreadsheetName, database, reportToLoad, /*dataChoice,imageStoreName, */ imageName, submit, null, template);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, databaseId, permissionId, opcode, spreadsheetName, database, reportToLoad, /*dataChoice,imageStoreName, */ imageName, submit, null, template);
     }
 }

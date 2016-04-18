@@ -124,11 +124,10 @@ public class CreateExcelForDownloadController {
                 int row = 1;
                 for (Permission.PermissionForDisplay permission : displayPermissionList){
                     permissionsSheet.getInternalSheet().getCell(row,0).setStringValue(permission.getDatabaseName());
-                    permissionsSheet.getInternalSheet().getCell(row,1).setStringValue(permission.getUserEmail());
-                    permissionsSheet.getInternalSheet().getCell(row,2).setStringValue(dateTimeFormatter.format(permission.getStartDate()));
-                    permissionsSheet.getInternalSheet().getCell(row,3).setStringValue(dateTimeFormatter.format(permission.getEndDate()));
-                    permissionsSheet.getInternalSheet().getCell(row,4).setStringValue(permission.getReadList());
-                    permissionsSheet.getInternalSheet().getCell(row,5).setStringValue(permission.getWriteList());
+                    permissionsSheet.getInternalSheet().getCell(row,1).setStringValue(permission.getReportId() + "");
+                    permissionsSheet.getInternalSheet().getCell(row,2).setStringValue(permission.getUserEmail());
+                    permissionsSheet.getInternalSheet().getCell(row,3).setStringValue(permission.getReadList());
+                    permissionsSheet.getInternalSheet().getCell(row,4).setStringValue(permission.getWriteList());
                     row++;
                 }
             }

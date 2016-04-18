@@ -4,10 +4,7 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
-import com.azquo.admin.onlinereport.OnlineReport;
-import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.onlinereport.ReportSchedule;
-import com.azquo.admin.onlinereport.ReportScheduleDAO;
+import com.azquo.admin.onlinereport.*;
 import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
@@ -63,6 +60,8 @@ public final class ImportService {
     private DatabaseDAO databaseDAO;
     @Autowired
     private ReportScheduleDAO reportScheduleDAO;
+    @Autowired
+    private DatabaseReportLinkDAO databaseReportLinkDAO;
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
@@ -178,19 +177,11 @@ public final class ImportService {
                         if (user != null) {
                             Database database1 = databaseDAO.findForName(user.getBusinessId(), database);
                             if (database1 != null) {
-                                LocalDateTime start = LocalDateTime.now();
-                                try {
-                                    start = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 2).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
-                                } catch (Exception ignored) {
-                                }
-                                LocalDateTime end = LocalDateTime.now();
-                                try {
-                                    end = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
-                                } catch (Exception ignored) {
-                                }
-                                String readList = userSheet.getInternalSheet().getCell(row, 4).getStringValue();
-                                String writeList = userSheet.getInternalSheet().getCell(row, 5).getStringValue();
-                                Permission newPermission = new Permission(0, start, end, user.getId(), database1.getId(), readList, writeList);
+                                String reportName = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
+                                final OnlineReport forDatabaseIdAndName = onlineReportDAO.findForDatabaseIdAndName(database1.getId(), reportName);
+                                String readList = userSheet.getInternalSheet().getCell(row, 3).getStringValue();
+                                String writeList = userSheet.getInternalSheet().getCell(row, 4).getStringValue();
+                                Permission newPermission = new Permission(0, forDatabaseIdAndName.getId(), user.getId(), database1.getId(), readList, writeList);
                                 permissionDAO.store(newPermission);
                             }
                         }
@@ -346,11 +337,11 @@ public final class ImportService {
         String pathName = reportType;
         if (pathName.length() == 0) {
             databaseId = loggedInUser.getDatabase().getId();
-            pathName = loggedInUser.getDatabase().getPersistenceName();
+            pathName = loggedInUser.getBusinessDirectory();
         }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         if (or == null) {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, databaseId, "", reportName, "", "", "", fileName, "", "", 1, true); // default to ZK now
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, "", reportName, "", fileName, "", "", 1, true); // default to ZK now
         } else {
             or.setActive(false);
             onlineReportDAO.store(or);
@@ -368,6 +359,7 @@ public final class ImportService {
         org.apache.commons.io.FileUtils.copyFile(new File(sourceName), out);// straight copy of the source
         out.close();
         onlineReportDAO.store(or);
+        databaseReportLinkDAO.link(databaseId, or.getId());
         return reportName + " uploaded.";
     }
 

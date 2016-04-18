@@ -31,9 +31,8 @@ public final class PermissionDAO extends StandardDAO<Permission> {
 
     // column names except ID which is in the superclass
 
-    private static final String STARTDATE = "start_date";
-    private static final String ENDDATE = "end_date";
-    private static final String USERID = "user_id";
+    private static final String REPORTID = "report_id";
+    public static final String USERID = "user_id";
     private static final String DATABASEID = "database_id";
     private static final String READLIST = "read_list";
     private static final String WRITELIST = "write_list";
@@ -42,8 +41,7 @@ public final class PermissionDAO extends StandardDAO<Permission> {
     public Map<String, Object> getColumnNameValueMap(final Permission permission) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(ID, permission.getId());
-        toReturn.put(STARTDATE, Date.from(permission.getStartDate().atZone(ZoneId.systemDefault()).toInstant()));
-        toReturn.put(ENDDATE, Date.from(permission.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));
+        toReturn.put(REPORTID, permission.getReportId());
         toReturn.put(USERID, permission.getUserId());
         toReturn.put(DATABASEID, permission.getDatabaseId());
         toReturn.put(READLIST, permission.getReadList());
@@ -80,8 +78,7 @@ public final class PermissionDAO extends StandardDAO<Permission> {
             // not pretty, just make it work for the moment
             try {
                 return new Permission(rs.getInt(ID)
-                        , getLocalDateTimeFromDate(rs.getDate(STARTDATE))
-                        , getLocalDateTimeFromDate(rs.getDate(ENDDATE))
+                        , rs.getInt(REPORTID)
                         , rs.getInt(USERID)
                         , rs.getInt(DATABASEID)
                         , rs.getString(READLIST)
@@ -125,7 +122,7 @@ public final class PermissionDAO extends StandardDAO<Permission> {
             if (p != null) {
                 id = p.getId();
             } else {
-                p = new Permission(0, null, null, 0, 0, "", "");
+                p = new Permission(0, 0, 0, 0, "", "");
                 store(p);
                 id = p.getId();
             }

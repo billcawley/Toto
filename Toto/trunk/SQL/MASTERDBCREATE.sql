@@ -22,10 +22,7 @@ SET time_zone = "+00:00";
 
 CREATE TABLE IF NOT EXISTS `business` (
   `id` int(11) NOT NULL,
-  `start_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `end_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `business_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `parent_id` int(11) NOT NULL,
   `business_details` text COLLATE utf8_unicode_ci NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
@@ -37,8 +34,6 @@ CREATE TABLE IF NOT EXISTS `business` (
 
 CREATE TABLE IF NOT EXISTS `database` (
   `id` int(11) NOT NULL,
-  `start_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `end_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `business_id` int(11) NOT NULL,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `mysql_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
@@ -84,16 +79,35 @@ CREATE TABLE IF NOT EXISTS `online_report` (
   `id` int(11) NOT NULL,
   `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `business_id` int(11) NOT NULL,
-  `database_id` int(11) NOT NULL,
   `report_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `database_type` varchar(255) COLLATE utf8_unicode_ci DEFAULT '',
   `report_category` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `user_status` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `filename` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `explanation` text COLLATE utf8_unicode_ci NOT NULL,
   `renderer` int(11) NOT NULL DEFAULT '0',
   `active` tinyint(1) NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB AUTO_INCREMENT=223 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Table structure for table `online_report`
+--
+
+CREATE TABLE IF NOT EXISTS `database_report_link` (
+  `database_id` int(11) NOT NULL,
+  `report_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+ALTER TABLE `database_report_link`
+  ADD KEY `database_id` (`database_id`), ADD KEY `report_id` (`report_id`);
+
+insert into `database_report_link` select database_id, id from online_report;
+ALTER TABLE `online_report` CHANGE `database_id` `database_id` INT(11) NOT NULL DEFAULT '0';
+ALTER TABLE `online_report` CHANGE `database_type` `database_type` VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci NULL DEFAULT NULL;
+ALTER TABLE `online_report` CHANGE `user_status` `user_status` VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci NULL DEFAULT NULL;
+insert into database_report_link SELECT database.id as database_id, online_report.id as report_id FROM `online_report`, `database` WHERE `online_report`.database_type<>'' and `online_report`.database_type = `database`.database_type;
+ALTER TABLE `permission` ADD `report_id` INT(11) NOT NULL DEFAULT '0' AFTER `id`;
+
+SELECT id, status FROM `user` WHERE status<>'' and status not like 'ADMINISTRATOR';
+SELECT id, user_status FROM `online_report` WHERE user_status<>'';
 
 -- --------------------------------------------------------
 
@@ -116,8 +130,7 @@ CREATE TABLE IF NOT EXISTS `open_database` (
 
 CREATE TABLE IF NOT EXISTS `permission` (
   `id` int(11) NOT NULL,
-  `start_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `end_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `report_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `database_id` int(11) NOT NULL,
   `read_list` text COLLATE utf8_unicode_ci NOT NULL,
@@ -167,7 +180,6 @@ CREATE TABLE IF NOT EXISTS `upload_record` (
 
 CREATE TABLE IF NOT EXISTS `user` (
   `id` int(11) NOT NULL,
-  `start_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `end_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `business_id` int(11) NOT NULL,
   `email` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
@@ -175,7 +187,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `status` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `salt` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `created_by` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `created_by` varchar(255) COLLATE utf8_unicode_ci NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------

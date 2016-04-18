@@ -48,6 +48,9 @@ public class LoggedInUser {
     private String imageStoreName;
     private String context;
 
+    private final String businessDirectory;
+
+
     private static final String defaultRegion = "default-region";
 
     // moved back in here now (was on the db server for a bit)
@@ -56,9 +59,10 @@ public class LoggedInUser {
 
     private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
 
-    protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions, String imageStoreName) {
+    protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions, String imageStoreName, String businessDirectory) {
         this.sessionId = sessionId;
         this.user = user;
+        this.businessDirectory = businessDirectory;
         reportId = 0;
         sentCellsMaps = new HashMap<>();
         azquoBook = null;
@@ -102,6 +106,7 @@ public class LoggedInUser {
         this.context = null;
         lastJSTreeNodeId = new AtomicInteger();
         jsTreeLookupMap = new ConcurrentHashMap<>();
+        this.businessDirectory = originalUser.businessDirectory;
     }
 
     public void assignIdForJsTreeNode(JsonChildren.Node node){
@@ -211,5 +216,9 @@ public class LoggedInUser {
 
     public DatabaseAccessToken getDataAccessToken(){
         return new DatabaseAccessToken(sessionId, databaseServer.getIp(), database.getPersistenceName(), readPermissions,writePermissions,languages);
+    }
+
+    public String getBusinessDirectory() {
+        return businessDirectory;
     }
 }

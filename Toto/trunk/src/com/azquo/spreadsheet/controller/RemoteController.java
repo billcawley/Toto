@@ -3,6 +3,7 @@ package com.azquo.spreadsheet.controller;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServerDAO;
+import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
@@ -59,15 +60,13 @@ public class RemoteController {
     @Autowired
     private DatabaseDAO databaseDAO;
     @Autowired
-    private DatabaseServerDAO databaseServerDAO;
+    private DatabaseReportLinkDAO databaseReportLinkDAO;
     @Autowired
     private UserChoiceDAO userChoiceDAO;
     @Autowired
     private UserRegionOptionsDAO userRegionOptionsDAO;
     @Autowired
     private SpreadsheetService spreadsheetService;
-    @Autowired
-    private ImportService importService;
     @Autowired
     private RMIClient rmiClient;
 
@@ -154,7 +153,7 @@ public class RemoteController {
         try {
             System.out.println("json sent " + json);
             JsonParameters jsonParameters = jacksonMapper.readValue(json, JsonParameters.class);
-            Database db;
+            Database db = null;
             try {
                 LoggedInUser loggedInUser = loginService.loginLoggedInUser(request.getSession().getId(), jsonParameters.database, jsonParameters.logon, jsonParameters.password, false);
                 if (loggedInUser == null) {
@@ -166,33 +165,24 @@ public class RemoteController {
                         spreadsheetService.setUserChoice(loggedInUser.getUser().getId(),key.substring(0,key.length()-6),jsonParameters.choices.get(key));
                     }
                 }
+                // database switching should be done by being logged in
                 OnlineReport onlineReport = null;
-                if (jsonParameters.reportName != null) {
+                if (jsonParameters.reportName != null && loggedInUser.getUser().isAdministrator()) {
                     //report id is assumed to be integer - sent from the website
-                    onlineReport = onlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), jsonParameters.reportName);
+                    onlineReport = onlineReportDAO.findForNameAndBusinessId(jsonParameters.reportName, loggedInUser.getUser().getBusinessId());
+                    onlineReport.setDatabase(jsonParameters.database);
                 }
+
                 if (onlineReport == null) {
                     return "incorrect report name"; // probably need to add json
                 }
-                loggedInUser.setReportId(onlineReport.getId());// that was below, whoops!
-                if (onlineReport.getDatabaseId() > 0) {
-                    db = databaseDAO.findById(onlineReport.getDatabaseId());
-                    loginService.switchDatabase(loggedInUser, db);
-                    onlineReport.setPathname(loggedInUser.getDatabase().getPersistenceName());
-                } else {
-                    db = loggedInUser.getDatabase();
-                    onlineReport.setPathname(onlineReport.getDatabaseType());
-                }
-                if (db != null) {
-                    onlineReport.setDatabase(db.getName());
-                }
+
                 if (jsonParameters.choices != null) {
                     for (String key : jsonParameters.choices.keySet()) {
                         spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), key, jsonParameters.choices.get(key));
                     }
                 }
                 // no region options at the moment
-
                 try {
                     long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                     long newHeapMarker = oldHeapMarker;

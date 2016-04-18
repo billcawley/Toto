@@ -6,8 +6,6 @@ import com.azquo.admin.database.DatabaseDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.time.LocalDateTime;
-
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  *
@@ -16,9 +14,8 @@ import java.time.LocalDateTime;
  */
 public final class Permission extends StandardEntity {
 
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
     private int userId;
+    private int reportId;
     private int databaseId;
     // these two may become arrays later
     private String readList;
@@ -26,36 +23,26 @@ public final class Permission extends StandardEntity {
 
     @JsonCreator
     public Permission(@JsonProperty("id") int id
-            , @JsonProperty("startDate") LocalDateTime startDate
-            , @JsonProperty("endDate") LocalDateTime endDate
+            , @JsonProperty("reportId") int reportId
             , @JsonProperty("userId") int userId
             , @JsonProperty("databaseId") int databaseId
             , @JsonProperty("readList") String readList
             , @JsonProperty("writeList") String writeList
 ) {
         this.id = id;
-        this.startDate = startDate;
-        this.endDate = endDate;
+        this.reportId = reportId;
         this.userId = userId;
         this.databaseId = databaseId;
         this.readList = readList;
         this.writeList = writeList;
     }
 
-    public LocalDateTime getStartDate() {
-        return startDate;
+    public int getReportId() {
+        return reportId;
     }
 
-    public void setStartDate(LocalDateTime startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDateTime getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDateTime endDate) {
-        this.endDate = endDate;
+    public void setReportId(int reportId) {
+        this.reportId = reportId;
     }
 
     public int getUserId() {
@@ -94,9 +81,8 @@ public final class Permission extends StandardEntity {
     public String toString() {
         return "Permission{" +
                 "id=" + id +
-                ", endDate=" + endDate +
-                ", startDate=" + startDate +
                 ", userId=" + userId +
+                ", reportId=" + reportId +
                 ", databaseId=" + databaseId +
                 ", readList='" + readList + '\'' +
                 ", writeList='" + writeList + '\'' +
@@ -110,9 +96,8 @@ public final class Permission extends StandardEntity {
     public static class PermissionForDisplay {
 
         private final int id;
-        private final LocalDateTime startDate;
-        private final LocalDateTime endDate;
         private final int userId;
+        private final int reportId;
         private final int databaseId;
         // these two may become arrays later
         private final String readList;
@@ -122,9 +107,8 @@ public final class Permission extends StandardEntity {
         // todo - maybe move the DAO calls out?
         public PermissionForDisplay(Permission permission, DatabaseDAO databaseDAO, UserDAO userDAO){
             this.id = permission.getId();
-            this.startDate = permission.getStartDate();
-            this.endDate = permission.getEndDate();
             this.userId = permission.getUserId();
+            this.reportId = permission.getReportId();
             this.databaseId = permission.getDatabaseId();
             this.readList = permission.getReadList();
             this.writeList = permission.getWriteList();
@@ -146,16 +130,12 @@ public final class Permission extends StandardEntity {
             return id;
         }
 
-        public LocalDateTime getStartDate() {
-            return startDate;
-        }
-
-        public LocalDateTime getEndDate() {
-            return endDate;
-        }
-
         public int getUserId() {
             return userId;
+        }
+
+        public int getReportId() {
+            return reportId;
         }
 
         public int getDatabaseId() {

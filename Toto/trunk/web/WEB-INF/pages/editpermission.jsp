@@ -13,7 +13,7 @@
 			<table class="edit">
 				<tbody>
 					<tr>
-					<td width="33%">
+					<td width="50%">
 						<h3>Permission Details</h3>
 						<div class="well">
 							<div>
@@ -21,6 +21,14 @@
 								<select name="databaseId">
 									<c:forEach items="${databases}" var="database">
 										<option value="${database.id}"<c:if test="${database.id == databaseId}"> selected</c:if>>${database.name}</option>
+									</c:forEach>
+								</select>
+							</div>
+							<div>
+								<label for="reportId">Report</label>
+								<select name="reportId">
+									<c:forEach items="${reports}" var="report">
+										<option value="${report.id}"<c:if test="${report.id == reportId}"> selected</c:if>>${report.reportName}</option>
 									</c:forEach>
 								</select>
 							</div>
@@ -34,20 +42,7 @@
 							</div>
 						</div>
 					</td>
-					<td width="33%">
-						<h3>Start / End Date</h3>
-						<div class="well">
-							<div>
-								<label for="startDate">Start Date</label>
-								<input name="startDate" id="startDate" value="${startDate}">
-							</div>
-							<div>
-								<label for="endDate">End Date</label>
-								<input name="endDate" id="endDate" value="${endDate}">
-							</div>
-						</div>
-					</td>
-					<td width="33%">
+					<td width="50%">
 						<h3>Read / Write List</h3>
 						<div class="well">
 							<div>

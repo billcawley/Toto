@@ -197,6 +197,8 @@ public final class ValueService {
     private long part3NanoCallTime1 = 0;
     private int numberOfTimesCalled1 = 0;
 
+    // what if we could cache combos? E.g. a 5 comes in and we save
+
     private static AtomicInteger findForNamesIncludeChildrenCount = new AtomicInteger(0);
 
     private List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
@@ -295,7 +297,7 @@ public final class ValueService {
         // and here's a thing : if more than one name has CALCULATION then only the first will be used
         for (Name name : names) {
             if (calcString == null) {// then try and find one - can only happen once
-                String calc = name.getAttribute(Name.CALCULATION, false, new HashSet<>()); // using extra parameters to stop parent checking for this attribute
+                String calc = name.getAttribute(Name.CALCULATION, false, null); // using extra parameters to stop parent checking for this attribute
                 if (calc != null) {
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here

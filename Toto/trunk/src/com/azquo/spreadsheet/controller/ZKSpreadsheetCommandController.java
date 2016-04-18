@@ -2,6 +2,7 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
@@ -68,6 +69,9 @@ public class ZKSpreadsheetCommandController {
     private UserRegionOptionsDAO userRegionOptionsDAO;
 
     @Autowired
+    private DatabaseReportLinkDAO databaseReportLinkDAO;
+
+    @Autowired
     private RMIClient rmiClient;
 
     @RequestMapping
@@ -122,15 +126,7 @@ public class ZKSpreadsheetCommandController {
                             Book book = ss.getBook();
                             int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                             OnlineReport onlineReport = onlineReportDAO.findById(reportId);
-                            // similar to some code in onlinecontroller. A bit hacky, hopefully can neaten later
-                            // yes can NPE, not so bothered at the mo
-                            if (onlineReport.getDatabaseId() > 0) {
-                                Database db = databaseDAO.findById(onlineReport.getDatabaseId());
-                                onlineReport.setPathname(db.getPersistenceName());
-                            } else {
-                                onlineReport.setPathname(onlineReport.getDatabaseType());
-                            }
-                            String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename(); // as in the online controller
+                            String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename(); // as in the online controller
                             FileOutputStream fos = null;
                             try {
                                 fos = new FileOutputStream(bookPath); // overwrite the report, should work

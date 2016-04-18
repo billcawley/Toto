@@ -31,7 +31,7 @@ public abstract class StandardDAO<EntityType extends StandardEntity> {
 
     private static final int SELECTLIMIT = 10000;
     protected static final String ID = "id";
-    protected static final String MASTER_DB = "master_db";
+    public static final String MASTER_DB = "master_db";
 
     protected abstract String getTableName();
 

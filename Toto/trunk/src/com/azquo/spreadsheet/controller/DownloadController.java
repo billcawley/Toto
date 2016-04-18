@@ -54,7 +54,7 @@ public class DownloadController {
             DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
             String LOCALIP = "127.0.0.1";
             if (databaseServer.getIp().equals(LOCALIP)) {
-                String pathOffset = loggedInUser.getDatabase().getPersistenceName() + "/images/" + image;
+                String pathOffset = loggedInUser.getBusinessDirectory() + "/images/" + image;
                 String dbPath = "/databases/";
                 String filePath = spreadsheetService.getHomeDir() + dbPath + pathOffset;
                 try {

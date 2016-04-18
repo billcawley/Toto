@@ -3,10 +3,7 @@ package com.azquo.admin;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
-import com.azquo.admin.onlinereport.OnlineReport;
-import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.onlinereport.ReportSchedule;
-import com.azquo.admin.onlinereport.ReportScheduleDAO;
+import com.azquo.admin.onlinereport.*;
 import com.azquo.admin.user.*;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -54,6 +51,8 @@ public class AdminService {
     private UploadRecordDAO uploadRecordDAO;
     @Autowired
     private OnlineReportDAO onlineReportDAO;
+    @Autowired
+    private DatabaseReportLinkDAO databaseReportLinkDAO;
     @Autowired
     private ReportScheduleDAO reportScheduleDAO;
     @Autowired
@@ -187,13 +186,13 @@ this may now not work at all, perhaps delete?
 
     // now not dependant on selected database
 
-    public void createUserPermission(final int userId, final int databaseId, final LocalDateTime startDate, final LocalDateTime endDate, final String readList, final String writeList, final LoggedInUser loggedInUser) throws Exception {
+    public void createUserPermission(final int reportId, final int userId, final int databaseId, final String readList, final String writeList, final LoggedInUser loggedInUser) throws Exception {
         User user = userDao.findById(userId);
         Database database = databaseDAO.findById(databaseId);
         if (loggedInUser.getUser().isAdministrator()
                 && user != null && user.getBusinessId() == loggedInUser.getUser().getBusinessId()
                 && database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            final Permission permission = new Permission(0, startDate, endDate, userId, databaseId, readList, writeList);
+            final Permission permission = new Permission(0, reportId, userId, databaseId, readList, writeList);
             permissionDAO.store(permission);
         } else {
             throw new Exception("error: you do not have permission to perform this action");
@@ -251,27 +250,27 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
+    public List<OnlineReport> getReportListForBusiness(final LoggedInUser loggedInUser) {
+        if (loggedInUser.getUser().isAdministrator()) {
+            return onlineReportDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        }
+        return null;
+    }
+
 
     public List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
         List<OnlineReport> reportList = new ArrayList<>();
         List<Database> databases = databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         for (Database database:databases) {
-            List<OnlineReport> reports = onlineReportDAO.findForDatabaseId(database.getId(), database.getDatabaseType());
+            List<OnlineReport> reports = onlineReportDAO.findForDatabaseId(database.getId());
             for (OnlineReport report:reports){
                 report.setDatabase(database.getName());
             }
             reportList.addAll(reports);
-
         }
-        if (reportList.size() > 0) {
-            for (OnlineReport onlineReport : reportList) {
-                Database database = databaseDAO.findById(onlineReport.getDatabaseId());
-                if (database != null) {//in case database has been deleted without deleting the report reference.....
-                    onlineReport.setDatabase(database.getName());
-                }
-            }
-        } else {
-            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, 0, "", "", "", "No reports found", "", "", "", "", OnlineReport.AZQUO_BOOK, true); // default to old for the moment
+        // was setting the database name for each report, this will be irrelevant
+        if (reportList.size() == 0) {
+            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, "", "", "", "No reports found", "", "", OnlineReport.AZQUO_BOOK, true);
             reportList.add(notFound);
         }
         return reportList;
@@ -382,14 +381,11 @@ this may now not work at all, perhaps delete?
     public void removeReportById(LoggedInUser loggedInUser, int reportId) {
         OnlineReport onlineReport = onlineReportDAO.findById(reportId);
         if (onlineReport != null && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            Database database = databaseDAO.findById(onlineReport.getDatabaseId());
-            if (database != null){ // should not be!
-                String fullPath = spreadsheetService.getHomeDir() + ImportService.dbPath + database.getPersistenceName() + "/onlinereports/" + onlineReport.getFilename();
+                String fullPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename();
                 File file = new File(fullPath);
                 if (file.exists()){
                     file.delete();
                 }
-            }
             onlineReportDAO.removeById(onlineReport);
         }
     }
@@ -400,7 +396,7 @@ this may now not work at all, perhaps delete?
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             // note, used to delete choices for the reports for this DB, won't do this now as
             loginRecordDAO.removeForDatabaseId(db.getId());
-            onlineReportDAO.removeForDatabaseId(db.getId());
+            databaseReportLinkDAO.unLinkDatabase(databaseId);
             openDatabaseDAO.removeForDatabaseId(db.getId());
             permissionDAO.removeForDatabaseId(db.getId());
             uploadRecordDAO.removeForDatabaseId(db.getId());

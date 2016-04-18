@@ -5,7 +5,6 @@
 
 <main>
 <h1>Manage Reports</h1>
-	<form action="/api/ManageReports" method="post">
 		<table>
 			<thead>
 				<tr>
@@ -15,9 +14,7 @@
 					-->
 					<td>Database</td>
 					<td>Report Name</td>
-					<td>Business Type</td>
 					<td>Report Category</td>
-					<td>User Groups</td>
 					<!-- <td>File Name</td> -->
                     <td>Explanation</td>
                     <td></td>
@@ -33,21 +30,14 @@
 				 <td>${report.database}</td>
 				 <!-- should reportid be 1??? -->
 				 <td><a href="/api/Online?reportid=1&amp;opcode=loadsheet&amp;reporttoload=${report.id}&amp;database=${report.database}" target="_blank"> <span class="fa fa-table"></span>  ${report.reportName}</a></td>
-				 <td><input name="businessType${report.id}" value="${report.databaseType}" /></td>
-				 <td><input name="reportCategory${report.id}" value="${report.reportCategory}" /></td>
-				 <td><input name="userStatus${report.id}" value="${report.userStatus}" /></td>
+				 <td>${report.reportCategory}</td>
 				 <!-- <td>${report.filename}</td> -->
-				 <td><textarea name="explanation${report.id}" rows="3">${report.explanation}</textarea></td>
-				 <td><a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" class="button small alt" title="Delete ${report.reportName}"><span class="fa fa-trash" title="Delete"></span> </a></td>
+				 <td>${report.explanation}</td>
+				 <td><a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a></td>
 			</tr>
 		</c:forEach>
 		</tbody>
 		</table>
-		
-		<div class="centeralign">
-			<input type="submit" value="Save Changes" class="button"/>
-		</div>
-	</form>
 </main>
 
 

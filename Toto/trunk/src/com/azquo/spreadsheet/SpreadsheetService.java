@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.ReportSchedule;
 import com.azquo.admin.onlinereport.ReportScheduleDAO;
@@ -55,6 +57,9 @@ public class SpreadsheetService {
 
     @Autowired
     UserChoiceDAO userChoiceDAO;
+
+    @Autowired
+    BusinessDAO businessDAO;
 
     @Autowired
     UserRegionOptionsDAO userRegionOptionsDAO;
@@ -162,7 +167,7 @@ public class SpreadsheetService {
     }
 
     // to load the old AzquoBook. Will be phased out so I'll leave the HTML in here.
-    public void readExcel(ModelMap model, LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName) throws Exception {
+    public void readExcel(ModelMap model, LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName, String databaseId, String permissionId) throws Exception {
         String message;
         String imagePath = getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/images/";
         AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this, rmiClient);
@@ -240,6 +245,8 @@ public class SpreadsheetService {
         model.addAttribute("maxrow", azquoBook.getMaxRow() + "");
         model.addAttribute("maxcol", azquoBook.getMaxCol() + "");
         model.addAttribute("reportid", onlineReport.getId() + "");
+        model.addAttribute("databaseid", databaseId);
+        model.addAttribute("permissionid", permissionId);
         if (azquoBook.dataRegionPrefix.equals(AzquoBook.azDataRegion)) {
 
             model.addAttribute("menuitems", "[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"},{\"position\":3,\"name\":\"Highlight changes\",\"enabled\":true,\"link\":\"showHighlight()\"}]");
@@ -256,9 +263,9 @@ public class SpreadsheetService {
 
         model.addAttribute("styles", head.toString());
         String ws = worksheet.toString();
-        if (worksheet.indexOf("$azquodatabaselist") > 0) {
+/*        if (worksheet.indexOf("$azquodatabaselist") > 0) {
             ws = ws.replace("$azquodatabaselist", createDatabaseSelect(loggedInUser));
-        }
+        }*/
         if (ws.indexOf("$fileselect") > 0) {
             ws = ws.replace("$fileselect", "<input type=\"file\" name=\"uploadfile\">");
         }
@@ -308,14 +315,8 @@ public class SpreadsheetService {
     }
 
     public AzquoBook loadAzquoBook(LoggedInUser loggedInUser, OnlineReport onlineReport) throws Exception {
-        if (onlineReport.getDatabaseId() > 0) {
-            onlineReport.setPathname(loggedInUser.getDatabase().getPersistenceName());
-        } else {
-            onlineReport.setPathname(onlineReport.getDatabaseType());
-        }
-
         AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this, rmiClient);
-        String filepath = ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
+        String filepath = ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename();
         azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
         azquoBook.loadBook(getHomeDir() + filepath, useAsposeLicense());
         azquoBook.setSheet(0);//assume currently that this is a single sheet workbook
@@ -358,46 +359,19 @@ public class SpreadsheetService {
         }
     }
 
-    private StringBuilder createDatabaseSelect(LoggedInUser loggedInUser) {
-        StringBuilder sb = new StringBuilder();
-        String chosen = "";
-        Map<String, Database> foundDatabases = loginService.foundDatabases(loggedInUser.getUser());
-        if (foundDatabases.size() > 1) {
-            if (loggedInUser.getDatabase() != null) chosen = loggedInUser.getDatabase().getName();
-            sb.append("<select class=\"databaseselect\" name=\"database\" id=\"databasechosen\" value=\"").append(chosen).append("\">\n");
-            sb.append("<option value=\"\">No database chosen</option>");
-            for (String dbName : foundDatabases.keySet()) {
-                sb.append("<option value =\"").append(dbName).append("\"");
-                if (dbName.equals(chosen)) sb.append(" selected");
-                sb.append(">").append(dbName).append("</option>\n");
-            }
-            sb.append("</select>");
-        } else {
-            if (foundDatabases.size() == 1) {
-                for (String dbName : foundDatabases.keySet()) {
-                    sb.append(dbName);
-                }
-            } else {
-                sb.append("No database available");
-            }
-        }
-        return sb;
-    }
-
     // on logging into Magento reports for example
 
     public void showUserMenu(ModelMap model, LoggedInUser loggedInUser) {
-        Map<String, Database> databases = loginService.foundDatabases(loggedInUser.getUser());
         model.addAttribute("welcome", "Welcome to Azquo!");
         List<Map<String, String>> reports = new ArrayList<>();
-        for (String dbName : databases.keySet()) {
-            Database database = databases.get(dbName);
-            List<OnlineReport> onlineReports = onlineReportDAO.findForDatabaseIdAndUserStatus(database.getId(), loggedInUser.getUser().getStatus(), database.getDatabaseType());
-            //TODO  set a database for each report - also check permissions
-            model.addAttribute("database", database);
-            String reportCategory = "";
 
-            for (OnlineReport onlineReport : onlineReports) {
+
+        final List<Permission> forUserId = permissionDAO.findForUserId(loggedInUser.getUser().getId());// new model this should be all we need . . .
+//            model.addAttribute("database", database);
+        String reportCategory = "";
+            for (Permission permission : forUserId) {
+                final OnlineReport onlineReport = onlineReportDAO.findById(permission.getReportId());
+
                 Map<String, String> vReport = new HashMap<>();
                 if (!onlineReport.getReportCategory().equals(reportCategory)) {
                     vReport.put("category", onlineReport.getReportCategory());
@@ -407,10 +381,9 @@ public class SpreadsheetService {
                 reportCategory = onlineReport.getReportCategory();
                 vReport.put("name", onlineReport.getReportName());
                 vReport.put("explanation", onlineReport.getExplanation());
-                vReport.put("link", "/api/Online/?opcode=loadsheet&reportid=" + onlineReport.getId());
+                vReport.put("link", "/api/Online/?opcode=loadsheet&permissionid=" + permission.getId()); // todo - address how this will be used!
                 reports.add(vReport);
             }
-        }
         model.addAttribute("reports", reports);
     }
 
@@ -589,7 +562,13 @@ public class SpreadsheetService {
                 // ok what user? I think we'll call it an admin one.
                 DatabaseServer databaseServer = databaseServerDAO.findById(database.getDatabaseServerId());
                 // assuming no read permissions?
-                LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, null, null);
+                // I should factor these few lines really
+                Business b = businessDAO.findById(user.getBusinessId());
+                if (b == null){
+                    throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
+                }
+                String businessDirectory = (b.getBusinessName() + "               ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
+                LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, null, null, businessDirectory);
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());

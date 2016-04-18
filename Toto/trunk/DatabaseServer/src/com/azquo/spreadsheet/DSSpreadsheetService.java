@@ -1397,7 +1397,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                     }
                 }
                 if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (as iot was before allowing attributes), need the headings as names,
-                    ValuesHook valuesHook = new ValuesHook();
+                    ValuesHook valuesHook = new ValuesHook(); // todo, can we use this only when necessary?
                     // now , get the function from the headings
                     if (function != null) {
                         locked.isTrue = true;
