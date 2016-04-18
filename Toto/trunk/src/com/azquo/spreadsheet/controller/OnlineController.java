@@ -143,6 +143,7 @@ public class OnlineController {
                     permission = permissionDAO.findById(Integer.parseInt(permissionId));
                     if (permission != null && permission.getUserId() == loggedInUser.getUser().getId()){
                         onlineReport = onlineReportDAO.findById(permission.getReportId());
+                        reportId = onlineReport.getId() + ""; // hack for permissions
                         loginService.switchDatabase(loggedInUser, databaseDAO.findById(permission.getDatabaseId()));
                     }
                 }
