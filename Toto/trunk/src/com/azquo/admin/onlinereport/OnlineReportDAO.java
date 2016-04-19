@@ -33,7 +33,6 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     private static final String FILENAME = "filename";
     private static final String EXPLANATION = "explanation";
     private static final String RENDERER = "renderer";
-    private static final String ACTIVE = "active";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
@@ -79,41 +78,36 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DatabaseReportLinkDAO.DATABASE_ID, databaseId);
         namedParams.addValue(REPORTNAME, reportName);
-        namedParams.addValue(ACTIVE, true);
         return findOneWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
                 +  "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
-                + " and `" + REPORTNAME + "` = :" + REPORTNAME + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams);
+                + " and `" + REPORTNAME + "` = :" + REPORTNAME, namedParams);
     }
 
     public OnlineReport findForIdAndBusinessId(final int id, int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(ID, id);
         namedParams.addValue(BUSINESSID, businessId);
-        namedParams.addValue(ACTIVE, true);
-        return findOneWithWhereSQLAndParameters("  WHERE " + ID + " = :" + ID + " and " + BUSINESSID + " = :" + BUSINESSID + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams);
+        return findOneWithWhereSQLAndParameters("  WHERE " + ID + " = :" + ID + " and " + BUSINESSID + " = :" + BUSINESSID, namedParams);
     }
 
     public OnlineReport findForNameAndBusinessId(final String name, int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(REPORTNAME, name);
         namedParams.addValue(BUSINESSID, businessId);
-        namedParams.addValue(ACTIVE, true);
-        return findOneWithWhereSQLAndParameters("  WHERE " + REPORTNAME + " = :" + REPORTNAME + " and " + BUSINESSID + " = :" + BUSINESSID + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams);
+        return findOneWithWhereSQLAndParameters("  WHERE " + REPORTNAME + " = :" + REPORTNAME + " and " + BUSINESSID + " = :" + BUSINESSID, namedParams);
     }
 
     public List<OnlineReport> findForBusinessId(int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        namedParams.addValue(ACTIVE, true);
-        return findListWithWhereSQLAndParameters("  WHERE " + BUSINESSID + " = :" + BUSINESSID + " and `" + ACTIVE + "` = :" + ACTIVE, namedParams, false);
+        return findListWithWhereSQLAndParameters("  WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
     }
 
     public List<OnlineReport> findForDatabaseId(final int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DatabaseReportLinkDAO.DATABASE_ID, databaseId);
-        namedParams.addValue(ACTIVE, true);
         return findListWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
                 +  "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
-                + " and `" + ACTIVE + "` = :" + ACTIVE + " order by " + REPORTNAME, namedParams, false);
+                + " order by " + REPORTNAME, namedParams, false);
     }
 }
