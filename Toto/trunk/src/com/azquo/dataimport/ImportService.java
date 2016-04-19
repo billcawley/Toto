@@ -340,20 +340,15 @@ public final class ImportService {
             pathName = loggedInUser.getBusinessDirectory();
         }
         OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
+        // change in logic, no longer making a copy, want to update what's there
         if (or == null) {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, "", reportName, "", fileName, "", "", 1, true); // default to ZK now
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, "", reportName, "", fileName, "", "", 1); // default to ZK now
         } else {
-            or.setActive(false);
-            onlineReportDAO.store(or);
+            or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
         }
-        or.setDateCreated(LocalDateTime.now());
-        or.setId(0);
-        or.setRenderer(1);
-        or.setActive(true);
         String fullPath = spreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
-
         FileOutputStream out = new FileOutputStream(fullPath);
 //        azquoBook.saveBook(fullPath); no, aspose could have changed the sheet, especially if the license is not set . . .
         org.apache.commons.io.FileUtils.copyFile(new File(sourceName), out);// straight copy of the source

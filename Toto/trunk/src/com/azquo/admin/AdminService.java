@@ -270,7 +270,7 @@ this may now not work at all, perhaps delete?
         }
         // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {
-            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, "", "", "", "No reports found", "", "", OnlineReport.AZQUO_BOOK, true);
+            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, "", "", "", "No reports found", "", "", OnlineReport.AZQUO_BOOK);
             reportList.add(notFound);
         }
         return reportList;
@@ -318,7 +318,7 @@ this may now not work at all, perhaps delete?
             List<Permission.PermissionForDisplay> permissions = new ArrayList<>();
             for (Permission permission : permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId())) {
                 OnlineReport onlineReport = onlineReportDAO.findById(permission.getReportId());
-                if (onlineReport != null && onlineReport.getActive()) { // really an inactive report should be zapped, here for safety
+                if (onlineReport != null) { // really an inactive report should be zapped, here for safety
                     permissions.add(new Permission.PermissionForDisplay(permission, databaseDAO, userDao));
                 }
             }

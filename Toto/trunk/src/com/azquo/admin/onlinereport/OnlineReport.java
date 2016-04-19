@@ -26,7 +26,6 @@ public class OnlineReport extends StandardEntity {
     private String pathName; //internal use
     private String explanation;
     private int renderer;
-    private boolean active;
 
     public static final int AZQUO_BOOK = 0;
     public static final int ZK_AZQUO_BOOK = 1;
@@ -42,7 +41,7 @@ public class OnlineReport extends StandardEntity {
             , @JsonProperty("pathName") String pathName
             , @JsonProperty("explanation") String explanation
             , @JsonProperty("renderer") int renderer
-            , @JsonProperty("active") boolean active) {
+            ) {
         this.id = id;
         this.dateCreated = dateCreated;
         this.businessId = businessId;
@@ -53,7 +52,6 @@ public class OnlineReport extends StandardEntity {
         this.pathName = pathName;
         this.explanation = explanation;
         this.renderer = renderer;
-        this.active = active;
     }
 
     public int getBusinessId() {
@@ -128,14 +126,6 @@ public class OnlineReport extends StandardEntity {
         this.renderer = renderer;
     }
 
-    public boolean getActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
-    }
-
     @Override
     public String toString() {
         return "OnlineReport{" +
@@ -148,7 +138,6 @@ public class OnlineReport extends StandardEntity {
                 ", pathName='" + pathName + '\'' +
                 ", explanation='" + explanation + '\'' +
                 ", renderer=" + renderer +
-                ", active=" + active +
                 '}';
     }
 }

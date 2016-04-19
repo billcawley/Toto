@@ -46,7 +46,6 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         toReturn.put(FILENAME, onlineReport.getFilename());
         toReturn.put(EXPLANATION, onlineReport.getExplanation());
         toReturn.put(RENDERER, onlineReport.getRenderer());
-        toReturn.put(ACTIVE, onlineReport.getActive());
         return toReturn;
     }
 
@@ -63,8 +62,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
                         , rs.getString(FILENAME)
                         , ""
                         , rs.getString(EXPLANATION)
-                        , rs.getInt(RENDERER)
-                        , rs.getBoolean(ACTIVE));
+                        , rs.getInt(RENDERER));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
