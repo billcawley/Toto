@@ -100,7 +100,7 @@ public class LoginService {
         if (b == null){
             throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
         }
-        String businessDirectory = (b.getBusinessName() + "               ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
+        String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
         LoggedInUser loggedInUser = new LoggedInUser(sessionId, user,databaseServer,database, permission != null ? permission.getReadList() : null, permission != null ? permission.getWriteList() : null, null, businessDirectory);
         if (loggedInUser.getUser().getId() != 25){ // stop recording Nic's logins which are also used by the monitoring software!
             loginRecordDAO.store(new LoginRecord(0, user.getId(), database != null ? database.getId() : 0, new Date()));
