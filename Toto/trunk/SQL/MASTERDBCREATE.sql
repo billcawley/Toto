@@ -106,9 +106,6 @@ ALTER TABLE `online_report` CHANGE `user_status` `user_status` VARCHAR(255) CHAR
 insert into database_report_link SELECT database.id as database_id, online_report.id as report_id FROM `online_report`, `database` WHERE `online_report`.database_type<>'' and `online_report`.database_type = `database`.database_type;
 ALTER TABLE `permission` ADD `report_id` INT(11) NOT NULL DEFAULT '0' AFTER `id`;
 
-SELECT id, status FROM `user` WHERE status<>'' and status not like 'ADMINISTRATOR';
-SELECT id, user_status FROM `online_report` WHERE user_status<>'';
-
 -- --------------------------------------------------------
 
 --
