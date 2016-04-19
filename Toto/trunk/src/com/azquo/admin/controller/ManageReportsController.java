@@ -81,6 +81,9 @@ public class ManageReportsController {
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
+            if (deleteId != null){
+                adminService.removeReportById(loggedInUser,Integer.parseInt(deleteId));
+            }
             if (editId != null) {
                 final OnlineReport theReport = onlineReportDAO.findById(Integer.parseInt(editId)); // yes could exception, don't care at the mo
                 if (theReport.getBusinessId() == loggedInUser.getUser().getBusinessId()) {

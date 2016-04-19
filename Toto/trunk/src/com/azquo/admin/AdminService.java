@@ -20,7 +20,7 @@ import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 31/10/13
@@ -78,7 +78,7 @@ public class AdminService {
         final Business business = new Business(0, businessName, bd);
         final Business existing = businessDAO.findByName(businessName);
         if (existing != null) {
-                throw new Exception(businessName + " already registered");
+            throw new Exception(businessName + " already registered");
         }
         User existingUser = userDao.findByEmail(email);
         if (existingUser != null) {
@@ -137,7 +137,7 @@ this may now not work at all, perhaps delete?
     // ok in new report/database server split creating a database needs distinct bits
 
     public void createDatabase(final String databaseName, String databaseType, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
-        if (databaseType==null){
+        if (databaseType == null) {
             databaseType = "";
         }
         if (loggedInUser.getUser().isAdministrator()) {
@@ -147,7 +147,7 @@ this may now not work at all, perhaps delete?
             }
             final String persistenceName = getSQLDatabaseName(loggedInUser, databaseName);
             final Business b = businessDAO.findById(loggedInUser.getUser().getBusinessId());
-            if (b == null){
+            if (b == null) {
                 throw new Exception("That business does not exist");
             }
             final Database database = new Database(0, b.getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId());
@@ -261,9 +261,9 @@ this may now not work at all, perhaps delete?
     public List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
         List<OnlineReport> reportList = new ArrayList<>();
         List<Database> databases = databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
-        for (Database database:databases) {
+        for (Database database : databases) {
             List<OnlineReport> reports = onlineReportDAO.findForDatabaseId(database.getId());
-            for (OnlineReport report:reports){
+            for (OnlineReport report : reports) {
                 report.setDatabase(database.getName());
             }
             reportList.addAll(reports);
@@ -279,7 +279,7 @@ this may now not work at all, perhaps delete?
     public List<ReportSchedule> getReportScheduleList(final LoggedInUser loggedInUser) {
         List<ReportSchedule> toReturn = new ArrayList<>();
         List<Database> databases = databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
-        for (Database database:databases) {
+        for (Database database : databases) {
             List<ReportSchedule> reportSchedules = reportScheduleDAO.findForDatabaseId(database.getId());
             toReturn.addAll(reportSchedules);
 
@@ -295,14 +295,14 @@ this may now not work at all, perhaps delete?
                 String dbName = "";
                 if (uploadRecord.getDatabaseId() > 0) {
                     Database database = databaseDAO.findById(uploadRecord.getDatabaseId());
-                    if (database != null){
+                    if (database != null) {
                         dbName = database.getName();
                     }
                 }
                 String userName = "";
                 if (uploadRecord.getUserId() > 0) {
                     User user = userDao.findById(uploadRecord.getUserId());
-                    if (user != null){
+                    if (user != null) {
                         userName = user.getName();
                     }
                 }
@@ -316,8 +316,11 @@ this may now not work at all, perhaps delete?
     public List<Permission.PermissionForDisplay> getDisplayPermissionList(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
             List<Permission.PermissionForDisplay> permissions = new ArrayList<>();
-            for (Permission permission : permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId())){
-                permissions.add(new Permission.PermissionForDisplay(permission, databaseDAO,userDao));
+            for (Permission permission : permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId())) {
+                OnlineReport onlineReport = onlineReportDAO.findById(permission.getReportId());
+                if (onlineReport != null && onlineReport.getActive()) { // really an inactive report should be zapped, here for safety
+                    permissions.add(new Permission.PermissionForDisplay(permission, databaseDAO, userDao));
+                }
             }
             return permissions;
         }
@@ -326,10 +329,10 @@ this may now not work at all, perhaps delete?
 
     public void deleteUserById(int userId, LoggedInUser loggedInUser) {
         User user = userDao.findById(userId);
-        if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
+        if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
             userDao.removeById(user);
             final List<Permission> forUserId = permissionDAO.findForUserId(userId);
-            for (Permission permission : forUserId){
+            for (Permission permission : forUserId) {
                 permissionDAO.removeById(permission);
             }
         }
@@ -337,7 +340,7 @@ this may now not work at all, perhaps delete?
 
     public User getUserById(int userId, LoggedInUser loggedInUser) {
         User user = userDao.findById(userId);
-        if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
+        if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
             return user;
         }
         return null;
@@ -346,16 +349,16 @@ this may now not work at all, perhaps delete?
     public void deletePermissionById(int permissionId, LoggedInUser loggedInUser) {
         Permission permission = permissionDAO.findById(permissionId);
         User user = userDao.findById(permission.getUserId());
-        if (loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
+        if (loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
             permissionDAO.removeById(permission);
         }
     }
 
     public Permission getPermissionById(int permissionId, LoggedInUser loggedInUser) {
         Permission permission = permissionDAO.findById(permissionId);
-        if (permission != null){
+        if (permission != null) {
             User user = userDao.findById(permission.getUserId());
-            if (loggedInUser.getUser().getBusinessId() == user.getBusinessId()){
+            if (loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
                 return permission;
             }
         }
@@ -364,7 +367,7 @@ this may now not work at all, perhaps delete?
 
     public Database getDatabaseById(int databaseId, LoggedInUser loggedInUser) {
         Database database = databaseDAO.findById(databaseId);
-        if (database != null && loggedInUser.getUser().getBusinessId() == database.getBusinessId()){
+        if (database != null && loggedInUser.getUser().getBusinessId() == database.getBusinessId()) {
             return database;
         }
         return null;
@@ -372,7 +375,7 @@ this may now not work at all, perhaps delete?
 
     public OnlineReport getReportById(int reportId, LoggedInUser loggedInUser) {
         OnlineReport onlineReport = onlineReportDAO.findById(reportId);
-        if (onlineReport != null && loggedInUser.getUser().getBusinessId() == onlineReport.getBusinessId()){
+        if (onlineReport != null && loggedInUser.getUser().getBusinessId() == onlineReport.getBusinessId()) {
             return onlineReport;
         }
         return null;
@@ -381,17 +384,17 @@ this may now not work at all, perhaps delete?
     public void removeReportById(LoggedInUser loggedInUser, int reportId) {
         OnlineReport onlineReport = onlineReportDAO.findById(reportId);
         if (onlineReport != null && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-                String fullPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename();
-                File file = new File(fullPath);
-                if (file.exists()){
-                    file.delete();
-                }
+            String fullPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename();
+            File file = new File(fullPath);
+            if (file.exists()) {
+                file.delete();
+            }
             onlineReportDAO.removeById(onlineReport);
         }
     }
 
     // code adapted from spreadsheet service which it wilol be removed from
-    public void removeDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
+    public void removeDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             // note, used to delete choices for the reports for this DB, won't do this now as
@@ -405,14 +408,14 @@ this may now not work at all, perhaps delete?
         }
     }
 
-    public void emptyDatabaseById(LoggedInUser loggedInUser,  int databaseId) throws Exception {
+    public void emptyDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getPersistenceName());
         }
     }
 
-    public void unloadDatabase(LoggedInUser loggedInUser,  int databaseId) throws Exception {
+    public void unloadDatabase(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = databaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             rmiClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).unloadDatabase(db.getPersistenceName());
@@ -420,21 +423,21 @@ this may now not work at all, perhaps delete?
     }
 
     // a little inconsistent but it will be called using a database object, no point looking up again
-    public boolean isDatabaseLoaded(LoggedInUser loggedInUser,  Database database) throws Exception {
+    public boolean isDatabaseLoaded(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).isDatabaseLoaded(database.getPersistenceName());
         }
         return false;
     }
 
-    public int getNameCount(LoggedInUser loggedInUser,  Database database) throws Exception {
+    public int getNameCount(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getNameCount(database.getPersistenceName());
         }
         return 0;
     }
 
-    public int getValueCount(LoggedInUser loggedInUser,  Database database) throws Exception {
+    public int getValueCount(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             return rmiClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getValueCount(database.getPersistenceName());
         }
