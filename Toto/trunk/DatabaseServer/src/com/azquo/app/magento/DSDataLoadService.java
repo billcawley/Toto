@@ -493,6 +493,7 @@ public class DSDataLoadService {
         Name qtyName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Quantity", orderEntities, false);
         Name weightName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Weight", orderEntities, false);
         Name canceledName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Canceled quantity", orderEntities, false);
+        Name discountName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Discount", orderEntities, false);
         Name taxName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Tax", orderEntities, false);
         Name ordersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "order", null, false);
         Name allOrdersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All orders", ordersName, false);
@@ -652,6 +653,7 @@ public class DSDataLoadService {
         orderLanguage.add("MagentoOrderID");
         String bundleLine = "";
         for (Map<String, String> salesRow : tableMap.get("sales_flat_order_item")) {
+            double discount = 0.0;
             String parentItemId = salesRow.get("parent_item_id");
             String itemId = salesRow.get("item_id");
 
@@ -673,7 +675,7 @@ public class DSDataLoadService {
             if (configLine == null) {
                 price = 0.0;
                 qty = 0.0;
-                //                productId = salesRow.get("product_id");
+                 //                productId = salesRow.get("product_id");
                 try {
                     price = Double.parseDouble(salesRow.get("base_row_invoiced"));//not sure which figure to take - base_row_invoiced or base_row_total
                     if (price == 0.0) {
@@ -684,6 +686,7 @@ public class DSDataLoadService {
                     weight = Double.parseDouble(salesRow.get("weight"));
                     tax = Double.parseDouble(salesRow.get("base_tax_amount"));
                     qty = qtyOrdered - qtyCanceled;
+                    discount = Double.parseDouble(salesRow.get("base_discount_invoiced"));
                     if (qty > 1) {
                         weight *= qty;//store total weight
                     }
@@ -713,6 +716,7 @@ public class DSDataLoadService {
             part1 += (thisCycleMarker - System.currentTimeMillis());
             thisCycleMarker = System.currentTimeMillis();
             if (configLine == null && !itemId.equals(bundleLine)) {
+                //not sure about discounts on bundles! - they may be ignored
                 //store the values.   Qty and price have attributes order, product.  order is in all orders, and in the relevant date
                 String orderNo = "Order " + salesRow.get("order_id");
                 Name orderName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderNo, allOrdersName, true, orderLanguage);
@@ -783,6 +787,13 @@ public class DSDataLoadService {
                 namesForValue.add(orderItemName);
                 namesForValue.add(weightName);
                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, weight + "", namesForValue);
+                if (discount > 0.0){
+                    namesForValue = HashObjSets.newMutableSet();
+                    namesForValue.add(orderItemName);
+                    namesForValue.add(discountName);
+                    valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, discount + "", namesForValue);
+
+                }
                 if (qtyCanceled > 0) {
                     namesForValue = HashObjSets.newMutableSet();
                     namesForValue.add(orderItemName);
