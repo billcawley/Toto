@@ -2,9 +2,7 @@ package com.azquo.spreadsheet.view;
 
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.user.UserChoiceDAO;
-import com.azquo.admin.user.UserRegionOptions;
-import com.azquo.admin.user.UserRegionOptionsDAO;
+import com.azquo.admin.user.*;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
@@ -764,19 +762,33 @@ public class ZKComposer extends SelectorComposer<Component> {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         String reportName = spreadsheetService.setChoices(loggedInUser, provline);
         OnlineReport or = null;
+        Permission permission = null;
+        Session session = Sessions.getCurrent();
+        ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
         if (reportName != null) {
-            Session session = Sessions.getCurrent();
-            int databaseId = loggedInUser.getDatabase().getId();
-            ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
-            OnlineReportDAO onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
-            or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
-            if (or == null) {
-                or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
+            if (loggedInUser.getUser().isAdministrator()){
+                int databaseId = loggedInUser.getDatabase().getId();
+                OnlineReportDAO onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
+                or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
+                if (or == null) {
+                    or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
+                }
+            } else { // need to try to find the permission given the new rules
+                PermissionDAO permissionDAO = (PermissionDAO) applicationContext.getBean("permissionDao");
+                final List<Permission> forUserId = permissionDAO.findForUserId(loggedInUser.getUser().getId());
+                for (Permission permission1 : forUserId){
+                    if (permission1.getDatabaseId() == loggedInUser.getDatabase().getId()){
+                        permission = permission1;
+                        break;
+                    }
+                }
             }
         } else {
             reportName = "unspecified";
         }
-        if (or != null) {
+        if (permission != null) {
+            Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + permission.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
+        } else if (or != null) {
             Clients.evalJavaScript("window.open(\"/api/Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
         } else {
             Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
