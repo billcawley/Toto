@@ -654,28 +654,32 @@ public class ZKComposer extends SelectorComposer<Component> {
 //                            auditItem.addEventListener("onClick",
 //                                    event -> System.out.println("audit menu item clicked"));
                             // only check for drilldown on proper data, that which could have provenance
-                            SName drillDown = myzss.getBook().getInternalBook().getNameByName("az_DrillDown" + region);
-                            if (drillDown != null) {
-                                String drillDownString = ZKAzquoBookUtils.getSnameCell(drillDown).getStringValue();
-                                if (drillDownString.length() > 0) {
-                                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
-                                    final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(cellRow - name.getRefersToCellRegion().getRow());
-                                    final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
-                                    String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
-                                    String colHeading = colHeadings.get(cellCol - name.getRefersToCellRegion().getColumn());
-                                    // rather inelegant way to be case insensitive
-                                    drillDownString = drillDownString.replace("[rowHeading]", rowHeading);
-                                    drillDownString = drillDownString.replace("[rowheading]", rowHeading);
-                                    drillDownString = drillDownString.replace("[ROWHEADING]", rowHeading);
-                                    drillDownString = drillDownString.replace("[columnHeading]", colHeading);
-                                    drillDownString = drillDownString.replace("[columnheading]", colHeading);
-                                    drillDownString = drillDownString.replace("[COLUMNHEADING]", colHeading);
-                                    final String stringToPass = drillDownString;
-                                    Menuitem ddItem = new Menuitem("Drill Down");
-                                    editPopup.appendChild(ddItem);
-                                    ddItem.addEventListener("onClick",
-                                            event -> showProvenance(stringToPass, 0));
-                                    // now need to find the headings - is this easy?
+                            for (SName sName:myzss.getBook().getInternalBook().getNames()){
+                                if (sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())){
+                                    String qualifier = name.getName().substring(("az_Drilldown" + region).length()).replace("_"," ");
+
+                                    String drillDownString = ZKAzquoBookUtils.getSnameCell(sName).getStringValue();
+                                    if (drillDownString.length() > 0) {
+                                        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
+                                        final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(cellRow - name.getRefersToCellRegion().getRow());
+                                        final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
+                                        String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
+                                        String colHeading = colHeadings.get(cellCol - name.getRefersToCellRegion().getColumn());
+                                        // rather inelegant way to be case insensitive
+                                        drillDownString = drillDownString.replace("[rowHeading]", rowHeading);
+                                        drillDownString = drillDownString.replace("[rowheading]", rowHeading);
+                                        drillDownString = drillDownString.replace("[ROWHEADING]", rowHeading);
+                                        drillDownString = drillDownString.replace("[columnHeading]", colHeading);
+                                        drillDownString = drillDownString.replace("[columnheading]", colHeading);
+                                        drillDownString = drillDownString.replace("[COLUMNHEADING]", colHeading);
+                                        final String stringToPass = drillDownString;
+                                        Menuitem ddItem = new Menuitem("Drill Down" + qualifier);
+                                        editPopup.appendChild(ddItem);
+                                        ddItem.addEventListener("onClick",
+                                                event -> showProvenance(stringToPass, 0));
+                                        // now need to find the headings - is this easy?
+                                    }
+
                                 }
                             }
                         }
