@@ -371,8 +371,9 @@ public class SpreadsheetService {
         String reportCategory = "";
             for (Permission permission : forUserId) {
                 final OnlineReport onlineReport = onlineReportDAO.findById(permission.getReportId());
+                if (onlineReport != null){
                     Map<String, String> vReport = new HashMap<>();
-                    if (!onlineReport.getReportCategory().equals(reportCategory)) {
+                    if (onlineReport.getReportCategory() != null && !onlineReport.getReportCategory().equals(reportCategory)) {
                         vReport.put("category", onlineReport.getReportCategory());
                     } else {
                         vReport.put("category", "");
@@ -382,6 +383,7 @@ public class SpreadsheetService {
                     vReport.put("explanation", onlineReport.getExplanation());
                     vReport.put("link", "/api/Online/?opcode=loadsheet&permissionid=" + permission.getId()); // todo - address how this will be used!
                     reports.add(vReport);
+                }
             }
         model.addAttribute("reports", reports);
     }

@@ -6,6 +6,8 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.*;
+import net.openhft.koloboke.collect.set.hash.HashObjSet;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -192,45 +195,71 @@ public final class ValueService {
     As mentioned in comments in the function a lot of effort went in to speeding up this function and reducing garbage, be very careful before changing it.
     */
 
-    private long part1NanoCallTime1 = 0;
-    private long part2NanoCallTime1 = 0;
-    private long part3NanoCallTime1 = 0;
-    private int numberOfTimesCalled1 = 0;
+    private AtomicLong part1NanoCallTime1 = new AtomicLong(0);
+    private AtomicLong part2NanoCallTime1 = new AtomicLong(0);
+    private AtomicLong part3NanoCallTime1 = new AtomicLong(0);
+    private AtomicInteger numberOfTimesCalled1 = new AtomicInteger(0);
 
     // what if we could cache combos? E.g. a 5 comes in and we save
 
     private static AtomicInteger findForNamesIncludeChildrenCount = new AtomicInteger(0);
 
-    private List<Value> findForNamesIncludeChildren(final Set<Name> names, boolean payAttentionToAdditive) {
-        findForNamesIncludeChildrenCount.incrementAndGet();
-        long start = System.nanoTime();
-        // first get the shortest value list taking into account children
-        int smallestNameSetSize = -1;
-        Name smallestName = null;
+    private List<Value> findForNamesIncludeChildren(final List<Name> names, boolean payAttentionToAdditive, Map<List<Name>, Set<Value>> nameComboValueCache) {
+
+/*        StringBuilder log = new StringBuilder();
         for (Name name : names) {
-            int setSizeIncludingChildren = name.findValuesIncludingChildren(payAttentionToAdditive).size();
-            if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
-                smallestNameSetSize = setSizeIncludingChildren;
-                if (smallestNameSetSize == 0) {//no values
-                    return new ArrayList<>();
-                }
-                smallestName = name;
-            }
+            log.append("|");
+            log.append(name.getDefaultDisplayName());
         }
-        part1NanoCallTime1 += (System.nanoTime() - start);
+        System.out.println(log.toString());*/
+
+        findForNamesIncludeChildrenCount.incrementAndGet();
         long point = System.nanoTime();
-        assert smallestName != null; // make intellij happy
-        final Set<Value> smallestValuesSet = smallestName.findValuesIncludingChildren(payAttentionToAdditive);
-        part2NanoCallTime1 += (System.nanoTime() - point);
-        point = System.nanoTime();
-        // ok from testing a new list using contains against values seems to be the thing, double the speed at least I think!
+        // ok here we're going to try and get clever by caching certain combinations of names
+        final Set<Value> smallestValuesSet;
+        Set[] setsToCheck;
         List<Value> toReturn = new ArrayList<>();// since the source is a set it will already be deduped - can use ArrayList to return
-        Set[] setsToCheck = new Set[names.size() - 1]; // I don't want to be creating iterators when checking. Iterator * millions = garbage (in the Java sense!). No problems losing typing, I just need the contains.
-        int arrayIndex = 0;
-        for (Name name : names) {
-            if (name != smallestName) { // a little cheaper than making a new name set and knocking this one off I think
-                setsToCheck[arrayIndex] = name.findValuesIncludingChildren(payAttentionToAdditive);
-                arrayIndex++;
+        if (nameComboValueCache != null && names.size() > 3){
+            List<Name> allButTwo = names.subList(0, names.size() - 2);
+//            List<Name> allButTwo = names.subList(0, names.size() - 1);
+            // note it may not actually be the smallest, we hope it is!
+            // the collection wrap may cost, guess we'll see hjow it goes
+            part1NanoCallTime1.addAndGet(System.nanoTime() - point);
+            smallestValuesSet = nameComboValueCache.computeIfAbsent(allButTwo, computed -> HashObjSets.newImmutableSet(findForNamesIncludeChildren(allButTwo, payAttentionToAdditive, null)));
+            point = System.nanoTime(); //reset after the cache hit as that will be measured in the recursive call
+            setsToCheck = new Set[2];
+            setsToCheck[0] = names.get(names.size() - 2).findValuesIncludingChildren(payAttentionToAdditive);
+            setsToCheck[1] = names.get(names.size() - 1).findValuesIncludingChildren(payAttentionToAdditive);
+//            setsToCheck = new Set[1];
+//            setsToCheck[0] = names.get(names.size() - 1).findValuesIncludingChildren(payAttentionToAdditive);
+        } else {
+            // first get the shortest value list taking into account children
+            int smallestNameSetSize = -1;
+            Name smallestName = null;
+            for (Name name : names) {
+                int setSizeIncludingChildren = name.findValuesIncludingChildren(payAttentionToAdditive).size();
+                if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
+                    smallestNameSetSize = setSizeIncludingChildren;
+                    if (smallestNameSetSize == 0) {//no values
+                        return new ArrayList<>();
+                    }
+                    smallestName = name;
+                }
+            }
+            part1NanoCallTime1.addAndGet(System.nanoTime() - point);
+            point = System.nanoTime();
+            assert smallestName != null; // make intellij happy
+            smallestValuesSet = smallestName.findValuesIncludingChildren(payAttentionToAdditive);
+            part2NanoCallTime1.addAndGet(System.nanoTime() - point);
+            point = System.nanoTime();
+            // ok from testing a new list using contains against values seems to be the thing, double the speed at least I think!
+            setsToCheck = new Set[names.size() - 1]; // I don't want to be creating iterators when checking. Iterator * millions = garbage (in the Java sense!). No problems losing typing, I just need the contains.
+            int arrayIndex = 0;
+            for (Name name : names) {
+                if (name != smallestName) { // a little cheaper than making a new name set and knocking this one off I think
+                    setsToCheck[arrayIndex] = name.findValuesIncludingChildren(payAttentionToAdditive);
+                    arrayIndex++;
+                }
             }
         }
         // The core things we want to know about values e.g. sum, max, min, could be done in here but currently the values list, via ValuesHook, is still accesed and used.
@@ -264,17 +293,17 @@ public final class ValueService {
                 toReturn.add(value);
             }
         }
-        part3NanoCallTime1 += (System.nanoTime() - point);
-        numberOfTimesCalled1++;
+        part3NanoCallTime1.addAndGet(System.nanoTime() - point);
+        numberOfTimesCalled1.incrementAndGet();
         return toReturn;
     }
 
     public void printFindForNamesIncludeChildrenStats() {
-        if (numberOfTimesCalled1 > 0) {
-            logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1);
-            logger.info("part 1 average nano : " + (part1NanoCallTime1 / numberOfTimesCalled1));
-            logger.info("part 2 average nano : " + (part2NanoCallTime1 / numberOfTimesCalled1));
-            logger.info("part 3 average nano : " + (part3NanoCallTime1 / numberOfTimesCalled1));
+        if (numberOfTimesCalled1.get() > 0) {
+            logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1.get());
+            logger.info("part 1 average nano : " + (part1NanoCallTime1.get() / numberOfTimesCalled1.get()));
+            logger.info("part 2 average nano : " + (part2NanoCallTime1.get() / numberOfTimesCalled1.get()));
+            logger.info("part 3 average nano : " + (part3NanoCallTime1.get() / numberOfTimesCalled1.get()));
         }
     }
 
@@ -286,8 +315,8 @@ public final class ValueService {
     // the function that populates each cell.
     private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
 
-    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Set<Name> names, final MutableBoolean locked
-            , final boolean payAttentionToAdditive, DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function) throws Exception {
+    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final MutableBoolean locked
+            , final boolean payAttentionToAdditive, DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
@@ -323,7 +352,7 @@ public final class ValueService {
 
         // no reverse polish converted formula, just sum
         if (calcString == null) {
-            return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesHook, function, locked);
+            return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesHook, function, locked, nameComboValueCache);
         } else {
             // this is where the work done by the shunting yard algorithm is used
             // ok I think I know why an array was used, to easily reference the entry before
@@ -354,11 +383,11 @@ public final class ValueService {
                         //int id = Integer.parseInt(term.substring(1));
                         // so get the name and add it to the other names
                         Name name = nameService.getNameFromListAndMarker(term, formulaNames);
-                        Set<Name> seekSet = new HashSet<>(calcnames);
-                        seekSet.add(name);
+                        List<Name> seekList = new ArrayList<>(calcnames);
+                        seekList.add(name);
                         // and put the result in
                         //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekSet, locked, payAttentionToAdditive, valuesHook, attributeNames, function);
+                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekList, locked, payAttentionToAdditive, valuesHook, attributeNames, function, nameComboValueCache);
                     }
                 }
             }
@@ -372,9 +401,9 @@ public final class ValueService {
 
     private static AtomicInteger findValueForHeadingsCount = new AtomicInteger(0);
 
-    public String findValueForHeadings(final Set<DataRegionHeading> headings, final MutableBoolean locked) throws Exception {
+    public String findValueForHeadings(final List<DataRegionHeading> headings, final MutableBoolean locked) throws Exception {
         findValueForHeadingsCount.incrementAndGet();
-        Set<Name> names = dsSpreadsheetService.namesFromDataRegionHeadings(headings);
+        List<Name> names = dsSpreadsheetService.namesFromDataRegionHeadings(headings);
         if (names.size() != 1) {
             locked.isTrue = true;
         }
@@ -425,13 +454,13 @@ public final class ValueService {
 
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
-    private double resolveValuesForNamesIncludeChildren(final Set<Name> names, final boolean payAttentionToAdditive
-            , DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
+    private double resolveValuesForNamesIncludeChildren(final List<Name> names, final boolean payAttentionToAdditive
+            , DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked, Map<List<Name>, Set<Value>> nameComboValueCache) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
 
-        List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive);
+        List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive, nameComboValueCache);
         double max = 0;
         double min = 0;
 
@@ -718,6 +747,7 @@ public final class ValueService {
     private static AtomicInteger findForSearchNamesIncludeChildrenCount = new AtomicInteger(0);
 
     // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
+    // todo - get rid of part1NanoCallTime1 etc or use different variables! They are usef in the main value resolving function
     private Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
         findForSearchNamesIncludeChildrenCount.incrementAndGet();
         long start = System.nanoTime();
@@ -725,7 +755,7 @@ public final class ValueService {
         final Set<Value> values = new HashSet<>();
         // assume that the first set of names is the most restrictive
         Set<Name> smallestNames = names.get(0);
-        part1NanoCallTime1 += (System.nanoTime() - start);
+        part1NanoCallTime1.addAndGet(System.nanoTime() - start);
         long point = System.nanoTime();
 
         final Set<Value> valueSet = new HashSet<>();
@@ -733,7 +763,7 @@ public final class ValueService {
             valueSet.addAll(name.findValuesIncludingChildren(payAttentionToAdditive));
         }
         // this seems a fairly crude implementation, list all values for the name sets then check that that values list is in all the name sets
-        part2NanoCallTime1 += (System.nanoTime() - point);
+        part2NanoCallTime1.addAndGet(System.nanoTime() - point);
         point = System.nanoTime();
         for (Value value : valueSet) {
             boolean theValueIsOk = true;
@@ -756,8 +786,8 @@ public final class ValueService {
                 values.add(value);
             }
         }
-        part3NanoCallTime1 += (System.nanoTime() - point);
-        numberOfTimesCalled1++;
+        part3NanoCallTime1.addAndGet(System.nanoTime() - point);
+        numberOfTimesCalled1.incrementAndGet();
         //System.out.println("track b   : " + (System.nanoTime() - track) + "  checked " + count + " names");
         //track = System.nanoTime();
 

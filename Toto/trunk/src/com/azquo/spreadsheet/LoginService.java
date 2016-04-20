@@ -13,7 +13,7 @@ import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 31/10/13
@@ -67,23 +67,33 @@ public class LoginService {
 
     // todo - what to do about database here, it's not ideal and based on the old model
 
-    private LoggedInUser loginLoggedInUser(final String sessionId, final String databaseName, final User user) throws Exception {
+    private LoggedInUser loginLoggedInUser(final String sessionId, String databaseName, final User user) throws Exception {
         Database database = null;
         // ok user should be ok :)
         Permission permission = null;
-        if (databaseName != null && databaseName.length() > 0){ // trying to set a db, how often?
-            if (user.isAdministrator()){
-                final List<Database> forBusinessId = databaseDAO.findForBusinessId(user.getBusinessId());
-                for (Database database1 : forBusinessId){
-                    if (database1.getName().equalsIgnoreCase(databaseName)){
+        if (databaseName == null) {
+            databaseName = "";
+        }
+        // new logic run regardless of whether we were passed a db as we want to default if there's only one DB (this was lost and it knackered some magento uploads)
+        if (user.isAdministrator()) {
+            final List<Database> forBusinessId = databaseDAO.findForBusinessId(user.getBusinessId());
+            if (forBusinessId.size() == 1) {
+                database = forBusinessId.get(0);
+            } else {
+                for (Database database1 : forBusinessId) {
+                    if (database1.getName().equalsIgnoreCase(databaseName)) {
                         database = database1;
                         break;
                     }
                 }
-            } else { // try and do it by permission - should we allow this at all for non admin users? todo - is the logic here correct, I need both the db and permissions, right now it feels like a double look up
-                final List<Database> forBusinessId = databaseDAO.findForUserIdViaPermission(user.getId());
-                for (Database database1 : forBusinessId){
-                    if (database1.getName().equalsIgnoreCase(databaseName)){
+            }
+        } else { // try and do it by permission - should we allow this at all for non admin users? todo - is the logic here correct, I need both the db and permissions, right now it feels like a double look up
+            final List<Database> forUserIdPermission = databaseDAO.findForUserIdViaPermission(user.getId());
+            if (forUserIdPermission.size() == 1) {
+                database = forUserIdPermission.get(0);
+            } else {
+                for (Database database1 : forUserIdPermission) {
+                    if (database1.getName().equalsIgnoreCase(databaseName)) {
                         database = database1;
                         permission = permissionDao.findByBusinessUserAndDatabase(user, database);
                         break;
@@ -92,17 +102,17 @@ public class LoginService {
             }
         }
         DatabaseServer databaseServer = null;
-        if (database != null){
+        if (database != null) {
             databaseServer = databaseServerDao.findById(database.getDatabaseServerId());
         }
 
         Business b = businessDAO.findById(user.getBusinessId());
-        if (b == null){
+        if (b == null) {
             throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
         }
         String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user,databaseServer,database, permission != null ? permission.getReadList() : null, permission != null ? permission.getWriteList() : null, null, businessDirectory);
-        if (loggedInUser.getUser().getId() != 25){ // stop recording Nic's logins which are also used by the monitoring software!
+        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user, databaseServer, database, permission != null ? permission.getReadList() : null, permission != null ? permission.getWriteList() : null, null, businessDirectory);
+        if (loggedInUser.getUser().getId() != 25) { // stop recording Nic's logins which are also used by the monitoring software!
             loginRecordDAO.store(new LoginRecord(0, user.getId(), database != null ? database.getId() : 0, new Date()));
         }
         // I zapped something to do with anonymising here, don't know if it's still relevant
@@ -125,7 +135,7 @@ public class LoginService {
     // we used to record open counts, this will need to be dealt with server side
 
     public void switchDatabase(LoggedInUser loggedInUser, Database db) throws Exception {
-        if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()){
+        if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             DatabaseServer databaseServer = databaseServerDao.findById(db.getDatabaseServerId());
             loggedInUser.setDatabaseWithServer(databaseServer, db);
         }

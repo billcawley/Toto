@@ -895,7 +895,7 @@ public class DSSpreadsheetService {
         // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
         // that is to say : the outside list's size is the number of columns or headings. So, do we have the row and col?
         if (unsortedRow < rowHeadings.size() && unsortedCol < columnHeadings.size()) {
-            return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextHeadings, unsortedRow, unsortedCol, languages, 0);
+            return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextHeadings, unsortedRow, unsortedCol, languages, 0, null);
         }
         return null; // no headings match the row/col passed
     }
@@ -1153,7 +1153,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             int colNo = 0;
             for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                 // values I need to build the CellUI
-                returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextHeadings, row, colNo, languages, valueId));
+                returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextHeadings, row, colNo, languages, valueId, null));
                 // for some reason this was before, it buggered up the ability to find the right column!
                 colNo++;
                 if (counter.incrementAndGet() % progressBarStep == 0) {
@@ -1178,8 +1178,10 @@ Callable interface sorts the memory "happens before" using future gets which run
         private final AtomicInteger counter;
         private final int progressBarStep;
 
+        private final Map<List<Name>, Set<Value>> nameComboValueCache;
+
         CellFiller(int row, int col, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow,
-                   List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
+                   List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep, Map<List<Name>, Set<Value>> nameComboValueCache) {
             this.row = row;
             this.col = col;
             this.headingsForColumn = headingsForColumn;
@@ -1190,6 +1192,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             this.connection = connection;
             this.counter = counter;
             this.progressBarStep = progressBarStep;
+            this.nameComboValueCache = nameComboValueCache;
         }
 
         // this should sort my memory concerns (I mean the AzquoCell being appropriately visible), call causing a memory barrier which runnable didn't.
@@ -1197,7 +1200,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         @Override
         public AzquoCell call() throws Exception {
             // connection.addToUserLog(".", false);
-            final AzquoCell azquoCell = getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextHeadings, row, col, languages, valueId);
+            final AzquoCell azquoCell = getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextHeadings, row, col, languages, valueId, nameComboValueCache);
             if (counter.incrementAndGet() % progressBarStep == 0) {
                 connection.addToUserLog("=", false);
             }
@@ -1250,7 +1253,7 @@ Callable interface sorts the memory "happens before" using future gets which run
      */
 
     private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
-            , List<DataRegionHeading> contextHeadings, int rowNo, int colNo, List<String> languages, int valueId) throws Exception {
+            , List<DataRegionHeading> contextHeadings, int rowNo, int colNo, List<String> languages, int valueId, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception {
         boolean selected = false;
         String stringValue = "";
         double doubleValue = 0;
@@ -1351,8 +1354,9 @@ Callable interface sorts the memory "happens before" using future gets which run
                 }
             }
         } else {// conventional type (sum) or value function
-            Set<DataRegionHeading> headingsForThisCell = HashObjSets.newMutableSet(rowHeadings.size()); // I wonder a little how important having them as sets is . . .
-            Set<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
+            // changing these collections to lists
+            List<DataRegionHeading> headingsForThisCell = new ArrayList<>(rowHeadings.size() + columnHeadings.size() + contextHeadings.size()); // moving to lists, don't see a problem (!)
+            List<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
             //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
             for (DataRegionHeading heading : rowHeadings) {
                 if (heading != null && (heading.getName() != null || (heading.getAttribute() != null && !heading.getAttribute().equals(".")))) {
@@ -1367,7 +1371,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         headingsForThisCell.add(heading);
                     }
                 }
-                rowAndColumnHeadingsForThisCell = new HashSet<>(headingsForThisCell);
+                rowAndColumnHeadingsForThisCell = new ArrayList<>(headingsForThisCell);
                 if (headingsForThisCell.size() > hCount) {
                     headingsForThisCell.addAll(contextHeadings);
                 } else {
@@ -1383,6 +1387,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                     locked.isTrue = true;
                 }
             }
+            Collections.reverse(headingsForThisCell); // here is the easiest place to do this, it was added in row, column, context order, we want to reverse this to improve caching on the names in a bit
             if (!checked) { // no valid row/col combo
                 locked.isTrue = true;
             } else {
@@ -1407,7 +1412,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         if (valueId > 0) {
                             valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
                         }
-                        doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function); // true = pay attention to names additive flag - I want to get rid of this. We'll see.
+                        doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function, nameComboValueCache); // true = pay attention to names additive flag - I want to get rid of this. We'll see.
                         if (function == DataRegionHeading.FUNCTION.VALUEPARENTCOUNT && valueFunctionSet != null) { // then value parent count, we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             Set<Name> allValueParents = HashObjSets.newMutableSet();
@@ -1489,12 +1494,15 @@ Callable interface sorts the memory "happens before" using future gets which run
         long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
         long newHeapMarker = oldHeapMarker;
         long track = System.currentTimeMillis();
+/*        if (headingsForEachRow.size() > 200){// hack to limit for the moment
+            headingsForEachRow = headingsForEachRow.subList(0, 200);
+        }*/
         int totalRows = headingsForEachRow.size();
         int totalCols = headingsForEachColumn.size();
 /*        for (int i = 0; i < totalRows; i++) {
             toReturn.add(null);// null the rows, basically adding spaces to the return list
         }*/
-        List<List<AzquoCell>> toReturn = new ArrayList<>(totalRows); // make it the right size so multithreading changes the values but not the structure
+        List<List<AzquoCell>> toReturn = new ArrayList<>(totalRows);
         connection.addToUserLog("Size = " + totalRows + " * " + totalCols);
         connection.addToUserLog("1%--------25%---------50%---------75%--------100%");
         int maxRegionSize = 2000000;//random!  set by WFC 29/6/15
@@ -1504,6 +1512,8 @@ Callable interface sorts the memory "happens before" using future gets which run
         ExecutorService executor = AzquoMemoryDB.mainThreadPool;
         int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
+        Map<List<Name>, Set<Value>> nameComboValueCache = new ConcurrentHashMap<>(); // attempt at caching commonly used combinations of names
+        nameComboValueCache = null;
         // I was passing an ArrayList through to the tasks. This did seem to work but as I understand a Callable is what's required here, takes care of memory sync and exceptions
         if (totalRows < 1000) { // arbitrary cut off for the moment, Future per cell. I wonder if it should be lower than 1000?
             List<List<Future<AzquoCell>>> futureCellArray = new ArrayList<>();
@@ -1516,7 +1526,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 int colNo = 0;
                 for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                     // inconsistent parameter ordering?
-                    futureRow.add(executor.submit(new CellFiller(row, colNo, columnHeadings, rowHeadings, contextHeadings, languages, valueId, connection, counter, progressBarStep)));
+                    futureRow.add(executor.submit(new CellFiller(row, colNo, columnHeadings, rowHeadings, contextHeadings, languages, valueId, connection, counter, progressBarStep, nameComboValueCache)));
                     colNo++;
                 }
                 futureCellArray.add(futureRow);
@@ -1847,8 +1857,8 @@ Callable interface sorts the memory "happens before" using future gets which run
                                 headingsForCell.addAll(azquoCell.getColumnHeadings());
                                 headingsForCell.addAll(azquoCell.getRowHeadings());
                                 headingsForCell.addAll(azquoCell.getContexts());
-                                Set<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
-                                valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), cellNames);
+                                List<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
+                                valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), new HashSet<>(cellNames));
                                 numberOfValuesModified++;
                             }
                             // warning on multiple values?
@@ -1918,9 +1928,9 @@ Callable interface sorts the memory "happens before" using future gets which run
         return dataRegionHeadings;
     }
 
-    public Set<Name> namesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
+    public List<Name> namesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
         // ok some of the data region headings may be attribute, no real harm I don't think VS a whacking great set which would always be names
-        Set<Name> names = new HashSet<>(dataRegionHeadings.size());
+        List<Name> names = new ArrayList<>(dataRegionHeadings.size()); // switching back to list, now I consider I'm not sure if sets help much here and I want ordering
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
             if (dataRegionHeading.getName() != null) {
                 names.add(dataRegionHeading.getName());

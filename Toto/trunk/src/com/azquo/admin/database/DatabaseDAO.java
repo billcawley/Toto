@@ -89,7 +89,7 @@ public final class DatabaseDAO extends StandardDAO<Database> {
     public List<Database> findForUserIdViaPermission(final int userId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PermissionDAO.USERID, userId);
-        return findListWithWhereSQLAndParameters(" FROM `database`,`permission` WHERE `permission`.`" + PermissionDAO.USERID + "` =: " + PermissionDAO.USERID +  " and `database`.id = `permission`.`database_id`group by `database_id`", namedParams, false);
+        return findListWithWhereSQLAndParameters(",`" + MASTER_DB + "`.`permission` WHERE `permission`.`" + PermissionDAO.USERID + "` =:" + PermissionDAO.USERID +  " and `database`.id = `permission`.`database_id` group by `database_id`", namedParams, false);
     }
 
     public Database findForName(final int businessID, final String name) {
