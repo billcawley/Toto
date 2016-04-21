@@ -1298,6 +1298,21 @@ public final class NameService {
         return namesFound != null ? namesFound : new NameSetList(null, new ArrayList<>(), true); // empty one if it's null
     }
 
+    public int countAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, String attributeValue){
+        List<String> attributeNames = new ArrayList<>();
+        attributeNames.add(attributeName);
+        return azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, attributeValue, null).size();
+
+    }
+
+    public Set<Name> attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, String attributeValue){
+        List<String> attributeNames = new ArrayList<>();
+        attributeNames.add(attributeName);
+        return azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, attributeValue, null);
+
+    }
+
+
 
     public static void printFunctionCountStats() {
         System.out.println("######### NAME SERVICE FUNCTION COUNTS");
