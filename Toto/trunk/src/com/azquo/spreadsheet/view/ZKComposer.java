@@ -539,11 +539,13 @@ public class ZKComposer extends SelectorComposer<Component> {
                     String[] rowHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
                     String displayRowHeadingsString = "az_Display" + name.getName().substring(3);
                     CellRegion displayRowHeadings = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), displayRowHeadingsString);
-                    int hrow = displayRowHeadings.getRow() - 1;
-                    int hcol = displayRowHeadings.getColumn();
-                    for (String rowHeading : rowHeadings) {
-                        if (hrow == event.getRow() && hcol++ == event.getColumn()) {
-                            return rowHeading.replace("`","");
+                    if (displayRowHeadings != null) {
+                        int hrow = displayRowHeadings.getRow() - 1;
+                        int hcol = displayRowHeadings.getColumn();
+                        for (String rowHeading : rowHeadings) {
+                            if (hrow == event.getRow() && hcol++ == event.getColumn()) {
+                                return rowHeading.replace("`", "");
+                            }
                         }
                     }
                 }
@@ -654,7 +656,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                             // only check for drilldown on proper data, that which could have provenance
                             for (SName sName:myzss.getBook().getInternalBook().getNames()){
                                 if (sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())){
-                                    String qualifier = name.getName().substring(("az_Drilldown" + region).length()).replace("_"," ");
+                                      String qualifier = sName.getName().substring(("az_drilldown" + region).length()).replace("_"," ");
 
                                     String drillDownString = ZKAzquoBookUtils.getSnameCell(sName).getStringValue();
                                     if (drillDownString.length() > 0) {
