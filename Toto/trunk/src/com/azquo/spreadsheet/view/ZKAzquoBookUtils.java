@@ -993,8 +993,8 @@ public class ZKAzquoBookUtils {
                     for (String filter : filters) {
                         List<String> optionsList = optionsList(loggedInUser,  "`" + filter + "` children");
                         if (optionsList!=null && optionsList.size() > 1) {
-                            String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children");//leave out any with single choices
                             filter = filter.trim();
+                            String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children");//leave out any with single choices
                             int rowOffset = filterCount % headingRows;
                             int colOffset = filterCount / headingRows;
                             int chosenRow = headingRow + rowOffset;
@@ -1122,8 +1122,10 @@ public class ZKAzquoBookUtils {
 
     public String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
         try {
+            List<String> languages = new ArrayList<>();
+            languages.add(loggedInUser.getUser().getEmail());
             List<String> chosenOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`" + filterName + "` children", loggedInUser.getLanguages());
+                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`" + filterName + "` children", languages);
             List<String> allOptions = optionsList(loggedInUser, sourceSet);
             if (allOptions.size() < 2) return null;
             if (chosenOptions.size() == 0 || chosenOptions.size() == allOptions.size()) return "[all]";
