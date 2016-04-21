@@ -346,6 +346,7 @@ public final class ImportService {
         } else {
             or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
         }
+        or.setFilename(fileName);
         String fullPath = spreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
