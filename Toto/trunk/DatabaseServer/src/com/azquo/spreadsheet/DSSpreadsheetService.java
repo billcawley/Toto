@@ -434,7 +434,6 @@ public class DSSpreadsheetService {
                     headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
                 } else {
                     headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
-                    headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
                 }
                 headingDefinitionRowIndex++;
             }
@@ -1287,10 +1286,23 @@ Callable interface sorts the memory "happens before" using future gets which run
         // todo re-implement caching here if there are performance problems - I did use findOverlap before here but I don't think is applicable now the name query is much more flexible. Caching fragments of the query would be the thing
         if (nameFunctionHeading != null) {
             String cellQuery = nameFunctionHeading.getDescription();
-            String ROWHEADING = "[ROWHEADING]";
-            String ROWHEADINGLOWERCASE = "[rowheading]";
-            if (!rowHeadings.isEmpty() && (cellQuery.contains(ROWHEADING) || cellQuery.contains(ROWHEADINGLOWERCASE))) {
-                cellQuery = cellQuery.replace(ROWHEADING, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(ROWHEADINGLOWERCASE, rowHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
+            //testing here for [rowheading], [rowheading2] etc...
+            String ROWHEADING = "[ROWHEADING";
+            if (!rowHeadings.isEmpty()) {
+                if (!cellQuery.contains(ROWHEADING)) {
+                    ROWHEADING = ROWHEADING.toLowerCase();
+                }
+                if (cellQuery.contains(ROWHEADING)) {
+                    String filler = "";
+                    boolean found = false;
+                    for (int colNo1 = 0; colNo1 < rowHeadings.size(); colNo1++) {
+                        String fillerAll = ROWHEADING + filler + "]";
+                        if (cellQuery.contains(fillerAll)) {
+                            cellQuery = cellQuery.replace(fillerAll, rowHeadings.get(colNo1).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
+                        }
+                        filler = (colNo1 + 2) + "";
+                    }
+                }
             }
             String COLUMNHEADING = "[COLUMNHEADING]";
             String COLUMNHEADINGLOWERCASE = "[columnheading]";
@@ -1351,6 +1363,20 @@ Callable interface sorts the memory "happens before" using future gets which run
                 stringValue = "";
                 for (Name name : set) { //a bit of a lazy way of doing things but it should be fine, plus with only a collection interface not sure of how to get the last!
                     stringValue = name.getDefaultDisplayName();
+                }
+            } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.ATTRIBUTECOUNT) {
+                String[] params = cellQuery.split(",");
+                if (params.length == 2){
+                    //strip out the qualifiers on the name
+                    String attValue = params[1].trim();
+                    if (attValue.contains(StringUtils.MEMBEROF)){
+                        attValue = attValue.substring(attValue.indexOf(StringUtils.MEMBEROF) + StringUtils.MEMBEROF.length());
+                    }
+                    doubleValue = nameService.countAttributes(connection, params[0].trim(),attValue.replace(Name.QUOTE+"",""));
+                    stringValue = "";
+                    if (doubleValue > 0){
+                        stringValue = doubleValue + "";
+                    }
                 }
             }
         } else {// conventional type (sum) or value function
