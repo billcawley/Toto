@@ -19,7 +19,21 @@ import java.util.Set;
  *
  */
 public class DataRegionHeading {
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE}
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, ATTRIBUTECOUNT, ATTRIBUTESET}
+    /*
+    COUNT               Value function      The number of values rather than the sum
+    AVERAGE             Value function      The average value
+    MAX, MIN            Value functions     Max and min values found
+    VALUEPARENTCOUNT    Value/Name function The number of names in a given set that are parents of the values found by the other cell definition features (e.g customers buying a product) (customer set
+    SET                 Name function       Comma separated list of elements of the set
+    FIRST, LAST         Name function       The first or last elements of the set
+    NAMECOUNT           Name function       The number of elements of the set
+    PATHCOUNT           Name function       The number of paths between the sets (e.g. the number of mailings sent to a specified group of customers)
+    PERMUTE             Heading function    The system will find all the combinations of the immediate children of the list to be permuted, selected on the basis of sharing common descendents
+    ATTRIBUTECOUNT      Name function       The number of names with the given attribute value (attname, attvalue)
+    ATTRIBUTESET        Name function       The set of names with the given value (attname, attvalue)
+
+     */
 
     private final Name name;
     private final String attribute;
@@ -98,6 +112,7 @@ public class DataRegionHeading {
     }
     // useful to be called outside if an instance
     static boolean isNameFunction(FUNCTION function){
-        return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT || function == FUNCTION.SET || function == FUNCTION.FIRST || function == FUNCTION.LAST);
+        return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT || function == FUNCTION.SET || function == FUNCTION.FIRST || function == FUNCTION.LAST
+        || function == FUNCTION.ATTRIBUTESET || function == FUNCTION.ATTRIBUTECOUNT);
     }
 }
