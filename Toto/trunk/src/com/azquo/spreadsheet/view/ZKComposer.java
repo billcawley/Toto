@@ -221,7 +221,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         final CellRegion queryResultRegion2 = queryResultRegion;
         if (selectionList!=null){
             final String selectionName2 = selectionName;
-            final String resultName2 = resultName;
             final String selectionList2 = selectionList;
 
 
@@ -229,8 +228,8 @@ public class ZKComposer extends SelectorComposer<Component> {
                 filterPopup.removeChild(filterPopup.getLastChild());
             }
             Listbox listbox = new Listbox();
-            // this is to make select all go across hidden pages
-            listbox.addEventListener("onCheckSelectAll", event1 -> {
+            // this is to make select all go across hidden pages - relevant with pagination
+/*            listbox.addEventListener("onCheckSelectAll", event1 -> {
                 CheckEvent event2 = (CheckEvent)event1;
                 if (event2.isChecked()){
                     listbox.selectAll();
@@ -239,7 +238,8 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             });
             listbox.setMold("paging");
-            listbox.setPageSize(10);
+            listbox.setPageSize(10);*/
+            listbox.setRows(10);
             Listhead listhead = new Listhead();
             Listheader listheader = new Listheader();
             listheader.setLabel("Select All");
