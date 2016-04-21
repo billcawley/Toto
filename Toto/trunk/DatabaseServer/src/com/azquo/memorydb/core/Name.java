@@ -209,7 +209,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public String getFullyQualifiedDefaultDisplayName() {
         if (getParents().isEmpty()){
-            return getDefaultDisplayName();
+            return QUOTE + getDefaultDisplayName() + QUOTE;
         }
         Collection<Name> parents = getParents();
         String qualified = getDefaultDisplayName();
