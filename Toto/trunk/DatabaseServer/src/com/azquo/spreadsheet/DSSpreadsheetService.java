@@ -17,6 +17,7 @@ import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.AsyncCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -310,32 +311,135 @@ public class DSSpreadsheetService {
         return toReturn;
     }
 
+    // to multi thread the headings made by permute items
 
-    private List<List<DataRegionHeading>> findPermutedItems(Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute) {
+    private class ComboBuilder implements Callable<Void> {
+
+        private final int comboSize;
+        private final List<Name> permuteNames;
+        private final int sourceFrom;// inclusive
+        private final int sourceTo;// NOT inclusive
+        private final Set<List<Name>> foundCombinations;
+        private final List<Name> sharedNamesList;
+
+        public ComboBuilder(int comboSize, List<Name> permuteNames, int sourceFrom, int sourceTo, Set<List<Name>> foundCombinations, List<Name> sharedNamesList) {
+            this.comboSize = comboSize;
+            this.permuteNames = permuteNames;
+            this.sourceFrom = sourceFrom;
+            this.sourceTo = sourceTo;
+            this.foundCombinations = foundCombinations;
+            this.sharedNamesList = sharedNamesList;
+        }
+
+        @Override
+        public Void call() throws Exception {
+            for (int i = sourceFrom; i < sourceTo; i++) {
+                List<Name> foundCombination = new ArrayList<>(comboSize);
+                for (Name pName : permuteNames) {
+                    foundCombination.add(Name.memberName(sharedNamesList.get(i), pName));
+                }
+                foundCombinations.add(foundCombination);
+            }
+            return null;
+        }
+    }
+
+
+
+    private List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute) throws Exception{
         NumberFormat nf = NumberFormat.getInstance();
         long startTime = System.currentTimeMillis();
+        List<Collection<Name>> sharedNamesSets = new ArrayList<>();
         List<Name> permuteNames = new ArrayList<>();
-        // edd note these shared headings can be big . . .
+        List<Name> sharedNamesList = new ArrayList<>(); // an arraylist is fine it's only going to be iterated later
         for (DataRegionHeading drh : listToPermute) {
             permuteNames.add(drh.getName());
-            if (sharedNames == null) {
-                sharedNames = HashObjSets.newMutableSet(drh.getName().findAllChildren(false));
-            } else {
-                sharedNames.retainAll(drh.getName().findAllChildren(false));
+            sharedNamesSets.add(drh.getName().findAllChildren(false));
+        }
+        if (sharedNames != null){
+            sharedNamesSets.add(sharedNames);
+        }
+        if (!sharedNamesSets.isEmpty()) {
+            // similar logic to getting values for a name. todo - can we factor? - it would be a function that takes 3 sets and finds the intersection, not rocket surgery . . . well except the issue of return types and single sets? IN this case there will always be more than one set
+            Collection<Name> smallestNameSet = null;
+            for (Collection<Name> nameSet : sharedNamesSets) {
+                if (smallestNameSet == null || nameSet.size() < smallestNameSet.size()) {
+                    smallestNameSet = nameSet;
+                    if (smallestNameSet.size() == 0) {// empty set, shared will bee empty just return empty now
+                        return new ArrayList<>();
+                    }
+                }
+            }
+            Collection[] setsToCheck = new Collection[sharedNamesSets.size() - 1];
+            int arrayIndex = 0;
+            for (Collection<Name> sharedNameSet : sharedNamesSets) {
+                if (sharedNameSet != smallestNameSet) {
+                    setsToCheck[arrayIndex] = sharedNameSet;
+                    arrayIndex++;
+                }
+            }
+            boolean add;
+            int index;
+            assert smallestNameSet != null;
+            for (Name name : smallestNameSet) {
+                add = true;
+                for (index = 0; index < setsToCheck.length; index++) {
+                    if (!setsToCheck[index].contains(name)) {
+                        add = false;
+                        break;
+                    }
+                }
+                if (add) {
+                    sharedNamesList.add(name);
+                }
             }
         }
+
+
+
+
+
         System.out.println("time for building shared " + nf.format(System.currentTimeMillis() - startTime));
         startTime = System.currentTimeMillis();
         //this is the part that takes a long time...
-        Collection<List<Name>> foundCombinations = HashObjSets.newMutableSet();
+        Set<List<Name>> foundCombinations;
         int comboSize = permuteNames.size();
-        for (Name name : sharedNames) {
-            List<Name> foundCombination = new ArrayList<>(comboSize);
-            for (Name pName : permuteNames) {
-                foundCombination.add(Name.memberName(name, pName));
+
+        int size = sharedNamesList.size();
+        if (size > 100_000){// arbitrary cut off for multi threading
+            System.out.println("multi threading the combo resolution");
+            foundCombinations = Collections.newSetFromMap(new ConcurrentHashMap<>()); // has to be concurrent for multi threading!
+            ExecutorService executor = AzquoMemoryDB.mainThreadPool;
+            final int divider = 50; // a bit arbitrary perhaps
+            List<Future<Void>> tasks = new ArrayList<>(50);
+            for (int i = 0; i < divider; i++){
+                tasks.add(executor.submit(new ComboBuilder(comboSize,permuteNames,(i * size / divider), ((i + 1) * size / divider), foundCombinations, sharedNamesList)));
             }
-            foundCombinations.add(foundCombination);
+            // then make sure all are executed and square up the memory - Future.get means a heppens before for the multi threaded stuff
+            for (Future<Void> task : tasks){
+                task.get();
+            }
+        } else { // just single thread
+            foundCombinations = HashObjSets.newMutableSet();
+            for (Name name : sharedNamesList) {
+                List<Name> foundCombination = new ArrayList<>(comboSize);
+                for (Name pName : permuteNames) {
+                    foundCombination.add(Name.memberName(name, pName));
+                }
+                foundCombinations.add(foundCombination);
+            }
         }
+
+        // this was taking a a short while before, going to try for multi threading
+/*
+        final Future<Void> task = executor.submit(new ComboBuilder(comboSize,permuteNames,from) {
+            @Override
+            public Void call() throws Exception {
+                return null;
+            }
+        });
+        task.get();*/
+
         System.out.println("time for getting combinations " + nf.format((System.currentTimeMillis() - startTime)));
         startTime = System.currentTimeMillis();
         //now need to sort the list into the order in the individual permute sets. ... by stagess
@@ -409,7 +513,7 @@ public class DSSpreadsheetService {
 
      */
 
-    private List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) {
+    private List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception {
         final int noOfHeadingDefinitionRows = headingLists.size();
         if (noOfHeadingDefinitionRows == 0) {
             return new ArrayList<>();
@@ -437,7 +541,6 @@ public class DSSpreadsheetService {
                 }
                 headingDefinitionRowIndex++;
             }
-            try {
                 if (headingDefinitionRow.get(0).get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) {
                     List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, headingDefinitionRow.get(0));//assumes only one row of headings
                     permutedLists.add(permuted);
@@ -446,11 +549,6 @@ public class DSSpreadsheetService {
                     permutedLists.add(permuted);
 
                 }
-            } catch (Exception e) {
-                List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
-                permutedLists.add(permuted);
-
-            }
         }
         if (permutedLists.size() == 1) { // it was just one row to permute, return it as is rather than combining the permuted results together which might result in a bit of garbage due to array copying
             return permutedLists.get(0);
@@ -858,21 +956,58 @@ public class DSSpreadsheetService {
 
     private Collection<Name> getSharedNames(List<DataRegionHeading> headingList) {
         long startTime = System.currentTimeMillis();
-        Set<Name> shared = null;
+        Collection<Name> shared = null;
+        List<Name> relevantNames = new ArrayList<>();
+        // gather names
         for (DataRegionHeading heading : headingList) {
             if (heading.getName() != null && heading.getName().getChildren().size() > 0) {
-                if (shared == null) {
-                    shared = new HashSet<>(heading.getName().findAllChildren(false));
-                } else {
-                    shared.retainAll(heading.getName().findAllChildren(false));
-
+                relevantNames.add(heading.getName());
+            }
+        }
+        // then similar logic to getting the values for names
+        if (relevantNames.size() == 1){
+            shared = relevantNames.get(0).findAllChildren(false);
+        } else if (relevantNames.size() > 1) {
+            shared = HashObjSets.newMutableSet();// I need a set it will could be hammered with contains later
+            // similar logic to getting values for a name. todo - can we factor?
+            int smallestNameSetSize = -1;
+            Name smallestName = null;
+            for (Name name : relevantNames) {
+                int setSizeIncludingChildren = name.findAllChildren(false).size();
+                if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
+                    // note - in other similar logic there was a check to exit immediately in the event of an empty set but this can't happen here as we ignore childless names (should we??)
+                    smallestNameSetSize = setSizeIncludingChildren;
+                    smallestName = name;
+                }
+            }
+            assert smallestName != null; // make intellij happy
+            Collection<Name> smallestNameSet = smallestName.findAllChildren(false);
+            Collection[] setsToCheck = new Collection[relevantNames.size() - 1];
+            int arrayIndex = 0;
+            for (Name name : relevantNames) {
+                if (name != smallestName) {
+                    setsToCheck[arrayIndex] = name.findAllChildren(false);
+                    arrayIndex++;
+                }
+            }
+            boolean add; // declare out here, save reinitialising each time
+            int index; // ditto that, should help
+            for (Name name : smallestNameSet) {
+                add = true;
+                for (index = 0; index < setsToCheck.length; index++) {
+                    if (!setsToCheck[index].contains(name)) {
+                        add = false;
+                        break;
+                    }
+                }
+                if (add) {
+                    shared.add(name);
                 }
             }
         }
         int size = 0;
         if (shared != null) size = shared.size();
         System.out.println("time to get shared names " + (System.currentTimeMillis() - startTime) + " count = " + size);
-
         return shared;
     }
 
@@ -1520,9 +1655,6 @@ Callable interface sorts the memory "happens before" using future gets which run
         long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
         long newHeapMarker = oldHeapMarker;
         long track = System.currentTimeMillis();
-/*        if (headingsForEachRow.size() > 200){// hack to limit for the moment
-            headingsForEachRow = headingsForEachRow.subList(0, 200);
-        }*/
         int totalRows = headingsForEachRow.size();
         int totalCols = headingsForEachColumn.size();
 /*        for (int i = 0; i < totalRows; i++) {
@@ -1538,8 +1670,10 @@ Callable interface sorts the memory "happens before" using future gets which run
         ExecutorService executor = AzquoMemoryDB.mainThreadPool;
         int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
-        Map<List<Name>, Set<Value>> nameComboValueCache = new ConcurrentHashMap<>(); // attempt at caching commonly used combinations of names
-        nameComboValueCache = null;
+        Map<List<Name>, Set<Value>> nameComboValueCache = null;
+        if (totalRows > 100){
+            nameComboValueCache = new ConcurrentHashMap<>(); // then try the cache which should speed up heading combinations where there's a lot of overlap
+        }
         // I was passing an ArrayList through to the tasks. This did seem to work but as I understand a Callable is what's required here, takes care of memory sync and exceptions
         if (totalRows < 1000) { // arbitrary cut off for the moment, Future per cell. I wonder if it should be lower than 1000?
             List<List<Future<AzquoCell>>> futureCellArray = new ArrayList<>();
@@ -1950,7 +2084,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, offsetHeadings, valueFunctionSet));
             }
         }
-        System.out.println("time for dataRegionHeadingsFromNames " + (System.currentTimeMillis() - startTime));
+        //System.out.println("time for dataRegionHeadingsFromNames " + (System.currentTimeMillis() - startTime));
         return dataRegionHeadings;
     }
 

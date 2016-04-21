@@ -220,18 +220,20 @@ public final class ValueService {
         Set[] setsToCheck;
         List<Value> toReturn = new ArrayList<>();// since the source is a set it will already be deduped - can use ArrayList to return
         if (nameComboValueCache != null && names.size() > 3){
-            List<Name> allButTwo = names.subList(0, names.size() - 2);
-//            List<Name> allButTwo = names.subList(0, names.size() - 1);
+//            List<Name> allButTwo = names.subList(0, names.size() - 2);
+            // testing is showing all but one being the fastest - this might make the
+            List<Name> allButOne = names.subList(0, names.size() - 1);
             // note it may not actually be the smallest, we hope it is!
             // the collection wrap may cost, guess we'll see hjow it goes
             part1NanoCallTime1.addAndGet(System.nanoTime() - point);
-            smallestValuesSet = nameComboValueCache.computeIfAbsent(allButTwo, computed -> HashObjSets.newImmutableSet(findForNamesIncludeChildren(allButTwo, payAttentionToAdditive, null)));
+//            smallestValuesSet = nameComboValueCache.computeIfAbsent(allButTwo, computed -> HashObjSets.newImmutableSet(findForNamesIncludeChildren(allButTwo, payAttentionToAdditive, null)));
+            smallestValuesSet = nameComboValueCache.computeIfAbsent(allButOne, computed -> HashObjSets.newImmutableSet(findForNamesIncludeChildren(allButOne, payAttentionToAdditive, null)));
             point = System.nanoTime(); //reset after the cache hit as that will be measured in the recursive call
-            setsToCheck = new Set[2];
+/*            setsToCheck = new Set[2];
             setsToCheck[0] = names.get(names.size() - 2).findValuesIncludingChildren(payAttentionToAdditive);
-            setsToCheck[1] = names.get(names.size() - 1).findValuesIncludingChildren(payAttentionToAdditive);
-//            setsToCheck = new Set[1];
-//            setsToCheck[0] = names.get(names.size() - 1).findValuesIncludingChildren(payAttentionToAdditive);
+            setsToCheck[1] = names.get(names.size() - 1).findValuesIncludingChildren(payAttentionToAdditive);*/
+            setsToCheck = new Set[1];
+            setsToCheck[0] = names.get(names.size() - 1).findValuesIncludingChildren(payAttentionToAdditive);
         } else {
             // first get the shortest value list taking into account children
             int smallestNameSetSize = -1;
