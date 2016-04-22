@@ -17,7 +17,6 @@ import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.AsyncCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
@@ -957,36 +956,32 @@ public class DSSpreadsheetService {
     private Collection<Name> getSharedNames(List<DataRegionHeading> headingList) {
         long startTime = System.currentTimeMillis();
         Collection<Name> shared = null;
-        List<Name> relevantNames = new ArrayList<>();
+        List<Collection<Name>> relevantNameSets = new ArrayList<>();
         // gather names
         for (DataRegionHeading heading : headingList) {
             if (heading.getName() != null && heading.getName().getChildren().size() > 0) {
-                relevantNames.add(heading.getName());
+                relevantNameSets.add(heading.getName().findAllChildren(false));
             }
         }
         // then similar logic to getting the values for names
-        if (relevantNames.size() == 1){
-            shared = relevantNames.get(0).findAllChildren(false);
-        } else if (relevantNames.size() > 1) {
+        if (relevantNameSets.size() == 1){
+            shared = relevantNameSets.get(0);
+        } else if (relevantNameSets.size() > 1) {
             shared = HashObjSets.newMutableSet();// I need a set it will could be hammered with contains later
             // similar logic to getting values for a name. todo - can we factor?
-            int smallestNameSetSize = -1;
-            Name smallestName = null;
-            for (Name name : relevantNames) {
-                int setSizeIncludingChildren = name.findAllChildren(false).size();
-                if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
+            Collection<Name> smallestNameSet = null;
+            for (Collection<Name> nameSet : relevantNameSets) {
+                if (smallestNameSet == null || nameSet.size() < smallestNameSet.size()) {
                     // note - in other similar logic there was a check to exit immediately in the event of an empty set but this can't happen here as we ignore childless names (should we??)
-                    smallestNameSetSize = setSizeIncludingChildren;
-                    smallestName = name;
+                    smallestNameSet = nameSet;
                 }
             }
-            assert smallestName != null; // make intellij happy
-            Collection<Name> smallestNameSet = smallestName.findAllChildren(false);
-            Collection[] setsToCheck = new Collection[relevantNames.size() - 1];
+            assert smallestNameSet != null; // make intellij happy
+            Collection[] setsToCheck = new Collection[relevantNameSets.size() - 1];
             int arrayIndex = 0;
-            for (Name name : relevantNames) {
-                if (name != smallestName) {
-                    setsToCheck[arrayIndex] = name.findAllChildren(false);
+            for (Collection<Name> nameSet : relevantNameSets) {
+                if (nameSet != smallestNameSet) {
+                    setsToCheck[arrayIndex] = nameSet;
                     arrayIndex++;
                 }
             }

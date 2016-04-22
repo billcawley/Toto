@@ -82,7 +82,7 @@ public class DSImportService {
     private static final String EXCLUSIVE = "exclusive";
     private static final String EXISTING = "existing"; // only works in in context of child of
     private static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table
-    private static final String LINEDATA   = "linedata";
+    private static final String LINEDATA = "linedata";
 
     // these two are not for clauses, it's to do with reading the file in the first place, do we read the headers or not, how many lines to skip before data
     private static final String HEADINGSSTRING = "HEADINGS";
@@ -320,7 +320,7 @@ public class DSImportService {
                 firstWord = firstWord.substring(0, firstWord.indexOf(" "));
             }
         }
-        if (clause.length() == firstWord.length() &&!firstWord.equals(COMPOSITION) && !firstWord.equals(LOCAL) && !firstWord.equals(NONZERO) && !firstWord.equals(EXCLUSIVE) && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
+        if (clause.length() == firstWord.length() && !firstWord.equals(COMPOSITION) && !firstWord.equals(LOCAL) && !firstWord.equals(NONZERO) && !firstWord.equals(EXCLUSIVE) && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading); // other clauses cannot be blank!
         }
         String result = clause.substring(firstWord.length()).trim();
@@ -356,7 +356,7 @@ public class DSImportService {
                 heading.only = result;
                 break;
             case COMPOSITION:// combine more than one column
-                  heading.compositionPattern = result;
+                heading.compositionPattern = result;
                 break;
             case DEFAULT: // if there's no value on the line a default
                 if (result.length() > 0) {
@@ -366,7 +366,7 @@ public class DSImportService {
             case PEERS: // in new logic this is the only place that peers are used in Azquo
                 heading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
                 String peersString = result;
-                if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing
+                if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing. Like children not robust to commas
                     if (peersString.contains("}")) {
                         peersString = peersString.substring(1, peersString.indexOf("}"));
                         Collections.addAll(heading.peers, peersString.split(","));
@@ -409,7 +409,7 @@ public class DSImportService {
 
     /* Used to find component cells for composite values
     The extra logic aside simply from heading matching is the identifier flag (multiple attributes mean many headings with the same name)
-    Or attribute being null (thus we don't care about identifier) or equalsString not being null? equals String parked for the mo after talking with WFC
+    Or attribute being null (thus we don't care about identifier)
     */
 
     private ImportCellWithHeading findCellWithHeading(String nameToFind, List<ImportCellWithHeading> importCellWithHeadings) {
@@ -559,7 +559,7 @@ public class DSImportService {
     private String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
         // Preparatory stuff
         String fileName = "";
-        if (fileType.length()>10){
+        if (fileType.length() > 10) {
             fileName = fileType;
         }
         // Local cache of names just to speed things up, the name name could be referenced millions of times in one file
@@ -736,7 +736,7 @@ public class DSImportService {
             for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
                 // intern may save a little memory. Column Index could point past line values for things like composite. Possibly other things but I can't think of them at the moment
                 String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern().replace("~~", "\r\n") : "";//hack to replace carriage returns from Excel sheets
-                if (lineValue.equals("\"")){
+                if (lineValue.equals("\"")) {
                     //this has happened
                     corrupt = true;
                     break;
@@ -805,21 +805,21 @@ public class DSImportService {
                 }
 
                 head = head.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
-                if (head.contains(LINEHEADING) && head.indexOf(";") > 0){
+                if (head.contains(LINEHEADING) && head.indexOf(";") > 0) {
                     pivot = true;
-                    String headname = head.substring(0,head.indexOf(";"));
+                    String headname = head.substring(0, head.indexOf(";"));
                     Name headset = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All headings", null, false);
 
-                    Name thisheading = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,headname.replace("_"," "),headset,true);//note - headings in different import files will be considered the same if they have the same name
-                    head = head.replace(LINEHEADING,";parent of LINENO;child of " + headname.replace("_"," ") + ";language " + headname);
+                    Name thisheading = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, headname.replace("_", " "), headset, true);//note - headings in different import files will be considered the same if they have the same name
+                    head = head.replace(LINEHEADING, ";parent of LINENO;child of " + headname.replace("_", " ") + ";language " + headname);
                 }
-                if (head.contains(LINEDATA) && head.indexOf(";") > 0){
+                if (head.contains(LINEDATA) && head.indexOf(";") > 0) {
                     pivot = true;
-                    String headname = head.substring(0,head.indexOf(";"));
+                    String headname = head.substring(0, head.indexOf(";"));
                     Name alldataset = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All data", null, false);
-                    Name thisDataSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,fileType + " data", alldataset, false);
-                    Name thisData = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,headname.replace("_"," "),thisDataSet,false);
-                    head = head.replace(LINEDATA,";peers {LINENO}").replace("_"," ");
+                    Name thisDataSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, fileType + " data", alldataset, false);
+                    Name thisData = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, headname.replace("_", " "), thisDataSet, false);
+                    head = head.replace(LINEDATA, ";peers {LINENO}").replace("_", " ");
                 }
                 int dividerPos = head.lastIndexOf(headingDivider);
 
@@ -849,7 +849,7 @@ public class DSImportService {
                     }
                 }
                 int fileNamePos = head.toLowerCase().indexOf("right(filename,");
-                if (fileNamePos > 0){
+                if (fileNamePos > 0) {
                     //extract this part of the file name.  This is currently limited to this format
                     int functionEnd = head.indexOf(")", fileNamePos);
                     if (functionEnd > 0) {
@@ -857,10 +857,10 @@ public class DSImportService {
                             int len = Integer.parseInt(head.substring(fileNamePos + "right(filename,".length(), functionEnd));
                             String replacement = "";
                             if (len < fileName.length()) {
-                                replacement = fileName.substring(fileName.length()-len);
+                                replacement = fileName.substring(fileName.length() - len);
 
                             }
-                            head = head.replace(head.substring(fileNamePos-1, functionEnd+2), replacement);// accomodating the quote marks
+                            head = head.replace(head.substring(fileNamePos - 1, functionEnd + 2), replacement);// accomodating the quote marks
                         } catch (Exception ignored) {
 
                         }
@@ -878,11 +878,11 @@ public class DSImportService {
             }
             col++;
         }
-        if (pivot){
-            Name allLines = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"All lines", null, false);
-            Name thisFileLines = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,fileType + " lines", allLines,false);
+        if (pivot) {
+            Name allLines = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All lines", null, false);
+            Name thisFileLines = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, fileType + " lines", allLines, false);
             MutableImportHeading pivotHeading = new MutableImportHeading();
-            interpretHeading(azquoMemoryDBConnection,"LINENO;composition LINENO;language " + fileType +";child of " + fileType + " lines",pivotHeading,attributeNames);
+            interpretHeading(azquoMemoryDBConnection, "LINENO;composition LINENO;language " + fileType + ";child of " + fileType + " lines", pivotHeading, attributeNames);
             headings.add(pivotHeading);
         }
     }
@@ -949,8 +949,8 @@ public class DSImportService {
          worth noting that after the above the headings were made immutable so the state of the headers should be the same
          Since the above loop will populate some context names I'm going to leave this as a separate loop below
          */
-         for (MutableImportHeading mutableImportHeading : headings) {
-              if (mutableImportHeading.contextHeadings.size() > 0 && mutableImportHeading.name != null) { // ok so some context headings and a name for this column? I guess as in not an attribute column for example
+        for (MutableImportHeading mutableImportHeading : headings) {
+            if (mutableImportHeading.contextHeadings.size() > 0 && mutableImportHeading.name != null) { // ok so some context headings and a name for this column? I guess as in not an attribute column for example
                 MutableImportHeading contextPeersHeading = null;
                 List<Name> contextNames = new ArrayList<>();
                 // gather the context names and peers
@@ -958,13 +958,13 @@ public class DSImportService {
                     contextNames.add(immutableImportHeading.name);
                     if (!immutableImportHeading.peers.isEmpty()) {
                         contextPeersHeading = immutableImportHeading;
-                        if (immutableImportHeading.blankZeroes){
+                        if (immutableImportHeading.blankZeroes) {
                             mutableImportHeading.blankZeroes = true;
                         }
                     }
                 }
                 contextNames.add(mutableImportHeading.name);// add this name onto the context stack - "this" referenced below will mean it's added again but only the first time, on subsequent headings it will be that heading (what with headings inheriting contexts)
-                   if (contextPeersHeading != null) { // a value cell HAS to have peers, context headings are only for values
+                if (contextPeersHeading != null) { // a value cell HAS to have peers, context headings are only for values
                     final Set<Name> namesForValue = new HashSet<>(); // the names we're preparing for values
                     namesForValue.add(contextPeersHeading.name);// ok the "defining" name with the peers.
                     final Set<Integer> possiblePeerIndexes = new HashSet<>(); // the names we're preparing for values
@@ -1115,11 +1115,11 @@ public class DSImportService {
                 // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
                 ImportCellWithHeading identityCell = cells.get(cell.immutableImportHeading.indexForAttribute); // get our source cell
                 if (identityCell.lineName != null) {
-                    if (cell.lineValue.contains("->")){
+                    if (cell.lineValue.contains("->")) {
                         List<String> languages = new ArrayList<>();
                         languages.add(cell.immutableImportHeading.attribute);
-                        Name newName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection,cell.lineValue, null,false,languages);
-                    }else{
+                        Name newName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, cell.lineValue, null, false, languages);
+                    } else {
                         identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
                     }
                 }
@@ -1301,33 +1301,37 @@ public class DSImportService {
                         }
                         headingMarker = result.indexOf("`", headingMarker + 1);
                     }
-                    if (result.toLowerCase().startsWith("calc")){
+                    if (result.toLowerCase().startsWith("calc")) {
                         result = result.substring(5);
                         Pattern p = Pattern.compile("[\\+\\-\\*\\/]");
                         Matcher m = p.matcher(result);
-                        if (m.find()){
+                        if (m.find()) {
                             double dresult = 0.0;
-                            try{
-                                double first = Double.parseDouble(result.substring(0,m.start()));
+                            try {
+                                double first = Double.parseDouble(result.substring(0, m.start()));
                                 double second = Double.parseDouble(result.substring(m.end()));
                                 char c = m.group().charAt(0);
                                 switch (c) {
-                                    case '+':dresult = first + second;
+                                    case '+':
+                                        dresult = first + second;
                                         break;
-                                    case '-':dresult = first - second;
+                                    case '-':
+                                        dresult = first - second;
                                         break;
-                                    case '*':dresult = first * second;
+                                    case '*':
+                                        dresult = first * second;
                                         break;
-                                    case '/':dresult = first / second;
+                                    case '/':
+                                        dresult = first / second;
                                         break;
 
                                 }
-                            }catch (Exception e){
+                            } catch (Exception e) {
 
                             }
                             result = dresult + "";
                         }
-                   }
+                    }
                     if (!result.equals(cell.lineValue)) {
                         cell.lineValue = result;
                         adjusted++;
@@ -1357,7 +1361,7 @@ public class DSImportService {
                 }
                 // we could be deriving the name from composite so check existing here
                 if (cell.immutableImportHeading.existing) {
-                    if (cell.immutableImportHeading.attribute!=null&& cell.immutableImportHeading.attribute.length() > 0){
+                    if (cell.immutableImportHeading.attribute != null && cell.immutableImportHeading.attribute.length() > 0) {
                         languages = Collections.singletonList(cell.immutableImportHeading.attribute);
                     }
                     if (languages == null) { // same logic as used when creating the line names, not sure of this

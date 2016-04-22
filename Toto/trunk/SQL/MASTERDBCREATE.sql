@@ -99,13 +99,6 @@ CREATE TABLE IF NOT EXISTS `database_report_link` (
 ALTER TABLE `database_report_link`
   ADD KEY `database_id` (`database_id`), ADD KEY `report_id` (`report_id`);
 
-insert into `database_report_link` select database_id, id from online_report;
-ALTER TABLE `online_report` CHANGE `database_id` `database_id` INT(11) NOT NULL DEFAULT '0';
-ALTER TABLE `online_report` CHANGE `database_type` `database_type` VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci NULL DEFAULT NULL;
-ALTER TABLE `online_report` CHANGE `user_status` `user_status` VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_unicode_ci NULL DEFAULT NULL;
-insert into database_report_link SELECT database.id as database_id, online_report.id as report_id FROM `online_report`, `database` WHERE `online_report`.database_type<>'' and `online_report`.database_type = `database`.database_type;
-ALTER TABLE `permission` ADD `report_id` INT(11) NOT NULL DEFAULT '0' AFTER `id`;
-
 -- --------------------------------------------------------
 
 --
@@ -350,12 +343,12 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1;
 -- AUTO_INCREMENT for table `business`
 --
 ALTER TABLE `business`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=19;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `database`
 --
 ALTER TABLE `database`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=30;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `database_server`
 --
@@ -365,12 +358,12 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 -- AUTO_INCREMENT for table `login_record`
 --
 ALTER TABLE `login_record`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=190;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `online_report`
 --
 ALTER TABLE `online_report`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=223;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `open_database`
 --
@@ -380,29 +373,29 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 -- AUTO_INCREMENT for table `permission`
 --
 ALTER TABLE `permission`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `report_schedule`
 --
 ALTER TABLE `report_schedule`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=2;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `upload_record`
 --
 ALTER TABLE `upload_record`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=207;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=101;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `user_choice`
 --
 ALTER TABLE `user_choice`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=82;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `user_region_options`
 --
 ALTER TABLE `user_region_options`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;

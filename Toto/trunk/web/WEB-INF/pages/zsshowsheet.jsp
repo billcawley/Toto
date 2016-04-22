@@ -138,7 +138,7 @@ setInterval(function(){ updateStatus(); }, 1000);
                         apply="com.azquo.spreadsheet.view.ZKComposer"
                         width="100%" height="100%"
                         maxrows="500" maxcolumns="200"
-                        showSheetbar="true" showToolbar="true" showFormulabar="true" showContextMenu="true"/>
+                        showSheetbar="true" showToolbar="false" showFormulabar="true" showContextMenu="true"/>
     
     <div id="serverStatus"></div>
 </div>
