@@ -15,6 +15,7 @@ import com.azquo.spreadsheet.view.FilterTriple;
 import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -945,8 +946,10 @@ public class DSSpreadsheetService {
             valueService.printFindForNamesIncludeChildrenStats();
         }
         track = System.currentTimeMillis();
+        boolean permute = false;
+        if (rowHeadingsSource.size()==1 && rowHeadingsSource.get(0).get(0).toLowerCase().startsWith("permute(")) permute = true;
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
-                , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays, languages);
+                , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays, languages, permute);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data sort/filter in " + time + "ms");
         System.out.println("region delivered in " + (System.currentTimeMillis() - start) + "ms");
@@ -1069,7 +1072,7 @@ public class DSSpreadsheetService {
     // also deals with highlighting
 
     private List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
-            , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays, List<String> languages) throws Exception {
+            , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays, List<String> languages,boolean  permute) throws Exception {
         List<List<AzquoCell>> toReturn = sourceData;
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
@@ -1143,12 +1146,42 @@ public class DSSpreadsheetService {
                 }
                 sortRowTotals.put(rowNo++, sortRowTotal);
             }
-            List<Integer> sortedRows = null;
+            List<Integer> sortedRows = new ArrayList<>();
             if (sortOnColIndex != -1 || sortOnRowTotals) { // then we need to sort the rows
-                if (rowNumbers) {
-                    sortedRows = sortDoubleValues(sortRowTotals, sortColAsc);
-                } else {
-                    sortedRows = sortStringValues(sortRowStrings, sortColAsc);
+                if (permute){
+                     int totalHeading = rowHeadings.get(0).size() - 2;
+                    int lastId = rowHeadings.get(0).get(totalHeading).getName().getId();
+                    int topRow =0;
+                    for (int row = 0; row < sortRowTotals.size(); row++) {
+                        //this assumes only two levels of permute.  Needs adjusting for more.
+                        int thisId = rowHeadings.get(row).get(totalHeading).getName().getId();
+                        if (thisId!=lastId) {
+                            if (rowNumbers) {
+                                Map<Integer, Double> subTotals = new HashedMap();
+                                for (int sectionRow = topRow; sectionRow < row - 1; sectionRow++) {
+                                    subTotals.put(sectionRow, sortRowTotals.get(sectionRow));
+                                }
+                                sortedRows.addAll(sortDoubleValues(subTotals, sortColAsc));
+                            } else {
+                                Map<Integer, String> subTotalStrings = new HashedMap();
+                                for (int sectionRow = topRow; sectionRow < row - 1; sectionRow++) {
+                                    subTotalStrings.put(sectionRow - topRow, sortRowStrings.get(sectionRow));
+                                }
+                                sortedRows.addAll(sortStringValues(subTotalStrings, sortColAsc));
+
+                            }
+                            sortedRows.add(row - 1);
+                            topRow = row;
+                            lastId = thisId;
+                        }
+                    }
+                    sortedRows.add(sortRowTotals.size() - 1);
+                }else{
+                    if (rowNumbers) {
+                        sortedRows = sortDoubleValues(sortRowTotals, sortColAsc);
+                    } else {
+                        sortedRows = sortStringValues(sortRowStrings, sortColAsc);
+                    }
                 }
             }
 
@@ -1166,7 +1199,7 @@ public class DSSpreadsheetService {
             }
             List<List<AzquoCell>> sortedCells = new ArrayList<>(maxRows); // could be less due to blanked cells but I don't see a huge harm
             for (rowNo = 0; rowNo < maxRows; rowNo++) {
-                List<AzquoCell> rowCells = sourceData.get(sortedRows != null ? sortedRows.get(rowNo) : rowNo); // if a sort happened use the row number according to it
+                List<AzquoCell> rowCells = sourceData.get(sortedRows.size() > 0 ? sortedRows.get(rowNo) : rowNo); // if a sort happened use the row number according to it
                 List<AzquoCell> newRow;
                 if (sortedCols != null) {
                     newRow = new ArrayList<>(maxCols);
@@ -1428,7 +1461,11 @@ Callable interface sorts the memory "happens before" using future gets which run
                     for (int colNo1 = 0; colNo1 < rowHeadings.size(); colNo1++) {
                         String fillerAll = ROWHEADING + filler + "]";
                         if (cellQuery.contains(fillerAll)) {
-                            cellQuery = cellQuery.replace(fillerAll, rowHeadings.get(colNo1).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
+                            if (rowHeadings.get(colNo1).getName()==null){
+                                cellQuery = "";
+                            }else{
+                                cellQuery = cellQuery.replace(fillerAll, rowHeadings.get(colNo1).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
+                            }
                         }
                         filler = (colNo1 + 2) + "";
                     }
