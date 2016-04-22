@@ -19,7 +19,7 @@ import java.util.Set;
  *
  */
 public class DataRegionHeading {
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, ATTRIBUTECOUNT, ATTRIBUTESET}
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, ATTRIBUTECOUNT}
     /*
     COUNT               Value function      The number of values rather than the sum
     AVERAGE             Value function      The average value
@@ -31,7 +31,7 @@ public class DataRegionHeading {
     PATHCOUNT           Name function       The number of paths between the sets (e.g. the number of mailings sent to a specified group of customers)
     PERMUTE             Heading function    The system will find all the combinations of the immediate children of the list to be permuted, selected on the basis of sharing common descendents
     ATTRIBUTECOUNT      Name function       The number of names with the given attribute value (attname, attvalue)
-    ATTRIBUTESET        Name function       The set of names with the given value (attname, attvalue)
+
 
      */
 
@@ -113,6 +113,6 @@ public class DataRegionHeading {
     // useful to be called outside if an instance
     static boolean isNameFunction(FUNCTION function){
         return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT || function == FUNCTION.SET || function == FUNCTION.FIRST || function == FUNCTION.LAST
-        || function == FUNCTION.ATTRIBUTESET || function == FUNCTION.ATTRIBUTECOUNT);
+        ||  function == FUNCTION.ATTRIBUTECOUNT);
     }
 }
