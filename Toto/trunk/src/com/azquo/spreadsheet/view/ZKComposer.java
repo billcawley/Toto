@@ -376,7 +376,8 @@ public class ZKComposer extends SelectorComposer<Component> {
                 // so I'd better get the headings.
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region); // maybe jam this object against the book? Otherwise multiple books could cause problems
                 if (cellsAndHeadingsForDisplay != null) {
-                    int localRow = event.getRow() - name.getRefersToCellRegion().getRow();
+                    //int localRow = event.getRow() - name.getRefersToCellRegion().getRow();
+                    int localRow = cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1;//assume the bottom row
                     int localCol = event.getColumn() - name.getRefersToCellRegion().getColumn();
                     if (cellsAndHeadingsForDisplay.getColumnHeadings().get(localRow) != null) {
                         String originalHeading = cellsAndHeadingsForDisplay.getColumnHeadings().get(localRow).get(localCol);
@@ -602,7 +603,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
                     try {
                         // ok this is a bit nasty, after Azquobook is zapped we could try something different
-                        int regionRow = cellRow - name.getRefersToCellRegion().getRow();
+                       int regionRow = cellRow - name.getRefersToCellRegion().getRow();
                         int regionColumn = cellCol - name.getRefersToCellRegion().getColumn();
                         List<TreeNode> treeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
                         if (!treeNodes.isEmpty()) {
@@ -664,13 +665,30 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
                                         String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
                                         String colHeading = colHeadings.get(cellCol - name.getRefersToCellRegion().getColumn());
-                                        // rather inelegant way to be case insensitive
-                                        drillDownString = drillDownString.replace("[rowHeading]", rowHeading);
-                                        drillDownString = drillDownString.replace("[rowheading]", rowHeading);
-                                        drillDownString = drillDownString.replace("[ROWHEADING]", rowHeading);
-                                        drillDownString = drillDownString.replace("[columnHeading]", colHeading);
-                                        drillDownString = drillDownString.replace("[columnheading]", colHeading);
-                                        drillDownString = drillDownString.replace("[COLUMNHEADING]", colHeading);
+                                        String filler = "";
+                                        while (drillDownString.toLowerCase().contains("[rowheading")){
+                                            for (int colNo = 0;colNo < rowHeadings.size();colNo++){
+                                                String rh = "[rowheading" + filler + "]";
+                                                if (drillDownString.toLowerCase().contains(rh)){
+                                                    int start = drillDownString.toLowerCase().indexOf(rh);
+                                                    drillDownString = drillDownString.substring(0,start) + rowHeadings.get(colNo) + drillDownString.substring(start + rh.length());
+                                                }
+                                                filler = (colNo + 2) + "";
+                                            }
+
+                                        }
+                                        filler = "";
+                                        while (drillDownString.toLowerCase().contains("[columnheading")){
+                                            for (int rowNo = 0;rowNo < colHeadings.size();rowNo++){
+                                                String ch = "[columnheading" + filler + "]";
+                                                if (drillDownString.toLowerCase().contains(ch)){
+                                                    int start = drillDownString.toLowerCase().indexOf(ch);
+                                                    drillDownString = drillDownString.substring(0,start) + rowHeadings.get(rowNo) + drillDownString.substring(start + ch.length());
+                                                }
+                                                filler = (rowNo + 2) + "";
+                                            }
+
+                                        }
                                         final String stringToPass = drillDownString;
                                         Menuitem ddItem = new Menuitem("Drill Down" + qualifier);
                                         editPopup.appendChild(ddItem);
