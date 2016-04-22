@@ -546,47 +546,61 @@ public class ZKAzquoBookUtils {
 
                             }
                             lineNo++;
-                            if (isHierarchy) {
+                            if (isHierarchy && lineNo > 1) {
                                 int sameValues = 0;
-                                if (lineNo > 0)
-                                    for (sameValues = 0; sameValues < lastRowHeadings.size(); sameValues++) {
-                                        if (!rowHeading.get(sameValues).equals(lastRowHeadings.get(sameValues))) {
-                                            break;
-                                        }
+                                for (sameValues = 0; sameValues < lastRowHeadings.size(); sameValues++) {
+                                    if (!rowHeading.get(sameValues).equals(lastRowHeadings.get(sameValues))) {
+                                        break;
                                     }
+                                }
 
                                 //format the row headings for hierarchy.  Each total level has a different format.   clear visible names in all but on eheading
                                 if (sameValues < rowHeading.size() - 1) {
-                                     int totalCount = rowHeading.size() - sameValues;
+                                     int totalCount = rowHeading.size() - sameValues -1;
                                     //this is a total line
                                     int selStart = displayRowHeadings.getColumn();
                                     int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1;
-                                    SCell lineFormat = getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + (sameValues + 1) + region));
+                                    SCell lineFormat = getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + totalCount + region));
                                     Range selection = Ranges.range(sheet, row - 1, selStart, row - 1, selEnd);
                                     if (lineFormat == null){
                                         CellOperationUtil.applyFontBoldweight(selection, Font.Boldweight.BOLD);
                                     }else{
-                                        if (sameValues == 1 && totalRow == -1){
+                                        if (totalCount == 1 && totalRow == -1){
                                             totalRow = lineFormat.getRowIndex();
                                         }
-                                        if (sameValues == 1 && totalRow > displayRowHeadings.getRow()){
+                                        if (totalCount == 1 && totalRow > displayRowHeadings.getRow()){
                                             //copy the total row and the line above to the current position, then copy the line above into the intermediate rows
                                             int dataStart = displayDataRegion.getColumn();
-                                            Range copySource = Ranges.range(sheet, totalRow - 1, dataStart, totalRow, selEnd);
-                                            Range destination = Ranges.range(sheet, row - 2, dataStart, row-1, selEnd);
+                                            int copyRows = row - lastTotalRow - 2;
+                                            if (copyRows > 2){
+                                                copyRows = 2;
+                                            }
+
+                                            Range copySource = Ranges.range(sheet, totalRow - 2, dataStart, totalRow, selEnd);
+                                            Range destination = Ranges.range(sheet, row - copyRows - 1, dataStart, row-1, selEnd);
                                             int tempStart = selEnd + 10;
-                                            Range tempPos = Ranges.range(sheet,totalRow- 1, tempStart, totalRow, tempStart + selEnd - selStart);
+                                            Range tempPos = Ranges.range(sheet,totalRow- 2, tempStart, totalRow, tempStart + selEnd - selStart);
+                                             if (copyRows == 1){
+                                                 //delete the middle line
+                                                CellOperationUtil.delete(Ranges.range(sheet,totalRow - 1,tempStart,totalRow-1, tempStart + selEnd - selStart),Range.DeleteShift.UP);
+                                                tempPos = Ranges.range(sheet,totalRow - 2, tempStart, totalRow - 1, tempStart + selEnd - selStart);
+                                            }
                                             CellOperationUtil.paste(copySource,tempPos );
                                             CellOperationUtil.cut(tempPos, destination);
-                                            if (row - lastTotalRow > 3){
-                                                CellOperationUtil.paste(Ranges.range(sheet, row - 2, dataStart, row - 2, selEnd), Ranges.range(sheet,lastTotalRow, dataStart, row - 3, selEnd));
+                                              if (row - lastTotalRow > 4){
+                                                  //zap cells above, and fill in cells below
+                                                  CellOperationUtil.delete(Ranges.range(sheet,lastTotalRow+1, dataStart, row - 4,selEnd), Range.DeleteShift.UP);
+                                                  CellOperationUtil.insert(Ranges.range(sheet,lastTotalRow + 2, dataStart, row-3, selEnd), Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE);
+                                                  CellOperationUtil.paste(Ranges.range(sheet, lastTotalRow+ 1, dataStart, lastTotalRow+1, selEnd), Ranges.range(sheet,lastTotalRow + 2, dataStart, row - 3, selEnd));
                                             }
                                         }
                                         CellOperationUtil.applyBackColor(selection, lineFormat.getCellStyle().getBackColor().getHtmlColor());
                                         CellOperationUtil.applyFontColor(selection, lineFormat.getCellStyle().getFont().getColor().getHtmlColor());
                                      }
-                                    Ranges.range(sheet, row - 1, selStart + sameValues + 1, row - 1, selStart + displayRowHeadings.getColumnCount()).clearContents();
-                                    lastTotalRow = row;
+                                    if (row > displayRowHeadings.getRow()){
+                                        Ranges.range(sheet, row - 1, selStart + sameValues + 1, row - 1, selStart + displayRowHeadings.getColumnCount()-1).clearContents();
+                                    }
+                                    lastTotalRow = row-1;
                                 }
                                 if (sameValues > 0) {
                                     Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayRowHeadings.getColumn() + sameValues - 1);
@@ -619,40 +633,52 @@ public class ZKAzquoBookUtils {
                     CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayColumnHeadings" + region);
                     if (displayColumnHeadings != null) {
                         row = displayColumnHeadings.getRow();
+                        int ignoreRow = cellsAndHeadingsForDisplay.getColumnHeadings().size() - displayColumnHeadings.getRowCount();
                         for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
-                            boolean columnSort = false;
-                            if (row - displayColumnHeadings.getRow() == cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1 && userRegionOptions.getSortable()) { // meaning last row of headings and sortable
-                                columnSort = true;
-                            }
-                            int col = displayColumnHeadings.getColumn();
-                            for (String heading : colHeading) {
-                                if (columnSort && !heading.equals(".")) { // don't sort "." headings they are probably derived in the spreadsheet
-                                    String sortArrow = " ↕";
-                                    if (heading.equals(userRegionOptions.getSortColumn())) {
-                                        sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
-                                    }
-                                    if (sheet.getInternalSheet().getCell(row, col).getType() == SCell.CellType.STRING && sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty()) {
-                                        sheet.getInternalSheet().getCell(row, col).setValue(heading + sortArrow);
-                                    } else {
-                                        sheet.getInternalSheet().getCell(row, col).setValue(sheet.getInternalSheet().getCell(row, col).getValue() + sortArrow);
-                                    }
-                                    String value = sheet.getInternalSheet().getCell(row, col).getStringValue();
-                                    value = value.substring(0, value.length() - 2);
-                                    Range chosenRange = Ranges.range(sheet, row, col, row, col);
-                                    // todo, investigate how commas would fit in in a heading name
-                                    // think I'll just zap em for the mo.
-                                    value = value.replace(",", "");
-                                    chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true,
-                                            value + " ↕," + value + " ↑," + value + " ↓", null,
-                                            true, "Select Sorting", "",
-                                            true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
-                                } else if (heading != null && (sheet.getInternalSheet().getCell(row, col).isNull() || sheet.getInternalSheet().getCell(row, col).getStringValue().length() == 0)) { // vanilla, overwrite if not
-                                    sheet.getInternalSheet().getCell(row, col).setValue(heading);
+                            if (--ignoreRow < 0) {
+                                boolean columnSort = false;
+                                if (row - displayColumnHeadings.getRow() == displayColumnHeadings.getRowCount() - 1 && userRegionOptions.getSortable()) { // meaning last row of headings and sortable
+                                    columnSort = true;
                                 }
-                                col++;
+                                int col = displayColumnHeadings.getColumn();
+                                for (String heading : colHeading) {
+                                    SCell sCell = sheet.getInternalSheet().getCell(row, col);
+                                    if (sCell.getType()!=SCell.CellType.STRING && sCell.getType()!=SCell.CellType.NUMBER){
+                                        sCell.setStringValue("");
+                                    }
+                                    if (columnSort && !heading.equals(".")) { // don't sort "." headings they are probably derived in the spreadsheet
+                                        String sortArrow = " ↕";
+                                        if (heading.equals(userRegionOptions.getSortColumn())) {
+                                            sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
+                                        }
+                                        if (!sCell.getStringValue().contains(sortArrow)) {
+                                            if (sCell.getType() == SCell.CellType.STRING && sCell.getStringValue().isEmpty()) {
+                                                sCell.setValue(heading + sortArrow);
+                                            } else {
+                                                sCell.setValue(sCell.getValue() + sortArrow);
+                                            }
+                                        }
+                                        String value = sCell.getStringValue();
+                                        value = value.substring(0, value.length() - 2);
+                                        Range chosenRange = Ranges.range(sheet, row, col, row, col);
+                                        // todo, investigate how commas would fit in in a heading name
+                                        // think I'll just zap em for the mo.
+                                        value = value.replace(",", "");
+                                        chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true,
+                                                value + " ↕," + value + " ↑," + value + " ↓", null,
+                                                true, "Select Sorting", "",
+                                                true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
+                                    } else{
+
+                                        if (heading != null && (sCell.isNull() || sCell.getStringValue().length() == 0)) { // vanilla, overwrite if not
+                                            sCell.setValue(heading);
+                                        }
+                                    }
+                                    col++;
+                                }
+                                row++;
                             }
-                            row++;
-                        }
+                         }
 
                         // for the moment don't allow user coolum sorting (row heading sorting). Shouldn't be too difficult to add
 
@@ -993,7 +1019,6 @@ public class ZKAzquoBookUtils {
                     for (String filter : filters) {
                         List<String> optionsList = optionsList(loggedInUser,  "`" + filter + "` children");
                         if (optionsList!=null && optionsList.size() > 1) {
-                            filter = filter.trim();
                             String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children");//leave out any with single choices
                             int rowOffset = filterCount % headingRows;
                             int colOffset = filterCount / headingRows;
