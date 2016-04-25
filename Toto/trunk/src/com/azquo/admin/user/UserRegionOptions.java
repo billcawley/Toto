@@ -45,6 +45,7 @@ public class UserRegionOptions extends StandardEntity{
     // Maybe these things could be better represented by a key pair two column region
 
     public UserRegionOptions(int id, int userId, int reportId, String region, String spreadsheetSource) {
+        spreadsheetSource = spreadsheetSource.toLowerCase();
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
