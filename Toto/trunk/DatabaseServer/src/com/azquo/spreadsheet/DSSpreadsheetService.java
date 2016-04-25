@@ -541,14 +541,24 @@ public class DSSpreadsheetService {
                 }
                 headingDefinitionRowIndex++;
             }
-                if (headingDefinitionRow.get(0).get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) {
-                    List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, headingDefinitionRow.get(0));//assumes only one row of headings
-                    permutedLists.add(permuted);
-                } else {
-                    List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
-                    permutedLists.add(permuted);
+            boolean permute = false;
+            try {
+                if (headingDefinitionRow.get(0).get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE){
+                    permute = true;
 
                 }
+            }catch(Exception e2){
+
+            }
+
+            if (permute) {
+                List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, headingDefinitionRow.get(0));//assumes only one row of headings
+                permutedLists.add(permuted);
+            } else {
+                List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
+                permutedLists.add(permuted);
+
+            }
         }
         if (permutedLists.size() == 1) { // it was just one row to permute, return it as is rather than combining the permuted results together which might result in a bit of garbage due to array copying
             return permutedLists.get(0);
