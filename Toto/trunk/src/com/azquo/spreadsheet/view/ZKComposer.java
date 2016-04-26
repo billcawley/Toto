@@ -683,7 +683,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                                                 String ch = "[columnheading" + filler + "]";
                                                 if (drillDownString.toLowerCase().contains(ch)){
                                                     int start = drillDownString.toLowerCase().indexOf(ch);
-                                                    drillDownString = drillDownString.substring(0,start) + rowHeadings.get(rowNo) + drillDownString.substring(start + ch.length());
+                                                    drillDownString = drillDownString.substring(0,start) + colHeading + drillDownString.substring(start + ch.length());
                                                 }
                                                 filler = (rowNo + 2) + "";
                                             }
