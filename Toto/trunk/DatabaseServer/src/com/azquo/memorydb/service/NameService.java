@@ -119,6 +119,10 @@ public final class NameService {
         List<Name> referencedNames = new ArrayList<>(nameStrings.size());
         for (String nameString : nameStrings) {
             Name toAdd = findNameAndAttribute(azquoMemoryDBConnection, nameString, attributeNames);
+            if (toAdd==null && nameString.startsWith("az_")){
+                //to handle pivot filters...
+                toAdd = findNameAndAttribute(azquoMemoryDBConnection,nameString.substring(3),attributeNames);
+            }
             if (toAdd == null) {
                 throw new Exception("error: cannot resolve reference to a name " + nameString);
             }
@@ -832,7 +836,18 @@ public final class NameService {
                     long heapMarker = ((runtime.totalMemory() - runtime.freeMemory()) / mb);
                     //System.out.println("aft mutable init " + heapMarker);
                     //System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
-                    for (Name child : nameStack.get(stackCount).getAsCollection()) {
+                    Collection<Name> lastName = nameStack.get(stackCount).getAsCollection();
+                    if (lastName.size()==1){
+                        Name setName = lastName.iterator().next();
+                        lastName = setName.findLevelLowest();
+                        if (lastName.size()==0 && setName.getDefaultDisplayName().startsWith("az_")){
+                            setName = findByName(azquoMemoryDBConnection,setName.getDefaultDisplayName().substring(3));
+                            if (setName!=null){
+                                lastName = setName.getChildren();
+                            }
+                        }
+                    }
+                    for (Name child : lastName) {
                         Name.findAllParents(child, parents); // new call to static function cuts garbage generation a lot
                     }
                     //System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
