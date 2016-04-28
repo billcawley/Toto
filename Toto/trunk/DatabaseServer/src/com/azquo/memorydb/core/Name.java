@@ -839,27 +839,6 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
-    public Collection<Name> findLevelLowest() {
-        Set<Name> toReturn = new HashSet<>();
-        findLevelLowest(this,toReturn);
-        return toReturn;
-    }
-
-
-    private void findLevelLowest(Name name, Set<Name> result) {
-        if (name.getChildren().size() == 0) {
-            result.add(name);
-        } else {
-            for (Name child : name.getChildren()) {
-                findLevelLowest(child, result);
-            }
-        }
-    }
-
-
-
-
-
     // synchronized? Not sure if it matters, don't need immediate visibility and the cache read should (!) be thread safe.
     // The read uses synchronized to stop creating the cache more than necessary rather than to be totally up to date
     private static AtomicInteger clearChildrenCachesCount = new AtomicInteger(0);
