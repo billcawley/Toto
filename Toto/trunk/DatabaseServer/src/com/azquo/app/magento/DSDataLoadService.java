@@ -289,15 +289,17 @@ public class DSDataLoadService {
             String thisCatNo = entityTypeRecord.get("entity_id");
             while (pathBits.hasMoreTokens()) {
                 String catNo = pathBits.nextToken();
-                if (catNo != null) {
-                    path = "`" + path + StringUtils.MEMBEROF + catNo + "`";
-                } else {
+                if (catNo == null) {
                     System.out.println("we have a category with no name!");
-                    path = "`" + path + StringUtils.MEMBEROF + catNo + "`";
+                }
+                if (path.isEmpty()) {
+                    path = catNo;
+                } else {
+                    path = path + StringUtils.MEMBEROF + catNo;
                 }
             }
             //TODO consider what might happen if importing categories from two different databases - don't do it!
-            Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, categoryLanguage);
+            Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "`" + path + "`", productCategories, true, categoryLanguage);
             categoryName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, categoryNames.get(thisCatNo));
             azquoCategoriesFound.put(thisCatNo, categoryName);
             allCategories.addChildWillBePersisted(categoryName);
@@ -365,7 +367,14 @@ public class DSDataLoadService {
             String attributeNo = attribute.get("attribute_id");
             //if (attributes.contains(attributeNo)) {
             //attributeNames.put(attributeNo, attribute.get("attribute_code"));
-            attributeNames.put(attributeNo, attribute.get("frontend_label"));
+            String attName = attribute.get("frontend_label");
+            if (attName == null || attName.isEmpty()){
+                attName = attribute.get("attribute_code");
+            }
+            if (attName == null || attName.isEmpty()){
+                attName = "BLANK";
+            }
+            attributeNames.put(attributeNo, attName);
             //}
         }
         tableMap.remove("catalog_product_super_attribute");
