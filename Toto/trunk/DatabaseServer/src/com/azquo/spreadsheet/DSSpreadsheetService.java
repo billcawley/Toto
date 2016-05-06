@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
  *
  * Created as a result of the report server/database server split
  *
- * todo : try to address proper use of protected and private given how I've shifted lots of classes around. This could apply to all sorts in the system.
  */
 
 public class DSSpreadsheetService {
@@ -131,12 +130,12 @@ public class DSSpreadsheetService {
                         single.add(new DataRegionHeading(sourceCell, true));// we say that an attribute heading defaults to writable, it will defer to the name
                         row.add(single);
                     } else {
-                        DataRegionHeading.FUNCTION function = null;// that's sum practically speaking
+                        DataRegionHeading.FUNCTION function = null;// that's the value or sum of values
                         // now allow functions
                         for (DataRegionHeading.FUNCTION _function : DataRegionHeading.FUNCTION.values()) {
                             if (sourceCell.toUpperCase().startsWith(_function.name() + "(")) { // function name bracket no sapce
                                 function = _function;
-                                sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1, sourceCell.trim().length() - 1);// +1 - 1 to get rid of the brackets
+                                sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1, sourceCell.trim().length() - 1);// +1 - 1 to get rid of the function name and brackets
                             }
                         }
                         /* The way name functions work is going to change to allow [ROWHEADING] and [COLUMNHEADING] which work with set operators, / * - + etc.
@@ -144,13 +143,13 @@ public class DSSpreadsheetService {
                            heading needs to have its description populated even if it's a simple name. Caching of heading will be broken, this would slow down Damart (which will be broken anyway due to changing syntax)
                            for example but that's not such a concern right now. Later when evaluating cells it will look for a function in the row heading first then the column heading
                            and it will evaluate the first it finds taking into account [ROWHEADING] and [COLUMNHEADING], it can't evaluate both. And [ROWHEADING] means the first row heading
-                           if there are more than one we may later allow [ROWHEADING1], [ROWHEADING2] etc. Thus a fair bit of code has been chopped out of here to be resolved later.
+                           if there are more than one we may later allow [ROWHEADING1], [ROWHEADING2] etc.
                            */
                         if (DataRegionHeading.isNameFunction(function)) { // then just set the description to be resolved later
                             List<DataRegionHeading> forFunction = new ArrayList<>();
                             forFunction.add(new DataRegionHeading(null, false, function, sourceCell, null)); // in this case the heading is just a placeholder for the formula to be evaluated later - that forumla being held in the description of the heading
                             row.add(forFunction);
-                            // ok this is the kind of thing that would typically be in name service but it needs to set some formatting info (visually indentation) so
+                            // ok this is the kind of thing that would typically be in name service where queries are parsed but it needs to set some formatting info (visually indentation) so
                             // it will be in here with limited parsing support e.g. `All customers` hierarchy 3 that is to say name, hierarchy, number
                         } else if (sourceCell.toLowerCase().contains(HIERARCHY)) { // kind of a special case, supports a name not an expression
                             String name = sourceCell.substring(0, sourceCell.toLowerCase().indexOf(HIERARCHY)).replace("`", "").trim();
@@ -169,18 +168,16 @@ public class DSSpreadsheetService {
                             String[] permutedNames = sourceCell.split(",");
                             List<Name> permuteNames = new ArrayList<>();
                             for (String permutedName : permutedNames) {
-                                //find the set chosen
+                                // EFC noting the hack, looking for a name created by pivot selections to permute as the first possibility.Need to see how this is set to confirm if it can be improved. todo
                                 Name pName = nameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
                                 // if no set chosen, find the original set
                                 if (pName == null || pName.getChildren().size() == 0) {
                                     pName = nameService.findByName(azquoMemoryDBConnection, permutedName);
-
                                 }
                                 permuteNames.add(pName);
                             }
                             row.clear();
                             row.add(dataRegionHeadingsFromNames(permuteNames, azquoMemoryDBConnection, function, null, null));
-
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
                             if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
@@ -268,36 +265,44 @@ public class DSSpreadsheetService {
         return toReturn;
     }
 
-    private List<List<DataRegionHeading>> sortCombos(List<DataRegionHeading> listToPermute, Collection<List<Name>> foundCombinations, int position, List<Map<Integer, Integer>> sortLists) {
-        Map<Integer, Integer> sortList = sortLists.get(position);
-        Map<Integer, Collection<List<Name>>> sortMap = new TreeMap<>();
+    /* Created by WFC to sort pivot table permuted headings, commented/modified a little by EFC
+    List to permute is the names from the permute function, found combinations is from the permute function, sort lists is the "natural ordering" of each of the lists of headings we het from the children
+    in listToPermute. Hence the outside list size of listToPermute and sortLists should be the same
+    A comparator might provide a more succinct sort (we'd need to pass sortLists still), would need to address how the totals were added after. Something to consider.
+    */
+
+    private List<List<DataRegionHeading>> sortCombos(List<DataRegionHeading> listToPermute, Set<List<Name>> foundCombinations, int position, final List<Map<Name, Integer>> sortLists) {
+        Map<Name, Integer> sortList = sortLists.get(position);
+        // a tree map is ordered by keys, means putting by sort position will result in a correctly ordered iterator
+        Map<Integer, Set<List<Name>>> sortMap = new TreeMap<>();
+        // go through combinations putting them in order according to the name in "position" so if it's the first then all the names on the left will be grouped
         for (List<Name> foundCombination : foundCombinations) {
-            int pos = sortList.get(foundCombination.get(position).getId());
-            Collection<List<Name>> sortItem = sortMap.get(pos);
-            if (sortItem == null) {
-                sortItem = new HashSet<>();
-                sortMap.put(pos, sortItem);
-            }
+            int sortPosition = sortList.get(foundCombination.get(position));
+            Collection<List<Name>> sortItem = sortMap.computeIfAbsent(sortPosition, integer -> new HashSet<>());
             sortItem.add(foundCombination);
         }
         position++;
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
-        for (int key : sortMap.keySet()) {
-            if (position == sortLists.size()) {
+        for (int key : sortMap.keySet()) { // so now we run through the groups of sorted names
+            if (position == sortLists.size()) { // we're on the last one
+                // according to the logic of the function I'd be very surprised if this ever had more than one combo at this point as it should be
+                // sorted on the last and there are no duplicate foundCombinations
                 for (List<Name> entry : sortMap.get(key)) {
                     List<DataRegionHeading> drhEntry = new ArrayList<>();
+                    // now for that combo build the headings
                     for (Name name : entry) {
                         drhEntry.add(new DataRegionHeading(name, true, null, null, null));
                     }
                     toReturn.add(drhEntry);
                 }
-                //extract list and convert to dataregion heading
+                // if it's not the last grab this clump of combos and run them through this function again to sort on the next level down
             } else {
                 toReturn.addAll(sortCombos(listToPermute, sortMap.get(key), position, sortLists));
             }
         }
+        // now add totals - remember this is recursive - this will happen leaving each level
         if (toReturn.size() > 0) {//maybe should be 1 - no need for totals if there's only one item
-            //create a total line
+            // I think this means add the last but one and then populate the rest with the top sets? it would make sense for totals
             List<DataRegionHeading> drhEntry = new ArrayList<>();
             List<DataRegionHeading> lastEntry = toReturn.get(toReturn.size() - 1);
             for (int i = 0; i < position - 1; i++) {
@@ -322,7 +327,7 @@ public class DSSpreadsheetService {
         private final Set<List<Name>> foundCombinations;
         private final List<Name> sharedNamesList;
 
-        public ComboBuilder(int comboSize, List<Name> permuteNames, int sourceFrom, int sourceTo, Set<List<Name>> foundCombinations, List<Name> sharedNamesList) {
+        ComboBuilder(int comboSize, List<Name> permuteNames, int sourceFrom, int sourceTo, Set<List<Name>> foundCombinations, List<Name> sharedNamesList) {
             this.comboSize = comboSize;
             this.permuteNames = permuteNames;
             this.sourceFrom = sourceFrom;
@@ -344,19 +349,22 @@ public class DSSpreadsheetService {
         }
     }
 
+    /* ok, so, practically speaking the shared names if applicable are from context (probably the findAllChildren from one name)
+    and the listToPermute is the contents of the permute function e.g. permute(`Product category`, `Product subcategory`) in Nisbets
+    */
 
-
-    private List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute) throws Exception{
+    private List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute) throws Exception {
         NumberFormat nf = NumberFormat.getInstance();
         long startTime = System.currentTimeMillis();
         List<Collection<Name>> sharedNamesSets = new ArrayList<>();
         List<Name> permuteNames = new ArrayList<>();
         List<Name> sharedNamesList = new ArrayList<>(); // an arraylist is fine it's only going to be iterated later
+        // assemble the sets I want to find a cross section o
         for (DataRegionHeading drh : listToPermute) {
             permuteNames.add(drh.getName());
             sharedNamesSets.add(drh.getName().findAllChildren(false));
         }
-        if (sharedNames != null){
+        if (sharedNames != null) {
             sharedNamesSets.add(sharedNames);
         }
         if (!sharedNamesSets.isEmpty()) {
@@ -394,29 +402,27 @@ public class DSSpreadsheetService {
                 }
             }
         }
-
-
-
-
-
+        // so now we have all the names common to the shared and the lists to permute, an overall set of shared names for the permutation, this sharedNamesList will be smaller the more permute criteria there are
         System.out.println("time for building shared " + nf.format(System.currentTimeMillis() - startTime));
         startTime = System.currentTimeMillis();
         //this is the part that takes a long time...
         Set<List<Name>> foundCombinations;
         int comboSize = permuteNames.size();
-
         int size = sharedNamesList.size();
-        if (size > 100_000){// arbitrary cut off for multi threading
+        // essentially what we're going to do now is go through every name in the shared pool and for each of them run memberName against the headings.
+        // member name against the headings is saying "which of this heading's direct children is this name related to?". We know that anything in shared WILL have the names in listToPermute in its parents
+        // of course there will be much duplication, hence use a set, foundCombinations
+        if (size > 100_000) {// arbitrary cut off for multi threading, this multi threading helps, no question
             System.out.println("multi threading the combo resolution");
             foundCombinations = Collections.newSetFromMap(new ConcurrentHashMap<>()); // has to be concurrent for multi threading!
             ExecutorService executor = AzquoMemoryDB.mainThreadPool;
             final int divider = 50; // a bit arbitrary perhaps
             List<Future<Void>> tasks = new ArrayList<>(50);
-            for (int i = 0; i < divider; i++){
-                tasks.add(executor.submit(new ComboBuilder(comboSize,permuteNames,(i * size / divider), ((i + 1) * size / divider), foundCombinations, sharedNamesList)));
+            for (int i = 0; i < divider; i++) {
+                tasks.add(executor.submit(new ComboBuilder(comboSize, permuteNames, (i * size / divider), ((i + 1) * size / divider), foundCombinations, sharedNamesList)));
             }
-            // then make sure all are executed and square up the memory - Future.get means a heppens before for the multi threaded stuff
-            for (Future<Void> task : tasks){
+            // then make sure all are executed and square up the memory - Future.get means a happens before for the multi threaded stuff
+            for (Future<Void> task : tasks) {
                 task.get();
             }
         } else { // just single thread
@@ -429,27 +435,16 @@ public class DSSpreadsheetService {
                 foundCombinations.add(foundCombination);
             }
         }
-
-        // this was taking a a short while before, going to try for multi threading
-/*
-        final Future<Void> task = executor.submit(new ComboBuilder(comboSize,permuteNames,from) {
-            @Override
-            public Void call() throws Exception {
-                return null;
-            }
-        });
-        task.get();*/
-
         System.out.println("time for getting combinations " + nf.format((System.currentTimeMillis() - startTime)));
         startTime = System.currentTimeMillis();
-        //now need to sort the list into the order in the individual permute sets. ... by stagess
-        // create some sort lists;
-        List<Map<Integer, Integer>> sortLists = new ArrayList<>();
+        // this is running through each of the name's children (the categories we're permuting) assigning a "natural" position
+        // it's created out here as sortCombos is recursive hence we don't want to recreate it each time
+        List<Map<Name, Integer>> sortLists = new ArrayList<>();
         for (Name permuteName : permuteNames) {
-            Map<Integer, Integer> sortList = new HashMap<>();
+            Map<Name, Integer> sortList = new HashMap<>();
             int sortPos = 0;
             for (Name name : permuteName.getChildren()) {
-                sortList.put(name.getId(), sortPos++);
+                sortList.put(name, sortPos++);
             }
             sortLists.add(sortList);
         }
@@ -502,14 +497,16 @@ public class DSSpreadsheetService {
 
     and this 1 has a list of 2, the two cells defined in row headings as seaports; children     container;children
 
-      We want to return a list<list> being row, cells in that row, the expansion of each of the rows. The source in my example being ony one row with 2 cells in it
-      those two cells holding lists of 96 and 4 hence we get 384 back, each with 2 cells.
+    We want to return a list<list> being row, cells in that row, the expansion of each of the rows. The source in my example being ony one row with 2 cells in it
+    those two cells holding lists of 96 and 4 hence we get 384 back, each with 2 cells.
 
     Heading definitions are a region if this region is more than on column wide then rows which have only one cell populated
     and that cell is the right most cell then that cell is added to the cell above it, it becomes part of that permutation.
     I renamed the function headingDefinitionRowHasOnlyTheRightCellPopulated to help make this clear.
 
     That logic just described is the bulk of the function I think. Permutation is handed off to get2DPermutationOfLists, then those permuted lists are simply stacked together.
+
+    Note! the permute FUNCTION is a different from standard permute in that it takes a list of names combined with the context and then only shows permutations that actually have data
 
      */
 
@@ -541,23 +538,12 @@ public class DSSpreadsheetService {
                 }
                 headingDefinitionRowIndex++;
             }
-            boolean permute = false;
-            try {
-                if (headingDefinitionRow.get(0).get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE){
-                    permute = true;
-
-                }
-            }catch(Exception e2){
-
-            }
-
-            if (permute) {
-                List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, headingDefinitionRow.get(0));//assumes only one row of headings
+            if (headingDefinitionRow.get(0) != null && headingDefinitionRow.get(0).get(0) != null && headingDefinitionRow.get(0).get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
+                List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, headingDefinitionRow.get(0));//assumes only one row of headings, it's a list of the permute names
                 permutedLists.add(permuted);
             } else {
                 List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
                 permutedLists.add(permuted);
-
             }
         }
         if (permutedLists.size() == 1) { // it was just one row to permute, return it as is rather than combining the permuted results together which might result in a bit of garbage due to array copying
@@ -753,7 +739,7 @@ public class DSSpreadsheetService {
     NOTE : this means the column heading are not stored according to the orientation used in the above function hence, to output them we have to transpose them again!
 
     OK, having generified the function we should only need one function. The list could be anything, names, list of names, HashMaps whatever
-    generics ensure that the return type will match the sent type now rather similar to the stacktrace example :)
+    generics ensure that the return type will match the sent type now rather similar to the stack overflow example :)
 
     Variable names assume first list is of rows and the second is each row. down then across.
     So the size of the first list is the y size (number of rows) and the size of the nested list the xsize (number of columns)
@@ -957,7 +943,8 @@ public class DSSpreadsheetService {
         }
         track = System.currentTimeMillis();
         boolean permute = false;
-        if (rowHeadingsSource.size()==1 && rowHeadingsSource.get(0).get(0).toLowerCase().startsWith("permute(")) permute = true;
+        if (rowHeadingsSource.size() == 1 && rowHeadingsSource.get(0).get(0).toLowerCase().startsWith("permute("))
+            permute = true;
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
                 , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays, languages, permute);
         time = (System.currentTimeMillis() - track);
@@ -965,6 +952,8 @@ public class DSSpreadsheetService {
         System.out.println("region delivered in " + (System.currentTimeMillis() - start) + "ms");
         return dataToShow;
     }
+
+    // used by the pivot permute function, really it's building a set of shared names based on all the children of names specified in context
 
     private Collection<Name> getSharedNames(List<DataRegionHeading> headingList) {
         long startTime = System.currentTimeMillis();
@@ -977,7 +966,7 @@ public class DSSpreadsheetService {
             }
         }
         // then similar logic to getting the values for names
-        if (relevantNameSets.size() == 1){
+        if (relevantNameSets.size() == 1) {
             shared = relevantNameSets.get(0);
         } else if (relevantNameSets.size() > 1) {
             shared = HashObjSets.newMutableSet();// I need a set it will could be hammered with contains later
@@ -1082,7 +1071,7 @@ public class DSSpreadsheetService {
     // also deals with highlighting
 
     private List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
-            , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays, List<String> languages,boolean  permute) throws Exception {
+            , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays, List<String> languages, boolean permute) throws Exception {
         List<List<AzquoCell>> toReturn = sourceData;
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
@@ -1158,27 +1147,26 @@ public class DSSpreadsheetService {
             }
             List<Integer> sortedRows = new ArrayList<>();
             if (sortOnColIndex != -1 || sortOnRowTotals) { // then we need to sort the rows
-                if (permute){
-                     int totalHeading = rowHeadings.get(0).size() - 2;
+                if (permute) {
+                    // essentially sub sorting the last sections, will need tweaking if we want the higher levels sorted too
+                    int totalHeading = rowHeadings.get(0).size() - 2;
                     int lastId = rowHeadings.get(0).get(totalHeading).getName().getId();
-                    int topRow =0;
+                    int topRow = 0;
                     for (int row = 0; row < sortRowTotals.size(); row++) {
-                        //this assumes only two levels of permute.  Needs adjusting for more.
                         int thisId = rowHeadings.get(row).get(totalHeading).getName().getId();
-                        if (thisId!=lastId) {
+                        if (thisId != lastId) {
                             if (rowNumbers) {
-                                Map<Integer, Double> subTotals = new HashedMap();
+                                Map<Integer, Double> subTotals = new HashMap<>();
                                 for (int sectionRow = topRow; sectionRow < row - 1; sectionRow++) {
                                     subTotals.put(sectionRow, sortRowTotals.get(sectionRow));
                                 }
                                 sortedRows.addAll(sortDoubleValues(subTotals, sortColAsc));
                             } else {
-                                Map<Integer, String> subTotalStrings = new HashedMap();
+                                Map<Integer, String> subTotalStrings = new HashMap<>();
                                 for (int sectionRow = topRow; sectionRow < row - 1; sectionRow++) {
                                     subTotalStrings.put(sectionRow - topRow, sortRowStrings.get(sectionRow));
                                 }
                                 sortedRows.addAll(sortStringValues(subTotalStrings, sortColAsc));
-
                             }
                             sortedRows.add(row - 1);
                             topRow = row;
@@ -1186,7 +1174,7 @@ public class DSSpreadsheetService {
                         }
                     }
                     sortedRows.add(sortRowTotals.size() - 1);
-                }else{
+                } else {
                     if (rowNumbers) {
                         sortedRows = sortDoubleValues(sortRowTotals, sortColAsc);
                     } else {
@@ -1230,7 +1218,7 @@ public class DSSpreadsheetService {
                 for (int j = 0; j < filterCount; j++) {
                     List<AzquoCell> rowToCheck = toReturn.get(rowNo + j); // size - 1 for the last index
                     for (AzquoCell cellToCheck : rowToCheck) {
-                         if (cellToCheck.getStringValue()!=null && cellToCheck.getStringValue().length() > 0) {
+                        if (cellToCheck.getStringValue() != null && cellToCheck.getStringValue().length() > 0) {
                             rowsBlank = false;
                             break;
                         }
@@ -1380,7 +1368,9 @@ Callable interface sorts the memory "happens before" using future gets which run
         }
     }
 
-    /* only called by itself and path intersection, we want to know the number of intersecting names between containsSet
+    /*
+    Used for PATHCOUNT
+    only called by itself and path intersection, we want to know the number of intersecting names between containsSet
     and all its children and selectionSet, recursive to deal with containsSet down to the bottom. alreadyTested is
     simply to stop checking names that have already been checked. Note already tested doesn't mean intersections are unique,
     the number on intersections is on alreadyTested's children, it's when there is an intersection there that a name is considered tested.
@@ -1455,7 +1445,6 @@ Callable interface sorts the memory "happens before" using future gets which run
                 }
             }
         }
-
         // todo re-implement caching here if there are performance problems - I did use findOverlap before here but I don't think is applicable now the name query is much more flexible. Caching fragments of the query would be the thing
         if (nameFunctionHeading != null) {
             String cellQuery = nameFunctionHeading.getDescription();
@@ -1467,13 +1456,12 @@ Callable interface sorts the memory "happens before" using future gets which run
                 }
                 if (cellQuery.contains(ROWHEADING)) {
                     String filler = "";
-                    boolean found = false;
                     for (int colNo1 = 0; colNo1 < rowHeadings.size(); colNo1++) {
                         String fillerAll = ROWHEADING + filler + "]";
                         if (cellQuery.contains(fillerAll)) {
-                            if (rowHeadings.get(colNo1).getName()==null){
+                            if (rowHeadings.get(colNo1).getName() == null) {
                                 cellQuery = "";
-                            }else{
+                            } else {
                                 cellQuery = cellQuery.replace(fillerAll, rowHeadings.get(colNo1).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
                             }
                         }
@@ -1540,20 +1528,6 @@ Callable interface sorts the memory "happens before" using future gets which run
                 stringValue = "";
                 for (Name name : set) { //a bit of a lazy way of doing things but it should be fine, plus with only a collection interface not sure of how to get the last!
                     stringValue = name.getDefaultDisplayName();
-                }
-            } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.ATTRIBUTECOUNT) {
-                String[] params = cellQuery.split(",");
-                if (params.length == 2){
-                    //strip out the qualifiers on the name
-                    String attValue = params[1].trim();
-                    if (attValue.contains(StringUtils.MEMBEROF)){
-                        attValue = attValue.substring(attValue.indexOf(StringUtils.MEMBEROF) + StringUtils.MEMBEROF.length());
-                    }
-                    doubleValue = nameService.countAttributes(connection, params[0].trim(),attValue.replace(Name.QUOTE+"",""));
-                    stringValue = "";
-                    if (doubleValue > 0){
-                        stringValue = doubleValue + "";
-                    }
                 }
             }
         } else {// conventional type (sum) or value function
@@ -1683,6 +1657,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     // todo : put the size check of each set and hence which way we run through the loop in here, should improve performance if required
+    // for valueparentcount
     private int findOverlap(Collection<Name> set1, Collection<Name> set2) {
         int count = 0;
         for (Name name : set1) {
@@ -1713,7 +1688,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
         Map<List<Name>, Set<Value>> nameComboValueCache = null;
-        if (totalRows > 100){
+        if (totalRows > 100) {
             nameComboValueCache = new ConcurrentHashMap<>(); // then try the cache which should speed up heading combinations where there's a lot of overlap
         }
         // I was passing an ArrayList through to the tasks. This did seem to work but as I understand a Callable is what's required here, takes care of memory sync and exceptions
@@ -1995,7 +1970,9 @@ Callable interface sorts the memory "happens before" using future gets which run
         bw.flush();
         bw.close();
         importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true, true);
-        temp.delete(); // see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
+        if (!temp.delete()){// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
+            System.out.println("Unable to delete " + temp.getPath());
+        }
     }
 
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
@@ -2114,7 +2091,6 @@ Callable interface sorts the memory "happens before" using future gets which run
 
     private List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
-        long startTime = System.currentTimeMillis();
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
             for (Name name : names) {

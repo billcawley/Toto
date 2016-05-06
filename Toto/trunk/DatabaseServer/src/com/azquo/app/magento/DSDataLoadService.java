@@ -22,18 +22,17 @@ import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 20/05/15.
  * <p/>
  * The new home of Magento loading logic. Much of this was in DataLoadService.
  * <p/>
  * Really the logic in here is defined by the data as dumped from Magento.
- *
+ * <p>
  * To elaborate a little : in principle importing is done via the importing service but for cases like Magento there's nothing wring with custom code (it may be necessary)
  * just make sure it's in the app package. Maybe move this to Groovy? Certainly I want to experiment with that for per business importing.
- *
+ * <p>
  * Note : given that this is what one might call "dynamic" or script like I'm not going to get so worked up pouring over every line or getting a green light.
- *
  */
 public class DSDataLoadService {
 
@@ -43,7 +42,7 @@ public class DSDataLoadService {
         final Runtime runtime = Runtime.getRuntime();
         final int mb = 1024 * 1024;
         NumberFormat nf = NumberFormat.getInstance();
-        System.out.println("--- MEMORY USED :  " + nf.format(runtime.totalMemory() - runtime.freeMemory() / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
+        System.out.println("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
     }
 
     @Autowired
@@ -129,7 +128,7 @@ public class DSDataLoadService {
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         azquoMemoryDBConnection.setProvenance(user, "imported from Magento", "", "");
         Map<String, List<Map<String, String>>> tableMap = HashObjObjMaps.newMutableMap();
-        BufferedReader br =  new BufferedReader(new InputStreamReader(new FileInputStream(filePath), "UTF8"));//changed for Windows.....
+        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filePath), "UTF8"));//changed for Windows.....
         long marker = System.currentTimeMillis();
         String line;
         List<Map<String, String>> currentTableDataMap = null;
@@ -299,12 +298,12 @@ public class DSDataLoadService {
             }
             //TODO consider what might happen if importing categories from two different databases - don't do it!
             Name categoryName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, path.substring(0, path.length() - 1), productCategories, true, categoryLanguage);
-                categoryName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, categoryNames.get(thisCatNo));
+            categoryName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, categoryNames.get(thisCatNo));
             azquoCategoriesFound.put(thisCatNo, categoryName);
             allCategories.addChildWillBePersisted(categoryName);
         }
         tableMap.remove("catalog_category_entity");
-        List<String>skuLanguage = new ArrayList<>();
+        List<String> skuLanguage = new ArrayList<>();
         skuLanguage.add("SKU");
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
             Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("sku"), allSKUs, true, skuLanguage);
@@ -355,18 +354,19 @@ public class DSDataLoadService {
         }
         tableMap.remove("catalog_category_product");
         //now find the attributes that matter
-        Set<String> attributes = HashObjSets.newMutableSet(tableMap.get("catalog_product_super_attribute").size());
+/*        Set<String> attributes = HashObjSets.newMutableSet(tableMap.get("catalog_product_super_attribute").size());
         for (Map<String, String> attributeRow : tableMap.get("catalog_product_super_attribute")) {
             //only interested in the attribute_id
             attributes.add(attributeRow.get("attribute_id"));
-        }        //only interested in the attribute_id
+        }        //only interested in the attribute_id*/
         //name the attributes that matter
         Map<String, String> attributeNames = HashObjObjMaps.newMutableMap();
         for (Map<String, String> attribute : tableMap.get("eav_attribute")) {
             String attributeNo = attribute.get("attribute_id");
-            if (attributes.contains(attributeNo)) {
-                attributeNames.put(attributeNo, attribute.get("attribute_code"));
-            }
+            //if (attributes.contains(attributeNo)) {
+            //attributeNames.put(attributeNo, attribute.get("attribute_code"));
+            attributeNames.put(attributeNo, attribute.get("frontend_label"));
+            //}
         }
         tableMap.remove("catalog_product_super_attribute");
         //name the option values
@@ -381,7 +381,8 @@ public class DSDataLoadService {
         //.... and allocate them!
         for (Map<String, String> attVals : tableMap.get("catalog_product_entity_int")) {
             String attVal = attVals.get("attribute_id");
-            if (attributes.contains(attVal)) {
+            //if (attributes.contains(attVal)) {
+            if (attributeNames.keySet().contains(attVal)) {
                 Name magentoName = azquoProductsFound.get(attVals.get("entity_id"));
                 if (magentoName == null) {
                     System.out.println("entity_id linked in catalog_product_entity_int that doesn't exist in catalog_product_entity : " + attVals.get("entity_id"));
@@ -442,8 +443,8 @@ public class DSDataLoadService {
 
         tableMap.remove("catalog_product_bundle_selection");
         Name entities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Entities", null, false);
-        Name orderEntities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Order entities", entities,false);
-        Name productEntities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"Product entities", entities,false);
+        Name orderEntities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Order entities", entities, false);
+        Name productEntities = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Product entities", entities, false);
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Name date = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "date", null, false);
         Name allDates = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All dates", date, false);
@@ -497,7 +498,7 @@ public class DSDataLoadService {
         Name taxName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "Tax", orderEntities, false);
         Name ordersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "order", null, false);
         Name allOrdersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All orders", ordersName, false);
-        Name orderStatusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,"All Order statuses", ordersName, false);
+        Name orderStatusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All Order statuses", ordersName, false);
         Name allCurrenciesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All currencies", ordersName, false);
         Name allHours = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "date" + StringUtils.MEMBEROF + "All hours", null, false);
 
@@ -505,7 +506,7 @@ public class DSDataLoadService {
         Name allCustomersName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, defaultLanguage);
         Name allCountriesName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All countries", customersName, false, defaultLanguage);
         Name allGroupsName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All customer groups", customersName, false, defaultLanguage);
-        List<String>emailLanguage = new ArrayList<>();
+        List<String> emailLanguage = new ArrayList<>();
         emailLanguage.add("email");
 
         System.out.println("customer groups");
@@ -657,7 +658,7 @@ public class DSDataLoadService {
             String parentItemId = salesRow.get("parent_item_id");
             String itemId = salesRow.get("item_id");
 
-            if (bundleLine.length() > 0 && (!parentItemId.equals(configLine)) && !parentItemId.equals(bundleLine) ) {
+            if (bundleLine.length() > 0 && (!parentItemId.equals(configLine)) && !parentItemId.equals(bundleLine)) {
                 calcBundle(azquoMemoryDBConnection, bundleTotal, bundleItems, priceName, taxName);
                 bundleItems = new ArrayList<>();
                 bundleLine = "";
@@ -675,7 +676,7 @@ public class DSDataLoadService {
             if (configLine == null) {
                 price = 0.0;
                 qty = 0.0;
-                 //                productId = salesRow.get("product_id");
+                //                productId = salesRow.get("product_id");
                 try {
                     price = Double.parseDouble(salesRow.get("base_row_invoiced"));//not sure which figure to take - base_row_invoiced or base_row_total
                     if (price == 0.0) {
@@ -787,7 +788,7 @@ public class DSDataLoadService {
                 namesForValue.add(orderItemName);
                 namesForValue.add(weightName);
                 valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, weight + "", namesForValue);
-                if (discount > 0.0){
+                if (discount > 0.0) {
                     namesForValue = HashObjSets.newMutableSet();
                     namesForValue.add(orderItemName);
                     namesForValue.add(discountName);
@@ -835,15 +836,15 @@ public class DSDataLoadService {
         Map<String, Map<String, String>> salesFlatOrderShippingAddressByOrderId = HashObjObjMaps.newMutableMap();
         if (tableMap.get("sales_flat_order_address") != null) {
             for (Map<String, String> orderRow : tableMap.get("sales_flat_order_address")) {
-                if (orderRow.get("address_type").equals("shipping")){ // only want the shipping one - I assume there's only one sipping address per order
+                if (orderRow.get("address_type").equals("shipping")) { // only want the shipping one - I assume there's only one sipping address per order
                     salesFlatOrderShippingAddressByOrderId.put(orderRow.get("parent_id"), orderRow); // I believe the parent_id is the order id
                     String fullName = getFullName(orderRow);
                     Name orderName = azquoOrdersFound.get("Order " + orderRow.get("parent_id"));
-                    if (orderName!=null){
+                    if (orderName != null) {
                         orderName.setAttributeWillBePersisted("delivery name", fullName);
-                        orderName.setAttributeWillBePersisted("postcode", get(orderRow,"postcode"));
-                        orderName.setAttributeWillBePersisted("street", get(orderRow,"street"));
-                        orderName.setAttributeWillBePersisted("city", get(orderRow,"city"));
+                        orderName.setAttributeWillBePersisted("postcode", get(orderRow, "postcode"));
+                        orderName.setAttributeWillBePersisted("street", get(orderRow, "street"));
+                        orderName.setAttributeWillBePersisted("city", get(orderRow, "city"));
                     }
 
 
@@ -875,10 +876,10 @@ public class DSDataLoadService {
                 if (customer == null || customer.length() == 0) {
                     // ok new logic, we need to make a customer from the extra info in sales_flat_order_address if it wasn't there by customer account
                     // note when they don't have an email address there will be no customer, I could do this from name but this might clash
-                    if (salesFlatOrderShippingAddress != null){ // so we can make the customer name
+                    if (salesFlatOrderShippingAddress != null) { // so we can make the customer name
                         // switch languages temporarily to email - mimic the code when there's a customer account
                         String email = salesFlatOrderShippingAddress.get("email");
-                        if (email == null || email.length() == 0){
+                        if (email == null || email.length() == 0) {
                             email = "noemail" + salesFlatOrderShippingAddress.get("firstname") + salesFlatOrderShippingAddress.get("lastname") + salesFlatOrderShippingAddress.get("postcode"); // then make one up
                         }
                         customerName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, email, allCustomersName, true, Collections.singletonList("email"));
@@ -936,8 +937,8 @@ public class DSDataLoadService {
                     }
                 }
                 String orderStatus = orderRow.get("status");
-                if (orderStatus!=null && orderStatus.length() > 0){
-                    Name statusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection,orderStatus,orderStatusName,true, defaultLanguage);
+                if (orderStatus != null && orderStatus.length() > 0) {
+                    Name statusName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderStatus, orderStatusName, true, defaultLanguage);
                     statusName.addChildWillBePersisted(orderName);
                 }
 
@@ -949,19 +950,18 @@ public class DSDataLoadService {
         }
 
         if (tableMap.get("sales_flat_invoice_grid") != null) {
-            List<String>orderIdLanguage = Collections.singletonList("order no");
+            List<String> orderIdLanguage = Collections.singletonList("order no");
             for (Map<String, String> invoiceRow : tableMap.get("sales_flat_invoice_grid")) {
                 String orderIncrementId = invoiceRow.get("order_increment_id");
                 String incrementId = invoiceRow.get("increment_id");
-                if (orderIncrementId!=null && incrementId!=null && orderIncrementId.length() > 0 && incrementId.length() > 0) {
+                if (orderIncrementId != null && incrementId != null && orderIncrementId.length() > 0 && incrementId.length() > 0) {
                     Name order = nameService.findByName(azquoMemoryDBConnection, orderIncrementId, orderIdLanguage);
-                    if (order !=null){
+                    if (order != null) {
                         order.setAttributeWillBePersisted("invoice no", incrementId);
                     }
-                 }
+                }
             }
         }
-
 
 
         System.out.println("");
@@ -987,13 +987,13 @@ public class DSDataLoadService {
         }
     }
 
-    private String get(Map<String,String> map, String key){
+    private String get(Map<String, String> map, String key) {
         String toReturn = map.get(key);
-        if (toReturn==null) return "none";
+        if (toReturn == null) return "none";
         return toReturn;
     }
 
-    private String getFullName(Map<String,String>salesFlatOrderShippingAddress){
+    private String getFullName(Map<String, String> salesFlatOrderShippingAddress) {
 
         String firstName = salesFlatOrderShippingAddress.get("firstname");
         String lastName = salesFlatOrderShippingAddress.get("lastname");
@@ -1104,9 +1104,9 @@ public class DSDataLoadService {
                 taxRemaining -= saleItem.tax;
             }
         }
-        if (priceRemaining != 0){
+        if (priceRemaining != 0) {
             double ratio = bundleTotal.price / (bundleTotal.price - priceRemaining);
-            for(SaleItem saleItem:bundleItems){
+            for (SaleItem saleItem : bundleItems) {
                 saleItem.price = saleItem.price * ratio;
                 saleItem.tax = saleItem.tax * ratio;
             }

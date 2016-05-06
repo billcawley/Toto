@@ -367,6 +367,7 @@ public final class NameService {
         findOrCreateNameInParent2Count.incrementAndGet();
         long marker = System.currentTimeMillis();
         if (name == null || name.length() == 0) {
+            System.out.println("returning null on findOrCreateNameInParent, db : " + azquoMemoryDBConnection.getAzquoMemoryDB().getPersistenceName() + " name : " + name + " parent : " + parent + " local : " + local + " attributeNames : " + attributeNames);
             return null;
             // dammit can't throw this just yet, caused a problem for callum, to invstigate
 //            throw new Exception("Name to be created is blank or null!");
