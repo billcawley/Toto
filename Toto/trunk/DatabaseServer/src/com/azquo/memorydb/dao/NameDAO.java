@@ -167,7 +167,7 @@ public class NameDAO extends FastDAO{
         return jdbcTemplateUtils.query(SQL_SELECT_ALL, new NameRowMapper(azquoMemoryDB));
     }
 
-    public void createFastTableIfItDoesntExist(final String databaseName){
+    void createFastTableIfItDoesntExist(final String databaseName){
         jdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + FASTNAME + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +

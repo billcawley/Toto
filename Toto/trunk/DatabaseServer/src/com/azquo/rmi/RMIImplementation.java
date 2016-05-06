@@ -309,7 +309,7 @@ class RMIImplementation implements RMIInterface {
             toReturn.append("##### Garbage Collection Suggested #####<br/>");
         }
         NumberFormat nf = NumberFormat.getInstance();
-        toReturn.append("--- MEMORY USED :  " + nf.format(runtime.totalMemory() - runtime.freeMemory() / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
+        toReturn.append("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
         return toReturn.toString();
     }
 

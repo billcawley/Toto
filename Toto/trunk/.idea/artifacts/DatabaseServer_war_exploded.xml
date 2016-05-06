@@ -10,7 +10,6 @@
         </element>
         <element id="directory" name="lib">
           <element id="library" level="project" name="org.springframework:spring-jdbc:4.1.6.RELEASE" />
-          <element id="library" level="project" name="mysql:mysql-connector-java:5.1.26" />
           <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.5.2" />
           <element id="library" level="project" name="org.apache.directory.studio:org.apache.commons.lang:2.6" />
           <element id="library" level="project" name="net.sourceforge.javacsv:javacsv:2.0" />
@@ -22,6 +21,7 @@
           <element id="library" level="project" name="org.apache.xmlgraphics:fop:1.1" />
           <element id="library" level="project" name="org.apache.httpcomponents:httpclient:4.5.1" />
           <element id="library" level="project" name="org.apache.hbase:hbase-client:0.98.0-hadoop2" />
+          <element id="library" level="project" name="org.mariadb.jdbc:mariadb-java-client:1.4.3" />
         </element>
       </element>
     </root>

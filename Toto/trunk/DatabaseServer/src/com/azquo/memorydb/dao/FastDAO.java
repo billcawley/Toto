@@ -22,15 +22,17 @@ public abstract class FastDAO {
     @Autowired
     protected JdbcTemplateUtils jdbcTemplateUtils;
 
-    protected static final String ID = "id";
+    static final String ID = "id";
 
-    public static final int UPDATELIMIT = 2500; // going to 2.5k as now some of the records can be quite large! Also simultaneous.
+    // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
+
+    static final int UPDATELIMIT = 2500; // going to 2.5k as now some of the records can be quite large! Also simultaneous.
 
     public abstract String getTableName();
 
     // possibly very similar to what's in JsonRecordDAO. Not sure if it's worth factoring (if so use a list of ids)
 
-    protected void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final List<? extends AzquoMemoryDBEntity> entities) throws DataAccessException {
+    void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final List<? extends AzquoMemoryDBEntity> entities) throws DataAccessException {
         if (!entities.isEmpty()) {
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
             final StringBuilder updateSql = new StringBuilder("delete from `" + azquoMemoryDB.getPersistenceName() + "`.`" + getTableName() + "` where " + ID + " in (");

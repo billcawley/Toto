@@ -81,6 +81,7 @@ public class DSImportService {
     private static final String ONLY = "only";
     private static final String EXCLUSIVE = "exclusive";
     private static final String EXISTING = "existing"; // only works in in context of child of
+    // essentially using either of these keywords switches to pivot mode where a name is created from the line number and in a set called the name of the file, uploading successive files with the same name would of course cause problems for this system
     private static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table
     private static final String LINEDATA = "linedata";
 
@@ -804,13 +805,21 @@ public class DSImportService {
                     head = header;
                 }
 
+                /*
+                line heading and data
+
+                Line heading means that the cell data on the line will be a name that is a parent of the line no
+
+                Line data means that the cell data on the line will be a value which is attached to the line number name (for when there's not for example an order reference to be a name on the line)
+                 */
+
                 head = head.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
                 if (head.contains(LINEHEADING) && head.indexOf(";") > 0) {
                     pivot = true;
                     String headname = head.substring(0, head.indexOf(";"));
                     Name headset = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All headings", null, false);
-
-                    Name thisheading = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, headname.replace("_", " "), headset, true);//note - headings in different import files will be considered the same if they have the same name
+                    // create the set the line heading name will go in
+                    nameService.findOrCreateNameInParent(azquoMemoryDBConnection, headname.replace("_", " "), headset, true);//note - headings in different import files will be considered the same if they have the same name
                     head = head.replace(LINEHEADING, ";parent of LINENO;child of " + headname.replace("_", " ") + ";language " + headname);
                 }
                 if (head.contains(LINEDATA) && head.indexOf(";") > 0) {
@@ -818,7 +827,8 @@ public class DSImportService {
                     String headname = head.substring(0, head.indexOf(";"));
                     Name alldataset = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All data", null, false);
                     Name thisDataSet = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, fileType + " data", alldataset, false);
-                    Name thisData = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, headname.replace("_", " "), thisDataSet, false);
+                    // create the set the line data name will go in
+                    nameService.findOrCreateNameInParent(azquoMemoryDBConnection, headname.replace("_", " "), thisDataSet, false);
                     head = head.replace(LINEDATA, ";peers {LINENO}").replace("_", " ");
                 }
                 int dividerPos = head.lastIndexOf(headingDivider);
@@ -858,17 +868,12 @@ public class DSImportService {
                             String replacement = "";
                             if (len < fileName.length()) {
                                 replacement = fileName.substring(fileName.length() - len);
-
                             }
                             head = head.replace(head.substring(fileNamePos - 1, functionEnd + 2), replacement);// accomodating the quote marks
                         } catch (Exception ignored) {
-
                         }
                     }
-
                 }
-
-
                 if (head.length() > 0) {
                     interpretHeading(azquoMemoryDBConnection, head, heading, attributeNames);
                 }
@@ -878,9 +883,13 @@ public class DSImportService {
             }
             col++;
         }
+
+        // pivot true if line heading or data used, add an artifical heading on so that the line no will be created for each line no
+        // one could add this to the top of the file . . .
         if (pivot) {
             Name allLines = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All lines", null, false);
-            Name thisFileLines = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, fileType + " lines", allLines, false);
+            // create the name based on this file name where we put the names generated to deal with pivot tables. Note this means uploading a file with the same name and different data causes havok!
+            nameService.findOrCreateNameInParent(azquoMemoryDBConnection, fileType + " lines", allLines, false);
             MutableImportHeading pivotHeading = new MutableImportHeading();
             interpretHeading(azquoMemoryDBConnection, "LINENO;composition LINENO;language " + fileType + ";child of " + fileType + " lines", pivotHeading, attributeNames);
             headings.add(pivotHeading);
@@ -1047,7 +1056,6 @@ public class DSImportService {
              whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
              essentially sort all local names */
             if (importCellWithHeading.immutableImportHeading.lineNameRequired && importCellWithHeading.immutableImportHeading.isLocal) {
-
                 // local and it is a parent of another heading (has child heading), inside this function it will use the child heading set up
                 resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, importCellWithHeading, cells, attributeNames, lineNo);
             }
@@ -1058,6 +1066,7 @@ public class DSImportService {
                 resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, lineNo);
             }
         }
+
         long tooLong = 2000000;
         long time = System.nanoTime();
         // now do the peers
@@ -1115,13 +1124,7 @@ public class DSImportService {
                 // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
                 ImportCellWithHeading identityCell = cells.get(cell.immutableImportHeading.indexForAttribute); // get our source cell
                 if (identityCell.lineName != null) {
-                    if (cell.lineValue.contains("->")) {
-                        List<String> languages = new ArrayList<>();
-                        languages.add(cell.immutableImportHeading.attribute);
-                        Name newName = nameService.findOrCreateNameStructure(azquoMemoryDBConnection, cell.lineValue, null, false, languages);
-                    } else {
-                        identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
-                    }
+                    identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
                 }
                 // else an error? If the line name couldn't be made in resolveLineNamesParentsChildren above there's nothing to be done about it
             }
@@ -1326,8 +1329,7 @@ public class DSImportService {
                                         break;
 
                                 }
-                            } catch (Exception e) {
-
+                            } catch (Exception ignored) {
                             }
                             result = dresult + "";
                         }

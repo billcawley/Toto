@@ -16,7 +16,6 @@ import java.util.Set;
  * OK with the new in memory DB thing these objects form the in memory database - it would be awkward to make them immutable
  * as I'd kind of like to so instead we want to make it so that it's very clear that modification after creation will
  * AUTOMATICALLY be reflected in MySQL/HBase as it catches up . . .
- * TODO : how to lock an object while it's being persisted??? Note time of modification? Might be a moot point since I mark as persisted then persist, I think the worst that can heppen is persiting more than is necessary.
  * Also, these objects act as data objects hence each object SHOULD only exist in context of a azquo memory db, code here is designed to enforce this
  * id and database id need to be rigidly controlled in this object or all hell could break loose
  * I think I may even go so far as actually holding the object reference to the database as opposed to a database id.
@@ -43,7 +42,7 @@ public abstract class AzquoMemoryDBEntity {
         this.azquoMemoryDB = azquoMemoryDB;
         // This getNeedsLoading is important, an instance of AzquoMemoryDB should only be in needsLoading during the constructor and hence it will stop
         // other bits of code overriding the entities ID
-        if (azquoMemoryDB.getNeedsLoading()) { // building objects from persistence (Mysql currently) store, rules are different, we can set the id as a parameter
+        if (azquoMemoryDB.getNeedsLoading()) { // building objects from persistence store, rules are different, we can set the id as a parameter
             this.id = id;
             // does not need inserting
             needsInserting = false;

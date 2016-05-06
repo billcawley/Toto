@@ -743,9 +743,8 @@ public final class NameService {
         //int stringCount = 0;
         // now to act on the formulae which has been converted to Reverse Polish, hence stack based parsing and no brackets etc.
         // NOTE THAT THE SHUNTING YARD ALGORITHM HERE LEAVES FUNCTIONS AT THE START (e.g. Attributeset)
-        int attSetStack = 0;//not ideal...
         while (pos < setFormula.length()) {
-            if (setFormula.substring(pos).trim().toLowerCase().startsWith(NameService.ATTRIBUTESET)) {
+            if (setFormula.substring(pos).trim().toLowerCase().startsWith(NameService.ATTRIBUTESET)) { // perhaps not elegant but we'll leave for the moment, can't really treat in query functions like operators
                 pos = setFormula.indexOf(NameService.ATTRIBUTESET) + NameService.ATTRIBUTESET.length();
                 //grab a couple of terms (only sets of names can go onto the stack
                 try {
@@ -837,9 +836,10 @@ public final class NameService {
                     //System.out.println("aft mutable init " + heapMarker);
                     //System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
                     Collection<Name> lastName = nameStack.get(stackCount).getAsCollection();
+                    // if filtering brand it means az_brand - this is for the pivot functionality, pivot filter and pivot header
                     if (lastName.size()==1){
                         Name setName = lastName.iterator().next();
-                        lastName = setName.findLevelLowest();
+                        lastName = setName.findAllChildren(false);
                         if (lastName.size()==0 && setName.getDefaultDisplayName().startsWith("az_")){
                             setName = findByName(azquoMemoryDBConnection,setName.getDefaultDisplayName().substring(3));
                             if (setName!=null){
@@ -1013,13 +1013,11 @@ public final class NameService {
         term = term.trim();
         if (term.startsWith("\"")){
             return strings.get(Integer.parseInt(term.substring(1, 3))).toLowerCase();
-
         }
         if (term.startsWith(NameService.NAMEMARKER + "")){
             return getNameFromListAndMarker(term, referencedNames).getDefaultDisplayName();
         }
         return term;
-
     }
 
     private List<Name> handleEdit(AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> languages) throws Exception {
@@ -1351,12 +1349,7 @@ public final class NameService {
         return namesFound != null ? namesFound : new NameSetList(null, new ArrayList<>(), true); // empty one if it's null
     }
 
-    public int countAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, String attributeValue){
-        List<String> attributeNames = new ArrayList<>();
-        attributeNames.add(attributeName);
-        return azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, attributeValue, null).size();
-
-    }
+    // in parse query, we want to find any names with that attribute and value e.g. "BORNIN", "GUILDFORD"
 
     public Set<Name> attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, String attributeValue){
         List<String> attributeNames = new ArrayList<>();
@@ -1364,8 +1357,6 @@ public final class NameService {
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, attributeValue, null);
 
     }
-
-
 
     public static void printFunctionCountStats() {
         System.out.println("######### NAME SERVICE FUNCTION COUNTS");

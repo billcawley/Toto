@@ -21,14 +21,11 @@ import java.util.concurrent.*;
  *
  * I want faster storing and loading of values, adapted from the NameDAO
  *
- * todo - factor off common bits?
  */
 public class ValueDAO extends FastDAO {
 
     @Autowired
     protected JdbcTemplateUtils jdbcTemplateUtils;
-    // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
-
     private static final String FASTVALUE = "fast_value";
     private static final String PROVENANCEID = "provenance_id";
     private static final String TEXT = "text";

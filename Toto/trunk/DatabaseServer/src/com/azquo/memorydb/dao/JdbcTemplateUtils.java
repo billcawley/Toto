@@ -64,15 +64,4 @@ public class JdbcTemplateUtils {
             return jdbcTemplate.queryForObject(sql, paramMap, requiredType);
         }
     }
-
-    public List<Map<String, Object>> queryForList(String sql, Map<String, ?> paramMap) {
-        try{
-            return jdbcTemplate.queryForList(sql,paramMap);
-        } catch (DataAccessException e){
-            e.printStackTrace();
-            System.out.println("JDBC Error on " + sql);
-            System.out.println("\ntrying again");
-            return jdbcTemplate.queryForList(sql,paramMap);
-        }
-    }
 }
