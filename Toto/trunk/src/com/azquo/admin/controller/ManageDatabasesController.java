@@ -216,8 +216,14 @@ public class ManageDatabasesController {
                                             importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false)
                                     );
                                 } catch (Exception e) {
-                                    String exceptionError = e.getMessage();
-                                    e.printStackTrace();
+                                    //e.printStackTrace();
+                                    Throwable t = e;
+                                    int check = 0;
+                                    while (t.getCause() != null && check < 20){
+                                        t = t.getCause();
+                                        check++;
+                                    }
+                                    String exceptionError = t.getMessage();
                                     if (exceptionError != null && exceptionError.contains("error:"))
                                         exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
                                     session.setAttribute("importResult", exceptionError);
