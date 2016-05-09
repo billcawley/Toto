@@ -87,7 +87,7 @@ public interface RMIInterface extends Remote {
 
     void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
-    boolean createNode(DatabaseAccessToken dataAccessToken, int nameId) throws RemoteException;
+    JsonChildren.Node createNode(DatabaseAccessToken dataAccessToken, int nameId) throws RemoteException;
 
     boolean renameNode(DatabaseAccessToken dataAccessToken, int nameId, String position) throws RemoteException;
 

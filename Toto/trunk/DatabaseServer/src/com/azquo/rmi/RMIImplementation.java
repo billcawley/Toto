@@ -170,7 +170,7 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public boolean createNode(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException {
+    public JsonChildren.Node createNode(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException {
         try {
             return jsTreeService.createJsTreeNode(databaseAccessToken, nameId);
         } catch (Exception e) {

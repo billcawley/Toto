@@ -92,31 +92,31 @@
 							return { "id" : node.id };
 						}
 					},
-					"check_callback" : function (operation, node, parent, position, more) {
-						azquojson("Jstree","op=" + operation + "&id=" + node.id + "&position=" + position + "&parent=" + parent.id);
-						//carry on, but let the json feed flag the errors
-						return true; // allow everything else
-					}/*,
-					"themes": {
-						"name": "proton",
-						"responsive": true
-					}
-					*/
-
-
+                    "check_callback" : true
+                    /*"check_callback" : function (operation, node, parent, position, more) {
+                        azquojson("Jstree","op=" + operation + "&id=" + node.id + "&position=" + position + "&parent=" + parent.id);
+                        //carry on, but let the json feed flag the errors
+                        return true; // allow everything else
+                    },
+                    "themes": {
+                        "name": "proton",
+                        "responsive": true
+                    }
+                    */
 				},
 				"plugins" : ["dnd","contextmenu"],
 				"contextmenu":{
 					"items": function($node) {
 						var tree = $("#js-container").jstree(true)
 						var menu =  {
-							/*createItem : {
+							createItem : {
 								"label" : "New Name",
 								"action" : function(obj) {
 									newNode = tree.create_node($node);
-									tree.edit(newNode)},
+									tree.open_node($node);
+									},
 								"_class" : "class"
-							},
+							},/*
 							renameItem : {
 								"label" : "Rename",
 								"action": function (obj) {
@@ -164,7 +164,28 @@
 					}
 				}
 
-			});
+			}).on('create_node.jstree', function (e, data) {
+                $.get('/api/Jstree?op=create_node', { 'id' : data.node.parent, 'position' : data.position, 'text' : data.node.text })
+                        .done(function (d) {
+                            data.instance.set_id(data.node, d);
+                            editAttributes(data.node); // here when the id has been sorted??
+                        })
+                        .fail(function () {
+                            data.instance.refresh();
+                        });
+            })/*.on('rename_node.jstree', function (e, data) {
+                $.get('response.php?operation=rename_node', { 'id' : data.node.id, 'text' : data.text })
+                        .fail(function () {
+                            data.instance.refresh();
+                        });
+            })*/.on('delete_node.jstree', function (e, data) {
+                $.get('response.php?operation=delete_node', { 'id' : data.node.id })
+                        .fail(function () {
+                            data.instance.refresh();
+                        });
+            });*/
+
+			;
 		});
 
 
@@ -250,7 +271,8 @@
 			json +="}";
 			hideDetails();
 			azquojson("Jstree", "json={" + json + "}");
-
+//            var node = $('#js-container').jstree(true).get_node(nameChosenNo);
+            $('#js-container').jstree('rename_node', nameChosenNo, document.getElementById("DEFAULT_DISPLAY_NAME").value);
 		}
 
 

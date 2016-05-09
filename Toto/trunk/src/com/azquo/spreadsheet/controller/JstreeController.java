@@ -103,17 +103,15 @@ public class JstreeController {
                 }
             } else {
                 JsonChildren.Node currentNode = new JsonChildren.Node(-1, null, false,-1,-1);
-                if (jsTreeId == null || jsTreeId.equals("#")) {
+                if ("true".equals(jsTreeId)) {
+                    currentNode = loggedInUser.getFromJsTreeLookupMap(parentInt);
+                } else if (jsTreeId == null || jsTreeId.equals("#")) {
                     if (topNodeInt > 0) {
                         currentNode.nameId = topNodeInt;
                     }
                     jsTreeId = "0";
                 } else { // on standard children there will be a tree id
                     currentNode = loggedInUser.getFromJsTreeLookupMap(Integer.parseInt(jsTreeId));
-                }
-                // need to understand syntax on these 3
-                if (jsTreeId.equals("true")) {
-                    currentNode = loggedInUser.getFromJsTreeLookupMap(parentInt);
                 }
                 if (op.equals("new")) { // on the first call to the tree it will be new
                     int rootId = 0;
@@ -161,8 +159,15 @@ public class JstreeController {
                                     .moveJsTreeNode(loggedInUser.getDataAccessToken(), loggedInUser.getFromJsTreeLookupMap(parentInt).nameId, currentNode.nameId);
                             break;
                         case "create_node":
-                            result = "" + rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                            JsonChildren.Node newNode = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                                     .createNode(loggedInUser.getDataAccessToken(), currentNode.nameId);
+                            loggedInUser.assignIdForJsTreeNode(newNode);
+                            // refresh the children list - we want the assignIdForJsTreeNode's
+/*                            final JsonChildren jsonChildren = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                                    .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"), itemsChosen, attribute);
+                            // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
+                            jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);*/
+                            result = newNode.id + "";
                             break;
                         case "rename_node":
                             result = "" + rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
@@ -184,7 +189,7 @@ public class JstreeController {
             // seems to be the logic from before, if children/new then don't do the function. Not sure why . . .
             if (op == null) op = "";
 
-            if (!op.equals("children")) {
+            if (!op.equals("children") && !op.equals("create_node")) {
                 model.addAttribute("content", jsonFunction + "({\"response\":" + result + "})");
             } else {
                 model.addAttribute("content", result);

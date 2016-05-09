@@ -19,7 +19,7 @@ import java.util.*;
  * <p>
  * All JSTree code that deals with DB objects to go in here.
  * <p>
- * It had controller like code in here but this has been mvoed out. Might take a few more passes before the representation is up to scratch.
+ * It had controller like code in here but this has been moved out. Might take a few more passes before the representation is up to scratch.
  */
 public class JSTreeService {
 
@@ -59,7 +59,7 @@ public class JSTreeService {
 
     public String processJsonRequest(DatabaseAccessToken databaseAccessToken, NameJsonRequest nameJsonRequest) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        String toReturn = "";
+        String toReturn = "true"; // think this will maike the parser at the other end happier
         if (nameJsonRequest.operation.equalsIgnoreCase(NameService.DELETE)) {
             if (nameJsonRequest.name.equals("all")) {
                 azquoMemoryDBConnection.getAzquoMemoryDB().zapUnusedNames();
@@ -160,12 +160,13 @@ public class JSTreeService {
         return false;
     }
 
-    public boolean createJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
+    public JsonChildren.Node createJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
         final AzquoMemoryDBConnection connectionFromAccessToken = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Name name = nameService.findById(connectionFromAccessToken, nameId);
         Name newName = nameService.findOrCreateNameInParent(connectionFromAccessToken, "newnewnew", name, true);
         newName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, "New node");
-        return true;
+        JsonChildren.Node newNode  = new JsonChildren.Node(-1, "New node", false, newName.getId(), nameId);
+        return newNode;
     }
 
     public boolean renameJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId, String newName) throws Exception {
