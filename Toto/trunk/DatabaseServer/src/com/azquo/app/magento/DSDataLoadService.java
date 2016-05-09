@@ -308,15 +308,15 @@ public class DSDataLoadService {
         List<String> skuLanguage = new ArrayList<>();
         skuLanguage.add("SKU");
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
-            Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("sku"), allSKUs, true, skuLanguage);
-            if (magentoName != null) {
+            if (entityRow.get("sku") == null || entityRow.get("sku").isEmpty()){
+                System.out.println("Sku null on " + entityRow);
+            } else {
+                Name magentoName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("sku"), allSKUs, true, skuLanguage);
                 allProducts.addChildWillBePersisted(magentoName);
                 if (!magentoName.findAllParents().contains(productCategories) && !magentoName.findAllParents().contains(uncategorisedProducts)) {
                     uncategorisedProducts.addChildWillBePersisted(magentoName);
                 }
                 azquoProductsFound.put(entityRow.get("entity_id"), magentoName);
-            } else {
-                System.out.println("magentoName null on " + entityRow);
             }
         }
         tableMap.remove("catalog_product_entity");
@@ -363,9 +363,10 @@ public class DSDataLoadService {
         }        //only interested in the attribute_id*/
         //name the attributes that matter
         Map<String, String> attributeNames = HashObjObjMaps.newMutableMap();
+        Set<String> attributeNoLookup = HashObjSets.newMutableSet(); // list the booleans in here
+
         for (Map<String, String> attribute : tableMap.get("eav_attribute")) {
             String attributeNo = attribute.get("attribute_id");
-            //if (attributes.contains(attributeNo)) {
             //attributeNames.put(attributeNo, attribute.get("attribute_code"));
             String attName = attribute.get("frontend_label");
             if (attName == null || attName.isEmpty()){
@@ -375,7 +376,10 @@ public class DSDataLoadService {
                 attName = "BLANK";
             }
             attributeNames.put(attributeNo, attName);
-            //}
+            // not default or custom then don't try to look up
+            if (!"".equals(attribute.get("source_model")) && !"eav/entity_attribute_source_table".equals(attribute.get("source_model"))){
+                attributeNoLookup.add(attributeNo);
+            }
         }
         tableMap.remove("catalog_product_super_attribute");
         //name the option values
@@ -389,18 +393,22 @@ public class DSDataLoadService {
         tableMap.remove("eav_attribute_option_value");
         //.... and allocate them!
         for (Map<String, String> attVals : tableMap.get("catalog_product_entity_int")) {
-            String attVal = attVals.get("attribute_id");
+            String attNo = attVals.get("attribute_id");
             //if (attributes.contains(attVal)) {
-            if (attributeNames.keySet().contains(attVal)) {
+            if (attributeNames.keySet().contains(attNo)) {
                 Name magentoName = azquoProductsFound.get(attVals.get("entity_id"));
                 if (magentoName == null) {
                     System.out.println("entity_id linked in catalog_product_entity_int that doesn't exist in catalog_product_entity : " + attVals.get("entity_id"));
                 } else {
-                    Name magentoProductCategory = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeNames.get(attVal), productAttributesName, true, skuLanguage);
+                    Name magentoProductCategory = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, attributeNames.get(attNo), productAttributesName, true, skuLanguage);
                     String val = attVals.get("value");
-                    if (optionValues.get(val) != null) {
+                    if (optionValues.get(val) != null || attributeNoLookup.contains(attNo)) {
+                        String resolvedValue = optionValues.get(val);
+                        if (attributeNoLookup.contains(attNo)){ // hack for things like boolean
+                            resolvedValue = val;
+                        }
                         //note - this is NOT a product id, so don't use the product id to find it!
-                        Name magentoOptionName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, optionValues.get(val), magentoProductCategory, true, null);
+                        Name magentoOptionName = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, resolvedValue, magentoProductCategory, true, null);
                         if (!magentoName.findAllParents().contains(magentoOptionName)) {
                             magentoOptionName.addChildWillBePersisted(magentoName);
                             if (allProducts.getChildren().contains(magentoName)) {
