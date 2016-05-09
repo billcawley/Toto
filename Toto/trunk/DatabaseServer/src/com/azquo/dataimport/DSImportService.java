@@ -80,6 +80,7 @@ public class DSImportService {
     private static final String DATELANG = "date";
     private static final String ONLY = "only";
     private static final String EXCLUSIVE = "exclusive";
+    private static final String COMMENT = "comment";
     private static final String EXISTING = "existing"; // only works in in context of child of
     // essentially using either of these keywords switches to pivot mode where a name is created from the line number and in a set called the name of the file, uploading successive files with the same name would of course cause problems for this system
     private static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table
@@ -358,6 +359,8 @@ public class DSImportService {
                 break;
             case COMPOSITION:// combine more than one column
                 heading.compositionPattern = result;
+                break;
+            case COMMENT: // ignore
                 break;
             case DEFAULT: // if there's no value on the line a default
                 if (result.length() > 0) {
