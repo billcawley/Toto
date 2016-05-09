@@ -162,11 +162,10 @@ public class JSTreeService {
 
     public JsonChildren.Node createJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
         final AzquoMemoryDBConnection connectionFromAccessToken = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        Name name = nameService.findById(connectionFromAccessToken, nameId);
+        Name name = nameService.findById(connectionFromAccessToken, nameId); // the parent, will be null if -1 passed in the case of adding to root . . .
         Name newName = nameService.findOrCreateNameInParent(connectionFromAccessToken, "newnewnew", name, true);
         newName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, "New node");
-        JsonChildren.Node newNode  = new JsonChildren.Node(-1, "New node", false, newName.getId(), nameId);
-        return newNode;
+        return new JsonChildren.Node(-1, "New node", false, newName.getId(), nameId);
     }
 
     public boolean renameJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId, String newName) throws Exception {

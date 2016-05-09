@@ -11,6 +11,7 @@ import com.azquo.spreadsheet.jsonentities.JsonChildren;
 import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -111,7 +112,9 @@ public class JstreeController {
                     }
                     jsTreeId = "0";
                 } else { // on standard children there will be a tree id
-                    currentNode = loggedInUser.getFromJsTreeLookupMap(Integer.parseInt(jsTreeId));
+                    if (NumberUtils.isNumber(jsTreeId)){
+                        currentNode = loggedInUser.getFromJsTreeLookupMap(Integer.parseInt(jsTreeId));
+                    }
                 }
                 if (op.equals("new")) { // on the first call to the tree it will be new
                     int rootId = 0;
@@ -158,16 +161,7 @@ public class JstreeController {
                             result = "" + rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                                     .moveJsTreeNode(loggedInUser.getDataAccessToken(), loggedInUser.getFromJsTreeLookupMap(parentInt).nameId, currentNode.nameId);
                             break;
-                        case "create_node":
-                            JsonChildren.Node newNode = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                                    .createNode(loggedInUser.getDataAccessToken(), currentNode.nameId);
-                            loggedInUser.assignIdForJsTreeNode(newNode);
-                            // refresh the children list - we want the assignIdForJsTreeNode's
-/*                            final JsonChildren jsonChildren = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                                    .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"), itemsChosen, attribute);
-                            // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
-                            jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);*/
-                            result = newNode.id + "";
+                        case "create_node"://left in to preserve error checking
                             break;
                         case "rename_node":
                             result = "" + rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
@@ -180,6 +174,17 @@ public class JstreeController {
                         default:
                             throw new Exception(op + " not understood");
                     }
+                }
+                if ("create_node".equals(op)){ // moved outside, it can operate with a null current node, adding to root
+                    JsonChildren.Node newNode = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                            .createNode(loggedInUser.getDataAccessToken(), currentNode != null ? currentNode.nameId : -1);
+                    loggedInUser.assignIdForJsTreeNode(newNode);
+                    // refresh the children list - we want the assignIdForJsTreeNode's
+/*                            final JsonChildren jsonChildren = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                                    .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"), itemsChosen, attribute);
+                            // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
+                            jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);*/
+                    result = newNode.id + "";
                 }
             }
             if (result == null){
