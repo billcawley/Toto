@@ -178,7 +178,7 @@
                         .fail(function () {
                             data.instance.refresh();
                         });
-            })*/.on('delete_node.jstree', function (e, data) {
+            }).on('delete_node.jstree', function (e, data) {
                 $.get('response.php?operation=delete_node', { 'id' : data.node.id })
                         .fail(function () {
                             data.instance.refresh();
