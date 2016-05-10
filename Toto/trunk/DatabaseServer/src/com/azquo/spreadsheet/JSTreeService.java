@@ -8,6 +8,7 @@ import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
 import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
@@ -235,6 +236,25 @@ public class JSTreeService {
         } else {
             return new JsonChildren(0, state, searchTerm, new ArrayList<>(), "");
         }
+        if (searchTerm != null && !searchTerm.isEmpty() && childNodes.size() > 1){// check for duplicate names and qualify them
+            Set<String> allNames = HashObjSets.newMutableSet();
+            Set<String> duplicateNames = HashObjSets.newMutableSet();
+            for (JsonChildren.Node node : childNodes){
+                if (!allNames.add(node.text)){ // return false if it's already in tehre in which case this is a duplicate name
+                    duplicateNames.add(node.text);
+                }
+            }
+            if (!duplicateNames.isEmpty()){ // then run through qualifying as necessary
+                for (JsonChildren.Node node : childNodes){
+                    if (duplicateNames.contains(node.text)){ // return false if it's already in tehre in which case this is a duplicate name
+                        Name n = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(node.nameId);
+                        node.text = n.getParents().isEmpty() ? "Root" : n.getParents().iterator().next().getDefaultDisplayName() + "->" + node.text;
+                    }
+                }
+            }
+        }
+
+
         String type;
         if (children.size() > 0) {
             type = "parent";

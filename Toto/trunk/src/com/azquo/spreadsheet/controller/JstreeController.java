@@ -179,11 +179,6 @@ public class JstreeController {
                     JsonChildren.Node newNode = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                             .createNode(loggedInUser.getDataAccessToken(), currentNode != null ? currentNode.nameId : -1);
                     loggedInUser.assignIdForJsTreeNode(newNode);
-                    // refresh the children list - we want the assignIdForJsTreeNode's
-/*                            final JsonChildren jsonChildren = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                                    .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"), itemsChosen, attribute);
-                            // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
-                            jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);*/
                     result = newNode.id + "";
                 }
             }

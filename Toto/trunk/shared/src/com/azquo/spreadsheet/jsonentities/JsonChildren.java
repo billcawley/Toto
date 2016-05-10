@@ -15,7 +15,7 @@ public class JsonChildren implements Serializable {
     // could use a map I suppose but why not define the structure properly
     public static class Node implements Serializable {
         public int id; // not final as I need to set the id (the node id) client side
-        public final String text;
+        public String text; // also not final as I may need to qualify after setting
         public final boolean children;
         public int nameId; // I had to add these two in so that the client side knows about the name ids which it needs to keep track of
         public int parentNameId;
