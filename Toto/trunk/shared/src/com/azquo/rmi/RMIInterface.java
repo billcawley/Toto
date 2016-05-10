@@ -11,6 +11,7 @@ import com.azquo.spreadsheet.view.FilterTriple;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -44,13 +45,7 @@ public interface RMIInterface extends Remote {
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColumnAsc, int highlightDays) throws RemoteException;
 
-    String processJSTreeRequest(DatabaseAccessToken dataAccessToken, NameJsonRequest nameJsonRequest) throws RemoteException;
-
     JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws RemoteException;
-
-    JsonChildStructure getChildDetailsFormattedForOutput(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException;
-
-    boolean moveJsTreeNode(DatabaseAccessToken databaseAccessToken, int parentId, int childId) throws RemoteException;
 
     List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
@@ -87,9 +82,13 @@ public interface RMIInterface extends Remote {
 
     void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
+    JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException;
+
+    void editAttributes(DatabaseAccessToken databaseAccessToken, int nameId, Map<String, String> attributes) throws RemoteException;
+
     JsonChildren.Node createNode(DatabaseAccessToken dataAccessToken, int nameId) throws RemoteException;
 
-    boolean renameNode(DatabaseAccessToken dataAccessToken, int nameId, String position) throws RemoteException;
+    void deleteNode(DatabaseAccessToken dataAccessToken, int nameId) throws RemoteException;
 
     void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws RemoteException;
 

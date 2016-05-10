@@ -7,7 +7,6 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
-import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -54,78 +53,19 @@ public class JSTreeService {
         return nameService.attributeList(azquoMemoryDBConnection);
     }
 
-    // pretty much replaced the original set of functions to do basic name manipulation
-    // should more functionality be pushed forward? The errors being in here for example are probably not correct.
-    // also it's taking a json object parsed directly from the front end. Hmmm.
+    // being pared down to just the edit attribute stuff. Json is sueful here, lists of attributes . . .maybe parse to java objects by this point?
 
-    public String processJsonRequest(DatabaseAccessToken databaseAccessToken, NameJsonRequest nameJsonRequest) throws Exception {
+    public void editAttributes(DatabaseAccessToken databaseAccessToken, int nameId, Map<String, String> attributes) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        String toReturn = "true"; // think this will maike the parser at the other end happier
-        if (nameJsonRequest.operation.equalsIgnoreCase(NameService.DELETE)) {
-            if (nameJsonRequest.name.equals("all")) {
-                azquoMemoryDBConnection.getAzquoMemoryDB().zapUnusedNames();
-            } else {
-                if (nameJsonRequest.id == 0) {
-                    return "error: id not passed for delete";
-                } else {
-                    Name name = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameJsonRequest.id);
-                    if (name == null) {
-                        return "error: name for id not found : " + nameJsonRequest.id;
-                    }
-                    if (name.getValues().size() > 0 && !nameJsonRequest.withData) {
-                        return "error: cannot delete name with data : " + nameJsonRequest.id;
-                    } else {
-                        name.delete();
-                    }
-                }
-            }
+        Name name = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameId);
+        if (name == null) {
+            throw new Exception("Name not found for id " + nameId);
         }
-        if (nameJsonRequest.operation.equalsIgnoreCase(NameService.EDIT) || nameJsonRequest.operation.equalsIgnoreCase(NameService.NEW)) {
-            if (nameJsonRequest.id == 0 && nameJsonRequest.operation.equalsIgnoreCase(NameService.EDIT)) {
-                return "error: id not passed for edit";
-            } else {
-                Name name;
-                if (nameJsonRequest.operation.equalsIgnoreCase(NameService.EDIT)) {
-                    name = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameJsonRequest.id);
-                } else {
-                    // new name . . .
-                    name = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), true);
-                }
-                if (name == null) {
-                    return "error: name for id not found : " + nameJsonRequest.id;
-                }
-                Name newParent = null;
-                Name oldParent = null;
-                if (nameJsonRequest.newParent > 0) {
-                    newParent = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameJsonRequest.newParent);
-                    if (newParent == null) {
-                        return "error: new parent for id not found : " + nameJsonRequest.newParent;
-                    }
-                }
-                if (nameJsonRequest.oldParent > 0) {
-                    oldParent = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameJsonRequest.oldParent);
-                    if (oldParent == null) {
-                        return "error: old parent for id not found : " + nameJsonRequest.oldParent;
-                    }
-                }
-                if (newParent != null) {
-                    newParent.addChildWillBePersisted(name, nameJsonRequest.newPosition);
-                }
-                if (oldParent != null) {
-                    oldParent.removeFromChildrenWillBePersisted(name);
-                }
-                // only clear and re set if attributes passed!
-                if (nameJsonRequest.attributes != null && !nameJsonRequest.attributes.isEmpty()) {
-                    name.clearAttributes(); // and just re set them below
-                    for (String key : nameJsonRequest.attributes.keySet()) {
-                        // Edd removed peer stuff, names don't have peers any more!
-                        name.setAttributeWillBePersisted(key, nameJsonRequest.attributes.get(key));
-                    }
-                }
-            }
+        name.clearAttributes(); // and just re set them below
+        for (String attName : attributes.keySet()) {
+            name.setAttributeWillBePersisted(attName, attributes.get(attName));
         }
         azquoMemoryDBConnection.persist();
-        return toReturn;
     }
 
     private int getTotalValues(Name name) {
@@ -137,7 +77,7 @@ public class JSTreeService {
     }
 
     // was about 40 lines before jackson though the class above is of course important. Changing name to details not structure which implies many levels.
-    public JsonChildStructure getChildDetailsFormattedForOutput(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
+    public JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
         Name name = nameService.findById(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), nameId);
         Map<String, Object> attributesForJackson = new HashMap<>();
         attributesForJackson.putAll(name.getAttributes());
@@ -150,17 +90,6 @@ public class JSTreeService {
         );
     }
 
-    public boolean moveJsTreeNode(DatabaseAccessToken databaseAccessToken, int parentId, int childId) throws Exception {
-        final AzquoMemoryDBConnection connectionFromAccessToken = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        Name parent = nameService.findById(connectionFromAccessToken, parentId);
-        Name child = nameService.findById(connectionFromAccessToken, childId);
-        if (parent != null && child != null) {
-            parent.addChildWillBePersisted(child);
-            return true;
-        }
-        return false;
-    }
-
     public JsonChildren.Node createJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
         final AzquoMemoryDBConnection connectionFromAccessToken = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Name name = nameService.findById(connectionFromAccessToken, nameId); // the parent, will be null if -1 passed in the case of adding to root . . .
@@ -169,15 +98,14 @@ public class JSTreeService {
         return new JsonChildren.Node(-1, "New node", false, newName.getId(), nameId);
     }
 
-    public boolean renameJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId, String newName) throws Exception {
+    // left it pretty simple
+    public void deleteJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
         final AzquoMemoryDBConnection connectionFromAccessToken = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Name name = nameService.findById(connectionFromAccessToken, nameId);
-        name.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, newName); // position?
-        return true;
+        name.delete();
     }
 
     // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
-    // Another one where maybe it should not be passed a json object
     public JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Map<String, Boolean> state = new HashMap<>();
@@ -202,13 +130,13 @@ public class JSTreeService {
             text = name.getAttribute(language);
             if (parents) {
                 for (Name nameParent : name.getParents()) {
-                    if (nameParent!=null){//in case of corruption - this should not happen
+                    if (nameParent != null) {//in case of corruption - this should not happen
                         children.add(nameParent);
                     }
                 }
             } else {
                 for (Name child : name.getChildren()) {
-                    if (child != null){
+                    if (child != null) {
                         children.add(child);//see above - in case of corruption
                     }
                 }
@@ -236,25 +164,23 @@ public class JSTreeService {
         } else {
             return new JsonChildren(0, state, searchTerm, new ArrayList<>(), "");
         }
-        if (searchTerm != null && !searchTerm.isEmpty() && childNodes.size() > 1){// check for duplicate names and qualify them
+        if (searchTerm != null && !searchTerm.isEmpty() && childNodes.size() > 1) {// check for duplicate names and qualify them
             Set<String> allNames = HashObjSets.newMutableSet();
             Set<String> duplicateNames = HashObjSets.newMutableSet();
-            for (JsonChildren.Node node : childNodes){
-                if (!allNames.add(node.text)){ // return false if it's already in tehre in which case this is a duplicate name
+            for (JsonChildren.Node node : childNodes) {
+                if (!allNames.add(node.text)) { // return false if it's already in tehre in which case this is a duplicate name
                     duplicateNames.add(node.text);
                 }
             }
-            if (!duplicateNames.isEmpty()){ // then run through qualifying as necessary
-                for (JsonChildren.Node node : childNodes){
-                    if (duplicateNames.contains(node.text)){ // return false if it's already in tehre in which case this is a duplicate name
+            if (!duplicateNames.isEmpty()) { // then run through qualifying as necessary
+                for (JsonChildren.Node node : childNodes) {
+                    if (duplicateNames.contains(node.text)) { // return false if it's already in tehre in which case this is a duplicate name
                         Name n = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(node.nameId);
                         node.text = n.getParents().isEmpty() ? "Root" : n.getParents().iterator().next().getDefaultDisplayName() + "->" + node.text;
                     }
                 }
             }
         }
-
-
         String type;
         if (children.size() > 0) {
             type = "parent";

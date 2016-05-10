@@ -33,7 +33,7 @@
 				<label for="itemschosen">Select items:</label>
 				<input class="itemselect" type="text" value="" id="itemschosen" name="itemschosen"/>
 			</div>
-			
+
 			<div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="submitChoice()" class="button" value="Show data"></p></div>
 		</div>
     </form>
@@ -116,32 +116,11 @@
 									tree.open_node($node);
 									},
 								"_class" : "class"
-							},/*
-							renameItem : {
-								"label" : "Rename",
-								"action": function (obj) {
-									tree.edit($node);
-								}
 							},
-							deleteItem : {
-								"label" : "Remove Name",
-								"action" : function(obj) { tree.delete_node($node)}
-							},
-							cutItem:{
-								"label" : "Cut Name",
-								"action" : function(obj) { tree.cut($node)}
-							},
-							copyItem:{
-								"label" : "Copy Name",
-								"action" : function(obj) { tree.copy($node)}
-							},
-							pasteItem:{
-								"label" : "Paste Name",
-								"action" : function(obj) {
-									var newNode=tree.paste($node);
-									tree.edit(newNode);
-								}
-							},*/
+                            deleteItem : {
+                                "label" : "Remove Name",
+                                "action" : function(obj) { tree.delete_node($node)}
+                            },
 							editAttributes:{
 								"label" : "Edit attributes",
 								"action" :function(obj){editAttributes($node)}
@@ -178,14 +157,13 @@
                         .fail(function () {
                             data.instance.refresh();
                         });
-            }).on('delete_node.jstree', function (e, data) {
-                $.get('response.php?operation=delete_node', { 'id' : data.node.id })
+            })*/.on('delete_node.jstree', function (e, data) {
+                $.get('/api/Jstree?op=delete_node', { 'id' : data.node.id })
                         .fail(function () {
                             data.instance.refresh();
                         });
-            });*/
+            });
 
-			;
 		});
 
 
@@ -200,23 +178,29 @@
 
 		}
 
-		function submitChoice(){
-			var itemsChosen = "";
-			if (document.getElementById("itemschosen").value == "") {
-				var selected = $('#js-container').jstree("get_selected");
-				var itemsChosen = "jstreeids:";
-				for (item in selected) {
-					itemsChosen += selected[item] + ",";
-				}
-			} else {
-				itemsChosen = document.getElementById("itemschosen").value;
-			}
-	
-			window.parent.$.inspectOverlay().tab(window.location + "&itemschosen=" + itemsChosen, 'Show Data');
-			//window.open("/api/Showdata?chosen=" + itemsChosen, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=800")
-		}
+        function submitChoice(){
+            var itemsChosen = "";
+            var dataFlag = false;
+            if (document.getElementById("itemschosen").value == "") {
+                var selected = $('#js-container').jstree("get_selected");
+                var itemsChosen = "jstreeids:";
+                for (item in selected) {
+                    itemsChosen += selected[item] + ",";
+                }
+                dataFlag = true;
+            } else {
+                itemsChosen = document.getElementById("itemschosen").value;
+            }
 
-		function hideDetails(){
+            if (dataFlag){ // old style call
+                window.parent.$.inspectOverlay().tab("/api/Showdata?chosen=" + itemsChosen, 'Show Data');
+            } else {
+                window.parent.$.inspectOverlay().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
+            }
+            //window.open("/api/Showdata?chosen=" + itemsChosen, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=800")
+        }
+
+        function hideDetails(){
 			document.getElementById("namedetails").style.display='none';
 		}
 

@@ -10,13 +10,13 @@ import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
 import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
-import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.view.FilterTriple;
 
 import java.rmi.RemoteException;
 import java.text.NumberFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -134,15 +134,6 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public String processJSTreeRequest(DatabaseAccessToken dataAccessToken, NameJsonRequest nameJsonRequest) throws RemoteException {
-        try {
-            return jsTreeService.processJsonRequest(dataAccessToken, nameJsonRequest);
-        } catch (Exception e) {
-            throw new RemoteException("Database Server Exception", e);
-        }
-    }
-
-    @Override
     public JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws RemoteException {
         try {
             return jsTreeService.getJsonChildren(databaseAccessToken,jsTreeId,nameId,parents,searchTerm,language);
@@ -152,18 +143,18 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public JsonChildStructure getChildDetailsFormattedForOutput(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException {
+    public JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException {
         try {
-            return jsTreeService.getChildDetailsFormattedForOutput(databaseAccessToken,nameId);
+            return jsTreeService.getNameDetailsJson(databaseAccessToken,nameId);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public boolean moveJsTreeNode(DatabaseAccessToken databaseAccessToken, int parentId, int childId) throws RemoteException {
+    public void editAttributes(DatabaseAccessToken databaseAccessToken, int nameId, Map<String, String> attributes) throws RemoteException {
         try {
-            return jsTreeService.moveJsTreeNode(databaseAccessToken,parentId,childId);
+            jsTreeService.editAttributes(databaseAccessToken,nameId,attributes);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -179,9 +170,9 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public boolean renameNode(DatabaseAccessToken databaseAccessToken, int nameId, String name) throws RemoteException {
+    public void deleteNode(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException {
         try {
-            return jsTreeService.renameJsTreeNode(databaseAccessToken, nameId, name);
+            jsTreeService.deleteJsTreeNode(databaseAccessToken, nameId);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
