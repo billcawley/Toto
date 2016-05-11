@@ -6,6 +6,7 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
+import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -53,9 +54,13 @@ public class ShowdataController {
                 namesString[0] = namesString[0].substring("jstreeids:".length());
                 // I note that we are trusting lookup not to be null
                 for(String jstreeId : namesString){
-                    JsonChildren.Node node = loggedInUser.getFromJsTreeLookupMap(Integer.parseInt(jstreeId));
-                    if (node != null){
-                        nameIds.add(node.nameId);
+                    if (NumberUtils.isNumber(jstreeId)){
+                        JsonChildren.Node node = loggedInUser.getFromJsTreeLookupMap(Integer.parseInt(jstreeId));
+                        if (node != null){
+                            nameIds.add(node.nameId);
+                        }
+                    } else {
+                        System.out.println("Non number passed to show data : " + jstreeId);
                     }
                 }
                 TreeNode node = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingIds(loggedInUser.getDataAccessToken(), nameIds, 1000);
