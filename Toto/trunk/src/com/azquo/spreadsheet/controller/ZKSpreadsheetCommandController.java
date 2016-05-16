@@ -10,6 +10,7 @@ import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
@@ -55,6 +56,9 @@ public class ZKSpreadsheetCommandController {
 
     @Autowired
     private SpreadsheetService spreadsheetService;
+
+    @Autowired
+    private LoginService loginService;
 
     @Autowired
     private UserChoiceDAO userChoiceDAO;
@@ -217,7 +221,7 @@ public class ZKSpreadsheetCommandController {
                         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                         }
-                        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService,userChoiceDAO,userRegionOptionsDAO, rmiClient);
+                        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService,loginService, userChoiceDAO,userRegionOptionsDAO, rmiClient);
                         zkAzquoBookUtils.populateBook(newBook, 0, true);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
@@ -256,7 +260,7 @@ public class ZKSpreadsheetCommandController {
         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
         }
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
         zkAzquoBookUtils.populateBook(newBook, 0);
         // here should be the list we're after
         final List<String> choiceList = getChoiceList(newBook, choices.get(selectedChoices.size()));

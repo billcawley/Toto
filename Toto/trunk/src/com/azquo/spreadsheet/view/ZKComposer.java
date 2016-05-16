@@ -47,6 +47,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     //Label provenanceLabel = new Label();
     private Label instructionsLabel = new Label();
     private SpreadsheetService spreadsheetService;
+    private LoginService loginService;
     private RMIClient rmiClient;
     private UserChoiceDAO userChoiceDAO;
     private UserRegionOptionsDAO userRegionOptionsDAO;
@@ -62,6 +63,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
         // todo - check ZK to see if there's a better way to do this
         spreadsheetService = (SpreadsheetService) applicationContext.getBean("spreadsheetService");
+        loginService = (LoginService) applicationContext.getBean("loginService");
         userChoiceDAO = (UserChoiceDAO) applicationContext.getBean("userChoiceDao");
         userRegionOptionsDAO = (UserRegionOptionsDAO) applicationContext.getBean("userRegionOptionsDao");
         rmiClient = (RMIClient) applicationContext.getBean("rmiClient");
@@ -193,7 +195,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellClick(CellMouseEvent event) {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
+        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
         String selectionName = pivotItem(zkAzquoBookUtils, event);
         String selectionList = null;
         String resultName = null;
@@ -340,7 +342,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
-        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
+        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
@@ -906,7 +908,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
             }
-            ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+            ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
             if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
             }

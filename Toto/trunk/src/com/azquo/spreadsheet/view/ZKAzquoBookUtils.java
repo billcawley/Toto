@@ -1,5 +1,7 @@
 package com.azquo.spreadsheet.view;
 
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserRegionOptions;
@@ -40,18 +42,20 @@ public class ZKAzquoBookUtils {
      */
 
     private final SpreadsheetService spreadsheetService;
+    private final LoginService loginService;
     private final UserChoiceDAO userChoiceDAO;
     private final UserRegionOptionsDAO userRegionOptionsDAO;
     private final RMIClient rmiClient;
     private final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
     private final String reportParameters;
 
-    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, RMIClient rmiClient) {
-        this(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, null, rmiClient);// no report parameters
+    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, RMIClient rmiClient) {
+        this(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, null, rmiClient);// no report parameters
     }
 
-    private ZKAzquoBookUtils(SpreadsheetService spreadsheetService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, String reportParameters, RMIClient rmiClient) {
+    private ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, String reportParameters, RMIClient rmiClient) {
         this.spreadsheetService = spreadsheetService;
+        this.loginService = loginService;
         this.userChoiceDAO = userChoiceDAO;
         this.userRegionOptionsDAO = userRegionOptionsDAO;
         this.rmiClient = rmiClient;
@@ -223,8 +227,23 @@ public class ZKAzquoBookUtils {
                         }
                         userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                     }
-
-                    fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, userChoices);
+                    String databaseName = userRegionOptions.getDatabaseName();
+                    Database origDatabase = null;
+                    DatabaseServer origServer = null;
+                    if (databaseName!=null){
+                        origDatabase = loggedInUser.getDatabase();
+                        origServer = loggedInUser.getDatabaseServer();
+                        try {
+                            loginService.switchDatabase(loggedInUser, databaseName);
+                            fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, userChoices);
+                          }catch(Exception e){
+                            String eMessage = "Unknown database " + databaseName + " for region " + region;
+                            sheet.getInternalSheet().getCell(0, 0).setStringValue(eMessage);
+                        }
+                        loggedInUser.setDatabaseWithServer(origServer, origDatabase);
+                    }else{
+                        fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, userChoices);
+                    }
                 }
             }
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");

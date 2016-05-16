@@ -37,6 +37,7 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
     private static final String SORT_COLUMN = "sort_column";
     private static final String SORT_COLUMN_ASC = "sort_column_asc";
     private static final String HIGHLIGHT_DAYS = "highlight_days";
+    private static final String DATABASE = "database";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(UserRegionOptions uro) {
@@ -54,6 +55,7 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
         toReturn.put(SORT_COLUMN, uro.getSortColumn());
         toReturn.put(SORT_COLUMN_ASC, uro.getSortColumnAsc());
         toReturn.put(HIGHLIGHT_DAYS, uro.getHighlightDays());
+        toReturn.put(DATABASE, uro.getDatabaseName());
         return toReturn;
     }
 
@@ -75,6 +77,7 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
                         , rs.getString(SORT_COLUMN)
                         , rs.getBoolean(SORT_COLUMN_ASC)
                         , rs.getInt(HIGHLIGHT_DAYS)
+                        , rs.getString(DATABASE)
                 );
             } catch (Exception e) {
                 e.printStackTrace();

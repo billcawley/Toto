@@ -573,7 +573,7 @@ public class SpreadsheetService {
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
-                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(this, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(this, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
                 bookUtils.populateBook(book, 0);
                 // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
                 if ("PDF".equals(reportSchedule.getType())) {

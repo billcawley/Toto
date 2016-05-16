@@ -23,9 +23,10 @@ public class UserRegionOptions extends StandardEntity{
     private String sortColumn;
     private boolean sortColumnAsc;
     private int highlightDays;
+    private String databaseName;
 
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, boolean sortable
-            , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn, boolean sortColumnAsc, int highlightDays) {
+            , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn, boolean sortColumnAsc, int highlightDays, String databaseName) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -39,6 +40,8 @@ public class UserRegionOptions extends StandardEntity{
         this.sortColumn = sortColumn;
         this.sortColumnAsc = sortColumnAsc;
         this.highlightDays = highlightDays;
+        this.databaseName = databaseName;
+
     }
 
     // to read the format of options from the spreadsheet, code adapted from azquobook.
@@ -68,11 +71,14 @@ public class UserRegionOptions extends StandardEntity{
             this.columnLimit = asNumber(getOptionFromSpreadsheetOptions(COLUMNLIMIT, spreadsheetSource));
             String HIGHLIGHT = "highlight";
             this.highlightDays = asNumber(getOptionFromSpreadsheetOptions(HIGHLIGHT, spreadsheetSource));
+            String DATABASENAME = "database";
+            this.databaseName = getOptionFromSpreadsheetOptions(DATABASENAME, spreadsheetSource);
         } else {
             this.sortable = false;
             this.rowLimit = 0;
             this.columnLimit = 0;
             this.highlightDays = 0;
+            this.databaseName = null;
         }
         this.sortRow = null;
         this.sortRowAsc = false;
@@ -210,6 +216,15 @@ public class UserRegionOptions extends StandardEntity{
         this.highlightDays = highlightDays;
     }
 
+    public String getDatabaseName() {
+        return databaseName;
+    }
+
+    public void setDatabaseName(String databaseName) {
+        this.databaseName = databaseName;
+    }
+
+
     @Override
     public String toString() {
         return "UserRegionOption{" +
@@ -226,6 +241,7 @@ public class UserRegionOptions extends StandardEntity{
                 ", sortColumn='" + sortColumn + '\'' +
                 ", sortColumnAsc=" + sortColumnAsc +
                 ", highlightDays=" + highlightDays +
+                ", databaseName=" + databaseName +
                 '}';
     }
 }
