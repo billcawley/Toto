@@ -1,5 +1,6 @@
 package com.azquo.memorydb.service;
 
+import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.Constants;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.memorydb.core.Name;
@@ -37,6 +38,10 @@ public final class NameService {
     ValueService valueService;//used only in formatting children for output
     @Autowired
     DSSpreadsheetService dsSpreadsheetService;//used only in formatting children for output
+
+    @Autowired
+    DSImportService dsImportService;//used only in formatting children for output
+
 
     private StringUtils stringUtils = new StringUtils(); // just make it quickly like this for the mo
 
@@ -726,6 +731,7 @@ public final class NameService {
         if (setFormula.toLowerCase().startsWith("edit:")) {
             return handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(), languages);
         }
+
         setFormula = stringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames;
         try {
@@ -1208,18 +1214,28 @@ public final class NameService {
                 if (clauseRhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
                     clauseRhs = attributeNames.get(Integer.parseInt(clauseRhs.substring(1, 3)));
                 }
+
                 String valRhs = "";
                 boolean fixed = false;
+                boolean isADate = false;
                 if (clauseRhs.charAt(0) == '"') {
                     valRhs = strings.get(Integer.parseInt(clauseRhs.substring(1, 3)));// anything left in quotes is referenced in the strings list
                     fixed = true;
+                    //assume here that date will be of the form yyyy-mm-dd
+                    if (dsImportService.isADate(valRhs)!=null){
+                        isADate = true;
+                    }
                 }
 
                 Set<Name> namesToRemove = HashObjSets.newMutableSet();
                 for (Name name : namesToFilter) {
                     String valLhs = name.getAttribute(clauseLhs);
+
                     if (valLhs == null) {
                         valLhs = "";
+                    }
+                    if (isADate){
+                        valLhs = standardizeDate(valLhs);
                     }
                     if (!fixed) {
                         valRhs = name.getAttribute(clauseRhs);
@@ -1253,6 +1269,32 @@ public final class NameService {
             andPos = condition.toLowerCase().indexOf(" and ", lastPos);
         }
         return toReturn; // its appropriate member collection should have been modified via namesToFilter above, return it
+    }
+
+    private String standardizeDate(String oldDate){
+        //dates may be stored in many forms - this attempts to standardize them to yyyy-mm-dd hh:mm:ss
+        //IT CANNOT DETECT US DATES!
+        if (oldDate.length() < 8 || oldDate.charAt(4) == '-'){
+            return oldDate;
+        }
+        String newDate = oldDate;
+        if (oldDate.charAt(2) == '-' || oldDate.charAt(2)=='/' || oldDate.charAt(2) == '.'){
+            String monthDay = oldDate.substring(3,5) + "-" + oldDate.substring(0,2);
+            if (oldDate.length() == 8 || oldDate.charAt(8) == ' '){
+                newDate = "20" + oldDate.substring(6,8) + "-" + monthDay;
+                if (oldDate.length() > 9){
+                    newDate += oldDate.substring(8);
+                }
+            }else{
+                if (oldDate.length()==10 || oldDate.charAt(10) == ' '){
+                    newDate = oldDate.substring(6,10) + "-" + monthDay;
+                }
+                if (oldDate.length() > 11){
+                    newDate += oldDate.substring(10);
+                }
+            }
+        }
+        return newDate;
     }
 
     // Managed to convert to returning NameSetList, the key being using fast collection operations where possible depending on what has been passed
