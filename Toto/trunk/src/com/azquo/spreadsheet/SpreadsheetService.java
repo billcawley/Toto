@@ -426,7 +426,7 @@ public class SpreadsheetService {
     }
 
     public String setChoices(LoggedInUser loggedInUser, String provline) {
-        int inSpreadPos = provline.indexOf("in spreadsheet");
+        int inSpreadPos = provline.toLowerCase().indexOf("in spreadsheet");
         if (inSpreadPos < 0) return null;
         int withPos = provline.indexOf(" with ", inSpreadPos);
         if (withPos < 0) return null;
