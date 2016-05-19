@@ -1122,15 +1122,16 @@ public final class Name extends AzquoMemoryDBEntity {
         for (Name parent : child.getParents()) {
             if (parent==null){
                 System.out.println("null parent on " + child.getDefaultDisplayName());
-            }
-            if (!checked.contains(parent)) {
-                checked.add(parent);
-                if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
-                    return child.getDefaultDisplayName();
-                }
-                String attribute = parent.getAttribute(attributeName, true, checked);
-                if (attribute != null) {
-                    return attribute;
+            }else {
+                if (!checked.contains(parent)) {
+                    checked.add(parent);
+                    if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
+                        return child.getDefaultDisplayName();
+                    }
+                    String attribute = parent.getAttribute(attributeName, true, checked);
+                    if (attribute != null) {
+                        return attribute;
+                    }
                 }
             }
         }
