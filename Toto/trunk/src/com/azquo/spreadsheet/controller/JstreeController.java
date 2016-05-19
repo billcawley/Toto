@@ -8,7 +8,7 @@ import com.azquo.memorydb.Constants;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
-import com.azquo.spreadsheet.jsonentities.NameJsonRequest;
+import com.azquo.spreadsheet.view.NameJsonRequest;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;

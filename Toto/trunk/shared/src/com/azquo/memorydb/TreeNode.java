@@ -13,13 +13,13 @@ import java.util.List;
  *
  */
 public class TreeNode implements Serializable{
-    String heading;
-    String name;
-    String value;
-    double dValue;
-    List<TreeNode> children;
+    private String heading;
+    private String name;
+    private String value;
+    private double dValue;
+    private List<TreeNode> children;
     // Edd added, it will help a lot when
-    int valueId;
+    private int valueId;
 
     public TreeNode(){
         heading = null;

@@ -571,9 +571,22 @@ public class DSImportService {
             final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
             long track = System.currentTimeMillis();
             char delimiter = ',';
+            File sizeTest = new File(filePath);
+            final long fileLength = sizeTest.length();
             BufferedReader br = new BufferedReader(new FileReader(filePath));
             // grab the first line to check on delimiters
             String firstLine = br.readLine();
+            String secondLine = br.readLine();
+            long linesGuess = fileLength / (secondLine != null ? secondLine.length() : 1000); // a very rough approximation
+            System.out.println("Lines guessed at : " + linesGuess);
+            int batchSize = 100000;
+            if (linesGuess < 100_000){
+                System.out.println("less than 100,000, dropping batch size to 1k");
+                batchSize = 1000;
+            } else if (linesGuess < 1_000_000){
+                System.out.println("less than 1,000,000, dropping batch size to 10k");
+                batchSize = 10_000;
+            }
             br.close();
             if (firstLine != null) {
                 if (firstLine.contains("|")) {
@@ -712,7 +725,6 @@ public class DSImportService {
             int lineNo = 1; // start at 1, we think of the first line being 1 not 0.
             // pretty vanilla multi threading bits
             AtomicInteger valueTracker = new AtomicInteger(0);
-            int batchSize = 100000; // a bit arbitrary, I wonder should I go smaller?
             ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(batchSize);
             int colCount = immutableImportHeadings.size();
             while (immutableImportHeadings.get(colCount - 1).compositionPattern != null)
@@ -1081,8 +1093,8 @@ public class DSImportService {
             }
         }
 
-        long tooLong = 2000000;
-        long time = System.nanoTime();
+        long tooLong = 2; // now ms
+        long time = System.currentTimeMillis();
         // now do the peers
         for (ImportCellWithHeading cell : cells) {
             /* ok the gist seems to be that there's peers as defined in a context item in which case it's looking in context items and peers
@@ -1142,11 +1154,11 @@ public class DSImportService {
                 }
                 // else an error? If the line name couldn't be made in resolveLineNamesParentsChildren above there's nothing to be done about it
             }
-            long now = System.nanoTime();
+            long now = System.currentTimeMillis();
             if (now - time > tooLong) {
-                System.out.println(cell.immutableImportHeading.heading + " took " + (now - time));
+                System.out.println(cell.immutableImportHeading.heading + " took " + (now - time) + "ms");
             }
-            time = System.nanoTime();
+            time = System.currentTimeMillis();
         }
         return valueCount;
     }

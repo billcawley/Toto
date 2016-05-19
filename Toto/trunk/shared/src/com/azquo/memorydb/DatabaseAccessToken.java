@@ -37,11 +37,11 @@ public class DatabaseAccessToken implements Serializable {
         return persistenceName;
     }
 
-    public String getReadPermissions() {
+    String getReadPermissions() {
         return readPermissions;
     }
 
-    public String getWritePermissions() {
+    String getWritePermissions() {
         return writePermissions;
     }
 

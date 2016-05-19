@@ -70,17 +70,7 @@ public class StringUtils {
         return pos >= len + 2 && searchText.substring(pos - len - 1, pos).toLowerCase().equals(testItem + " ");
     }
 
-/* rewriting the parsing, it needs to deal with this sort of thing :
-
-`All months` level 2 from `2014-01-01` to `2015-01-01` as `Period Chosen`
-`High Street`,London,Ontario level 2 from `2014-01-01` to `2015-01-01` as `Period Chosen`
-`2013-12-05`,`All dates` level lowest
-Entities children
-`All Customers` children - `Customer Unknown`
-`All Months` children from `2014-01-01` to `2015-01-01` as `Period Chosen`
-`All products` children sorted * `Kids UK foot size` children level lowest parents
-`Kids UK foot size` children level 1 sorted
-'Boutique Hotels';level lowest WHERE Review date >= "2015-05-05" * order level lowest * All ratings level lowest
+/* after some syntax chenges we might need some updated examples here
 
 nameStrings are strings we assume are references to names
 string literals are things in normal quotes e.g. dates
@@ -96,9 +86,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
     private DecimalFormat twoDigit = new DecimalFormat("00");
 
     public String prepareStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
-        /* sort the name quotes - what is replaced is just needed here, the way names can be referenced
-         with hierarchy and commas makes things more interesting e.g. `High Street`,London,Ontario. In this case we'll have !01,London,Ontario instead
-         that will be resolved more properly below. Also note that this takes care of attribute quotes. Distinguished by starting with a . e.g. .`some attribute name` */
+        // sort the name quotes - will be replaces with !01 !02 etc.
         StringBuilder modifiedStatement = new StringBuilder();
         Pattern p = Pattern.compile("" + Name.QUOTE + ".*?" + Name.QUOTE + ""); // don't need escaping here I don't think. Possible to add though.
         Matcher matcher = p.matcher(statement);

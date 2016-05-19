@@ -2,28 +2,26 @@ package com.azquo.admin.onlinereport;
 
 import com.azquo.admin.StandardDAO;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
 
 /**
  * Created by edward on 08/04/16.
+ *
  */
 public class DatabaseReportLinkDAO {
 
     @Autowired
     protected NamedParameterJdbcTemplate jdbcTemplate;
 
-    public static final String DATABASE_REPORT_LINK = "database_report_link";
+    static final String DATABASE_REPORT_LINK = "database_report_link";
 
-    public static final String DATABASE_ID = "database_id";
-    public static final String REPORT_ID = "report_id";
+    static final String DATABASE_ID = "database_id";
+    static final String REPORT_ID = "report_id";
 
-    public void unLink(int databaseId, int reportId){
+    private void unLink(int databaseId, int reportId){
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASE_ID, databaseId);
         namedParams.addValue(REPORT_ID, reportId);

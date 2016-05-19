@@ -52,7 +52,6 @@ public class ShowdataController {
             if (namesString[0].startsWith("jstreeids:")){
                 Set<Integer> nameIds = new HashSet<>();
                 namesString[0] = namesString[0].substring("jstreeids:".length());
-                // I note that we are trusting lookup not to be null
                 for(String jstreeId : namesString){
                     if (NumberUtils.isNumber(jstreeId)){
                         JsonChildren.Node node = loggedInUser.getFromJsTreeLookupMap(Integer.parseInt(jstreeId));
