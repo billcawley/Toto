@@ -235,7 +235,7 @@ public class DSImportService {
         }
     }
 
-    private LocalDate isADate(String maybeDate) {
+    public LocalDate isADate(String maybeDate) {
         LocalDate date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, dateTimeFormatter);
         if (date != null) return date;
         date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, ukdf4);
