@@ -165,7 +165,7 @@ public class ZKAzquoBookUtils {
                                         //maybe the user choice is over -specified. (e.g from drilldown or removal of conflicting names)  Try removing the super-sets
                                         userChoice = userChoice.substring(userChoice.indexOf("->") + 2);
                                     }
-                                    if (userChoice != null && !validOptions.contains(userChoice) && !validOptions.isEmpty()) { // just set the first for the mo.
+                                    if ((userChoice == null || !validOptions.contains(userChoice)) && !validOptions.isEmpty()) { // just set the first for the mo.
                                         userChoice = validOptions.get(0);
                                     }
                                 }
@@ -1006,7 +1006,7 @@ public class ZKAzquoBookUtils {
                      rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                             .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
                 } catch (Exception e) {
-                    e.printStackTrace();
+                       e.printStackTrace();
                 }
             }
         }
