@@ -538,7 +538,7 @@ public class DSSpreadsheetService {
                 }
                 headingDefinitionRowIndex++;
             }
-            if (headingDefinitionRow.get(0) != null && headingDefinitionRow.get(0).get(0) != null && headingDefinitionRow.get(0).get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
+            if (headingDefinitionRow.get(0) != null && headingDefinitionRow.get(0).size() > 0 && headingDefinitionRow.get(0).get(0) != null && headingDefinitionRow.get(0).get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
                 List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, headingDefinitionRow.get(0));//assumes only one row of headings, it's a list of the permute names
                 permutedLists.add(permuted);
             } else {
