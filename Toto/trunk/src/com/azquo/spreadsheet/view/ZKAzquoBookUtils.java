@@ -153,9 +153,9 @@ public class ZKAzquoBookUtils {
                             if (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1) { // I think I may keep this constraint even after
                                 // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
                                 List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
+                                String userChoice = userChoices.get(choiceName);
                                 if (validOptions != null) {
-                                    String userChoice = userChoices.get(choiceName);
-                                    if (FIRST_PLACEHOLDER.equals(userChoice)) {
+                                     if (FIRST_PLACEHOLDER.equals(userChoice)) {
                                         userChoice = validOptions.get(0);
                                     }
                                     if (LAST_PLACEHOLDER.equals(userChoice)) {
@@ -165,13 +165,15 @@ public class ZKAzquoBookUtils {
                                         //maybe the user choice is over -specified. (e.g from drilldown or removal of conflicting names)  Try removing the super-sets
                                         userChoice = userChoice.substring(userChoice.indexOf("->") + 2);
                                     }
-                                    if (userChoice != null && validOptions.contains(userChoice)) {
-                                        sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
-                                        context += choiceName + " = " + userChoice + ";";
-                                    } else if (validOptions != null && !validOptions.isEmpty()) { // just set the first for the mo.
-                                        sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(validOptions.get(0));
+                                    if (userChoice != null && !validOptions.contains(userChoice) && !validOptions.isEmpty()) { // just set the first for the mo.
+                                        userChoice = validOptions.get(0);
                                     }
                                 }
+                                if (userChoice != null) {
+                                    sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
+                                    context += choiceName + " = " + userChoice + ";";
+                                }
+
                             }
                         }
                     }
@@ -467,10 +469,8 @@ public class ZKAzquoBookUtils {
                     for (String filter : filters) {
                         filter = filter.trim();
                         try {
-                           List<String> possibleOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "` children", loggedInUser.getLanguages());
-                            List<String> choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`az_" + filter + "` children", loggedInUser.getLanguages());
+                           List<String> possibleOptions = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
+                            List<String> choiceOptions =  getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
                             if (possibleOptions.size() != choiceOptions.size() && choiceOptions.size() > 0) {
                                 List<String> additionalContext = new ArrayList<>();
                                 additionalContext.add("az_" + filter);
@@ -890,8 +890,7 @@ public class ZKAzquoBookUtils {
                             String[] choices = query.split(",");
                             Collections.addAll(choiceOptions, choices);
                         } else {
-                            choiceOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
+                            choiceOptions = getDropdownListForQuery(loggedInUser, query);
                         }
                     } catch (Exception e) {
                         choiceOptions.add(e.getMessage());
@@ -946,8 +945,7 @@ public class ZKAzquoBookUtils {
                         vSheet.getCell(0, targetCol + optionNo).setStringValue(optionVal);
                         String newQuery = query.substring(0, contentPos) + optionVal + query.substring(contentPos + catEnd + CONTENTS.length() + 1);
                         try {
-                            List<String> optionList = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), newQuery, loggedInUser.getLanguages());
+                            List<String> optionList = getDropdownListForQuery(loggedInUser, newQuery);
                             if (optionList.size() > maxSize) maxSize = optionList.size();
                             int rowOffset = 1;
                             for (String option : optionList) {
@@ -1036,7 +1034,7 @@ public class ZKAzquoBookUtils {
                     int filterCount = 0;
                     //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                     for (String filter : filters) {
-                        List<String> optionsList = optionsList(loggedInUser,  "`" + filter + "` children");
+                        List<String> optionsList = getDropdownListForQuery(loggedInUser,  "`" + filter + "` children");
                         if (optionsList!=null && optionsList.size() > 1) {
                             String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children");//leave out any with single choices
                             int rowOffset = filterCount % headingRows;
@@ -1155,22 +1153,13 @@ public class ZKAzquoBookUtils {
         return found;
     }
 
-    public List<String> optionsList(LoggedInUser loggedInUser, String sourceSet){
-        try {
-            return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), sourceSet, loggedInUser.getLanguages());
-        }catch(Exception e){
-            return null;
-        }
-    }
 
     public String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
         try {
             List<String> languages = new ArrayList<>();
             languages.add(loggedInUser.getUser().getEmail());
-            List<String> chosenOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), "`" + filterName + "` children", languages);
-            List<String> allOptions = optionsList(loggedInUser, sourceSet);
+            List<String> chosenOptions = getDropdownListForQuery(loggedInUser, "`" + filterName + "` children", languages);
+            List<String> allOptions = getDropdownListForQuery(loggedInUser, sourceSet);
             if (allOptions.size() < 2) return null;
             if (chosenOptions.size() == 0 || chosenOptions.size() == allOptions.size()) return "[all]";
             if (chosenOptions.size() < 6) {
@@ -1204,6 +1193,33 @@ public class ZKAzquoBookUtils {
         } catch (Exception e) {
 
             return "[all]";
+        }
+    }
+
+    public List<String> getDropdownListForQuery(LoggedInUser loggedInUser,String query){
+        return getDropdownListForQuery(loggedInUser, query, loggedInUser.getLanguages());
+    }
+
+
+
+        private List<String> getDropdownListForQuery(LoggedInUser loggedInUser,String query, List<String> languages){
+        //hack to discover a database name
+        int arrowsPos = query.indexOf(">>");
+        try{
+            if (arrowsPos > 0){
+                Database origDatabase = loggedInUser.getDatabase();
+                DatabaseServer origDatabaseServer = loggedInUser.getDatabaseServer();
+                loginService.switchDatabase(loggedInUser,query.substring(0, arrowsPos));
+                List<String> toReturn =  rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query.substring(arrowsPos + 2), languages);
+                loggedInUser.setDatabaseWithServer(origDatabaseServer, origDatabase);
+                return toReturn;
+
+            }
+            return  rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, languages);
+        }catch(Exception e){
+            return null;
         }
     }
 }
