@@ -23,7 +23,7 @@
 		<c:forEach items="${permissions}" var="permission">
 			<tr>
 				<td>${permission.databaseName}</td>
-				<td>${permission.reportId}</td>
+				<td>${permission.reportName}</td>
 				<td>${permission.userEmail}</td>
 				<td>${permission.readList}</td>
 				<td>${permission.writeList}</td>

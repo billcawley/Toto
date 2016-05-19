@@ -317,10 +317,7 @@ this may now not work at all, perhaps delete?
         if (loggedInUser.getUser().isAdministrator()) {
             List<Permission.PermissionForDisplay> permissions = new ArrayList<>();
             for (Permission permission : permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId())) {
-                OnlineReport onlineReport = onlineReportDAO.findById(permission.getReportId());
-                if (onlineReport != null) { // really an inactive report should be zapped, here for safety
-                    permissions.add(new Permission.PermissionForDisplay(permission, databaseDAO, userDao));
-                }
+                permissions.add(new Permission.PermissionForDisplay(permission, databaseDAO, userDao,onlineReportDAO));
             }
             return permissions;
         }

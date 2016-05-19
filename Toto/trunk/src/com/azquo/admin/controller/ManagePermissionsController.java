@@ -21,6 +21,9 @@ import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -82,12 +85,23 @@ public class ManagePermissionsController {
                                 error.append("Applicable Database Id Required<br/>");
                             }
                         }
-                        if (reportId == null || !NumberUtils.isNumber(reportId)) {
-                            error.append("Repor Id Required<br/>");
-                        } else {
-                            OnlineReport onlineReport = adminService.getReportById(Integer.parseInt(reportId), loggedInUser);
-                            if (onlineReport == null) {
-                                error.append("Applicable Repor Id Required<br/>");
+                        List<OnlineReport> reports = new ArrayList<>();
+                        if (toEdit == null){ // then it could be multiple
+                            StringTokenizer st = new StringTokenizer(reportId, ",");
+                            while (st.hasMoreTokens()){ // will exception if someone plays silly buggers
+                                OnlineReport onlineReport = adminService.getReportById(Integer.parseInt(st.nextToken()), loggedInUser);
+                                if (onlineReport != null){
+                                    reports.add(onlineReport);
+                                }
+                            }
+                        } else { // editing a simgle
+                            if (reportId == null || !NumberUtils.isNumber(reportId)) {
+                                error.append("Report Id Required<br/>");
+                            } else {
+                                OnlineReport onlineReport = adminService.getReportById(Integer.parseInt(reportId), loggedInUser);
+                                if (onlineReport == null) {
+                                    error.append("Applicable Repor Id Required<br/>");
+                                }
                             }
                         }
                         // no error checking on read and write list??
@@ -98,9 +112,10 @@ public class ManagePermissionsController {
                             assert reportId != null;
                             // then store, it might be new
                             if (toEdit == null) {
-                                // Have to use  alocadate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
-                                adminService.createUserPermission(Integer.parseInt(reportId), Integer.parseInt(userId), Integer.parseInt(databaseId),
-                                        readList, writeList, loggedInUser);
+                                    for (OnlineReport report : reports) {
+                                        adminService.createUserPermission(report.getId(), Integer.parseInt(userId), Integer.parseInt(databaseId),
+                                                readList, writeList, loggedInUser);
+                                    }
                             } else {
                                 User check = userDAO.findById(toEdit.getUserId());
                                 if (check.getBusinessId() == loggedInUser.getUser().getBusinessId()){
@@ -110,9 +125,7 @@ public class ManagePermissionsController {
                                     toEdit.setReadList(readList);
                                     toEdit.setWriteList(writeList);
                                     permissionDAO.store(toEdit);
-
                                 }
-
                             }
                             model.put("permissions", adminService.getDisplayPermissionList(loggedInUser));
                             return "managepermissions";
@@ -135,8 +148,10 @@ public class ManagePermissionsController {
                             model.put("readList", toEdit.getReadList());
                             model.put("writeList", toEdit.getWriteList());
                         }
+                        model.put("multiple", "");
                     } else {
                         model.put("id", "0");
+                        model.put("multiple", "multiple");
                     }
                 }
                 model.put("databases", adminService.getDatabaseListForBusiness(loggedInUser));

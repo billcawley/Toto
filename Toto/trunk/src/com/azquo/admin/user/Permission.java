@@ -3,6 +3,8 @@ package com.azquo.admin.user;
 import com.azquo.admin.StandardEntity;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -104,8 +106,9 @@ public final class Permission extends StandardEntity {
         private final String writeList;
         private final String databaseName;
         private final String userEmail;
+        private final String reportName;
         // todo - maybe move the DAO calls out?
-        public PermissionForDisplay(Permission permission, DatabaseDAO databaseDAO, UserDAO userDAO){
+        public PermissionForDisplay(Permission permission, DatabaseDAO databaseDAO, UserDAO userDAO, OnlineReportDAO onlineReportDAO){
             this.id = permission.getId();
             this.userId = permission.getUserId();
             this.reportId = permission.getReportId();
@@ -123,6 +126,12 @@ public final class Permission extends StandardEntity {
                 userEmail = user.getEmail();
             } else {
                 userEmail = null;
+            }
+            OnlineReport onlineReport = onlineReportDAO.findById(reportId);
+            if (onlineReport != null){
+                reportName = onlineReport.getReportName();
+            } else {
+                reportName = null;
             }
         }
 
@@ -156,6 +165,10 @@ public final class Permission extends StandardEntity {
 
         public String getUserEmail() {
             return userEmail;
+        }
+
+        public String getReportName() {
+            return reportName;
         }
     }
 }

@@ -26,7 +26,7 @@
 							</div>
 							<div>
 								<label for="reportId">Report</label>
-								<select name="reportId">
+								<select name="reportId" ${multiple}>
 									<c:forEach items="${reports}" var="report">
 										<option value="${report.id}"<c:if test="${report.id == reportId}"> selected</c:if>>${report.reportName}</option>
 									</c:forEach>
