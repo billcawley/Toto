@@ -704,7 +704,11 @@ public class DSImportService {
                         lastfilled = false;
                         for (String heading:nextLine){
                             if (heading.length() > 2 && colNo < headers.length) { //ignore --
-                                headers[colNo] = headers[colNo] + ";" + heading;
+                                if (heading.startsWith(".")){
+                                    headers[colNo] += heading;
+                                }else{
+                                    headers[colNo] +=";" + heading;
+                                }
                                 lastfilled = true;
                             }
                             colNo++;
