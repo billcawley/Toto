@@ -94,7 +94,7 @@ public class DSDataLoadService {
 
     public boolean magentoDBNeedsSettingUp(final DatabaseAccessToken databaseAccessToken) throws Exception {
         final AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        return nameService.findByName(azquoMemoryDBConnection, "all years") == null;
+        return nameService.findByName(azquoMemoryDBConnection, "All Months") == null;
     }
 
     // generally default data but after the first time it will stay as it was then.

@@ -12,7 +12,7 @@
 <div id="js-wrapper">
 	<form method="post" id="names" name="names">
 		<div id="js-container" class="js-col2"></div>
-		
+
 		<div class="js-col2">
 			<div id="attributeList">
 				<label for="attributeChosen"> Attribute (language)</label>
@@ -28,13 +28,13 @@
 				#end
 				</select>
 			</div>
-			
+
 			<div>
 				<label for="itemschosen">Select items:</label>
 				<input class="itemselect" type="text" value="" id="itemschosen" name="itemschosen"/>
 			</div>
 
-			<div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="submitChoice()" class="button" value="Show data"></p></div>
+			<div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="submitChoice(); return false;" class="button" value="Show data"></p></div>
 		</div>
     </form>
 	<div class="namedetails" id="namedetails" style="display:none">
@@ -54,7 +54,7 @@
 				<div id="htmlatts"></div>
 			</div>
 			<div class="propertystats">
-				<div class="datacount"> 
+				<div class="datacount">
 					Direct data count <b><span id="mydatacount"></span></b> Total Data Count <b><span id="totaldatacount"></span></b>
 				</div>
 				<h3>Provenance:</h3>
