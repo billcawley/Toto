@@ -689,6 +689,29 @@ public class DSImportService {
             // finally we might use the headers on the data file, this is notably used when setting up the headers themselves :)
             if (headers == null) {
                 headers = lineIterator.next();
+                boolean hasClauses = false;
+                for (String header:headers){
+                    if (header.contains(".") || header.contains(";")){
+                        hasClauses = true;
+                    }
+                }
+                if (!hasClauses){
+                    String[] nextLine = lineIterator.next();
+                    int headingCount = 1;
+                    boolean lastfilled = true;
+                    while (nextLine!=null && lastfilled && headingCount++ < 10){
+                        int colNo = 0;
+                        lastfilled = false;
+                        for (String heading:nextLine){
+                            if (heading.length() > 2 && colNo < headers.length) { //ignore --
+                                headers[colNo] = headers[colNo] + ";" + heading;
+                                lastfilled = true;
+                            }
+                            colNo++;
+                        }
+                        nextLine = lineIterator.next();
+                    }
+                }
                 if (isSpreadsheet) {
                     Name importSheets = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All import sheets", null, false);
                     Name dataImportThis = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, "DataImport " + fileType, importSheets, true);
@@ -1433,6 +1456,9 @@ public class DSImportService {
             if (st.hasMoreTokens()) {
                 List<Name> children = new ArrayList<>();
                 String setName = st.nextToken().replace("\"", "");//sometimes the last line of imported spreadsheets has come up as ""
+                while (st.hasMoreElements() && setName.length()==0){
+                    setName = st.nextToken().replace("\"","");
+                }
                 if (setName.length() > 0) {
                     interpretHeading(azquoMemoryDBConnection, setName, mutableImportHeading, attributeNames);
                     mutableImportHeading.name = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, true, attributeNames);
