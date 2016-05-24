@@ -1085,7 +1085,7 @@ public class ZKAzquoBookUtils {
                     if (chosenRegion!=null) {
                         List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
                         boolean dataRegionDropdown = !getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
-                        if (chosenRegion.getRowCount() == 1 || dataRegionDropdown) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
+                        if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && choiceOptions != null) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
                               String query = choiceCell.getStringValue();
                             int contentPos = query.toLowerCase().indexOf(CONTENTS);
                             if (contentPos < 0) {//not a dependent range
