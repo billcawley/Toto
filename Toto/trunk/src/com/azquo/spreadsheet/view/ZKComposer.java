@@ -10,7 +10,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.chart.ChartsEvent;
 import org.zkoss.zk.ui.*;
-import org.zkoss.zk.ui.event.CheckEvent;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
@@ -89,9 +88,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         provenancePopup.setDroppable("true");
         provenancePopup.setStyle("background-color:#ffffff");
         provenancePopup.setStyle("border: 5px solid #F58030");
-        //item1.setPopup(provenancePopup); // I think that will automatically work??
-
-
         instructionsPopup = new Popup();
         instructionsPopup.setId("instructionsPopup");
         instructionsPopup.setStyle("background-color:#ffffff");
@@ -110,7 +106,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         filterPopup.setId("filterPopup");
         filterPopup.setStyle("background-color:#ffffff");
         filterPopup.setStyle("border: 5px solid #F58030");
-
 
         if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(editPopup);
@@ -183,12 +178,13 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    static String MULTI = "Multi";
-    static String CHOICE = "Choice";
-    static String RESULT = "Result";
+    private static String MULTI = "Multi";
+    private static String CHOICE = "Choice";
+    private static String RESULT = "Result";
 
     /* Bit of an odd one this : on a cell click "wake" the log between the client and report server back up as there may be activity shortly
-    In addition I now want to now deal with the new filter things - this was by an area a la WASPS but now we'll do it by a popup
+    In addition I now want to now deal with the new filter things - this was by a cell area a la WASPS but now we'll do it by a popup
+    Also pivot code kick in here, need to check this all makes sense . . .
      */
 
     @Listen("onCellClick = #myzss")
@@ -196,20 +192,20 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
+        //-- what is going on here?
         String selectionName = pivotItem(zkAzquoBookUtils, event);
         String selectionList = null;
-        String resultName = null;
-        CellRegion queryResultRegion =null;
-        if (selectionName!=null){
+        CellRegion queryResultRegion = null;
+        if (selectionName != null) {
             selectionList = "`" + selectionName + "` children sorted";
             selectionName = "az_" + selectionName.trim();
             queryResultRegion = new CellRegion(event.getRow(), event.getColumn());
-        }else{
-             List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
+        } else {
+            List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
             for (SName name : names) {
                 if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
                     selectionName = name.getName();
-                    queryResultRegion = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), selectionName + RESULT);
+                    queryResultRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), selectionName + RESULT);
 
                     final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
                     if (filterQueryCell != null) {
@@ -221,16 +217,14 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
         }
         final CellRegion queryResultRegion2 = queryResultRegion;
-        if (selectionList!=null){
+        if (selectionList != null) {
             final String selectionName2 = selectionName;
             final String selectionList2 = selectionList;
-
-
             while (filterPopup.getChildren().size() > 0) { // clear it out
                 filterPopup.removeChild(filterPopup.getLastChild());
             }
             Listbox listbox = new Listbox();
-            // this is to make select all go across hidden pages - relevant with pagination
+            // this is to make select all go across hidden pages - relevant IF pagination is used
 /*            listbox.addEventListener("onCheckSelectAll", event1 -> {
                 CheckEvent event2 = (CheckEvent)event1;
                 if (event2.isChecked()){
@@ -251,23 +245,23 @@ public class ZKComposer extends SelectorComposer<Component> {
             listbox.setCheckmark(true);
             listbox.setWidth("350px");
             listbox.appendChild(listhead);
-            try{
+            try {
                 List<FilterTriple> filterOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                         .getFilterListForQuery(loggedInUser.getDataAccessToken(), selectionList, selectionName, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
                 Set<Listitem> selectedItems = new HashSet<>();
                 int index = 0;
-                for (FilterTriple filterTriple : filterOptions){
+                for (FilterTriple filterTriple : filterOptions) {
                     listbox.appendItem(filterTriple.name, filterTriple.nameId + ""); // can I puit the name id in there?
-                    if (filterTriple.selected){
+                    if (filterTriple.selected) {
                         selectedItems.add(listbox.getItemAtIndex(index));
                     }
                     index++;
                 }
                 listbox.setSelectedItems(selectedItems);
-                } catch (Exception e) {
-                    listbox.appendItem("error : " + e.getMessage(), "");
-                    e.printStackTrace();
-                }
+            } catch (Exception e) {
+                listbox.appendItem("error : " + e.getMessage(), "");
+                e.printStackTrace();
+            }
             filterPopup.appendChild(listbox);
             Button save = new Button();
             save.setWidth("80px");
@@ -276,7 +270,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     event1 -> {
                         List<Integer> childIds = new ArrayList<>();
                         final Set<Listitem> selectedItems = listbox.getSelectedItems();
-                        for (Listitem listItem : selectedItems){
+                        for (Listitem listItem : selectedItems) {
                             childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
                         }
                         rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
@@ -290,7 +284,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     event1 -> {
                         List<Integer> childIds = new ArrayList<>();
                         final Set<Listitem> selectedItems = listbox.getSelectedItems();
-                        for (Listitem listItem : selectedItems){
+                        for (Listitem listItem : selectedItems) {
                             childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
                         }
                         rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
@@ -302,16 +296,14 @@ public class ZKComposer extends SelectorComposer<Component> {
                             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
                                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                             }
-
                             if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
                                 // direct calls to the HTML are perhaps not ideal. Could be replaced with calls to expected functions?
                                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                             }
                             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
-
                             // check to see if we need to set the selected values in a cell - or in the main cell?
-                            if (queryResultRegion2 != null){
-                                String resultDescription = zkAzquoBookUtils.multiList(loggedInUser,selectionName2, selectionList2);
+                            if (queryResultRegion2 != null) {
+                                String resultDescription = zkAzquoBookUtils.multiList(loggedInUser, selectionName2, selectionList2);
                                 final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(queryResultRegion2.getRow(), queryResultRegion2.getColumn());
                                 cell.setStringValue(resultDescription);
                             }
@@ -319,7 +311,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                             e.printStackTrace();
                         }
                     });
-
             Button cancel = new Button();
             cancel.setWidth("80px");
             cancel.setLabel("Cancel");
@@ -439,11 +430,9 @@ public class ZKComposer extends SelectorComposer<Component> {
             chosen = cellData.getStringValue();
         } catch (Exception e) {
             try {
-
                 doubleValue = cellData.getDoubleValue();
                 isDouble = true;
                 chosen = doubleValue + "";
-
             } catch (Exception e2) {
                 chosen = "";
             }
@@ -488,13 +477,14 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
+    // Commented, why?
     @Listen("onSheetSelect = #myzss")
     public void onSheetSelect(SheetSelectEvent sheetSelectEvent) {
         // now here's the thing, I need to re add the validation as it gets zapped for some reason
         //ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
-       // Book book = sheetSelectEvent.getSheet().getBook();
-       // final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptions(sheetSelectEvent.getSheet().getBook(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
-       // zkAzquoBookUtils.addValidation(sheetSelectEvent.getSheet().getBook(), choiceOptions, null);
+        // Book book = sheetSelectEvent.getSheet().getBook();
+        // final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptions(sheetSelectEvent.getSheet().getBook(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
+        // zkAzquoBookUtils.addValidation(sheetSelectEvent.getSheet().getBook(), choiceOptions, null);
     }
 
     // to deal with provenance
@@ -504,19 +494,19 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
 
-    private String pivotItem(ZKAzquoBookUtils zkAzquoBookUtils, CellMouseEvent event){
+    private String pivotItem(ZKAzquoBookUtils zkAzquoBookUtils, CellMouseEvent event) {
         SName pivotFilters = event.getSheet().getBook().getInternalBook().getNameByName("az_PivotFilters");
-        if (pivotFilters != null){
-            String[] filters = zkAzquoBookUtils.getSnameCell(pivotFilters).getStringValue().split(",");
-            CellRegion pivotHeadings = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(),"az_PivotHeadings");
-            if (pivotHeadings!=null){
+        if (pivotFilters != null) {
+            String[] filters = ZKAzquoBookUtils.getSnameCell(pivotFilters).getStringValue().split(",");
+            CellRegion pivotHeadings = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), "az_PivotHeadings");
+            if (pivotHeadings != null) {
                 int headingRow = pivotHeadings.getRow();
                 int headingCol = pivotHeadings.getColumn();
                 int headingRows = pivotHeadings.getRowCount();
                 int filterCount = 0;
                 //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
-                for (String filter:filters) {
-                    List<String> optionsList = zkAzquoBookUtils.getDropdownListForQuery( (LoggedInUser)event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
+                for (String filter : filters) {
+                    List<String> optionsList = zkAzquoBookUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
                     if (optionsList != null && optionsList.size() > 1) {
                         int rowOffset = filterCount % headingRows;
                         int colOffset = filterCount / headingRows;
@@ -529,11 +519,10 @@ public class ZKComposer extends SelectorComposer<Component> {
                     }
                 }
             }
-
         }
         //look in the row headings.   probably should also be in the column headings....
         for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith("az_rowheadings")){
+            if (name.getName().toLowerCase().startsWith("az_rowheadings")) {
                 //surely there must be a better way of getting the first cell off a region!
                 String firstItem = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn()).getStringValue();
                 if (firstItem.toLowerCase().startsWith("permute(")) {
@@ -605,7 +594,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
                     try {
                         // ok this is a bit nasty, after Azquobook is zapped we could try something different
-                       int regionRow = cellRow - name.getRefersToCellRegion().getRow();
+                        int regionRow = cellRow - name.getRefersToCellRegion().getRow();
                         int regionColumn = cellCol - name.getRefersToCellRegion().getColumn();
                         List<TreeNode> treeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
                         if (!treeNodes.isEmpty()) {
@@ -656,9 +645,9 @@ public class ZKComposer extends SelectorComposer<Component> {
 //                            auditItem.addEventListener("onClick",
 //                                    event -> System.out.println("audit menu item clicked"));
                             // only check for drilldown on proper data, that which could have provenance
-                            for (SName sName:myzss.getBook().getInternalBook().getNames()){
-                                if (sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())){
-                                      String qualifier = sName.getName().substring(("az_drilldown" + region).length()).replace("_"," ");
+                            for (SName sName : myzss.getBook().getInternalBook().getNames()) {
+                                if (sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())) {
+                                    String qualifier = sName.getName().substring(("az_drilldown" + region).length()).replace("_", " ");
 
                                     String drillDownString = ZKAzquoBookUtils.getSnameCell(sName).getStringValue();
                                     if (drillDownString.length() > 0) {
@@ -668,24 +657,24 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
                                         String colHeading = colHeadings.get(cellCol - name.getRefersToCellRegion().getColumn());
                                         String filler = "";
-                                        while (drillDownString.toLowerCase().contains("[rowheading")){
-                                            for (int colNo = 0;colNo < rowHeadings.size();colNo++){
+                                        while (drillDownString.toLowerCase().contains("[rowheading")) {
+                                            for (int colNo = 0; colNo < rowHeadings.size(); colNo++) {
                                                 String rh = "[rowheading" + filler + "]";
-                                                if (drillDownString.toLowerCase().contains(rh)){
+                                                if (drillDownString.toLowerCase().contains(rh)) {
                                                     int start = drillDownString.toLowerCase().indexOf(rh);
-                                                    drillDownString = drillDownString.substring(0,start) + rowHeadings.get(colNo) + drillDownString.substring(start + rh.length());
+                                                    drillDownString = drillDownString.substring(0, start) + rowHeadings.get(colNo) + drillDownString.substring(start + rh.length());
                                                 }
                                                 filler = (colNo + 2) + "";
                                             }
 
                                         }
                                         filler = "";
-                                        while (drillDownString.toLowerCase().contains("[columnheading")){
-                                            for (int rowNo = 0;rowNo < colHeadings.size();rowNo++){
+                                        while (drillDownString.toLowerCase().contains("[columnheading")) {
+                                            for (int rowNo = 0; rowNo < colHeadings.size(); rowNo++) {
                                                 String ch = "[columnheading" + filler + "]";
-                                                if (drillDownString.toLowerCase().contains(ch)){
+                                                if (drillDownString.toLowerCase().contains(ch)) {
                                                     int start = drillDownString.toLowerCase().indexOf(ch);
-                                                    drillDownString = drillDownString.substring(0,start) + colHeading + drillDownString.substring(start + ch.length());
+                                                    drillDownString = drillDownString.substring(0, start) + colHeading + drillDownString.substring(start + ch.length());
                                                 }
                                                 filler = (rowNo + 2) + "";
                                             }
@@ -787,7 +776,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         Session session = Sessions.getCurrent();
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
         if (reportName != null) {
-            if (loggedInUser.getUser().isAdministrator()){
+            if (loggedInUser.getUser().isAdministrator()) {
                 int databaseId = loggedInUser.getDatabase().getId();
                 OnlineReportDAO onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
                 or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
@@ -797,8 +786,8 @@ public class ZKComposer extends SelectorComposer<Component> {
             } else { // need to try to find the permission given the new rules
                 PermissionDAO permissionDAO = (PermissionDAO) applicationContext.getBean("permissionDao");
                 final List<Permission> forUserId = permissionDAO.findForUserId(loggedInUser.getUser().getId());
-                for (Permission permission1 : forUserId){
-                    if (permission1.getDatabaseId() == loggedInUser.getDatabase().getId()){
+                for (Permission permission1 : forUserId) {
+                    if (permission1.getDatabaseId() == loggedInUser.getDatabase().getId()) {
                         permission = permission1;
                         break;
                     }

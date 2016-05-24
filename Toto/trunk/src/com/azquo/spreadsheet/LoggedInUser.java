@@ -34,7 +34,7 @@ public class LoggedInUser {
     private int reportId;
 
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
-    // need to hold the current one unlike with ZK which holds onto the user after the spreadsheet is created
+    // need to hold the current one unlike with ZK which holds onto the user after the spreadsheet is created. Will be zapped when Aspose goes.
     private AzquoBook azquoBook;
     private List<String> languages;
 
@@ -66,7 +66,7 @@ public class LoggedInUser {
         reportId = 0;
         sentCellsMaps = new HashMap<>();
         azquoBook = null;
-        languages = new ArrayList<>();
+        languages = new ArrayList<>(2);
         languages.add(user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         this.database = database;
@@ -82,10 +82,6 @@ public class LoggedInUser {
 
     public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId){
         return jsTreeLookupMap.get(jsTreeNodeId);
-    }
-
-    public void clearJsTreeLookupMap(){ // necessary? Maybe a map could get a bit big, I'm not concerned right now
-        jsTreeLookupMap.clear();
     }
 
     // ok we need to keep a session map of jstree ids which are created incrementally against the actual name ids, passing the nodes here seems fine
@@ -112,10 +108,6 @@ public class LoggedInUser {
     public void assignIdForJsTreeNode(JsonChildren.Node node){
         node.id = lastJSTreeNodeId.incrementAndGet();
         jsTreeLookupMap.put(node.id, node);
-    }
-
-    public String getSessionId() {
-        return sessionId;
     }
 
     public int getReportId() {
@@ -180,22 +172,6 @@ public class LoggedInUser {
     public void setDatabaseWithServer(DatabaseServer databaseServer, Database database) {
         this.databaseServer = databaseServer;
         this.database = database;
-    }
-
-    public String getReadPermissions() {
-        return readPermissions;
-    }
-
-    public void setReadPermissions(String readPermissions) {
-        this.readPermissions = readPermissions;
-    }
-
-    public String getWritePermissions() {
-        return writePermissions;
-    }
-
-    public void setWritePermissions(String writePermissions) {
-        this.writePermissions = writePermissions;
     }
 
     public String getImageStoreName() { return imageStoreName; };
