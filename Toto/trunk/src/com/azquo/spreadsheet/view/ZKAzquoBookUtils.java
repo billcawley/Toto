@@ -689,7 +689,7 @@ public class ZKAzquoBookUtils {
                                                 true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
                                     } else{
 
-                                        if (heading != null && (sCell.isNull() || sCell.getStringValue().length() == 0)) { // vanilla, overwrite if not
+                                        if (heading != null && (!sCell.getType().equals(SCell.CellType.NUMBER) && (sCell.isNull() || sCell.getStringValue().length() == 0))) { // vanilla, overwrite if not
                                             sCell.setValue(heading);
                                         }
                                     }
