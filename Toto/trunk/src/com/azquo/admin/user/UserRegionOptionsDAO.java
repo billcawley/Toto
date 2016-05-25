@@ -14,6 +14,7 @@ import java.util.Map;
  *
  * Created by bill on 22/04/14.
  *
+ * Only supports a subset of the objects paramters. Might need to rethink this at some point.
  */
 public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
 
@@ -28,16 +29,11 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
     private static final String USERID = "user_id";
     private static final String REPORTID = "report_id";
     private static final String REGION = "region";
-    private static final String HIDE_ROWS = "hide_rows";
-    private static final String SORTABLE = "sortable";
-    private static final String ROW_LIMIT = "row_limit";
-    private static final String COLUMN_LIMIT = "column_limit";
     private static final String SORT_ROW = "sort_row";
     private static final String SORT_ROW_ASC = "sort_row_asc";
     private static final String SORT_COLUMN = "sort_column";
     private static final String SORT_COLUMN_ASC = "sort_column_asc";
     private static final String HIGHLIGHT_DAYS = "highlight_days";
-    private static final String DATABASE = "database";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(UserRegionOptions uro) {
@@ -46,16 +42,11 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
         toReturn.put(USERID, uro.getUserId());
         toReturn.put(REPORTID, uro.getReportId());
         toReturn.put(REGION, uro.getRegion());
-        toReturn.put(HIDE_ROWS, uro.getHideRows());
-        toReturn.put(SORTABLE, uro.getSortable());
-        toReturn.put(ROW_LIMIT, uro.getRowLimit());
-        toReturn.put(COLUMN_LIMIT, uro.getColumnLimit());
         toReturn.put(SORT_ROW, uro.getSortRow());
         toReturn.put(SORT_ROW_ASC, uro.getSortRowAsc());
         toReturn.put(SORT_COLUMN, uro.getSortColumn());
         toReturn.put(SORT_COLUMN_ASC, uro.getSortColumnAsc());
         toReturn.put(HIGHLIGHT_DAYS, uro.getHighlightDays());
-        toReturn.put(DATABASE, uro.getDatabaseName());
         return toReturn;
     }
 
@@ -64,20 +55,21 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
         @Override
         public UserRegionOptions mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
+                // set some defaults for the data not saved in mysql. As mentioned above this feels a little hacky
                 return new UserRegionOptions(rs.getInt(ID)
                         , rs.getInt(USERID)
                         , rs.getInt(REPORTID)
                         , rs.getString(REGION)
-                        , rs.getInt(HIDE_ROWS)
-                        , rs.getBoolean(SORTABLE)
-                        , rs.getInt(ROW_LIMIT)
-                        , rs.getInt(COLUMN_LIMIT)
+                        ,0
+                        ,false
+                        ,0
+                        ,0
                         , rs.getString(SORT_ROW)
                         , rs.getBoolean(SORT_ROW_ASC)
                         , rs.getString(SORT_COLUMN)
                         , rs.getBoolean(SORT_COLUMN_ASC)
                         , rs.getInt(HIGHLIGHT_DAYS)
-                        , rs.getString(DATABASE)
+                        ,null
                 );
             } catch (Exception e) {
                 e.printStackTrace();
@@ -99,9 +91,4 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
         return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + REPORTID + "` = :" + REPORTID + " AND `" + REGION + "` = :" + REGION, namedParams);
     }
 
-    public void deleteForReportId(final int reportId) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(REPORTID, reportId);
-        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + REPORTID + " = :" + REPORTID, namedParams);
-    }
-}
+ }

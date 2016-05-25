@@ -20,15 +20,9 @@ public final class UploadRecord extends StandardEntity {
     final private String fileName;
     final private String fileType;
     final private String comments;
+    final private String tempPath;// where the file might still be!
 
-    public UploadRecord(int id
-            , Date date
-            , int businessId
-            , int databaseId
-            , int userId
-            , String fileName
-            , String fileType
-            , String comments) {
+    public UploadRecord(int id, Date date, int businessId, int databaseId, int userId, String fileName, String fileType, String comments, String tempPath) {
         this.id = id;
         this.date = date;
         this.businessId = businessId;
@@ -37,6 +31,7 @@ public final class UploadRecord extends StandardEntity {
         this.fileName = fileName;
         this.fileType = fileType;
         this.comments = comments;
+        this.tempPath = tempPath;
     }
 
     public Date getDate() {
@@ -67,6 +62,10 @@ public final class UploadRecord extends StandardEntity {
         return comments;
     }
 
+    public String getTempPath() {
+        return tempPath;
+    }
+
     @Override
     public String toString() {
         return "UploadRecord{" +
@@ -84,6 +83,7 @@ public final class UploadRecord extends StandardEntity {
     // Saw for JSON, now JSTL, need the getters
 
     public static class UploadRecordForDisplay {
+        public final int id;
         public final Date date;
         final String businessName;
         final String databaseName;
@@ -91,8 +91,10 @@ public final class UploadRecord extends StandardEntity {
         final String fileName;
         final String fileType;
         final String comments;
+        final boolean downloadable;
 
-        public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName) {
+        public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName, boolean downloadable) {
+            this.id = ur.id;
             this.date = ur.date;
             this.businessName = businessName;
             this.databaseName = databaseName;
@@ -100,6 +102,7 @@ public final class UploadRecord extends StandardEntity {
             fileName = ur.fileName;
             fileType = ur.fileType;
             comments = ur.comments;
+            this.downloadable = downloadable;
         }
 
         public Date getDate() {
@@ -128,6 +131,14 @@ public final class UploadRecord extends StandardEntity {
 
         public String getComments() {
             return comments;
+        }
+
+        public boolean getDownloadable() {
+            return downloadable;
+        }
+
+        public int getId() {
+            return id;
         }
     }
 }

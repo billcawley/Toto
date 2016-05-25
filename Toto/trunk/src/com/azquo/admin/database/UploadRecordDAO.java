@@ -33,6 +33,7 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
     private static final String FILENAME = "file_name";
     private static final String FILETYPE = "file_type";
     private static final String COMMENTS = "comments";
+    private static final String TEMPPATH = "temp_path";
 
     @Override
     public Map<String, Object> getColumnNameValueMap(final UploadRecord uploadRecord) {
@@ -45,6 +46,7 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
         toReturn.put(FILENAME, uploadRecord.getFileName());
         toReturn.put(FILETYPE, uploadRecord.getFileType());
         toReturn.put(COMMENTS, uploadRecord.getComments());
+        toReturn.put(TEMPPATH, uploadRecord.getTempPath());
         return toReturn;
     }
 
@@ -60,7 +62,9 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
                         , rs.getInt(USERID)
                         , rs.getString(FILENAME)
                         , rs.getString(FILETYPE)
-                        , rs.getString(COMMENTS));
+                        , rs.getString(COMMENTS)
+                        , rs.getString(TEMPPATH)
+                );
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

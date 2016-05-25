@@ -38,7 +38,7 @@ public class ZKAzquoBookUtils {
     For single cell 'chosen' ranges there is no problem - the choice for the subcategory may be defined as an Excel formula.
     For multicell ranges, use 'CONTENTS(rangechosen) to specify the subcategory....
 
-
+    Not to do with pivot tables, initially for the expenses sheet, let us say that the first column is to select a project and then the second to select something based off that, you'd use contents. Not used that often.
      */
 
     private final SpreadsheetService spreadsheetService;
@@ -47,6 +47,7 @@ public class ZKAzquoBookUtils {
     private final UserRegionOptionsDAO userRegionOptionsDAO;
     private final RMIClient rmiClient;
     private final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+    // for scheduling reports
     private final String reportParameters;
 
     public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, RMIClient rmiClient) {
@@ -70,7 +71,6 @@ public class ZKAzquoBookUtils {
         long track = System.currentTimeMillis();
         String imageStoreName = "";
         boolean showSave = false;
-        //book.getInternalBook().getAttribute(ZKAzquoBookProvider.BOOK_PATH);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
 
@@ -90,7 +90,7 @@ public class ZKAzquoBookUtils {
         final String FIRST_PLACEHOLDER = "||FIRST||";
         final String LAST_PLACEHOLDER = "||LAST||";
 
-        if (reportParameters != null) {
+        if (reportParameters != null) { // report parameters are used for scheduled reports
             boolean inQuotes = false;
             int ruleStart = 0;
             int currentIndex = 0;
@@ -109,7 +109,7 @@ public class ZKAzquoBookUtils {
                         } else if (value.startsWith("`")) { // then zap the quotes
                             value = value.replace('`', ' ').trim();
                         }
-                        userChoices.put(split[0].toLowerCase().trim(), value); // ok and I need to add special cases for first and last
+                        userChoices.put(split[0].toLowerCase().trim(), value);
                     }
                     ruleStart = currentIndex + 1;
                 }
@@ -155,7 +155,7 @@ public class ZKAzquoBookUtils {
                                 List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
                                 String userChoice = userChoices.get(choiceName);
                                 if (validOptions != null) {
-                                     if (FIRST_PLACEHOLDER.equals(userChoice)) {
+                                    if (FIRST_PLACEHOLDER.equals(userChoice)) {
                                         userChoice = validOptions.get(0);
                                     }
                                     if (LAST_PLACEHOLDER.equals(userChoice)) {
@@ -173,7 +173,6 @@ public class ZKAzquoBookUtils {
                                     sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
                                     context += choiceName + " = " + userChoice + ";";
                                 }
-
                             }
                         }
                     }
@@ -197,27 +196,27 @@ public class ZKAzquoBookUtils {
             for (CellRegion merge : merges) {
                 CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
             }
-            // and now we want to run through all regions for this sheet, will look at the old code for this, I think it's fill region that we take cues from
+            // and now we want to run through all regions for this sheet
             boolean fastLoad = false; // skip some checks, initially related to saving
             for (SName name : namesForSheet) {
-                // Old one was case insensitive - not so happy about this. Will allow it on the prefix
+                // Old one was case insensitive - not so happy about this. Will allow it on prefixes. (fast load being set outside the loop so is there a problem with it not being found before data regions??)
                 if (name.getName().equalsIgnoreCase("az_FastLoad")) {
                     fastLoad = true;
                 }
                 if (name.getName().equals("ImageStoreName")) {
                     imageStoreName = getRegionValue(sheet, name.getRefersToCellRegion());
-
                 }
                 if (name.getName().startsWith(azDataRegion)) { // then we have a data region to deal with here
                     String region = name.getName().substring(azDataRegion.length()); // might well be an empty string
                     SName optionsRegion = sheet.getBook().getInternalBook().getNameByName(azOptions + region);
-                    String source = "";
+                    String optionsSource = "";
                     if (optionsRegion != null) {
-                        source = getSnameCell(optionsRegion).getStringValue();
+                        optionsSource = getSnameCell(optionsRegion).getStringValue();
                     }
-                    UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
+                    UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);
+                    // UserRegionOptions from MySQL will have limited fields filled
                     UserRegionOptions userRegionOptions2 = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
-                    //only these five fields to be taken from the table.   other fields - hide_rows, sortable, row_limit, column_limit should be removed from SQL table
+                    // only these five fields are taken from the table
                     if (userRegionOptions2 != null) {
                         if (userRegionOptions.getSortColumn() == null) {
                             userRegionOptions.setSortColumn(userRegionOptions2.getSortColumn());
@@ -230,26 +229,25 @@ public class ZKAzquoBookUtils {
                         userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                     }
                     String databaseName = userRegionOptions.getDatabaseName();
-                    Database origDatabase = null;
-                    DatabaseServer origServer = null;
-                    if (databaseName!=null){
-                        origDatabase = loggedInUser.getDatabase();
-                        origServer = loggedInUser.getDatabaseServer();
+                    // fairly simple addition to allow multiple databases on the same report
+                    // todo - support when saving . . .
+                    if (databaseName != null) {
+                        Database origDatabase = loggedInUser.getDatabase();
+                        DatabaseServer origServer = loggedInUser.getDatabaseServer();
                         try {
                             loginService.switchDatabase(loggedInUser, databaseName);
-                            fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, userChoices);
-                          }catch(Exception e){
+                            fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
+                        } catch (Exception e) {
                             String eMessage = "Unknown database " + databaseName + " for region " + region;
                             sheet.getInternalSheet().getCell(0, 0).setStringValue(eMessage);
                         }
                         loggedInUser.setDatabaseWithServer(origServer, origDatabase);
-                    }else{
-                        fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, userChoices);
+                    } else {
+                        fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
                     }
                 }
             }
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
-
             // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
             // can't do this in the fill region as formulae need to be dealt with outside
             Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator(); // only rows with values in them
@@ -297,7 +295,6 @@ public class ZKAzquoBookUtils {
                                                         cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
                                                         showSave = true;
                                                     }
-
                                                 }
                                                 if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
                                                     cellForDisplay.setStringValue(df.format(sCell.getDateValue()));//set a string value as our date for saving purposes
@@ -375,10 +372,9 @@ public class ZKAzquoBookUtils {
         if (dependentRanges.size() > 0) {
             resolveDependentChoiceOptions(dependentRanges, book, loggedInUser);
         }
-
+        //
         loggedInUser.setImageStoreName(imageStoreName);
         loggedInUser.setContext(context);
-
         // after stripping off some redundant exception throwing this was the only possibility left, ignore it
         try {
             rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
@@ -388,7 +384,6 @@ public class ZKAzquoBookUtils {
     }
 
     // like rangeToStringLists in azquobook
-
 
     private List<List<String>> nameToStringLists(SName sName) {
         List<List<String>> toReturn = new ArrayList<>();
@@ -436,11 +431,12 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private void fillRegion(Sheet sheet, int reportId, String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, Map<String, String> userChoices) {
+    private void fillRegion(Sheet sheet, int reportId, String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
         SName columnHeadingsDescription = sheet.getBook().getInternalBook().getNameByName("az_ColumnHeadings" + region);
         SName rowHeadingsDescription = sheet.getBook().getInternalBook().getNameByName("az_RowHeadings" + region);
         SName contextDescription = sheet.getBook().getInternalBook().getNameByName("az_Context" + region);
         String errorMessage = null;
+        // make a blank area for data to be populated from, an upload in the sheet so to speak
         if (columnHeadingsDescription != null && rowHeadingsDescription == null) {
             List<List<String>> colHeadings = nameToStringLists(columnHeadingsDescription);
             List<List<CellForDisplay>> dataRegionCells = new ArrayList<>();
@@ -448,7 +444,7 @@ public class ZKAzquoBookUtils {
             for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
                 List<CellForDisplay> oneRow = new ArrayList<>();
                 for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
-                    oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true, false)); // make these ignored. Edd note : I'm not praticularly happy about this, sent data should be sent data, this is just made up . . .
+                    oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true, false)); // make these ignored. Edd note : I'm not particularly happy about this, sent data should be sent data, this is just made up . . .
                 }
                 dataRegionCells.add(oneRow);
             }
@@ -459,28 +455,33 @@ public class ZKAzquoBookUtils {
 
         if (columnHeadingsDescription != null) {
             try {
-
                 List<List<String>> contextList = nameToStringLists(contextDescription);
                 List<List<String>> rowHeadingList = nameToStringLists(rowHeadingsDescription);
                 //check if this is a pivot - if so, then add in any additional filter needed
                 SName pivotFilters = sheet.getBook().getInternalBook().getNameByName("az_PivotFilters");
+                // a comma separated list of names
                 if (pivotFilters != null) {
                     String[] filters = getSnameCell(pivotFilters).getStringValue().split(",");
                     for (String filter : filters) {
                         filter = filter.trim();
                         try {
-                           List<String> possibleOptions = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
-                            List<String> choiceOptions =  getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
+                            List<String> possibleOptions = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
+                            // the names selected off the pivot filter are jammed into a name with "az_" before the filter name
+                            List<String> choiceOptions = getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
+                            // This means if it's not empty and not full ignore the filter. Works as the permute function, which needs to be used with pivots,
+                            // will constrain by this set, if created, falling back on the set it's passed if not. Means what's in the permute will be a subset of the filters
+                            // does this mean a double check? That it's constrained by selection here in context and again by the permute? I suppose no harm.
                             if (possibleOptions.size() != choiceOptions.size() && choiceOptions.size() > 0) {
                                 List<String> additionalContext = new ArrayList<>();
                                 additionalContext.add("az_" + filter);
+                                // so add it to the context. Could perhaps be one list that's added? I suppose it doesn't really matter.
                                 contextList.add(additionalContext);
                             }
                         } catch (Exception e) {
                             //ignore - no choices yet made
+                            // todo, make this a bit more elegant?
                         }
                     }
-
                 }
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, nameToStringLists(columnHeadingsDescription),
                         contextList, userRegionOptions);
@@ -544,11 +545,10 @@ public class ZKAzquoBookUtils {
                         }
                         row = displayRowHeadings.getRow();
                         int lineNo = 0;
-                        int lastTotalRow = row -1;
+                        int lastTotalRow = row - 1;
                         int totalRow = -1;
                         List<String> lastRowHeadings = new ArrayList<>(cellsAndHeadingsForDisplay.getRowHeadings().size());
                         for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
-
                             int col = displayRowHeadings.getColumn();
                             int startCol = col;
                             for (String heading : rowHeading) {
@@ -558,11 +558,9 @@ public class ZKAzquoBookUtils {
                                         //disguise the heading by making foreground colour = background colour
                                         Range selection = Ranges.range(sheet, row, col, row, col);
                                         CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row, col).getCellStyle().getBackColor().getHtmlColor());
-
                                     }
                                 }
                                 col++;
-
                             }
                             lineNo++;
                             if (isHierarchy && lineNo > 1) {
@@ -575,57 +573,56 @@ public class ZKAzquoBookUtils {
 
                                 //format the row headings for hierarchy.  Each total level has a different format.   clear visible names in all but on eheading
                                 if (sameValues < rowHeading.size() - 1) {
-                                     int totalCount = rowHeading.size() - sameValues -1;
+                                    int totalCount = rowHeading.size() - sameValues - 1;
                                     //this is a total line
                                     int selStart = displayRowHeadings.getColumn();
                                     int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1;
                                     SCell lineFormat = getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + totalCount + region));
                                     Range selection = Ranges.range(sheet, row - 1, selStart, row - 1, selEnd);
-                                    if (lineFormat == null){
+                                    if (lineFormat == null) {
                                         CellOperationUtil.applyFontBoldweight(selection, Font.Boldweight.BOLD);
-                                    }else{
-                                        if (totalCount == 1 && totalRow == -1){
+                                    } else {
+                                        if (totalCount == 1 && totalRow == -1) {
                                             totalRow = lineFormat.getRowIndex();
                                         }
-                                        if (totalCount == 1 && totalRow > displayRowHeadings.getRow()){
+                                        if (totalCount == 1 && totalRow > displayRowHeadings.getRow()) {
                                             //copy the total row and the line above to the current position, then copy the line above into the intermediate rows
                                             int dataStart = displayDataRegion.getColumn();
                                             int copyRows = row - lastTotalRow - 2;
-                                            if (copyRows > 2){
+                                            if (copyRows > 2) {
                                                 copyRows = 2;
                                             }
 
                                             Range copySource = Ranges.range(sheet, totalRow - 2, dataStart, totalRow, selEnd);
-                                            Range destination = Ranges.range(sheet, row - copyRows - 1, dataStart, row-1, selEnd);
+                                            Range destination = Ranges.range(sheet, row - copyRows - 1, dataStart, row - 1, selEnd);
                                             int tempStart = selEnd + 10;
-                                            Range tempPos = Ranges.range(sheet,totalRow- 2, tempStart, totalRow, tempStart + selEnd - selStart);
-                                             if (copyRows == 1){
-                                                 //delete the middle line
-                                                CellOperationUtil.delete(Ranges.range(sheet,totalRow - 1,tempStart,totalRow-1, tempStart + selEnd - selStart),Range.DeleteShift.UP);
-                                                tempPos = Ranges.range(sheet,totalRow - 2, tempStart, totalRow - 1, tempStart + selEnd - selStart);
+                                            Range tempPos = Ranges.range(sheet, totalRow - 2, tempStart, totalRow, tempStart + selEnd - selStart);
+                                            if (copyRows == 1) {
+                                                //delete the middle line
+                                                CellOperationUtil.delete(Ranges.range(sheet, totalRow - 1, tempStart, totalRow - 1, tempStart + selEnd - selStart), Range.DeleteShift.UP);
+                                                tempPos = Ranges.range(sheet, totalRow - 2, tempStart, totalRow - 1, tempStart + selEnd - selStart);
                                             }
-                                            CellOperationUtil.paste(copySource,tempPos );
+                                            CellOperationUtil.paste(copySource, tempPos);
                                             CellOperationUtil.cut(tempPos, destination);
-                                              if (row - lastTotalRow > 4){
-                                                  //zap cells above, and fill in cells below
-                                                  CellOperationUtil.delete(Ranges.range(sheet,lastTotalRow+1, dataStart, row - 4,selEnd), Range.DeleteShift.UP);
-                                                  CellOperationUtil.insert(Ranges.range(sheet,lastTotalRow + 2, dataStart, row-3, selEnd), Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE);
-                                                  CellOperationUtil.paste(Ranges.range(sheet, lastTotalRow+ 1, dataStart, lastTotalRow+1, selEnd), Ranges.range(sheet,lastTotalRow + 2, dataStart, row - 3, selEnd));
+                                            if (row - lastTotalRow > 4) {
+                                                //zap cells above, and fill in cells below
+                                                CellOperationUtil.delete(Ranges.range(sheet, lastTotalRow + 1, dataStart, row - 4, selEnd), Range.DeleteShift.UP);
+                                                CellOperationUtil.insert(Ranges.range(sheet, lastTotalRow + 2, dataStart, row - 3, selEnd), Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE);
+                                                CellOperationUtil.paste(Ranges.range(sheet, lastTotalRow + 1, dataStart, lastTotalRow + 1, selEnd), Ranges.range(sheet, lastTotalRow + 2, dataStart, row - 3, selEnd));
                                             }
                                         }
                                         CellOperationUtil.applyBackColor(selection, lineFormat.getCellStyle().getBackColor().getHtmlColor());
                                         CellOperationUtil.applyFontColor(selection, lineFormat.getCellStyle().getFont().getColor().getHtmlColor());
-                                     }
-                                    if (row > displayRowHeadings.getRow()){
-                                        Ranges.range(sheet, row - 1, selStart + sameValues + 1, row - 1, selStart + displayRowHeadings.getColumnCount()-1).clearContents();
                                     }
-                                    lastTotalRow = row-1;
+                                    if (row > displayRowHeadings.getRow()) {
+                                        Ranges.range(sheet, row - 1, selStart + sameValues + 1, row - 1, selStart + displayRowHeadings.getColumnCount() - 1).clearContents();
+                                    }
+                                    lastTotalRow = row - 1;
                                 }
                                 if (sameValues > 0) {
                                     Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayRowHeadings.getColumn() + sameValues - 1);
                                     CellOperationUtil.clearStyles(selection);
                                     CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row, displayRowHeadings.getColumn()).getCellStyle().getBackColor().getHtmlColor());
-
                                 }
                             }
                             lastRowHeadings = rowHeading;
@@ -639,8 +636,8 @@ public class ZKAzquoBookUtils {
                                 int hrow = displayRowHeadings.getRow() - 1;
                                 int hcol = displayRowHeadings.getColumn();
                                 for (String rowHeading : rowHeadings) {
-                                    rowHeading = rowHeading.replace("`","").trim();
-                                    String colHeading = multiList(loggedInUser,"az_" + rowHeading,"`" + rowHeading + "` children");
+                                    rowHeading = rowHeading.replace("`", "").trim();
+                                    String colHeading = multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
                                     if (colHeading.equals("[all]")) colHeading = rowHeading;
                                     sheet.getInternalSheet().getCell(hrow, hcol++).setStringValue(colHeading);
                                 }
@@ -662,7 +659,7 @@ public class ZKAzquoBookUtils {
                                 int col = displayColumnHeadings.getColumn();
                                 for (String heading : colHeading) {
                                     SCell sCell = sheet.getInternalSheet().getCell(row, col);
-                                    if (sCell.getType()!=SCell.CellType.STRING && sCell.getType()!=SCell.CellType.NUMBER){
+                                    if (sCell.getType() != SCell.CellType.STRING && sCell.getType() != SCell.CellType.NUMBER) {
                                         sCell.setStringValue("");
                                     }
                                     if (columnSort && !heading.equals(".")) { // don't sort "." headings they are probably derived in the spreadsheet
@@ -687,7 +684,7 @@ public class ZKAzquoBookUtils {
                                                 value + " ↕," + value + " ↑," + value + " ↓", null,
                                                 true, "Select Sorting", "",
                                                 true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
-                                    } else{
+                                    } else {
 
                                         if (heading != null && (!sCell.getType().equals(SCell.CellType.NUMBER) && (sCell.isNull() || sCell.getStringValue().length() == 0))) { // vanilla, overwrite if not
                                             sCell.setValue(heading);
@@ -697,7 +694,7 @@ public class ZKAzquoBookUtils {
                                 }
                                 row++;
                             }
-                         }
+                        }
 
                         // for the moment don't allow user coolum sorting (row heading sorting). Shouldn't be too difficult to add
 
@@ -832,7 +829,6 @@ public class ZKAzquoBookUtils {
     }
 
     // this works out case insensitive based on the API, I've made this static for convenience? Is is a problem? Maybe the code calling it should be in here
-    // todo - reslove static question!
 
     public static CellRegion getCellRegionForSheetAndName(Sheet sheet, String name) {
         SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
@@ -849,7 +845,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public static SCell getSnameCell(SName sName) {
+    static SCell getSnameCell(SName sName) {
         if (sName == null) return null;
         return sName.getBook().getSheetByName(sName.getRefersToSheetName()).getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
     }
@@ -861,7 +857,7 @@ public class ZKAzquoBookUtils {
      This adds one caveat : the options match the choice name at the time the function ran - if the query in the choice cell updates this needs to be run again
        */
 
-    Map<String, List<String>> resolveChoiceOptions(Book book, LoggedInUser loggedInUser) {
+    private Map<String, List<String>> resolveChoiceOptions(Book book, LoggedInUser loggedInUser) {
         Map<String, List<String>> toReturn = new HashMap<>();
         for (SName name : book.getInternalBook().getNames()) {
             //check to create pivot filter choices....
@@ -993,7 +989,7 @@ public class ZKAzquoBookUtils {
 
     private void resolveQueries(Sheet sheet, LoggedInUser loggedInUser) {
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
-            if (name!=null && name.getName()!=null && name.getName().endsWith("Query")) {
+            if (name != null && name.getName() != null && name.getName().endsWith("Query")) {
                 SCell queryCell = getSnameCell(name);
                 // as will happen to the whole sheet later
                 if (queryCell.getType() == SCell.CellType.FORMULA) {
@@ -1001,12 +997,12 @@ public class ZKAzquoBookUtils {
                     queryCell.getFormulaResultType();
                     queryCell.clearFormulaResultCache();
                 }
-                 try {
-                     String queryString = queryCell.getStringValue();
-                     rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                try {
+                    String queryString = queryCell.getStringValue();
+                    rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                             .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
                 } catch (Exception e) {
-                       e.printStackTrace();
+                    e.printStackTrace();
                 }
             }
         }
@@ -1034,8 +1030,8 @@ public class ZKAzquoBookUtils {
                     int filterCount = 0;
                     //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                     for (String filter : filters) {
-                        List<String> optionsList = getDropdownListForQuery(loggedInUser,  "`" + filter + "` children");
-                        if (optionsList!=null && optionsList.size() > 1) {
+                        List<String> optionsList = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
+                        if (optionsList != null && optionsList.size() > 1) {
                             String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children");//leave out any with single choices
                             int rowOffset = filterCount % headingRows;
                             int colOffset = filterCount / headingRows;
@@ -1082,11 +1078,11 @@ public class ZKAzquoBookUtils {
                 if (name.getRefersToCellRegion() != null && chosen != null) {
                     Sheet sheet = book.getSheet(chosen.getRefersToSheetName());
                     CellRegion chosenRegion = chosen.getRefersToCellRegion();
-                    if (chosenRegion!=null) {
+                    if (chosenRegion != null) {
                         List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
                         boolean dataRegionDropdown = !getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && choiceOptions != null) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
-                              String query = choiceCell.getStringValue();
+                            String query = choiceCell.getStringValue();
                             int contentPos = query.toLowerCase().indexOf(CONTENTS);
                             if (contentPos < 0) {//not a dependent range
                                 validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
@@ -1124,7 +1120,7 @@ public class ZKAzquoBookUtils {
                              */
                         }
                     }
-                }else {
+                } else {
                     SName multi = book.getInternalBook().getNameByName(choiceName + "multiresult"); // as ever I do wonder about these string literals
                     if (multi != null) {
                         SCell resultCell = getSnameCell(multi);
@@ -1196,29 +1192,28 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public List<String> getDropdownListForQuery(LoggedInUser loggedInUser,String query){
+    public List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query) {
         return getDropdownListForQuery(loggedInUser, query, loggedInUser.getLanguages());
     }
 
 
-
-        private List<String> getDropdownListForQuery(LoggedInUser loggedInUser,String query, List<String> languages){
+    private List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
         //hack to discover a database name
         int arrowsPos = query.indexOf(">>");
-        try{
-            if (arrowsPos > 0){
+        try {
+            if (arrowsPos > 0) {
                 Database origDatabase = loggedInUser.getDatabase();
                 DatabaseServer origDatabaseServer = loggedInUser.getDatabaseServer();
-                loginService.switchDatabase(loggedInUser,query.substring(0, arrowsPos));
-                List<String> toReturn =  rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                loginService.switchDatabase(loggedInUser, query.substring(0, arrowsPos));
+                List<String> toReturn = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                         .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query.substring(arrowsPos + 2), languages);
                 loggedInUser.setDatabaseWithServer(origDatabaseServer, origDatabase);
                 return toReturn;
 
             }
-            return  rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+            return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                     .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, languages);
-        }catch(Exception e){
+        } catch (Exception e) {
             return null;
         }
     }

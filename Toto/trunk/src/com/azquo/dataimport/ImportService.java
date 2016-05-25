@@ -70,7 +70,7 @@ public final class ImportService {
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("error: no database set");
         }
-        String tempFile = tempFileWithoutDecoding(uploadFile, fileName);
+        String tempFile = tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
         uploadFile.close(); // windows requires this (though windows should not be used in production), perhaps not a bad idea anyway
         String toReturn;
         if (fileName.endsWith(".zip")) {
@@ -109,7 +109,7 @@ public final class ImportService {
         } else { // vanilla
             toReturn = readBookOrFile(loggedInUser, fileName, tempFile, attributeNames, true, isData);
         }
-        UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", "");//should record the error? (last parameter)
+        UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", "", filePath);//should record the error? (in comment)
         uploadRecordDAO.store(uploadRecord);
         return toReturn;
     }

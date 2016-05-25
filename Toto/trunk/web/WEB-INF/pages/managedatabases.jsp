@@ -58,6 +58,7 @@ Created by IntelliJ IDEA.
 				<td>File Name</td>
 				<td>File Type</td>
 				<td>Comments</td>
+				<td></td>
 			</tr>
 		</thead>
 		<tbody>
@@ -70,6 +71,7 @@ Created by IntelliJ IDEA.
 				<td>${upload.fileName}</td>
 				<td>${upload.fileType}</td>
 				<td>${upload.comments}</td>
+				<td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}">Download</a></c:if></td>
 			</tr>
 		</c:forEach>
 		</tbody>

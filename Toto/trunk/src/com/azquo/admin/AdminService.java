@@ -306,7 +306,14 @@ this may now not work at all, perhaps delete?
                         userName = user.getName();
                     }
                 }
-                uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, businessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName));
+                boolean downloadable = false;
+                if (uploadRecord.getTempPath() != null && !uploadRecord.getTempPath().isEmpty()){
+                    File test = new File(uploadRecord.getTempPath());
+                    if (test.exists() && test.isFile()){
+                        downloadable = true;
+                    }
+                }
+                uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, businessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
             }
             return uploadRecordsForDisplay;
         }
