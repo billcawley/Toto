@@ -1284,6 +1284,7 @@ public class AzquoBook {
         temp.deleteOnExit();
         //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
         CsvWriter csvW = new CsvWriter(new FileWriter(tempName), '\t');
+        csvW.setUseTextQualifier(false);
         convertRangeToCSV(sheet, csvW, null, null, transpose);
         csvW.close();
         return tempName;
@@ -1305,7 +1306,11 @@ public class AzquoBook {
 
                     }
                 }
-                 csvW.write(cellFormat);
+                if (cellFormat.contains("\"\"") && cellFormat.startsWith("\"")&& cellFormat.endsWith("\"")){
+                    //remove spuriouse quote marks
+                    cellFormat = cellFormat.substring(1, cellFormat.length()-1).replace("\"\"","\"");
+                }
+                csvW.write(cellFormat);
             }
         } else {
             csvW.write("");
@@ -1421,60 +1426,5 @@ public class AzquoBook {
         return choices;
     }
 
-    public String fillDataRangesFromCopy(LoggedInUser loadingUser, int reportId){
-        int items = 0;
-        int nonBlankItems = 0;
-        for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
-            com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
-            if (name.getText().toLowerCase().startsWith(dataRegionPrefix)) {
-                String regionName = name.getText().substring(dataRegionPrefix.length()).toLowerCase();
-                Range source = getRange(name.getText());
-                CellsAndHeadingsForDisplay sentCells = loadingUser.getSentCells(reportId, regionName);
-                if (sentCells != null){
-                    List<List<CellForDisplay>> data = sentCells.getData();
-                    if (data.size() == source.getRowCount() && data.get(0).size() == source.getColumnCount()){
-                        for (int row=0;row<source.getRowCount();row++){
-                            List<CellForDisplay> dataRow = data.get(row);
-                            for (int col=0;col < source.getColumnCount(); col++){
-                                CellForDisplay dataCell = dataRow.get(col);
-                                String chosen;
-                                boolean isDouble = false;
-                                double doubleValue = 0.0;
-                                try {
-                                    chosen = source.get(row,col).getStringValue();
-                                    try {
-                                        doubleValue = Double.parseDouble(chosen);
-                                        isDouble = true;
-                                    }catch (Exception e){
-
-                                    }
-                                } catch (Exception e) {
-                                    try {
-
-                                        doubleValue = source.get(row,col).getDoubleValue();
-                                        isDouble = true;
-                                        chosen = doubleValue + "";
-
-                                    } catch (Exception e2) {
-                                        chosen = "";
-                                    }
-                                }
-                                dataCell.setStringValue(chosen);
-                                if (chosen.length() > 0) nonBlankItems++;
-                                if (isDouble) {
-                                    dataCell.setDoubleValue(doubleValue);
-                                }
-                                items++;
-                            }
-                        }
-                    }
-
-
-                }
-              }
-        }
-        return nonBlankItems + " data items transferred successfully";
-
-    }
 
 }
