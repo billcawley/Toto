@@ -845,7 +845,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    static SCell getSnameCell(SName sName) {
+    public static SCell getSnameCell(SName sName) {
         if (sName == null) return null;
         return sName.getBook().getSheetByName(sName.getRefersToSheetName()).getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
     }
@@ -1217,6 +1217,20 @@ public class ZKAzquoBookUtils {
             return null;
         }
     }
+
+    public Map<String,String> uploadChoices(Book book){
+        //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
+        Map<String,String> choices = new HashMap<>();
+        for (SName sName:book.getInternalBook().getNames()) {
+            String rangeName = sName.getName();
+            if (rangeName.toLowerCase().endsWith("chosen")){
+                choices.put(rangeName.substring(0,rangeName.length()-6),getSnameCell(sName).getStringValue());
+            }
+        }
+        return choices;
+    }
+
+
 }
 
 
