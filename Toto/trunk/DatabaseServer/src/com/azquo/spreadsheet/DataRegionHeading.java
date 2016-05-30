@@ -41,6 +41,7 @@ public class DataRegionHeading {
     private final String description;
     private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
     private final Set<Name> valueFunctionSet;
+    private boolean split;
 
     DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, Set<Name> valueFunctionSet) {
         this(name, writeAllowed,function,description, null, valueFunctionSet);
@@ -54,7 +55,7 @@ public class DataRegionHeading {
         this.description = description;
         this.offsetHeadings = offsetHeadings;
         this.valueFunctionSet = valueFunctionSet;
-    }
+     }
 
     // no functions with attributes for the moment
     DataRegionHeading(String attribute, boolean writeAllowed) {
@@ -65,6 +66,7 @@ public class DataRegionHeading {
         this.description = null;
         this.offsetHeadings = null;
         this.valueFunctionSet = null;
+        this.split = false;
     }
 
     public Name getName() {
@@ -104,6 +106,10 @@ public class DataRegionHeading {
     Set<Name> getValueFunctionSet() {
         return valueFunctionSet;
     }
+
+    boolean getSplit(){ return split; }
+
+    void setSplit(boolean split){this.split = split; }
 
     boolean isNameFunction(){
         return isNameFunction(function);
