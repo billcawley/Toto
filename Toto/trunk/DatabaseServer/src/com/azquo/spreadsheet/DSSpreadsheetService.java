@@ -478,12 +478,31 @@ public class DSSpreadsheetService {
 
     private <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
         List<List<T>> toReturn = new ArrayList<>(existing2DArray.size() * permutationWeWantToAdd.size());
+        int existing = 0;
+        for (existing = permutationWeWantToAdd.size()-1;existing > 0;existing--){
+            if (permutationWeWantToAdd.get(existing)!=null){
+                break;
+            }
+        }
+        existing++;
         for (List<T> existingRow : existing2DArray) {
+            int count = 0;
             for (T elementWeWantToAdd : permutationWeWantToAdd) { // for each new element
+                if (count++ == existing){
+                    break;
+                }
                 List<T> newRow = new ArrayList<>(existingRow); // copy the existing row
                 newRow.add(elementWeWantToAdd);// add the extra element
                 toReturn.add(newRow);
             }
+        }
+        //make up blank lines if necessary
+        while(existing2DArray.size() > 0 && toReturn.size() < permutationWeWantToAdd.size()){
+            List<T> newRow = new ArrayList<>();
+            while (newRow.size() <= existing2DArray.get(0).size()){
+                newRow.add(null);
+            }
+            toReturn.add(newRow);
         }
         return toReturn;
     }
@@ -524,6 +543,11 @@ public class DSSpreadsheetService {
         ArrayList<List<List<DataRegionHeading>>> permutedLists = new ArrayList<>(noOfHeadingDefinitionRows); // could be slightly less elements than this but it's unlikely to be a biggy.
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) { // not using a vanilla for loop as we want to skip forward to allow folding of rows with one cell on the right into the list above
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
+            if (headingDefinitionRow.get(lastHeadingDefinitionCellIndex) == null){
+                headingDefinitionRow.set(lastHeadingDefinitionCellIndex,new ArrayList<DataRegionHeading>());
+                headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
+            }
+            int startCount = headingDefinitionRow.get(lastHeadingDefinitionCellIndex).size() - 1;
             if (lastHeadingDefinitionCellIndex > 0 && !headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex)))
                 starting = false;// Don't permute until you have something to permute!
             while (!starting && headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 // we're not on the last row
@@ -532,9 +556,12 @@ public class DSSpreadsheetService {
                     ) {
                 // add the single last cell from the next row to the end of this row
                 if (headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex) == null) { // note if it's completely empty headingDefinitionRowHasOnlyTheRightCellPopulated would return true, not sure if this logic is completely correct, left over from the old code, I think having nulls in the permuations is allowed
-                    headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
+                      if (startCount-- <= 0){
+                          headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
+                      }
                 } else {
-                    headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
+                      headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
+                      startCount = headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex).size() - 1;
                 }
                 headingDefinitionRowIndex++;
             }
@@ -559,7 +586,7 @@ public class DSSpreadsheetService {
         return output;
     }
 
-    // what we're saying is it's only got one cell in the heading definition filled and it's the last one.
+     // what we're saying is it's only got one cell in the heading definition filled and it's the last one.
 
     private boolean headingDefinitionRowHasOnlyTheRightCellPopulated(List<List<DataRegionHeading>> headingLists) {
         int numberOfCellsInThisHeadingDefinition = headingLists.size();
@@ -1356,6 +1383,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         }
 
         // this should sort my memory concerns (I mean the AzquoCell being appropriately visible), call causing a memory barrier which runnable didn't.
+        // this should sort my memory concerns (I mean the AzquoCell being appropriately visible), call causing a memory barrier which runnable didn't.
         // Not 100% sure this error tracking is correct, leave it for the mo
         @Override
         public AzquoCell call() throws Exception {
@@ -1536,19 +1564,21 @@ Callable interface sorts the memory "happens before" using future gets which run
             List<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
             //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
             for (DataRegionHeading heading : rowHeadings) {
-                if (heading != null && (heading.getName() != null || (heading.getAttribute() != null && !heading.getAttribute().equals(".")))) {
+                 if (heading != null && (heading.getName() != null || !isDot(heading))) {
                     headingsForThisCell.add(heading);
-                }
+                 }
             }
             int hCount = headingsForThisCell.size();
             boolean checked = true;
             if (hCount > 0) {
-                for (DataRegionHeading heading : columnHeadings) {
-                    if (heading != null && (heading.getName() != null || (heading.getAttribute() != null && !heading.getAttribute().equals(".")))) {
+                 for (DataRegionHeading heading : columnHeadings) {
+                    if (heading != null && (heading.getName() != null || !isDot(heading))) {
                         headingsForThisCell.add(heading);
                     }
                 }
-                rowAndColumnHeadingsForThisCell = new ArrayList<>(headingsForThisCell);
+                if (isDot(rowHeadings.get(rowHeadings.size()-1)) || isDot(columnHeadings.get(columnHeadings.size()-1))){
+                    locked.isTrue = true;
+                 }
                 if (headingsForThisCell.size() > hCount) {
                     headingsForThisCell.addAll(contextHeadings);
                 } else {
@@ -1666,6 +1696,13 @@ Callable interface sorts the memory "happens before" using future gets which run
         return count;
     }
 
+    private boolean isDot(DataRegionHeading dataRegionHeading){
+        if (dataRegionHeading!=null&& dataRegionHeading.getAttribute()!=null && dataRegionHeading.getAttribute().equals(".")){
+            return true;
+        }
+        return false;
+    }
+
     private List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
             , final List<DataRegionHeading> contextHeadings, List<String> languages, int valueId) throws Exception {
@@ -1696,14 +1733,36 @@ Callable interface sorts the memory "happens before" using future gets which run
             List<List<Future<AzquoCell>>> futureCellArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
+                DataRegionHeading lastHeading = rowHeadings.get(rowHeadings.size()-1);
+                if (isDot(lastHeading)) {
+                    List<DataRegionHeading> newRowHeadings = new ArrayList<DataRegionHeading>();
+                    for (int headingNo = 0;headingNo < rowHeadings.size()-1;headingNo++){
+                        newRowHeadings.add(null);
+                    }
+                    newRowHeadings.add(lastHeading);
+                    rowHeadings = newRowHeadings;
+                }
+                //a '.' on the final heading means a blank line
                 List<Future<AzquoCell>> futureRow = new ArrayList<>(headingsForEachColumn.size());
                 /*for (int i = 0; i < headingsForEachColumn.size(); i++) {
                     returnRow.add(null);// yes a bit hacky, want to make the space that will be used by cellfiller
                 }*/
                 int colNo = 0;
+
                 for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
+                    DataRegionHeading lastColHeading = rowHeadings.get(rowHeadings.size() - 1);
+                    if (isDot(lastColHeading)) {
+                        List<DataRegionHeading> newColumnHeadings = new ArrayList<DataRegionHeading>();
+                        for (int headingNo = 0;headingNo < columnHeadings.size()-1;headingNo++){
+                            newColumnHeadings.add(null);
+                        }
+                        newColumnHeadings.add(lastColHeading);
+                        columnHeadings = newColumnHeadings;
+                    }
                     // inconsistent parameter ordering?
                     futureRow.add(executor.submit(new CellFiller(row, colNo, columnHeadings, rowHeadings, contextHeadings, languages, valueId, connection, counter, progressBarStep, nameComboValueCache)));
+
+
                     colNo++;
                 }
                 futureCellArray.add(futureRow);
@@ -1995,7 +2054,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                     AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadingsSource()
                             , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                             , cell.getUnsortedRow(), cell.getUnsortedCol(), databaseAccessToken.getLanguages());
-                    if (azquoCell != null) {
+                    if (azquoCell != null && !azquoCell.isLocked()) {
                         numberOfValuesModified++;
                         // this save logic is the same as before but getting necessary info from the AzquoCell
                         logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
@@ -2110,7 +2169,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         // ok some of the data region headings may be attribute, no real harm I don't think VS a whacking great set which would always be names
         List<Name> names = new ArrayList<>(dataRegionHeadings.size()); // switching back to list, now I consider I'm not sure if sets help much here and I want ordering
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
-            if (dataRegionHeading.getName() != null) {
+            if (dataRegionHeading!=null && dataRegionHeading.getName() != null) {
                 names.add(dataRegionHeading.getName());
             }
         }
