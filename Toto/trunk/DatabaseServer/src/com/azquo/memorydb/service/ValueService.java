@@ -272,7 +272,7 @@ public final class ValueService {
             // stopping the iterator in here and moving the declarations out of here made a MASSIVE difference! Be careful doing anything inside this loop,
             add = true;
             for (index = 0; index < setsToCheck.length; index++){
-                if (!setsToCheck[index].contains(value)) {
+                if (setsToCheck[index]!=null && !setsToCheck[index].contains(value)) {//setsToCheck may not have the same dimensionality if there are duplicate headings and 'smallestName' is the duplicate heading
                     add = false;
                     break;
                 }
