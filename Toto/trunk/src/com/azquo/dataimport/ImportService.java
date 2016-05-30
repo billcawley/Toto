@@ -9,19 +9,28 @@ import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
-import com.azquo.spreadsheet.view.AzquoBook;
+import com.azquo.spreadsheet.controller.OnlineController;
+import com.azquo.spreadsheet.view.CellForDisplay;
+import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
+import com.csvreader.CsvWriter;
 import com.jcraft.jsch.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
+import org.zkoss.zss.model.*;
+import org.zkoss.zss.range.SRange;
 
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -62,6 +71,12 @@ public final class ImportService {
     private ReportScheduleDAO reportScheduleDAO;
     @Autowired
     private DatabaseReportLinkDAO databaseReportLinkDAO;
+    @Autowired
+    private LoginService loginService;
+    private SimpleDateFormat ukdflong = new SimpleDateFormat("dd/MM/yy hh:mm:ss");
+    private SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
+    private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
@@ -360,9 +375,15 @@ public final class ImportService {
     }
 
     private String readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
-        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService, rmiClient);
-        azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
-        String reportName = azquoBook.getReportName();
+        final Book book = Importers.getImporter().imports(new File(tempName), "Imported");
+        ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+        //AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService, rmiClient);
+        //azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
+        String reportName = null;
+        SName reportRange = book.getInternalBook().getNameByName("az_ReportName");
+        if (reportRange != null){
+            reportName = bookUtils.getSnameCell(reportRange).getStringValue();
+        }
         if (reportName != null) {
             if (loggedInUser.getUser().isAdministrator() && !isData) {
                 return uploadReport(loggedInUser, tempName, fileName, reportName, "");
@@ -370,32 +391,35 @@ public final class ImportService {
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
             OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
             if (or == null) return "no report named " + reportName + " found";
-            azquoBook.calculateAll();
-            Map<String, String> choices = azquoBook.uploadChoices();
+             Map<String, String> choices = bookUtils.uploadChoices(book);
             for (String choice : choices.keySet()) {
                 spreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
             }
-            AzquoBook reportBook = spreadsheetService.loadAzquoBook(loadingUser, or);
-            azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
-            String toReturn = azquoBook.fillDataRangesFromCopy(loadingUser, or.getId());
-            reportBook.saveData(loadingUser, or.getId());
+            String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilename();
+             final Book reportBook = Importers.getImporter().imports(new File(bookPath), "Report name");
+            reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
+            reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+            reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
+            bookUtils.populateBook(reportBook, 0);
+            String toReturn = fillDataRangesFromCopy(loggedInUser, book, or);
+
             return toReturn;
         }
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("no database set");
         }
-        int sheetNo = 0;
         StringBuilder toReturn = new StringBuilder();
-        while (sheetNo < azquoBook.getNumberOfSheets()) {
-            toReturn.append(readSheet(loggedInUser, azquoBook, tempName, sheetNo, attributeNames, sheetNo == azquoBook.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
+        for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
+            Sheet sheet = book.getSheetAt(sheetNo);
+            toReturn.append(readSheet(loggedInUser, sheet, tempName, sheetNo, attributeNames, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
             toReturn.append("\n");
             sheetNo++;
         }
         return toReturn.toString();
     }
 
-    private String readSheet(LoggedInUser loggedInUser, AzquoBook azquoBook, final String tempFileName, final int sheetNo, List<String> attributeNames, boolean persistAfter) throws Exception {
-        String tempName = azquoBook.convertSheetToCSV(tempFileName, sheetNo);
+    private String readSheet(LoggedInUser loggedInUser, Sheet sheet, final String tempFileName, final int sheetNo, List<String> attributeNames, boolean persistAfter) throws Exception {
+        String tempName = convertSheetToCSV(tempFileName, sheet);
         String fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
         return readPreparedFile(loggedInUser, tempName, fileType, attributeNames, persistAfter, true);
     }
@@ -552,4 +576,168 @@ public final class ImportService {
             }
         }
     }
+
+    public String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport){
+        int items = 0;
+        int nonBlankItems = 0;
+        Sheet sourceSheet = sourceBook.getSheetAt(0);
+
+        for (SName sName:sourceBook.getInternalBook().getNames()) {
+            String name = sName.getName();
+            if (name.toLowerCase().startsWith("az_dataregion")) {
+                String regionName = name.substring("az_dataregion".length()).toLowerCase();
+                CellRegion sourceRegion = sName.getRefersToCellRegion();
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), regionName);
+                if (cellsAndHeadingsForDisplay!=null){
+                     List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
+                     if (data.size()!=sourceRegion.getRowCount() || data.get(0).size()!= sourceRegion.getColumnCount()){
+                        return "The size of the region " + regionName + " does not match";
+                    }
+                    for (int row=0;row< sourceRegion.getRowCount();row++){
+                        for (int col = 0;col<sourceRegion.getColumnCount();col++){
+                            SCell sourceCell = sourceSheet.getInternalSheet().getCell(sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                            String sourceValue = "";
+                            boolean isDouble = false;
+                            try {
+                                sourceValue = sourceCell.getStringValue();
+                            } catch (Exception e) {
+                                try{
+                                    double d = sourceCell.getNumberValue();
+                                    sourceValue = d + "";
+                                }catch(Exception e2){
+                                    //ignore
+                                }
+                            }
+                            data.get(row).get(col).setStringValue(sourceValue);
+                            if (sourceValue.length() > 0) nonBlankItems++;
+                            items++;
+                        }
+                    }
+
+
+                }
+                try {
+                    spreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
+                }catch(Exception e){
+                    return e.getMessage();
+                }
+            }
+
+        }
+
+        return nonBlankItems + " data items transferred successfully";
+
+    }
+
+    public String convertSheetToCSV(final String tempFileName, final Sheet sheet) throws Exception {
+        boolean transpose = false;
+        String fileType = sheet.getInternalSheet().getSheetName();
+        if (fileType.toLowerCase().contains("transpose")) {
+            transpose = true;
+        }
+        File temp = File.createTempFile(tempFileName, "." + fileType);
+        String tempName = temp.getPath();
+        temp.deleteOnExit();
+        //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
+        CsvWriter csvW = new CsvWriter(new FileWriter(tempName), '\t');
+        csvW.setUseTextQualifier(false);
+        convertRangeToCSV(sheet, csvW, null, null, transpose);
+        csvW.close();
+        return tempName;
+    }
+
+    private void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
+        SCell cell = sheet.getInternalSheet().getCell(r,c);
+        //if (colCount++ > 0) bw.write('\t');
+        if (cell != null && cell.getType() != SCell.CellType.BLANK) {
+            String cellFormat = convertDates(cell.getStringValue()).replace("\r\n","~~");//a hack to carry through Excel carriage returns
+            if (newNames != null && newNames.get(cellFormat) != null) {
+                csvW.write(newNames.get(cellFormat));
+            } else {
+                String style = cell.getCellStyle().toString();
+                if (style.contains("$")|| style.contains("£")){
+                    try {
+                        cellFormat = cell.getNumberValue() + "";
+                    }catch(Exception e){
+
+                    }
+                }
+                if (cellFormat.contains("\"\"") && cellFormat.startsWith("\"")&& cellFormat.endsWith("\"")){
+                    //remove spuriouse quote marks
+                    cellFormat = cellFormat.substring(1, cellFormat.length()-1).replace("\"\"","\"");
+                }
+                csvW.write(cellFormat);
+            }
+        } else {
+            csvW.write("");
+        }
+
+    }
+
+
+    public void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW, CellRegion range, Map<String, String> newNames, boolean transpose) throws Exception {
+
+        /*  NewNames here is a very short list which will convert 'next...' into the next available number for that variable, the value being held as the attribute 'next' on that name - e.g. for invoices
+        *   the code is now defunct, but was present at SVN version 1161
+        *
+        * */
+        int rows = sheet.getLastRow();
+        int maxCol = 0;
+        for (int row = 0; row <= sheet.getLastRow(); row++){
+            if (maxCol < sheet.getLastColumn(row)){
+                maxCol = sheet.getLastColumn(row);
+            }
+        }
+        int startRow = 0;
+        int startCol = 0;
+        if (range != null) {
+            startRow = range.getRow();
+            startCol = range.getColumn();
+            rows = startRow + range.getRowCount() - 1;
+            maxCol = startCol + range.getColumnCount() - 1;
+        }
+
+        if (!transpose) {
+            for (int r = startRow; r <= rows; r++) {
+                SRow row = sheet.getInternalSheet().getRow(r);
+                if (row != null) {
+                    //System.out.println("Excel row " + r);
+                    //int colCount = 0;
+                    for (int c = startCol; c <= maxCol; c++) {
+                        writeCell(sheet, r, c, csvW, newNames);
+                    }
+                    csvW.endRecord();
+                }
+            }
+        } else {
+            for (int c = startCol; c <= maxCol; c++) {
+                for (int r = startRow; r <= rows; r++) {
+                    writeCell(sheet, r, c, csvW, newNames);
+                }
+                csvW.endRecord();
+
+            }
+        }
+    }
+
+    private String convertDates(String possibleDate) {
+        //this routine should probably be generalised to recognise more forms of date
+        int slashPos = possibleDate.indexOf("/");
+        if (slashPos < 0) return possibleDate;
+        Date date;
+        try {
+            date = ukdflong.parse(possibleDate);// try with time
+        } catch (Exception e) {
+            try {
+                date = ukdf.parse(possibleDate); //try without time
+            }catch(Exception e2){
+                return possibleDate;
+            }
+        }
+        return df.format(date);
+    }
+
+
+
+
 }
