@@ -845,7 +845,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    static SCell getSnameCell(SName sName) {
+    public static SCell getSnameCell(SName sName) {
         if (sName == null) return null;
         return sName.getBook().getSheetByName(sName.getRefersToSheetName()).getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
     }
