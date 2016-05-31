@@ -699,7 +699,7 @@ public class DSImportService {
                     String[] nextLine = lineIterator.next();
                     int headingCount = 1;
                     boolean lastfilled = true;
-                    while (nextLine!=null && lastfilled && headingCount++ < 10){
+                    while (lineIterator.hasNext() && lastfilled && headingCount++ < 10){
                         int colNo = 0;
                         lastfilled = false;
                         for (String heading:nextLine){
@@ -1270,12 +1270,12 @@ public class DSImportService {
                 Collection<Name> exclusiveSetToCheckAgainst = null;
                 if ("".equals(cellWithHeading.immutableImportHeading.exclusive) && cellWithHeading.immutableImportHeading.parentNames.size() == 1) {
                     // blank exclusive clause, use child of if there's one (check all the way down. all children, necessary due due to composite option name1->name2->name3->etc
-                    exclusiveSetToCheckAgainst = cellWithHeading.immutableImportHeading.parentNames.iterator().next().findAllChildren(false);
+                    exclusiveSetToCheckAgainst = cellWithHeading.immutableImportHeading.parentNames.iterator().next().findAllChildren();
                 } else if (cellWithHeading.immutableImportHeading.exclusive != null) { // exclusive is referring to a higher name
                     Name specifiedExclusiveSet = nameService.findByName(azquoMemoryDBConnection, cellWithHeading.immutableImportHeading.exclusive);
                     if (specifiedExclusiveSet != null) {
                         specifiedExclusiveSet.removeFromChildrenWillBePersisted(childCell.lineName); // if it's directly against the top it won't be caught by the set below, don't want to add to the set I'd have to make a new, potentially large, set
-                        exclusiveSetToCheckAgainst = specifiedExclusiveSet.findAllChildren(false);
+                        exclusiveSetToCheckAgainst = specifiedExclusiveSet.findAllChildren();
                     }
                 }
                 if (exclusiveSetToCheckAgainst != null) {

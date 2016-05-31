@@ -420,7 +420,7 @@ public final class NameService {
         } else {
             logger.debug("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
             // I think provenance from connection is correct, we should be looking to make a useful provenance when making the connection from the data access token
-            Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), true); // default additive to true
+            Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance());
             if (!attributeNames.get(0).equals(Constants.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
                 newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
             }
@@ -494,7 +494,7 @@ public final class NameService {
         if (level == ALL_LEVEL_INT) {
             System.out.println("ALL_LEVEL_INT called on " + name.getDefaultDisplayName() + ", annoying!");
             // new logic! All names is the name find all children plus itself. A bit annoying to make a copy but there we go
-            Set<Name> toReturn = HashObjSets.newMutableSet(name.findAllChildren(false));
+            Set<Name> toReturn = HashObjSets.newMutableSet(name.findAllChildren());
             toReturn.add(name); // a whole new set just to add this, grrr
             return new NameSetList(toReturn, null, true); // at least we're now flagging this up : you can modify this set
         }
@@ -811,7 +811,7 @@ public final class NameService {
                             if (previousSetSet.contains(name)) {
                                 setIntersectionSet.add(name);
                             }
-                            for (Name child : name.findAllChildren(false)) {
+                            for (Name child : name.findAllChildren()) {
                                 if (previousSetSet.contains(child)) {
                                     setIntersectionSet.add(child);
                                 }
@@ -825,7 +825,7 @@ public final class NameService {
                                 setIntersectionList.add(name);
                             } else { // we've already checked the top members, check all children to see if it's in there also
                                 for (Name intersectName : lastSet) {
-                                    if (intersectName.findAllChildren(false).contains(name)) {
+                                    if (intersectName.findAllChildren().contains(name)) {
                                         setIntersectionList.add(name);
                                     }
                                 }
@@ -846,7 +846,7 @@ public final class NameService {
                     // if filtering brand it means az_brand - this is for the pivot functionality, pivot filter and pivot header
                     if (lastName.size()==1){
                         Name setName = lastName.iterator().next();
-                        lastName = setName.findAllChildren(false);
+                        lastName = setName.findAllChildren();
                         if (lastName.size()==0 && setName.getDefaultDisplayName().startsWith("az_")){
                             setName = findByName(azquoMemoryDBConnection,setName.getDefaultDisplayName().substring(3));
                             if (setName!=null){
@@ -949,7 +949,7 @@ public final class NameService {
                     if (attributeNames.size() > 1) { // just checking we have have the user added to the list
                         String userEmail = attributeNames.get(0);
                         if (totalName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
-                            Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), totalName.getAdditive()); // a basic copy of the set
+                            Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
                             //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
                             userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
                             totalName.addChildWillBePersisted(userSpecificSet);
@@ -997,7 +997,7 @@ public final class NameService {
                                 localLanguages.add(userEmail);
                                 Name userSpecificSet = findByName(azquoMemoryDBConnection, defName.getDefaultDisplayName(), localLanguages);
                                 if (userSpecificSet == null) {
-                                    userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), defName.getAdditive()); // a basic copy of the set
+                                    userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
                                     //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
                                     userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
                                     defName.addChildWillBePersisted(userSpecificSet);
@@ -1134,7 +1134,7 @@ public final class NameService {
         Name name = names.iterator().next();
         List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        for (Name child : name.findAllChildren(false)) {
+        for (Name child : name.findAllChildren()) {
             if (!rubbishBin.getChildren().contains(child)) {
                 Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(languages, child.getDefaultDisplayName(), name);
                 if (possibles.size() > 1) {

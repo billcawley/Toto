@@ -70,7 +70,7 @@ public class StringUtils {
         return pos >= len + 2 && searchText.substring(pos - len - 1, pos).toLowerCase().equals(testItem + " ");
     }
 
-/* after some syntax chenges we might need some updated examples here
+/* after some syntax changes we might need some updated examples here
 
 nameStrings are strings we assume are references to names
 string literals are things in normal quotes e.g. dates
@@ -169,6 +169,10 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
         statement = statement.replaceAll("(?i)level lowest", "level 100");
         statement = statement.replaceAll("(?i)level highest", "level -100");
         statement = statement.replaceAll("(?i)level all", "level 101");
+        // can be used by the new "exclude" syntax
+        statement = statement.replace("[", " [ ").replace("  ", " ");
+        statement = statement.replace("]", " ] ").replace("  ", " ");
+
 
  /* so now we have things like this, should be ready for a basic test
         !1 level 2 from !2 to !3 as !4
@@ -219,6 +223,7 @@ I should be ok for StringTokenizer at this point
         return term.equals("*") || term.equals("/") || term.equals("+") || term.equals("-") || term.equals(">")
                 || term.equals("<") || term.equals("=") || term.equals(",")
                 || term.equals("(") || term.equals(")")
+                || term.equals("[") || term.equals("]")
                 || term.equalsIgnoreCase("and")
                 || term.equalsIgnoreCase(NameService.LEVEL) || term.equalsIgnoreCase(NameService.FROM)
                 || term.equalsIgnoreCase(NameService.TO) || term.equalsIgnoreCase(NameService.COUNT)

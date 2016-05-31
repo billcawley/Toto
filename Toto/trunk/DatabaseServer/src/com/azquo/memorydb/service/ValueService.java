@@ -8,7 +8,9 @@ import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.*;
 import net.openhft.koloboke.collect.set.hash.HashObjSet;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.math.util.OpenIntToDoubleHashMap;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -204,7 +206,7 @@ public final class ValueService {
 
     private static AtomicInteger findForNamesIncludeChildrenCount = new AtomicInteger(0);
 
-    private List<Value> findForNamesIncludeChildren(final List<Name> names, boolean payAttentionToAdditive, Map<List<Name>, Set<Value>> nameComboValueCache) {
+    private List<Value> findForNamesIncludeChildren(final List<Name> names, Map<List<Name>, Set<Value>> nameComboValueCache) {
 
 /*        StringBuilder log = new StringBuilder();
         for (Name name : names) {
@@ -227,19 +229,19 @@ public final class ValueService {
             // the collection wrap may cost, guess we'll see hjow it goes
             part1NanoCallTime1.addAndGet(System.nanoTime() - point);
 //            smallestValuesSet = nameComboValueCache.computeIfAbsent(allButTwo, computed -> HashObjSets.newImmutableSet(findForNamesIncludeChildren(allButTwo, payAttentionToAdditive, null)));
-            smallestValuesSet = nameComboValueCache.computeIfAbsent(allButOne, computed -> HashObjSets.newImmutableSet(findForNamesIncludeChildren(allButOne, payAttentionToAdditive, null)));
+            smallestValuesSet = nameComboValueCache.computeIfAbsent(allButOne, computed -> HashObjSets.newImmutableSet(findForNamesIncludeChildren(allButOne, null)));
             point = System.nanoTime(); //reset after the cache hit as that will be measured in the recursive call
 /*            setsToCheck = new Set[2];
             setsToCheck[0] = names.get(names.size() - 2).findValuesIncludingChildren(payAttentionToAdditive);
             setsToCheck[1] = names.get(names.size() - 1).findValuesIncludingChildren(payAttentionToAdditive);*/
             setsToCheck = new Set[1];
-            setsToCheck[0] = names.get(names.size() - 1).findValuesIncludingChildren(payAttentionToAdditive);
+            setsToCheck[0] = names.get(names.size() - 1).findValuesIncludingChildren();
         } else {
             // first get the shortest value list taking into account children
             int smallestNameSetSize = -1;
             Name smallestName = null;
             for (Name name : names) {
-                int setSizeIncludingChildren = name.findValuesIncludingChildren(payAttentionToAdditive).size();
+                int setSizeIncludingChildren = name.findValuesIncludingChildren().size();
                 if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
                     smallestNameSetSize = setSizeIncludingChildren;
                     if (smallestNameSetSize == 0) {//no values
@@ -251,7 +253,7 @@ public final class ValueService {
             part1NanoCallTime1.addAndGet(System.nanoTime() - point);
             point = System.nanoTime();
             assert smallestName != null; // make intellij happy
-            smallestValuesSet = smallestName.findValuesIncludingChildren(payAttentionToAdditive);
+            smallestValuesSet = smallestName.findValuesIncludingChildren();
             part2NanoCallTime1.addAndGet(System.nanoTime() - point);
             point = System.nanoTime();
             // ok from testing a new list using contains against values seems to be the thing, double the speed at least I think!
@@ -259,7 +261,7 @@ public final class ValueService {
             int arrayIndex = 0;
             for (Name name : names) {
                 if (name != smallestName) { // a little cheaper than making a new name set and knocking this one off I think
-                    setsToCheck[arrayIndex] = name.findValuesIncludingChildren(payAttentionToAdditive);
+                    setsToCheck[arrayIndex] = name.findValuesIncludingChildren();
                     arrayIndex++;
                 }
             }
@@ -318,10 +320,11 @@ public final class ValueService {
     private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
 
     public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final MutableBoolean locked
-            , final boolean payAttentionToAdditive, DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception {
+            , DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
+        Collection<Name> appliesToNames = null; // used if you want formulae from calc to be resolved at a lower level and the result summed rather than sum each term in the calc formula
         List<Name> formulaNames = new ArrayList<>();
         String calcString = null; // whether this is null replaces hasCalc
         // add all names to calcnames except the the one with CALCULATION
@@ -330,12 +333,15 @@ public final class ValueService {
             if (calcString == null) {// then try and find one - can only happen once
                 String calc = name.getAttribute(Name.CALCULATION, false, null); // using extra parameters to stop parent checking for this attribute
                 if (calc != null) {
+                    if (name.getAttribute(Name.APPLIESTO) != null){
+                        // will be being looked up by default display name for the moment
+                        appliesToNames = nameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(Name.APPLIESTO));
+                    }
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
                     List<String> formulaStrings = new ArrayList<>();
                     List<String> nameStrings = new ArrayList<>();
                     List<String> attributeStrings = new ArrayList<>();
-
                     calc = stringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
                     formulaNames = nameService.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
                     calc = stringUtils.shuntingYardAlgorithm(calc);
@@ -351,50 +357,130 @@ public final class ValueService {
                 calcnames.add(name);
             }
         }
+        // ok we've populated calc names is applicable, now check if calc names interacts with applies to (applies to is looking for an intersection with calc names e,g, from the row or context NOT the names in the formulae)
+        List<Name> restrictedAppliesToNames = new ArrayList<>();
+        if (appliesToNames != null){ // then try and find the name
+            Iterator<Name> calcNamesIterator = calcnames.iterator(); // for the remove function otherwise a loop might throw a wobbbler (exception)
+            while (calcNamesIterator.hasNext()){ // go through the names and find the first that crosses over with the appliesTo set
+                for (Name appliesToName : appliesToNames){
+                    if (calcNamesIterator.next().findAllChildren().contains(appliesToName)){ // we have a hit (one of the applies to list is found in the children of the formula names), add to the list that will replace this calc name
+                        restrictedAppliesToNames.add(appliesToName);
+                    }
+                }
+                if (!restrictedAppliesToNames.isEmpty()){// we have a restricted list for this calc name, remove that calc name and stop looking
+                    calcNamesIterator.remove();
+                    break;
+                }
+            }
+        }
 
         // no reverse polish converted formula, just sum
         if (calcString == null) {
-            return resolveValuesForNamesIncludeChildren(names, payAttentionToAdditive, valuesHook, function, locked, nameComboValueCache);
+            return resolveValuesForNamesIncludeChildren(names, valuesHook, function, locked, nameComboValueCache);
         } else {
-            // this is where the work done by the shunting yard algorithm is used
-            // ok I think I know why an array was used, to easily reference the entry before
-            double[] values = new double[20];//should be enough!!
-            int valNo = 0;
-            StringTokenizer st = new StringTokenizer(calcString, " ");
-            while (st.hasMoreTokens()) {
-                String term = st.nextToken();
-                if (term.length() == 1) { // operation
-                    valNo--;
-                    char charTerm = term.charAt(0);
-                    if (charTerm == '+') {
-                        values[valNo - 1] += values[valNo];
-                    } else if (charTerm == '-') {
-                        values[valNo - 1] -= values[valNo];
-                    } else if (charTerm == '*') {
-                        values[valNo - 1] *= values[valNo];
-                    } else if (values[valNo] == 0) {
-                        values[valNo - 1] = 0;
-                    } else {
-                        values[valNo - 1] /= values[valNo];
+            if (!restrictedAppliesToNames.isEmpty()){
+                double toReturn = 0;
+                for (Name appliesToName : restrictedAppliesToNames){
+                    calcnames.add(appliesToName);
+                    double[] values = new double[20];//should be enough!!
+                    int valNo = 0;
+                    StringTokenizer st = new StringTokenizer(calcString, " ");
+                    while (st.hasMoreTokens()) {
+                        String term = st.nextToken();
+                        if (term.length() == 1) { // operation
+                            valNo--;
+                            char charTerm = term.charAt(0);
+                            if (charTerm == '+') {
+                                values[valNo - 1] += values[valNo];
+                            } else if (charTerm == '-') {
+                                values[valNo - 1] -= values[valNo];
+                            } else if (charTerm == '*') {
+                                values[valNo - 1] *= values[valNo];
+                            } else if (values[valNo] == 0) {
+                                values[valNo - 1] = 0;
+                            } else {
+                                values[valNo - 1] /= values[valNo];
+                            }
+                        } else { // a value, not in the Azquo sense, a number or reference to a name
+                            if (NumberUtils.isNumber(term)) {
+                                values[valNo++] = Double.parseDouble(term);
+                            } else {
+                                // we assume it's a name id starting with NAMEMARKER
+                                //int id = Integer.parseInt(term.substring(1));
+                                // so get the name and add it to the other names
+                                Name name = nameService.getNameFromListAndMarker(term, formulaNames);
+                                List<Name> seekList = new ArrayList<>(calcnames);
+                                seekList.add(name);
+                                if (name.getAttribute(Name.INDEPENDENTOF) != null){// then this name formula term is saying it wants to exclude some names
+                                    Name independentOfSet = nameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.INDEPENDENTOF));
+                                    Iterator<Name> seekListIterator = seekList.iterator();
+                                    while (seekListIterator.hasNext()){
+                                        final Name test = seekListIterator.next();
+                                        if (independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test)){
+                                            seekListIterator.remove();
+                                        }
+                                    }
+                                }
+                                //note - would there be recursion? Resolve order of formulae might be unreliable
+                                values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, function, nameComboValueCache);
+                            }
+                        }
                     }
-                } else { // a value, not in the Azquo sense, a number or reference to a name
-                    if (NumberUtils.isNumber(term)) {
-                        values[valNo++] = Double.parseDouble(term);
-                    } else {
-                        // we assume it's a name id starting with NAMEMARKER
-                        //int id = Integer.parseInt(term.substring(1));
-                        // so get the name and add it to the other names
-                        Name name = nameService.getNameFromListAndMarker(term, formulaNames);
-                        List<Name> seekList = new ArrayList<>(calcnames);
-                        seekList.add(name);
-                        // and put the result in
-                        //note - recursion in case of more than one formula, but the order of the formulae is undefined if the formulae are in different peer groups
-                        values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekList, locked, payAttentionToAdditive, valuesHook, attributeNames, function, nameComboValueCache);
+                    toReturn += values[0];
+                    calcnames.remove(appliesToName);
+                }
+                locked.isTrue = true;
+                return toReturn;
+            } else {
+                // this is where the work done by the shunting yard algorithm is used
+                // ok I think I know why an array was used, to easily reference the entry before
+                double[] values = new double[20];//should be enough!!
+                int valNo = 0;
+                StringTokenizer st = new StringTokenizer(calcString, " ");
+                while (st.hasMoreTokens()) {
+                    String term = st.nextToken();
+                    if (term.length() == 1) { // operation
+                        valNo--;
+                        char charTerm = term.charAt(0);
+                        if (charTerm == '+') {
+                            values[valNo - 1] += values[valNo];
+                        } else if (charTerm == '-') {
+                            values[valNo - 1] -= values[valNo];
+                        } else if (charTerm == '*') {
+                            values[valNo - 1] *= values[valNo];
+                        } else if (values[valNo] == 0) {
+                            values[valNo - 1] = 0;
+                        } else {
+                            values[valNo - 1] /= values[valNo];
+                        }
+                    } else { // a value, not in the Azquo sense, a number or reference to a name
+                        if (NumberUtils.isNumber(term)) {
+                            values[valNo++] = Double.parseDouble(term);
+                        } else {
+                            // we assume it's a name id starting with NAMEMARKER
+                            //int id = Integer.parseInt(term.substring(1));
+                            // so get the name and add it to the other names
+                            Name name = nameService.getNameFromListAndMarker(term, formulaNames);
+                            List<Name> seekList = new ArrayList<>(calcnames);
+                            seekList.add(name);
+                            if (name.getAttribute(Name.INDEPENDENTOF) != null){// then this name formula term is saying it wants to exclude some names
+                                Name independentOfSet = nameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.INDEPENDENTOF));
+                                Iterator<Name> seekListIterator = seekList.iterator();
+                                while (seekListIterator.hasNext()){
+                                    final Name test = seekListIterator.next();
+                                    if (independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test)){
+                                        seekListIterator.remove();
+                                    }
+                                }
+                            }
+                            //note - would there be recursion? Resolve order of formulae might be unreliable
+                            values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, function, nameComboValueCache);
+                        }
                     }
                 }
+                locked.isTrue = true;
+                return values[0];
             }
-            locked.isTrue = true;
-            return values[0];
         }
     }
 
@@ -456,13 +542,13 @@ public final class ValueService {
 
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
-    private double resolveValuesForNamesIncludeChildren(final List<Name> names, final boolean payAttentionToAdditive
+    private double resolveValuesForNamesIncludeChildren(final List<Name> names
             , DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked, Map<List<Name>, Set<Value>> nameComboValueCache) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
 
-        List<Value> values = findForNamesIncludeChildren(names, payAttentionToAdditive, nameComboValueCache);
+        List<Value> values = findForNamesIncludeChildren(names, nameComboValueCache);
         double max = 0;
         double min = 0;
 
@@ -750,7 +836,7 @@ public final class ValueService {
 
     // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
     // todo - get rid of part1NanoCallTime1 etc or use different variables! They are usef in the main value resolving function
-    private Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names, boolean payAttentionToAdditive) {
+    private Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names) {
         findForSearchNamesIncludeChildrenCount.incrementAndGet();
         long start = System.nanoTime();
 
@@ -762,7 +848,7 @@ public final class ValueService {
 
         final Set<Value> valueSet = new HashSet<>();
         for (Name name : smallestNames) {
-            valueSet.addAll(name.findValuesIncludingChildren(payAttentionToAdditive));
+            valueSet.addAll(name.findValuesIncludingChildren());
         }
         // this seems a fairly crude implementation, list all values for the name sets then check that that values list is in all the name sets
         part2NanoCallTime1.addAndGet(System.nanoTime() - point);
@@ -801,7 +887,7 @@ public final class ValueService {
     Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
         getSearchValuesCount.incrementAndGet();
         if (searchNames == null) return null;
-        Set<Value> values = findForSearchNamesIncludeChildren(searchNames, false);
+        Set<Value> values = findForSearchNamesIncludeChildren(searchNames);
         //The names on the values have been moved 'up' the tree to the name that was searched
         // e.g. if the search was 'England' and the name was 'London' then 'London' has been replaced with 'England'
         // so there may be duplicates in an unordered search - hence the consolidation below.

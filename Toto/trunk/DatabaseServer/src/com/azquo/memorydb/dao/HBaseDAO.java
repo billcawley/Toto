@@ -104,7 +104,6 @@ public class HBaseDAO {
 
     private static final String NAMETABLE = "name";
     private static final byte[] PROVENANCEID = Bytes.toBytes("provenance_id");
-    private static final byte[] ADDITIVE = Bytes.toBytes("additive");
     private static final byte[] ATTRIBUTES = Bytes.toBytes("attributes");
     private static final byte[] CHILDREN = Bytes.toBytes("children");
     private static final byte[] NOPARENTS = Bytes.toBytes("no_parents");
@@ -119,7 +118,6 @@ public class HBaseDAO {
         for (Name name : names) {
             Put put = new Put(Bytes.toBytes(name.getId()));
             put.add(COLUMN_FAMILY, PROVENANCEID, Bytes.toBytes(name.getProvenance().getId()));
-            put.add(COLUMN_FAMILY, ADDITIVE, Bytes.toBytes(name.getAdditive()));
             put.add(COLUMN_FAMILY, ATTRIBUTES, Bytes.toBytes(name.getAttributesForFastStore()));
             put.add(COLUMN_FAMILY, CHILDREN, name.getChildrenIdsAsBytes());
             put.add(COLUMN_FAMILY, NOPARENTS, Bytes.toBytes(name.getParents().size()));
@@ -196,7 +194,6 @@ public class HBaseDAO {
             toReturn.add(new Name(azquoMemoryDB,
                     Bytes.toInt(r.getRow()),
                     Bytes.toInt(r.getValue(COLUMN_FAMILY, PROVENANCEID)),
-                    Bytes.toBoolean(r.getValue(COLUMN_FAMILY, ADDITIVE)),
                     Bytes.toString(r.getValue(COLUMN_FAMILY, ATTRIBUTES)),
                     r.getValue(COLUMN_FAMILY, CHILDREN),
                     Bytes.toInt(r.getValue(COLUMN_FAMILY, NOPARENTS)),

@@ -57,7 +57,6 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
-        // perhaps a bit long winded but it gets us the spreadsheet
         Session session = Sessions.getCurrent();
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
         // todo - check ZK to see if there's a better way to do this
@@ -100,7 +99,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         highlightPopup.setId("highlightPopup");
         //item2.setPopup(instructionsPopup);
         //item3.setPopup(highlightPopup);
-
         // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
         filterPopup = new Popup();
         filterPopup.setId("filterPopup");
@@ -184,7 +182,6 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     /* Bit of an odd one this : on a cell click "wake" the log between the client and report server back up as there may be activity shortly
     In addition I now want to now deal with the new filter things - this was by a cell area a la WASPS but now we'll do it by a popup
-    Also pivot code kick in here, need to check this all makes sense . . .
      */
 
     @Listen("onCellClick = #myzss")
@@ -192,21 +189,19 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
-        //-- what is going on here?
         String selectionName = pivotItem(zkAzquoBookUtils, event);
         String selectionList = null;
         CellRegion queryResultRegion = null;
-        if (selectionName != null) {
+        if (selectionName != null) { // we have a pivot menu for that cell. Either the dropdown at the top or a row heading - todo address the row heading having excel style dropdown as well as our pivot style box
             selectionList = "`" + selectionName + "` children sorted";
             selectionName = "az_" + selectionName.trim();
             queryResultRegion = new CellRegion(event.getRow(), event.getColumn());
-        } else {
+        } else { // check to see if it's a non-pivot multi
             List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
             for (SName name : names) {
                 if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
                     selectionName = name.getName();
                     queryResultRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), selectionName + RESULT);
-
                     final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
                     if (filterQueryCell != null) {
                         final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(filterQueryCell.getRefersToCellRegion().getRow(), filterQueryCell.getRefersToCellRegion().getColumn());
@@ -216,8 +211,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
         }
-        final CellRegion queryResultRegion2 = queryResultRegion;
         if (selectionList != null) {
+            // finals for thread safety - use in lambdas
+            final CellRegion queryResultRegion2 = queryResultRegion;
             final String selectionName2 = selectionName;
             final String selectionList2 = selectionList;
             while (filterPopup.getChildren().size() > 0) { // clear it out
@@ -251,7 +247,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 Set<Listitem> selectedItems = new HashSet<>();
                 int index = 0;
                 for (FilterTriple filterTriple : filterOptions) {
-                    listbox.appendItem(filterTriple.name, filterTriple.nameId + ""); // can I puit the name id in there?
+                    listbox.appendItem(filterTriple.name, filterTriple.nameId + ""); // it seems to allow me to jam the name id in there, useful (though as ever it would be nice for the client side to know nothing about name ids)
                     if (filterTriple.selected) {
                         selectedItems.add(listbox.getItemAtIndex(index));
                     }
@@ -505,6 +501,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 int headingRows = pivotHeadings.getRowCount();
                 int filterCount = 0;
                 //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
+                // this logic is repeated from add validation, dedupe?
                 for (String filter : filters) {
                     List<String> optionsList = zkAzquoBookUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
                     if (optionsList != null && optionsList.size() > 1) {
@@ -526,7 +523,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                 //surely there must be a better way of getting the first cell off a region!
                 String firstItem = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn()).getStringValue();
                 if (firstItem.toLowerCase().startsWith("permute(")) {
-
                     String[] rowHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
                     String displayRowHeadingsString = "az_Display" + name.getName().substring(3);
                     CellRegion displayRowHeadings = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), displayRowHeadingsString);
@@ -542,10 +538,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
         }
-
         return null;
-
-
     }
 
     private void provenanceForRowAndColumn(int cellRow, int cellCol, int mouseX, int mouseY) {

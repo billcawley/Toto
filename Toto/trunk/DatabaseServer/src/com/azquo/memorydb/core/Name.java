@@ -46,6 +46,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class Name extends AzquoMemoryDBEntity {
 
     public static final String CALCULATION = "CALCULATION";
+    public static final String APPLIESTO = "APPLIES TO";
+    public static final String INDEPENDENTOF = "INDEPENDENT OF";
     private static final String LOCAL = "LOCAL";
     private static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
 
@@ -60,7 +62,6 @@ public final class Name extends AzquoMemoryDBEntity {
 //    private static final Logger logger = Logger.getLogger(Name.class);
 
     private Provenance provenance; // should be volatile? Don't care about being completely up to date but could a prtially constructed object get in here?
-    private boolean additive;
 
     /* Going to try for attributes as two arrays as this should save a lot of space vs a LinkedHashMap.
     That is to say one makes a new one of these when updating attributes and then switch it in. Immutable, hence atomic
@@ -148,11 +149,11 @@ public final class Name extends AzquoMemoryDBEntity {
     private volatile Set<Name> childrenAsSet;
     private volatile Name[] children;
 
-    // For the code to make new names (not when loading). Is additive ever false?
+    // For the code to make new names (not when loading).
 
     private static AtomicInteger newNameCount = new AtomicInteger(0);
 
-    public Name(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance, boolean additive) throws Exception {
+    public Name(final AzquoMemoryDB azquoMemoryDB, final Provenance provenance) throws Exception {
         super(azquoMemoryDB, 0);
         newNameCount.incrementAndGet();
         valuesAsSet = null;
@@ -165,19 +166,17 @@ public final class Name extends AzquoMemoryDBEntity {
         getAzquoMemoryDB().addNameToDb(this);
         newNameCount.incrementAndGet();
         setProvenanceWillBePersisted(provenance);
-        setAdditiveWillBePersisted(additive);
     }
 
     // For loading, it should only be used by the NameDAO. Can I reshuffle and make it non public? Todo.
 
     private static AtomicInteger newName3Count = new AtomicInteger(0);
 
-    public Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, boolean additive, String attributes, byte[] chidrenCache, int noParents, int noValues) throws Exception {
+    public Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, byte[] chidrenCache, int noParents, int noValues) throws Exception {
         super(azquoMemoryDB, id);
         newName3Count.incrementAndGet();
         this.childrenCache = chidrenCache;
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId); // see no reason not to do this here now
-        this.additive = additive;
         //this.attributes = transport.attributes;
         String[] attsArray = attributes.split(ATTRIBUTEDIVIDER);
         String[] attributeKeys = new String[attsArray.length / 2];
@@ -227,17 +226,6 @@ public final class Name extends AzquoMemoryDBEntity {
         return provenance;
     }
 
-    public boolean getAdditive() {
-        return additive;
-    }
-
-    private synchronized void setAdditiveWillBePersisted(final boolean additive) throws Exception {
-        if (this.additive != additive) {
-            this.additive = additive;
-            setNeedsPersisting();
-        }
-    }
-
     private synchronized void setProvenanceWillBePersisted(final Provenance provenance) throws Exception {
         if (this.provenance == null || !this.provenance.equals(provenance)) {
             this.provenance = provenance;
@@ -251,7 +239,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 "id=" + getId() +
                 ", default display name=" + getDefaultDisplayName() +
                 ", provenance=" + provenance +
-                ", additive=" + additive +
                 ", nameAttributes=" + nameAttributes +
                 '}';
     }
@@ -306,7 +293,6 @@ public final class Name extends AzquoMemoryDBEntity {
         checkDatabaseMatches(value);
         // may make this more clever as in clearing only if there's a change but not now
         valuesIncludingChildrenCache = null;
-        valuesIncludingChildrenPayAttentionToAdditiveCache = null;
         // without volatile supposedly this (and getValues) could be accessing a not yet instantiated set. I am sceptical.
         if (valuesAsSet != null) {
             valuesAsSet.add(value);// Backed by concurrent hash map should be thread safe
@@ -360,7 +346,6 @@ public final class Name extends AzquoMemoryDBEntity {
         if (valuesAsSet != null) {
             if (valuesAsSet.remove(value)) {
                 valuesIncludingChildrenCache = null;
-                valuesIncludingChildrenPayAttentionToAdditiveCache = null;
             }
         } else {
             synchronized (this) { // just sync on this object to protect the lists
@@ -368,7 +353,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (valuesAsSet != null) {
                     if (valuesAsSet.remove(value)) {
                         valuesIncludingChildrenCache = null;
-                        valuesIncludingChildrenPayAttentionToAdditiveCache = null;
                     }
                     return;
                 }
@@ -385,7 +369,6 @@ public final class Name extends AzquoMemoryDBEntity {
                     }
                     values = newValuesArray;
                     valuesIncludingChildrenCache = null;
-                    valuesIncludingChildrenPayAttentionToAdditiveCache = null;
                 }
             }
         }
@@ -700,28 +683,25 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // same logic as find all parents but returns a set, should be correct
-    // also we have the option to use additive or not
     // Koloboke makes the sets as light as can be expected, volatile to comply with double-checked locking pattern https://en.wikipedia.org/wiki/Double-checked_locking
     private volatile Set<Name> findAllChildrenCache = null;
-    private volatile Set<Name> findAllChildrenPayAttentionToAdditiveCache = null;
 
     private static AtomicInteger finaAllChildrenCount = new AtomicInteger(0);
 
-    private void findAllChildren(Name name, boolean payAttentionToAdditive, final Set<Name> allChildren) {
+    private void findAllChildren(Name name, final Set<Name> allChildren) {
         finaAllChildrenCount.incrementAndGet();
-        if (payAttentionToAdditive && !name.additive) return;
         // similar to optimisation for get all parents, this potentially could cause a concurrency problem if the array were shrunk by another thread, I don't think this a concern in the context it's used
         // and we'll know if we look at the log. If this happened a local reference to the array should sort it, save the pointer garbage for the mo
         if (name.childrenAsSet != null) {
             for (Name child : name.childrenAsSet) { // as mentioned above I'll allow this kind of access in here
                 if (allChildren.add(child)) {
-                    findAllChildren(child, payAttentionToAdditive, allChildren);
+                    findAllChildren(child, allChildren);
                 }
             }
         } else if (name.children.length > 0) {
             for (int i = 0; i < name.children.length; i++) {
                 if (allChildren.add(name.children[i])) {
-                    findAllChildren(name.children[i], payAttentionToAdditive, allChildren);
+                    findAllChildren(name.children[i], allChildren);
                 }
             }
         }
@@ -729,39 +709,21 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger finaAllChildren2Count = new AtomicInteger(0);
 
-    public Collection<Name> findAllChildren(boolean payAttentionToAdditive) {
+    public Collection<Name> findAllChildren() {
         finaAllChildren2Count.incrementAndGet();
-        if (payAttentionToAdditive) {
             /* local reference useful for my logic anyway but also fulfil double-checked locking.
-            having findAllChildrenPayAttentionToAdditiveCache volatile in addition to this variable should mean things are predictable.
+            having findAllChildrenCache volatile in addition to this variable should mean things are predictable.
              */
-            Set<Name> localReference = findAllChildrenPayAttentionToAdditiveCache;
-            if (localReference == null) {
-                // ok I don't want to be building two at a time, hence I want to synchronize this bit,
-                synchronized (this) { // ideally I wouldn't synchronize on this, it would be on findAllChildrenPayAttentionToAdditiveCache but it's not final and I don't want it to be for the moment
-                    localReference = findAllChildrenPayAttentionToAdditiveCache; // check again after synchronized, it may have been sorted in the mean time
-                    if (localReference == null) {
-                        localReference = HashObjSets.newUpdatableSet();
-                        findAllChildren(this, true, localReference);
-                        if (localReference.isEmpty()) {
-                            findAllChildrenPayAttentionToAdditiveCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
-                        } else {
-                            findAllChildrenPayAttentionToAdditiveCache = localReference;
-                        }
-                    }
-                }
-            }
-            return Collections.unmodifiableSet(localReference);
-        } else {
             Set<Name> localReference = findAllChildrenCache;
             if (localReference == null) {
-                synchronized (this) {
-                    localReference = findAllChildrenCache;
+                // ok I don't want to be building two at a time, hence I want to synchronize this bit,
+                synchronized (this) { // ideally I wouldn't synchronize on this, it would be on findAllChildrenCache but it's not final and I don't want it to be for the moment
+                    localReference = findAllChildrenCache; // check again after synchronized, it may have been sorted in the mean time
                     if (localReference == null) {
-                        localReference = HashObjSets.newMutableSet();
-                        findAllChildren(this, false, localReference);
+                        localReference = HashObjSets.newUpdatableSet();
+                        findAllChildren(this, localReference);
                         if (localReference.isEmpty()) {
-                            findAllChildrenCache = Collections.emptySet();
+                            findAllChildrenCache = Collections.emptySet(); // stop memory overhead, ooh I feel all clever!
                         } else {
                             findAllChildrenCache = localReference;
                         }
@@ -769,7 +731,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
             return Collections.unmodifiableSet(localReference);
-        }
     }
 
     /* as above but for values, proved to provide a decent speed increase
@@ -778,39 +739,11 @@ public final class Name extends AzquoMemoryDBEntity {
     See comments in findAllChildren for cache pattern notes
     */
     private volatile Set<Value> valuesIncludingChildrenCache = null;
-    private volatile Set<Value> valuesIncludingChildrenPayAttentionToAdditiveCache = null;
 
     private static AtomicInteger findValuesIncludingChildrenCount = new AtomicInteger(0);
 
-    public Set<Value> findValuesIncludingChildren(boolean payAttentionToAdditive) {
+    public Set<Value> findValuesIncludingChildren() {
         findValuesIncludingChildrenCount.incrementAndGet();
-        if (payAttentionToAdditive) {
-            Set<Value> localReference = valuesIncludingChildrenPayAttentionToAdditiveCache;
-            if (localReference == null) {
-                synchronized (this) {
-                    localReference = valuesIncludingChildrenPayAttentionToAdditiveCache;
-                    if (localReference == null) {
-                        localReference = HashObjSets.newUpdatableSet(getValues()); // don't forget teh values for this name!
-                        int i;
-                        for (Name child : findAllChildren(true)) {
-                            if (child.valuesAsSet != null) {
-                                localReference.addAll(child.valuesAsSet);
-                            } else if (child.values.length > 0) {
-                                for (i = 0; i < child.values.length; i++) {
-                                    localReference.add(child.values[i]);
-                                }
-                            }
-                        }
-                        if (localReference.isEmpty()) {
-                            valuesIncludingChildrenPayAttentionToAdditiveCache = Collections.emptySet();
-                        } else {
-                            valuesIncludingChildrenPayAttentionToAdditiveCache = localReference;
-                        }
-                    }
-                }
-            }
-            return Collections.unmodifiableSet(localReference);
-        } else {
             Set<Value> localReference = valuesIncludingChildrenCache;
             if (localReference == null) {
                 synchronized (this) {
@@ -818,7 +751,7 @@ public final class Name extends AzquoMemoryDBEntity {
                     if (localReference == null) {
                         localReference = HashObjSets.newUpdatableSet(getValues());
                         int i;
-                        for (Name child : findAllChildren(false)) {
+                        for (Name child : findAllChildren()) {
                             if (child.valuesAsSet != null) {
                                 localReference.addAll(child.valuesAsSet);
                             } else if (child.values.length > 0) {
@@ -836,7 +769,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
             return Collections.unmodifiableSet(localReference);
-        }
     }
 
     // synchronized? Not sure if it matters, don't need immediate visibility and the cache read should (!) be thread safe.
@@ -846,9 +778,7 @@ public final class Name extends AzquoMemoryDBEntity {
     void clearChildrenCaches() {
         clearChildrenCachesCount.incrementAndGet();
         findAllChildrenCache = null;
-        findAllChildrenPayAttentionToAdditiveCache = null;
         valuesIncludingChildrenCache = null;
-        valuesIncludingChildrenPayAttentionToAdditiveCache = null;
     }
 
     private static AtomicInteger getChildrenCount = new AtomicInteger(0);

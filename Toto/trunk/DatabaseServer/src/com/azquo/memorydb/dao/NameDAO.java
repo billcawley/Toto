@@ -31,7 +31,6 @@ public class NameDAO extends FastDAO{
     //    public static final int UPDATELIMIT = 5000;
     private static final String FASTNAME = "fast_name";
     private static final String PROVENANCEID = "provenance_id";
-    private static final String ADDITIVE = "additive";
     private static final String ATTRIBUTES = "attributes";
     private static final String CHILDREN = "children";
     private static final String NOPARENTS = "no_parents";
@@ -56,7 +55,7 @@ public class NameDAO extends FastDAO{
             childrenBlob.free(); // apparently a good idea
             // todo - address this, ergh!
             try{
-                return new Name(azquoMemoryDB, rs.getInt(ID), rs.getInt(PROVENANCEID), rs.getBoolean(ADDITIVE), rs.getString(ATTRIBUTES), childrenBytes, rs.getInt(NOPARENTS), rs.getInt(NOVALUES));
+                return new Name(azquoMemoryDB, rs.getInt(ID), rs.getInt(PROVENANCEID), rs.getString(ATTRIBUTES), childrenBytes, rs.getInt(NOPARENTS), rs.getInt(NOVALUES));
             } catch (Exception e){
                 e.printStackTrace();
             }
@@ -81,13 +80,12 @@ public class NameDAO extends FastDAO{
             if (!namesToInsert.isEmpty()) {
                 final MapSqlParameterSource namedParams = new MapSqlParameterSource();
                 final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTNAME + "` (`" + ID + "`,`" + PROVENANCEID + "`,`"
-                        + ADDITIVE + "`,`" + ATTRIBUTES + "`,`" + CHILDREN + "`,`" + NOPARENTS + "`,`" + NOVALUES + "`) VALUES ");
+                        + ATTRIBUTES + "`,`" + CHILDREN + "`,`" + NOPARENTS + "`,`" + NOVALUES + "`) VALUES ");
                 int count = 1;
 
                 for (Name name : namesToInsert) {
                     insertSql.append("(:" + ID).append(count)
                             .append(",:").append(PROVENANCEID).append(count)
-                            .append(",:").append(ADDITIVE).append(count)
                             .append(",:").append(ATTRIBUTES).append(count)
                             .append(",:").append(CHILDREN).append(count)
                             .append(",:").append(NOPARENTS).append(count)
@@ -95,7 +93,6 @@ public class NameDAO extends FastDAO{
                             .append("), ");
                     namedParams.addValue(ID + count, name.getId());
                     namedParams.addValue(PROVENANCEID + count, name.getProvenance().getId());
-                    namedParams.addValue(ADDITIVE + count, name.getAdditive());
                     namedParams.addValue(ATTRIBUTES + count, name.getAttributesForFastStore());
                     namedParams.addValue(CHILDREN + count, name.getChildrenIdsAsBytes());
                     namedParams.addValue(NOPARENTS + count, name.getParents().size());
@@ -171,7 +168,6 @@ public class NameDAO extends FastDAO{
         jdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + FASTNAME + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +
-                "  `additive` tinyint(1) NOT NULL,\n" +
                 "  `attributes` text COLLATE utf8mb4_unicode_ci NOT NULL,\n" +
                 "  `children` longblob NOT NULL,\n" +
                 "  `no_parents` int(11) NOT NULL,\n" +

@@ -806,7 +806,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    static List<SName> getNamesForSheet(Sheet sheet) {
+    private static List<SName> getNamesForSheet(Sheet sheet) {
         List<SName> names = new ArrayList<>();
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
             if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(sheet.getSheetName())) {
@@ -845,7 +845,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public static SCell getSnameCell(SName sName) {
+    static SCell getSnameCell(SName sName) {
         if (sName == null) return null;
         return sName.getBook().getSheetByName(sName.getRefersToSheetName()).getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
     }
@@ -1008,7 +1008,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
+    private List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
         if (book.getSheet(VALIDATION_SHEET) == null) {
             book.getInternalBook().createSheet(VALIDATION_SHEET);
         }
@@ -1124,11 +1124,10 @@ public class ZKAzquoBookUtils {
                     SName multi = book.getInternalBook().getNameByName(choiceName + "multiresult"); // as ever I do wonder about these string literals
                     if (multi != null) {
                         SCell resultCell = getSnameCell(multi);
+                        // all multi list is is a fancy way of saying to the user what is selected, e.g. all, various, all but or a list of those selected. The actual selection box is created in the composer, onclick
                         resultCell.setStringValue(multiList(loggedInUser, choiceName + "Multi", choiceCell.getStringValue()));
-
                     }
                 }
-
             }
         }
         return dependentRanges;
@@ -1217,21 +1216,4 @@ public class ZKAzquoBookUtils {
             return null;
         }
     }
-
-    public Map<String,String> uploadChoices(Book book){
-        //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
-        Map<String,String> choices = new HashMap<>();
-        for (SName sName:book.getInternalBook().getNames()) {
-            String rangeName = sName.getName();
-            if (rangeName.toLowerCase().endsWith("chosen")){
-                choices.put(rangeName.substring(0,rangeName.length()-6),getSnameCell(sName).getStringValue());
-            }
-        }
-        return choices;
-    }
-
-
 }
-
-
-

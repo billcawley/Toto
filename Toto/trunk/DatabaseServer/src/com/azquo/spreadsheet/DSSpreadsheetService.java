@@ -368,7 +368,7 @@ public class DSSpreadsheetService {
         // assemble the sets I want to find a cross section o
         for (DataRegionHeading drh : listToPermute) {
             permuteNames.add(drh.getName());
-            sharedNamesSets.add(drh.getName().findAllChildren(false));
+            sharedNamesSets.add(drh.getName().findAllChildren());
         }
         if (sharedNames != null) {
             sharedNamesSets.add(sharedNames);
@@ -995,7 +995,7 @@ public class DSSpreadsheetService {
         // gather names
         for (DataRegionHeading heading : headingList) {
             if (heading.getName() != null && heading.getName().getChildren().size() > 0) {
-                relevantNameSets.add(heading.getName().findAllChildren(false));
+                relevantNameSets.add(heading.getName().findAllChildren());
             }
         }
         // then similar logic to getting the values for names
@@ -1626,7 +1626,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         if (valueId > 0) {
                             valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
                         }
-                        doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, true, valuesHook, languages, function, nameComboValueCache); // true = pay attention to names additive flag - I want to get rid of this. We'll see.
+                        doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, function, nameComboValueCache);
                         if (function == DataRegionHeading.FUNCTION.VALUEPARENTCOUNT && valueFunctionSet != null) { // then value parent count, we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             Set<Name> allValueParents = HashObjSets.newMutableSet();
@@ -1928,9 +1928,9 @@ Callable interface sorts the memory "happens before" using future gets which run
         for (Name name : names) {
             if (values == null) {
 //                values = new ArrayList<>(valueService.findValuesForNameIncludeAllChildren(name, true));
-                values = new ArrayList<>(name.findValuesIncludingChildren(true));
+                values = new ArrayList<>(name.findValuesIncludingChildren());
             } else {
-                values.retainAll(name.findValuesIncludingChildren(true));
+                values.retainAll(name.findValuesIncludingChildren());
             }
             if (heading.length() > 0) heading += ", ";
             heading += name.getDefaultDisplayName();
