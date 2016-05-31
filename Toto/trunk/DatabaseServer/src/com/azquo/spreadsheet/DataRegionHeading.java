@@ -44,10 +44,10 @@ public class DataRegionHeading {
     private boolean split;
 
     DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, Set<Name> valueFunctionSet) {
-        this(name, writeAllowed,function,description, null, valueFunctionSet);
+        this(name, writeAllowed,function,description, null, valueFunctionSet, false);
     }
 
-    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
+    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet, boolean split) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
@@ -55,6 +55,7 @@ public class DataRegionHeading {
         this.description = description;
         this.offsetHeadings = offsetHeadings;
         this.valueFunctionSet = valueFunctionSet;
+        this.split = split;
      }
 
     // no functions with attributes for the moment
