@@ -1419,7 +1419,7 @@ public class AzquoBook {
         for (int i = 0; i < wb.getWorksheets().getNames().getCount(); i++) {
             com.aspose.cells.Name name = wb.getWorksheets().getNames().get(i);
             String rangeName = name.getText().toLowerCase();
-                if (rangeName.endsWith("chosen")){
+            if (rangeName.endsWith("chosen")){
                 choices.put(rangeName.substring(0,rangeName.length()-6),getRangeData(rangeName));
             }
         }
