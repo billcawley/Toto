@@ -130,6 +130,11 @@ public class DSSpreadsheetService {
                         single.add(new DataRegionHeading(sourceCell, true));// we say that an attribute heading defaults to writable, it will defer to the name
                         row.add(single);
                     } else {
+                        boolean split = false;
+                        if (sourceCell.toLowerCase().endsWith(" split")){
+                            split = true;
+                            sourceCell = sourceCell.substring(0, sourceCell.length() - " split".length());
+                        }
                         DataRegionHeading.FUNCTION function = null;// that's the value or sum of values
                         // now allow functions
                         for (DataRegionHeading.FUNCTION _function : DataRegionHeading.FUNCTION.values()) {
@@ -157,8 +162,8 @@ public class DSSpreadsheetService {
                             Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
                             if (!names.isEmpty()) {// it should be just one
                                 List<DataRegionHeading> hierarchyList = new ArrayList<>();
-                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null, null); // I assume this will be only one!
-                                resolveHierarchyForHeading(azquoMemoryDBConnection, offsetHeadings.get(0), hierarchyList, function, new ArrayList<>(), level);
+                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null, null, split); // I assume this will be only one!
+                                resolveHierarchyForHeading(azquoMemoryDBConnection, offsetHeadings.get(0), hierarchyList, function, new ArrayList<>(), level, split);
                                 if (namesQueryLimit > 0 && hierarchyList.size() > namesQueryLimit) {
                                     throw new Exception("While creating headings " + sourceCell + " resulted in " + hierarchyList.size() + " names, more than the specified limit of " + namesQueryLimit);
                                 }
@@ -177,13 +182,14 @@ public class DSSpreadsheetService {
                                 permuteNames.add(pName);
                             }
                             row.clear();
-                            row.add(dataRegionHeadingsFromNames(permuteNames, azquoMemoryDBConnection, function, null, null));
+                            row.add(dataRegionHeadingsFromNames(permuteNames, azquoMemoryDBConnection, function, null, null, split));
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
                             if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
                             }
-                            row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null, null));
+                            row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null, null, split));
+
                         }
                     }
                 }
@@ -194,12 +200,12 @@ public class DSSpreadsheetService {
 
     // recursive, the key is to add the offset to allow formatting of the hierarchy
     private void resolveHierarchyForHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading heading, List<DataRegionHeading> target
-            , DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, int levelLimit) {
+            , DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, int levelLimit, boolean split) {
         if (offsetHeadings.size() < levelLimit) {// then get the children
             List<DataRegionHeading> offsetHeadingsCopy = new ArrayList<>(offsetHeadings);
             offsetHeadingsCopy.add(heading);
-            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), azquoMemoryDBConnection, function, offsetHeadingsCopy, null)) {
-                resolveHierarchyForHeading(azquoMemoryDBConnection, child, target, function, offsetHeadingsCopy, levelLimit);
+            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), azquoMemoryDBConnection, function, offsetHeadingsCopy, null, split)) {
+                resolveHierarchyForHeading(azquoMemoryDBConnection, child, target, function, offsetHeadingsCopy, levelLimit, split);
             }
         }
         target.add(heading); // the "parent" is added after
@@ -1595,6 +1601,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 }
             }
             Collections.reverse(headingsForThisCell); // here is the easiest place to do this, it was added in row, column, context order, we want to reverse this to improve caching on the names in a bit
+
             if (!checked) { // no valid row/col combo
                 locked.isTrue = true;
             } else {
@@ -2148,17 +2155,17 @@ Callable interface sorts the memory "happens before" using future gets which run
         return contextHeadings;
     }
 
-    private List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
+    private List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet, boolean split) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
             for (Name name : names) {
                 // will the new write permissions cause an overhead?
-                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null, offsetHeadings, valueFunctionSet));
+                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null, offsetHeadings, valueFunctionSet, split));
             }
         } else { // don't bother checking permissions, write permissions to true
             for (Name name : names) {
-                dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, offsetHeadings, valueFunctionSet));
+                dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, offsetHeadings, valueFunctionSet, split));
             }
         }
         //System.out.println("time for dataRegionHeadingsFromNames " + (System.currentTimeMillis() - startTime));
