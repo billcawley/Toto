@@ -649,7 +649,18 @@ public final class ImportService {
         SCell cell = sheet.getInternalSheet().getCell(r,c);
         //if (colCount++ > 0) bw.write('\t');
         if (cell != null && cell.getType() != SCell.CellType.BLANK) {
-            String cellFormat = convertDates(cell.getStringValue()).replace("\r\n","~~");//a hack to carry through Excel carriage returns
+            String cellFormat = "";
+            if (cell.getType().equals(SCell.CellType.NUMBER)) {
+                if (cell.getCellStyle().getDataFormat().contains("mm")) {
+                    SimpleDateFormat df = new SimpleDateFormat(cell.getCellStyle().getDataFormat().toUpperCase());//if there are minutes that will become
+                    cellFormat = df.format(cell.getDateValue());
+
+                }else{
+                    cellFormat = cell.getValue() + "";
+            }
+            }else{
+                cellFormat = convertDates(cell.getStringValue()).replace("\r\n","~~");//a hack to carry through Excel carriage returns
+            }
             if (newNames != null && newNames.get(cellFormat) != null) {
                 csvW.write(newNames.get(cellFormat));
             } else {
