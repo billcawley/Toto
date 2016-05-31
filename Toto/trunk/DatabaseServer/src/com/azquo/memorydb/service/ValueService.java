@@ -358,29 +358,33 @@ public final class ValueService {
             }
         }
         // ok we've populated calc names is applicable, now check if calc names interacts with applies to (applies to is looking for an intersection with calc names e,g, from the row or context NOT the names in the formulae)
-        List<Name> restrictedAppliesToNames = new ArrayList<>();
+        // this was just for the applied to names but to reduce code duplication we'll get the first calc name and jam it in here to make a single loop
+        List<Name> outerLoopNames = new ArrayList<>();
         if (appliesToNames != null){ // then try and find the name
             Iterator<Name> calcNamesIterator = calcnames.iterator(); // for the remove function otherwise a loop might throw a wobbbler (exception)
             while (calcNamesIterator.hasNext()){ // go through the names and find the first that crosses over with the appliesTo set
+                Name calcName = calcNamesIterator.next();
                 for (Name appliesToName : appliesToNames){
-                    if (calcNamesIterator.next().findAllChildren().contains(appliesToName)){ // we have a hit (one of the applies to list is found in the children of the formula names), add to the list that will replace this calc name
-                        restrictedAppliesToNames.add(appliesToName);
+                    if (calcName.findAllChildren().contains(appliesToName)){ // we have a hit (one of the applies to list is found in the children of the formula names), add to the list that will replace this calc name
+                        outerLoopNames.add(appliesToName);
                     }
                 }
-                if (!restrictedAppliesToNames.isEmpty()){// we have a restricted list for this calc name, remove that calc name and stop looking
+                if (!outerLoopNames.isEmpty()){// we have a restricted list for this calc name, remove that calc name and stop looking
                     calcNamesIterator.remove();
                     break;
                 }
             }
-        }
 
+        }
+        if (outerLoopNames.isEmpty()){ // will be most of the time, put the first in the outer loop
+            outerLoopNames.add(calcnames.remove(0));// as mentioned above in the case of normal use take the first and move it to the outside loop. Yes it will just be added straight back on but otherwise we have code duplication below in an else or a function with many parameters passed
+        }
         // no reverse polish converted formula, just sum
         if (calcString == null) {
             return resolveValuesForNamesIncludeChildren(names, valuesHook, function, locked, nameComboValueCache);
         } else {
-            if (!restrictedAppliesToNames.isEmpty()){
                 double toReturn = 0;
-                for (Name appliesToName : restrictedAppliesToNames){
+                for (Name appliesToName : outerLoopNames){ // in normal use just a single
                     calcnames.add(appliesToName);
                     double[] values = new double[20];//should be enough!!
                     int valNo = 0;
@@ -431,56 +435,6 @@ public final class ValueService {
                 }
                 locked.isTrue = true;
                 return toReturn;
-            } else {
-                // this is where the work done by the shunting yard algorithm is used
-                // ok I think I know why an array was used, to easily reference the entry before
-                double[] values = new double[20];//should be enough!!
-                int valNo = 0;
-                StringTokenizer st = new StringTokenizer(calcString, " ");
-                while (st.hasMoreTokens()) {
-                    String term = st.nextToken();
-                    if (term.length() == 1) { // operation
-                        valNo--;
-                        char charTerm = term.charAt(0);
-                        if (charTerm == '+') {
-                            values[valNo - 1] += values[valNo];
-                        } else if (charTerm == '-') {
-                            values[valNo - 1] -= values[valNo];
-                        } else if (charTerm == '*') {
-                            values[valNo - 1] *= values[valNo];
-                        } else if (values[valNo] == 0) {
-                            values[valNo - 1] = 0;
-                        } else {
-                            values[valNo - 1] /= values[valNo];
-                        }
-                    } else { // a value, not in the Azquo sense, a number or reference to a name
-                        if (NumberUtils.isNumber(term)) {
-                            values[valNo++] = Double.parseDouble(term);
-                        } else {
-                            // we assume it's a name id starting with NAMEMARKER
-                            //int id = Integer.parseInt(term.substring(1));
-                            // so get the name and add it to the other names
-                            Name name = nameService.getNameFromListAndMarker(term, formulaNames);
-                            List<Name> seekList = new ArrayList<>(calcnames);
-                            seekList.add(name);
-                            if (name.getAttribute(Name.INDEPENDENTOF) != null){// then this name formula term is saying it wants to exclude some names
-                                Name independentOfSet = nameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.INDEPENDENTOF));
-                                Iterator<Name> seekListIterator = seekList.iterator();
-                                while (seekListIterator.hasNext()){
-                                    final Name test = seekListIterator.next();
-                                    if (independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test)){
-                                        seekListIterator.remove();
-                                    }
-                                }
-                            }
-                            //note - would there be recursion? Resolve order of formulae might be unreliable
-                            values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, function, nameComboValueCache);
-                        }
-                    }
-                }
-                locked.isTrue = true;
-                return values[0];
-            }
         }
     }
 
