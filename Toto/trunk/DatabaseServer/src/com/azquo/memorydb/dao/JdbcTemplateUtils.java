@@ -64,4 +64,12 @@ public class JdbcTemplateUtils {
             return jdbcTemplate.queryForObject(sql, paramMap, requiredType);
         }
     }
+
+    public int updateNoException(String sql, Map<String, ?> namedParams){
+        try{
+            return jdbcTemplate.update(sql, namedParams);
+        } catch (DataAccessException ignored){
+            return 0;
+        }
+    }
 }

@@ -32,30 +32,33 @@ public class DataRegionHeading {
     PERMUTE             Heading function    The system will find all the combinations of the immediate children of the list to be permuted, selected on the basis of sharing common descendants
 
      */
-
+    public enum SUFFIX {UNLOCKED, LOCKED, SPLIT}
+    /*
+    Additional criteria. Existing locking stands but a new rule is to lock by default on a composite value
+     */
     private final Name name;
     private final String attribute;
     private final boolean writeAllowed;
     private final FUNCTION function;
+    private final SUFFIX suffix;
     // either the name (normally) or the function as written in the case of name count path count etc.
     private final String description;
     private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
     private final Set<Name> valueFunctionSet;
-    private boolean split;
 
-    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, Set<Name> valueFunctionSet) {
-        this(name, writeAllowed,function,description, null, valueFunctionSet, false);
+    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, Set<Name> valueFunctionSet) {
+        this(name, writeAllowed,function,suffix, description, null, valueFunctionSet);
     }
 
-    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, String description, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet, boolean split) {
+    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
         this.function = function;
+        this.suffix = suffix;
         this.description = description;
         this.offsetHeadings = offsetHeadings;
         this.valueFunctionSet = valueFunctionSet;
-        this.split = split;
      }
 
     // no functions with attributes for the moment
@@ -64,10 +67,10 @@ public class DataRegionHeading {
         this.attribute = attribute;
         this.writeAllowed = writeAllowed;
         this.function = null;
+        this.suffix = null;
         this.description = null;
         this.offsetHeadings = null;
         this.valueFunctionSet = null;
-        this.split = false;
     }
 
     public Name getName() {
@@ -84,6 +87,10 @@ public class DataRegionHeading {
 
     public FUNCTION getFunction() {
         return function;
+    }
+
+    public SUFFIX getSuffix() {
+        return suffix;
     }
 
     @Override
@@ -107,10 +114,6 @@ public class DataRegionHeading {
     Set<Name> getValueFunctionSet() {
         return valueFunctionSet;
     }
-
-    boolean getSplit(){ return split; }
-
-    void setSplit(boolean split){this.split = split; }
 
     boolean isNameFunction(){
         return isNameFunction(function);

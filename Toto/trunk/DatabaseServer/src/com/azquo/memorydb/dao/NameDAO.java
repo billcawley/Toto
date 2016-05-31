@@ -176,4 +176,8 @@ public class NameDAO extends FastDAO{
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
 
     }
+
+    public void zapAdditive(final String databaseName){
+        jdbcTemplateUtils.updateNoException("ALTER TABLE `" + databaseName + "`.`" + FASTNAME + "` DROP `additive`;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+    }
 }

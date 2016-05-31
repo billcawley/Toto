@@ -12,9 +12,11 @@ import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.view.FilterTriple;
+import net.openhft.koloboke.collect.map.DoubleByteCursor;
 import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
+import org.apache.commons.collections.iterators.ArrayListIterator;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -130,11 +132,6 @@ public class DSSpreadsheetService {
                         single.add(new DataRegionHeading(sourceCell, true));// we say that an attribute heading defaults to writable, it will defer to the name
                         row.add(single);
                     } else {
-                        boolean split = false;
-                        if (sourceCell.toLowerCase().endsWith(" split")){
-                            split = true;
-                            sourceCell = sourceCell.substring(0, sourceCell.length() - " split".length());
-                        }
                         DataRegionHeading.FUNCTION function = null;// that's the value or sum of values
                         // now allow functions
                         for (DataRegionHeading.FUNCTION _function : DataRegionHeading.FUNCTION.values()) {
@@ -143,6 +140,14 @@ public class DSSpreadsheetService {
                                 sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1, sourceCell.trim().length() - 1);// +1 - 1 to get rid of the function name and brackets
                             }
                         }
+                        DataRegionHeading.SUFFIX suffix = null;// assign similar to functions
+                        for (DataRegionHeading.SUFFIX _suffix : DataRegionHeading.SUFFIX.values()) {
+                            if (sourceCell.toUpperCase().endsWith(_suffix.name())) {
+                                suffix = _suffix;
+                                sourceCell = sourceCell.substring(0, sourceCell.length() - suffix.name().length()).trim();
+                            }
+                        }
+
                         /* The way name functions work is going to change to allow [ROWHEADING] and [COLUMNHEADING] which work with set operators, / * - + etc.
                            This means that in the case of name functions the heading can't cache sets, it needs to evaluate the formulae on each line and it means that each
                            heading needs to have its description populated even if it's a simple name. Caching of heading will be broken, this would slow down Damart (which will be broken anyway due to changing syntax)
@@ -152,7 +157,7 @@ public class DSSpreadsheetService {
                            */
                         if (DataRegionHeading.isNameFunction(function)) { // then just set the description to be resolved later
                             List<DataRegionHeading> forFunction = new ArrayList<>();
-                            forFunction.add(new DataRegionHeading(null, false, function, sourceCell, null)); // in this case the heading is just a placeholder for the formula to be evaluated later - that forumla being held in the description of the heading
+                            forFunction.add(new DataRegionHeading(null, false, function, suffix, sourceCell, null)); // in this case the heading is just a placeholder for the formula to be evaluated later - that forumla being held in the description of the heading
                             row.add(forFunction);
                             // ok this is the kind of thing that would typically be in name service where queries are parsed but it needs to set some formatting info (visually indentation) so
                             // it will be in here with limited parsing support e.g. `All customers` hierarchy 3 that is to say name, hierarchy, number
@@ -162,8 +167,8 @@ public class DSSpreadsheetService {
                             Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
                             if (!names.isEmpty()) {// it should be just one
                                 List<DataRegionHeading> hierarchyList = new ArrayList<>();
-                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null, null, split); // I assume this will be only one!
-                                resolveHierarchyForHeading(azquoMemoryDBConnection, offsetHeadings.get(0), hierarchyList, function, new ArrayList<>(), level, split);
+                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null); // I assume this will be only one!
+                                resolveHierarchyForHeading(azquoMemoryDBConnection, offsetHeadings.get(0), hierarchyList, function, suffix, new ArrayList<>(), level);
                                 if (namesQueryLimit > 0 && hierarchyList.size() > namesQueryLimit) {
                                     throw new Exception("While creating headings " + sourceCell + " resulted in " + hierarchyList.size() + " names, more than the specified limit of " + namesQueryLimit);
                                 }
@@ -182,13 +187,13 @@ public class DSSpreadsheetService {
                                 permuteNames.add(pName);
                             }
                             row.clear();
-                            row.add(dataRegionHeadingsFromNames(permuteNames, azquoMemoryDBConnection, function, null, null, split));
+                            row.add(dataRegionHeadingsFromNames(permuteNames, azquoMemoryDBConnection, function, suffix, null, null));
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
                             if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
                             }
-                            row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, null, null, split));
+                            row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null));
 
                         }
                     }
@@ -200,12 +205,12 @@ public class DSSpreadsheetService {
 
     // recursive, the key is to add the offset to allow formatting of the hierarchy
     private void resolveHierarchyForHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading heading, List<DataRegionHeading> target
-            , DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, int levelLimit, boolean split) {
+            , DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, int levelLimit) {
         if (offsetHeadings.size() < levelLimit) {// then get the children
             List<DataRegionHeading> offsetHeadingsCopy = new ArrayList<>(offsetHeadings);
             offsetHeadingsCopy.add(heading);
-            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), azquoMemoryDBConnection, function, offsetHeadingsCopy, null, split)) {
-                resolveHierarchyForHeading(azquoMemoryDBConnection, child, target, function, offsetHeadingsCopy, levelLimit, split);
+            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), azquoMemoryDBConnection, function, suffix, offsetHeadingsCopy, null)) {
+                resolveHierarchyForHeading(azquoMemoryDBConnection, child, target, function, suffix, offsetHeadingsCopy, levelLimit);
             }
         }
         target.add(heading); // the "parent" is added after
@@ -297,7 +302,7 @@ public class DSSpreadsheetService {
                     List<DataRegionHeading> drhEntry = new ArrayList<>();
                     // now for that combo build the headings
                     for (Name name : entry) {
-                        drhEntry.add(new DataRegionHeading(name, true, null, null, null));
+                        drhEntry.add(new DataRegionHeading(name, true, null, null, null, null));
                     }
                     toReturn.add(drhEntry);
                 }
@@ -1626,6 +1631,14 @@ Callable interface sorts the memory "happens before" using future gets which run
                         if (valueId > 0) {
                             valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
                         }
+                        for (DataRegionHeading lockCheck : headingsForThisCell){
+                            if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.LOCKED){
+                                locked.isTrue = true;
+                            } else if (lockCheck.getName() != null && lockCheck.getName().hasChildren() && // a name with children so default locked UNLESS defined as unlocked or split
+                                    lockCheck.getSuffix() != DataRegionHeading.SUFFIX.UNLOCKED && lockCheck.getSuffix() != DataRegionHeading.SUFFIX.SPLIT){
+                                locked.isTrue = true;
+                            }
+                        }
                         doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, function, nameComboValueCache);
                         if (function == DataRegionHeading.FUNCTION.VALUEPARENTCOUNT && valueFunctionSet != null) { // then value parent count, we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
@@ -2084,29 +2097,80 @@ Callable interface sorts the memory "happens before" using future gets which run
                                 //do nothing
                             }
                         }
-                        if (valuesForCell.getValues() != null) { // this assumes empty values rather than null if the populating code couldn't find any
-                            if (valuesForCell.getValues().size() == 1) {
-                                final Value theValue = valuesForCell.getValues().get(0);
-                                logger.info("trying to overwrite");
-                                if (cell.getStringValue() != null && cell.getStringValue().length() > 0) {
-                                    //sometimes non-existent original values are stored as '0'
-                                    valueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
-                                    numberOfValuesModified++;
-                                } else {
-                                    theValue.delete();
-                                }
-                            } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue() != null && cell.getStringValue().length() > 0) {
-                                logger.info("storing new value here . . .");
-                                // need to get the names, this was outside
-                                final Set<DataRegionHeading> headingsForCell = HashObjSets.newMutableSet(azquoCell.getColumnHeadings().size() + azquoCell.getRowHeadings().size());
-                                headingsForCell.addAll(azquoCell.getColumnHeadings());
-                                headingsForCell.addAll(azquoCell.getRowHeadings());
-                                headingsForCell.addAll(azquoCell.getContexts());
-                                List<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
-                                valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), new HashSet<>(cellNames));
-                                numberOfValuesModified++;
+                        final Set<DataRegionHeading> headingsForCell = HashObjSets.newMutableSet(azquoCell.getColumnHeadings().size() + azquoCell.getRowHeadings().size());
+                        headingsForCell.addAll(azquoCell.getColumnHeadings());
+                        headingsForCell.addAll(azquoCell.getRowHeadings());
+                        headingsForCell.addAll(azquoCell.getContexts());
+                        Name splitName = null;
+                        for (DataRegionHeading heading : headingsForCell){
+                            if (heading.getSuffix() == DataRegionHeading.SUFFIX.SPLIT){
+                                splitName = heading.getName(); // I suppose could be assigned null but this would be a nonsensical heading
+                                break;
                             }
-                            // warning on multiple values?
+                        }
+                        if (valuesForCell.getValues() != null) { // this assumes empty values rather than null if the populating code couldn't find any (as opposed to attribute cell that would be null values)
+                            // check for split first
+                            if (splitName != null){ // get the lowest level names and see if we can split the value among them
+                                try {
+                                    double valueToSplit = 0;
+                                    if (cell.getStringValue() != null && cell.getStringValue().length() > 0){
+                                        valueToSplit = Double.parseDouble(cell.getStringValue().replace(",",""));
+                                    }
+                                    final List<Name> names = namesFromDataRegionHeadings(headingsForCell);
+                                    names.remove(splitName);
+                                    List<Name> lowestChildren = new ArrayList<>();
+                                    for (Name child : splitName.findAllChildren()){
+                                        if (!child.hasChildren()){
+                                            lowestChildren.add(child);
+                                        }
+                                    }
+                                    double splitValue = valueToSplit / lowestChildren.size();
+                                    // ok now try to spread them around
+                                    for (Name child : lowestChildren){
+                                        Set<Name> nameSet = new HashSet<>(names);
+                                        nameSet.add(child); // so we now have the cells names except the split one but the child of the split one instead.
+                                        // we want an exact match
+                                        final List<Value> forNames = valueService.findForNames(nameSet);
+                                        if (forNames.size() > 1){
+                                            System.out.println("multiple values found for a split, this should not happen! " + forNames);
+                                        } else if (forNames.size() == 1){
+                                            Value v = forNames.get(0);
+                                            if (splitValue == 0){ // we'll consider 0 OR blank deleting in this context
+                                                v.delete();
+                                                numberOfValuesModified++;
+                                            } else { // overwrite!
+                                                valueService.overWriteExistingValue(azquoMemoryDBConnection, v, splitValue + ""); // a double to a string and back, hacky but that's the call for the mo
+                                            }
+                                        } else { // new value!
+                                            if (splitValue != 0){ // then something to store
+                                                valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, splitValue + "", nameSet);
+                                                numberOfValuesModified++;
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e){
+                                    System.out.println("unable to split value : " + e.getMessage());
+                                }
+                            } else { // normal behavior, most of the time
+                                if (valuesForCell.getValues().size() == 1) {
+                                    final Value theValue = valuesForCell.getValues().get(0);
+                                    logger.info("trying to overwrite");
+                                    if (cell.getStringValue() != null && cell.getStringValue().length() > 0) {
+                                        //sometimes non-existent original values are stored as '0'
+                                        valueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
+                                        numberOfValuesModified++;
+                                    } else {
+                                        theValue.delete();
+                                        numberOfValuesModified++;
+                                    }
+                                } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue() != null && cell.getStringValue().length() > 0) {
+                                    logger.info("storing new value here . . .");
+                                    List<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
+                                    valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), new HashSet<>(cellNames));
+                                    numberOfValuesModified++;
+                                }
+                                // warning on multiple values?
+                            }
                         } else {
                             // added not null checks - can names or attributes be null here? Best check - todo
                             if (valuesForCell.getNames() != null && valuesForCell.getNames().size() == 1
@@ -2155,17 +2219,17 @@ Callable interface sorts the memory "happens before" using future gets which run
         return contextHeadings;
     }
 
-    private List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet, boolean split) {
+    private List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
             for (Name name : names) {
                 // will the new write permissions cause an overhead?
-                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, null, offsetHeadings, valueFunctionSet, split));
+                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, suffix, null, offsetHeadings, valueFunctionSet));
             }
         } else { // don't bother checking permissions, write permissions to true
             for (Name name : names) {
-                dataRegionHeadings.add(new DataRegionHeading(name, true, function, null, offsetHeadings, valueFunctionSet, split));
+                dataRegionHeadings.add(new DataRegionHeading(name, true, function, suffix, null, offsetHeadings, valueFunctionSet));
             }
         }
         //System.out.println("time for dataRegionHeadingsFromNames " + (System.currentTimeMillis() - startTime));

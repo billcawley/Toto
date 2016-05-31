@@ -389,6 +389,7 @@ public final class AzquoMemoryDB {
                     }
                     marker = System.currentTimeMillis();
                     from = 0;
+                    nameDAO.zapAdditive(getPersistenceName());
                     maxIdForTable = nameDAO.findMaxId(this);
                     futureBatches = new ArrayList<>();
                     while (from < maxIdForTable) {

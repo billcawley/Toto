@@ -160,7 +160,7 @@ public final class ValueService {
 
     private static AtomicInteger findForNamesCount = new AtomicInteger(0);
 
-    private List<Value> findForNames(final Set<Name> names) {
+    public List<Value> findForNames(final Set<Name> names) {
         findForNamesCount.incrementAndGet();
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
         final List<Value> values = new ArrayList<>();
