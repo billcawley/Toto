@@ -391,7 +391,7 @@ public final class ImportService {
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
             OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
             if (or == null) return "no report named " + reportName + " found";
-             Map<String, String> choices = bookUtils.uploadChoices(book);
+             Map<String, String> choices = uploadChoices(book, bookUtils);
             for (String choice : choices.keySet()) {
                 spreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
             }
@@ -413,7 +413,6 @@ public final class ImportService {
             Sheet sheet = book.getSheetAt(sheetNo);
             toReturn.append(readSheet(loggedInUser, sheet, tempName, sheetNo, attributeNames, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
             toReturn.append("\n");
-            sheetNo++;
         }
         return toReturn.toString();
     }
@@ -737,6 +736,18 @@ public final class ImportService {
         return df.format(date);
     }
 
+    public Map<String,String> uploadChoices(Book book, ZKAzquoBookUtils bookUtils){
+        //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
+        Map<String,String> choices = new HashMap<>();
+        for (SName sName:book.getInternalBook().getNames()){
+            String rangeName = sName.getName().toLowerCase();
+            if (rangeName.endsWith("chosen")){
+                choices.put(rangeName.substring(0,rangeName.length()-6),bookUtils.getSnameCell(sName).getStringValue());
+
+            }
+        }
+        return choices;
+    }
 
 
 
