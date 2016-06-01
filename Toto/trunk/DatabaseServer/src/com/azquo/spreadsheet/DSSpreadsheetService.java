@@ -2103,7 +2103,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         headingsForCell.addAll(azquoCell.getContexts());
                         Name splitName = null;
                         for (DataRegionHeading heading : headingsForCell){
-                            if (heading.getSuffix() == DataRegionHeading.SUFFIX.SPLIT){
+                            if (heading!=null && heading.getSuffix() == DataRegionHeading.SUFFIX.SPLIT){
                                 splitName = heading.getName(); // I suppose could be assigned null but this would be a nonsensical heading
                                 break;
                             }
