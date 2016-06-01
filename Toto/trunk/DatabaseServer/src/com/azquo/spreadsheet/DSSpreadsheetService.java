@@ -1587,6 +1587,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         headingsForThisCell.add(heading);
                     }
                 }
+                rowAndColumnHeadingsForThisCell = new ArrayList<>(headingsForThisCell);
                 if (isDot(rowHeadings.get(rowHeadings.size()-1)) || isDot(columnHeadings.get(columnHeadings.size()-1))){
                     locked.isTrue = true;
                  }
