@@ -658,7 +658,7 @@ public final class ImportService {
                     String cellStyle = cell.getCellStyle().getDataFormat();
                     if (cellStyle.contains("dd")){
                         //convert to standard form
-                        SimpleDateFormat df = new SimpleDateFormat("yyyy-mm-dd");
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
                         cellFormat = df.format(cell.getDateValue());
                     }else if (cellStyle.contains("mm")) {
                         SimpleDateFormat df = new SimpleDateFormat(cell.getCellStyle().getDataFormat().toUpperCase());//if there are minutes that will become
@@ -666,6 +666,9 @@ public final class ImportService {
 
                     }else{
                         cellFormat = cell.getValue() + "";
+                        if (cellFormat.endsWith(".0")){
+                            cellFormat = cellFormat.substring(0,cellFormat.length()-2);
+                        }
                     }
 
                 }catch(Exception e2){
