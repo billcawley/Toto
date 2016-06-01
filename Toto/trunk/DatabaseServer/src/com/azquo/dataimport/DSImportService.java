@@ -696,6 +696,9 @@ public class DSImportService {
                     }
                 }
                 if (!hasClauses){
+                    if (!lineIterator.hasNext()){
+                        throw new Exception("Invalid headers on import file - is this a report that required az_ReportName?");
+                    }
                     String[] nextLine = lineIterator.next();
                     int headingCount = 1;
                     boolean lastfilled = true;

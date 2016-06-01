@@ -322,7 +322,6 @@ public class SpreadsheetService {
         azquoBook.setSheet(0);//assume currently that this is a single sheet workbook
         azquoBook.prepareSheet(loggedInUser, onlineReport.getId(), null);
         return azquoBook;
-
     }
 
 /*    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {

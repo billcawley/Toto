@@ -1,16 +1,15 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.*;
-import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -126,7 +125,7 @@ public class OnlineController {
                 if (loggedInUser.getUser().isAdministrator() && reportId != null && reportId.length() > 0 && !reportId.equals("1")) { // admin, we allow a report and possibly db to be set
                     //report id is assumed to be integer - sent from the website
                     onlineReport = onlineReportDAO.findForIdAndBusinessId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
-                    // todo - deciude which method to switch databases
+                    // todo - decide which method to switch databases
                     if (databaseId != null && databaseId.length() > 0){
                         final List<Integer> databaseIdsForReportId = databaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
                         for (int dbId : databaseIdsForReportId){
@@ -139,12 +138,21 @@ public class OnlineController {
                         loginService.switchDatabase(loggedInUser, database);
                     }
                 } else if (permissionId != null && permissionId.length() > 0) {
-                    //report id is assumed to be integer - sent from the website
-                    permission = permissionDAO.findById(Integer.parseInt(permissionId));
-                    if (permission != null && permission.getUserId() == loggedInUser.getUser().getId()){
-                        onlineReport = onlineReportDAO.findById(permission.getReportId());
-                        reportId = onlineReport.getId() + ""; // hack for permissions
-                        loginService.switchDatabase(loggedInUser, databaseDAO.findById(permission.getDatabaseId()));
+                    if (NumberUtils.isNumber(permissionId)){
+                        permission = permissionDAO.findById(Integer.parseInt(permissionId));
+                        if (permission != null && permission.getUserId() == loggedInUser.getUser().getId()){
+                            onlineReport = onlineReportDAO.findById(permission.getReportId());
+                            reportId = onlineReport.getId() + ""; // hack for permissions
+                            loginService.switchDatabase(loggedInUser, databaseDAO.findById(permission.getDatabaseId()));
+                        }
+                    } else { //new logic for permissions ad hoc on a report
+                        if (loggedInUser.getPermissionsFromReport().get(permissionId) != null){ // then we have a permission as set by a report
+                            onlineReport = onlineReportDAO.findForNameAndBusinessId(permissionId, loggedInUser.getUser().getBusinessId());
+                            if (onlineReport != null){
+                                reportId = onlineReport.getId() + ""; // hack for permissions
+                                loginService.switchDatabase(loggedInUser, databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), loggedInUser.getPermissionsFromReport().get(permissionId)));
+                            }
+                        }
                     }
                 }
                 if (onlineReport != null){
@@ -201,9 +209,7 @@ public class OnlineController {
                 if (opcode.equals("upload")) {
                     reportId = "";
                     if (submit.length() > 0) {
-                        if (database.length() > 0) {
-                            loginService.switchDatabase(loggedInUser, database);
-                        }
+                        // getting rid of database switch
                         String fileName = uploadfile.getOriginalFilename();
                         if (imageName.length() > 0){
                             result = importService.uploadImage(loggedInUser,uploadfile, imageName);
@@ -230,8 +236,17 @@ public class OnlineController {
                 }
                 if ("1".equals(reportId)) {
                     if (!loggedInUser.getUser().isAdministrator()) {
-                        spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
-                        return "azquoReports";
+                        final List<Permission> forUserId = permissionDAO.findForUserId(loggedInUser.getUser().getId());// new model this should be all we need . . .
+                        if (forUserId.size() == 1){// one report, show it
+                            permission = forUserId.get(0);
+                            onlineReport = onlineReportDAO.findById(permission.getReportId());
+                            onlineReport.setPathname(loggedInUser.getBusinessDirectory()); // hack! todo, sort
+                            reportId = onlineReport.getId() + ""; // hack for permissions
+                            loginService.switchDatabase(loggedInUser, databaseDAO.findById(permission.getDatabaseId()));
+                        } else {
+                            spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
+                            return "azquoReports";
+                        }
                     } else {
                         return "redirect:/api/ManageReports";
                     }

@@ -67,13 +67,14 @@ public class ZKAzquoBookUtils {
         return populateBook(book, valueId, false);
     }
 
+    public static final String ALLOWABLE_REPORTS = "az_AllowableReports";
+
     public boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae) {
         long track = System.currentTimeMillis();
         String imageStoreName = "";
         boolean showSave = false;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-
         Map<String, String> userChoices = new HashMap<>();
         // get the user choices for the report. Can be drop down values, sorting/highlighting etc.
         // a notable point here is that the user choices don't distinguish between sheets
@@ -86,7 +87,6 @@ public class ZKAzquoBookUtils {
         currently allowing first or last, if first or last required as names add quotes
         I could rip off the parsing from string utils though it seems rather verbose, really what I want is tokenizing based on , but NOT in the quoted areas
         */
-
         final String FIRST_PLACEHOLDER = "||FIRST||";
         final String LAST_PLACEHOLDER = "||LAST||";
 
@@ -119,12 +119,35 @@ public class ZKAzquoBookUtils {
 
         String context = "";
         Map<String, List<String>> choiceOptionsMap = resolveChoiceOptions(book, loggedInUser);
-
+        Map<String, String> permissionsFromReports = new HashMap<>();
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
             // these two lines moved from below the unmerge command, shouldn't be a big problem - I need the options to check that we're setting valid options directly below
             // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
             List<SName> namesForSheet = getNamesForSheet(sheet);
+            //have a look for "az_AllowableReports", it's read only, getting it here seems as reasonable as anything
+            for (SName sName : namesForSheet) {
+                if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
+                    CellRegion allowable = getCellRegionForSheetAndName(sheet, sName.getName());
+                    boolean databases = allowable.getLastColumn() > allowable.getColumn();
+                    for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++){
+                        if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()){
+                            String key = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
+                            String value = "";
+                            if (databases && !sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).isNull()){
+                                value = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
+                            }
+                            if (value.isEmpty()){ // use the current DB
+                                value = loggedInUser.getDatabase().getName();
+                            }
+                            permissionsFromReports.put(key,value);
+                        }
+                    }
+                    loggedInUser.setPermissionsFromReport(permissionsFromReports);
+                }
+            }
+
+
             // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
 
             /* commenting locked for the mo

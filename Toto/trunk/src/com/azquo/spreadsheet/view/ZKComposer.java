@@ -9,6 +9,7 @@ import com.azquo.spreadsheet.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.chart.ChartsEvent;
+import org.zkoss.web.servlet.http.Encodes;
 import org.zkoss.zk.ui.*;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
@@ -29,6 +30,7 @@ import org.zkoss.zul.*;
 import com.azquo.memorydb.TreeNode;
 
 import java.io.File;
+import java.net.URLEncoder;
 import java.util.*;
 
 /**
@@ -208,6 +210,16 @@ public class ZKComposer extends SelectorComposer<Component> {
                         selectionList = cell.getStringValue();
                     }
                     break;
+                }
+                if (name.getName().equalsIgnoreCase(ZKAzquoBookUtils.ALLOWABLE_REPORTS)){
+                    String cellValue = "";
+                    final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), name.getRefersToCellRegion().getColumn());// we care about the contents of the left most cell
+                    if (!cell.isNull()){
+                        cellValue = cell.getStringValue();
+                    }
+                    if (!cellValue.isEmpty()){ // deal with security in the online controller
+                        Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue) + "\")");
+                    }
                 }
             }
         }
@@ -789,8 +801,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         } else {
             reportName = "unspecified";
         }
-        if (permission != null) {
-            Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + permission.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
+        if (permission != null) { // database removed from permission, redundant
+            Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + permission.getId() + "&opcode=loadsheet" + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
         } else if (or != null) {
             Clients.evalJavaScript("window.open(\"/api/Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
         } else {

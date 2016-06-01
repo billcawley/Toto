@@ -50,6 +50,7 @@ public class LoggedInUser {
 
     private final String businessDirectory;
 
+    private Map<String, String> permissionsFromReport; // hold them here after they're set by a "home page" report for linking
 
     private static final String defaultRegion = "default-region";
 
@@ -196,5 +197,13 @@ public class LoggedInUser {
 
     public String getBusinessDirectory() {
         return businessDirectory;
+    }
+
+    public Map<String, String> getPermissionsFromReport() {
+        return permissionsFromReport;
+    }
+
+    public void setPermissionsFromReport(Map<String, String> permissionsFromReport) {
+        this.permissionsFromReport = permissionsFromReport;
     }
 }

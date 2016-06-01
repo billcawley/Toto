@@ -51,8 +51,7 @@ public class LoginController {
                 request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
                 if (!loggedInUser.getUser().isAdministrator()) {
-                    spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
-                    return "azquoReports"; // velocity currently
+                    return "redirect:/api/Online?opcode=loadsheet&reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                 } else {
                     return "redirect:/api/ManageReports";
                 }
@@ -64,9 +63,7 @@ public class LoginController {
                 if (loggedInUser != null) {
                     request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (!loggedInUser.getUser().isAdministrator()) {
-                        // I realise making a velocity and passing it to jsp is a bit crap, I just want it to work
-                        spreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
-                        return "azquoReports";
+                        return "redirect:/api/Online?opcode=loadsheet&reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                     } else {
                         return "redirect:/api/ManageReports";
                     }
