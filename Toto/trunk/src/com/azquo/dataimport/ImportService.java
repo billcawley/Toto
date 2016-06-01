@@ -650,16 +650,27 @@ public final class ImportService {
         //if (colCount++ > 0) bw.write('\t');
         if (cell != null && cell.getType() != SCell.CellType.BLANK) {
             String cellFormat = "";
-            if (cell.getType().equals(SCell.CellType.NUMBER)) {
-                if (cell.getCellStyle().getDataFormat().contains("mm")) {
-                    SimpleDateFormat df = new SimpleDateFormat(cell.getCellStyle().getDataFormat().toUpperCase());//if there are minutes that will become
-                    cellFormat = df.format(cell.getDateValue());
+            try {
+                cellFormat = convertDates(cell.getStringValue()).replace("\r\n", "~~");//a hack to carry through Excel carriage returns
+            }catch(Exception e){
+                try{
+                    double d = cell.getNumberValue();
+                    String cellStyle = cell.getCellStyle().getDataFormat();
+                    if (cellStyle.contains("dd")){
+                        //convert to standard form
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-mm-dd");
+                        cellFormat = df.format(cell.getDateValue());
+                    }else if (cellStyle.contains("mm")) {
+                        SimpleDateFormat df = new SimpleDateFormat(cell.getCellStyle().getDataFormat().toUpperCase());//if there are minutes that will become
+                        cellFormat = df.format(cell.getDateValue());
 
-                }else{
-                    cellFormat = cell.getValue() + "";
-            }
-            }else{
-                cellFormat = convertDates(cell.getStringValue()).replace("\r\n","~~");//a hack to carry through Excel carriage returns
+                    }else{
+                        cellFormat = cell.getValue() + "";
+                    }
+
+                }catch(Exception e2){
+                    //leave blank
+                }
             }
             if (newNames != null && newNames.get(cellFormat) != null) {
                 csvW.write(newNames.get(cellFormat));
