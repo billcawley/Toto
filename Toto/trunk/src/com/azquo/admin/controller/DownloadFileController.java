@@ -44,25 +44,24 @@ public class DownloadFileController {
                 if (byId.getTempPath().endsWith(".xlsx")){
                     response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
                 }
+                response.setHeader("Content-Disposition", "inline; filename=\"" + byId.getFileName() + "\"");
+                File f = new File(byId.getTempPath());
+                response.setHeader("Content-Length", String.valueOf(f.length()));
                 // maybe add a few more later
                 OutputStream out = response.getOutputStream();
                 byte[] bucket = new byte[32 * 1024];
-                int length = 0;
                 try {
                     // new java 8 syntax, a little odd but I'll leave here for the moment
-                    try (InputStream input = new BufferedInputStream(new FileInputStream(byId.getTempPath()))) {
+                    try (InputStream input = new BufferedInputStream(new FileInputStream(f))) {
                         int bytesRead = 0;
                         while (bytesRead != -1) {
                             //aInput.read() returns -1, 0, or more :
                             bytesRead = input.read(bucket);
                             if (bytesRead > 0) {
                                 out.write(bucket, 0, bytesRead);
-                                length += bytesRead;
                             }
                         }
                     }
-                    response.setHeader("Content-Disposition", "inline; filename=\"" + byId.getFileName() + "\"");
-                    response.setHeader("Content-Length", String.valueOf(length));
                     out.flush();
                     return;
                 } catch (IOException ex) {
