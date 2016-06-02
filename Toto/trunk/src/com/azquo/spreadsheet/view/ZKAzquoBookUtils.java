@@ -2,21 +2,27 @@ package com.azquo.spreadsheet.view;
 
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
+import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.zss.api.CellOperationUtil;
+import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.*;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
+import java.io.File;
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -45,22 +51,113 @@ public class ZKAzquoBookUtils {
     private final LoginService loginService;
     private final UserChoiceDAO userChoiceDAO;
     private final UserRegionOptionsDAO userRegionOptionsDAO;
+    private final OnlineReportDAO onlineReportDAO;
     private final RMIClient rmiClient;
     private final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
     // for scheduling reports
     private final String reportParameters;
 
     public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, RMIClient rmiClient) {
-        this(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, null, rmiClient);// no report parameters
+        this(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, null, null, rmiClient);// no report parameters or report DAO.
     }
 
-    private ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, String reportParameters, RMIClient rmiClient) {
+    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, OnlineReportDAO onlineReportDAO, String reportParameters, RMIClient rmiClient) {
         this.spreadsheetService = spreadsheetService;
         this.loginService = loginService;
         this.userChoiceDAO = userChoiceDAO;
         this.userRegionOptionsDAO = userRegionOptionsDAO;
+        this.onlineReportDAO = onlineReportDAO;
         this.rmiClient = rmiClient;
         this.reportParameters = reportParameters;
+    }
+
+    public static final String EXECUTE = "az_Execute";
+
+    public boolean runExecuteCommandForBook(Book book) throws Exception {
+        String executeCommand = null;
+        for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+            Sheet sheet = book.getSheetAt(sheetNumber);
+            List<SName> namesForSheet = getNamesForSheet(sheet);
+            for (SName sName : namesForSheet) {
+                if (sName.getName().equalsIgnoreCase(EXECUTE)) {
+                    executeCommand = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getStringValue();
+                }
+            }
+        }
+        if (executeCommand == null || executeCommand.isEmpty()){ // just return the book for the moment, no executing
+            // how to error message there was no execute? Exception? todo
+            return populateBook(book, 0);
+        }
+        List<String> commands = new ArrayList<>();
+        StringTokenizer st = new StringTokenizer(executeCommand, "\n");
+        while (st.hasMoreTokens()){
+            String line = st.nextToken();
+            if (!line.trim().isEmpty()){
+                commands.add(line);
+            }
+        }
+        LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        executeCommands(loggedInUser, commands);
+        return true;
+    }
+    // we assume cleansed of blank lines
+    public void executeCommands(LoggedInUser loggedInUser, List<String> commands) throws Exception {
+        if (commands.size() > 0 && commands.get(0) != null){
+            String firstLine = commands.get(0);
+            int startingIndent = getIndent(firstLine);
+            for (int lineNo = 0; lineNo < commands.size(); lineNo++){ // makes checking ahead easier
+                String line = commands.get(lineNo);
+                String trimmedLine = line.trim();
+                if (trimmedLine.toLowerCase().startsWith("for each")){
+                    // gather following lines - what we'll be executing
+                    int onwardLineNo = lineNo + 1;
+                    List<String> subCommands = new ArrayList<>();
+                    while (onwardLineNo < commands.size() && getIndent(commands.get(onwardLineNo)) > startingIndent){
+                        subCommands.add(commands.get(onwardLineNo));
+                        onwardLineNo++;
+                    }
+                    lineNo = onwardLineNo - 1; // put line back to where it is now
+                    if (!subCommands.isEmpty()){ // then we have something to run for the for each!
+                        String choiceName = trimmedLine.substring("for each".length(), trimmedLine.indexOf(" in ")).trim();
+                        String choiceQuery = trimmedLine.substring(trimmedLine.indexOf(" in ") + " in ".length()).trim();
+                        final List<String> dropdownListForQuery = getDropdownListForQuery(loggedInUser, choiceQuery);
+                        for (String choiceValue : dropdownListForQuery){ // run the for :)
+                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, choiceValue);
+                            executeCommands(loggedInUser, subCommands);
+                        }
+                    }
+                    // if not a for each I guess we just execute? Will check for "do"
+                } else if (trimmedLine.toLowerCase().startsWith("do")){
+                    String reportToRun = trimmedLine.substring(2).trim();
+                    OnlineReport onlineReport = onlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
+                    if (onlineReport != null){ // need to prepare it as in the controller todo - factor?
+                        onlineReport.setPathname(loggedInUser.getBusinessDirectory());
+                        String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
+                        final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                        book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
+                        book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+                        book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
+                        final boolean save = populateBook(book, 0);
+                        if (save){ // so the data was changed and if we save from here it will make changes to the DB
+                            for (SName name : book.getInternalBook().getNames()) {
+                                if (name.getName().toLowerCase().startsWith(AzquoBook.azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
+                                    String region = name.getName().substring(AzquoBook.azDataRegion.length());
+                                    spreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public int getIndent(String s){
+        int indent = 0;
+        while (indent < s.length() && s.charAt(indent) == ' '){
+            indent++;
+        }
+        return indent;
     }
 
     public boolean populateBook(Book book, int valueId) {

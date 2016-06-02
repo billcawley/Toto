@@ -190,32 +190,6 @@ public class SpreadsheetService {
                 //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
                 String filepath = ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                 azquoBook.loadBook(getHomeDir() + filepath, useAsposeLicense());
-                // executing parked commented as the execute loop code makes no sense
-                /*
-                String executeSetName = azquoBook.getRangeValue("az_ExecuteSet");
-                List<SetNameChosen> nameLoop = new ArrayList<SetNameChosen>();
-                String executeSet = null;
-                if (executeSetName != null && executeSetName.length() > 0) {
-                    executeSet = azquoBook.getRangeValue(executeSetName);
-                }
-                if (executeSet != null) {
-                    String[] executeItems = executeSet.split(",");
-                    for (String executeItem : executeItems) {
-
-                        if (executeItem.length() > 0 && executeItem.toLowerCase().endsWith("choice")) {
-                            List<Name> nameList = nameService.parseQuery(loggedInUser, executeItem);
-                            if (nameList != null) {
-                                SetNameChosen nextSetNameChosen = new SetNameChosen();
-                                nextSetNameChosen.setName = executeItem.toLowerCase().replace("choice", "chosen");
-                                nextSetNameChosen.choiceList = nameList;
-                                nextSetNameChosen.chosen = null;
-                                nameLoop.add(nextSetNameChosen);
-                            }
-                        }
-                    }
-                    executeLoop(loggedInUser, onlineReport.getId(), nameLoop, 0);
-                    return "";
-                }*/
             }
             azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
             spreadsheetName = azquoBook.printTabs(tabs, spreadsheetName);
@@ -313,30 +287,6 @@ public class SpreadsheetService {
         }
         return sb;
     }
-
-    public AzquoBook loadAzquoBook(LoggedInUser loggedInUser, OnlineReport onlineReport) throws Exception {
-        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this, rmiClient);
-        String filepath = ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename();
-        azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
-        azquoBook.loadBook(getHomeDir() + filepath, useAsposeLicense());
-        azquoBook.setSheet(0);//assume currently that this is a single sheet workbook
-        azquoBook.prepareSheet(loggedInUser, onlineReport.getId(), null);
-        return azquoBook;
-    }
-
-/*    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
-        AzquoBook azquoBook = loggedInConnection.getAzquoBook();
-        for (Name chosen : nameLoop.get(level).choiceList) {
-            setUserChoice(loggedInConnection.getUser().getId(), reportId, nameLoop.get(level).setName, chosen.getDefaultDisplayName());
-            level++;
-            if (level == nameLoop.size()) {
-                azquoBook.executeSheet(loggedInConnection);
-            } else {
-                executeLoop(loggedInConnection, reportId, nameLoop, level + 1);
-            }
-        }
-    }*/
-
 
     public void setUserChoice(int userId, String choiceName, String choiceValue) {
         UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(userId, choiceName);

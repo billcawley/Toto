@@ -44,7 +44,7 @@ public class SpreadsheetStatusController {
         }
         if ("log".equals(action)){
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-            // todo - limit the maount returned?
+            // todo - limit the amount returned?
             if (loggedInUser != null) {
                 return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getSessionLog(loggedInUser.getDataAccessToken()).replace("\n","<br>"); // note - I am deliberately not doing <br/>, it seems javascript messes with it and then I can't detect changes
             }

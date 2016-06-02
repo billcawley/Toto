@@ -98,6 +98,7 @@ public class OnlineController {
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
             , @RequestParam(value = "template", required = false) String template
+            , @RequestParam(value = "execute", required = false) String execute
 
     ) {
         try {
@@ -295,6 +296,7 @@ public class OnlineController {
                             final OnlineReport finalOnlineReport = onlineReport;
                             final LoggedInUser finalLoggedInUser = loggedInUser;
                             final boolean templateMode = "TRUE".equalsIgnoreCase(template) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster());
+                            final boolean executeMode = "TRUE".equalsIgnoreCase(execute);
                             new Thread(() -> {
                                 // so in here the new thread we set up the loading as it was originally before
                                 try {
@@ -307,8 +309,13 @@ public class OnlineController {
                                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                                     book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
                                     if (!templateMode){
-                                        ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
-                                        session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book, valueId));
+                                        ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, onlineReportDAO, null, rmiClient);
+                                        if (executeMode){
+                                            bookUtils.runExecuteCommandForBook(book);
+                                            session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
+                                        } else {
+                                            session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book, valueId));
+                                        }
                                     } else {
                                         finalLoggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
                                     }
@@ -366,7 +373,8 @@ public class OnlineController {
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "template", required = false, defaultValue = "") String template
+            , @RequestParam(value = "execute", required = false, defaultValue = "") String execute
     ) {
-        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, databaseId, permissionId, opcode, spreadsheetName, database, reportToLoad, /*dataChoice,imageStoreName, */ imageName, submit, null, template);
+        return handleRequest(model, request, user, password, choiceName, choiceValue, reportId, databaseId, permissionId, opcode, spreadsheetName, database, reportToLoad, /*dataChoice,imageStoreName, */ imageName, submit, null, template, execute);
     }
 }
