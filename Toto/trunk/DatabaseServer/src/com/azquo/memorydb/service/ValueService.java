@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class ValueService {
 
+    private static final String OPS = "+-*/";
+
     private static final Logger logger = Logger.getLogger(ValueService.class);
 
     @Autowired
@@ -391,7 +393,7 @@ public final class ValueService {
                     StringTokenizer st = new StringTokenizer(calcString, " ");
                     while (st.hasMoreTokens()) {
                         String term = st.nextToken();
-                        if (term.length() == 1) { // operation
+                        if (OPS.contains(term)) { // operation
                             valNo--;
                             char charTerm = term.charAt(0);
                             if (charTerm == '+') {
@@ -420,7 +422,7 @@ public final class ValueService {
                                     Iterator<Name> seekListIterator = seekList.iterator();
                                     while (seekListIterator.hasNext()){
                                         final Name test = seekListIterator.next();
-                                        if (independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test)){
+                                        if (!test.equals(name) && (independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))){
                                             seekListIterator.remove();
                                         }
                                     }
