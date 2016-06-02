@@ -198,7 +198,34 @@ public class ZKComposer extends SelectorComposer<Component> {
             selectionList = "`" + selectionName + "` children sorted";
             selectionName = "az_" + selectionName.trim();
             queryResultRegion = new CellRegion(event.getRow(), event.getColumn());
-        } else { // check to see if it's a non-pivot multi
+        } else {
+
+            SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ZKAzquoBookUtils.ALLOWABLE_REPORTS);
+            if (allowableReports !=null) {
+                String cellValue = "";
+                final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());// we care about the contents of the left most cell
+                if (!cell.isNull()&& cell.getType().equals(SCell.CellType.STRING)) {
+                    cellValue = cell.getStringValue();
+                }
+                if (cellValue.length()> 0) {
+                    CellRegion allowedRegion = allowableReports.getRefersToCellRegion();
+                    Sheet allowedSheet = myzss.getBook().getSheet(allowableReports.getRefersToSheetName());
+                    try {
+                        for (int row1 = allowedRegion.getRow(); row1 < allowedRegion.getRow() + allowedRegion.getRowCount(); row1++) {
+                            if (allowedSheet.getInternalSheet().getCell(row1, allowedRegion.getColumn()).getStringValue().equals(cellValue)) {// deal with security in the online controller
+
+                                Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue) + "\")");
+                            }
+                        }
+                    }catch(Exception e){
+                        //in case some cells are numeric
+                    }
+                }
+            }
+
+             // check to see if it's a non-pivot multi
+
+
             List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
             for (SName name : names) {
                 if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
@@ -210,16 +237,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                         selectionList = cell.getStringValue();
                     }
                     break;
-                }
-                if (name.getName().equalsIgnoreCase(ZKAzquoBookUtils.ALLOWABLE_REPORTS)){
-                    String cellValue = "";
-                    final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), name.getRefersToCellRegion().getColumn());// we care about the contents of the left most cell
-                    if (!cell.isNull()){
-                        cellValue = cell.getStringValue();
-                    }
-                    if (!cellValue.isEmpty()){ // deal with security in the online controller
-                        Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue) + "\")");
-                    }
                 }
             }
         }
