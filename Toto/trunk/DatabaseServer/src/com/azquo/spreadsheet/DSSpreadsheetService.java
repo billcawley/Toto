@@ -582,6 +582,13 @@ public class DSSpreadsheetService {
             } else {
                 List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
                 permutedLists.add(permuted);
+                if (lastHeadingDefinitionCellIndex==0){
+                    int spaceNeeded = permuted.size()- 1;
+                    while (spaceNeeded-- > 0 && headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 && headingLists.get(headingDefinitionRowIndex +1).get(0)==null ){
+                        headingDefinitionRowIndex++;
+                    }
+                }
+
             }
         }
         if (permutedLists.size() == 1) { // it was just one row to permute, return it as is rather than combining the permuted results together which might result in a bit of garbage due to array copying
