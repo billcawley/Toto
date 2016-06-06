@@ -21,7 +21,10 @@ import com.jcraft.jsch.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.Range;
+import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 import org.zkoss.zss.range.SRange;
@@ -646,43 +649,28 @@ public final class ImportService {
     }
 
     private void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
-        SCell cell = sheet.getInternalSheet().getCell(r,c);
-        //if (colCount++ > 0) bw.write('\t');
-        if (cell != null && cell.getType() != SCell.CellType.BLANK) {
+        Range range = Ranges.range(sheet,r,c);
+        CellData cellData = range.getCellData();
+
+          //if (colCount++ > 0) bw.write('\t');
+        if (cellData != null) {
             String cellFormat = "";
             try {
-                cellFormat = convertDates(cell.getStringValue()).replace("\r\n", "~~");//a hack to carry through Excel carriage returns
+                cellFormat = cellData.getFormatText();
             }catch(Exception e){
-                try{
-                    double d = cell.getNumberValue();
-                    String cellStyle = cell.getCellStyle().getDataFormat();
-                    if (cellStyle.contains("dd")){
-                        //convert to standard form
-                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-                        cellFormat = df.format(cell.getDateValue());
-                    }else if (cellStyle.contains("mm")) {
-                        SimpleDateFormat df = new SimpleDateFormat(cell.getCellStyle().getDataFormat().toUpperCase());//if there are minutes that will become
-                        cellFormat = df.format(cell.getDateValue());
-
-                    }else{
-                        cellFormat = cell.getValue() + "";
-                        if (cellFormat.endsWith(".0")){
-                            cellFormat = cellFormat.substring(0,cellFormat.length()-2);
-                        }
-                    }
-
-                }catch(Exception e2){
-                    //leave blank
-                }
             }
             if (newNames != null && newNames.get(cellFormat) != null) {
                 csvW.write(newNames.get(cellFormat));
             } else {
-                String style = cell.getCellStyle().toString();
-                if (style.contains("$")|| style.contains("£")){
+                if (!sheet.getInternalSheet().getCell(r,c).getCellStyle().toString().toLowerCase().contains("m")) {//check that it is not a data or a time
+                    //if it's a number, remove all formatting
                     try {
-                        cellFormat = cell.getNumberValue() + "";
-                    }catch(Exception e){
+                        double d = cellData.getDoubleValue();
+                        cellFormat = d + "";
+                        if (cellFormat.endsWith(".0")){
+                            cellFormat = cellFormat.substring(0,cellFormat.length()-2);
+                        }
+                    } catch (Exception e) {
 
                     }
                 }
