@@ -548,12 +548,15 @@ public class DSSpreadsheetService {
         final int lastHeadingDefinitionCellIndex = headingLists.get(0).size() - 1; // the headingLists will be square, that is to say all row lists the same length as prepared by createHeadingArraysFromSpreadsheetRegion
         // ok here's the logic, what's passed is a 2d array of lists, as created from createHeadingArraysFromSpreadsheetRegion
         // we would just run through the rows running a 2d permutation on each row BUT there's a rule that if there's
-        // a row below blank except the right most one then add that right most one to the one above
+        // a row below blank except the right most one then add that right most to the one above
         boolean starting = true;
         // ok the reason I'm doing this is to avoid unnecessary array copying and resizing. If the size is 1 can just return that otherwise create an ArrayList of the right size and copy in
         ArrayList<List<List<DataRegionHeading>>> permutedLists = new ArrayList<>(noOfHeadingDefinitionRows); // could be slightly less elements than this but it's unlikely to be a biggy.
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) { // not using a vanilla for loop as we want to skip forward to allow folding of rows with one cell on the right into the list above
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
+            if (headingDefinitionRow.size()==0){
+                headingDefinitionRow.add(null);
+            }
             if (headingDefinitionRow.get(lastHeadingDefinitionCellIndex) == null){
                 headingDefinitionRow.set(lastHeadingDefinitionCellIndex,new ArrayList<DataRegionHeading>());
                 headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
@@ -2096,6 +2099,18 @@ Callable interface sorts the memory "happens before" using future gets which run
                             }
                         } catch (Exception ignored) {
                         }*/
+                        //a cell can have a double value without having a string value.....
+                         try {
+                            double d =  cell.getDoubleValue();
+                            if (d!=0){
+                                String numericValue = d+"";
+                                if (numericValue.endsWith(".0")){
+                                    numericValue = numericValue.substring(0,numericValue.length()-2);
+                                }
+                                cell.setStringValue(numericValue);
+                            }
+                        }catch(Exception e){
+                        }
                         if (cell.getStringValue() != null && cell.getStringValue().endsWith("%")) {
                             String percent = cell.getStringValue().substring(0, cell.getStringValue().length() - 1);
                             try {
@@ -2162,7 +2177,6 @@ Callable interface sorts the memory "happens before" using future gets which run
                             } else { // normal behavior, most of the time
                                 if (valuesForCell.getValues().size() == 1) {
                                     final Value theValue = valuesForCell.getValues().get(0);
-                                    logger.info("trying to overwrite");
                                     if (cell.getStringValue() != null && cell.getStringValue().length() > 0) {
                                         //sometimes non-existent original values are stored as '0'
                                         valueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
@@ -2172,8 +2186,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                         numberOfValuesModified++;
                                     }
                                 } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue() != null && cell.getStringValue().length() > 0) {
-                                    logger.info("storing new value here . . .");
-                                    List<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
+                                     List<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
                                     valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), new HashSet<>(cellNames));
                                     numberOfValuesModified++;
                                 }
@@ -2193,11 +2206,11 @@ Callable interface sorts the memory "happens before" using future gets which run
                                      So attSet following that example is "All Categories", category is a (possibly) new name that's a child of all categories and then we need to add the product
                                      , named toChange at the moment to that category.
                                     */
-                                    logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getStringValue() + " within " + attribute);
+                                    //logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getStringValue() + " within " + attribute);
                                     Name category = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getStringValue(), attSet, true);
                                     category.addChildWillBePersisted(toChange);
                                 } else {// simple attribute set
-                                    logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
+                                    //logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
                                     toChange.setAttributeWillBePersisted(attribute, cell.getStringValue());
                                 }
                             }
