@@ -122,7 +122,7 @@ public class ZKAzquoBookUtils {
                         String choiceQuery = trimmedLine.substring(trimmedLine.indexOf(" in ") + " in ".length()).trim();
                         final List<String> dropdownListForQuery = getDropdownListForQuery(loggedInUser, choiceQuery);
                         for (String choiceValue : dropdownListForQuery){ // run the for :)
-                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, choiceValue);
+                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`",""), choiceValue);
                             executeCommands(loggedInUser, subCommands);
                         }
                     }
