@@ -472,18 +472,51 @@ public class ZKComposer extends SelectorComposer<Component> {
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
         List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet());
-        if (names == null) return;
+        List<SName> repeatRegionNames = ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ZKAzquoBookUtils.azRepeatScope);
+        if (names == null && repeatRegionNames == null) return;
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-
-        for (SName name : names) { // regions may overlap - update all!
-            String region = name.getName().substring("az_DataRegion".length());
-            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
-            if (sentCells != null) {
-                // the data region as defined on the cheet may be larger than the sent cells
-                if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow()
-                        && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
-                    CellForDisplay cellForDisplay = sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).get(col - name.getRefersToCellRegion().getColumn());
+        // regions may overlap - update all EXCEPT where there are repeat regions, in which case just do that as repeat regions will have overlap by their nature
+        SName repeatScopeName = null;
+        SName repeatRegion = null;
+        SName repeatDataRegion = null;
+        String repeatRegionName = null;
+        for (SName name : repeatRegionNames){ // really should be only one
+                repeatScopeName = name;
+                repeatRegionName = name.getName().substring(ZKAzquoBookUtils.azRepeatScope.length());
+                repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.azRepeatRegion + repeatRegionName);
+                repeatDataRegion = book.getInternalBook().getNameByName("az_DataRegion" + repeatRegionName); // todo string literals ergh!
+        }
+        // deal with repeats, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
+        // todo and maybe factor some of the working out where we are stuff
+        if (repeatScopeName != null && repeatRegion != null && repeatDataRegion != null){ // ergh, got to try and find the right sent cell!
+            // local row ancd col starts off local to the repeat scope then the region and finally the data region in the repeated region
+            int localRow = row - repeatScopeName.getRefersToCellRegion().getRow();
+            int localCol = col - repeatScopeName.getRefersToCellRegion().getColumn();
+            // NOT row and col in a cell cense, row and coll in a repeated region sense
+            int repeatRow = 0;
+            int repeatCol = 0;
+            // ok so keep chopping the row and col in repeat scope until we have the row and col in the repeat region but we know WHICH repeat region we're in
+            while (localRow - repeatRegion.getRefersToCellRegion().getRowCount() > 0){
+                repeatRow++;
+                localRow -= repeatRegion.getRefersToCellRegion().getRowCount();
+            }
+            while (localCol - repeatRegion.getRefersToCellRegion().getColumnCount() > 0){
+                repeatCol++;
+                localCol -= repeatRegion.getRefersToCellRegion().getColumnCount();
+            }
+            // so now we should know the row and col local to the particular repeat region we're in and which repeat region we're in. Try to get the sent cells!
+            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, repeatRegionName + "-" + repeatRow + "-" + repeatCol);
+            if (sentCells != null){ // a good start!
+                // take into account eh offset from the top left of the repeated region and the data region in it
+                int dataRowStartInRepeatRegion = repeatDataRegion.getRefersToCellRegion().getRow() - repeatScopeName.getRefersToCellRegion().getRow();
+                int dataColStartInRepeatRegion = repeatDataRegion.getRefersToCellRegion().getColumn() - repeatScopeName.getRefersToCellRegion().getColumn();
+                localRow -= dataRowStartInRepeatRegion;
+                localCol -= dataColStartInRepeatRegion;
+                // similar to below - todo factor
+                if (localRow >= 0 && localCol >= 0 &&
+                        sentCells.getData().size() > localRow && sentCells.getData().get(localRow).size() > localCol) {
+                    CellForDisplay cellForDisplay = sentCells.getData().get(localRow).get(localCol);
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                     if (isDouble) {
                         cellForDisplay.setDoubleValue(doubleValue);
@@ -498,6 +531,31 @@ public class ZKComposer extends SelectorComposer<Component> {
                         CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
                     }
                 }
+            }
+        } else if (names != null){
+            for (SName name : names) {
+                    String region = name.getName().substring("az_DataRegion".length());
+                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
+                    if (sentCells != null) {
+                        // the data region as defined on the sheet may be larger than the sent cells
+                        if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow()
+                                && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
+                            CellForDisplay cellForDisplay = sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).get(col - name.getRefersToCellRegion().getColumn());
+                            Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
+                            if (isDouble) {
+                                cellForDisplay.setDoubleValue(doubleValue);
+                            }
+                            cellForDisplay.setStringValue(chosen);
+                            int highlightDays = 0;
+                            if (book.getInternalBook().getAttribute("highlightDays") != null) { // maybe factor the string literals??
+                                highlightDays = (Integer) book.getInternalBook().getAttribute("highlightDays");
+                            }
+                            if (highlightDays > 0) {
+                                cellForDisplay.setHighlighted(true);
+                                CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
+                            }
+                        }
+                    }
             }
         }
     }

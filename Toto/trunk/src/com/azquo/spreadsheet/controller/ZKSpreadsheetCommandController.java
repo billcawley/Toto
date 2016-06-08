@@ -212,6 +212,24 @@ public class ZKSpreadsheetCommandController {
                                 String region = name.getName().substring(AzquoBook.azDataRegion.length());
                                 spreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
                             }
+                            // deal with repeats, annoying!
+                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.azRepeatScope.toLowerCase())) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
+                                String region = name.getName().substring(ZKAzquoBookUtils.azRepeatScope.length());
+                                final SName repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.azRepeatRegion + region);
+                                if (repeatRegion != null){
+                                    int regionRows = repeatRegion.getRefersToCellRegion().getRowCount();
+                                    int regionCols = repeatRegion.getRefersToCellRegion().getColumnCount();
+                                    // integer division is fine will give the number of complete region rows and cols ( rounds down)
+                                    int repeatRows = name.getRefersToCellRegion().getRowCount() / regionRows;
+                                    int repeatCols = name.getRefersToCellRegion().getColumnCount() / regionCols;
+                                    for (int row = 0; row < repeatRows; row++){
+                                        for (int col = 0; col < repeatCols; col++){
+                                            //region + "-" + repeatRow + "-" + repeatColumn
+                                            spreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 

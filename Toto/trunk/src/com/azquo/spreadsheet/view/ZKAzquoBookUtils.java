@@ -13,6 +13,7 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.math.util.OpenIntToDoubleHashMap;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Range;
@@ -38,6 +39,12 @@ public class ZKAzquoBookUtils {
 
     private static final String azDataRegion = "az_DataRegion";
     static final String azOptions = "az_Options";
+    public static final String azRepeatRegion = "az_RepeatRegion";
+    public static final String azRepeatScope = "az_RepeatScope";
+    public static final String azRepeatItem = "az_RepeatItem";
+    public static final String azRepeatList = "az_RepeatList";
+
+
     private static final String CONTENTS = "contents(";
     /*
     CONTENTS is used to handle dependent ranges within the data region.   Thus one column in the data region may ask for a category, and the next a subcategory, which should be determined by the category
@@ -225,7 +232,7 @@ public class ZKAzquoBookUtils {
             //have a look for "az_AllowableReports", it's read only, getting it here seems as reasonable as anything
             for (SName sName : namesForSheet) {
                 if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
-                    CellRegion allowable = getCellRegionForSheetAndName(sheet, sName.getName());
+                    CellRegion allowable = sName.getRefersToCellRegion();
                     boolean databases = allowable.getLastColumn() > allowable.getColumn();
                     for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++){
                         if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()){
@@ -262,12 +269,13 @@ public class ZKAzquoBookUtils {
             // choices can be a real pain, I effectively need to keep resolving them until they don't change due to choices being based on choices (dependencies in excel)
             boolean resolveChoices = true;
             int attempts = 0;
+            List<CellRegion> regionsToWatchForMerge = new ArrayList<>();
             while (resolveChoices) {
                 context = "";
                 // Now I need to run through all choices setting from the user options IF it is valid and the first on the menu if it is not
                 for (SName sName : namesForSheet) {
                     if (sName.getName().endsWith("Chosen")) {
-                        CellRegion chosen = getCellRegionForSheetAndName(sheet, sName.getName());
+                        CellRegion chosen = sName.getRefersToCellRegion();
                         String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length()).toLowerCase();
                         if (chosen != null) {
                             if (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1) { // I think I may keep this constraint even after
@@ -295,6 +303,10 @@ public class ZKAzquoBookUtils {
                                 }
                             }
                         }
+                        regionsToWatchForMerge.add(chosen);
+                    }
+                    if (sName.getName().equalsIgnoreCase("az_ReportName")) {
+                        regionsToWatchForMerge.add(sName.getRefersToCellRegion());
                     }
                 }
                 resolveChoices = false;
@@ -311,10 +323,17 @@ public class ZKAzquoBookUtils {
                 }
             }
             resolveQueries(sheet, loggedInUser); // after all options sorted should be ok
-            // ok the plan here is remove all the merges then put them back in after the regions are expanded.
-            List<CellRegion> merges = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
-            for (CellRegion merge : merges) {
-                CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
+            // ok the plan here is remove merges that might be adversely affected by regions expanding then put them back in after the regions are expanded.
+
+            List<CellRegion> mergesToTemporarilyRemove = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
+            Iterator<CellRegion> it = mergesToTemporarilyRemove.iterator();
+            while (it.hasNext()){
+                CellRegion merge = it.next();
+                if (regionsToWatchForMerge.contains(merge)){
+                    CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
+                } else {
+                    it.remove(); // a merge we just leave alone
+                }
             }
             // and now we want to run through all regions for this sheet
             boolean fastLoad = false; // skip some checks, initially related to saving
@@ -349,22 +368,22 @@ public class ZKAzquoBookUtils {
                         userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                     }
                     String databaseName = userRegionOptions.getDatabaseName();
-                    // fairly simple addition to allow multiple databases on the same report
-                    // todo - support when saving . . .
-                    if (databaseName != null) {
-                        Database origDatabase = loggedInUser.getDatabase();
-                        DatabaseServer origServer = loggedInUser.getDatabaseServer();
-                        try {
-                            loginService.switchDatabase(loggedInUser, databaseName);
+                        // fairly simple addition to allow multiple databases on the same report
+                        // todo - support when saving . . .
+                        if (databaseName != null) {
+                            Database origDatabase = loggedInUser.getDatabase();
+                            DatabaseServer origServer = loggedInUser.getDatabaseServer();
+                            try {
+                                loginService.switchDatabase(loggedInUser, databaseName);
+                                fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
+                            } catch (Exception e) {
+                                String eMessage = "Unknown database " + databaseName + " for region " + region;
+                                sheet.getInternalSheet().getCell(0, 0).setStringValue(eMessage);
+                            }
+                            loggedInUser.setDatabaseWithServer(origServer, origDatabase);
+                        } else {
                             fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
-                        } catch (Exception e) {
-                            String eMessage = "Unknown database " + databaseName + " for region " + region;
-                            sheet.getInternalSheet().getCell(0, 0).setStringValue(eMessage);
                         }
-                        loggedInUser.setDatabaseWithServer(origServer, origDatabase);
-                    } else {
-                        fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
-                    }
                 }
             }
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
@@ -483,7 +502,7 @@ public class ZKAzquoBookUtils {
                 chart.setAnchor(new ViewAnchor(row, col, 0, 0, width, height));
             }
             // now remerge? Should work
-            for (CellRegion merge : merges) {
+            for (CellRegion merge : mergesToTemporarilyRemove) {
                 // the boolean meant JUST horizontally, I don't know why. Hence false.
                 CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), false);
             }
@@ -551,7 +570,61 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private void fillRegion(Sheet sheet, int reportId, String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
+    private void fillRegion(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
+
+        // ok need to deal with the repeat region things
+        // the region to be repeated, will contain headings and an item which changes for each repetition
+        SName repeatRegion = sheet.getBook().getInternalBook().getNameByName(azRepeatRegion + region);
+        // the target space we can repeat into. Can expand down but not across
+        SName repeatScope = sheet.getBook().getInternalBook().getNameByName(azRepeatScope + region);
+        // the list of items we can repeat over
+        SName repeatList = sheet.getBook().getInternalBook().getNameByName(azRepeatList + region);
+        // the cell we'll put the items in the list in
+        SName repeatItem = sheet.getBook().getInternalBook().getNameByName(azRepeatItem + region);
+        // probably will be required later so declare out here
+        int repeatRegionWidth = 0;
+        int repeatScopeWidth = 0;
+        int repeatRegionHeight = 0;
+        int repeatScopeHeight = 0;
+        int repeatColumns = 0;
+        int repeatItemRowOffset = 0;
+        int repeatItemColumnOffset = 0;
+        List<String> repeatListItems = null;
+        if (repeatRegion != null && repeatScope != null && repeatList != null && repeatItem != null) { // then the repeat thing
+            repeatRegionWidth = repeatRegion.getRefersToCellRegion().getColumnCount();
+            repeatScopeWidth = repeatScope.getRefersToCellRegion().getColumnCount();
+            repeatRegionHeight = repeatRegion.getRefersToCellRegion().getRowCount();
+            repeatScopeHeight = repeatScope.getRefersToCellRegion().getRowCount();
+            repeatColumns = repeatScopeWidth / repeatRegionWidth;
+            // we'll need the relative location of the item to populate it in each instance
+            repeatItemRowOffset = repeatItem.getRefersToCellRegion().getRow() - repeatRegion.getRefersToCellRegion().getRow();
+            repeatItemColumnOffset = repeatItem.getRefersToCellRegion().getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+
+            String repeatListText = getSnameCell(repeatList).getStringValue();
+            repeatListItems = getDropdownListForQuery(loggedInUser, repeatListText);
+            // so the expansion within each region will be dealt with by fill region internally but out here I need to ensure that there's enough space for the regions unexpanded
+            int repeatRowsRequired = repeatListItems.size() / repeatColumns;
+            if (repeatListItems.size() % repeatColumns > 0) {
+                repeatRowsRequired++;
+            }
+            int rowsRequired = repeatRowsRequired * repeatRegionHeight;
+            if (rowsRequired > repeatScopeHeight) {
+                // slight copy paste from below, todo factor?
+                int maxCol = getMaxCol(sheet);
+                int rowsToAdd = rowsRequired - repeatScopeHeight;
+                int insertRow = repeatScope.getRefersToCellRegion().getRow() + repeatScope.getRefersToCellRegion().getRowCount() - 1; // last but one row
+//                int insertRow = repeatScope.getRefersToCellRegion().getLastRow(); // last row (different API call, was using the firt row plus the row count - 1, a simple mistake?)
+                Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
+                Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+                CellOperationUtil.insertRow(insertRange);
+                CellOperationUtil.paste(copySource, insertRange);
+                int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
+                if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
+                    insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
+                }
+            }
+            // so the space should be prepared for multi
+        }
         SName columnHeadingsDescription = sheet.getBook().getInternalBook().getNameByName("az_ColumnHeadings" + region);
         SName rowHeadingsDescription = sheet.getBook().getInternalBook().getNameByName("az_RowHeadings" + region);
         SName contextDescription = sheet.getBook().getInternalBook().getNameByName("az_Context" + region);
@@ -616,12 +689,7 @@ public class ZKAzquoBookUtils {
 
                 if (displayDataRegion != null) {
                     // add rows
-                    int maxCol = 0;
-                    for (int i = 0; i <= sheet.getLastRow(); i++) {
-                        if (sheet.getLastColumn(i) > maxCol) {
-                            maxCol = sheet.getLastColumn(i);
-                        }
-                    }
+                    int maxCol = getMaxCol(sheet);
                     if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
                         rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
                         int insertRow = displayDataRegion.getRow() + displayDataRegion.getRowCount() - 1; // last but one row
@@ -649,8 +717,8 @@ public class ZKAzquoBookUtils {
                             insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
                         }
                     }
+                    // these re loadings are because the region may have changed
                     displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
-
                     int row;
                     // ok there should be the right space for the headings
                     if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
@@ -822,67 +890,63 @@ public class ZKAzquoBookUtils {
                 }*/
                     }
                     displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
+                    if (repeatListItems != null){ // then we need to prepare the repeated regions. Row and col headings have been made so copy paste them where required
+                        int rootRow = repeatRegion.getRefersToCellRegion().getRow();
+                        int rootCol = repeatRegion.getRefersToCellRegion().getColumn();
+                        int repeatColumn = 0;
+                        int repeatRow = 0;
 
-                    row = displayDataRegion.getRow();
-                    List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
-                    if (cellsAndHeadingsForDisplay.getData() != null) {
-                        for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
-                            int col = displayDataRegion.getColumn();
-                            int localCol = 0;
-                            for (CellForDisplay cellValue : rowCellValues) {
-                                if (!cellValue.getStringValue().isEmpty() && !bottomColHeadings.get(localCol).equals(".")) { // then something to set. Note : if col heading ON THE DB SIDE is . then don't populate
-                                    // the notable thing ehre is that ZK uses the object type to work out data type
-                                    SCell cell = sheet.getInternalSheet().getCell(row, col);
-                                    // logic I didn't initially implement : don't overwrite if there's a formulae in there
-                                    boolean hasValue = false;
-                                    if (cell.getType() != SCell.CellType.FORMULA) {
-                                        String format = cell.getCellStyle().getDataFormat();
-                                        if (format.toLowerCase().contains("m")) {//allow users to format their own dates.  All dates on file as values are yyyy-MM-dd
-                                            try {
-                                                Date date;
-                                                if (format.contains("h")) {
-                                                    SimpleDateFormat dfLocal = new SimpleDateFormat(format);
-                                                    date = dfLocal.parse(cellValue.getStringValue());
-                                                } else {
-                                                    date = df.parse(cellValue.getStringValue());
-                                                }
-                                                if (date != null) {
-                                                    cell.setValue(date.getTime() / (1000 * 3600 * 24) + 25569);//convert date to days relative to 1970
-                                                    hasValue = true;
-                                                }
-                                            } catch (Exception ignored) {
-                                            }
-                                        }
-                                        if (!hasValue) {
-                                            if (cell.getCellStyle().getFont().getName().equalsIgnoreCase("Code EAN13")) { // then a special case, need to use barcode encoding
-                                                cell.setValue(SpreadsheetService.prepareEAN13Barcode(cellValue.getStringValue()));// guess we'll see how that goes!
-                                            } else {
-                                                if (NumberUtils.isNumber(cellValue.getStringValue())) {
-                                                    cell.setValue(cellValue.getDoubleValue());// think that works . . .
-                                                } else {
-                                                    cell.setValue(cellValue.getStringValue());// think that works . . .
-                                                }
-                                            }
-                                        }
-                                        // see if this works for highlighting
-                                        if (cellValue.isHighlighted()) {
-                                            CellOperationUtil.applyFontColor(Ranges.range(sheet, row, col), "#FF0000");
-                                        }
-                                    /* commented for the moment, requires the overall unlock per sheet followed by the protect later
-                                    if (cellValue.isLocked()){
-                                        Range selection =  Ranges.range(sheet, row, col);
-                                        CellStyle oldStyle = selection.getCellStyle();
-                                        EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
-                                        newStyle.setLocked(true);
-                                        selection.setCellStyle(newStyle);
-                                    }*/
-                                    }
-                                }
-                                col++;
-                                localCol++;
+                        // work out where the data region is relative to the repeat region, we wait until now as it may have been expanded
+                        int repeatDataRowOffset = 0;
+                        int repeatDataColumnOffset = 0;
+                        int repeatDataLastRowOffset = 0;
+                        int repeatDataLastColumnOffset = 0;
+
+                        repeatDataRowOffset = displayDataRegion.getRow() - repeatRegion.getRefersToCellRegion().getRow();
+                        repeatDataColumnOffset = displayDataRegion.getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+                        repeatDataLastRowOffset = displayDataRegion.getLastRow() - repeatRegion.getRefersToCellRegion().getRow();
+                        repeatDataLastColumnOffset = displayDataRegion.getLastColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+
+                        Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
+                        // yes the first will simply be copying over itself
+                        for (String item : repeatListItems){
+                            Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth);
+                            CellOperationUtil.paste(copySource, insertRange);
+                            // and set the item
+                            sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset).setStringValue(item);
+                            repeatColumn++;
+                            if (repeatColumn == repeatColumns){ // zap if back to the first column
+                                repeatColumn = 0;
+                                repeatRow++;
                             }
-                            row++;
                         }
+                        // reset tracking among the repeat regions
+                        repeatColumn = 0;
+                        repeatRow = 0;
+                        // and now do the data, separate loop otherwise I'll be copy/pasting data
+                        for (String item : repeatListItems) {
+                            contextList.add(Collections.singletonList(item)); // item added to the context
+                            // yes this is little inefficient as the headings are being resolved each time but that's just how it is for the moment
+                            cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, nameToStringLists(columnHeadingsDescription),
+                                    contextList, userRegionOptions);
+                            displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
+                            ,rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
+
+                            loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!
+
+                            dataFill(sheet, cellsAndHeadingsForDisplay,displayDataRegion);
+                            contextList.remove(contextList.size() - 1); // item removed from the context
+
+                            repeatColumn++;
+                            if (repeatColumn == repeatColumns){ // zap if back to the first column
+                                repeatColumn = 0;
+                                repeatRow++;
+                            }
+
+                        }
+
+                    } else {
+                        dataFill(sheet, cellsAndHeadingsForDisplay,displayDataRegion);
                     }
                 }
             } catch (RemoteException re) {
@@ -924,6 +988,82 @@ public class ZKAzquoBookUtils {
                 System.out.println("no region found for az_DataRegion" + region);
             }
         }
+    }
+
+    // factored off to enable multiple regions
+
+    private void dataFill(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion){
+        int row = displayDataRegion.getRow();
+        List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
+        if (cellsAndHeadingsForDisplay.getData() != null) {
+            for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
+                int col = displayDataRegion.getColumn();
+                int localCol = 0;
+                for (CellForDisplay cellValue : rowCellValues) {
+                    if (!cellValue.getStringValue().isEmpty() && !bottomColHeadings.get(localCol).equals(".")) { // then something to set. Note : if col heading ON THE DB SIDE is . then don't populate
+                        // the notable thing ehre is that ZK uses the object type to work out data type
+                        SCell cell = sheet.getInternalSheet().getCell(row, col);
+                        // logic I didn't initially implement : don't overwrite if there's a formulae in there
+                        boolean hasValue = false;
+                        if (cell.getType() != SCell.CellType.FORMULA) {
+                            String format = cell.getCellStyle().getDataFormat();
+                            if (format.toLowerCase().contains("m")) {//allow users to format their own dates.  All dates on file as values are yyyy-MM-dd
+                                try {
+                                    Date date;
+                                    if (format.contains("h")) {
+                                        SimpleDateFormat dfLocal = new SimpleDateFormat(format);
+                                        date = dfLocal.parse(cellValue.getStringValue());
+                                    } else {
+                                        date = df.parse(cellValue.getStringValue());
+                                    }
+                                    if (date != null) {
+                                        cell.setValue(date.getTime() / (1000 * 3600 * 24) + 25569);//convert date to days relative to 1970
+                                        hasValue = true;
+                                    }
+                                } catch (Exception ignored) {
+                                }
+                            }
+                            if (!hasValue) {
+                                if (cell.getCellStyle().getFont().getName().equalsIgnoreCase("Code EAN13")) { // then a special case, need to use barcode encoding
+                                    cell.setValue(SpreadsheetService.prepareEAN13Barcode(cellValue.getStringValue()));// guess we'll see how that goes!
+                                } else {
+                                    if (NumberUtils.isNumber(cellValue.getStringValue())) {
+                                        cell.setValue(cellValue.getDoubleValue());// think that works . . .
+                                    } else {
+                                        cell.setValue(cellValue.getStringValue());// think that works . . .
+                                    }
+                                }
+                            }
+                            // see if this works for highlighting
+                            if (cellValue.isHighlighted()) {
+                                CellOperationUtil.applyFontColor(Ranges.range(sheet, row, col), "#FF0000");
+                            }
+                                    /* commented for the moment, requires the overall unlock per sheet followed by the protect later
+                                    if (cellValue.isLocked()){
+                                        Range selection =  Ranges.range(sheet, row, col);
+                                        CellStyle oldStyle = selection.getCellStyle();
+                                        EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
+                                        newStyle.setLocked(true);
+                                        selection.setCellStyle(newStyle);
+                                    }*/
+                        }
+                    }
+                    col++;
+                    localCol++;
+                }
+                row++;
+            }
+        }
+    }
+
+    private int getMaxCol(Sheet sheet) {
+        int maxCol = 0;
+        for (int i = 0; i <= sheet.getLastRow(); i++) {
+            if (sheet.getLastColumn(i) > maxCol) {
+                maxCol = sheet.getLastColumn(i);
+            }
+        }
+        return maxCol;
     }
 
     private static List<SName> getNamesForSheet(Sheet sheet) {
@@ -1255,9 +1395,15 @@ public class ZKAzquoBookUtils {
 
     // moved/adapted from ZKComposer and made static
     static List<SName> getNamedDataRegionForRowAndColumnSelectedSheet(int row, int col, Sheet sheet) {
+        return  getNamedRegionForRowAndColumnSelectedSheet(row,col,sheet, "az_dataregion");
+    }
+
+    // moved/adapted from ZKComposer and made static
+    static List<SName> getNamedRegionForRowAndColumnSelectedSheet(int row, int col, Sheet sheet, String prefix) {
+        prefix = prefix.toLowerCase();
         List<SName> found = new ArrayList<>();
         for (SName name : getNamesForSheet(sheet)) { // seems best to loop through names checking which matches I think
-            if (name.getName().toLowerCase().startsWith("az_dataregion")
+            if (name.getName().toLowerCase().startsWith(prefix)
                     && name.getRefersToCellRegion() != null
                     && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
                     && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
