@@ -367,15 +367,20 @@ public class ZKComposer extends SelectorComposer<Component> {
         boolean reload = false;
         for (SName name : names) {
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// would have been a one cell name
-                String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
-                spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
-                // I'm not sure exactly why blankDependantChoices was commented, commenting the other two redundant lines
-                //List<String> changedChoice = new ArrayList<>();
-                //changedChoice.add(choice);
-                // hopefully self explanatory :)
-                //zkAzquoBookUtils.blankDependantChoices(loggedInUser, changedChoice, event.getSheet());
-                reload = true;
-                break;
+                //and it cannot be in an existing data region
+                if (ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ZKAzquoBookUtils.azRepeatScope).size() == 0
+                        && ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), "az_dataregion").size() == 0) {
+
+                    String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
+                    spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
+                    // I'm not sure exactly why blankDependantChoices was commented, commenting the other two redundant lines
+                    //List<String> changedChoice = new ArrayList<>();
+                    //changedChoice.add(choice);
+                    // hopefully self explanatory :)
+                    //zkAzquoBookUtils.blankDependantChoices(loggedInUser, changedChoice, event.getSheet());
+                    reload = true;
+                    break;
+                }
             }
             // todo, add row heading later if required
             if (name.getName().startsWith("az_DisplayColumnHeadings")) { // ok going to try for a sorting detect
