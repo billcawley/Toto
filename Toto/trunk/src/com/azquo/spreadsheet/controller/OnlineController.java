@@ -313,7 +313,7 @@ public class OnlineController {
                                     book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
                                     if (!templateMode){
                                         ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, onlineReportDAO, null, rmiClient);
-                                        session.setAttribute(finalReportId + EXECUTE_FLAG, book.getInternalBook().getNameByName("execute") != null); // pretty crude but should do it
+                                        session.setAttribute(finalReportId + EXECUTE_FLAG, book.getInternalBook().getNameByName(ZKAzquoBookUtils.EXECUTE) != null); // pretty crude but should do it
                                         if (executeMode){
                                             bookUtils.runExecuteCommandForBook(book);
                                             session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
