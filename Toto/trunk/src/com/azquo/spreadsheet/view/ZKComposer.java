@@ -9,7 +9,6 @@ import com.azquo.spreadsheet.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.chart.ChartsEvent;
-import org.zkoss.web.servlet.http.Encodes;
 import org.zkoss.zk.ui.*;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
@@ -201,13 +200,13 @@ public class ZKComposer extends SelectorComposer<Component> {
         } else {
 
             SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ZKAzquoBookUtils.ALLOWABLE_REPORTS);
-            if (allowableReports !=null) {
+            if (allowableReports != null) {
                 String cellValue = "";
                 final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());// we care about the contents of the left most cell
-                if (!cell.isNull()&& cell.getType().equals(SCell.CellType.STRING)) {
+                if (!cell.isNull() && cell.getType().equals(SCell.CellType.STRING)) {
                     cellValue = cell.getStringValue();
                 }
-                if (cellValue.length()> 0) {
+                if (cellValue.length() > 0) {
                     CellRegion allowedRegion = allowableReports.getRefersToCellRegion();
                     Sheet allowedSheet = myzss.getBook().getSheet(allowableReports.getRefersToSheetName());
                     try {
@@ -217,13 +216,13 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue) + "\")");
                             }
                         }
-                    }catch(Exception e){
+                    } catch (Exception e) {
                         //in case some cells are numeric
                     }
                 }
             }
 
-             // check to see if it's a non-pivot multi
+            // check to see if it's a non-pivot multi
 
 
             List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
@@ -435,8 +434,20 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    // to detect data changes.
+    // used directly below, I need a list of the following
+    private class RegionRowCol {
+        public final String region;
+        public final int row;
+        public final int col;
 
+        private RegionRowCol(String region, int row, int col) {
+            this.region = region;
+            this.row = row;
+            this.col = col;
+        }
+    }
+
+    // to detect data changes.
     @Listen("onAfterCellChange = #myzss")
     public void onAfterCellChange(CellAreaEvent event) {
         int row = event.getRow();
@@ -477,46 +488,24 @@ public class ZKComposer extends SelectorComposer<Component> {
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         // regions may overlap - update all EXCEPT where there are repeat regions, in which case just do that as repeat regions will have overlap by their nature
-        SName repeatScopeName = null;
-        SName repeatRegion = null;
-        SName repeatDataRegion = null;
-        String repeatRegionName = null;
-        for (SName name : repeatRegionNames){ // really should be only one
-                repeatScopeName = name;
-                repeatRegionName = name.getName().substring(ZKAzquoBookUtils.azRepeatScope.length());
-                repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.azRepeatRegion + repeatRegionName);
-                repeatDataRegion = book.getInternalBook().getNameByName("az_DataRegion" + repeatRegionName); // todo string literals ergh!
+        List<RegionRowCol> regionRowColsToSave = new ArrayList<>(); // a list to save - list due to the possibility of overlapping data regions
+        if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
+            final RegionRowCol regionRowColForRepeatRegion = getRegionRowColForRepeatRegion(book, row, col, repeatRegionNames.get(0));
+            if (regionRowColForRepeatRegion != null) {
+                regionRowColsToSave.add(regionRowColForRepeatRegion);
+            }
         }
-        // deal with repeats, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
-        // todo and maybe factor some of the working out where we are stuff
-        if (repeatScopeName != null && repeatRegion != null && repeatDataRegion != null){ // ergh, got to try and find the right sent cell!
-            // local row ancd col starts off local to the repeat scope then the region and finally the data region in the repeated region
-            int localRow = row - repeatScopeName.getRefersToCellRegion().getRow();
-            int localCol = col - repeatScopeName.getRefersToCellRegion().getColumn();
-            // NOT row and col in a cell cense, row and coll in a repeated region sense
-            int repeatRow = 0;
-            int repeatCol = 0;
-            // ok so keep chopping the row and col in repeat scope until we have the row and col in the repeat region but we know WHICH repeat region we're in
-            while (localRow - repeatRegion.getRefersToCellRegion().getRowCount() > 0){
-                repeatRow++;
-                localRow -= repeatRegion.getRefersToCellRegion().getRowCount();
+        if (regionRowColsToSave.isEmpty() && names != null) { // no repeat regions but there are normal ones
+            for (SName name : names) {
+                regionRowColsToSave.add(new RegionRowCol(name.getName().substring("az_DataRegion".length()), row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
             }
-            while (localCol - repeatRegion.getRefersToCellRegion().getColumnCount() > 0){
-                repeatCol++;
-                localCol -= repeatRegion.getRefersToCellRegion().getColumnCount();
-            }
-            // so now we should know the row and col local to the particular repeat region we're in and which repeat region we're in. Try to get the sent cells!
-            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, repeatRegionName + "-" + repeatRow + "-" + repeatCol);
-            if (sentCells != null){ // a good start!
-                // take into account eh offset from the top left of the repeated region and the data region in it
-                int dataRowStartInRepeatRegion = repeatDataRegion.getRefersToCellRegion().getRow() - repeatScopeName.getRefersToCellRegion().getRow();
-                int dataColStartInRepeatRegion = repeatDataRegion.getRefersToCellRegion().getColumn() - repeatScopeName.getRefersToCellRegion().getColumn();
-                localRow -= dataRowStartInRepeatRegion;
-                localCol -= dataColStartInRepeatRegion;
-                // similar to below - todo factor
-                if (localRow >= 0 && localCol >= 0 &&
-                        sentCells.getData().size() > localRow && sentCells.getData().get(localRow).size() > localCol) {
-                    CellForDisplay cellForDisplay = sentCells.getData().get(localRow).get(localCol);
+        }
+        for (RegionRowCol regionRowCol : regionRowColsToSave) {
+            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, regionRowCol.region);
+            if (sentCells != null) { // a good start!
+                if (regionRowCol.row >= 0 && regionRowCol.col >= 0 &&
+                        sentCells.getData().size() > regionRowCol.row && sentCells.getData().get(regionRowCol.row).size() > regionRowCol.col) {
+                    CellForDisplay cellForDisplay = sentCells.getData().get(regionRowCol.row).get(regionRowCol.col);
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                     if (isDouble) {
                         cellForDisplay.setDoubleValue(doubleValue);
@@ -532,32 +521,43 @@ public class ZKComposer extends SelectorComposer<Component> {
                     }
                 }
             }
-        } else if (names != null){
-            for (SName name : names) {
-                    String region = name.getName().substring("az_DataRegion".length());
-                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
-                    if (sentCells != null) {
-                        // the data region as defined on the sheet may be larger than the sent cells
-                        if (sentCells.getData().size() > row - name.getRefersToCellRegion().getRow()
-                                && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
-                            CellForDisplay cellForDisplay = sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).get(col - name.getRefersToCellRegion().getColumn());
-                            Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
-                            if (isDouble) {
-                                cellForDisplay.setDoubleValue(doubleValue);
-                            }
-                            cellForDisplay.setStringValue(chosen);
-                            int highlightDays = 0;
-                            if (book.getInternalBook().getAttribute("highlightDays") != null) { // maybe factor the string literals??
-                                highlightDays = (Integer) book.getInternalBook().getAttribute("highlightDays");
-                            }
-                            if (highlightDays > 0) {
-                                cellForDisplay.setHighlighted(true);
-                                CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
-                            }
-                        }
-                    }
-            }
         }
+    }
+
+    // work out what the local region and row and column is for a given cell in a repeat score
+    private RegionRowCol getRegionRowColForRepeatRegion(Book book, int row, int col, SName repeatScopeName) {
+        SName repeatRegion = null;
+        SName repeatDataRegion = null;
+        String repeatRegionName = null;
+        repeatRegionName = repeatScopeName.getName().substring(ZKAzquoBookUtils.azRepeatScope.length());
+        repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.azRepeatRegion + repeatRegionName);
+        repeatDataRegion = book.getInternalBook().getNameByName("az_DataRegion" + repeatRegionName); // todo string literals ergh!
+        // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
+        if (repeatRegion != null && repeatDataRegion != null) { // ergh, got to try and find the right sent cell!
+            // local row ancd col starts off local to the repeat scope then the region and finally the data region in the repeated region
+            int localRow = row - repeatScopeName.getRefersToCellRegion().getRow();
+            int localCol = col - repeatScopeName.getRefersToCellRegion().getColumn();
+            // NOT row and col in a cell cense, row and coll in a repeated region sense
+            int repeatRow = 0;
+            int repeatCol = 0;
+            // ok so keep chopping the row and col in repeat scope until we have the row and col in the repeat region but we know WHICH repeat region we're in
+            while (localRow - repeatRegion.getRefersToCellRegion().getRowCount() > 0) {
+                repeatRow++;
+                localRow -= repeatRegion.getRefersToCellRegion().getRowCount();
+            }
+            while (localCol - repeatRegion.getRefersToCellRegion().getColumnCount() > 0) {
+                repeatCol++;
+                localCol -= repeatRegion.getRefersToCellRegion().getColumnCount();
+            }
+            // so now we should know the row and col local to the particular repeat region we're in and which repeat region we're in. Try to get the sent cells!
+            int dataRowStartInRepeatRegion = repeatDataRegion.getRefersToCellRegion().getRow() - repeatScopeName.getRefersToCellRegion().getRow();
+            int dataColStartInRepeatRegion = repeatDataRegion.getRefersToCellRegion().getColumn() - repeatScopeName.getRefersToCellRegion().getColumn();
+            // take into account the offset from the top left of the repeated region and the data region in it
+            localRow -= dataRowStartInRepeatRegion;
+            localCol -= dataColStartInRepeatRegion;
+            return new RegionRowCol(repeatRegionName + "-" + repeatRow + "-" + repeatCol, localRow, localCol);
+        }
+        return null;
     }
 
     // Commented, why?
@@ -637,8 +637,6 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
     private void provenanceForRowAndColumn(int cellRow, int cellCol, int mouseX, int mouseY, Component ref) {
-        // right now a right click gets provenance ready, dunno if I need to do this
-        List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());
         while (editPopup.getChildren().size() > 0) { // clear it out
             editPopup.removeChild(editPopup.getLastChild());
         }
@@ -665,184 +663,199 @@ public class ZKComposer extends SelectorComposer<Component> {
                 editPopup.open(mouseX - 140, mouseY);
             }
         } else {
-            for (SName name : names) {
-                SName rowHeadingsName = myzss.getSelectedSheet().getBook().getInternalBook().getNameByName("az_rowheadings" + name.getName().substring(13));
-                if (rowHeadingsName != null) {
-                    String region = name.getName().substring("az_DataRegion".length());
-                    Book book = myzss.getBook();
-                    int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-                    LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-                    try {
-                        // ok this is a bit nasty, after Azquobook is zapped we could try something different
-                        int regionRow = cellRow - name.getRefersToCellRegion().getRow();
-                        int regionColumn = cellCol - name.getRefersToCellRegion().getColumn();
-                        List<TreeNode> treeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
-                        if (!treeNodes.isEmpty()) {
-                            StringBuilder toShow = new StringBuilder();
-                            for (TreeNode TreeNode : treeNodes) {
-                                resolveTreeNode(0, toShow, TreeNode);
-                            }
-                            String stringToShow = toShow.toString();
-                            final String fullProvenance = stringToShow;
-                            stringToShow = stringToShow.replace("\t", "....");
-                            int spreadPos = stringToShow.indexOf("in spreadsheet"); // this kind of thing needs to be re coded.
-                            int nextBlock;
-                            while (spreadPos >= 0) {
-                                int valueId = getLastValueInt(treeNodes.get(0)); // should be a root of 1 in this case. In fact that applies above?
-                                int endLine = stringToShow.indexOf("\n");
-                                if (endLine == -1) endLine = stringToShow.length();
-                                nextBlock = stringToShow.indexOf("in spreadsheet", endLine);
-                                if (nextBlock < 0) {
-                                    nextBlock = stringToShow.length();
-                                } else {
-                                    nextBlock = stringToShow.lastIndexOf("\n", nextBlock) + 1;
-                                }
-                                final String provLine = stringToShow.substring(0, endLine);
-                                final Toolbarbutton provButton = new Toolbarbutton(provLine);
-                                provButton.addEventListener("onClick",
-                                        event -> showProvenance(provLine, valueId));
-                                provenancePopup.appendChild(provButton);
-                                Label provenanceLabel = new Label();
-                                provenanceLabel.setMultiline(true);
+            Book book = myzss.getBook();
+            int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+            LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+            String region = null;
+            int regionRow = 0;
+            int regionColumn = 0;
+            // adding support for repeat regions. There's an additional check for row headings in a normal data region but I think this is redundant in repeat regions
+            List<SName> repeatRegionNames = ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), ZKAzquoBookUtils.azRepeatScope);
+            if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
+                RegionRowCol regionRowColForRepeatRegion = getRegionRowColForRepeatRegion(myzss.getBook(), cellRow, cellCol, repeatRegionNames.get(0));
+                if (regionRowColForRepeatRegion != null) {
+                    region = regionRowColForRepeatRegion.region;
+                    regionRow = regionRowColForRepeatRegion.row;
+                    regionColumn = regionRowColForRepeatRegion.col;
+                }
+            } else { // standard
+                List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());
+                for (SName name : names) {
+                    SName rowHeadingsName = myzss.getSelectedSheet().getBook().getInternalBook().getNameByName("az_rowheadings" + name.getName().substring(13));
+                    if (rowHeadingsName != null) {
+                        region = name.getName().substring("az_DataRegion".length());
+                        // ok this is a bit nasty, after Azquobook is zapped we could try something different (regarding the way strings are built manually here)
+                        regionRow = cellRow - name.getRefersToCellRegion().getRow();
+                        regionColumn = cellCol - name.getRefersToCellRegion().getColumn();
+                        break;
+                    }
+                }
+            }
+            try {
+                List<TreeNode> treeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
+                if (!treeNodes.isEmpty()) {
+                    StringBuilder toShow = new StringBuilder();
+                    for (TreeNode TreeNode : treeNodes) {
+                        resolveTreeNode(0, toShow, TreeNode);
+                    }
+                    String stringToShow = toShow.toString();
+                    final String fullProvenance = stringToShow;
+                    stringToShow = stringToShow.replace("\t", "....");
+                    int spreadPos = stringToShow.indexOf("in spreadsheet"); // this kind of thing needs to be re coded.
+                    int nextBlock;
+                    while (spreadPos >= 0) {
+                        int valueId = getLastValueInt(treeNodes.get(0)); // should be a root of 1 in this case. In fact that applies above?
+                        int endLine = stringToShow.indexOf("\n");
+                        if (endLine == -1) endLine = stringToShow.length();
+                        nextBlock = stringToShow.indexOf("in spreadsheet", endLine);
+                        if (nextBlock < 0) {
+                            nextBlock = stringToShow.length();
+                        } else {
+                            nextBlock = stringToShow.lastIndexOf("\n", nextBlock) + 1;
+                        }
+                        final String provLine = stringToShow.substring(0, endLine);
+                        final Toolbarbutton provButton = new Toolbarbutton(provLine);
+                        provButton.addEventListener("onClick",
+                                event -> showProvenance(provLine, valueId));
+                        provenancePopup.appendChild(provButton);
+                        Label provenanceLabel = new Label();
+                        provenanceLabel.setMultiline(true);
 
-                                provenanceLabel.setValue(trimString(stringToShow.substring(endLine, nextBlock)));
-                                provenancePopup.appendChild(provenanceLabel);
-                                stringToShow = stringToShow.substring(nextBlock);
-                                spreadPos = stringToShow.indexOf("in spreadsheet");
-                            }
-                            Label provenanceLabel = new Label();
-                            provenanceLabel.setMultiline(true);
-                            provenanceLabel.setValue(trimString(stringToShow));
-                            provenancePopup.appendChild(provenanceLabel);
+                        provenanceLabel.setValue(trimString(stringToShow.substring(endLine, nextBlock)));
+                        provenancePopup.appendChild(provenanceLabel);
+                        stringToShow = stringToShow.substring(nextBlock);
+                        spreadPos = stringToShow.indexOf("in spreadsheet");
+                    }
+                    Label provenanceLabel = new Label();
+                    provenanceLabel.setMultiline(true);
+                    provenanceLabel.setValue(trimString(stringToShow));
+                    provenancePopup.appendChild(provenanceLabel);
 
-                            final Toolbarbutton button = new Toolbarbutton("Download Full Audit");
-                            button.addEventListener("onClick",
-                                    event -> Filedownload.save(fullProvenance, "text/csv", "audit " + name.getRefersToSheetName() + ".txt"));
-                            provenancePopup.appendChild(button);
-                            Menuitem auditItem = new Menuitem("Audit");
-                            editPopup.appendChild(auditItem);
-                            auditItem.setPopup(provenancePopup);
+                    final Toolbarbutton button = new Toolbarbutton("Download Full Audit");
+                    button.addEventListener("onClick",
+                            event -> Filedownload.save(fullProvenance, "text/csv", "audit " + myzss.getSelectedSheet().getSheetName() + ".txt"));
+                    provenancePopup.appendChild(button);
+                    Menuitem auditItem = new Menuitem("Audit");
+                    editPopup.appendChild(auditItem);
+                    auditItem.setPopup(provenancePopup);
 //                            auditItem.addEventListener("onClick",
 //                                    event -> System.out.println("audit menu item clicked"));
-                            // only check for drilldown on proper data, that which could have provenance
-                            for (SName sName : myzss.getBook().getInternalBook().getNames()) {
-                                if (sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())) {
-                                    String qualifier = sName.getName().substring(("az_drilldown" + region).length()).replace("_", " ");
-
-                                    String drillDownString = ZKAzquoBookUtils.getSnameCell(sName).getStringValue();
-                                    if (drillDownString.length() > 0) {
-                                        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
-                                        final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(cellRow - name.getRefersToCellRegion().getRow());
-                                        final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
-                                        String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
-                                        String colHeading = colHeadings.get(cellCol - name.getRefersToCellRegion().getColumn());
-                                        String filler = "";
-                                        while (drillDownString.toLowerCase().contains("[rowheading")) {
-                                            for (int colNo = 0; colNo < rowHeadings.size(); colNo++) {
-                                                String rh = "[rowheading" + filler + "]";
-                                                if (drillDownString.toLowerCase().contains(rh)) {
-                                                    int start = drillDownString.toLowerCase().indexOf(rh);
-                                                    drillDownString = drillDownString.substring(0, start) + rowHeadings.get(colNo) + drillDownString.substring(start + rh.length());
-                                                }
-                                                filler = (colNo + 2) + "";
-                                            }
-
+                    // only check for drilldown on proper data, that which could have provenance
+                    for (SName sName : myzss.getBook().getInternalBook().getNames()) {
+                        if (sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())) {
+                            String qualifier = sName.getName().substring(("az_drilldown" + region).length()).replace("_", " ");
+                            String drillDownString = ZKAzquoBookUtils.getSnameCell(sName).getStringValue();
+                            if (drillDownString.length() > 0) {
+                                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
+                                final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(regionRow);
+                                final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
+                                String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
+                                String colHeading = colHeadings.get(regionColumn);
+                                String filler = "";
+                                while (drillDownString.toLowerCase().contains("[rowheading")) {
+                                    for (int colNo = 0; colNo < rowHeadings.size(); colNo++) {
+                                        String rh = "[rowheading" + filler + "]";
+                                        if (drillDownString.toLowerCase().contains(rh)) {
+                                            int start = drillDownString.toLowerCase().indexOf(rh);
+                                            drillDownString = drillDownString.substring(0, start) + rowHeadings.get(colNo) + drillDownString.substring(start + rh.length());
                                         }
-                                        filler = "";
-                                        while (drillDownString.toLowerCase().contains("[columnheading")) {
-                                            for (int rowNo = 0; rowNo < colHeadings.size(); rowNo++) {
-                                                String ch = "[columnheading" + filler + "]";
-                                                if (drillDownString.toLowerCase().contains(ch)) {
-                                                    int start = drillDownString.toLowerCase().indexOf(ch);
-                                                    drillDownString = drillDownString.substring(0, start) + colHeading + drillDownString.substring(start + ch.length());
-                                                }
-                                                filler = (rowNo + 2) + "";
-                                            }
-
-                                        }
-                                        final String stringToPass = drillDownString;
-                                        Menuitem ddItem = new Menuitem("Drill Down" + qualifier);
-                                        editPopup.appendChild(ddItem);
-                                        ddItem.addEventListener("onClick",
-                                                event -> showProvenance(stringToPass, 0));
-                                        // now need to find the headings - is this easy?
+                                        filler = (colNo + 2) + "";
                                     }
 
                                 }
-                            }
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                                filler = "";
+                                while (drillDownString.toLowerCase().contains("[columnheading")) {
+                                    for (int rowNo = 0; rowNo < colHeadings.size(); rowNo++) {
+                                        String ch = "[columnheading" + filler + "]";
+                                        if (drillDownString.toLowerCase().contains(ch)) {
+                                            int start = drillDownString.toLowerCase().indexOf(ch);
+                                            drillDownString = drillDownString.substring(0, start) + colHeading + drillDownString.substring(start + ch.length());
+                                        }
+                                        filler = (rowNo + 2) + "";
+                                    }
 
-                    instructionsLabel.setValue("");
-                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
-                    if (sentCells != null && sentCells.getData().size() > 0) {
-                        StringBuilder instructionsText = new StringBuilder();
-                        instructionsText.append("COLUMN HEADINGS\n\n");
-                        List<List<String>> headings = sentCells.getColHeadingsSource();
-                        if (headings != null) {
-                            for (List<String> row : sentCells.getColHeadingsSource()) { // flatten for the mo
-                                for (String cell : row) {
-                                    instructionsText.append(cell + "\n");
                                 }
+                                final String stringToPass = drillDownString;
+                                Menuitem ddItem = new Menuitem("Drill Down" + qualifier);
+                                editPopup.appendChild(ddItem);
+                                ddItem.addEventListener("onClick",
+                                        event -> showProvenance(stringToPass, 0));
+                                // now need to find the headings - is this easy?
                             }
-                        }
-                        instructionsText.append("\nROW HEADINGS\n\n");
-                        headings = sentCells.getRowHeadingsSource();
-                        if (headings != null) {
-                            for (List<String> row : sentCells.getRowHeadingsSource()) { // flatten for the mo
-                                for (String cell : row) {
-                                    instructionsText.append(cell + "\n");
-                                }
-                            }
-                        }
-                        headings = sentCells.getContextSource();
-                        instructionsText.append("\nCONTEXT\n\n");
-                        if (headings != null) {
-                            for (List<String> row : sentCells.getContextSource()) { // flatten for the mo
-                                for (String cell : row) {
-                                    instructionsText.append(cell + "\n");
-                                }
-                            }
-                        }
-                        instructionsLabel.setValue(instructionsText.toString());
-                    }
-                    Menuitem instructionsItem = new Menuitem("Region definition");
-                    editPopup.appendChild(instructionsItem);
-                    instructionsItem.setPopup(instructionsPopup);
 
-                    popupChild = highlightPopup.getFirstChild();
-                    while (popupChild != null) {
-                        highlightPopup.removeChild(popupChild);
-                        popupChild = highlightPopup.getFirstChild();
-                    }
-                    UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
-                    int highlightDays = 0;
-                    if (userRegionOptions != null) {
-                        highlightDays = userRegionOptions.getHighlightDays();
-                    }
-                    String highlightString = "no highlight";
-                    if (highlightDays > 0) highlightString = highlightDays + " days";
-                    final String highlightList = "Current highlight is " + highlightString + "\n";
-                    Label highlightLabel = new Label();
-                    highlightLabel.setMultiline(true);
-                    highlightLabel.setValue(highlightList);
-                    highlightPopup.appendChild(highlightLabel);
-                    addHighlight(highlightPopup, 0);
-                    addHighlight(highlightPopup, 1);
-                    addHighlight(highlightPopup, 7);
-                    addHighlight(highlightPopup, 30);
-                    addHighlight(highlightPopup, 90);
-                    Menuitem highlightItem = new Menuitem("Highlight");
-                    editPopup.appendChild(highlightItem);
-                    highlightItem.setPopup(highlightPopup);
-                    if (ref != null) {
-                        editPopup.open(ref, "at_pointer");
-                    } else {
-                        editPopup.open(mouseX - 140, mouseY);
+                        }
                     }
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            instructionsLabel.setValue("");
+            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
+            if (sentCells != null && sentCells.getData().size() > 0) {
+                StringBuilder instructionsText = new StringBuilder();
+                instructionsText.append("COLUMN HEADINGS\n\n");
+                List<List<String>> headings = sentCells.getColHeadingsSource();
+                if (headings != null) {
+                    for (List<String> row : sentCells.getColHeadingsSource()) { // flatten for the mo
+                        for (String cell : row) {
+                            instructionsText.append(cell + "\n");
+                        }
+                    }
+                }
+                instructionsText.append("\nROW HEADINGS\n\n");
+                headings = sentCells.getRowHeadingsSource();
+                if (headings != null) {
+                    for (List<String> row : sentCells.getRowHeadingsSource()) { // flatten for the mo
+                        for (String cell : row) {
+                            instructionsText.append(cell + "\n");
+                        }
+                    }
+                }
+                headings = sentCells.getContextSource();
+                instructionsText.append("\nCONTEXT\n\n");
+                if (headings != null) {
+                    for (List<String> row : sentCells.getContextSource()) { // flatten for the mo
+                        for (String cell : row) {
+                            instructionsText.append(cell + "\n");
+                        }
+                    }
+                }
+                instructionsLabel.setValue(instructionsText.toString());
+            }
+            Menuitem instructionsItem = new Menuitem("Region definition");
+            editPopup.appendChild(instructionsItem);
+            instructionsItem.setPopup(instructionsPopup);
+
+            popupChild = highlightPopup.getFirstChild();
+            while (popupChild != null) {
+                highlightPopup.removeChild(popupChild);
+                popupChild = highlightPopup.getFirstChild();
+            }
+            UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+            int highlightDays = 0;
+            if (userRegionOptions != null) {
+                highlightDays = userRegionOptions.getHighlightDays();
+            }
+            String highlightString = "no highlight";
+            if (highlightDays > 0) highlightString = highlightDays + " days";
+            final String highlightList = "Current highlight is " + highlightString + "\n";
+            Label highlightLabel = new Label();
+            highlightLabel.setMultiline(true);
+            highlightLabel.setValue(highlightList);
+            highlightPopup.appendChild(highlightLabel);
+            addHighlight(highlightPopup, 0);
+            addHighlight(highlightPopup, 1);
+            addHighlight(highlightPopup, 7);
+            addHighlight(highlightPopup, 30);
+            addHighlight(highlightPopup, 90);
+            Menuitem highlightItem = new Menuitem("Highlight");
+            editPopup.appendChild(highlightItem);
+            highlightItem.setPopup(highlightPopup);
+            if (ref != null) {
+                editPopup.open(ref, "at_pointer");
+            } else {
+                editPopup.open(mouseX - 140, mouseY);
             }
         }
     }
