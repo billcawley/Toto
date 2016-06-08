@@ -365,12 +365,20 @@ public class SpreadsheetService {
         return new ArrayList<>(); // maybe "not found"?
     }
 
+    public void databasePersist(LoggedInUser loggedInUser) throws Exception {
+        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).persistDatabase(databaseAccessToken);
+    }
 
     public void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName) throws Exception {
+        saveData(loggedInUser,region,reportId,reportName,true); // default to persist server side
+    }
+
+    public void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName, boolean persist) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
         if (cellsAndHeadingsForDisplay != null) {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            rmiClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext());
+            rmiClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
         }
     }
 

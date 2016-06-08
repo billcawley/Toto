@@ -105,6 +105,7 @@ public class ZKAzquoBookUtils {
         }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         executeCommands(loggedInUser, commands);
+        spreadsheetService.databasePersist(loggedInUser);
         return true;
     }
     // we assume cleansed of blank lines
@@ -149,7 +150,7 @@ public class ZKAzquoBookUtils {
                             for (SName name : book.getInternalBook().getNames()) {
                                 if (name.getName().toLowerCase().startsWith(AzquoBook.azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
                                     String region = name.getName().substring(AzquoBook.azDataRegion.length());
-                                    spreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName());
+                                    spreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName(), false); // to not persist right now
                                 }
                             }
                         }

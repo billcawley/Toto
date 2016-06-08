@@ -74,6 +74,7 @@ public class OnlineController {
     public static final String BOOK = "BOOK";
     public static final String BOOK_PATH = "BOOK_PATH";
     private static final String SAVE_FLAG = "SAVE_FLAG";
+    private static final String EXECUTE_FLAG = "EXECUTE_FLAG";
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
     public static final String REPORT_ID = "REPORT_ID";
     public static final String CELL_SELECT = "CELL_SELECT";
@@ -271,7 +272,9 @@ public class OnlineController {
                             model.put("masterUser", loggedInUser.getUser().isMaster());
                             model.put("templateMode", "TRUE".equalsIgnoreCase(template) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster()));
                             model.put("showTemplate", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster());
+                            model.put("execute", session.getAttribute(reportId + EXECUTE_FLAG));
                             session.removeAttribute(reportId + SAVE_FLAG);// get rid of it from the session
+                            session.removeAttribute(reportId + EXECUTE_FLAG);
                             // sort the pdf merges, had forgotten this . . .
                             final List<SName> names = book.getInternalBook().getNames();
                             List<String> pdfMerges = new ArrayList<>();
@@ -310,6 +313,7 @@ public class OnlineController {
                                     book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
                                     if (!templateMode){
                                         ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, onlineReportDAO, null, rmiClient);
+                                        session.setAttribute(finalReportId + EXECUTE_FLAG, book.getInternalBook().getNameByName("execute") != null); // pretty crude but should do it
                                         if (executeMode){
                                             bookUtils.runExecuteCommandForBook(book);
                                             session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute

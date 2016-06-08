@@ -490,8 +490,8 @@ public class DSSpreadsheetService {
     private <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
         List<List<T>> toReturn = new ArrayList<>(existing2DArray.size() * permutationWeWantToAdd.size());
         int existing = 0;
-        for (existing = permutationWeWantToAdd.size()-1;existing > 0;existing--){
-            if (permutationWeWantToAdd.get(existing)!=null){
+        for (existing = permutationWeWantToAdd.size() - 1; existing > 0; existing--) {
+            if (permutationWeWantToAdd.get(existing) != null) {
                 break;
             }
         }
@@ -499,7 +499,7 @@ public class DSSpreadsheetService {
         for (List<T> existingRow : existing2DArray) {
             int count = 0;
             for (T elementWeWantToAdd : permutationWeWantToAdd) { // for each new element
-                if (count++ == existing){
+                if (count++ == existing) {
                     break;
                 }
                 List<T> newRow = new ArrayList<>(existingRow); // copy the existing row
@@ -508,9 +508,9 @@ public class DSSpreadsheetService {
             }
         }
         //make up blank lines if necessary
-        while(existing2DArray.size() > 0 && toReturn.size() < permutationWeWantToAdd.size()){
+        while (existing2DArray.size() > 0 && toReturn.size() < permutationWeWantToAdd.size()) {
             List<T> newRow = new ArrayList<>();
-            while (newRow.size() <= existing2DArray.get(0).size()){
+            while (newRow.size() <= existing2DArray.get(0).size()) {
                 newRow.add(null);
             }
             toReturn.add(newRow);
@@ -554,11 +554,11 @@ public class DSSpreadsheetService {
         ArrayList<List<List<DataRegionHeading>>> permutedLists = new ArrayList<>(noOfHeadingDefinitionRows); // could be slightly less elements than this but it's unlikely to be a biggy.
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) { // not using a vanilla for loop as we want to skip forward to allow folding of rows with one cell on the right into the list above
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
-            if (headingDefinitionRow.size()==0){
+            if (headingDefinitionRow.size() == 0) {
                 headingDefinitionRow.add(null);
             }
-            if (headingDefinitionRow.get(lastHeadingDefinitionCellIndex) == null){
-                headingDefinitionRow.set(lastHeadingDefinitionCellIndex,new ArrayList<DataRegionHeading>());
+            if (headingDefinitionRow.get(lastHeadingDefinitionCellIndex) == null) {
+                headingDefinitionRow.set(lastHeadingDefinitionCellIndex, new ArrayList<DataRegionHeading>());
                 headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
             }
             int startCount = headingDefinitionRow.get(lastHeadingDefinitionCellIndex).size() - 1;
@@ -570,12 +570,12 @@ public class DSSpreadsheetService {
                     ) {
                 // add the single last cell from the next row to the end of this row
                 if (headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex) == null) { // note if it's completely empty headingDefinitionRowHasOnlyTheRightCellPopulated would return true, not sure if this logic is completely correct, left over from the old code, I think having nulls in the permuations is allowed
-                      if (startCount-- <= 0){
-                          headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
-                      }
+                    if (startCount-- <= 0) {
+                        headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
+                    }
                 } else {
-                      headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
-                      startCount = headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex).size() - 1;
+                    headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
+                    startCount = headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex).size() - 1;
                 }
                 headingDefinitionRowIndex++;
             }
@@ -585,9 +585,9 @@ public class DSSpreadsheetService {
             } else {
                 List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
                 permutedLists.add(permuted);
-                if (lastHeadingDefinitionCellIndex==0){
-                    int spaceNeeded = permuted.size()- 1;
-                    while (spaceNeeded-- > 0 && headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 && headingLists.get(headingDefinitionRowIndex +1).get(0)==null ){
+                if (lastHeadingDefinitionCellIndex == 0) {
+                    int spaceNeeded = permuted.size() - 1;
+                    while (spaceNeeded-- > 0 && headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 && headingLists.get(headingDefinitionRowIndex + 1).get(0) == null) {
                         headingDefinitionRowIndex++;
                     }
                 }
@@ -607,7 +607,7 @@ public class DSSpreadsheetService {
         return output;
     }
 
-     // what we're saying is it's only got one cell in the heading definition filled and it's the last one.
+    // what we're saying is it's only got one cell in the heading definition filled and it's the last one.
 
     private boolean headingDefinitionRowHasOnlyTheRightCellPopulated(List<List<DataRegionHeading>> headingLists) {
         int numberOfCellsInThisHeadingDefinition = headingLists.size();
@@ -1470,22 +1470,22 @@ Callable interface sorts the memory "happens before" using future gets which run
         double doubleValue = 0;
         MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
         boolean hasData = false;
-        for (DataRegionHeading heading:rowHeadings){
-            if (heading!=null && (heading.getName()!= null || heading.getAttribute()!=null)){
+        for (DataRegionHeading heading : rowHeadings) {
+            if (heading != null && (heading.getName() != null || heading.getAttribute() != null)) {
                 hasData = true;
                 break;
             }
         }
-        if (hasData){
+        if (hasData) {
             hasData = false;
-            for (DataRegionHeading heading:columnHeadings){
-                if (heading!=null && (heading.getName()!= null || heading.getAttribute()!=null)){
+            for (DataRegionHeading heading : columnHeadings) {
+                if (heading != null && (heading.getName() != null || heading.getAttribute() != null)) {
                     hasData = true;
                     break;
                 }
             }
         }
-        if (!hasData){
+        if (!hasData) {
             return new AzquoCell(locked.isTrue, null, rowHeadings, columnHeadings, contextHeadings, rowNo, colNo, "", doubleValue, false, false);
 
         }
@@ -1605,22 +1605,22 @@ Callable interface sorts the memory "happens before" using future gets which run
             List<DataRegionHeading> rowAndColumnHeadingsForThisCell = null;
             //check that we do have both row and column headings, otherwise blank them the cell will be blank (danger of e.g. a sum on the name "Product"!)
             for (DataRegionHeading heading : rowHeadings) {
-                 if (heading != null && (heading.getName() != null || !isDot(heading))) {
+                if (heading != null && (heading.getName() != null || !isDot(heading))) {
                     headingsForThisCell.add(heading);
-                 }
+                }
             }
             int hCount = headingsForThisCell.size();
             boolean checked = true;
             if (hCount > 0) {
-                 for (DataRegionHeading heading : columnHeadings) {
+                for (DataRegionHeading heading : columnHeadings) {
                     if (heading != null && (heading.getName() != null || !isDot(heading))) {
                         headingsForThisCell.add(heading);
                     }
                 }
                 rowAndColumnHeadingsForThisCell = new ArrayList<>(headingsForThisCell);
-                if (isDot(rowHeadings.get(rowHeadings.size()-1)) || isDot(columnHeadings.get(columnHeadings.size()-1))){
+                if (isDot(rowHeadings.get(rowHeadings.size() - 1)) || isDot(columnHeadings.get(columnHeadings.size() - 1))) {
                     locked.isTrue = true;
-                 }
+                }
                 if (headingsForThisCell.size() > hCount) {
                     headingsForThisCell.addAll(contextHeadings);
                 } else {
@@ -1662,11 +1662,11 @@ Callable interface sorts the memory "happens before" using future gets which run
                         if (valueId > 0) {
                             valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
                         }
-                        for (DataRegionHeading lockCheck : headingsForThisCell){
-                            if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.LOCKED){
+                        for (DataRegionHeading lockCheck : headingsForThisCell) {
+                            if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.LOCKED) {
                                 locked.isTrue = true;
                             } else if (lockCheck.getName() != null && lockCheck.getName().hasChildren() && // a name with children so default locked UNLESS defined as unlocked or split
-                                    lockCheck.getSuffix() != DataRegionHeading.SUFFIX.UNLOCKED && lockCheck.getSuffix() != DataRegionHeading.SUFFIX.SPLIT){
+                                    lockCheck.getSuffix() != DataRegionHeading.SUFFIX.UNLOCKED && lockCheck.getSuffix() != DataRegionHeading.SUFFIX.SPLIT) {
                                 locked.isTrue = true;
                             }
                         }
@@ -1747,8 +1747,8 @@ Callable interface sorts the memory "happens before" using future gets which run
         return count;
     }
 
-    private boolean isDot(DataRegionHeading dataRegionHeading){
-        if (dataRegionHeading!=null&& dataRegionHeading.getAttribute()!=null && dataRegionHeading.getAttribute().equals(".")){
+    private boolean isDot(DataRegionHeading dataRegionHeading) {
+        if (dataRegionHeading != null && dataRegionHeading.getAttribute() != null && dataRegionHeading.getAttribute().equals(".")) {
             return true;
         }
         return false;
@@ -1784,10 +1784,10 @@ Callable interface sorts the memory "happens before" using future gets which run
             List<List<Future<AzquoCell>>> futureCellArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
-                DataRegionHeading lastHeading = rowHeadings.get(rowHeadings.size()-1);
+                DataRegionHeading lastHeading = rowHeadings.get(rowHeadings.size() - 1);
                 if (isDot(lastHeading)) {
                     List<DataRegionHeading> newRowHeadings = new ArrayList<DataRegionHeading>();
-                    for (int headingNo = 0;headingNo < rowHeadings.size()-1;headingNo++){
+                    for (int headingNo = 0; headingNo < rowHeadings.size() - 1; headingNo++) {
                         newRowHeadings.add(null);
                     }
                     newRowHeadings.add(lastHeading);
@@ -1804,7 +1804,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                     DataRegionHeading lastColHeading = rowHeadings.get(rowHeadings.size() - 1);
                     if (isDot(lastColHeading)) {
                         List<DataRegionHeading> newColumnHeadings = new ArrayList<DataRegionHeading>();
-                        for (int headingNo = 0;headingNo < columnHeadings.size()-1;headingNo++){
+                        for (int headingNo = 0; headingNo < columnHeadings.size() - 1; headingNo++) {
                             newColumnHeadings.add(null);
                         }
                         newColumnHeadings.add(lastColHeading);
@@ -2080,18 +2080,26 @@ Callable interface sorts the memory "happens before" using future gets which run
         bw.flush();
         bw.close();
         importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true, true);
-        if (!temp.delete()){// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
+        if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
         }
     }
 
+    public void persistDatabase(DatabaseAccessToken databaseAccessToken) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+        azquoMemoryDBConnection.persist();
+    }
+
+
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
-    public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws Exception {
+    public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
         if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
             importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
-            azquoMemoryDBConnection.persist();
+            if (persist) {
+                azquoMemoryDBConnection.persist();
+            }
             return;
         }
         int numberOfValuesModified = 0;
@@ -2110,7 +2118,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         // this save logic is the same as before but getting necessary info from the AzquoCell
                         logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                         final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-                        if (valuesForCell!=null) {
+                        if (valuesForCell != null) {
                             // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
                             // first align text and numbers where appropriate
                         /* edd commenting 07/03/2016, this was stopping deleting a cell and I think it makes no sense looking at the ZK code that happens on editing, maybe a hangover from Aspose?
@@ -2242,7 +2250,9 @@ Callable interface sorts the memory "happens before" using future gets which run
             }
         }
         if (numberOfValuesModified > 0) {
-            azquoMemoryDBConnection.persist();
+            if (persist) {
+                azquoMemoryDBConnection.persist();
+            }
         }
         // clear the caches after, if we do before then some will be recreated as part of saving.
         // Is this a bit overkill given that it should clear as it goes? I suppose there's the query and count caches, plus parents of the changed names
@@ -2283,7 +2293,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         // ok some of the data region headings may be attribute, no real harm I don't think VS a whacking great set which would always be names
         List<Name> names = new ArrayList<>(dataRegionHeadings.size()); // switching back to list, now I consider I'm not sure if sets help much here and I want ordering
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
-            if (dataRegionHeading!=null && dataRegionHeading.getName() != null) {
+            if (dataRegionHeading != null && dataRegionHeading.getName() != null) {
                 names.add(dataRegionHeading.getName());
             }
         }

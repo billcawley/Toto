@@ -252,9 +252,19 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws RemoteException {
+    public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws RemoteException {
         try {
-            dsSpreadsheetService.saveData(databaseAccessToken, cellsAndHeadingsForDisplay, user, reportName, context);
+            dsSpreadsheetService.saveData(databaseAccessToken, cellsAndHeadingsForDisplay, user, reportName, context, persist);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    // to allow execute to save multiple times then persist
+    @Override
+    public void persistDatabase(DatabaseAccessToken databaseAccessToken) throws RemoteException {
+        try {
+            dsSpreadsheetService.persistDatabase(databaseAccessToken);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

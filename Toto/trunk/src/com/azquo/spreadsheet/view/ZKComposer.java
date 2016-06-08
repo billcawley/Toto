@@ -754,7 +754,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
                                 final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(regionRow);
                                 final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
-                                String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
+                                //String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
                                 String colHeading = colHeadings.get(regionColumn);
                                 String filler = "";
                                 while (drillDownString.toLowerCase().contains("[rowheading")) {
@@ -766,7 +766,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         }
                                         filler = (colNo + 2) + "";
                                     }
-
                                 }
                                 filler = "";
                                 while (drillDownString.toLowerCase().contains("[columnheading")) {
@@ -778,7 +777,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         }
                                         filler = (rowNo + 2) + "";
                                     }
-
                                 }
                                 final String stringToPass = drillDownString;
                                 Menuitem ddItem = new Menuitem("Drill Down" + qualifier);
@@ -787,7 +785,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         event -> showProvenance(stringToPass, 0));
                                 // now need to find the headings - is this easy?
                             }
-
                         }
                     }
                 }

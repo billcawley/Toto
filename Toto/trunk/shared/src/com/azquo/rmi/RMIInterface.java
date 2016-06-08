@@ -73,7 +73,9 @@ public interface RMIInterface extends Remote {
 
     void unloadDatabase(String persistenceName) throws RemoteException;
 
-    void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context) throws RemoteException;
+    void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws RemoteException;
+
+    void persistDatabase(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
     String getSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
