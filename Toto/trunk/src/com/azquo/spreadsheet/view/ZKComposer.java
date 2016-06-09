@@ -700,11 +700,28 @@ public class ZKComposer extends SelectorComposer<Component> {
                 List<TreeNode> treeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
                 if (!treeNodes.isEmpty()) {
                     StringBuilder toShow = new StringBuilder();
+                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
+                    toShow.append("COLUMN");
+                    for (List<String> colHeadingsRow : sentCells.getColumnHeadings()){
+                        toShow.append("\t" + colHeadingsRow.get(regionColumn));
+                    }
+                    toShow.append("\tROW ");
+                    for (String rowItem : sentCells.getRowHeadings().get(regionRow)){
+                        toShow.append("\t" + rowItem);
+                    }
+                    toShow.append("\tCONTEXT ");
+                    for (List<String> contextRow : sentCells.getContextSource()){
+                        for (String context : contextRow){
+                            toShow.append("\t" + context);
+                        }
+                    }
+                    toShow.append("\n\n");
                     for (TreeNode TreeNode : treeNodes) {
                         resolveTreeNode(0, toShow, TreeNode);
                     }
                     String stringToShow = toShow.toString();
                     final String fullProvenance = stringToShow;
+
                     stringToShow = stringToShow.replace("\t", "....");
                     int spreadPos = stringToShow.indexOf("in spreadsheet"); // this kind of thing needs to be re coded.
                     int nextBlock;
