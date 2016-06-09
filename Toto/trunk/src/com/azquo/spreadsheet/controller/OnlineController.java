@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.SName;
 
 import javax.servlet.http.HttpServletRequest;
@@ -313,7 +314,13 @@ public class OnlineController {
                                     book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
                                     if (!templateMode){
                                         ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, onlineReportDAO, null, rmiClient);
-                                        session.setAttribute(finalReportId + EXECUTE_FLAG, book.getInternalBook().getNameByName(ZKAzquoBookUtils.EXECUTE) != null); // pretty crude but should do it
+                                        boolean executeName = false;
+                                        for (SName check : book.getInternalBook().getNames()){
+                                            if (check.getName().equalsIgnoreCase(ZKAzquoBookUtils.EXECUTE)) {
+                                                executeName = true;
+                                            }
+                                        }
+                                        session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
                                         if (executeMode){
                                             bookUtils.runExecuteCommandForBook(book);
                                             session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
