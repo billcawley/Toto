@@ -1068,7 +1068,7 @@ public class ZKAzquoBookUtils {
         return maxCol;
     }
 
-    private static List<SName> getNamesForSheet(Sheet sheet) {
+    public static List<SName> getNamesForSheet(Sheet sheet) {
         List<SName> names = new ArrayList<>();
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
             if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(sheet.getSheetName())) {

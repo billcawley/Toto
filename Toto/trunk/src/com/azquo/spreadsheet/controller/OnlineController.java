@@ -315,9 +315,14 @@ public class OnlineController {
                                     if (!templateMode){
                                         ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, onlineReportDAO, null, rmiClient);
                                         boolean executeName = false;
-                                        for (SName check : book.getInternalBook().getNames()){
-                                            if (check.getName().equalsIgnoreCase(ZKAzquoBookUtils.EXECUTE)) {
-                                                executeName = true;
+                                        // annoying, factor?
+                                        for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+                                            Sheet sheet = book.getSheetAt(sheetNumber);
+                                            List<SName> namesForSheet = ZKAzquoBookUtils.getNamesForSheet(sheet);
+                                            for (SName sName : namesForSheet) {
+                                                if (sName.getName().equalsIgnoreCase(ZKAzquoBookUtils.EXECUTE)) {
+                                                    executeName = true;
+                                                }
                                             }
                                         }
                                         session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
