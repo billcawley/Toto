@@ -586,11 +586,12 @@ public final class ImportService {
 
         for (SName sName:sourceBook.getInternalBook().getNames()) {
             String name = sName.getName();
-            if (name.toLowerCase().startsWith("az_dataregion")) {
-                String regionName = name.substring("az_dataregion".length()).toLowerCase();
+            String regionName = getRegionName(name);
+            if (regionName != null) {
                 CellRegion sourceRegion = sName.getRefersToCellRegion();
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), regionName);
                 if (cellsAndHeadingsForDisplay!=null){
+                    //needs to be able to handle repeat regions here....
                      List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
                      if (data.size()!=sourceRegion.getRowCount() || data.get(0).size()!= sourceRegion.getColumnCount()){
                         return "The size of the region " + regionName + " does not match";
@@ -631,6 +632,16 @@ public final class ImportService {
 
     }
 
+    private String getRegionName(String name){
+        if (name.toLowerCase().startsWith("az_dataregion")){
+            return name.substring("az_dataregion".length()).toLowerCase();
+        }
+        if (name.toLowerCase().startsWith("az_repeatscope")){
+            return name.substring("az_repeatscope".length()).toLowerCase();
+        }
+        return null;
+    }
+
     public String convertSheetToCSV(final String tempFileName, final Sheet sheet) throws Exception {
         boolean transpose = false;
         String fileType = sheet.getInternalSheet().getSheetName();
@@ -651,18 +662,21 @@ public final class ImportService {
     private void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
         Range range = Ranges.range(sheet,r,c);
         CellData cellData = range.getCellData();
-
+        String dataFormat = sheet.getInternalSheet().getCell(r,c).getCellStyle().toString();
           //if (colCount++ > 0) bw.write('\t');
         if (cellData != null) {
             String cellFormat = "";
             try {
                 cellFormat = cellData.getFormatText();
+                if (dataFormat.toLowerCase().contains("-mm")) {//fix a ZK bug
+                    cellFormat = cellFormat.replace(" ","-");//crude replacement of spaces in dates with dashes
+                }
             }catch(Exception e){
             }
             if (newNames != null && newNames.get(cellFormat) != null) {
                 csvW.write(newNames.get(cellFormat));
             } else {
-                if (!sheet.getInternalSheet().getCell(r,c).getCellStyle().toString().toLowerCase().contains("m")) {//check that it is not a data or a time
+                if (!dataFormat.toLowerCase().contains("m")) {//check that it is not a data or a time
                     //if it's a number, remove all formatting
                     try {
                         double d = cellData.getDoubleValue();
