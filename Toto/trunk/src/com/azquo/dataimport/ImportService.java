@@ -662,13 +662,13 @@ public final class ImportService {
     private void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
         Range range = Ranges.range(sheet,r,c);
         CellData cellData = range.getCellData();
-        String dataFormat = sheet.getInternalSheet().getCell(r,c).getCellStyle().toString();
+        String dataFormat = sheet.getInternalSheet().getCell(r,c).getCellStyle().getDataFormat();
           //if (colCount++ > 0) bw.write('\t');
         if (cellData != null) {
             String cellFormat = "";
             try {
                 cellFormat = cellData.getFormatText();
-                if (dataFormat.toLowerCase().contains("-mm")) {//fix a ZK bug
+                if (dataFormat.toLowerCase().contains("mm-")) {//fix a ZK bug
                     cellFormat = cellFormat.replace(" ","-");//crude replacement of spaces in dates with dashes
                 }
             }catch(Exception e){
