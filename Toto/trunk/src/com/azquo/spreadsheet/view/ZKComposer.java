@@ -868,6 +868,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             highlightLabel.setValue(highlightList);
             highlightPopup.appendChild(highlightLabel);
             addHighlight(highlightPopup, 0);
+            addHighlight(highlightPopup, 2);
             addHighlight(highlightPopup, 1);
             addHighlight(highlightPopup, 7);
             addHighlight(highlightPopup, 30);
@@ -977,6 +978,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     private void addHighlight(Popup highlightPopup, final int days) {
         String hDays = days + " days";
         if (days == 0) hDays = "none";
+        if (days == 2) hDays = "1 hour";
         final Toolbarbutton highlightButton = new Toolbarbutton("highlight " + hDays);
         highlightButton.addEventListener("onClick",
                 event -> showHighlight(days));
