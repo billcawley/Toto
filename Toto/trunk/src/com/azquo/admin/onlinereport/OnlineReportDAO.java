@@ -90,6 +90,7 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         return findOneWithWhereSQLAndParameters("  WHERE " + ID + " = :" + ID + " and " + BUSINESSID + " = :" + BUSINESSID, namedParams);
     }
 
+    // case insensetive - todo - is this a security concern??
     public OnlineReport findForNameAndBusinessId(final String name, int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(REPORTNAME, name);

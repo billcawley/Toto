@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -224,7 +225,7 @@ public class ZKAzquoBookUtils {
 
         String context = "";
         Map<String, List<String>> choiceOptionsMap = resolveChoiceOptions(book, loggedInUser);
-        Map<String, String> permissionsFromReports = new HashMap<>();
+        Map<String, String> permissionsFromReports = loggedInUser.getPermissionsFromReport() != null ? loggedInUser.getPermissionsFromReport() : new ConcurrentHashMap<>(); // cumulative permissions. Might as well make concurrent
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
             // these two lines moved from below the unmerge command, shouldn't be a big problem - I need the options to check that we're setting valid options directly below
