@@ -901,7 +901,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
                 }
             } else if (loggedInUser.getPermissionsFromReport() != null) {
-                if (loggedInUser.getPermissionsFromReport().get(reportName) != null){
+                if (loggedInUser.getPermissionsFromReport().get(reportName.toLowerCase()) != null){
                     permissionId = reportName;
                 }
             } else { // need to try to find the permission from the db

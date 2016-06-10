@@ -149,11 +149,11 @@ public class OnlineController {
                             loginService.switchDatabase(loggedInUser, databaseDAO.findById(permission.getDatabaseId()));
                         }
                     } else { //new logic for permissions ad hoc on a report
-                        if (loggedInUser.getPermissionsFromReport().get(permissionId) != null){ // then we have a permission as set by a report
+                        if (loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase()) != null){ // then we have a permission as set by a report
                             onlineReport = onlineReportDAO.findForNameAndBusinessId(permissionId, loggedInUser.getUser().getBusinessId());
                             if (onlineReport != null){
                                 reportId = onlineReport.getId() + ""; // hack for permissions
-                                loginService.switchDatabase(loggedInUser, databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), loggedInUser.getPermissionsFromReport().get(permissionId)));
+                                loginService.switchDatabase(loggedInUser, databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase())));
                             }
                         }
                     }

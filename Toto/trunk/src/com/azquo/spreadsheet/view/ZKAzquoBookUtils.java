@@ -245,7 +245,7 @@ public class ZKAzquoBookUtils {
                             if (value.isEmpty()){ // use the current DB
                                 value = loggedInUser.getDatabase().getName();
                             }
-                            permissionsFromReports.put(key,value);
+                            permissionsFromReports.put(key.toLowerCase(),value);
                         }
                     }
                     loggedInUser.setPermissionsFromReport(permissionsFromReports);
