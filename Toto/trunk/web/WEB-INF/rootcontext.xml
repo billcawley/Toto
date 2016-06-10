@@ -66,7 +66,7 @@
     <bean name="databaseDao" class="com.azquo.admin.database.DatabaseDAO"/>
     <bean name="databaseServerDao" class="com.azquo.admin.database.DatabaseServerDAO"/>
     <bean name="loginRecordDao" class="com.azquo.admin.user.LoginRecordDAO"/>
-    <bean name="accessDao" class="com.azquo.admin.user.PermissionDAO"/>
+    <bean name="permissionDAO" class="com.azquo.admin.user.PermissionDAO"/>
     <bean name="invoiceDetailsDao" class="com.azquo.admin.business.InvoiceDetailsDAO"/>
     <bean name="invoiceSentDao" class="com.azquo.admin.business.InvoiceSentDAO"/>
     <bean name="loginService" class="com.azquo.spreadsheet.LoginService"/>
