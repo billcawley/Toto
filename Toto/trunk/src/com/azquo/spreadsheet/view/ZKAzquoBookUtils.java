@@ -653,10 +653,13 @@ public class ZKAzquoBookUtils {
                 List<List<String>> contextList = nameToStringLists(contextDescription);
                 List<List<String>> rowHeadingList = nameToStringLists(rowHeadingsDescription);
                 //check if this is a pivot - if so, then add in any additional filter needed
-                SName pivotFilters = sheet.getBook().getInternalBook().getNameByName("az_PivotFilters");
+                SName contextFilters = sheet.getBook().getInternalBook().getNameByName("az_ContextFilters");
+                if (contextFilters == null) {
+                    contextFilters  = sheet.getBook().getInternalBook().getNameByName("az_PivotFilters");
+                }
                 // a comma separated list of names
-                if (pivotFilters != null) {
-                    String[] filters = getSnameCell(pivotFilters).getStringValue().split(",");
+                if (contextFilters != null) {
+                    String[] filters = getSnameCell(contextFilters).getStringValue().split(",");
                     for (String filter : filters) {
                         filter = filter.trim();
                         try {
@@ -1283,13 +1286,17 @@ public class ZKAzquoBookUtils {
             if (name.getName().toLowerCase().startsWith("az_pivotfilters")) {
                 String region = name.getName().substring("az_pivotFilters".length());
                 String[] filters = getSnameCell(name).getStringValue().split(",");
-                SName pivotHeadings = book.getInternalBook().getNameByName("az_PivotHeadings" + region);
-                if (pivotHeadings != null) {
-                    Sheet pSheet = book.getSheet(pivotHeadings.getRefersToSheetName());
-                    CellRegion phRange = pivotHeadings.getRefersToCellRegion();
-                    int headingRow = phRange.getRow();
-                    int headingCol = phRange.getColumn();
-                    int headingRows = phRange.getRowCount();
+                SName contextHeadings = book.getInternalBook().getNameByName("az_ContextHeadings" + region);
+                if (contextHeadings==null){
+                    //original name...
+                    contextHeadings = book.getInternalBook().getNameByName("az_PivotHeadings" + region);
+                }
+                if (contextHeadings != null) {
+                    Sheet cSheet = book.getSheet(contextHeadings.getRefersToSheetName());
+                    CellRegion chRange = contextHeadings.getRefersToCellRegion();
+                    int headingRow = chRange.getRow();
+                    int headingCol = chRange.getColumn();
+                    int headingRows = chRange.getRowCount();
                     int filterCount = 0;
                     //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                     for (String filter : filters) {
@@ -1301,14 +1308,14 @@ public class ZKAzquoBookUtils {
                             int chosenRow = headingRow + rowOffset;
                             int chosenCol = headingCol + 3 * colOffset;
                             if (filterCount > 0) {
-                                Range copySource = Ranges.range(pSheet, headingRow, headingCol, headingRow, headingCol + 1);
-                                Range copyTarget = Ranges.range(pSheet, chosenRow, chosenCol, chosenRow, chosenCol + 1);
+                                Range copySource = Ranges.range(cSheet, headingRow, headingCol, headingRow, headingCol + 1);
+                                Range copyTarget = Ranges.range(cSheet, chosenRow, chosenCol, chosenRow, chosenCol + 1);
                                 CellOperationUtil.paste(copySource, copyTarget);
                                 //Ranges.range(pSheet, chosenRow, chosenCol + 1).setNameName(filter + "Chosen");
 
                             }
-                            pSheet.getInternalSheet().getCell(chosenRow, chosenCol).setStringValue(filter);
-                            pSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1).setStringValue(selected);
+                            cSheet.getInternalSheet().getCell(chosenRow, chosenCol).setStringValue(filter);
+                            cSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1).setStringValue(selected);
                          /*
                         validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(filter);
                         int row = 0;
