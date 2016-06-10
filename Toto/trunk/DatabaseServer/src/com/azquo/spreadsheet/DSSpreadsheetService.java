@@ -1287,9 +1287,12 @@ public class DSSpreadsheetService {
 
         // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
         if (highlightDays > 0) {
+            int highlightHours = highlightDays * 24;
+            //hack to allow highlight one hour
+            if (highlightDays==2) highlightHours = 1;
             for (List<AzquoCell> row : toReturn) {
                 for (AzquoCell azquoCell : row) {
-                    long age = 10000; // about 30 years old as default
+                    long age = 1000000; // about 30 years old as default
                     ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
                     if (valuesForCell != null && (valuesForCell.getValues() != null && !valuesForCell.getValues().isEmpty())) {
                         for (Value value : valuesForCell.getValues()) {
@@ -1298,14 +1301,14 @@ public class DSSpreadsheetService {
                                     break;
                                 }
                                 LocalDateTime provdate = LocalDateTime.ofInstant(value.getProvenance().getTimeStamp().toInstant(), ZoneId.systemDefault());
-                                long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.DAYS);
+                                long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.HOURS);
                                 if (cellAge < age) {
                                     age = cellAge;
                                 }
                             }
                         }
                     }
-                    if (highlightDays >= age) {
+                    if (highlightHours >= age) {
                         azquoCell.setHighlighted(true);
                     }
                 }
