@@ -702,16 +702,16 @@ public class ZKComposer extends SelectorComposer<Component> {
                     final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
                     StringBuilder colRowContext = new StringBuilder();
                     colRowContext.append("COLUMN");
-                    for (List<String> colHeadingsRow : sentCells.getColumnHeadings()){
+                    for (List<String> colHeadingsRow : sentCells.getColumnHeadings()) {
                         colRowContext.append("\t" + colHeadingsRow.get(regionColumn));
                     }
                     colRowContext.append("\n\tROW ");
-                    for (String rowItem : sentCells.getRowHeadings().get(regionRow)){
+                    for (String rowItem : sentCells.getRowHeadings().get(regionRow)) {
                         colRowContext.append("\t" + rowItem);
                     }
                     colRowContext.append("\n\tCONTEXT ");
-                    for (List<String> contextRow : sentCells.getContextSource()){
-                        for (String context : contextRow){
+                    for (List<String> contextRow : sentCells.getContextSource()) {
+                        for (String context : contextRow) {
                             colRowContext.append("\t" + context);
                         }
                     }
@@ -889,23 +889,28 @@ public class ZKComposer extends SelectorComposer<Component> {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         String reportName = spreadsheetService.setChoices(loggedInUser, provline);
         OnlineReport or = null;
-        Permission permission = null;
         Session session = Sessions.getCurrent();
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
+        OnlineReportDAO onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
+        String permissionId = null;
         if (reportName != null) {
             if (loggedInUser.getUser().isAdministrator()) {
                 int databaseId = loggedInUser.getDatabase().getId();
-                OnlineReportDAO onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
                 or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
                 if (or == null) {
                     or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
                 }
-            } else { // need to try to find the permission given the new rules
+            } else if (loggedInUser.getPermissionsFromReport() != null) {
+                if (loggedInUser.getPermissionsFromReport().get(reportName) != null){
+                    permissionId = reportName;
+                }
+            } else { // need to try to find the permission from the db
                 PermissionDAO permissionDAO = (PermissionDAO) applicationContext.getBean("permissionDao");
                 final List<Permission> forUserId = permissionDAO.findForUserId(loggedInUser.getUser().getId());
+                OnlineReport test = onlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
                 for (Permission permission1 : forUserId) {
-                    if (permission1.getDatabaseId() == loggedInUser.getDatabase().getId()) {
-                        permission = permission1;
+                    if (permission1.getReportId() == test.getId()) { // so they can see this report from permissions
+                        permissionId = permission1.getId() + ""; // hacky but now permission id can be report names
                         break;
                     }
                 }
@@ -913,8 +918,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         } else {
             reportName = "unspecified";
         }
-        if (permission != null) { // database removed from permission, redundant
-            Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + permission.getId() + "&opcode=loadsheet" + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
+        if (permissionId != null) { // database removed from permission, redundant
+            Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + permissionId + "&opcode=loadsheet" + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
         } else if (or != null) {
             Clients.evalJavaScript("window.open(\"/api/Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
         } else {
