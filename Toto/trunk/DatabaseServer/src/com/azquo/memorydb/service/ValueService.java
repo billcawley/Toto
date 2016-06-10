@@ -613,8 +613,8 @@ public final class ValueService {
 
     public void sortValues(List<Value> values) {
         sortValuesCount.incrementAndGet();
-        Collections.sort(values, (o1, o2) -> (o1.getProvenance().getTimeStamp())
-                .compareTo(o2.getProvenance().getTimeStamp()));
+        Collections.sort(values, (o1, o2) -> (o2.getProvenance().getTimeStamp())
+                .compareTo(o1.getProvenance().getTimeStamp()));
     }
 
     // printbatch was creating a value, no good, use this instead

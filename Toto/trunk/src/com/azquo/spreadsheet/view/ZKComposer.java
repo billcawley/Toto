@@ -699,23 +699,28 @@ public class ZKComposer extends SelectorComposer<Component> {
             try {
                 List<TreeNode> treeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
                 if (!treeNodes.isEmpty()) {
-                    StringBuilder toShow = new StringBuilder();
                     final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
-                    toShow.append("COLUMN");
+                    StringBuilder colRowContext = new StringBuilder();
+                    colRowContext.append("COLUMN");
                     for (List<String> colHeadingsRow : sentCells.getColumnHeadings()){
-                        toShow.append("\t" + colHeadingsRow.get(regionColumn));
+                        colRowContext.append("\t" + colHeadingsRow.get(regionColumn));
                     }
-                    toShow.append("\tROW ");
+                    colRowContext.append("\n\tROW ");
                     for (String rowItem : sentCells.getRowHeadings().get(regionRow)){
-                        toShow.append("\t" + rowItem);
+                        colRowContext.append("\t" + rowItem);
                     }
-                    toShow.append("\tCONTEXT ");
+                    colRowContext.append("\n\tCONTEXT ");
                     for (List<String> contextRow : sentCells.getContextSource()){
                         for (String context : contextRow){
-                            toShow.append("\t" + context);
+                            colRowContext.append("\t" + context);
                         }
                     }
-                    toShow.append("\n\n");
+                    colRowContext.append("\n\n");
+                    Label provenanceLabel = new Label();
+                    provenanceLabel.setMultiline(true);
+                    provenanceLabel.setValue(colRowContext.toString());
+                    provenancePopup.appendChild(provenanceLabel);
+                    StringBuilder toShow = new StringBuilder();
                     for (TreeNode TreeNode : treeNodes) {
                         resolveTreeNode(0, toShow, TreeNode);
                     }
@@ -740,15 +745,14 @@ public class ZKComposer extends SelectorComposer<Component> {
                         provButton.addEventListener("onClick",
                                 event -> showProvenance(provLine, valueId));
                         provenancePopup.appendChild(provButton);
-                        Label provenanceLabel = new Label();
+                        provenanceLabel = new Label();
                         provenanceLabel.setMultiline(true);
-
                         provenanceLabel.setValue(trimString(stringToShow.substring(endLine, nextBlock)));
                         provenancePopup.appendChild(provenanceLabel);
                         stringToShow = stringToShow.substring(nextBlock);
                         spreadPos = stringToShow.indexOf("in spreadsheet");
                     }
-                    Label provenanceLabel = new Label();
+                    provenanceLabel = new Label();
                     provenanceLabel.setMultiline(true);
                     provenanceLabel.setValue(trimString(stringToShow));
                     provenancePopup.appendChild(provenanceLabel);
