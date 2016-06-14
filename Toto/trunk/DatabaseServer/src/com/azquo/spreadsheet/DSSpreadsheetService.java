@@ -107,14 +107,14 @@ public class DSSpreadsheetService {
 
     */
 
-    private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames) throws Exception {
-        return createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, headingRegion, attributeNames, 0);
+    private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, DataRegionHeading.SUFFIX defaultSuffix) throws Exception {
+        return createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, headingRegion, attributeNames, 0, defaultSuffix);
     }
 
     // now has the option to exception based on large sets being returned by parse query. Used currently on columns, if these name sets are more than a few hundred then that's clearly unworkable - you wouldn't want more than a few hundred columns
     private static final String HIERARCHY = "hierarchy";
 
-    private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, int namesQueryLimit) throws Exception {
+    private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, int namesQueryLimit, DataRegionHeading.SUFFIX defaultSuffix) throws Exception {
         List<List<List<DataRegionHeading>>> nameLists = new ArrayList<>(headingRegion.size());
         for (List<String> sourceRow : headingRegion) { // we're stepping through the cells that describe headings
             // ok here's the thing, before it was just names here, now it could be other things, attribute names formulae etc.
@@ -146,6 +146,9 @@ public class DSSpreadsheetService {
                                 suffix = _suffix;
                                 sourceCell = sourceCell.substring(0, sourceCell.length() - suffix.name().length()).trim();
                             }
+                        }
+                        if (suffix == null && defaultSuffix != null){
+                            suffix = defaultSuffix;
                         }
 
                         /* The way name functions work is going to change to allow [ROWHEADING] and [COLUMNHEADING] which work with set operators, / * - + etc.
@@ -954,10 +957,18 @@ public class DSSpreadsheetService {
         long threshold = 1000;
         // the context is changing to data region headings to support name function permutations - unlike the column and row headings it has to be flat, a resultant one dimensional list from createHeadingArraysFromSpreadsheetRegion
         final List<DataRegionHeading> contextHeadings = getContextHeadings(azquoMemoryDBCOnnection, contextSource, languages);
+        // look for context locked/unlokced suffix to apply to col and row headings that don't have suffixes
+        DataRegionHeading.SUFFIX contextSuffix = null;
+        for (DataRegionHeading contextHeading : contextHeadings) {
+            if (contextHeading != null && (contextHeading.getSuffix() == DataRegionHeading.SUFFIX.LOCKED || contextHeading.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED)) {
+                contextSuffix = contextHeading.getSuffix();
+            }
+        }
+
         long time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Context parsed in " + time + "ms");
         track = System.currentTimeMillis();
-        final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
+        final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Row headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
@@ -966,7 +977,7 @@ public class DSSpreadsheetService {
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Row headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
-        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages, COL_HEADINGS_NAME_QUERY_LIMIT);
+        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages, COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
@@ -1063,10 +1074,16 @@ public class DSSpreadsheetService {
             , int unsortedRow, int unsortedCol, List<String> languages) throws Exception {
         // these 25 lines or so are used elsewhere, maybe normalise?
         final List<DataRegionHeading> contextHeadings = getContextHeadings(azquoMemoryDBCOnnection, contextSource, languages);
+        DataRegionHeading.SUFFIX contextSuffix = null;
+        for (DataRegionHeading contextHeading : contextHeadings) {
+            if (contextHeading != null && (contextHeading.getSuffix() == DataRegionHeading.SUFFIX.LOCKED || contextHeading.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED)) {
+                contextSuffix = contextHeading.getSuffix();
+            }
+        }
         Collection<Name> sharedNames = getSharedNames(contextHeadings);//sharedNames only required for permutations
-        final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages);
+        final List<List<List<DataRegionHeading>>> rowHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix);
         final List<List<DataRegionHeading>> rowHeadings = expandHeadings(rowHeadingLists, sharedNames);
-        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages, COL_HEADINGS_NAME_QUERY_LIMIT); // same as standard limit for col headings
+        final List<List<List<DataRegionHeading>>> columnHeadingLists = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages, COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix); // same as standard limit for col headings
         final List<List<DataRegionHeading>> columnHeadings = expandHeadings(transpose2DList(columnHeadingLists), sharedNames);
         if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
             return null;
@@ -2263,7 +2280,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     private List<DataRegionHeading> getContextHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception {
-        final List<List<List<DataRegionHeading>>> contextArraysFromSpreadsheetRegion = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, contextSource, languages);
+        final List<List<List<DataRegionHeading>>> contextArraysFromSpreadsheetRegion = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, contextSource, languages, null); // no default suffix, this is where we might find it
         final List<DataRegionHeading> contextHeadings = new ArrayList<>();
         for (List<List<DataRegionHeading>> list1 : contextArraysFromSpreadsheetRegion) {
             for (List<DataRegionHeading> list2 : list1) {
