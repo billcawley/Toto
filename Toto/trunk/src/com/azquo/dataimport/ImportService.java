@@ -282,7 +282,7 @@ public final class ImportService {
         } else if (fileName.contains(".xls")) { // normal. I'm not entirely sure the code for users etc above should be in this file, maybe a different importer?
             return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter, isData);
         } else {
-             return readPreparedFile(loggedInUser, filePath, fileName.substring(0, fileName.indexOf(".")), attributeNames, persistAfter, false); // no file type
+            return readPreparedFile(loggedInUser, filePath, fileName.substring(0, fileName.indexOf(".")), attributeNames, persistAfter, false); // no file type
         }
     }
 
@@ -384,7 +384,7 @@ public final class ImportService {
         //azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = null;
         SName reportRange = book.getInternalBook().getNameByName("az_ReportName");
-        if (reportRange != null){
+        if (reportRange != null) {
             reportName = bookUtils.getSnameCell(reportRange).getStringValue();
         }
         if (reportName != null) {
@@ -394,12 +394,12 @@ public final class ImportService {
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
             OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
             if (or == null) return "no report named " + reportName + " found";
-             Map<String, String> choices = uploadChoices(book, bookUtils);
+            Map<String, String> choices = uploadChoices(book, bookUtils);
             for (String choice : choices.keySet()) {
                 spreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
             }
             String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilename();
-             final Book reportBook = Importers.getImporter().imports(new File(bookPath), "Report name");
+            final Book reportBook = Importers.getImporter().imports(new File(bookPath), "Report name");
             reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
             reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
             reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
@@ -579,64 +579,110 @@ public final class ImportService {
         }
     }
 
-    public String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport){
+    // for the download, modify and upload the report
+
+    public String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
         int items = 0;
         int nonBlankItems = 0;
         Sheet sourceSheet = sourceBook.getSheetAt(0);
-
-        for (SName sName:sourceBook.getInternalBook().getNames()) {
+        for (SName sName : sourceBook.getInternalBook().getNames()) {
             String name = sName.getName();
             String regionName = getRegionName(name);
             if (regionName != null) {
                 CellRegion sourceRegion = sName.getRefersToCellRegion();
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), regionName);
-                if (cellsAndHeadingsForDisplay!=null){
-                    //needs to be able to handle repeat regions here....
-                     List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                     if (data.size()!=sourceRegion.getRowCount() || data.get(0).size()!= sourceRegion.getColumnCount()){
-                        return "The size of the region " + regionName + " does not match";
-                    }
-                    for (int row=0;row< sourceRegion.getRowCount();row++){
-                        for (int col = 0;col<sourceRegion.getColumnCount();col++){
-                            SCell sourceCell = sourceSheet.getInternalSheet().getCell(sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                            String sourceValue = "";
-                            boolean isDouble = false;
-                            try {
-                                sourceValue = sourceCell.getStringValue();
-                            } catch (Exception e) {
-                                try{
-                                    double d = sourceCell.getNumberValue();
-                                    sourceValue = d + "";
-                                }catch(Exception e2){
-                                    //ignore
+                if (name.toLowerCase().contains(ZKAzquoBookUtils.azRepeatScope.toLowerCase())) { // then deal with the multiple data regions sent due to this
+                    // need to gather associated names for calculations, the region and the data region, code copied and changewd from getRegionRowColForRepeatRegion, it needs to work well for a batch of cells not just one
+                    SName repeatRegion = sourceBook.getInternalBook().getNameByName(ZKAzquoBookUtils.azRepeatRegion + regionName);
+                    SName repeatDataRegion = sourceBook.getInternalBook().getNameByName("az_DataRegion" + regionName); // todo string literals ergh!
+                    // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
+                    if (repeatRegion != null && repeatDataRegion != null) {
+                        int regionHeight = repeatRegion.getRefersToCellRegion().getRowCount();
+                        int regionWitdh = repeatRegion.getRefersToCellRegion().getColumnCount();
+                        int dataHeight = repeatDataRegion.getRefersToCellRegion().getRowCount();
+                        int dataWitdh = repeatDataRegion.getRefersToCellRegion().getColumnCount();
+                        // where the data starts in each repeated region
+                        int dataStartRow = repeatDataRegion.getRefersToCellRegion().getRow() - repeatRegion.getRefersToCellRegion().getRow();
+                        int dataStartCol = repeatDataRegion.getRefersToCellRegion().getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+                        // we can't really do a size comparison as before, we can simply run the region and see where we think there should be repeat reagions in the scope
+                        for (int row = 0; row < sourceRegion.getRowCount(); row++) {
+                            int repeatRow = row/regionHeight;
+                            int rowInRegion = row % regionHeight;
+                            for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
+                                int colInRegion = col % regionWitdh;
+                                int repeatCol = col / regionWitdh;
+                                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), regionName + "-" + repeatRow + "-" + repeatCol); // getting each time might be a little inefficient, can optimise if there is a performance problem here
+                                if (colInRegion >= dataStartCol && rowInRegion >= dataStartRow
+                                        && colInRegion <= dataStartCol + dataWitdh
+                                        && rowInRegion <= dataStartRow + dataHeight
+                                        && cellsAndHeadingsForDisplay != null){
+                                    final List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
+                                    SCell sourceCell = sourceSheet.getInternalSheet().getCell(sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    String sourceValue = "";
+                                    // boolean isDouble = false; // used in some other bit?
+                                    try {
+                                        sourceValue = sourceCell.getStringValue();
+                                    } catch (Exception e) {
+                                        try {
+                                            double d = sourceCell.getNumberValue();
+                                            sourceValue = d + "";
+                                        } catch (Exception e2) {
+                                            //ignore
+                                        }
+                                    }
+                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setStringValue(sourceValue);
+                                    if (sourceValue.length() > 0) nonBlankItems++;
+                                    items++;
                                 }
                             }
-                            data.get(row).get(col).setStringValue(sourceValue);
-                            if (sourceValue.length() > 0) nonBlankItems++;
-                            items++;
                         }
                     }
-
-
-                }
-                try {
-                    spreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
-                }catch(Exception e){
-                    return e.getMessage();
+                    return null;
+                } else { // a normal data region. Note that the data region used by a repeat scope should be harmless here as it will return a null on getSentCells, no need to be clever
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), regionName);
+                    if (cellsAndHeadingsForDisplay != null) {
+                        //needs to be able to handle repeat regions here....
+                        List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
+                        if (data.size() != sourceRegion.getRowCount() || data.get(0).size() != sourceRegion.getColumnCount()) {
+                            return "The size of the region " + regionName + " does not match";
+                        }
+                        for (int row = 0; row < sourceRegion.getRowCount(); row++) {
+                            for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
+                                SCell sourceCell = sourceSheet.getInternalSheet().getCell(sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                String sourceValue = "";
+                                boolean isDouble = false;
+                                try {
+                                    sourceValue = sourceCell.getStringValue();
+                                } catch (Exception e) {
+                                    try {
+                                        double d = sourceCell.getNumberValue();
+                                        sourceValue = d + "";
+                                    } catch (Exception e2) {
+                                        //ignore
+                                    }
+                                }
+                                data.get(row).get(col).setStringValue(sourceValue);
+                                if (sourceValue.length() > 0) nonBlankItems++;
+                                items++;
+                            }
+                        }
+                    }
+                    try {
+                        spreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
+                    } catch (Exception e) {
+                        return e.getMessage();
+                    }
                 }
             }
-
         }
 
         return nonBlankItems + " data items transferred successfully";
-
     }
 
-    private String getRegionName(String name){
-        if (name.toLowerCase().startsWith("az_dataregion")){
+    private String getRegionName(String name) {
+        if (name.toLowerCase().startsWith("az_dataregion")) {
             return name.substring("az_dataregion".length()).toLowerCase();
         }
-        if (name.toLowerCase().startsWith("az_repeatscope")){
+        if (name.toLowerCase().startsWith("az_repeatscope")) {
             return name.substring("az_repeatscope".length()).toLowerCase();
         }
         return null;
@@ -660,18 +706,18 @@ public final class ImportService {
     }
 
     private void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
-        Range range = Ranges.range(sheet,r,c);
+        Range range = Ranges.range(sheet, r, c);
         CellData cellData = range.getCellData();
-        String dataFormat = sheet.getInternalSheet().getCell(r,c).getCellStyle().getDataFormat();
-          //if (colCount++ > 0) bw.write('\t');
+        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
+        //if (colCount++ > 0) bw.write('\t');
         if (cellData != null) {
             String cellFormat = "";
             try {
                 cellFormat = cellData.getFormatText();
                 if (dataFormat.toLowerCase().contains("mm-")) {//fix a ZK bug
-                    cellFormat = cellFormat.replace(" ","-");//crude replacement of spaces in dates with dashes
+                    cellFormat = cellFormat.replace(" ", "-");//crude replacement of spaces in dates with dashes
                 }
-            }catch(Exception e){
+            } catch (Exception e) {
             }
             if (newNames != null && newNames.get(cellFormat) != null) {
                 csvW.write(newNames.get(cellFormat));
@@ -681,16 +727,16 @@ public final class ImportService {
                     try {
                         double d = cellData.getDoubleValue();
                         cellFormat = d + "";
-                        if (cellFormat.endsWith(".0")){
-                            cellFormat = cellFormat.substring(0,cellFormat.length()-2);
+                        if (cellFormat.endsWith(".0")) {
+                            cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
                         }
                     } catch (Exception e) {
 
                     }
                 }
-                if (cellFormat.contains("\"\"") && cellFormat.startsWith("\"")&& cellFormat.endsWith("\"")){
+                if (cellFormat.contains("\"\"") && cellFormat.startsWith("\"") && cellFormat.endsWith("\"")) {
                     //remove spuriouse quote marks
-                    cellFormat = cellFormat.substring(1, cellFormat.length()-1).replace("\"\"","\"");
+                    cellFormat = cellFormat.substring(1, cellFormat.length() - 1).replace("\"\"", "\"");
                 }
                 csvW.write(cellFormat);
             }
@@ -709,8 +755,8 @@ public final class ImportService {
         * */
         int rows = sheet.getLastRow();
         int maxCol = 0;
-        for (int row = 0; row <= sheet.getLastRow(); row++){
-            if (maxCol < sheet.getLastColumn(row)){
+        for (int row = 0; row <= sheet.getLastRow(); row++) {
+            if (maxCol < sheet.getLastColumn(row)) {
                 maxCol = sheet.getLastColumn(row);
             }
         }
@@ -756,26 +802,25 @@ public final class ImportService {
         } catch (Exception e) {
             try {
                 date = ukdf.parse(possibleDate); //try without time
-            }catch(Exception e2){
+            } catch (Exception e2) {
                 return possibleDate;
             }
         }
         return df.format(date);
     }
 
-    public Map<String,String> uploadChoices(Book book, ZKAzquoBookUtils bookUtils){
+    public Map<String, String> uploadChoices(Book book, ZKAzquoBookUtils bookUtils) {
         //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
-        Map<String,String> choices = new HashMap<>();
-        for (SName sName:book.getInternalBook().getNames()){
+        Map<String, String> choices = new HashMap<>();
+        for (SName sName : book.getInternalBook().getNames()) {
             String rangeName = sName.getName().toLowerCase();
-            if (rangeName.endsWith("chosen")){
-                choices.put(rangeName.substring(0,rangeName.length()-6),bookUtils.getSnameCell(sName).getStringValue());
+            if (rangeName.endsWith("chosen")) {
+                choices.put(rangeName.substring(0, rangeName.length() - 6), bookUtils.getSnameCell(sName).getStringValue());
 
             }
         }
         return choices;
     }
-
 
 
 }
