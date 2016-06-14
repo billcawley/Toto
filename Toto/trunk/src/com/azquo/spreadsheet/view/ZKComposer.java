@@ -514,6 +514,8 @@ public class ZKComposer extends SelectorComposer<Component> {
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                     if (isDouble) {
                         cellForDisplay.setDoubleValue(doubleValue);
+                    }else{
+                        cellForDisplay.setDoubleValue(0);
                     }
                     cellForDisplay.setStringValue(chosen);
                     int highlightDays = 0;
