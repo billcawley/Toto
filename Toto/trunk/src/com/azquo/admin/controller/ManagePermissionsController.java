@@ -87,11 +87,13 @@ public class ManagePermissionsController {
                         }
                         List<OnlineReport> reports = new ArrayList<>();
                         if (toEdit == null){ // then it could be multiple
-                            StringTokenizer st = new StringTokenizer(reportId, ",");
-                            while (st.hasMoreTokens()){ // will exception if someone plays silly buggers
-                                OnlineReport onlineReport = adminService.getReportById(Integer.parseInt(st.nextToken()), loggedInUser);
-                                if (onlineReport != null){
-                                    reports.add(onlineReport);
+                            if (reportId != null && reportId.length() > 0){
+                                StringTokenizer st = new StringTokenizer(reportId, ",");
+                                while (st.hasMoreTokens()){ // will exception if someone plays silly buggers
+                                    OnlineReport onlineReport = adminService.getReportById(Integer.parseInt(st.nextToken()), loggedInUser);
+                                    if (onlineReport != null){
+                                        reports.add(onlineReport);
+                                    }
                                 }
                             }
                         } else { // editing a simgle
@@ -116,6 +118,10 @@ public class ManagePermissionsController {
                                         adminService.createUserPermission(report.getId(), Integer.parseInt(userId), Integer.parseInt(databaseId),
                                                 readList, writeList, loggedInUser);
                                     }
+                                if (reports.isEmpty()){ // we'll allow a blank one
+                                    adminService.createUserPermission(0, Integer.parseInt(userId), Integer.parseInt(databaseId),
+                                            readList, writeList, loggedInUser);
+                                }
                             } else {
                                 User check = userDAO.findById(toEdit.getUserId());
                                 if (check.getBusinessId() == loggedInUser.getUser().getBusinessId()){
