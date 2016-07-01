@@ -624,6 +624,13 @@ public class ZKAzquoBookUtils {
                 if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
                     insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
                 }
+                // and do hidden
+                boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
+                if (hidden){
+                    for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++){
+                        sheet.getInternalSheet().getRow(row).setHidden(true);
+                    }
+                }
             }
             // so the space should be prepared for multi
         }
@@ -707,6 +714,12 @@ public class ZKAzquoBookUtils {
                         if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
                             insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
                         }
+                        boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
+                        if (hidden){
+                            for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++){
+                                sheet.getInternalSheet().getRow(row).setHidden(true);
+                            }
+                        }
                     }
                     // add columns
                     int maxRow = sheet.getLastRow();
@@ -721,6 +734,12 @@ public class ZKAzquoBookUtils {
                         int originalWidth = sheet.getInternalSheet().getColumn(insertCol).getWidth();
                         if (originalWidth != sheet.getInternalSheet().getColumn(insertCol).getWidth()) { // height may not match on insert
                             insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
+                        }
+                        boolean hidden = sheet.getInternalSheet().getColumn(insertCol - 1).isHidden();
+                        if (hidden){
+                            for (int col = insertRange.getColumn(); col <= insertRange.getLastColumn(); col++){
+                                sheet.getInternalSheet().getColumn(col).setHidden(true);
+                            }
                         }
                     }
                     // these re loadings are because the region may have changed
