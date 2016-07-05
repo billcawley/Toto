@@ -414,13 +414,13 @@ public final class ImportService {
         StringBuilder toReturn = new StringBuilder();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            toReturn.append(readSheet(loggedInUser, sheet, tempName, sheetNo, attributeNames, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
+            toReturn.append(readSheet(loggedInUser, sheet, tempName, attributeNames, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
             toReturn.append("\n");
         }
         return toReturn.toString();
     }
 
-    private String readSheet(LoggedInUser loggedInUser, Sheet sheet, final String tempFileName, final int sheetNo, List<String> attributeNames, boolean persistAfter) throws Exception {
+    private String readSheet(LoggedInUser loggedInUser, Sheet sheet, final String tempFileName, List<String> attributeNames, boolean persistAfter) throws Exception {
         String tempName = convertSheetToCSV(tempFileName, sheet);
         String fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
         return readPreparedFile(loggedInUser, tempName, fileType, attributeNames, persistAfter, true);
