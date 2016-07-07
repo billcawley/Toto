@@ -398,7 +398,8 @@ public final class ImportService {
             for (String choice : choices.keySet()) {
                 spreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
             }
-            String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilename();
+            //String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilename();
+            String bookPath = tempName;//take the import sheet as a template.
             final Book reportBook = Importers.getImporter().imports(new File(bookPath), "Report name");
             reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
             reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
@@ -616,19 +617,7 @@ public final class ImportService {
                                         && rowInRegion <= dataStartRow + dataHeight
                                         && cellsAndHeadingsForDisplay != null){
                                     final List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                                    SCell sourceCell = sourceSheet.getInternalSheet().getCell(sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    String sourceValue = "";
-                                    // boolean isDouble = false; // used in some other bit?
-                                    try {
-                                        sourceValue = sourceCell.getStringValue();
-                                    } catch (Exception e) {
-                                        try {
-                                            double d = sourceCell.getNumberValue();
-                                            sourceValue = d + "";
-                                        } catch (Exception e2) {
-                                            //ignore
-                                        }
-                                    }
+                                    String sourceValue = getCellString(sourceSheet,sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
                                     data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setStringValue(sourceValue);
                                     if (sourceValue.length() > 0) nonBlankItems++;
                                     items++;
@@ -642,27 +631,14 @@ public final class ImportService {
                     if (cellsAndHeadingsForDisplay != null) {
                         //needs to be able to handle repeat regions here....
                         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                        if (data.size() != sourceRegion.getRowCount() || data.get(0).size() != sourceRegion.getColumnCount()) {
-                            return "The size of the region " + regionName + " does not match";
-                        }
-                        for (int row = 0; row < sourceRegion.getRowCount(); row++) {
-                            for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
-                                SCell sourceCell = sourceSheet.getInternalSheet().getCell(sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                String sourceValue = "";
-                                boolean isDouble = false;
-                                try {
-                                    sourceValue = sourceCell.getStringValue();
-                                } catch (Exception e) {
-                                    try {
-                                        double d = sourceCell.getNumberValue();
-                                        sourceValue = d + "";
-                                    } catch (Exception e2) {
-                                        //ignore
-                                    }
+                        if (data.size() == sourceRegion.getRowCount() && data.get(0).size() == sourceRegion.getColumnCount()) {//ignore region sizes which do not match (e.g. on transaction entries showing past entries)
+                            for (int row = 0; row < sourceRegion.getRowCount(); row++) {
+                                for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
+                                    String sourceValue = getCellString(sourceSheet,sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    data.get(row).get(col).setStringValue(sourceValue);
+                                    if (sourceValue.length() > 0) nonBlankItems++;
+                                    items++;
                                 }
-                                data.get(row).get(col).setStringValue(sourceValue);
-                                if (sourceValue.length() > 0) nonBlankItems++;
-                                items++;
                             }
                         }
                     }
@@ -705,7 +681,7 @@ public final class ImportService {
         return tempName;
     }
 
-    private void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
+    private String getCellString(Sheet sheet, int r, int c){
         Range range = Ranges.range(sheet, r, c);
         CellData cellData = range.getCellData();
         String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
@@ -719,30 +695,37 @@ public final class ImportService {
                 }
             } catch (Exception e) {
             }
-            if (newNames != null && newNames.get(cellFormat) != null) {
-                csvW.write(newNames.get(cellFormat));
-            } else {
-                if (!dataFormat.toLowerCase().contains("m")) {//check that it is not a data or a time
-                    //if it's a number, remove all formatting
-                    try {
-                        double d = cellData.getDoubleValue();
-                        cellFormat = d + "";
-                        if (cellFormat.endsWith(".0")) {
-                            cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
-                        }
-                    } catch (Exception e) {
-
+            if (!dataFormat.toLowerCase().contains("m")) {//check that it is not a data or a time
+                //if it's a number, remove all formatting
+                try {
+                    double d = cellData.getDoubleValue();
+                    cellFormat = d + "";
+                    if (cellFormat.endsWith(".0")) {
+                        cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
                     }
+                } catch (Exception e) {
+
                 }
-                if (cellFormat.contains("\"\"") && cellFormat.startsWith("\"") && cellFormat.endsWith("\"")) {
-                    //remove spuriouse quote marks
-                    cellFormat = cellFormat.substring(1, cellFormat.length() - 1).replace("\"\"", "\"");
-                }
-                csvW.write(cellFormat);
             }
-        } else {
-            csvW.write("");
+            if (cellFormat.contains("\"\"") && cellFormat.startsWith("\"") && cellFormat.endsWith("\"")) {
+                //remove spuriouse quote marks
+                cellFormat = cellFormat.substring(1, cellFormat.length() - 1).replace("\"\"", "\"");
+            }
+            return cellFormat;
         }
+        return "";
+
+
+
+    }
+
+    private void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
+        String cellFormat = getCellString(sheet, r,c);
+        if (newNames != null && newNames.get(cellFormat) != null) {
+             csvW.write(newNames.get(cellFormat));
+        } else {
+             csvW.write(cellFormat);
+         }
 
     }
 
