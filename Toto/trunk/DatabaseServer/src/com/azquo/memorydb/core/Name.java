@@ -1232,6 +1232,9 @@ public final class Name extends AzquoMemoryDBEntity {
             for (Name child : getChildren()) {
                 removeFromChildrenWillBePersisted(child);
             }
+            for (String attribute : getAttributeKeys()) {
+                setAttributeWillBePersisted(attribute, null); // simple way to clear it from the indexes
+            }
         }
         // then the actions on other objects - we now delete such values
         for (Value v : values) {

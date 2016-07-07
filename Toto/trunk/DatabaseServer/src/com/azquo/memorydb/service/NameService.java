@@ -1039,6 +1039,7 @@ public final class NameService {
             Collection<Name> names = parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages); // defaulting to list here
             if (names != null) {
                 for (Name name : names) name.delete();
+                azquoMemoryDBConnection.persist();
                 return toReturn;
             }
         }

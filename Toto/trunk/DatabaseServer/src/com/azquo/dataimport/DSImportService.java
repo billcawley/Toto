@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
  * <p>
  * I'm trying to write up as much of the non obvious logic as possible in comments in the code.
  * <p>
- * The cell on a line can be a value or an attribute or a name.
+ * The cell on a line can be a value or an attribute or a name - or a part of another cell
  */
 public class DSImportService {
 
