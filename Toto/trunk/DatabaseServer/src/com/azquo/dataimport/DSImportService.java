@@ -530,7 +530,7 @@ public class DSImportService {
                    of course if the first column has no header and then the second has data but not on this line then it would get loaded
                    happy for the check to remain in here - more stuff for the multi threaded bit */
                 ImportCellWithHeading first = lineToLoad.get(0);
-                if (first.lineValue.length() > 0 || first.immutableImportHeading.heading == null) {
+                if (first.lineValue.length() > 0 || first.immutableImportHeading.heading == null || first.immutableImportHeading.compositionPattern!=null) {
                     List<String> languages = attributeNames;
                     if (getCompositeValuesCheckOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, lineNo, languages)) {
                         try {
