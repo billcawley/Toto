@@ -454,7 +454,10 @@ public class ZKAzquoBookUtils {
                                             // we now want to compare in the case of non formulae changes - a value from one data region importing into another,
                                             // the other typically being of the "ad hoc" no row headings type
                                             // notably this will hit a lot of cells (all the rest)
+                                            String cellString = getCellString(sheet,row, col);
+
                                             if (sCell.getType() == SCell.CellType.NUMBER) {
+                                                cellForDisplay.setStringValue(cellString);//to cover dates as well as numbers
                                                 if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
                                                     cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
                                                     showSave = true;
@@ -1511,4 +1514,44 @@ public class ZKAzquoBookUtils {
             return null;
         }
     }
+
+    private  String getCellString(Sheet sheet, int r, int c){//this is the same routine as in ImportService, so one is redundant, but I'm not sure which (WFC)
+        Range range = Ranges.range(sheet, r, c);
+        CellData cellData = range.getCellData();
+        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
+        //if (colCount++ > 0) bw.write('\t');
+        if (cellData != null) {
+            String cellFormat = "";
+            try {
+                cellFormat = cellData.getFormatText();
+                if (dataFormat.toLowerCase().contains("mm-")) {//fix a ZK bug
+                    cellFormat = cellFormat.replace(" ", "-");//crude replacement of spaces in dates with dashes
+                }
+            } catch (Exception e) {
+            }
+            if (!dataFormat.toLowerCase().contains("m")) {//check that it is not a data or a time
+                //if it's a number, remove all formatting
+                try {
+                    double d = cellData.getDoubleValue();
+                    cellFormat = d + "";
+                    if (cellFormat.endsWith(".0")) {
+                        cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
+                    }
+                } catch (Exception e) {
+
+                }
+            }
+            if (cellFormat.contains("\"\"") && cellFormat.startsWith("\"") && cellFormat.endsWith("\"")) {
+                //remove spuriouse quote marks
+                cellFormat = cellFormat.substring(1, cellFormat.length() - 1).replace("\"\"", "\"");
+            }
+            return cellFormat;
+        }
+        return "";
+
+
+
+    }
+
+
 }
