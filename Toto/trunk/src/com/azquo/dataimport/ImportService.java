@@ -584,6 +584,7 @@ public final class ImportService {
 
     public String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
         int items = 0;
+        String errorMessage = "";
         int nonBlankItems = 0;
         Sheet sourceSheet = sourceBook.getSheetAt(0);
         for (SName sName : sourceBook.getInternalBook().getNames()) {
@@ -645,13 +646,15 @@ public final class ImportService {
                     try {
                         spreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
                     } catch (Exception e) {
-                        return e.getMessage();
+                        errorMessage += "- in region " + regionName + " -" +  e.getMessage();
                     }
                 }
             }
+
         }
 
-        return nonBlankItems + " data items transferred successfully";
+
+        return errorMessage + " - " + nonBlankItems + " data items transferred successfully";
     }
 
     private String getRegionName(String name) {
