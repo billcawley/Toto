@@ -81,20 +81,23 @@ public class ZKAzquoBookUtils {
 
     public static final String EXECUTE = "az_Execute";
 
-    public boolean runExecuteCommandForBook(Book book) throws Exception {
+    public static final String FOLLOWON = "az_Followon";
+
+    public boolean runExecuteCommandForBook(Book book, String sourceNamedRegion) throws Exception {
         String executeCommand = null;
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
             List<SName> namesForSheet = getNamesForSheet(sheet);
             for (SName sName : namesForSheet) {
-                if (sName.getName().equalsIgnoreCase(EXECUTE)) {
+                if (sName.getName().equalsIgnoreCase(sourceNamedRegion)) {
                     executeCommand = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getStringValue();
                 }
             }
         }
         if (executeCommand == null || executeCommand.isEmpty()){ // just return the book for the moment, no executing
-            // how to error message there was no execute? Exception? todo
-            return populateBook(book, 0);
+            // how to error message there was no execute? Exception? todo. Also why populate the book at all, what's the point?
+            return false;
+            //return populateBook(book, 0);
         }
         List<String> commands = new ArrayList<>();
         StringTokenizer st = new StringTokenizer(executeCommand, "\n");

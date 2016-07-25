@@ -327,7 +327,7 @@ public class OnlineController {
                                         }
                                         session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
                                         if (executeMode){
-                                            bookUtils.runExecuteCommandForBook(book);
+                                            bookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.EXECUTE); // standard, there's the option to execute the contents of a different namers
                                             session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                         } else {
                                             session.setAttribute(finalReportId + SAVE_FLAG, bookUtils.populateBook(book, valueId));

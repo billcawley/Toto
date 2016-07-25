@@ -1,8 +1,5 @@
 package com.azquo.spreadsheet.controller;
 
-import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserChoiceDAO;
@@ -67,13 +64,7 @@ public class ZKSpreadsheetCommandController {
     private OnlineReportDAO onlineReportDAO;
 
     @Autowired
-    private DatabaseDAO databaseDAO;
-
-    @Autowired
     private UserRegionOptionsDAO userRegionOptionsDAO;
-
-    @Autowired
-    private DatabaseReportLinkDAO databaseReportLinkDAO;
 
     @Autowired
     private RMIClient rmiClient;
@@ -231,6 +222,9 @@ public class ZKSpreadsheetCommandController {
                                 }
                             }
                         }
+                        // new thing, look for followon, guess we need an instance of ZK azquobook utils
+                        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+                        zkAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                     }
 
                     if ("RestoreSavedValues".equals(action)) {
