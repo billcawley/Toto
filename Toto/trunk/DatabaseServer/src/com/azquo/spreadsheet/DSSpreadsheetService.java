@@ -726,7 +726,21 @@ public class DSSpreadsheetService {
                 return toReturn;
             }
         }
-        return getUniqueNameStrings(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages)));
+        if (query.toLowerCase().trim().endsWith("showparents")){ // a hack to force simple showing of parents regardless
+            query = query.substring(0, query.indexOf("showparents"));
+            final Collection<Name> names = nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages);
+            List<String> toReturn = new ArrayList<>();
+            for (Name name : names){
+                if (name.hasParents()){ // qualify with the first parent
+                    toReturn.add(name.getParents().iterator().next().getDefaultDisplayName() + StringUtils.MEMBEROF + name.getDefaultDisplayName());
+                } else {
+                    toReturn.add(name.getDefaultDisplayName());
+                }
+            }
+            return toReturn;
+        } else { // normal qualify as necessary
+            return getUniqueNameStrings(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages)));
+        }
     }
 
     public List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws Exception {
