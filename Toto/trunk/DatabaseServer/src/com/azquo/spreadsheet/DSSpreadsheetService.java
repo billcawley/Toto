@@ -677,8 +677,20 @@ public class DSSpreadsheetService {
 
     // for the drop down, essentially given a collection of names for a query need to give a meaningful list qualifying names with parents where they are duplicates (I suppose high streets in different towns)
     // it was assumed that names were sorted, one can't guarantee this though preserving the order is important. EFC going to rewrite, won't require ordering, now this returns the unique nnames to enable "selected" for filter lists
-    private List<UniqueName> getUniqueNames(Collection<Name> names) {
-        List<UniqueName> toCheck = names.stream().map(name -> new UniqueName(name, name.getDefaultDisplayName())).collect(Collectors.toList()); // java 8 should be ok here, basically copy the names to unique names to check
+    private List<UniqueName> getUniqueNames(Collection<Name> names, boolean forceFirstLevel) {
+        List<UniqueName> toCheck;
+        if (forceFirstLevel){
+            toCheck = new ArrayList<>();
+            for (Name name : names){
+                if (name.hasParents()){ // qualify with the first parent
+                    toCheck.add(new UniqueName(name, name.getParents().iterator().next().getDefaultDisplayName() + StringUtils.MEMBEROF + name.getDefaultDisplayName()));
+                } else {
+                    toCheck.add(new UniqueName(name, name.getDefaultDisplayName()));
+                }
+            }
+        } else {
+            toCheck = names.stream().map(name -> new UniqueName(name, name.getDefaultDisplayName())).collect(Collectors.toList()); // java 8 should be ok here, basically copy the names to unique names to check
+        }
         int triesLeft = 10; // just in case there's a chance of infinite loops
         boolean keepChecking = true;
         while (triesLeft >= 0 && keepChecking) {
@@ -726,21 +738,12 @@ public class DSSpreadsheetService {
                 return toReturn;
             }
         }
+        boolean forceFirstLevel = false;
         if (query.toLowerCase().trim().endsWith("showparents")){ // a hack to force simple showing of parents regardless
             query = query.substring(0, query.indexOf("showparents"));
-            final Collection<Name> names = nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages);
-            List<String> toReturn = new ArrayList<>();
-            for (Name name : names){
-                if (name.hasParents()){ // qualify with the first parent
-                    toReturn.add(name.getParents().iterator().next().getDefaultDisplayName() + StringUtils.MEMBEROF + name.getDefaultDisplayName());
-                } else {
-                    toReturn.add(name.getDefaultDisplayName());
-                }
-            }
-            return toReturn;
-        } else { // normal qualify as necessary
-            return getUniqueNameStrings(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages)));
+            forceFirstLevel = true;
         }
+        return getUniqueNameStrings(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel));
     }
 
     public List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws Exception {
@@ -761,7 +764,12 @@ public class DSSpreadsheetService {
             }
         }
         //final Collection<Name> names = nameService.parseQuery(connectionFromAccessToken, query, languages);
-        return getFilterPairsFromUniqueNames(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages)), filterSet);
+        boolean forceFirstLevel = false;
+        if (query.toLowerCase().trim().endsWith("showparents")){ // a hack to force simple showing of parents regardless
+            query = query.substring(0, query.indexOf("showparents"));
+            forceFirstLevel = true;
+        }
+        return getFilterPairsFromUniqueNames(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel), filterSet);
     }
 
     // it doesn't return anything, for things like setting up "as" criteria
