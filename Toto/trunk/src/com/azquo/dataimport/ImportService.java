@@ -727,7 +727,7 @@ public final class ImportService {
         if (newNames != null && newNames.get(cellFormat) != null) {
              csvW.write(newNames.get(cellFormat));
         } else {
-             csvW.write(cellFormat);
+             csvW.write(cellFormat.replace("\n","\\\\n").replace("\t","\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
          }
 
     }
