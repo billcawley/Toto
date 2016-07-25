@@ -116,7 +116,7 @@ Created by IntelliJ IDEA.
 					<!--<td>${database.businessId}</td>-->
 					<td>Name</td>
 					<td>Persistence Name</td>
-					<td>Database type</td>
+					<td></td>
 					<td>Name Count</td>
 					<td>Value Count</td>
 					<td></td>
@@ -133,7 +133,7 @@ Created by IntelliJ IDEA.
 					<!--<td>${database.businessId}</td> -->
 					<td>${database.name}</td>
 					<td>${database.persistenceName}</td>
-					<td>${database.databaseType}</td>
+					<td><a href="/api/ManageDatabaseBackups?databaseId=${database.id}">Manage Backups</a></td>
 					<td>${database.nameCount}</td>
 					<td>${database.valueCount}</td>
 					<td><a href="/api/Jstree?op=new&database=${database.urlEncodedName}" data-title="${database.urlEncodedName}" class="button small inspect" title="Inspect"><span class="fa fa-eye" title="Inspect ${database.name}"></span></a></td>

@@ -12,7 +12,7 @@ import java.util.Set;
  * User: cawley
  * Date: 17/10/13
  * Time: 09:23
- * After some thinking and learning about generics : entity objects should have as little reference to persistence (mysql or hbase) as possible - the table they live in should be it?
+ * After some thinking and learning about generics : entity objects should have as little reference to persistence (back to just mysql at the mo) as possible - the table they live in should be it?
  * OK with the new in memory DB thing these objects form the in memory database - it would be awkward to make them immutable
  * as I'd kind of like to so instead we want to make it so that it's very clear that modification after creation will
  * AUTOMATICALLY be reflected in MySQL/HBase as it catches up . . .

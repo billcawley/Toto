@@ -40,9 +40,6 @@
     <bean name="jsonRecordDAO" class="com.azquo.memorydb.dao.JsonRecordDAO"/>
     <bean name="nameDAO" class="com.azquo.memorydb.dao.NameDAO"/>
     <bean name="valueDAO" class="com.azquo.memorydb.dao.ValueDAO"/>
-    <bean name="hbaseDAO" class="com.azquo.memorydb.dao.HBaseDAO">
-        <constructor-arg value="/home/edward/Downloads/hbase-1.1.3/conf/hbase-site.xml"/>
-    </bean>
     <bean name="provenanceService" class="com.azquo.memorydb.service.ProvenanceService"/>
     <bean name="dsAdminService" class="com.azquo.memorydb.service.DSAdminService"/>
     <bean name="dsImportService" class="com.azquo.dataimport.DSImportService"/>
@@ -54,7 +51,6 @@
         <constructor-arg type="com.azquo.memorydb.dao.JsonRecordDAO" ref="jsonRecordDAO"/>
         <constructor-arg type="com.azquo.memorydb.dao.NameDAO" ref="nameDAO"/>
         <constructor-arg type="com.azquo.memorydb.dao.ValueDAO" ref="valueDAO"/>
-        <constructor-arg type="com.azquo.memorydb.dao.HBaseDAO" ref="hbaseDAO"/>
     </bean>
     <bean name="rmiServer" class="com.azquo.rmi.RMIServer">
         <constructor-arg index="0" ref="dsSpreadsheetService"/>

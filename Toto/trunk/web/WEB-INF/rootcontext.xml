@@ -81,6 +81,8 @@
     <bean name="magentoService" class="com.azquo.app.magento.service.DataLoadService"/>
     <bean name="invoiceService" class="com.azquo.admin.InvoiceService"/>
 
+    <bean name="commandLineCalls" class="com.azquo.util.CommandLineCalls"/>
+
     <bean id="dbCron" class="com.azquo.dataimport.DBCron"></bean>
 
 

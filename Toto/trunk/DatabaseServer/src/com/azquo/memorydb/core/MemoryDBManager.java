@@ -1,6 +1,5 @@
 package com.azquo.memorydb.core;
 
-import com.azquo.memorydb.dao.HBaseDAO;
 import com.azquo.memorydb.dao.NameDAO;
 import com.azquo.memorydb.dao.JsonRecordDAO;
 import com.azquo.memorydb.dao.ValueDAO;
@@ -27,24 +26,21 @@ public final class MemoryDBManager {
 
     private final ValueDAO valueDAO;
 
-    private final HBaseDAO hBaseDAO;
-
-    public MemoryDBManager(JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valueDAO, HBaseDAO hBaseDAO) throws Exception {
+    public MemoryDBManager(JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valueDAO) throws Exception {
         this.jsonRecordDAO = jsonRecordDAO;
         this.nameDAO = nameDAO;
         this.valueDAO = valueDAO;
-        this.hBaseDAO = hBaseDAO;
         memoryDatabaseMap = new ConcurrentHashMap<>(); // by data store name. Will be unique.
     }
 
     public AzquoMemoryDB getAzquoMemoryDB(String persistenceName, StringBuffer sessionLog) throws Exception {
         AzquoMemoryDB loaded;
         if (persistenceName.equals("temp")) {
-            loaded = new AzquoMemoryDB(persistenceName, jsonRecordDAO, nameDAO,valueDAO, hBaseDAO, sessionLog);
+            loaded = new AzquoMemoryDB(persistenceName, jsonRecordDAO, nameDAO,valueDAO, sessionLog);
             return loaded;
         }
         // should be fine. Notably allows concurrent loading of databases. Two big ones might be a prob but we don't want to jam up loading of small ones while a big one loads.
-        return memoryDatabaseMap.computeIfAbsent(persistenceName, t-> new AzquoMemoryDB(persistenceName, jsonRecordDAO, nameDAO,valueDAO, hBaseDAO, sessionLog));
+        return memoryDatabaseMap.computeIfAbsent(persistenceName, t-> new AzquoMemoryDB(persistenceName, jsonRecordDAO, nameDAO,valueDAO, sessionLog));
 
         // todo, add back in client side?
 /*        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900, 0, 0).getTime());// should start to get away from date

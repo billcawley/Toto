@@ -6,11 +6,8 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.*;
-import net.openhft.koloboke.collect.set.hash.HashObjSet;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.commons.math.util.OpenIntToDoubleHashMap;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 

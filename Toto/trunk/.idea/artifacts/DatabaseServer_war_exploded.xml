@@ -20,7 +20,6 @@
           <element id="library" level="project" name="org.codehaus.groovy:groovy-all:2.4.3" />
           <element id="library" level="project" name="org.apache.xmlgraphics:fop:1.1" />
           <element id="library" level="project" name="org.apache.httpcomponents:httpclient:4.5.1" />
-          <element id="library" level="project" name="org.apache.hbase:hbase-client:0.98.0-hadoop2" />
           <element id="library" level="project" name="org.mariadb.jdbc:mariadb-java-client:1.4.3" />
         </element>
       </element>

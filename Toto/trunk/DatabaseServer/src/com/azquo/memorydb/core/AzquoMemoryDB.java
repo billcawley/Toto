@@ -51,8 +51,6 @@ public final class AzquoMemoryDB {
 
     private final ValueDAO valueDAO;
 
-    private final HBaseDAO hBaseDAO;
-
     private final Map<String, Map<String, List<Name>>> nameByAttributeMap; // a map of maps of lists of names. Fun! Moved back to lists to save memory, the lists are unlikely to be big
 
     // simple by id maps, if an object is in one of these three it's in the database
@@ -63,7 +61,7 @@ public final class AzquoMemoryDB {
     // does this database need loading from the data store, a significant flag that affects rules for memory db entity instantiation for example
     private boolean needsLoading;
 
-    // was just mysql, now can be hbase also, where do we load from and persist to
+    // back to just mysql for the mo
     private String persistenceName;
 
     // no need to max id at load, it's used for this
@@ -78,7 +76,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger newDatabaseCount = new AtomicInteger(0);
 
-    // may need to tweak this - since SQL is IO Bound then ramping it up more may not be the best idea. Also MySQL/hBase will be using processors of course.
+    // may need to tweak this - since SQL is IO Bound then ramping it up more may not be the best idea. Also persistence will be using processors of course.
     private static ExecutorService getSQLThreadPool() {
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         int possibleLoadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
@@ -110,14 +108,13 @@ public final class AzquoMemoryDB {
     public static final ExecutorService mainThreadPool = getMainThreadPool();
     public static final ExecutorService sqlThreadPool = getSQLThreadPool();
 
-    protected AzquoMemoryDB(String persistenceName, JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valeuDAO, HBaseDAO hBaseDAO, StringBuffer sessionLog) {
+    protected AzquoMemoryDB(String persistenceName, JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valeuDAO, StringBuffer sessionLog) {
         newDatabaseCount.incrementAndGet();
         this.sessionLog = sessionLog;
         this.persistenceName = persistenceName;
         this.jsonRecordDAO = jsonRecordDAO;
         this.nameDAO = nameDAO;
         this.valueDAO = valeuDAO;
-        this.hBaseDAO = hBaseDAO;
         needsLoading = true;
         nameByAttributeMap = new ConcurrentHashMap<>();
         // commenting the map init numbers, inno db can overestimate quite heavily.
@@ -335,41 +332,6 @@ public final class AzquoMemoryDB {
                 Map<String, JsonSerializableEntityInitializer> jsonTablesAndInitializers = new HashMap<>();
                 // add lines like this for loading other json entities. A note is table names repeated, might have a think about that
                 jsonTablesAndInitializers.put(Provenance.PERSIST_TABLE, (azquoMemoryDB, jsonRecordTransport) -> new Provenance(azquoMemoryDB, jsonRecordTransport.id, jsonRecordTransport.json));
-                if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)) {
-                    int batch = 100_000;
-                    for (String tableName : jsonTablesAndInitializers.keySet()) {
-                        jsonRecordsLoaded.set(0);
-                        List<JsonRecordTransport> jsonRecordTransports = hBaseDAO.initJsonEntitiesFromWithLimitSkipStartId(tableName, this, 0, batch, jsonTablesAndInitializers.get(tableName), jsonRecordsLoaded);
-                        JsonRecordTransport lastJsonRecordTransport = null;
-                        while (!jsonRecordTransports.isEmpty()) {
-                            for (JsonRecordTransport jsonRecordTransport : jsonRecordTransports) {
-                                nextId.getAndUpdate(current -> current < jsonRecordTransport.id ? jsonRecordTransport.id : current);
-                                lastJsonRecordTransport = jsonRecordTransport;
-                            }
-                            jsonRecordTransports = hBaseDAO.initJsonEntitiesFromWithLimitSkipStartId(tableName, this, lastJsonRecordTransport.id, batch, jsonTablesAndInitializers.get(tableName), jsonRecordsLoaded);
-                        }
-                        logInSessionLogAndSystem(tableName + ", " + jsonRecordsLoaded + " records loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
-                    }
-
-                    List<Name> names = hBaseDAO.getNamesFromWithLimitSkipStartId(this, 0, batch, namesLoaded); // first set with no from, don't need to knock off the first
-                    Name lastName = null;
-                    while (!names.isEmpty()) {
-                        for (Name name : names) {
-                            nextId.getAndUpdate(current -> current < name.getId() ? name.getId() : current);
-                            lastName = name;
-                        }
-                        names = hBaseDAO.getNamesFromWithLimitSkipStartId(this, lastName.getId(), batch, namesLoaded);
-                    }
-                    List<Value> values = hBaseDAO.getValuesFromWithLimitSkipStartId(this, 0, batch, valuesLoaded); // first set with no from, don't need to knock off the first
-                    Value lastValue = null;
-                    while (!values.isEmpty()) {
-                        for (Value value : values) {
-                            nextId.getAndUpdate(current -> current < value.getId() ? value.getId() : current);
-                            lastValue = value;
-                        }
-                        values = hBaseDAO.getValuesFromWithLimitSkipStartId(this, lastValue.getId(), batch, valuesLoaded);
-                    }
-                } else { // old mysql
                     int from;
                     int maxIdForTable;
                     List<Future<?>> futureBatches;
@@ -414,7 +376,6 @@ public final class AzquoMemoryDB {
                     }
                     logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
 
-                }
 
 
                 marker = System.currentTimeMillis();
@@ -488,11 +449,7 @@ public final class AzquoMemoryDB {
                 }
                 // and end here
                 try {
-                    if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)) {
-                        hBaseDAO.persistJsonEntities(tableName, this, recordsToStore);
-                    } else {
                         jsonRecordDAO.persistJsonRecords(this, tableName, recordsToStore);// note this is multi threaded internally
-                    }
                 } catch (Exception e) {
                     // currently I'll just stack trace this, not sure of what would be the best strategy
                     e.printStackTrace();
@@ -509,11 +466,7 @@ public final class AzquoMemoryDB {
             name.setAsPersisted();// The actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
         }
         try {
-            if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)) {
-                hBaseDAO.persistNames(this, namesToStore, false);
-            } else {
                 nameDAO.persistNames(this, namesToStore, false);
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -525,11 +478,7 @@ public final class AzquoMemoryDB {
             value.setAsPersisted();
         }
         try {
-            if (persistenceName.endsWith(DSAdminService.HBASE_PERSISTENCE_SUFFIX)) {
-                hBaseDAO.persistValues(this, valuesToStore, false);
-            } else {
                 valueDAO.persistValues(this, valuesToStore, false);
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }

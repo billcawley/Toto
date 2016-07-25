@@ -7,7 +7,6 @@ import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.MemoryDBManager;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
-import com.azquo.memorydb.dao.HBaseDAO;
 import com.azquo.memorydb.dao.MySQLDatabaseManager;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +25,6 @@ import java.util.*;
  */
 public class DSAdminService {
 
-    public static String HBASE_PERSISTENCE_SUFFIX = "hbase";
     @Autowired
     DSSpreadsheetService dsSpreadsheetService;
     @Autowired
@@ -37,9 +35,6 @@ public class DSAdminService {
     MySQLDatabaseManager mySQLDatabaseManager;
     @Autowired
     MemoryDBManager memoryDBManager;
-    @Autowired
-    HBaseDAO hBaseDAO;
-
 
     private Name copyName(AzquoMemoryDBConnection toDB, Name name, Name parent, List<String> languages, Collection<Name> allowed, Map<Name, Name> dictionary) throws Exception {
         Name name2 = dictionary.get(name);
@@ -117,11 +112,7 @@ public class DSAdminService {
     }
 
     public void emptyDatabaseInPersistence(String persistenceName) throws Exception {
-        if (persistenceName.endsWith(HBASE_PERSISTENCE_SUFFIX)){
-            hBaseDAO.clearTables(persistenceName);
-        } else {
             mySQLDatabaseManager.emptyDatabase(persistenceName);
-        }
     }
 
     public void dropDatabase(String persistenceName) throws Exception {
@@ -135,21 +126,13 @@ public class DSAdminService {
     }
 
     public void dropDatabaseInPersistence(String persistenceName) throws Exception {
-        if (persistenceName.endsWith(HBASE_PERSISTENCE_SUFFIX)){
-            hBaseDAO.removeRequiredTables(persistenceName);
-        } else {
             mySQLDatabaseManager.dropDatabase(persistenceName);
-        }
     }
 
     public void createDatabase(final String persistenceName) throws Exception {
         if (memoryDBManager.isDBLoaded(persistenceName)){
             throw new Exception("cannot create new memory database one attached to that mysql database " + persistenceName + " already exists");
         }
-        if (persistenceName.endsWith(HBASE_PERSISTENCE_SUFFIX)){
-            hBaseDAO.createRequiredTables(persistenceName);
-        } else {
             mySQLDatabaseManager.createNewDatabase(persistenceName);
-        }
     }
 }
