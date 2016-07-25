@@ -343,33 +343,32 @@ public final class Name extends AzquoMemoryDBEntity {
 
     void removeFromValues(final Value value) throws Exception {
         removeFromValuesCount.incrementAndGet();
-        if (valuesAsSet != null) {
-            if (valuesAsSet.remove(value)) {
-                valuesIncludingChildrenCache = null;
-            }
-        } else {
-            synchronized (this) { // just sync on this object to protect the lists
-                // double check - I'd forgotten to here! Regardless of whether values as set is volatile or not it could have been set in the mean time by addToValues above
-                if (valuesAsSet != null) {
-                    if (valuesAsSet.remove(value)) {
-                        valuesIncludingChildrenCache = null;
-                    }
-                    return;
-                }
-                List<Value> valuesList = Arrays.asList(values);
-                if (valuesList.contains(value)) {
-                    // ok and a manual copy, again since synchronized I can't see a massive problem here.
-                    Value[] newValuesArray = new Value[values.length - 1];
-                    int newArrayPosition = 0;// gotta have a separate index on the new array, they will go out of sync
-                    for (Value value1 : values) { // do one copy skipping the element we want removed
-                        if (!value1.equals(value)) { // if it's not the one we want to return then copy
-                            newValuesArray[newArrayPosition] = value1;
-                            newArrayPosition++;
-                        }
-                    }
-                    values = newValuesArray;
+        synchronized (this) { // just sync on this object to protect the lists
+            // double check - I'd forgotten to here! Regardless of whether values as set is volatile or not it could have been set in the mean time by addToValues above
+            if (valuesAsSet != null) {
+                if (valuesAsSet.remove(value)) {
                     valuesIncludingChildrenCache = null;
                 }
+                //return;
+            }
+            List<Value> valuesList = Arrays.asList(values);
+            if (valuesList.contains(value)) {
+                // ok and a manual copy, again since synchronized I can't see a massive problem here.
+                Value[] newValuesArray = new Value[values.length - 1];
+                int newArrayPosition = 0;// gotta have a separate index on the new array, they will go out of sync
+                for (Value value1 : values) { // do one copy skipping the element we want removed
+                    // WFC found null pointers in the values list - code amended to remove them.
+                    //if (value1!=null && !value1.equals(value)) { // if it's not the one we want to return then copy
+                        newValuesArray[newArrayPosition] = value1;
+                        newArrayPosition++;
+                   // }
+                }
+                //if (newArrayPosition==values.length - 1){
+                    values = newValuesArray;
+               // }else{
+              //      values = Arrays.copyOf(newValuesArray,newArrayPosition);
+              //  }
+                valuesIncludingChildrenCache = null;
             }
         }
     }
