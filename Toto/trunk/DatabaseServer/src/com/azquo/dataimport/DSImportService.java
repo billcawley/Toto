@@ -1180,7 +1180,7 @@ public class DSImportService {
                 // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
                 ImportCellWithHeading identityCell = cells.get(cell.immutableImportHeading.indexForAttribute); // get our source cell
                 if (identityCell.lineName != null) {
-                    identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue);
+                    identityCell.lineName.setAttributeWillBePersisted(cell.immutableImportHeading.attribute, cell.lineValue.replace("\\\\t","\t").replace("\\\\n","\n"));
                 }
                 // else an error? If the line name couldn't be made in resolveLineNamesParentsChildren above there's nothing to be done about it
             }
