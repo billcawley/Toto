@@ -10,14 +10,13 @@ def fileProcess(Object[] args) {
     // loose typing seems to be what's required here
     String filePath = args[0];
     AzquoMemoryDBConnection azquoMemoryDBConnection = (AzquoMemoryDBConnection)args[1];
-    NameService nameService = (NameService)args[2];
     File file = new File(filePath);
     def outFile = filePath + "groovyout"
     File writeFile = new File(outFile);
     writeFile.delete() // if you don't zap the append will do as it says and append to an existing file
     def lineNo = 1
     def line
-    Name test = nameService.findByName(azquoMemoryDBConnection, "Client");
+    Name test = NameService.findByName(azquoMemoryDBConnection, "Client");
     println("found a name " + test)
     fileWriter = writeFile.newWriter();
     file.withReader { reader ->

@@ -13,22 +13,19 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 public final class DataLoadService {
 
-    @Autowired
-    RMIClient rmiClient;
-
     public String findLastUpdate(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
-        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).findLastUpdate(databaseAccessToken, remoteAddress);
+        return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).findLastUpdate(databaseAccessToken, remoteAddress);
     }
 
     public boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception{
-        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).magentoDBNeedsSettingUp(databaseAccessToken);
+        return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).magentoDBNeedsSettingUp(databaseAccessToken);
     }
 
     public String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
-        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).findRequiredTables(databaseAccessToken, remoteAddress);
+        return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).findRequiredTables(databaseAccessToken, remoteAddress);
     }
 
     public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress, String user) throws Exception {
-        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).loadData(databaseAccessToken, filePath, remoteAddress, user);
+        RMIClient.getServerInterface(databaseAccessToken.getServerIp()).loadData(databaseAccessToken, filePath, remoteAddress, user);
     }
 }

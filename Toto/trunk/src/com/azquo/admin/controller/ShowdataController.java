@@ -34,9 +34,6 @@ public class ShowdataController {
     @Autowired
     SpreadsheetService spreadsheetService;
 
-    @Autowired
-    RMIClient rmiClient;
-
     @RequestMapping
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
             , @RequestParam(value = "chosen", required = false) String chosen
@@ -62,12 +59,12 @@ public class ShowdataController {
                         System.out.println("Non number passed to show data : " + jstreeId);
                     }
                 }
-                TreeNode node = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingIds(loggedInUser.getDataAccessToken(), nameIds, 1000);
+                TreeNode node = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingIds(loggedInUser.getDataAccessToken(), nameIds, 1000);
                 modelMap.addAttribute("node", node);
             } else {
                 Set<String> nameNames = new HashSet<>();
                 Collections.addAll(nameNames, namesString);
-                TreeNode node = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingNames(loggedInUser.getDataAccessToken(), nameNames, 1000);
+                TreeNode node = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getJstreeDataForOutputUsingNames(loggedInUser.getDataAccessToken(), nameNames, 1000);
                 modelMap.addAttribute("node", node);
             }
             // this jsp has JSTL which will render tree nodes correctly

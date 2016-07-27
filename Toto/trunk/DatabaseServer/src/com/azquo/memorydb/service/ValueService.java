@@ -34,22 +34,14 @@ public final class ValueService {
 
     private static final Logger logger = Logger.getLogger(ValueService.class);
 
-    @Autowired
-    private NameService nameService;
-
-    @Autowired
-    private DSSpreadsheetService dsSpreadsheetService;
-
-    private StringUtils stringUtils = new StringUtils();
-
     private static AtomicInteger nameCompareCount = new AtomicInteger(0);
 
-    private Value createValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Provenance provenance, final String text) throws Exception {
+    private static Value createValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Provenance provenance, final String text) throws Exception {
         nameCompareCount.incrementAndGet();
         return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text);
     }
 
-    private Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
+    private static Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
 
  /*   private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd) {
         long current = 0;
@@ -63,7 +55,7 @@ public final class ValueService {
         timeTrack.get(azquoMemoryDBConnection).put(trackName, current + toAdd);
     }*/
 
-    public Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection) {
+    public static Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection) {
         return timeTrack.get(azquoMemoryDBConnection);
     }
 
@@ -71,7 +63,7 @@ public final class ValueService {
 
     private static AtomicInteger storeValueWithProvenanceAndNamesCount = new AtomicInteger(0);
 
-    public String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
+    public static String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
         // ok there's an issue of numbers with "," in them, in that case I should remove on the way in
         if (valueString.contains(",")){
@@ -107,7 +99,7 @@ public final class ValueService {
             //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
             //marker = System.currentTimeMillis();
             // won't be true for the same file as it will be caught above but from different files it could well happen
-            if (dsSpreadsheetService.compareStringValues(existingValue.getText(), valueString)) {
+            if (DSSpreadsheetService.compareStringValues(existingValue.getText(), valueString)) {
                 toReturn += "  that value already exists, skipping";
                 alreadyInDatabase = true;
             } else {
@@ -135,7 +127,7 @@ public final class ValueService {
     // called when altering values in a spreadsheet
     private static AtomicInteger overWriteExistingValueCount = new AtomicInteger(0);
 
-    public boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, String newValueString) throws Exception {
+    public static boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, String newValueString) throws Exception {
         overWriteExistingValueCount.incrementAndGet();
         if (newValueString.contains(",")){
             try{
@@ -159,7 +151,7 @@ public final class ValueService {
 
     private static AtomicInteger findForNamesCount = new AtomicInteger(0);
 
-    public List<Value> findForNames(final Set<Name> names) {
+    public static List<Value> findForNames(final Set<Name> names) {
         findForNamesCount.incrementAndGet();
         // ok here goes we want to get a value (or values!) for a given criteria, there may be much scope for optimisation
         final List<Value> values = new ArrayList<>();
@@ -196,16 +188,16 @@ public final class ValueService {
     As mentioned in comments in the function a lot of effort went in to speeding up this function and reducing garbage, be very careful before changing it.
     */
 
-    private AtomicLong part1NanoCallTime1 = new AtomicLong(0);
-    private AtomicLong part2NanoCallTime1 = new AtomicLong(0);
-    private AtomicLong part3NanoCallTime1 = new AtomicLong(0);
-    private AtomicInteger numberOfTimesCalled1 = new AtomicInteger(0);
+    private static AtomicLong part1NanoCallTime1 = new AtomicLong(0);
+    private static AtomicLong part2NanoCallTime1 = new AtomicLong(0);
+    private static AtomicLong part3NanoCallTime1 = new AtomicLong(0);
+    private static AtomicInteger numberOfTimesCalled1 = new AtomicInteger(0);
 
     // what if we could cache combos? E.g. a 5 comes in and we save
 
     private static AtomicInteger findForNamesIncludeChildrenCount = new AtomicInteger(0);
 
-    private List<Value> findForNamesIncludeChildren(final List<Name> names, Map<List<Name>, Set<Value>> nameComboValueCache) {
+    private static List<Value> findForNamesIncludeChildren(final List<Name> names, Map<List<Name>, Set<Value>> nameComboValueCache) {
 
 /*        StringBuilder log = new StringBuilder();
         for (Name name : names) {
@@ -301,7 +293,7 @@ public final class ValueService {
         return toReturn;
     }
 
-    public void printFindForNamesIncludeChildrenStats() {
+    public static void printFindForNamesIncludeChildrenStats() {
         if (numberOfTimesCalled1.get() > 0) {
             logger.info("calls to  FindForNamesIncludeChildrenStats : " + numberOfTimesCalled1.get());
             logger.info("part 1 average nano : " + (part1NanoCallTime1.get() / numberOfTimesCalled1.get()));
@@ -310,15 +302,15 @@ public final class ValueService {
         }
     }
 
-    private long totalNanoCallTime = 0;
-    private long part1NanoCallTime = 0;
-    private long part2NanoCallTime = 0;
-    private int numberOfTimesCalled = 0;
+    private static long totalNanoCallTime = 0;
+    private static long part1NanoCallTime = 0;
+    private static long part2NanoCallTime = 0;
+    private static int numberOfTimesCalled = 0;
 
     // the function that populates each cell.
     private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
 
-    public double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final MutableBoolean locked
+    public static double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final MutableBoolean locked
             , DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
@@ -334,16 +326,16 @@ public final class ValueService {
                 if (calc != null) {
                     if (name.getAttribute(Name.APPLIESTO) != null){
                         // will be being looked up by default display name for the moment
-                        appliesToNames = nameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(Name.APPLIESTO));
+                        appliesToNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(Name.APPLIESTO));
                     }
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
                     List<String> formulaStrings = new ArrayList<>();
                     List<String> nameStrings = new ArrayList<>();
                     List<String> attributeStrings = new ArrayList<>();
-                    calc = stringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
-                    formulaNames = nameService.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
-                    calc = stringUtils.shuntingYardAlgorithm(calc);
+                    calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
+                    formulaNames = NameService.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
+                    calc = StringUtils.shuntingYardAlgorithm(calc);
                     //todo : make sure name lookups below use the new style of marker
                     if (!calc.startsWith("error")) { // there should be a better way to deal with errors
                         calcString = calc;
@@ -411,11 +403,11 @@ public final class ValueService {
                                 // we assume it's a name id starting with NAMEMARKER
                                 //int id = Integer.parseInt(term.substring(1));
                                 // so get the name and add it to the other names
-                                Name name = nameService.getNameFromListAndMarker(term, formulaNames);
+                                Name name = NameService.getNameFromListAndMarker(term, formulaNames);
                                 List<Name> seekList = new ArrayList<>(calcnames);
                                 seekList.add(name);
                                 if (name.getAttribute(Name.INDEPENDENTOF) != null){// then this name formula term is saying it wants to exclude some names
-                                    Name independentOfSet = nameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.INDEPENDENTOF));
+                                    Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.INDEPENDENTOF));
                                     Iterator<Name> seekListIterator = seekList.iterator();
                                     while (seekListIterator.hasNext()){
                                         final Name test = seekListIterator.next();
@@ -442,13 +434,13 @@ public final class ValueService {
 
     private static AtomicInteger findValueForHeadingsCount = new AtomicInteger(0);
 
-    public String findValueForHeadings(final List<DataRegionHeading> headings, final MutableBoolean locked) throws Exception {
+    public static String findValueForHeadings(final List<DataRegionHeading> headings, final MutableBoolean locked) throws Exception {
         findValueForHeadingsCount.incrementAndGet();
-        List<Name> names = dsSpreadsheetService.namesFromDataRegionHeadings(headings);
+        List<Name> names = DSSpreadsheetService.namesFromDataRegionHeadings(headings);
         if (names.size() != 1) {
             locked.isTrue = true;
         }
-        Set<String> attributes = dsSpreadsheetService.attributesFromDataRegionHeadings(headings);
+        Set<String> attributes = DSSpreadsheetService.attributesFromDataRegionHeadings(headings);
         String stringResult = null;
         double numericResult = 0;
         int count = 0;
@@ -495,7 +487,7 @@ public final class ValueService {
 
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
-    private double resolveValuesForNamesIncludeChildren(final List<Name> names
+    private static double resolveValuesForNamesIncludeChildren(final List<Name> names
             , DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked, Map<List<Name>, Set<Value>> nameComboValueCache) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
@@ -562,7 +554,7 @@ public final class ValueService {
         return sumValue; // default to sum, no function
     }
 
-    public void printSumStats() {
+    public static void printSumStats() {
         if (numberOfTimesCalled > 0) {
             logger.info("calls to  resolveValuesForNamesIncludeChildren : " + numberOfTimesCalled);
             logger.info("part 1 average nano : " + (part1NanoCallTime / numberOfTimesCalled));
@@ -575,7 +567,7 @@ public final class ValueService {
 
     private static AtomicInteger getMostUsedNameCount = new AtomicInteger(0);
 
-    private Name getMostUsedName(Set<DummyValue> values, Name topParent) {
+    private static Name getMostUsedName(Set<DummyValue> values, Name topParent) {
         getMostUsedNameCount.incrementAndGet();
         Map<Name, Integer> nameCount = new HashMap<>();
         for (DummyValue value : values) {
@@ -608,7 +600,7 @@ public final class ValueService {
     // by time. For database inspect.
     private static AtomicInteger sortValuesCount = new AtomicInteger(0);
 
-    public void sortValues(List<Value> values) {
+    public static void sortValues(List<Value> values) {
         sortValuesCount.incrementAndGet();
         Collections.sort(values, (o1, o2) -> (o2.getProvenance().getTimeStamp())
                 .compareTo(o1.getProvenance().getTimeStamp()));
@@ -648,7 +640,7 @@ public final class ValueService {
 
     private static AtomicInteger getTreeNodesFromValuesCount = new AtomicInteger(0);
 
-    private List<TreeNode> getTreeNodesFromValues(Set<Value> values, int maxSize) {
+    private static List<TreeNode> getTreeNodesFromValues(Set<Value> values, int maxSize) {
         getTreeNodesFromValuesCount.incrementAndGet();
         Set<DummyValue> convertedToDummy = new HashSet<>(values.size());
         for (Value value : values) {
@@ -659,7 +651,7 @@ public final class ValueService {
 
     private static AtomicInteger getTreeNodesFromValues2Count = new AtomicInteger(0);
 
-    private List<TreeNode> getTreeNodesFromDummyValues(Set<DummyValue> values, int maxSize) {
+    private static List<TreeNode> getTreeNodesFromDummyValues(Set<DummyValue> values, int maxSize) {
         getTreeNodesFromValues2Count.incrementAndGet();
         //int debugCount = 0;
         boolean headingNeeded = false;
@@ -731,7 +723,7 @@ public final class ValueService {
 
     private static AtomicInteger roundValueCount = new AtomicInteger(0);
 
-    private String roundValue(double dValue) {
+    private static String roundValue(double dValue) {
         roundValueCount.incrementAndGet();
         Locale locale = Locale.getDefault();
         NumberFormat nf = NumberFormat.getInstance(locale);
@@ -740,11 +732,11 @@ public final class ValueService {
     }
 
     // jam this outside to stop instantiation in each function call
-    private DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
+    private static DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
 
     private static AtomicInteger getTreeNodeCount = new AtomicInteger(0);
 
-    public TreeNode getTreeNode(Set<Value> values, Provenance p, int maxSize) {
+    public static TreeNode getTreeNode(Set<Value> values, Provenance p, int maxSize) {
         getTreeNodeCount.incrementAndGet();
         String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
         String method = p.getMethod();
@@ -759,7 +751,7 @@ public final class ValueService {
 
     private static AtomicInteger addNodeValuesCount = new AtomicInteger(0);
 
-    public void addNodeValues(TreeNode t) {
+    public static void addNodeValues(TreeNode t) {
         addNodeValuesCount.incrementAndGet();
         double d = 0;
         for (TreeNode child : t.getChildren()) {
@@ -774,10 +766,10 @@ public final class ValueService {
 
     private static AtomicInteger sumNameCount = new AtomicInteger(0);
 
-    private Name sumName(Name name, List<Set<Name>> searchNames) {
+    private static Name sumName(Name name, List<Set<Name>> searchNames) {
         sumNameCount.incrementAndGet();
         for (Set<Name> searchName : searchNames) {
-            Name maybeParent = nameService.inParentSet(name, searchName);
+            Name maybeParent = NameService.inParentSet(name, searchName);
             if (maybeParent != null) {
                 return maybeParent;
             }
@@ -789,7 +781,7 @@ public final class ValueService {
 
     // for searches, the Names are a List of sets rather than a set, and the result need not be ordered
     // todo - get rid of part1NanoCallTime1 etc or use different variables! They are usef in the main value resolving function
-    private Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names) {
+    private static Set<Value> findForSearchNamesIncludeChildren(final List<Set<Name>> names) {
         findForSearchNamesIncludeChildrenCount.incrementAndGet();
         long start = System.nanoTime();
 
@@ -812,7 +804,7 @@ public final class ValueService {
                 if (!nameSet.equals(smallestNames)) { // ignore the one we started with
                     boolean foundInChildList = false;
                     for (Name valueNames : value.getNames()) {
-                        if (nameService.inParentSet(valueNames, nameSet) != null) {
+                        if (NameService.inParentSet(valueNames, nameSet) != null) {
                             foundInChildList = true;
                             break;
                         }
@@ -837,7 +829,7 @@ public final class ValueService {
 
     private static AtomicInteger getSearchValuesCount = new AtomicInteger(0);
 
-    Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
+    static Map<Set<Name>, Set<Value>> getSearchValues(final List<Set<Name>> searchNames) throws Exception {
         getSearchValuesCount.incrementAndGet();
         if (searchNames == null) return null;
         Set<Value> values = findForSearchNamesIncludeChildren(searchNames);
@@ -864,7 +856,7 @@ public final class ValueService {
 
     private static AtomicInteger addValuesCount = new AtomicInteger(0);
 
-    String addValues(Set<Value> values) {
+    static String addValues(Set<Value> values) {
         addValuesCount.incrementAndGet();
         String stringVal = null;
         Double doubleVal = 0.0;

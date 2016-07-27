@@ -22,9 +22,6 @@ import javax.servlet.http.HttpServletRequest;
 @RequestMapping("/MemoryReport")
 public class MemoryReportController {
 
-    @Autowired
-    RMIClient rmiClient;
-
     @RequestMapping
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
             , @RequestParam(value = "serverIp", required = false) String serverIp
@@ -36,7 +33,7 @@ public class MemoryReportController {
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-            modelMap.addAttribute("memoryReport", rmiClient.getServerInterface(serverIp).getMemoryReport("true".equalsIgnoreCase(gc)));
+            modelMap.addAttribute("memoryReport", RMIClient.getServerInterface(serverIp).getMemoryReport("true".equalsIgnoreCase(gc)));
             modelMap.addAttribute("serverIp", serverIp);
             return "memoryreport";
         }

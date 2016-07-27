@@ -60,22 +60,20 @@ public class ZKAzquoBookUtils {
     private final UserChoiceDAO userChoiceDAO;
     private final UserRegionOptionsDAO userRegionOptionsDAO;
     private final OnlineReportDAO onlineReportDAO;
-    private final RMIClient rmiClient;
     private final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
     // for scheduling reports
     private final String reportParameters;
 
-    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, RMIClient rmiClient) {
-        this(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, null, null, rmiClient);// no report parameters or report DAO.
+    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO) {
+        this(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, null, null);// no report parameters or report DAO.
     }
 
-    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, OnlineReportDAO onlineReportDAO, String reportParameters, RMIClient rmiClient) {
+    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, OnlineReportDAO onlineReportDAO, String reportParameters) {
         this.spreadsheetService = spreadsheetService;
         this.loginService = loginService;
         this.userChoiceDAO = userChoiceDAO;
         this.userRegionOptionsDAO = userRegionOptionsDAO;
         this.onlineReportDAO = onlineReportDAO;
-        this.rmiClient = rmiClient;
         this.reportParameters = reportParameters;
     }
 
@@ -524,7 +522,7 @@ public class ZKAzquoBookUtils {
         loggedInUser.setContext(context);
         // after stripping off some redundant exception throwing this was the only possibility left, ignore it
         try {
-            rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
+            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
         } catch (Exception ignored) {
         }
         return showSave;
@@ -1290,7 +1288,7 @@ public class ZKAzquoBookUtils {
                 }
                 try {
                     String queryString = queryCell.getStringValue();
-                    rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                    RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                             .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -1505,13 +1503,13 @@ public class ZKAzquoBookUtils {
                 Database origDatabase = loggedInUser.getDatabase();
                 DatabaseServer origDatabaseServer = loggedInUser.getDatabaseServer();
                 loginService.switchDatabase(loggedInUser, query.substring(0, arrowsPos));
-                List<String> toReturn = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                List<String> toReturn = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                         .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query.substring(arrowsPos + 2), languages);
                 loggedInUser.setDatabaseWithServer(origDatabaseServer, origDatabase);
                 return toReturn;
 
             }
-            return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+            return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                     .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, languages);
         } catch (Exception e) {
             return null;

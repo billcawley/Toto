@@ -13,7 +13,6 @@ def fileProcess(Object[] args) {
     // loose typing seems to be what's required here
     String filePath = args[0];
 //    AzquoMemoryDBConnection azquoMemoryDBConnection = (AzquoMemoryDBConnection)args[1];
-    NameService nameService = (NameService)args[2];
     File file = new File(filePath);
     def outFile = filePath + "groovyout"
     File writeFile = new File(outFile);

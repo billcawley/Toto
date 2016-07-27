@@ -18,29 +18,16 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class MemoryDBManager {
 
-    private final ConcurrentHashMap<String, AzquoMemoryDB> memoryDatabaseMap;
+    private static final ConcurrentHashMap<String, AzquoMemoryDB> memoryDatabaseMap = new ConcurrentHashMap<>(); // by data store name. Will be unique.;
 
-    private final JsonRecordDAO jsonRecordDAO;
-
-    private final NameDAO nameDAO;
-
-    private final ValueDAO valueDAO;
-
-    public MemoryDBManager(JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valueDAO) throws Exception {
-        this.jsonRecordDAO = jsonRecordDAO;
-        this.nameDAO = nameDAO;
-        this.valueDAO = valueDAO;
-        memoryDatabaseMap = new ConcurrentHashMap<>(); // by data store name. Will be unique.
-    }
-
-    public AzquoMemoryDB getAzquoMemoryDB(String persistenceName, StringBuffer sessionLog) throws Exception {
+    public static AzquoMemoryDB getAzquoMemoryDB(String persistenceName, StringBuffer sessionLog) throws Exception {
         AzquoMemoryDB loaded;
         if (persistenceName.equals("temp")) {
-            loaded = new AzquoMemoryDB(persistenceName, jsonRecordDAO, nameDAO,valueDAO, sessionLog);
+            loaded = new AzquoMemoryDB(persistenceName, sessionLog);
             return loaded;
         }
         // should be fine. Notably allows concurrent loading of databases. Two big ones might be a prob but we don't want to jam up loading of small ones while a big one loads.
-        return memoryDatabaseMap.computeIfAbsent(persistenceName, t-> new AzquoMemoryDB(persistenceName, jsonRecordDAO, nameDAO,valueDAO, sessionLog));
+        return memoryDatabaseMap.computeIfAbsent(persistenceName, t-> new AzquoMemoryDB(persistenceName, sessionLog));
 
         // todo, add back in client side?
 /*        final OpenDatabase openDatabase = new OpenDatabase(0, database.getId(), new Date(), new GregorianCalendar(1900, 0, 0).getTime());// should start to get away from date
@@ -50,11 +37,11 @@ public final class MemoryDBManager {
 
     // worth being aware that if the db is still referenced somewhere then the garbage collector won't chuck it (which is what we want)
 
-    public void removeDBfromMap(String persistenceName) throws Exception {
+    public static void removeDBfromMap(String persistenceName) throws Exception {
         memoryDatabaseMap.remove(persistenceName);
     }
 
-    public boolean isDBLoaded(String persistenceName) throws Exception {
+    public static boolean isDBLoaded(String persistenceName) throws Exception {
         return memoryDatabaseMap.containsKey(persistenceName);
     }
 

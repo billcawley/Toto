@@ -2,7 +2,6 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:context="http://www.springframework.org/schema/context"
-       xmlns:security="http://www.springframework.org/schema/security"
        xmlns:task="http://www.springframework.org/schema/task"
 
        xsi:schemaLocation="http://www.springframework.org/schema/beans
@@ -34,30 +33,8 @@
     <bean name="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
-    <bean name="jdbcTemplateUtils" class="com.azquo.memorydb.dao.JdbcTemplateUtils"/>
-    <bean name="nameService" class="com.azquo.memorydb.service.NameService"/>
-    <bean name="valueService" class="com.azquo.memorydb.service.ValueService"/>
-    <bean name="jsonRecordDAO" class="com.azquo.memorydb.dao.JsonRecordDAO"/>
-    <bean name="nameDAO" class="com.azquo.memorydb.dao.NameDAO"/>
-    <bean name="valueDAO" class="com.azquo.memorydb.dao.ValueDAO"/>
-    <bean name="provenanceService" class="com.azquo.memorydb.service.ProvenanceService"/>
-    <bean name="dsAdminService" class="com.azquo.memorydb.service.DSAdminService"/>
-    <bean name="dsImportService" class="com.azquo.dataimport.DSImportService"/>
-    <bean name="dsSpreadsheetService" class="com.azquo.spreadsheet.DSSpreadsheetService"/>
-    <bean name="jsTreeService" class="com.azquo.spreadsheet.JSTreeService"/>
-    <bean name="mySQLDatabaseManager" class="com.azquo.memorydb.dao.MySQLDatabaseManager"/>
-    <bean name="magentoService" class="com.azquo.app.magento.DSDataLoadService"/>
-    <bean name="memoryDBManager" class="com.azquo.memorydb.core.MemoryDBManager">
-        <constructor-arg type="com.azquo.memorydb.dao.JsonRecordDAO" ref="jsonRecordDAO"/>
-        <constructor-arg type="com.azquo.memorydb.dao.NameDAO" ref="nameDAO"/>
-        <constructor-arg type="com.azquo.memorydb.dao.ValueDAO" ref="valueDAO"/>
+    <bean name="jdbcTemplateUtils" class="com.azquo.memorydb.dao.JdbcTemplateUtils">
+        <constructor-arg type="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate" ref="jdbcTemplate"/>
     </bean>
-    <bean name="rmiServer" class="com.azquo.rmi.RMIServer">
-        <constructor-arg index="0" ref="dsSpreadsheetService"/>
-        <constructor-arg index="1" ref="dsAdminService"/>
-        <constructor-arg index="2" ref="magentoService"/>
-        <constructor-arg index="3" ref="dsImportService"/>
-        <constructor-arg index="4" ref="jsTreeService"/>
-        <constructor-arg index="5" ref="memoryDBManager"/>
-    </bean>
+    <bean name="rmiServer" class="com.azquo.rmi.RMIServer"/>
 </beans>

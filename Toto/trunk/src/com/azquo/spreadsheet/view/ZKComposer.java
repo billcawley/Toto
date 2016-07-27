@@ -48,7 +48,6 @@ public class ZKComposer extends SelectorComposer<Component> {
     private Label instructionsLabel = new Label();
     private SpreadsheetService spreadsheetService;
     private LoginService loginService;
-    private RMIClient rmiClient;
     private UserChoiceDAO userChoiceDAO;
     private UserRegionOptionsDAO userRegionOptionsDAO;
     private Popup provenancePopup = null;
@@ -65,7 +64,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         loginService = (LoginService) applicationContext.getBean("loginService");
         userChoiceDAO = (UserChoiceDAO) applicationContext.getBean("userChoiceDao");
         userRegionOptionsDAO = (UserRegionOptionsDAO) applicationContext.getBean("userRegionOptionsDao");
-        rmiClient = (RMIClient) applicationContext.getBean("rmiClient");
         editPopup.setId("editPopup");
         editPopup.setStyle("background-color:#ffffff");
         editPopup.setStyle("border: 5px solid #F58030");
@@ -189,7 +187,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellClick(CellMouseEvent event) {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
+        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO); // used in more than one place
         String selectionName = pivotItem(zkAzquoBookUtils, event);
         String selectionList = null;
         CellRegion queryResultRegion = null;
@@ -270,7 +268,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             listbox.setWidth("350px");
             listbox.appendChild(listhead);
             try {
-                List<FilterTriple> filterOptions = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                         .getFilterListForQuery(loggedInUser.getDataAccessToken(), selectionList, selectionName, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
                 Set<Listitem> selectedItems = new HashSet<>();
                 int index = 0;
@@ -297,7 +295,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         for (Listitem listItem : selectedItems) {
                             childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
                         }
-                        rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
                         filterPopup.close();
                     });
 
@@ -311,7 +309,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         for (Listitem listItem : selectedItems) {
                             childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
                         }
-                        rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
                         filterPopup.close();
                         // factor the reload here?
                         try {
@@ -357,7 +355,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
-        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient); // used in more than one place
+        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO); // used in more than one place
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
@@ -1022,7 +1020,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
             }
-            ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+            ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO);
             if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
             }

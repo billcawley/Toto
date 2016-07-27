@@ -10,25 +10,26 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * Created by cawley on 20/05/15.
  *
- * Accessing the database server. Need to make this work for multiple DBs, going for a simple map initialls
+ * Accessing the database server. Need to make this work for multiple DBs, going for a simple map initially
  *
+ * Moving to static, as with the daos I see little advantage in a singleton.
  */
 public class RMIClient {
 
-    // I'm not sure if this is best practice but I was writing functions that were just passing through to this so I'll make it available here
-    // todo - check singleton pattern which I never use properly
-
-    private Map<String, RMIInterface> rmiInterfaceMap = new ConcurrentHashMap<>();
+    private static Map<String, RMIInterface> rmiInterfaceMap = new ConcurrentHashMap<>();
 
     // this perhaps could be more robust if an unused database is tried for the first time concurrently?
-    // is it really a big problem?
+    // is it really a big problem? Computeifabsent swallows the exceptions, I'd rather they were chucked up . . .
 
-    public RMIInterface getServerInterface(String ip) throws Exception{
-        if (rmiInterfaceMap.get(ip) == null){
+    public static RMIInterface getServerInterface(String ip) throws Exception{
+        RMIInterface toReturn = rmiInterfaceMap.get(ip);
+        if (toReturn == null){
+            // yes this could run a few times concurrently at the beginning, not sure it's a big problem
             Registry registry = LocateRegistry.getRegistry(ip, 12345);
-            rmiInterfaceMap.put(ip,(RMIInterface) registry.lookup(RMIInterface.serviceName));
+            toReturn = (RMIInterface) registry.lookup(RMIInterface.serviceName);
+            rmiInterfaceMap.put(ip,toReturn);
             System.out.println("Rmi client set up for " + ip);
         }
-        return rmiInterfaceMap.get(ip);
+        return toReturn;
     }
 }

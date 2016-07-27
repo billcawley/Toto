@@ -23,9 +23,6 @@ import javax.servlet.http.HttpServletRequest;
 
 public class SpreadsheetStatusController {
 
-    @Autowired
-    private RMIClient rmiClient;
-
     public static final String LOGGED_IN_USER_SESSION = "LOGGED_IN_USER_SESSION";
 
     @RequestMapping
@@ -46,13 +43,13 @@ public class SpreadsheetStatusController {
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
             // todo - limit the amount returned?
             if (loggedInUser != null) {
-                return rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getSessionLog(loggedInUser.getDataAccessToken()).replace("\n","<br>"); // note - I am deliberately not doing <br/>, it seems javascript messes with it and then I can't detect changes
+                return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getSessionLog(loggedInUser.getDataAccessToken()).replace("\n","<br>"); // note - I am deliberately not doing <br/>, it seems javascript messes with it and then I can't detect changes
             }
         }
         if ("stop".equals(action)){
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
             if (loggedInUser != null) {
-                rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).sendStopMessageToLog(loggedInUser.getDataAccessToken());
+                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).sendStopMessageToLog(loggedInUser.getDataAccessToken());
                 return "stopsent";
             }
         }

@@ -55,10 +55,6 @@ public class JstreeController {
     @Autowired
     DatabaseDAO databaseDAO;
 
-    // I wonder about this being in here but for the moment I think it makes a bit more sense
-    @Autowired
-    RMIClient rmiClient;
-
     private static final Logger logger = Logger.getLogger(JstreeController.class);
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -99,7 +95,7 @@ public class JstreeController {
                     JsonChildren.Node currentNode = loggedInUser.getFromJsTreeLookupMap(nameJsonRequest.id); // we assume it is there, the code did before
                     if (currentNode.nameId != -1) {
                         nameJsonRequest.id = currentNode.nameId;//convert from jstree id to the name id
-                        rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).editAttributes(loggedInUser.getDataAccessToken(), nameJsonRequest.id, nameJsonRequest.attributes); // Now we pass through to the back end
+                        RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).editAttributes(loggedInUser.getDataAccessToken(), nameJsonRequest.id, nameJsonRequest.attributes); // Now we pass through to the back end
                         result = "true";
                     }
                 } else {
@@ -137,7 +133,7 @@ public class JstreeController {
                         model.addAttribute("rootid", rootId);
                         model.addAttribute("searchnames", itemsChosen);
                         model.addAttribute("attributeChosen", attribute);
-                        List<String> attributes = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getAttributeList(loggedInUser.getDataAccessToken());
+                        List<String> attributes = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getAttributeList(loggedInUser.getDataAccessToken());
                         model.addAttribute("attributes", attributes);
                         return "jstree";
                     }
@@ -149,24 +145,24 @@ public class JstreeController {
                             itemsChosen = "";
                         }
                         // the return type JsonChildren is designed to produce javascript that js tree understands
-                        final JsonChildren jsonChildren = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                        final JsonChildren jsonChildren = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                                 .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"), itemsChosen, attribute);
                         // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
                         jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);
                         result = jacksonMapper.writeValueAsString(jsonChildren);
                     } else if (currentNode != null && currentNode.nameId != -1) { // assuming it is not null!
                         if ("details".equals(op)) { // still used?
-                            result = "true,\"namedetails\":" + jacksonMapper.writeValueAsString(rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                            result = "true,\"namedetails\":" + jacksonMapper.writeValueAsString(RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                                     .getNameDetailsJson(loggedInUser.getDataAccessToken(), currentNode.nameId));
                         }
                         if ("delete_node".equals(op)) { // still used?
-                            rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                            RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                                     .deleteNode(loggedInUser.getDataAccessToken(), currentNode.nameId);
                             result = "true";
                         }
                     }
                     if ("create_node".equals(op)) { // moved outside, it can operate with a null current node, adding to root
-                        JsonChildren.Node newNode = rmiClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                        JsonChildren.Node newNode = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                                 .createNode(loggedInUser.getDataAccessToken(), currentNode != null ? currentNode.nameId : -1);
                         loggedInUser.assignIdForJsTreeNode(newNode);
                         result = newNode.id + "";

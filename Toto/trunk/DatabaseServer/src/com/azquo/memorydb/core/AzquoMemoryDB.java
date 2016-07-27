@@ -42,15 +42,6 @@ public final class AzquoMemoryDB {
 
     private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
 
-    // I don't think I can auto wire this as I can't guarantee it will be ready for the constructor
-
-    private final JsonRecordDAO jsonRecordDAO;
-
-    // new faster loading/saving data access objects.
-    private final NameDAO nameDAO;
-
-    private final ValueDAO valueDAO;
-
     private final Map<String, Map<String, List<Name>>> nameByAttributeMap; // a map of maps of lists of names. Fun! Moved back to lists to save memory, the lists are unlikely to be big
 
     // simple by id maps, if an object is in one of these three it's in the database
@@ -108,13 +99,10 @@ public final class AzquoMemoryDB {
     public static final ExecutorService mainThreadPool = getMainThreadPool();
     public static final ExecutorService sqlThreadPool = getSQLThreadPool();
 
-    protected AzquoMemoryDB(String persistenceName, JsonRecordDAO jsonRecordDAO, NameDAO nameDAO, ValueDAO valeuDAO, StringBuffer sessionLog) {
+    protected AzquoMemoryDB(String persistenceName, StringBuffer sessionLog) {
         newDatabaseCount.incrementAndGet();
         this.sessionLog = sessionLog;
         this.persistenceName = persistenceName;
-        this.jsonRecordDAO = jsonRecordDAO;
-        this.nameDAO = nameDAO;
-        this.valueDAO = valeuDAO;
         needsLoading = true;
         nameByAttributeMap = new ConcurrentHashMap<>();
         // commenting the map init numbers, inno db can overestimate quite heavily.
@@ -170,7 +158,6 @@ public final class AzquoMemoryDB {
     private static AtomicInteger newSQLBatchLoaderRunCount = new AtomicInteger(0);
 
     private class SQLBatchLoader implements Callable<Void> {
-        private final JsonRecordDAO jsonRecordDAO;
         private final String tableName;
         private final JsonSerializableEntityInitializer jsonSerializableEntityInitializer;
         private final int minId;
@@ -178,8 +165,7 @@ public final class AzquoMemoryDB {
         private final AzquoMemoryDB memDB;
         private final AtomicInteger loadTracker;
 
-        SQLBatchLoader(JsonRecordDAO jsonRecordDAO, String tableName, JsonSerializableEntityInitializer jsonSerializableEntityInitializer, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
-            this.jsonRecordDAO = jsonRecordDAO;
+        SQLBatchLoader(String tableName, JsonSerializableEntityInitializer jsonSerializableEntityInitializer, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
             this.tableName = tableName;
             this.jsonSerializableEntityInitializer = jsonSerializableEntityInitializer;
             this.minId = minId;
@@ -191,7 +177,7 @@ public final class AzquoMemoryDB {
         @Override
         public Void call() throws Exception {
             newSQLBatchLoaderRunCount.incrementAndGet();
-            List<JsonRecordTransport> dataToLoad = jsonRecordDAO.findFromTableMinMaxId(memDB, tableName, minId, maxId);
+            List<JsonRecordTransport> dataToLoad = JsonRecordDAO.findFromTableMinMaxId(memDB, tableName, minId, maxId);
             for (JsonRecordTransport dataRecord : dataToLoad) {
                 nextId.getAndUpdate(current -> current < dataRecord.id ? dataRecord.id : current);
                 jsonSerializableEntityInitializer.initializeEntity(memDB, dataRecord);
@@ -211,14 +197,12 @@ public final class AzquoMemoryDB {
     private static AtomicInteger newNameBatchLoaderRunCount = new AtomicInteger(0);
 
     private class NameBatchLoader implements Callable<Void> {
-        private final NameDAO nameDAO;
         private final int minId;
         private final int maxId;
         private final AzquoMemoryDB memDB;
         private final AtomicInteger loadTracker;
 
-        NameBatchLoader(NameDAO nameDAO, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
-            this.nameDAO = nameDAO;
+        NameBatchLoader(int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
             this.minId = minId;
             this.maxId = maxId;
             this.memDB = memDB;
@@ -228,7 +212,7 @@ public final class AzquoMemoryDB {
         @Override
         public Void call() {
             newNameBatchLoaderRunCount.incrementAndGet();
-            List<Name> names = nameDAO.findForMinMaxId(memDB, minId, maxId);
+            List<Name> names = NameDAO.findForMinMaxId(memDB, minId, maxId);
             for (Name name : names) {// bit of an overhead just to get the max id? I guess no concern - zapping the lists would save garbage but
                 nextId.getAndUpdate(current -> current < name.getId() ? name.getId() : current);
             }
@@ -246,14 +230,12 @@ public final class AzquoMemoryDB {
     private static AtomicInteger newValueBatchLoaderRunCount = new AtomicInteger(0);
 
     private class ValueBatchLoader implements Callable<Void> {
-        private final ValueDAO valueDAO;
         private final int minId;
         private final int maxId;
         private final AzquoMemoryDB memDB;
         private final AtomicInteger loadTracker;
 
-        ValueBatchLoader(ValueDAO valueDAO, int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
-            this.valueDAO = valueDAO;
+        ValueBatchLoader(int minId, int maxId, AzquoMemoryDB memDB, AtomicInteger loadTracker) {
             this.minId = minId;
             this.maxId = maxId;
             this.memDB = memDB;
@@ -263,7 +245,7 @@ public final class AzquoMemoryDB {
         @Override
         public Void call() {
             newValueBatchLoaderRunCount.incrementAndGet();
-            List<Value> values = valueDAO.findForMinMaxId(memDB, minId, maxId);
+            List<Value> values = ValueDAO.findForMinMaxId(memDB, minId, maxId);
             for (Value value : values) {// bit of an overhead just to get the max id? I guess no concern.
                 nextId.getAndUpdate(current -> current < value.getId() ? value.getId() : current);
             }
@@ -338,10 +320,10 @@ public final class AzquoMemoryDB {
                     for (String tableName : jsonTablesAndInitializers.keySet()) {
                         jsonRecordsLoaded.set(0);
                         from = 0;
-                        maxIdForTable = jsonRecordDAO.findMaxId(this, tableName);
+                        maxIdForTable = JsonRecordDAO.findMaxId(this, tableName);
                         futureBatches = new ArrayList<>();
                         while (from < maxIdForTable) {
-                            futureBatches.add(sqlThreadPool.submit(new SQLBatchLoader(jsonRecordDAO, tableName, jsonTablesAndInitializers.get(tableName), from, from + step, this, jsonRecordsLoaded)));
+                            futureBatches.add(sqlThreadPool.submit(new SQLBatchLoader(tableName, jsonTablesAndInitializers.get(tableName), from, from + step, this, jsonRecordsLoaded)));
                             from += step;
                         }
                         for (Future future : futureBatches) {
@@ -351,11 +333,11 @@ public final class AzquoMemoryDB {
                     }
                     marker = System.currentTimeMillis();
                     from = 0;
-                    nameDAO.zapAdditive(getPersistenceName());
-                    maxIdForTable = nameDAO.findMaxId(this);
+                    NameDAO.zapAdditive(getPersistenceName());
+                    maxIdForTable = NameDAO.findMaxId(this);
                     futureBatches = new ArrayList<>();
                     while (from < maxIdForTable) {
-                        futureBatches.add(sqlThreadPool.submit(new NameBatchLoader(nameDAO, from, from + step, this, namesLoaded)));
+                        futureBatches.add(sqlThreadPool.submit(new NameBatchLoader(from, from + step, this, namesLoaded)));
                         from += step;
                     }
                     for (Future future : futureBatches) {
@@ -365,10 +347,10 @@ public final class AzquoMemoryDB {
                     marker = System.currentTimeMillis();
                     // todo finish hbase detection and loading!
                     from = 0;
-                    maxIdForTable = valueDAO.findMaxId(this);
+                    maxIdForTable = ValueDAO.findMaxId(this);
                     futureBatches = new ArrayList<>();
                     while (from < maxIdForTable) {
-                        futureBatches.add(sqlThreadPool.submit(new ValueBatchLoader(valueDAO, from, from + step, this, valuesLoaded)));
+                        futureBatches.add(sqlThreadPool.submit(new ValueBatchLoader(from, from + step, this, valuesLoaded)));
                         from += step;
                     }
                     for (Future future : futureBatches) {
@@ -449,7 +431,7 @@ public final class AzquoMemoryDB {
                 }
                 // and end here
                 try {
-                        jsonRecordDAO.persistJsonRecords(this, tableName, recordsToStore);// note this is multi threaded internally
+                        JsonRecordDAO.persistJsonRecords(this, tableName, recordsToStore);// note this is multi threaded internally
                 } catch (Exception e) {
                     // currently I'll just stack trace this, not sure of what would be the best strategy
                     e.printStackTrace();
@@ -466,7 +448,7 @@ public final class AzquoMemoryDB {
             name.setAsPersisted();// The actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
         }
         try {
-                nameDAO.persistNames(this, namesToStore, false);
+                NameDAO.persistNames(this, namesToStore, false);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -478,7 +460,7 @@ public final class AzquoMemoryDB {
             value.setAsPersisted();
         }
         try {
-                valueDAO.persistValues(this, valuesToStore, false);
+                ValueDAO.persistValues(this, valuesToStore, false);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1074,12 +1056,12 @@ public final class AzquoMemoryDB {
     }
 
     // I may change these later, for the mo I just want to stop drops and clears at the same time as persistence
-    public synchronized void synchronizedClear(DSAdminService dsAdminService) throws Exception {
-        dsAdminService.emptyDatabaseInPersistence(getPersistenceName());
+    public synchronized void synchronizedClear() throws Exception {
+        DSAdminService.emptyDatabaseInPersistence(getPersistenceName());
     }
 
-    public synchronized void synchronizedDrop(DSAdminService dsAdminService) throws Exception {
-        dsAdminService.dropDatabaseInPersistence(getPersistenceName());
+    public synchronized void synchronizedDrop() throws Exception {
+        DSAdminService.dropDatabaseInPersistence(getPersistenceName());
     }
 
     private static void printFunctionCountStats() {

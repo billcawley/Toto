@@ -89,7 +89,6 @@
     <!--    <util:list id="appServices" value-type="com.azquo.spreadsheetheet.AppEntityService">
             <ref bean="feedbackService"/>
         </util:list> -->
-    <bean name="rmiClient" class="com.azquo.rmi.RMIClient"/>
 
 <!--    <bean name="reviewsAuthenticationProvider" class="com.azquo.app.reviews.misc.ReviewsAuthenticationProvider"/>
     <security:http auto-config="true" use-expressions="true" >

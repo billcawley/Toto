@@ -59,8 +59,6 @@ public final class ImportService {
     @Autowired
     private UserRegionOptionsDAO userRegionOptionsDAO;
     @Autowired
-    private RMIClient rmiClient;
-    @Autowired
     private UploadRecordDAO uploadRecordDAO;
     @Autowired
     private BusinessDAO businessDAO;
@@ -379,8 +377,8 @@ public final class ImportService {
 
     private String readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         final Book book = Importers.getImporter().imports(new File(tempName), "Imported");
-        ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
-        //AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService, rmiClient);
+        ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO);
+        //AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService, RMIClient);
         //azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = null;
         SName reportRange = book.getInternalBook().getNameByName("az_ReportName");
@@ -434,12 +432,12 @@ public final class ImportService {
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         if (databaseServer.getIp().equals(LOCALIP)) {
-            return rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
+            return RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
         } else {
             // move it
             File f = new File(filePath);
             String remoteFilePath = copyFileToDatabaseServer(new FileInputStream(f), databaseServer.getSftpUrl());
-            return rmiClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, remoteFilePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
+            return RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, remoteFilePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
         }
     }
 
@@ -550,7 +548,7 @@ public final class ImportService {
         }
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
 
-        String imageList = rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
+        String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
         if (imageList != null) {//check if it's already in the list
             String[] images = imageList.split(",");
             for (String image : images) {
@@ -562,7 +560,7 @@ public final class ImportService {
         } else {
             imageList = fileName + suffix;
         }
-        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).setNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images", imageList);
+        RMIClient.getServerInterface(databaseAccessToken.getServerIp()).setNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images", imageList);
         return success;
     }
 

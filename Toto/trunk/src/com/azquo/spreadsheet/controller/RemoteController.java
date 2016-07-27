@@ -67,8 +67,6 @@ public class RemoteController {
     private UserRegionOptionsDAO userRegionOptionsDAO;
     @Autowired
     private SpreadsheetService spreadsheetService;
-    @Autowired
-    private RMIClient rmiClient;
 
     /* Parameters are sent as Json . . . posted via https should be secure enough for the moment
          */
@@ -192,7 +190,7 @@ public class RemoteController {
                     book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                     book.getInternalBook().setAttribute(REPORT_ID, onlineReport.getId());
-                    ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+                    ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO);
                     bookUtils.populateBook(book, 0);
                     newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                     System.out.println();

@@ -24,7 +24,7 @@ public class StringUtils {
 
     // returns parsed names from a name qualified with parents, the parents are returned first. Note, support for "," removed
 
-    public List<String> parseNameQualifiedWithParents(String source) {
+    public static List<String> parseNameQualifiedWithParents(String source) {
         List<String> toReturn = new ArrayList<>();
         if (source == null || source.isEmpty()) return toReturn;
         while (source.contains(MEMBEROF) && !source.endsWith(MEMBEROF)) {
@@ -37,7 +37,7 @@ public class StringUtils {
 
     // Used to use a ; between instructions. A basic part of the parser e.g. from X level Y etc.
 
-    public String getInstruction(final String instructions, final String instructionName) {
+    public static String getInstruction(final String instructions, final String instructionName) {
         String toReturn = null;
         //needs to detect that e.g. 'from' is an instruction, and not contained in a word
         int iPos = instructions.toLowerCase().indexOf(instructionName.toLowerCase());
@@ -65,7 +65,7 @@ public class StringUtils {
         return toReturn;
     }
 
-    public boolean precededBy(String searchText, String testItem, int pos) {
+    public static boolean precededBy(String searchText, String testItem, int pos) {
         int len = testItem.length();
         return pos >= len + 2 && searchText.substring(pos - len - 1, pos).toLowerCase().equals(testItem + " ");
     }
@@ -83,9 +83,9 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
 
      */
 
-    private DecimalFormat twoDigit = new DecimalFormat("00");
+    private static DecimalFormat twoDigit = new DecimalFormat("00");
 
-    public String prepareStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
+    public static String prepareStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
         // sort the name quotes - will be replaces with !01 !02 etc.
         StringBuilder modifiedStatement = new StringBuilder();
         Pattern p = Pattern.compile("" + Name.QUOTE + ".*?" + Name.QUOTE + ""); // don't need escaping here I don't think. Possible to add though.
@@ -219,7 +219,7 @@ I should be ok for StringTokenizer at this point
         return statement;
     }
 
-    private boolean isKeywordOrOperator(String term) {
+    private static boolean isKeywordOrOperator(String term) {
         return term.equals("*") || term.equals("/") || term.equals("+") || term.equals("-") || term.equals(">")
                 || term.equals("<") || term.equals("=") || term.equals(",")
                 || term.equals("(") || term.equals(")")
@@ -242,7 +242,7 @@ I should be ok for StringTokenizer at this point
     this function assumes a string ready to parse, quoted areas dealt with
     */
 
-    public String shuntingYardAlgorithm(String calc) {
+    public static String shuntingYardAlgorithm(String calc) {
         Pattern p = Pattern.compile("[" + NameService.ASSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";

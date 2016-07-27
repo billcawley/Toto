@@ -17,10 +17,8 @@ import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -40,47 +38,27 @@ import java.util.stream.Collectors;
 
 public class DSSpreadsheetService {
 
-    private final Runtime runtime = Runtime.getRuntime();
+    private static final Runtime runtime = Runtime.getRuntime();
 
-    private final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
+    private static final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
 
     private static final Logger logger = Logger.getLogger(DSSpreadsheetService.class);
 
-    @Autowired
-    NameService nameService;
-    @Autowired
-    ValueService valueService;
-    @Autowired
-    MemoryDBManager memoryDBManager;
-    @Autowired
-    DSImportService importService;
-
     // todo, clean this up when sessions are expired, maybe a last accessed time?
-    private final Map<String, StringBuffer> sessionLogs;
-
-    public DSSpreadsheetService() {
-        String thost = ""; // Currently just to put in the log
-        try {
-            thost = InetAddress.getLocalHost().getHostName();
-        } catch (Exception e) {
-            e.printStackTrace(); // Not exactly sure what it might be
-        }
-        System.out.println("host : " + thost);
-        sessionLogs = new ConcurrentHashMap<>(); // may as well make concurrent to be safe.
-    }
+    private static final Map<String, StringBuffer> sessionLogs = new ConcurrentHashMap<>();
 
     // after some thinking trim this down to the basics. Would have just been a DB name for that server but need permissions too.
     // may cache in future to save DB/Permission lookups. Depends on how consolidated client/server calls can be made . . .
 
-    public AzquoMemoryDBConnection getConnectionFromAccessToken(DatabaseAccessToken databaseAccessToken) throws Exception {
+    public static AzquoMemoryDBConnection getConnectionFromAccessToken(DatabaseAccessToken databaseAccessToken) throws Exception {
         // todo - address opendb count (do we care?) and exceptions
         StringBuffer sessionLog = sessionLogs.computeIfAbsent(databaseAccessToken.getUserSessionId(), t -> new StringBuffer()); // computeIfAbsent is such a wonderful thread safe call
-        AzquoMemoryDB memoryDB = memoryDBManager.getAzquoMemoryDB(databaseAccessToken.getPersistenceName(), sessionLog);
+        AzquoMemoryDB memoryDB = MemoryDBManager.getAzquoMemoryDB(databaseAccessToken.getPersistenceName(), sessionLog);
         // we can't do the lookup for permissions out here as it requires the connection, hence pass things through
-        return new AzquoMemoryDBConnection(memoryDB, databaseAccessToken, nameService, databaseAccessToken.getLanguages(), sessionLog);
+        return new AzquoMemoryDBConnection(memoryDB, databaseAccessToken, databaseAccessToken.getLanguages(), sessionLog);
     }
 
-    public String getSessionLog(DatabaseAccessToken databaseAccessToken) throws Exception {
+    public static String getSessionLog(DatabaseAccessToken databaseAccessToken) throws Exception {
         StringBuffer log = sessionLogs.get(databaseAccessToken.getUserSessionId());
         if (log != null) {
             return log.toString();
@@ -104,14 +82,14 @@ public class DSSpreadsheetService {
 
     */
 
-    private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, DataRegionHeading.SUFFIX defaultSuffix) throws Exception {
+    private static List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, DataRegionHeading.SUFFIX defaultSuffix) throws Exception {
         return createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, headingRegion, attributeNames, 0, defaultSuffix);
     }
 
     // now has the option to exception based on large sets being returned by parse query. Used currently on columns, if these name sets are more than a few hundred then that's clearly unworkable - you wouldn't want more than a few hundred columns
     private static final String HIERARCHY = "hierarchy";
 
-    private List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, int namesQueryLimit, DataRegionHeading.SUFFIX defaultSuffix) throws Exception {
+    private static List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, int namesQueryLimit, DataRegionHeading.SUFFIX defaultSuffix) throws Exception {
         List<List<List<DataRegionHeading>>> nameLists = new ArrayList<>(headingRegion.size());
         for (List<String> sourceRow : headingRegion) { // we're stepping through the cells that describe headings
             // ok here's the thing, before it was just names here, now it could be other things, attribute names formulae etc.
@@ -164,7 +142,7 @@ public class DSSpreadsheetService {
                         } else if (sourceCell.toLowerCase().contains(HIERARCHY)) { // kind of a special case, supports a name not an expression
                             String name = sourceCell.substring(0, sourceCell.toLowerCase().indexOf(HIERARCHY)).replace("`", "").trim();
                             int level = Integer.parseInt(sourceCell.substring(sourceCell.toLowerCase().indexOf(HIERARCHY) + HIERARCHY.length()).trim()); // fragile?
-                            Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
+                            Collection<Name> names = NameService.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
                             if (!names.isEmpty()) {// it should be just one
                                 List<DataRegionHeading> hierarchyList = new ArrayList<>();
                                 List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null); // I assume this will be only one!
@@ -179,17 +157,17 @@ public class DSSpreadsheetService {
                             List<Name> permuteNames = new ArrayList<>();
                             for (String permutedName : permutedNames) {
                                 // EFC noting the hack, looking for a name created by pivot selections to permute as the first possibility.Need to see how this is set to confirm if it can be improved. todo
-                                Name pName = nameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
+                                Name pName = NameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
                                 // if no set chosen, find the original set
                                 if (pName == null || pName.getChildren().size() == 0) {
-                                    pName = nameService.findByName(azquoMemoryDBConnection, permutedName);
+                                    pName = NameService.findByName(azquoMemoryDBConnection, permutedName);
                                 }
                                 permuteNames.add(pName);
                             }
                             row.clear();
                             row.add(dataRegionHeadingsFromNames(permuteNames, azquoMemoryDBConnection, function, suffix, null, null));
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
-                            final Collection<Name> names = nameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
+                            final Collection<Name> names = NameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
                             if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
                             }
@@ -204,7 +182,7 @@ public class DSSpreadsheetService {
     }
 
     // recursive, the key is to add the offset to allow formatting of the hierarchy
-    private void resolveHierarchyForHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading heading, List<DataRegionHeading> target
+    private static void resolveHierarchyForHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading heading, List<DataRegionHeading> target
             , DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, int levelLimit) {
         if (offsetHeadings.size() < levelLimit) {// then get the children
             List<DataRegionHeading> offsetHeadingsCopy = new ArrayList<>(offsetHeadings);
@@ -253,7 +231,7 @@ public class DSSpreadsheetService {
      plus I don't think this is a big performance bottleneck. Commented attempt at optimising will be in SVN if required.
     */
 
-    private <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
+    private static <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
         //this version does full permute
         List<List<T>> toReturn = null;
         for (List<T> permutationDimension : listsToPermute) {
@@ -282,7 +260,7 @@ public class DSSpreadsheetService {
     A comparator might provide a more succinct sort (we'd need to pass sortLists still), would need to address how the totals were added after. Something to consider.
     */
 
-    private List<List<DataRegionHeading>> sortCombos(List<DataRegionHeading> listToPermute, Set<List<Name>> foundCombinations, int position, final List<Map<Name, Integer>> sortLists) {
+    private static List<List<DataRegionHeading>> sortCombos(List<DataRegionHeading> listToPermute, Set<List<Name>> foundCombinations, int position, final List<Map<Name, Integer>> sortLists) {
         Map<Name, Integer> sortList = sortLists.get(position);
         // a tree map is ordered by keys, means putting by sort position will result in a correctly ordered iterator
         Map<Integer, Set<List<Name>>> sortMap = new TreeMap<>();
@@ -329,7 +307,7 @@ public class DSSpreadsheetService {
 
     // to multi thread the headings made by permute items
 
-    private class ComboBuilder implements Callable<Void> {
+    private static class ComboBuilder implements Callable<Void> {
 
         private final int comboSize;
         private final List<Name> permuteNames;
@@ -364,7 +342,7 @@ public class DSSpreadsheetService {
     and the listToPermute is the contents of the permute function e.g. permute(`Product category`, `Product subcategory`) in Nisbets
     */
 
-    private List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute) throws Exception {
+    private static List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute) throws Exception {
         NumberFormat nf = NumberFormat.getInstance();
         long startTime = System.currentTimeMillis();
         List<Collection<Name>> sharedNamesSets = new ArrayList<>();
@@ -487,7 +465,7 @@ public class DSSpreadsheetService {
      */
 
 
-    private <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
+    private static <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
         List<List<T>> toReturn = new ArrayList<>(existing2DArray.size() * permutationWeWantToAdd.size());
         int existing = 0;
         for (existing = permutationWeWantToAdd.size() - 1; existing > 0; existing--) {
@@ -540,7 +518,7 @@ public class DSSpreadsheetService {
 
      */
 
-    private List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception {
+    private static List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception {
         final int noOfHeadingDefinitionRows = headingLists.size();
         if (noOfHeadingDefinitionRows == 0) {
             return new ArrayList<>();
@@ -609,7 +587,7 @@ public class DSSpreadsheetService {
 
     // what we're saying is it's only got one cell in the heading definition filled and it's the last one.
 
-    private boolean headingDefinitionRowHasOnlyTheRightCellPopulated(List<List<DataRegionHeading>> headingLists) {
+    private static boolean headingDefinitionRowHasOnlyTheRightCellPopulated(List<List<DataRegionHeading>> headingLists) {
         int numberOfCellsInThisHeadingDefinition = headingLists.size();
         for (int cellIndex = 0; cellIndex < numberOfCellsInThisHeadingDefinition; cellIndex++) {
             if (headingLists.get(cellIndex) != null) {
@@ -621,15 +599,15 @@ public class DSSpreadsheetService {
 
     // Filter set being a multi selection list
 
-    public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, List<Integer> childrenIds) throws Exception {
+    public static void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, List<Integer> childrenIds) throws Exception {
         final AzquoMemoryDBConnection connectionFromAccessToken = getConnectionFromAccessToken(databaseAccessToken);
         List<String> justUserNameLanguages = new ArrayList<>();
         justUserNameLanguages.add(userName);
-        Name filterSets = nameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
-        Name set = nameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
+        Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
+        Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
         set.setChildrenWillBePersisted(Collections.emptyList()); // easiest way to clear them
         for (Integer childId : childrenIds) {
-            Name childName = nameService.findById(connectionFromAccessToken, childId);
+            Name childName = NameService.findById(connectionFromAccessToken, childId);
             if (childName != null) { // it really should not be!
                 set.addChildWillBePersisted(childName); // and that should be it!
             }
@@ -649,7 +627,7 @@ public class DSSpreadsheetService {
         }
     }
 
-    private boolean qualifyUniqueNameWithParent(UniqueName uName) {
+    private static boolean qualifyUniqueNameWithParent(UniqueName uName) {
         Name name = uName.topName;
         boolean changed = false;
         for (Name parent : name.getParents()) {
@@ -677,7 +655,7 @@ public class DSSpreadsheetService {
 
     // for the drop down, essentially given a collection of names for a query need to give a meaningful list qualifying names with parents where they are duplicates (I suppose high streets in different towns)
     // it was assumed that names were sorted, one can't guarantee this though preserving the order is important. EFC going to rewrite, won't require ordering, now this returns the unique nnames to enable "selected" for filter lists
-    private List<UniqueName> getUniqueNames(Collection<Name> names, boolean forceFirstLevel) {
+    private static List<UniqueName> getUniqueNames(Collection<Name> names, boolean forceFirstLevel) {
         List<UniqueName> toCheck;
         if (forceFirstLevel){
             toCheck = new ArrayList<>();
@@ -717,20 +695,20 @@ public class DSSpreadsheetService {
         return toCheck;
     }
 
-    private List<String> getUniqueNameStrings(Collection<UniqueName> names) {
+    private static List<String> getUniqueNameStrings(Collection<UniqueName> names) {
         return names.stream().map(uniqueName -> uniqueName.description).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
     }
 
-    private List<FilterTriple> getFilterPairsFromUniqueNames(Collection<UniqueName> names, Name filterSet) {
+    private static List<FilterTriple> getFilterPairsFromUniqueNames(Collection<UniqueName> names, Name filterSet) {
         return names.stream().map(uniqueName -> new FilterTriple(uniqueName.bottomName.getId(), uniqueName.description, filterSet.getChildren().contains(uniqueName.bottomName))).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
     }
 
 
-    public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
+    public static List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
         //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
         int dotPos = query.indexOf(".");
         if (dotPos > 0) {//todo check that it's not part of a name
-            Name possibleName = nameService.findByName(getConnectionFromAccessToken(databaseAccessToken), query.substring(0, dotPos));
+            Name possibleName = NameService.findByName(getConnectionFromAccessToken(databaseAccessToken), query.substring(0, dotPos));
             if (possibleName != null) {
                 String result = possibleName.getAttribute(query.substring(dotPos + 1));
                 List<String> toReturn = new ArrayList<>();
@@ -743,19 +721,19 @@ public class DSSpreadsheetService {
             query = query.substring(0, query.indexOf("showparents"));
             forceFirstLevel = true;
         }
-        return getUniqueNameStrings(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel));
+        return getUniqueNameStrings(getUniqueNames(NameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel));
     }
 
-    public List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws Exception {
+    public static List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws Exception {
         //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
         List<String> justUserNameLanguages = new ArrayList<>();
         justUserNameLanguages.add(userName);
         final AzquoMemoryDBConnection connectionFromAccessToken = getConnectionFromAccessToken(databaseAccessToken);
-        Name filterSets = nameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
-        Name filterSet = nameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
+        Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
+        Name filterSet = NameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
         int dotPos = query.indexOf(".");
         if (dotPos > 0) {//todo check that it's not part of a name
-            Name possibleName = nameService.findByName(connectionFromAccessToken, query.substring(0, dotPos));
+            Name possibleName = NameService.findByName(connectionFromAccessToken, query.substring(0, dotPos));
             if (possibleName != null) {
                 String result = possibleName.getAttribute(query.substring(dotPos + 1));
                 List<FilterTriple> toReturn = new ArrayList<>();
@@ -763,21 +741,21 @@ public class DSSpreadsheetService {
                 return toReturn;
             }
         }
-        //final Collection<Name> names = nameService.parseQuery(connectionFromAccessToken, query, languages);
+        //final Collection<Name> names = NameService.parseQuery(connectionFromAccessToken, query, languages);
         boolean forceFirstLevel = false;
         if (query.toLowerCase().trim().endsWith("showparents")){ // a hack to force simple showing of parents regardless
             query = query.substring(0, query.indexOf("showparents"));
             forceFirstLevel = true;
         }
-        return getFilterPairsFromUniqueNames(getUniqueNames(nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel), filterSet);
+        return getFilterPairsFromUniqueNames(getUniqueNames(NameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel), filterSet);
     }
 
     // it doesn't return anything, for things like setting up "as" criteria
-    public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
-        nameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages);
+    public static void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
+        NameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages);
     }
 
-    private List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
+    private static List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<>(sortTotals.size());
         List<Map.Entry<Integer, Double>> list = new ArrayList<>(sortTotals.entrySet());
         // sort list based on
@@ -790,7 +768,7 @@ public class DSSpreadsheetService {
 
     // same thing for strings, I prefer stronger typing
 
-    private List<Integer> sortStringValues(Map<Integer, String> sortTotals, final boolean sortRowsUp) {
+    private static List<Integer> sortStringValues(Map<Integer, String> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<>(sortTotals.size());
         List<Map.Entry<Integer, String>> list = new ArrayList<>(sortTotals.entrySet());
         // sort list based on string now
@@ -818,7 +796,7 @@ public class DSSpreadsheetService {
 
     */
 
-    private <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
+    private static <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
         if (source2Dlist.size() == 0) {
             return new ArrayList<>();
         }
@@ -838,7 +816,7 @@ public class DSSpreadsheetService {
 
     // return headings as strings for display, I'm going to put blanks in here if null. Called after permuting/expanding
 
-    private List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languagesSent) {
+    private static List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languagesSent) {
         // first I need to check max offsets for each column - need to check on whether the 2d arrays are the same orientation for row or column headings or not todo
         List<Integer> maxColOffsets = new ArrayList<>();
         for (List<DataRegionHeading> row : source) {
@@ -910,14 +888,14 @@ public class DSSpreadsheetService {
 
     // should be called before each report request
 
-    public void clearLog(DatabaseAccessToken databaseAccessToken) throws Exception {
+    public static void clearLog(DatabaseAccessToken databaseAccessToken) throws Exception {
         getConnectionFromAccessToken(databaseAccessToken).clearUserLog();
     }
 
     // to try to force an exception to stop execution
     // todo - check interruption is not the thing here, probably not but check
 
-    public void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws Exception {
+    public static void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws Exception {
         getConnectionFromAccessToken(databaseAccessToken).setStopInUserLog();
     }
 
@@ -926,7 +904,7 @@ public class DSSpreadsheetService {
       Filtercount is to remove sets of blank rows, what size chunks we look for. Highlightdays means highlight data where the provenance is less than x days old.
      */
 
-    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
+    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int filterCount, int maxRows, int maxCols
             , String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, int highlightDays) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
@@ -967,7 +945,7 @@ public class DSSpreadsheetService {
                 , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource);
     }
 
-    private List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
+    private static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, List<String> languages, int highlightDays, int valueId) throws Exception {
         azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
@@ -1016,8 +994,8 @@ public class DSSpreadsheetService {
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
         if (time > 5000) { // a bit arbitrary
-            valueService.printSumStats();
-            valueService.printFindForNamesIncludeChildrenStats();
+            ValueService.printSumStats();
+            ValueService.printFindForNamesIncludeChildrenStats();
         }
         track = System.currentTimeMillis();
         boolean permute = false;
@@ -1033,7 +1011,7 @@ public class DSSpreadsheetService {
 
     // used by the pivot permute function, really it's building a set of shared names based on all the children of names specified in context
 
-    private Collection<Name> getSharedNames(List<DataRegionHeading> headingList) {
+    private static Collection<Name> getSharedNames(List<DataRegionHeading> headingList) {
         long startTime = System.currentTimeMillis();
         Collection<Name> shared = null;
         List<Collection<Name>> relevantNameSets = new ArrayList<>();
@@ -1088,7 +1066,7 @@ public class DSSpreadsheetService {
 
     // when doing things like saving/provenance the client needs to say "here's a region description and original position" to locate a cell server side
 
-    private AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
+    private static AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int unsortedRow, int unsortedCol, List<String> languages) throws Exception {
         // these 25 lines or so are used elsewhere, maybe normalise?
@@ -1117,7 +1095,7 @@ public class DSSpreadsheetService {
 
     // for looking up a heading given a string. Used to find the col/row index to sort on (as in I want to sort on "Colour", ok what's the column number?)
 
-    private int findPosition(List<List<DataRegionHeading>> headings, String toFind, List<String> languages) {
+    private static int findPosition(List<List<DataRegionHeading>> headings, String toFind, List<String> languages) {
         if (toFind == null || toFind.length() == 0) {
             return -1;
         }
@@ -1154,7 +1132,7 @@ public class DSSpreadsheetService {
     // note, one could derive column and row headings from the source data's headings but passing them is easier if they are to hand which the should be
     // also deals with highlighting
 
-    private List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
+    private static List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
             , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays, List<String> languages, boolean permute) throws Exception {
         List<List<AzquoCell>> toReturn = sourceData;
         if (sourceData == null || sourceData.isEmpty()) {
@@ -1367,7 +1345,7 @@ public class DSSpreadsheetService {
 Callable interface sorts the memory "happens before" using future gets which runnable did not guarantee I don't think (though it did work).
     */
 
-    private class RowFiller implements Callable<List<AzquoCell>> {
+    private static class RowFiller implements Callable<List<AzquoCell>> {
         private final int row;
         private final List<List<DataRegionHeading>> headingsForEachColumn;
         private final List<List<DataRegionHeading>> headingsForEachRow;
@@ -1413,7 +1391,7 @@ Callable interface sorts the memory "happens before" using future gets which run
 
     // More granular version of the above, less than 1000 rows, probably typical use.
     // On Damart for example we had 26*9 taking a while and it was reasonable to assume that rows were not even in terms of processing required
-    private class CellFiller implements Callable<AzquoCell> {
+    private static class CellFiller implements Callable<AzquoCell> {
         private final int row;
         private final int col;
         private final List<DataRegionHeading> headingsForColumn;
@@ -1470,7 +1448,7 @@ Callable interface sorts the memory "happens before" using future gets which run
 
        */
 
-    private int totalSetIntersectionCount(Name containsSet, Set<Name> selectionSet, Set<Name> alreadyTested, int track) {
+    private static int totalSetIntersectionCount(Name containsSet, Set<Name> selectionSet, Set<Name> alreadyTested, int track) {
 //            System.out.println("totalSetIntersectionCount track " + track + " contains set : " + containsSet.getDefaultDisplayName() + ", children size : " + containsSet.getChildren().size());
         track++;
         if (alreadyTested.contains(containsSet)) return 0;
@@ -1502,7 +1480,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     evaluate a name expression for each cell as opposed to value functions which work off names already resolved in the DataRegionHeadings
      */
 
-    private AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
+    private static AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<DataRegionHeading> contextHeadings, int rowNo, int colNo, List<String> languages, int valueId, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception {
         boolean selected = false;
         String stringValue = "";
@@ -1585,15 +1563,15 @@ Callable interface sorts the memory "happens before" using future gets which run
             locked.isTrue = true; // they cant edit the results from complex functions
             if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
                 Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
-                nameService.parseQuery(connection, cellQuery, languages, namesToCount);
+                NameService.parseQuery(connection, cellQuery, languages, namesToCount);
                 doubleValue = namesToCount.size();
                 stringValue = doubleValue + "";
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
                 String[] twoSets = nameFunctionHeading.getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
                 Set<Name> leftSet = HashObjSets.newMutableSet();
                 Set<Name> rightSet = HashObjSets.newMutableSet();
-                nameService.parseQuery(connection, twoSets[0], languages, leftSet);
-                nameService.parseQuery(connection, twoSets[1], languages, rightSet);
+                NameService.parseQuery(connection, twoSets[0], languages, leftSet);
+                NameService.parseQuery(connection, twoSets[1], languages, rightSet);
                 // ok I have the two sets, I got rid of total name count (which featured caching), I'm going to do the nuts and bolts here, need to think a little
                 Set<Name> alreadyTested = HashObjSets.newMutableSet();
                 // ok this should be like the inside of totalSetIntersectionCount but dealing with left set as the first parameter not a name.
@@ -1614,7 +1592,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 doubleValue = count;
                 stringValue = count + "";
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.SET) {
-                final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
+                final Collection<Name> set = NameService.parseQuery(connection, cellQuery, languages);
                 doubleValue = 0;
                 StringBuilder sb = new StringBuilder();
                 boolean first = true;
@@ -1627,11 +1605,11 @@ Callable interface sorts the memory "happens before" using future gets which run
                 }
                 stringValue = sb.toString();
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.FIRST) { // we may have to pass a hint about ordering to the query parser, let's see how it goes without it
-                final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
+                final Collection<Name> set = NameService.parseQuery(connection, cellQuery, languages);
                 doubleValue = 0;
                 stringValue = set.isEmpty() ? "" : set.iterator().next().getDefaultDisplayName();
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.LAST) {
-                final Collection<Name> set = nameService.parseQuery(connection, cellQuery, languages);
+                final Collection<Name> set = NameService.parseQuery(connection, cellQuery, languages);
                 doubleValue = 0;
                 stringValue = "";
                 for (Name name : set) { //a bit of a lazy way of doing things but it should be fine, plus with only a collection interface not sure of how to get the last!
@@ -1709,7 +1687,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                 locked.isTrue = true;
                             }
                         }
-                        doubleValue = valueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, function, nameComboValueCache);
+                        doubleValue = ValueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, function, nameComboValueCache);
                         if (function == DataRegionHeading.FUNCTION.VALUEPARENTCOUNT && valueFunctionSet != null) { // then value parent count, we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             Set<Name> allValueParents = HashObjSets.newMutableSet();
@@ -1755,7 +1733,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         }
                     }
                     listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
-                    String attributeResult = valueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked);
+                    String attributeResult = ValueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked);
                     try {
                         doubleValue = Double.parseDouble(attributeResult);
                     } catch (Exception e) {
@@ -1778,7 +1756,7 @@ Callable interface sorts the memory "happens before" using future gets which run
 
     // todo : put the size check of each set and hence which way we run through the loop in here, should improve performance if required
     // for valueparentcount
-    private int findOverlap(Collection<Name> set1, Collection<Name> set2) {
+    private static int findOverlap(Collection<Name> set1, Collection<Name> set2) {
         int count = 0;
         for (Name name : set1) {
             if (set2.contains(name)) count++;
@@ -1786,14 +1764,14 @@ Callable interface sorts the memory "happens before" using future gets which run
         return count;
     }
 
-    private boolean isDot(DataRegionHeading dataRegionHeading) {
+    private static boolean isDot(DataRegionHeading dataRegionHeading) {
         if (dataRegionHeading != null && dataRegionHeading.getAttribute() != null && dataRegionHeading.getAttribute().equals(".")) {
             return true;
         }
         return false;
     }
 
-    private List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
+    private static List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
             , final List<DataRegionHeading> contextHeadings, List<String> languages, int valueId) throws Exception {
         long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
@@ -1887,7 +1865,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     // new logic, derive the headings from the data, so after sorting the data one can get headings for each cell rather than pushing the sort over to the headings as well
-    private List<List<DataRegionHeading>> getColumnHeadingsAsArray(List<List<AzquoCell>> cellArray) {
+    private static List<List<DataRegionHeading>> getColumnHeadingsAsArray(List<List<AzquoCell>> cellArray) {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>(cellArray.get(0).size());
         for (AzquoCell cell : cellArray.get(0)) {
             toReturn.add(cell.getColumnHeadings());
@@ -1896,7 +1874,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     // new logic, derive the headings from the data, no need to resort to resorting etc.
-    private List<List<DataRegionHeading>> getRowHeadingsAsArray(List<List<AzquoCell>> cellArray) {
+    private static List<List<DataRegionHeading>> getRowHeadingsAsArray(List<List<AzquoCell>> cellArray) {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>(cellArray.size()); // might not use all of it but I'm a little confused as to why the row would be empty?
         for (List<AzquoCell> row : cellArray) {
             if (!row.isEmpty()) { // this check . . think for some unusual situations
@@ -1907,7 +1885,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     // used when comparing values. So ignore the currency symbol if the numbers are the same
-    private String stripCurrency(String val) {
+    private static String stripCurrency(String val) {
         //TODO we need to be able to detect other currencies
         if (val.length() > 1 && "$£".contains(val.substring(0, 1))) {
             return val.substring(1);
@@ -1915,7 +1893,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         return val;
     }
 
-    public boolean compareStringValues(final String val1, final String val2) {
+    public static boolean compareStringValues(final String val1, final String val2) {
         //tries to work out if numbers expressed with different numbers of decimal places, maybe including percentage signs and currency symbols are the same.
         if (val1.equals(val2)) return true;
         String val3 = val1;
@@ -1934,7 +1912,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         return false;
     }
 
-    public List<TreeNode> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+    public static List<TreeNode> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, databaseAccessToken.getLanguages());
@@ -1959,7 +1937,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         return Collections.emptyList(); //just empty ok? null? Unsure
     }
 
-    private List<TreeNode> nameCountProvenance(AzquoCell azquoCell) {
+    private static List<TreeNode> nameCountProvenance(AzquoCell azquoCell) {
         String provString = "";
         Set<Name> cellNames = new HashSet<>();
         Name nameCountHeading = null;
@@ -2005,7 +1983,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     // for inspect database I think - should be moved to the JStree service maybe?
-    public TreeNode getDataList(Set<Name> names, int maxSize) throws Exception {
+    public static TreeNode getDataList(Set<Name> names, int maxSize) throws Exception {
         List<Value> values = null;
         String heading = "";
         for (Name name : names) {
@@ -2022,16 +2000,16 @@ Callable interface sorts the memory "happens before" using future gets which run
         toReturn.setHeading(heading);
         toReturn.setValue("");
         toReturn.setChildren(nodify(values, maxSize));
-        valueService.addNodeValues(toReturn);
+        ValueService.addNodeValues(toReturn);
         return toReturn;
     }
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
     // for provenance?
-    private List<TreeNode> nodify(List<Value> values, int maxSize) {
+    private static List<TreeNode> nodify(List<Value> values, int maxSize) {
         List<TreeNode> toReturn = new ArrayList<>();
         if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
-            valueService.sortValues(values);
+            ValueService.sortValues(values);
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
             Date provdate = values.get(0).getProvenance().getTimeStamp();
             Set<Value> oneUpdate = new HashSet<>();
@@ -2041,20 +2019,20 @@ Callable interface sorts the memory "happens before" using future gets which run
                     oneUpdate.add(value);
                     p = value.getProvenance();
                 } else {
-                    toReturn.add(valueService.getTreeNode(oneUpdate, p, maxSize));
+                    toReturn.add(ValueService.getTreeNode(oneUpdate, p, maxSize));
                     oneUpdate = new HashSet<>();
                     oneUpdate.add(value);
                     p = value.getProvenance();
                     provdate = value.getProvenance().getTimeStamp();
                 }
             }
-            toReturn.add(valueService.getTreeNode(oneUpdate, p, maxSize));
+            toReturn.add(ValueService.getTreeNode(oneUpdate, p, maxSize));
         }
         return toReturn;
     }
 
     // another not very helpfully named function, might be able to be rewritten after we zap Azquo Book (the Aspose based functionality)
-    private List<TreeNode> nodify(Name name, String attribute) {
+    private static List<TreeNode> nodify(Name name, String attribute) {
         attribute = attribute.substring(1).replace("`", "");
         List<TreeNode> toReturn = new ArrayList<>();
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
@@ -2074,7 +2052,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     // create a file to import from a populated region in the spreadsheet
-    private void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
+    private static void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
         //write the column headings and data to a temporary file, then import it
         String fileName = "temp_" + user;
         File temp = File.createTempFile(fileName + ".csv", "csv");
@@ -2118,20 +2096,20 @@ Callable interface sorts the memory "happens before" using future gets which run
         }
         bw.flush();
         bw.close();
-        importService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true, true);
+        DSImportService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true, true);
         if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
         }
     }
 
-    public void persistDatabase(DatabaseAccessToken databaseAccessToken) throws Exception {
+    public static void persistDatabase(DatabaseAccessToken databaseAccessToken) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.persist();
     }
 
 
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
-    public void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
+    public static void saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
         if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
@@ -2221,7 +2199,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                             Set<Name> nameSet = new HashSet<>(names);
                                             nameSet.add(child); // so we now have the cells names except the split one but the child of the split one instead.
                                             // we want an exact match
-                                            final List<Value> forNames = valueService.findForNames(nameSet);
+                                            final List<Value> forNames = ValueService.findForNames(nameSet);
                                             if (forNames.size() > 1) {
                                                 System.out.println("multiple values found for a split, this should not happen! " + forNames);
                                             } else if (forNames.size() == 1) {
@@ -2230,11 +2208,11 @@ Callable interface sorts the memory "happens before" using future gets which run
                                                     v.delete();
                                                     numberOfValuesModified++;
                                                 } else { // overwrite!
-                                                    valueService.overWriteExistingValue(azquoMemoryDBConnection, v, splitValue + ""); // a double to a string and back, hacky but that's the call for the mo
+                                                    ValueService.overWriteExistingValue(azquoMemoryDBConnection, v, splitValue + ""); // a double to a string and back, hacky but that's the call for the mo
                                                 }
                                             } else { // new value!
                                                 if (splitValue != 0) { // then something to store
-                                                    valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, splitValue + "", nameSet);
+                                                    ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, splitValue + "", nameSet);
                                                     numberOfValuesModified++;
                                                 }
                                             }
@@ -2247,7 +2225,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                         final Value theValue = valuesForCell.getValues().get(0);
                                         if (cell.getStringValue() != null && cell.getStringValue().length() > 0) {
                                             //sometimes non-existent original values are stored as '0'
-                                            valueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
+                                            ValueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getStringValue());
                                             numberOfValuesModified++;
                                         } else {
                                             theValue.delete();
@@ -2255,7 +2233,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                         }
                                     } else if (valuesForCell.getValues().isEmpty() && cell.getStringValue() != null && cell.getStringValue().length() > 0) {
                                         List<Name> cellNames = namesFromDataRegionHeadings(headingsForCell);
-                                        valueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), new HashSet<>(cellNames));
+                                        ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getStringValue(), new HashSet<>(cellNames));
                                         numberOfValuesModified++;
                                     }
                                     // warning on multiple values?
@@ -2266,7 +2244,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                         && valuesForCell.getAttributeNames() != null && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
                                     Name toChange = valuesForCell.getNames().get(0);
                                     String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(Name.QUOTE + "", "");//remove the initial '.' and any `
-                                    Name attSet = nameService.findByName(azquoMemoryDBConnection, attribute);
+                                    Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
                                     if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)) {
                                     /* right : when populating attribute based data findParentAttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
                                     returned is not in fact attributes but the name of an intermediate set in the hierarchy - suppose you want the category of a product the structure is
@@ -2275,7 +2253,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                      , named toChange at the moment to that category.
                                     */
                                         //logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getStringValue() + " within " + attribute);
-                                        Name category = nameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getStringValue(), attSet, true);
+                                        Name category = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getStringValue(), attSet, true);
                                         category.addChildWillBePersisted(toChange);
                                     } else {// simple attribute set
                                         //logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
@@ -2298,7 +2276,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
     }
 
-    private List<DataRegionHeading> getContextHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception {
+    private static List<DataRegionHeading> getContextHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> contextSource, List<String> languages) throws Exception {
         final List<List<List<DataRegionHeading>>> contextArraysFromSpreadsheetRegion = createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, contextSource, languages, null); // no default suffix, this is where we might find it
         final List<DataRegionHeading> contextHeadings = new ArrayList<>();
         for (List<List<DataRegionHeading>> list1 : contextArraysFromSpreadsheetRegion) {
@@ -2311,13 +2289,13 @@ Callable interface sorts the memory "happens before" using future gets which run
         return contextHeadings;
     }
 
-    private List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
+    private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
             for (Name name : names) {
                 // will the new write permissions cause an overhead?
-                dataRegionHeadings.add(new DataRegionHeading(name, nameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, suffix, null, offsetHeadings, valueFunctionSet));
+                dataRegionHeadings.add(new DataRegionHeading(name, NameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, suffix, null, offsetHeadings, valueFunctionSet));
             }
         } else { // don't bother checking permissions, write permissions to true
             for (Name name : names) {
@@ -2328,7 +2306,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         return dataRegionHeadings;
     }
 
-    public List<Name> namesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
+    public static List<Name> namesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
         // ok some of the data region headings may be attribute, no real harm I don't think VS a whacking great set which would always be names
         List<Name> names = new ArrayList<>(dataRegionHeadings.size()); // switching back to list, now I consider I'm not sure if sets help much here and I want ordering
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
@@ -2339,7 +2317,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         return names;
     }
 
-    public Set<String> attributesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
+    public static Set<String> attributesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
         Set<String> names = HashObjSets.newMutableSet(); // attributes won't ever be big as they're manually defined, leave this to default (16 size table internally?)
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
             if (dataRegionHeading.getAttribute() != null) {
@@ -2349,7 +2327,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         return names;
     }
 
-    private boolean headingsHaveAttributes(Collection<DataRegionHeading> dataRegionHeadings) {
+    private static boolean headingsHaveAttributes(Collection<DataRegionHeading> dataRegionHeadings) {
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
             if (dataRegionHeading != null && dataRegionHeading.getAttribute() != null) {
                 return true;

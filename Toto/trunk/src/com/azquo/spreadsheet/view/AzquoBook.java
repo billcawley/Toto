@@ -48,7 +48,6 @@ public class AzquoBook {
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     private SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
     private SimpleDateFormat ukdflong = new SimpleDateFormat("dd/MM/yy hh:mm:ss");
-    private RMIClient rmiClient;
 
     public static final String azDataRegion = "az_dataregion";
 //    public static final String OPTIONPREFIX = "!";
@@ -147,11 +146,10 @@ public class AzquoBook {
         }
     };
 
-    public AzquoBook(UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, SpreadsheetService spreadsheetService, RMIClient rmiClient) throws Exception {
+    public AzquoBook(UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, SpreadsheetService spreadsheetService) throws Exception {
         this.userRegionOptionsDAO = userRegionOptionsDAO;
         this.userChoiceDAO = userChoiceDAO;
         this.spreadsheetService = spreadsheetService;
-        this.rmiClient = rmiClient;
         jacksonMapper.registerModule(new JSR310Module());
     }
 
@@ -844,7 +842,7 @@ public class AzquoBook {
                 } else {
                     try {
                         System.out.println("SELECTION: choosing from " + cellChoice);
-                        choiceList = rmiClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                        choiceList = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                                 .getDropDownListForQuery(loggedInUser.getDataAccessToken(), cellChoice, loggedInUser.getLanguages());
                     } catch (Exception e) {
                         constants.add(e.getMessage());

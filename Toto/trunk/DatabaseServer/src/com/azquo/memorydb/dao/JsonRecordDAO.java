@@ -1,7 +1,6 @@
 package com.azquo.memorydb.dao;
 
 import com.azquo.memorydb.core.AzquoMemoryDB;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -29,8 +28,6 @@ import java.util.concurrent.*;
  */
 public class JsonRecordDAO {
 
-    @Autowired
-    protected JdbcTemplateUtils jdbcTemplateUtils;
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
 //    public static final int UPDATELIMIT = 5000;
@@ -50,7 +47,7 @@ public class JsonRecordDAO {
     }
 
 
-    private class BulkInserter implements Callable<Void> {
+    private static class BulkInserter implements Callable<Void> {
         private final AzquoMemoryDB azquoMemoryDB;
         private final String tableName;
         private final List<JsonRecordTransport> records;
@@ -79,7 +76,7 @@ public class JsonRecordDAO {
                     }
                     insertSql.delete(insertSql.length() - 2, insertSql.length());
                     //System.out.println(insertSql.toString());
-                    jdbcTemplateUtils.update(insertSql.toString(), namedParams);
+                    JdbcTemplateUtils.update(insertSql.toString(), namedParams);
                     System.out.println("bulk inserted " + DecimalFormat.getInstance().format(records.size()) + " into " + tableName + " in " + (System.currentTimeMillis() - track) + " remaining " + totalCount);
                 }
             return null;
@@ -98,7 +95,7 @@ WHERE id IN (1,2,3)
 
      */
 
-    private void bulkUpdate(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
+    private static void bulkUpdate(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
         if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -124,12 +121,12 @@ WHERE id IN (1,2,3)
             }
             updateSql.append(")");
             //System.out.println(updateSql.toString());
-            jdbcTemplateUtils.update(updateSql.toString(), namedParams);
+            JdbcTemplateUtils.update(updateSql.toString(), namedParams);
             System.out.println("bulk updated " + records.size() + " into " + tableName + " in " + (System.currentTimeMillis() - track));
         }
     }
 
-    private void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
+    private static void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
         if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -146,12 +143,12 @@ WHERE id IN (1,2,3)
             }
             updateSql.append(")");
             //System.out.println(updateSql.toString());
-            jdbcTemplateUtils.update(updateSql.toString(), namedParams);
+            JdbcTemplateUtils.update(updateSql.toString(), namedParams);
             System.out.println("bulk deleted " + records.size() + " from " + tableName + " in " + (System.currentTimeMillis() - track));
         }
     }
 
-    public void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws Exception {
+    public static void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult - todo, perhaps for update and possible list optimisation there?
         ExecutorService executor = AzquoMemoryDB.sqlThreadPool;
         List<JsonRecordTransport> toInsert = new ArrayList<>(UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
@@ -197,14 +194,14 @@ WHERE id IN (1,2,3)
 
     }
 
-    public final List<JsonRecordTransport> findFromTableMinMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName, int minId, int maxId) throws DataAccessException {
+    public static List<JsonRecordTransport> findFromTableMinMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName, int minId, int maxId) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
-        return jdbcTemplateUtils.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
+        return JdbcTemplateUtils.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
     }
 
-    public final int findMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName) throws DataAccessException {
+    public static int findMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "`";
-        Integer toReturn = jdbcTemplateUtils.queryForObject(SQL_SELECT_ALL, new HashMap<>(), Integer.class);
+        Integer toReturn = JdbcTemplateUtils.queryForObject(SQL_SELECT_ALL, new HashMap<>(), Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }
 

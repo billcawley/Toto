@@ -66,9 +66,6 @@ public class ZKSpreadsheetCommandController {
     @Autowired
     private UserRegionOptionsDAO userRegionOptionsDAO;
 
-    @Autowired
-    private RMIClient rmiClient;
-
     @RequestMapping
     public void handleRequest(final HttpServletRequest req, HttpServletResponse resp) throws Exception {
         // really necessary? Maybe check
@@ -223,7 +220,7 @@ public class ZKSpreadsheetCommandController {
                             }
                         }
                         // new thing, look for followon, guess we need an instance of ZK azquobook utils
-                        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+                        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO);
                         zkAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                     }
 
@@ -233,7 +230,7 @@ public class ZKSpreadsheetCommandController {
                         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                         }
-                        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService,loginService, userChoiceDAO,userRegionOptionsDAO, rmiClient);
+                        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService,loginService, userChoiceDAO,userRegionOptionsDAO);
                         zkAzquoBookUtils.populateBook(newBook, 0, true);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
@@ -272,7 +269,7 @@ public class ZKSpreadsheetCommandController {
         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
         }
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO);
         zkAzquoBookUtils.populateBook(newBook, 0);
         // here should be the list we're after
         final List<String> choiceList = getChoiceList(newBook, choices.get(selectedChoices.size()));

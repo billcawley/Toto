@@ -2,7 +2,6 @@ package com.azquo.memorydb.dao;
 
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -23,23 +22,15 @@ import java.util.concurrent.*;
  */
 public class NameDAO extends FastDAO{
 
-
-    @Autowired
-    protected JdbcTemplateUtils jdbcTemplateUtils;
     // this value is not picked randomly, tests have it faster than 1k or 10k. It seems with imports bigger is not necessarily better. Possibly to do with query parsing overhead.
 
     //    public static final int UPDATELIMIT = 5000;
-    private static final String FASTNAME = "fast_name";
+    static final String FASTNAME = "fast_name";
     private static final String PROVENANCEID = "provenance_id";
     private static final String ATTRIBUTES = "attributes";
     private static final String CHILDREN = "children";
     private static final String NOPARENTS = "no_parents";
     private static final String NOVALUES = "no_values";
-
-    @Override
-    public String getTableName() {
-        return FASTNAME;
-    }
 
     private static final class NameRowMapper implements RowMapper<Name> {
         final AzquoMemoryDB azquoMemoryDB;
@@ -64,7 +55,7 @@ public class NameDAO extends FastDAO{
     }
 
     // I think sticking to callable even if the return type is null is more consistent
-    private class BulkNameInserter implements Callable<Void> {
+    private static class BulkNameInserter implements Callable<Void> {
         private final AzquoMemoryDB azquoMemoryDB;
         private final List<Name> namesToInsert;
         private final String message;
@@ -101,7 +92,7 @@ public class NameDAO extends FastDAO{
                 }
                 insertSql.delete(insertSql.length() - 2, insertSql.length());
                 //System.out.println(insertSql.toString());
-                jdbcTemplateUtils.update(insertSql.toString(), namedParams);
+                JdbcTemplateUtils.update(insertSql.toString(), namedParams);
                 if (message != null){
                     System.out.println(message);
                 }
@@ -110,7 +101,7 @@ public class NameDAO extends FastDAO{
         }
     }
 
-    public void persistNames(final AzquoMemoryDB azquoMemoryDB, final Collection<Name> names, boolean initialInsert) throws Exception {
+    public static void persistNames(final AzquoMemoryDB azquoMemoryDB, final Collection<Name> names, boolean initialInsert) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult
         // old pattern had update, I think this is a pain and unnecessary, just delete than add to the insert
         ExecutorService executor = AzquoMemoryDB.sqlThreadPool;
@@ -123,7 +114,7 @@ public class NameDAO extends FastDAO{
                 if (!name.getNeedsInserting()) { // either flagged for delete or it exists already and will be reinserted, delete it
                     toDelete.add(name);
                     if (toDelete.size() == UPDATELIMIT) {
-                        bulkDelete(azquoMemoryDB, toDelete);
+                        bulkDelete(azquoMemoryDB, toDelete, FASTNAME);
                         toDelete = new ArrayList<>(UPDATELIMIT);
                     }
                     counter++;
@@ -133,7 +124,7 @@ public class NameDAO extends FastDAO{
                 }
             }
         }
-        bulkDelete(azquoMemoryDB, toDelete);
+        bulkDelete(azquoMemoryDB, toDelete, FASTNAME);
         System.out.println("bulk deleted " + counter);
         int insertCount = 0;
         for (Name name:names){
@@ -159,13 +150,13 @@ public class NameDAO extends FastDAO{
         System.out.println("Name save complete.");
     }
 
-    public final List<Name> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
+    public static List<Name> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTNAME + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTNAME + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
-        return jdbcTemplateUtils.query(SQL_SELECT_ALL, new NameRowMapper(azquoMemoryDB));
+        return JdbcTemplateUtils.query(SQL_SELECT_ALL, new NameRowMapper(azquoMemoryDB));
     }
 
-    void createFastTableIfItDoesntExist(final String databaseName){
-        jdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + FASTNAME + "` (\n" +
+    static void createFastTableIfItDoesntExist(final String databaseName){
+        JdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + FASTNAME + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +
                 "  `attributes` text COLLATE utf8mb4_unicode_ci NOT NULL,\n" +
@@ -177,7 +168,11 @@ public class NameDAO extends FastDAO{
 
     }
 
-    public void zapAdditive(final String databaseName){
-        jdbcTemplateUtils.updateNoException("ALTER TABLE `" + databaseName + "`.`" + FASTNAME + "` DROP `additive`;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+    public static void zapAdditive(final String databaseName){
+        JdbcTemplateUtils.updateNoException("ALTER TABLE `" + databaseName + "`.`" + FASTNAME + "` DROP `additive`;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+    }
+
+    public static int findMaxId(final AzquoMemoryDB azquoMemoryDB) throws DataAccessException {
+        return findMaxId(azquoMemoryDB, FASTNAME);
     }
 }

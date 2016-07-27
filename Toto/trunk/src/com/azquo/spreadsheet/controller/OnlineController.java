@@ -65,8 +65,6 @@ public class OnlineController {
     private SpreadsheetService spreadsheetService;
     @Autowired
     private ImportService importService;
-    @Autowired
-    private RMIClient rmiClient;
 
     // TODO : break up into separate functions?
 
@@ -313,7 +311,7 @@ public class OnlineController {
                                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                                     book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
                                     if (!templateMode){
-                                        ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, onlineReportDAO, null, rmiClient);
+                                        ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, onlineReportDAO, null);
                                         boolean executeName = false;
                                         // annoying, factor?
                                         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {

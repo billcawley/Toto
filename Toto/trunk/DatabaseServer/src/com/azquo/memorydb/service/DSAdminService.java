@@ -9,7 +9,6 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.dao.MySQLDatabaseManager;
 import com.azquo.spreadsheet.DSSpreadsheetService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
 
@@ -25,24 +24,13 @@ import java.util.*;
  */
 public class DSAdminService {
 
-    @Autowired
-    DSSpreadsheetService dsSpreadsheetService;
-    @Autowired
-    NameService nameService;
-    @Autowired
-    ValueService valueService;
-    @Autowired
-    MySQLDatabaseManager mySQLDatabaseManager;
-    @Autowired
-    MemoryDBManager memoryDBManager;
-
-    private Name copyName(AzquoMemoryDBConnection toDB, Name name, Name parent, List<String> languages, Collection<Name> allowed, Map<Name, Name> dictionary) throws Exception {
+    private static Name copyName(AzquoMemoryDBConnection toDB, Name name, Name parent, List<String> languages, Collection<Name> allowed, Map<Name, Name> dictionary) throws Exception {
         Name name2 = dictionary.get(name);
         if (name2 != null) {
             return name2;
         }
         //consider ALL names as local.  Global names will be found from dictionary
-        name2 = nameService.findOrCreateNameInParent(toDB, name.getDefaultDisplayName(), parent, true, languages);
+        name2 = NameService.findOrCreateNameInParent(toDB, name.getDefaultDisplayName(), parent, true, languages);
         for (String attName : name.getAttributes().keySet()) {
             name2.setAttributeWillBePersisted(attName, name.getAttribute(attName));
         }
@@ -55,17 +43,17 @@ public class DSAdminService {
         return name2;
     }
 
-    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
-        AzquoMemoryDBConnection sourceConnection = dsSpreadsheetService.getConnectionFromAccessToken(source);
-        AzquoMemoryDBConnection targetConnection = dsSpreadsheetService.getConnectionFromAccessToken(target);
+    public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
+        AzquoMemoryDBConnection sourceConnection = DSSpreadsheetService.getConnectionFromAccessToken(source);
+        AzquoMemoryDBConnection targetConnection = DSSpreadsheetService.getConnectionFromAccessToken(target);
         if (targetConnection == null) {
             throw new Exception("cannot log in to " + target.getPersistenceName());
         }
         targetConnection.setProvenance("generic admin", "transfer from", source.getPersistenceName(), "");
         //can't use 'nameService.decodeString as this may have multiple values in each list
-        List<Set<Name>> namesToTransfer = nameService.decodeString(sourceConnection, nameList, readLanguages);
+        List<Set<Name>> namesToTransfer = NameService.decodeString(sourceConnection, nameList, readLanguages);
         //find the data to transfer
-        Map<Set<Name>, Set<Value>> showValues = valueService.getSearchValues(namesToTransfer);
+        Map<Set<Name>, Set<Value>> showValues = ValueService.getSearchValues(namesToTransfer);
 
         //extract the names from this data
         final Set<Name> namesFound = new HashSet<>();
@@ -96,43 +84,43 @@ public class DSAdminService {
                 names2.add(dictionary.get(name));
 
             }
-            valueService.storeValueWithProvenanceAndNames(targetConnection, valueService.addValues(showValues.get(nameValues)), names2);
+            ValueService.storeValueWithProvenanceAndNames(targetConnection, ValueService.addValues(showValues.get(nameValues)), names2);
         }
         targetConnection.persist();
     }
 
-    public void emptyDatabase(String persistenceName) throws Exception {
-        if (memoryDBManager.isDBLoaded(persistenceName)){ // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
-            final AzquoMemoryDB azquoMemoryDB = memoryDBManager.getAzquoMemoryDB(persistenceName, null);
-            azquoMemoryDB.synchronizedClear(this);
-            memoryDBManager.removeDBfromMap(persistenceName);
+    public static void emptyDatabase(String persistenceName) throws Exception {
+        if (MemoryDBManager.isDBLoaded(persistenceName)){ // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
+            final AzquoMemoryDB azquoMemoryDB = MemoryDBManager.getAzquoMemoryDB(persistenceName, null);
+            azquoMemoryDB.synchronizedClear();
+            MemoryDBManager.removeDBfromMap(persistenceName);
         } else {
             emptyDatabaseInPersistence(persistenceName);
         }
     }
 
-    public void emptyDatabaseInPersistence(String persistenceName) throws Exception {
-            mySQLDatabaseManager.emptyDatabase(persistenceName);
+    public static void emptyDatabaseInPersistence(String persistenceName) throws Exception {
+            MySQLDatabaseManager.emptyDatabase(persistenceName);
     }
 
-    public void dropDatabase(String persistenceName) throws Exception {
-        if (memoryDBManager.isDBLoaded(persistenceName)){ // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
-            final AzquoMemoryDB azquoMemoryDB = memoryDBManager.getAzquoMemoryDB(persistenceName, null);
-            azquoMemoryDB.synchronizedDrop(this);
-            memoryDBManager.removeDBfromMap(persistenceName);
+    public static void dropDatabase(String persistenceName) throws Exception {
+        if (MemoryDBManager.isDBLoaded(persistenceName)){ // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
+            final AzquoMemoryDB azquoMemoryDB = MemoryDBManager.getAzquoMemoryDB(persistenceName, null);
+            azquoMemoryDB.synchronizedDrop();
+            MemoryDBManager.removeDBfromMap(persistenceName);
         } else {
             dropDatabaseInPersistence(persistenceName);
         }
     }
 
-    public void dropDatabaseInPersistence(String persistenceName) throws Exception {
-            mySQLDatabaseManager.dropDatabase(persistenceName);
+    public static void dropDatabaseInPersistence(String persistenceName) throws Exception {
+            MySQLDatabaseManager.dropDatabase(persistenceName);
     }
 
-    public void createDatabase(final String persistenceName) throws Exception {
-        if (memoryDBManager.isDBLoaded(persistenceName)){
+    public static void createDatabase(final String persistenceName) throws Exception {
+        if (MemoryDBManager.isDBLoaded(persistenceName)){
             throw new Exception("cannot create new memory database one attached to that mysql database " + persistenceName + " already exists");
         }
-            mySQLDatabaseManager.createNewDatabase(persistenceName);
+        MySQLDatabaseManager.createNewDatabase(persistenceName);
     }
 }

@@ -2,7 +2,6 @@ package com.azquo.memorydb.dao;
 
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Value;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -24,17 +23,10 @@ import java.util.concurrent.*;
  */
 public class ValueDAO extends FastDAO {
 
-    @Autowired
-    protected JdbcTemplateUtils jdbcTemplateUtils;
-    private static final String FASTVALUE = "fast_value";
+    public static final String FASTVALUE = "fast_value";
     private static final String PROVENANCEID = "provenance_id";
     private static final String TEXT = "text";
     private static final String NAMES = "names";
-
-    @Override
-    public String getTableName() {
-        return FASTVALUE;
-    }
 
     private static final class ValueRowMapper implements RowMapper<Value> {
         final AzquoMemoryDB azquoMemoryDB;
@@ -58,7 +50,7 @@ public class ValueDAO extends FastDAO {
     }
 
 
-    private class BulkValuesInserter implements Callable<Void> {
+    private static class BulkValuesInserter implements Callable<Void> {
         private final AzquoMemoryDB azquoMemoryDB;
         private final List<Value> valuesToInsert;
         private final int totalCount;
@@ -92,14 +84,14 @@ public class ValueDAO extends FastDAO {
                 }
                 insertSql.delete(insertSql.length() - 2, insertSql.length());
                 //System.out.println(insertSql.toString());
-                jdbcTemplateUtils.update(insertSql.toString(), namedParams);
+                JdbcTemplateUtils.update(insertSql.toString(), namedParams);
                 System.out.println("bulk inserted " + DecimalFormat.getInstance().format(valuesToInsert.size()) + " into " + FASTVALUE + " in " + (System.currentTimeMillis() - track) + " remaining " + totalCount);
             }
             return null;
         }
     }
 
-    public void persistValues(final AzquoMemoryDB azquoMemoryDB, final Collection<Value> values, boolean initialInsert) throws Exception {
+    public static void persistValues(final AzquoMemoryDB azquoMemoryDB, final Collection<Value> values, boolean initialInsert) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult
         // old pattern had update, I think this is a pain and unnecessary, just delete than add to the insert
         ExecutorService executor = AzquoMemoryDB.sqlThreadPool;
@@ -111,13 +103,13 @@ public class ValueDAO extends FastDAO {
                 if (!value.getNeedsInserting()) { // either flagged for delete or it exists already and will be reinserted, delete it
                     toDelete.add(value);
                     if (toDelete.size() == UPDATELIMIT) {
-                        bulkDelete(azquoMemoryDB, toDelete);
+                        bulkDelete(azquoMemoryDB, toDelete, FASTVALUE);
                         toDelete = new ArrayList<>(UPDATELIMIT);
                     }
                 }
             }
         }
-        bulkDelete(azquoMemoryDB, toDelete);
+        bulkDelete(azquoMemoryDB, toDelete, FASTVALUE);
         int insertCount = 0;
         for (Value value: values){
             if (!value.getNeedsDeleting()) insertCount++;
@@ -140,8 +132,8 @@ public class ValueDAO extends FastDAO {
 
     }
 
-    void createFastTableIfItDoesntExist(final String databaseName){
-        jdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + FASTVALUE + "` (\n" +
+    static void createFastTableIfItDoesntExist(final String databaseName){
+        JdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + FASTVALUE + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +
                 "  `text` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,\n" +
@@ -150,8 +142,12 @@ public class ValueDAO extends FastDAO {
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
-    public final List<Value> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
+    public static List<Value> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
-        return jdbcTemplateUtils.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));
+        return JdbcTemplateUtils.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));
+    }
+
+    public static int findMaxId(final AzquoMemoryDB azquoMemoryDB) throws DataAccessException {
+        return findMaxId(azquoMemoryDB, FASTVALUE);
     }
 }

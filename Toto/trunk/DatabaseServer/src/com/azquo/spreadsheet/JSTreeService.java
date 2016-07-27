@@ -23,40 +23,35 @@ import java.util.*;
  */
 public class JSTreeService {
 
-    @Autowired
-    DSSpreadsheetService dsSpreadsheetService; // to get the connection
-    @Autowired
-    NameService nameService;
-
-    public Set<Name> interpretNameFromStrings(DatabaseAccessToken databaseAccessToken, Set<String> nameStrings) throws Exception {
+    public static Set<Name> interpretNameFromStrings(DatabaseAccessToken databaseAccessToken, Set<String> nameStrings) throws Exception {
         Set<Name> names = new HashSet<>();
-        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         for (String nString : nameStrings) {
-            Name name = nameService.findByName(azquoMemoryDBConnection, nString);
+            Name name = NameService.findByName(azquoMemoryDBConnection, nString);
             if (name != null) names.add(name);
         }
         return names;
     }
 
-    public Set<Name> interpretNameFromIds(DatabaseAccessToken databaseAccessToken, Set<Integer> ids) throws Exception {
+    public static Set<Name> interpretNameFromIds(DatabaseAccessToken databaseAccessToken, Set<Integer> ids) throws Exception {
         Set<Name> names = new HashSet<>();
-        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         for (int id : ids) {
-            Name name = nameService.findById(azquoMemoryDBConnection, id);
+            Name name = NameService.findById(azquoMemoryDBConnection, id);
             if (name != null) names.add(name);
         }
         return names;
     }
 
-    public List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        return nameService.attributeList(azquoMemoryDBConnection);
+    public static List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        return NameService.attributeList(azquoMemoryDBConnection);
     }
 
     // being pared down to just the edit attribute stuff. Json is sueful here, lists of attributes . . .maybe parse to java objects by this point?
 
-    public void editAttributes(DatabaseAccessToken databaseAccessToken, int nameId, Map<String, String> attributes) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+    public static void editAttributes(DatabaseAccessToken databaseAccessToken, int nameId, Map<String, String> attributes) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Name name = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameId);
         if (name == null) {
             throw new Exception("Name not found for id " + nameId);
@@ -68,7 +63,7 @@ public class JSTreeService {
         azquoMemoryDBConnection.persist();
     }
 
-    private int getTotalValues(Name name) {
+    private static int getTotalValues(Name name) {
         int values = name.getValues().size();
         for (Name child : name.getChildren()) {
             values += getTotalValues(child);
@@ -77,8 +72,8 @@ public class JSTreeService {
     }
 
     // was about 40 lines before jackson though the class above is of course important. Changing name to details not structure which implies many levels.
-    public JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
-        Name name = nameService.findById(dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), nameId);
+    public static JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
+        Name name = NameService.findById(DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), nameId);
         Map<String, Object> attributesForJackson = new HashMap<>();
         attributesForJackson.putAll(name.getAttributes());
         return new JsonChildStructure(name.getDefaultDisplayName()
@@ -90,40 +85,40 @@ public class JSTreeService {
         );
     }
 
-    public JsonChildren.Node createJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
-        final AzquoMemoryDBConnection connectionFromAccessToken = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        Name name = nameService.findById(connectionFromAccessToken, nameId); // the parent, will be null if -1 passed in the case of adding to root . . .
-        Name newName = nameService.findOrCreateNameInParent(connectionFromAccessToken, "newnewnew", name, true);
+    public static JsonChildren.Node createJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
+        final AzquoMemoryDBConnection connectionFromAccessToken = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        Name name = NameService.findById(connectionFromAccessToken, nameId); // the parent, will be null if -1 passed in the case of adding to root . . .
+        Name newName = NameService.findOrCreateNameInParent(connectionFromAccessToken, "newnewnew", name, true);
         newName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, "New node");
         return new JsonChildren.Node(-1, "New node", false, newName.getId(), nameId);
     }
 
     // left it pretty simple
-    public void deleteJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
-        final AzquoMemoryDBConnection connectionFromAccessToken = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        Name name = nameService.findById(connectionFromAccessToken, nameId);
+    public static void deleteJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
+        final AzquoMemoryDBConnection connectionFromAccessToken = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        Name name = NameService.findById(connectionFromAccessToken, nameId);
         name.delete();
     }
 
     // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
-    public JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+    public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         Map<String, Boolean> state = new HashMap<>();
         state.put("opened", true);
         String text = "";
         Collection<Name> children = new ArrayList<>();
-        Name name = nameId > 0 ? nameService.findById(azquoMemoryDBConnection, nameId) : null;
+        Name name = nameId > 0 ? NameService.findById(azquoMemoryDBConnection, nameId) : null;
         if (jsTreeId == 0 && name == null) {// will be true on the initial call
             text = "root";
             if (searchTerm == null || searchTerm.length() == 0) {// also true on the initial call
-                children = nameService.findTopNames(azquoMemoryDBConnection, language);// hence we get the top names, OK
+                children = NameService.findTopNames(azquoMemoryDBConnection, language);// hence we get the top names, OK
             } else {
                 try {
-                    children = nameService.parseQuery(azquoMemoryDBConnection, searchTerm);
+                    children = NameService.parseQuery(azquoMemoryDBConnection, searchTerm);
                 } catch (Exception e) {//carry on
                 }
                 if (children == null || children.size() == 0) {
-                    children = nameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm);
+                    children = NameService.getNamesWithAttributeContaining(azquoMemoryDBConnection, language, searchTerm);
                 }
             }
         } else if (name != null) { // typically on open
@@ -196,9 +191,9 @@ public class JSTreeService {
         return new JsonChildren(jsTreeId, state, text, childNodes, type);
     }
 
-    public String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        Name name = nameService.findByName(azquoMemoryDBConnection, nameString);
+    public static String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        Name name = NameService.findByName(azquoMemoryDBConnection, nameString);
         if (name != null) {
             return name.getAttribute(attribute);
         }
@@ -206,9 +201,9 @@ public class JSTreeService {
 
     }
 
-    public void setNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute, String attVal) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = dsSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        Name name = nameService.findByName(azquoMemoryDBConnection, nameString);
+    public static void setNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute, String attVal) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        Name name = NameService.findByName(azquoMemoryDBConnection, nameString);
         if (name != null) {
             name.setAttributeWillBePersisted(attribute, attVal);
         }

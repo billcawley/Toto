@@ -53,9 +53,6 @@ public class SpreadsheetService {
     private static final Logger logger = Logger.getLogger(SpreadsheetService.class);
 
     @Autowired
-    RMIClient rmiClient;
-
-    @Autowired
     UserChoiceDAO userChoiceDAO;
 
     @Autowired
@@ -170,7 +167,7 @@ public class SpreadsheetService {
     public void readExcel(ModelMap model, LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName, String databaseId, String permissionId) throws Exception {
         String message;
         String imagePath = getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/images/";
-        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this, rmiClient);
+        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this);
         StringBuilder worksheet = new StringBuilder();
         StringBuilder tabs = new StringBuilder();
         StringBuilder head = new StringBuilder();
@@ -344,7 +341,7 @@ public class SpreadsheetService {
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , UserRegionOptions userRegionOptions) throws Exception {
-        return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
+        return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
                 userRegionOptions.getHideRows(), userRegionOptions.getRowLimit(), userRegionOptions.getColumnLimit(), userRegionOptions.getSortRow()
                 , userRegionOptions.getSortRowAsc(), userRegionOptions.getSortColumn(), userRegionOptions.getSortColumnAsc(), userRegionOptions.getHighlightDays());
     }
@@ -358,7 +355,7 @@ public class SpreadsheetService {
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            return rmiClient.getServerInterface(databaseAccessToken.getServerIp()).formatDataRegionProvenanceForOutput(databaseAccessToken, cellsAndHeadingsForDisplay.getRowHeadingsSource()
+            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).formatDataRegionProvenanceForOutput(databaseAccessToken, cellsAndHeadingsForDisplay.getRowHeadingsSource()
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                     , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(), maxSize);
         }
@@ -367,7 +364,7 @@ public class SpreadsheetService {
 
     public void databasePersist(LoggedInUser loggedInUser) throws Exception {
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-        rmiClient.getServerInterface(databaseAccessToken.getServerIp()).persistDatabase(databaseAccessToken);
+        RMIClient.getServerInterface(databaseAccessToken.getServerIp()).persistDatabase(databaseAccessToken);
     }
 
     public void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName) throws Exception {
@@ -378,7 +375,7 @@ public class SpreadsheetService {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
         if (cellsAndHeadingsForDisplay != null) {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            rmiClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
+            RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
         }
     }
 
@@ -531,7 +528,7 @@ public class SpreadsheetService {
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
-                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(this, loginService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
+                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(this, loginService, userChoiceDAO, userRegionOptionsDAO);
                 bookUtils.populateBook(book, 0);
                 // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
                 if ("PDF".equals(reportSchedule.getType())) {
@@ -597,7 +594,7 @@ public class SpreadsheetService {
     public Map<String, String> getImageList(LoggedInUser loggedInUser) throws Exception {
         Map<String, String> images = new HashMap<>();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-        String imageList = rmiClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
+        String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
         if (imageList != null) {
             String[] imageArray = imageList.split(",");
             for (String image : imageArray) {
