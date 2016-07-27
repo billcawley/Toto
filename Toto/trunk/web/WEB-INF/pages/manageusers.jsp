@@ -13,7 +13,7 @@
 				<td>Name</td>
 				<td>User Email</td>
 				<td>End Date</td>
-				<td>Business Id</td>
+				<!--<td>Business Id</td>-->
 				
 				<td>Status</td>
 				<td width="30"></td>
@@ -29,7 +29,7 @@
 				<td>${user.email}</td>
 				
 				<td>${user.endDate}</td>
-				<td>${user.businessId}</td>
+				<!--<td>${user.businessId}</td>-->
 				
 				<td>${user.status}</td>
 				<td><a href="/api/ManageUsers?deleteId=${user.id}" title="Delete ${user.name}" onclick="return confirm('Are you sure?')" class="button small alt fa fa-trash"></a></td>

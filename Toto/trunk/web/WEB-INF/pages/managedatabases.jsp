@@ -116,9 +116,9 @@ Created by IntelliJ IDEA.
 					<!--<td>${database.businessId}</td>-->
 					<td>Name</td>
 					<td>Persistence Name</td>
-					<td></td>
 					<td>Name Count</td>
 					<td>Value Count</td>
+					<td></td>
 					<td></td>
 					<td></td>
 					<td></td>
@@ -133,12 +133,12 @@ Created by IntelliJ IDEA.
 					<!--<td>${database.businessId}</td> -->
 					<td>${database.name}</td>
 					<td>${database.persistenceName}</td>
-					<td><a href="/api/ManageDatabaseBackups?databaseId=${database.id}">Manage Backups</a></td>
 					<td>${database.nameCount}</td>
 					<td>${database.valueCount}</td>
 					<td><a href="/api/Jstree?op=new&database=${database.urlEncodedName}" data-title="${database.urlEncodedName}" class="button small inspect" title="Inspect"><span class="fa fa-eye" title="Inspect ${database.name}"></span></a></td>
 					<td><a href="/api/ManageDatabases?emptyId=${database.id}" onclick="return confirm('Are you sure you want to Empty ${database.name}?')" class="button small" title="Empty ${database.name}"><span class="fa fa-bomb" title="Empty"></span></a></td>
 					<td><a href="/api/ManageDatabases?deleteId=${database.id}" onclick="return confirm('Are you sure you want to Delete ${database.name}?')" class="button small alt" title="Delete ${database.name}"><span class="fa fa-trash" title="Delete"></span> </a></td>
+					<td><a href="/api/ManageDatabaseBackups?databaseId=${database.id}" class="button small alt" title="Manage Backups for ${database.name}"><span class="fa fa-archive" title="Backups"></span> </a></td>
 					<td><c:if test="${database.loaded}"><a href="/api/ManageDatabases?unloadId=${database.id}" class="button small" title="Unload ${database.name}"><span class="fa fa-eject" title="Unload"></span></a></c:if></td>
 				</tr>
 				</c:forEach>
