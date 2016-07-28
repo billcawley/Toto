@@ -40,21 +40,6 @@ import java.util.List;
 @RequestMapping("/Jstree")
 public class JstreeController {
 
-    @Autowired
-    private LoginService loginService;
-
-    @Autowired
-    SpreadsheetService spreadsheetService;
-
-    @Autowired
-    AdminService adminService;
-
-    @Autowired
-    OnlineReportDAO onlineReportDAO;
-
-    @Autowired
-    DatabaseDAO databaseDAO;
-
     private static final Logger logger = Logger.getLogger(JstreeController.class);
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -82,7 +67,7 @@ public class JstreeController {
             if ((database == null || database.length() == 0) && loggedInUser.getDatabase() != null) {
                 database = loggedInUser.getDatabase().getName();
             } else {
-                loginService.switchDatabase(loggedInUser, database);
+                LoginService.switchDatabase(loggedInUser, database);
             }
             int topNodeInt = ServletRequestUtils.getIntParameter(request, "topnode", 0);
             int parentInt = ServletRequestUtils.getIntParameter(request, "parent", 0);
@@ -122,11 +107,11 @@ public class JstreeController {
                         }
                         model.addAttribute("message", "");
                         if (database != null && database.length() > 0) {
-                            Database newDB = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
+                            Database newDB = DatabaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
                             if (newDB == null) {
                                 model.addAttribute("message", "no database chosen");
                             }
-                            loginService.switchDatabase(loggedInUser, newDB);
+                            LoginService.switchDatabase(loggedInUser, newDB);
                         }
                         if (itemsChosen == null) itemsChosen = "";
                         model.addAttribute("parents", parents);

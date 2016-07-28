@@ -35,16 +35,6 @@ import java.util.List;
 @RequestMapping("/ManageReports")
 public class ManageReportsController {
 
-    @Autowired
-    private AdminService adminService;
-
-    @Autowired
-    private OnlineReportDAO onlineReportDAO;
-    @Autowired
-    private DatabaseDAO databaseDAO;
-    @Autowired
-    private DatabaseReportLinkDAO databaseReportLinkDAO;
-
     private static final Logger logger = Logger.getLogger(ManageReportsController.class);
 
     public class DatabaseSelected{
@@ -82,29 +72,29 @@ public class ManageReportsController {
             return "redirect:/api/Login";
         } else {
             if (deleteId != null){
-                adminService.removeReportById(loggedInUser,Integer.parseInt(deleteId));
+                AdminService.removeReportById(loggedInUser,Integer.parseInt(deleteId));
             }
             if (editId != null) {
-                final OnlineReport theReport = onlineReportDAO.findById(Integer.parseInt(editId)); // yes could exception, don't care at the mo
+                final OnlineReport theReport = OnlineReportDAO.findById(Integer.parseInt(editId)); // yes could exception, don't care at the mo
                 if (theReport.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
                     // ok check to see if data was submitted
                     if (submit != null) {
                         // to keep intelliJ happy, I'm not sure if this is a good idea or not? I suppose protects against logic above being changed unpredictably
-                        databaseReportLinkDAO.unLinkReport(theReport.getId());
+                        DatabaseReportLinkDAO.unLinkReport(theReport.getId());
                         for (String databaseId : databaseIdList){
-                            databaseReportLinkDAO.link(Integer.parseInt(databaseId), theReport.getId());
+                            DatabaseReportLinkDAO.link(Integer.parseInt(databaseId), theReport.getId());
                         }
                         theReport.setReportName(name);
                         theReport.setReportCategory(category);
                         theReport.setExplanation(explanation);
-                        onlineReportDAO.store(theReport);
-                        model.put("reports", adminService.getReportList(loggedInUser));
+                        OnlineReportDAO.store(theReport);
+                        model.put("reports", AdminService.getReportList(loggedInUser));
                         return "managereports";
                     }
-                    final List<Integer> databaseIdsForReportId = databaseReportLinkDAO.getDatabaseIdsForReportId(theReport.getId());
+                    final List<Integer> databaseIdsForReportId = DatabaseReportLinkDAO.getDatabaseIdsForReportId(theReport.getId());
                     model.put("id", editId);
                     List<DatabaseSelected> databasesSelected = new ArrayList<>();
-                    final List<Database> forBusinessId = databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+                    final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
                     for (Database database : forBusinessId){
                         databasesSelected.add(new DatabaseSelected(databaseIdsForReportId.contains(database.getId()), database));
                     }
@@ -117,7 +107,7 @@ public class ManageReportsController {
                 }
             }
             // if not editing then very simple
-            model.put("reports", adminService.getReportList(loggedInUser));
+            model.put("reports", AdminService.getReportList(loggedInUser));
             return "managereports";
         }
     }

@@ -14,7 +14,6 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
-import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
@@ -22,16 +21,12 @@ import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.core.env.Environment;
 import org.springframework.ui.ModelMap;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 
-import javax.servlet.ServletContext;
 import java.io.*;
 import java.net.InetAddress;
 import java.time.LocalDateTime;
@@ -45,106 +40,22 @@ import java.util.*;
  * it seems that trying to configure the properties in spring is a problem
  * this works but I'm a bit fed up of something that should be simple, go to a simple classpath read??
 */
-@Configuration
-@PropertySource({"classpath:azquo.properties"})
 
 public class SpreadsheetService {
 
     private static final Logger logger = Logger.getLogger(SpreadsheetService.class);
 
-    @Autowired
-    UserChoiceDAO userChoiceDAO;
+    private static final Properties azquoProperties = new Properties();
 
-    @Autowired
-    BusinessDAO businessDAO;
+    private static final String host;
 
-    @Autowired
-    UserRegionOptionsDAO userRegionOptionsDAO;
-
-    @Autowired
-    LoginService loginService;
-
-    @Autowired
-    AdminService adminService;
-
-    @Autowired
-    DatabaseDAO databaseDAO;
-
-    @Autowired
-    DatabaseServerDAO databaseServerDAO;
-
-    @Autowired
-    OnlineReportDAO onlineReportDAO;
-
-    @Autowired
-    LoginRecordDAO loginRecordDAO;
-
-    @Autowired
-    ReportScheduleDAO reportScheduleDAO;
-
-    @Autowired
-    UploadRecordDAO uploadRecordDAO;
-
-    @Autowired
-    PermissionDAO permissionDAO;
-
-    @Autowired
-    OpenDatabaseDAO openDatabaseDAO;
-
-    @Autowired
-    UserDAO userDAO;
-
-    @Autowired
-    ServletContext servletContext;
-
-    @Autowired
-    private Environment env;
-
-    private final String host;
-    private String homeDir = null;
-
-    // ints not boolean as I want to be able to tell if not set. Thread safety not such a concern, it's reading from a file, can't see how the state would be corrupted
-    private int devMachine = -1;
-    private int asposeLicense = -1;
-
-    private static final String AZQUOHOME = "azquo.home";
-    private static final String ASPOSELICENSE = "aspose.license";
-    private static final String DEVMACHINE = "dev.machine";
-
-    public String getHomeDir() {
-        if (homeDir == null) {
-            homeDir = env.getProperty(host + "." + AZQUOHOME);
-            if (homeDir == null) {
-                homeDir = env.getProperty(AZQUOHOME);
-            }
+    static {
+        System.out.println("attempting properties load from classpath");
+        try {
+            azquoProperties.load(SpreadsheetService.class.getClassLoader().getResourceAsStream("azquo.properties"));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return homeDir;
-    }
-
-    public boolean useAsposeLicense() {
-        if (asposeLicense == -1) {
-            if (env.getProperty(host + "." + ASPOSELICENSE) != null) {
-                asposeLicense = (env.getProperty(host + "." + ASPOSELICENSE).equalsIgnoreCase("true") ? 1 : 0);
-            } else {
-                // if null default false
-                asposeLicense = (env.getProperty(ASPOSELICENSE) != null && env.getProperty(ASPOSELICENSE).equalsIgnoreCase("true") ? 1 : 0);
-            }
-        }
-        return asposeLicense == 1;
-    }
-
-    public boolean onADevMachine() {
-        if (devMachine == -1) {
-            if (env.getProperty(host + "." + DEVMACHINE) != null) {
-                devMachine = (env.getProperty(host + "." + DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
-            } else {
-                devMachine = (env.getProperty(DEVMACHINE) != null && env.getProperty(DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
-            }
-        }
-        return devMachine == 1;
-    }
-
-    public SpreadsheetService() {
         String current = null;
         try {
             current = new File(".").getCanonicalPath();
@@ -163,160 +74,67 @@ public class SpreadsheetService {
         host = thost;
     }
 
-    // to load the old AzquoBook. Will be phased out so I'll leave the HTML in here.
-    public void readExcel(ModelMap model, LoggedInUser loggedInUser, OnlineReport onlineReport, String spreadsheetName, String databaseId, String permissionId) throws Exception {
-        String message;
-        String imagePath = getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/images/";
-        AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, this);
-        StringBuilder worksheet = new StringBuilder();
-        StringBuilder tabs = new StringBuilder();
-        StringBuilder head = new StringBuilder();
-        loggedInUser.setAzquoBook(azquoBook);  // is this a heavy object to put against the session?
-        if (spreadsheetName == null) {
-            spreadsheetName = "";
-        }
-        if (onlineReport.getId() == 1 && spreadsheetName.equals("Upload")) {
-            model.addAttribute("enctype", " enctype=\"multipart/form-data\" ");
-        } else {
-            model.addAttribute("enctype", "");
-        }
-        try {
-            if (onlineReport.getId() < 2) {// we don't look in the DB directory
-                azquoBook.loadBook(onlineReport.getFilename(), useAsposeLicense());
-            } else {
-                //note - the database specified in the report may not be the current database (as in applications such as Magento and reviews), but be 'temp'
-                String filepath = ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
-                azquoBook.loadBook(getHomeDir() + filepath, useAsposeLicense());
+    private static String homeDir = null;
+
+    // ints not boolean as I want to be able to tell if not set. Thread safety not such a concern, it's reading from a file, can't see how the state would be corrupted
+    private static int devMachine = -1;
+
+    private static final String AZQUOHOME = "azquo.home";
+    private static final String DEVMACHINE = "dev.machine";
+
+    public static String getHomeDir() {
+        if (homeDir == null) {
+            homeDir = azquoProperties.getProperty(host + "." + AZQUOHOME);
+            if (homeDir == null) {
+                homeDir = azquoProperties.getProperty(AZQUOHOME);
             }
-            azquoBook.dataRegionPrefix = AzquoBook.azDataRegion;
-            spreadsheetName = azquoBook.printTabs(tabs, spreadsheetName);
-            message = azquoBook.convertSpreadsheetToHTML(loggedInUser, onlineReport.getId(), spreadsheetName, worksheet);
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw (e);
         }
-        head.append("<style>\n");
-        head.append(azquoBook.printAllStyles());
-        head.append(readFile("css/excelStyle.css"));
-        head.append("</style>\n");
-        //velocityContext.put("script",readFile("online.js").toString());
-        //velocityContext.put("topmenu",createTopMenu(loggedInConnection).toString());
-        azquoBook.fillVelocityOptionInfo(loggedInUser, model, onlineReport.getId());
-
-        model.addAttribute("tabs", tabs.toString());
-        model.addAttribute("topmessage", message);
-        if (onlineReport.getId() == 1 && spreadsheetName.equalsIgnoreCase("reports")) {
-            spreadsheetName = "";
-        }
-        model.addAttribute("spreadsheetname", spreadsheetName);
-        model.addAttribute("topcell", azquoBook.getTopCell() + "");
-        model.addAttribute("leftcell", azquoBook.getLeftCell() + "");
-        model.addAttribute("maxheight", azquoBook.getMaxHeight() + "px");
-        model.addAttribute("maxwidth", azquoBook.getMaxWidth() + "px");
-        model.addAttribute("maxrow", azquoBook.getMaxRow() + "");
-        model.addAttribute("maxcol", azquoBook.getMaxCol() + "");
-        model.addAttribute("reportid", onlineReport.getId() + "");
-        model.addAttribute("databaseid", databaseId);
-        model.addAttribute("permissionid", permissionId);
-        if (azquoBook.dataRegionPrefix.equals(AzquoBook.azDataRegion)) {
-
-            model.addAttribute("menuitems", "[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"},{\"position\":3,\"name\":\"Highlight changes\",\"enabled\":true,\"link\":\"showHighlight()\"}]");
-        } else {
-            model.addAttribute("menuitems", "[{\"position\":1,\"name\":\"Provenance\",\"enabled\":true,\"link\":\"showProvenance()\"}," +
-                    "{\"position\":2,\"name\":\"Edit\",\"enabled\":true,\"link\":\"edit()\"}," +
-                    "{\"position\":3,\"name\":\"Cut\",\"enabled\":true,\"link\":\"cut()\"}," +
-                    "{\"position\":4,\"name\":\"Copy\",\"enabled\":true,\"link\":\"copy()\"}," +
-                    "{\"position\":5,\"name\":\"Paste before\",\"enabled\":true,\"link\":\"paste(0)\"}," +
-                    "{\"position\":6,\"name\":\"Paste after\",\"enabled\":true,\"link\":\"paste(1)\"}," +
-                    "{\"position\":7,\"name\":\"Paste into\",\"enabled\":true,\"link\":\"paste(2)\"}," +
-                    "{\"position\":8,\"name\":\"Delete\",\"enabled\":true,\"link\":\"deleteName()\"}]");
-        }
-
-        model.addAttribute("styles", head.toString());
-        String ws = worksheet.toString();
-/*        if (worksheet.indexOf("$azquodatabaselist") > 0) {
-            ws = ws.replace("$azquodatabaselist", createDatabaseSelect(loggedInUser));
-        }*/
-        if (ws.indexOf("$fileselect") > 0) {
-            ws = ws.replace("$fileselect", "<input type=\"file\" name=\"uploadfile\">");
-        }
-        model.addAttribute("workbook", ws);
-        model.addAttribute("charts", azquoBook.drawCharts(loggedInUser, imagePath).toString());
+        return homeDir;
     }
 
-/*    public void executeLoop(LoggedInConnection loggedInConnection, int reportId, List<SetNameChosen> nameLoop, int level) throws Exception {
-        AzquoBook azquoBook = loggedInConnection.getAzquoBook();
-        for (Name chosen : nameLoop.get(level).choiceList) {
-            setUserChoice(loggedInConnection.getUser().getId(), reportId, nameLoop.get(level).setName, chosen.getDefaultDisplayName());
-            level++;
-            if (level == nameLoop.size()) {
-                azquoBook.executeSheet(loggedInConnection);
+    public static boolean onADevMachine() {
+        if (devMachine == -1) {
+            if (azquoProperties.getProperty(host + "." + DEVMACHINE) != null) {
+                devMachine = (azquoProperties.getProperty(host + "." + DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
             } else {
-                executeLoop(loggedInConnection, reportId, nameLoop, level + 1);
+                devMachine = (azquoProperties.getProperty(DEVMACHINE) != null && azquoProperties.getProperty(DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
             }
         }
-    }*/
-
-    // to put a referenced CSS inline for example
-    // edd changing to read from web-inf
-
-    private StringBuilder readFile(String filename) {
-        // First, copy the base css
-        StringBuilder sb = new StringBuilder();
-        BufferedReader in = null;
-        try {
-            in = new BufferedReader(new InputStreamReader(servletContext.getResourceAsStream("/WEB-INF/" + filename)));
-            String line;
-            while ((line = in.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException("Reading standard css", e);
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    //noinspection ThrowFromFinallyBlock
-                    throw new IllegalStateException("Reading standard css", e);
-                }
-            }
-        }
-        return sb;
+        return devMachine == 1;
     }
 
-    public void setUserChoice(int userId, String choiceName, String choiceValue) {
-        UserChoice userChoice = userChoiceDAO.findForUserIdAndChoice(userId, choiceName);
+    public static void setUserChoice(int userId, String choiceName, String choiceValue) {
+        UserChoice userChoice = UserChoiceDAO.findForUserIdAndChoice(userId, choiceName);
         if (choiceValue != null && choiceValue.length() > 0) {
             if (userChoice == null) {
                 userChoice = new UserChoice(0, userId, choiceName, choiceValue, new Date());
-                userChoiceDAO.store(userChoice);
+                UserChoiceDAO.store(userChoice);
             } else {
                 if (!choiceValue.equals(userChoice.getChoiceValue())) {
                     userChoice.setChoiceValue(choiceValue);
                     userChoice.setTime(new Date());
-                    userChoiceDAO.store(userChoice);
+                    UserChoiceDAO.store(userChoice);
                 }
             }
         } else {
             if (userChoice != null) {
-                userChoiceDAO.removeById(userChoice);
+                UserChoiceDAO.removeById(userChoice);
             }
         }
     }
 
     // on logging into Magento reports for example
 
-    public void showUserMenu(ModelMap model, LoggedInUser loggedInUser) {
+    public static void showUserMenu(ModelMap model, LoggedInUser loggedInUser) {
         model.addAttribute("welcome", "Welcome to Azquo!");
         List<Map<String, String>> reports = new ArrayList<>();
 
 
-        final List<Permission> forUserId = permissionDAO.findForUserId(loggedInUser.getUser().getId());// new model this should be all we need . . .
+        final List<Permission> forUserId = PermissionDAO.findForUserId(loggedInUser.getUser().getId());// new model this should be all we need . . .
 //            model.addAttribute("database", database);
         String reportCategory = "";
             for (Permission permission : forUserId) {
-                final OnlineReport onlineReport = onlineReportDAO.findById(permission.getReportId());
+                final OnlineReport onlineReport = OnlineReportDAO.findById(permission.getReportId());
                 if (onlineReport != null){
                     Map<String, String> vReport = new HashMap<>();
                     if (onlineReport.getReportCategory() != null && !onlineReport.getReportCategory().equals(reportCategory)) {
@@ -338,7 +156,7 @@ public class SpreadsheetService {
     // function that can be called by the front end to deliver the data and headings
     // this is sort of a proxy but the number of parameters changes a fair bit, I'll leave it for the mo
 
-    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
+    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , UserRegionOptions userRegionOptions) throws Exception {
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
@@ -347,7 +165,7 @@ public class SpreadsheetService {
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
-    public List<TreeNode> getTreeNode(LoggedInUser loggedInUser, int reportId, String region, int rowInt, int colInt, int maxSize) throws Exception {
+    public static List<TreeNode> getTreeNode(LoggedInUser loggedInUser, int reportId, String region, int rowInt, int colInt, int maxSize) throws Exception {
         final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
@@ -362,16 +180,16 @@ public class SpreadsheetService {
         return new ArrayList<>(); // maybe "not found"?
     }
 
-    public void databasePersist(LoggedInUser loggedInUser) throws Exception {
+    public static void databasePersist(LoggedInUser loggedInUser) throws Exception {
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         RMIClient.getServerInterface(databaseAccessToken.getServerIp()).persistDatabase(databaseAccessToken);
     }
 
-    public void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName) throws Exception {
+    public static void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName) throws Exception {
         saveData(loggedInUser,region,reportId,reportName,true); // default to persist server side
     }
 
-    public void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName, boolean persist) throws Exception {
+    public static void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName, boolean persist) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
         if (cellsAndHeadingsForDisplay != null) {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
@@ -379,7 +197,7 @@ public class SpreadsheetService {
         }
     }
 
-    public String setChoices(LoggedInUser loggedInUser, String provline) {
+    public static String setChoices(LoggedInUser loggedInUser, String provline) {
         int inSpreadPos = provline.toLowerCase().indexOf("in spreadsheet");
         if (inSpreadPos < 0) return null;
         int withPos = provline.indexOf(" with ", inSpreadPos);
@@ -491,18 +309,18 @@ public class SpreadsheetService {
 
     // should this be in here?
 
-    public void runScheduledReports() throws Exception {
+    public static void runScheduledReports() throws Exception {
         Map<String, List<File>> filesToSendForEachEmail = new HashMap<>();
-        for (ReportSchedule reportSchedule : reportScheduleDAO.findWhereDueBefore(LocalDateTime.now())) {
+        for (ReportSchedule reportSchedule : ReportScheduleDAO.findWhereDueBefore(LocalDateTime.now())) {
             /* ok we need to group reports by e-mail, as in multiple reports in one email, adapting the old code
             which had the "sendEMail" in this loop actually makes pretty good sense, I mean queue the reports up in a map
             in there then send at the end.
              */
-            OnlineReport onlineReport = onlineReportDAO.findById(reportSchedule.getReportId());
-            Database database = databaseDAO.findById(reportSchedule.getDatabaseId());
+            OnlineReport onlineReport = OnlineReportDAO.findById(reportSchedule.getReportId());
+            Database database = DatabaseDAO.findById(reportSchedule.getDatabaseId());
             if (onlineReport != null && database != null) {
                 onlineReport.setPathname(database.getPersistenceName());
-                List<User> users = userDAO.findForBusinessId(database.getBusinessId());
+                List<User> users = UserDAO.findForBusinessId(database.getBusinessId());
                 User user = null;
                 for (User possible : users) {
                     if (user == null || possible.isAdministrator()) { // default to admin or the first we can find
@@ -516,10 +334,10 @@ public class SpreadsheetService {
                 // the first two make sense. Little funny about the second two but we need a reference to these
                 book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
                 // ok what user? I think we'll call it an admin one.
-                DatabaseServer databaseServer = databaseServerDAO.findById(database.getDatabaseServerId());
+                DatabaseServer databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
                 // assuming no read permissions?
                 // I should factor these few lines really
-                Business b = businessDAO.findById(user.getBusinessId());
+                Business b = BusinessDAO.findById(user.getBusinessId());
                 if (b == null){
                     throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
                 }
@@ -528,7 +346,7 @@ public class SpreadsheetService {
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
-                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(this, loginService, userChoiceDAO, userRegionOptionsDAO);
+                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils();
                 bookUtils.populateBook(book, 0);
                 // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
                 if ("PDF".equals(reportSchedule.getType())) {
@@ -580,7 +398,7 @@ public class SpreadsheetService {
                         reportSchedule.setNextDue(reportSchedule.getNextDue().plusMonths(1));
                         break;
                 }
-                reportScheduleDAO.store(reportSchedule);
+                ReportScheduleDAO.store(reportSchedule);
             }
         }
         // now send
@@ -591,7 +409,9 @@ public class SpreadsheetService {
         }
     }
 
-    public Map<String, String> getImageList(LoggedInUser loggedInUser) throws Exception {
+    // is this an aspose hangover?
+
+    public static Map<String, String> getImageList(LoggedInUser loggedInUser) throws Exception {
         Map<String, String> images = new HashMap<>();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");

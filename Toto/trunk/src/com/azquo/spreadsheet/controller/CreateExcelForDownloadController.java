@@ -36,9 +36,6 @@ import java.util.List;
 public class CreateExcelForDownloadController {
 
     @Autowired
-    private AdminService adminService;
-
-    @Autowired
     ServletContext servletContext;
 
     public static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -60,7 +57,7 @@ public class CreateExcelForDownloadController {
             // modify book to add the user
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             if (userSheet != null){
-                final List<User> userListForBusiness = adminService.getUserListForBusiness(loggedInUser);
+                final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);
                 int row = 1;
                 for (User user : userListForBusiness){
                     userSheet.getInternalSheet().getCell(row,0).setStringValue(user.getName());
@@ -77,12 +74,12 @@ public class CreateExcelForDownloadController {
             Book book = Importers.getImporter().imports(servletContext.getResourceAsStream("/WEB-INF/" + REPORTSCHEDULESFILENAME), "Report name");
             // modify book to add the user
             Sheet schedulesSheet = book.getSheet("ReportSchedules");
-            final List<ReportSchedule> reportSchedules = adminService.getReportScheduleList(loggedInUser);
+            final List<ReportSchedule> reportSchedules = AdminService.getReportScheduleList(loggedInUser);
             if (schedulesSheet != null){
                 int row = 1;
                 for (ReportSchedule reportSchedule : reportSchedules){
-                    final Database databaseById = adminService.getDatabaseById(reportSchedule.getDatabaseId(), loggedInUser);
-                    final OnlineReport reportById = adminService.getReportById(reportSchedule.getReportId(), loggedInUser);
+                    final Database databaseById = AdminService.getDatabaseById(reportSchedule.getDatabaseId(), loggedInUser);
+                    final OnlineReport reportById = AdminService.getReportById(reportSchedule.getReportId(), loggedInUser);
                     if (databaseById != null && reportById != null){
                         schedulesSheet.getInternalSheet().getCell(row,0).setStringValue(reportSchedule.getPeriod());
                         schedulesSheet.getInternalSheet().getCell(row,1).setStringValue(reportSchedule.getRecipients());
@@ -106,13 +103,13 @@ public class CreateExcelForDownloadController {
             // modify book to add the users and permissions
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             if (userSheet != null){
-                final List<User> userListForBusiness = adminService.getUserListForBusiness(loggedInUser);
+                final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);
                 int row = 1;
                 for (User user : userListForBusiness){
                     userSheet.getInternalSheet().getCell(row,0).setStringValue(user.getName());
                     userSheet.getInternalSheet().getCell(row,1).setStringValue(user.getEmail());
                     userSheet.getInternalSheet().getCell(row,3).setStringValue(dateTimeFormatter.format(user.getEndDate()));
-                    final Business businessById = adminService.getBusinessById(user.getBusinessId());
+                    final Business businessById = AdminService.getBusinessById(user.getBusinessId());
                     userSheet.getInternalSheet().getCell(row,4).setStringValue(businessById != null ? businessById.getBusinessName() : "");
                     userSheet.getInternalSheet().getCell(row,5).setStringValue(user.getStatus());
                     row++;
@@ -120,7 +117,7 @@ public class CreateExcelForDownloadController {
             }
             Sheet permissionsSheet = book.getSheet("Permissions"); // literals not best practice, could it be factored between this and the xlsx file?
             if (permissionsSheet != null){
-                final List<Permission.PermissionForDisplay> displayPermissionList = adminService.getDisplayPermissionList(loggedInUser);
+                final List<Permission.PermissionForDisplay> displayPermissionList = AdminService.getDisplayPermissionList(loggedInUser);
                 int row = 1;
                 for (Permission.PermissionForDisplay permission : displayPermissionList){
                     permissionsSheet.getInternalSheet().getCell(row,0).setStringValue(permission.getDatabaseName());

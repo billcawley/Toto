@@ -15,24 +15,20 @@ import java.util.Map;
  *
  * Created by cawley on 07/01/14.
  */
-public final class BusinessDAO extends StandardDAO<Business> {
+public final class BusinessDAO {
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper();
 
-    @Override
-    public String getTableName() {
-        return "business";
-    }
+    private static final String TABLENAME = "business";
 
     // column names (except ID)
 
     private static final String BUSINESSNAME = "business_name";
     private static final String BUSINESSDETAILS = "business_details";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(final Business business) {
+    public static Map<String, Object> getColumnNameValueMap(final Business business) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, business.getId());
+        toReturn.put(StandardDAO.ID, business.getId());
         toReturn.put(BUSINESSNAME, business.getBusinessName());
         try {
             toReturn.put(BUSINESSDETAILS, jacksonMapper.writeValueAsString(business.getBusinessDetails()));
@@ -42,11 +38,11 @@ public final class BusinessDAO extends StandardDAO<Business> {
         return toReturn;
     }
 
-    private final class BusinessRowMapper implements RowMapper<Business> {
+    private static class BusinessRowMapper implements RowMapper<Business> {
         @Override
         public Business mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new Business(rs.getInt(ID)
+                return new Business(rs.getInt(StandardDAO.ID)
                         , rs.getString(BUSINESSNAME)
                         , jacksonMapper.readValue(rs.getString(BUSINESSDETAILS)
                         , Business.BusinessDetails.class));
@@ -57,14 +53,24 @@ public final class BusinessDAO extends StandardDAO<Business> {
         }
     }
 
-    @Override
-    public RowMapper<Business> getRowMapper() {
-        return new BusinessRowMapper();
-    }
+    private static final BusinessRowMapper businessRowMapper = new BusinessRowMapper();
 
-    public Business findByName(final String businessName) {
+    public static Business findByName(final String businessName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSNAME, businessName);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSNAME + "` = :" + BUSINESSNAME, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSNAME + "` = :" + BUSINESSNAME, TABLENAME, businessRowMapper, namedParams);
     }
+
+    public static Business findById(int id){
+        return StandardDAO.findById(id, TABLENAME, businessRowMapper);
+    }
+
+    public static void removeById(Business business){
+        StandardDAO.removeById(business, TABLENAME);
+    }
+
+    public static void store(Business business){
+        StandardDAO.store(business, TABLENAME, getColumnNameValueMap(business));
+    }
+
 }

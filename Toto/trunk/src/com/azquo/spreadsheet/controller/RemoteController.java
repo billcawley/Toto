@@ -53,21 +53,6 @@ public class RemoteController {
     private final int mb = 1024 * 1024;
     // note : I'm now thinking dao objects are acceptable in controllers if moving the call to the service would just be a proxy
 
-    @Autowired
-    private LoginService loginService;
-    @Autowired
-    private OnlineReportDAO onlineReportDAO;
-    @Autowired
-    private DatabaseDAO databaseDAO;
-    @Autowired
-    private DatabaseReportLinkDAO databaseReportLinkDAO;
-    @Autowired
-    private UserChoiceDAO userChoiceDAO;
-    @Autowired
-    private UserRegionOptionsDAO userRegionOptionsDAO;
-    @Autowired
-    private SpreadsheetService spreadsheetService;
-
     /* Parameters are sent as Json . . . posted via https should be secure enough for the moment
          */
     private static class JsonParameters {
@@ -153,21 +138,21 @@ public class RemoteController {
             JsonParameters jsonParameters = jacksonMapper.readValue(json, JsonParameters.class);
             Database db = null;
             try {
-                LoggedInUser loggedInUser = loginService.loginLoggedInUser(request.getSession().getId(), jsonParameters.database, jsonParameters.logon, jsonParameters.password, false);
+                LoggedInUser loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), jsonParameters.database, jsonParameters.logon, jsonParameters.password, false);
                 if (loggedInUser == null) {
                     return "incorrect login details"; // probably need to add json
                 }
                 if (jsonParameters.choices!=null){
                     for (String key:jsonParameters.choices.keySet()){
                         //remove 'chosen' from key
-                        spreadsheetService.setUserChoice(loggedInUser.getUser().getId(),key.substring(0,key.length()-6),jsonParameters.choices.get(key));
+                        SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(),key.substring(0,key.length()-6),jsonParameters.choices.get(key));
                     }
                 }
                 // database switching should be done by being logged in
                 OnlineReport onlineReport = null;
                 if (jsonParameters.reportName != null && loggedInUser.getUser().isAdministrator()) {
                     //report id is assumed to be integer - sent from the website
-                    onlineReport = onlineReportDAO.findForNameAndBusinessId(jsonParameters.reportName, loggedInUser.getUser().getBusinessId());
+                    onlineReport = OnlineReportDAO.findForNameAndBusinessId(jsonParameters.reportName, loggedInUser.getUser().getBusinessId());
                     onlineReport.setDatabase(jsonParameters.database);
                 }
 
@@ -177,21 +162,20 @@ public class RemoteController {
 
                 if (jsonParameters.choices != null) {
                     for (String key : jsonParameters.choices.keySet()) {
-                        spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), key, jsonParameters.choices.get(key));
+                        SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), key, jsonParameters.choices.get(key));
                     }
                 }
                 // no region options at the moment
                 try {
                     long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                     long newHeapMarker = oldHeapMarker;
-                    String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
+                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                     final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                     book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                     book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                     book.getInternalBook().setAttribute(REPORT_ID, onlineReport.getId());
-                    ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO);
-                    bookUtils.populateBook(book, 0);
+                    ZKAzquoBookUtils.populateBook(book, 0);
                     newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                     System.out.println();
                     System.out.println("Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);

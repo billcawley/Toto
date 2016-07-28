@@ -29,10 +29,6 @@ import java.util.List;
 @Controller
 @RequestMapping("/ManageUsers")
 public class ManageUsersController {
-    @Autowired
-    AdminService adminService;
-    @Autowired
-    UserDAO userDAO;
     // TODO : break up into separate functions
 
     private static final Logger logger = Logger.getLogger(ManageUsersController.class);
@@ -57,10 +53,10 @@ public class ManageUsersController {
         } else {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             if (deleteId != null && NumberUtils.isDigits(deleteId)){
-                adminService.deleteUserById(Integer.parseInt(deleteId), loggedInUser);
+                AdminService.deleteUserById(Integer.parseInt(deleteId), loggedInUser);
             }
             if (editId != null && NumberUtils.isDigits(editId)){
-                User toEdit = adminService.getUserById(Integer.parseInt(editId), loggedInUser);
+                User toEdit = AdminService.getUserById(Integer.parseInt(editId), loggedInUser);
                 // ok check to see if data was submitted
                 StringBuilder error = new StringBuilder();
                 if (submit != null){
@@ -77,7 +73,7 @@ public class ManageUsersController {
                         error.append("Email required<br/>");
                     }
                     email = email.trim();
-                    if (toEdit == null && userDAO.findByEmail(email) != null){
+                    if (toEdit == null && UserDAO.findByEmail(email) != null){
                         error.append("User Exists<br/>");
                     }
                     if (name == null || name.isEmpty()){
@@ -91,20 +87,20 @@ public class ManageUsersController {
                         // then store, it might be new
                         if (toEdit == null){
                             // Have to use  a LocalDate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
-                            adminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser);
+                            AdminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser);
                         } else {
                             toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());
                             toEdit.setEmail(email);
                             toEdit.setName(name);
                             toEdit.setStatus(status);
                             if (password != null && !password.isEmpty()){
-                                final String salt = adminService.shaHash(System.currentTimeMillis() + "salt");
+                                final String salt = AdminService.shaHash(System.currentTimeMillis() + "salt");
                                 toEdit.setSalt(salt);
-                                toEdit.setPassword(adminService.encrypt(password, salt));
+                                toEdit.setPassword(AdminService.encrypt(password, salt));
                             }
-                            userDAO.store(toEdit);
+                            UserDAO.store(toEdit);
                         }
-                        model.put("users", adminService.getUserListForBusiness(loggedInUser));
+                        model.put("users", AdminService.getUserListForBusiness(loggedInUser));
                         return "manageusers";
                     } else {
                         model.put("error", error.toString());
@@ -127,14 +123,12 @@ public class ManageUsersController {
                 }
                 return "edituser";
             }
-            final List<User> userListForBusiness = adminService.getUserListForBusiness(loggedInUser);
+            final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);
             model.put("users", userListForBusiness);
             if (userListForBusiness.size() > 1){
                 model.put("showDownload", true);
             }
-
             return "manageusers";
         }
     }
-
 }

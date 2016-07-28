@@ -48,39 +48,13 @@ import java.util.zip.ZipInputStream;
 public final class ImportService {
     public static final String dbPath = "/databases/";
 
-    @Autowired
-    private OnlineReportDAO onlineReportDAO;
-    @Autowired
-    private SpreadsheetService spreadsheetService;
-    @Autowired
-    private AdminService adminService;
-    @Autowired
-    private UserChoiceDAO userChoiceDAO;
-    @Autowired
-    private UserRegionOptionsDAO userRegionOptionsDAO;
-    @Autowired
-    private UploadRecordDAO uploadRecordDAO;
-    @Autowired
-    private BusinessDAO businessDAO;
-    @Autowired
-    private PermissionDAO permissionDAO;
-    @Autowired
-    private UserDAO userDAO;
-    @Autowired
-    private DatabaseDAO databaseDAO;
-    @Autowired
-    private ReportScheduleDAO reportScheduleDAO;
-    @Autowired
-    private DatabaseReportLinkDAO databaseReportLinkDAO;
-    @Autowired
-    private LoginService loginService;
-    private SimpleDateFormat ukdflong = new SimpleDateFormat("dd/MM/yy hh:mm:ss");
-    private SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
-    private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+    private static SimpleDateFormat ukdflong = new SimpleDateFormat("dd/MM/yy hh:mm:ss");
+    private static SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
+    private static SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
+    public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
         InputStream uploadFile = new FileInputStream(filePath);
         // todo : address provenance on an import
         if (loggedInUser.getDatabase() == null) {
@@ -126,11 +100,11 @@ public final class ImportService {
             toReturn = readBookOrFile(loggedInUser, fileName, tempFile, attributeNames, true, isData);
         }
         UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", "", filePath);//should record the error? (in comment)
-        uploadRecordDAO.store(uploadRecord);
+        UploadRecordDAO.store(uploadRecord);
         return toReturn;
     }
 
-    private String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
+    private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         if (fileName.equals(CreateExcelForDownloadController.USERSPERMISSIONSFILENAME) && loggedInUser.getUser().isAdministrator()) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(fileName), "Report name");
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
@@ -140,12 +114,12 @@ public final class ImportService {
                 // keep them to use if not set. Should I be updating records instead? I'm not sure.
                 Map<String, String> oldPasswordMap = new HashMap<>();
                 Map<String, String> oldSaltMap = new HashMap<>();
-                List<User> userList = adminService.getUserListForBusiness(loggedInUser);
+                List<User> userList = AdminService.getUserListForBusiness(loggedInUser);
                 for (User user : userList) {
                     if (user.getId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
                         oldPasswordMap.put(user.getEmail(), user.getPassword());
                         oldSaltMap.put(user.getEmail(), user.getSalt());
-                        userDAO.removeById(user);
+                        UserDAO.removeById(user);
                     }
                 }
                 while (userSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && userSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
@@ -158,7 +132,7 @@ public final class ImportService {
                         } catch (Exception ignored) {
                         }
                         // should we allow them to change businesses?
-                        Business b = businessDAO.findByName(userSheet.getInternalSheet().getCell(row, 4).getStringValue());
+                        Business b = BusinessDAO.findByName(userSheet.getInternalSheet().getCell(row, 4).getStringValue());
                         String status = userSheet.getInternalSheet().getCell(row, 5).getStringValue();
                         String salt = "";
                         String password = userSheet.getInternalSheet().getCell(row, 5).getStringValue();
@@ -167,21 +141,21 @@ public final class ImportService {
                         }
                         // Probably could be factored somewhere
                         if (password.length() > 0) {
-                            salt = adminService.shaHash(System.currentTimeMillis() + "salt");
-                            password = adminService.encrypt(password, salt);
+                            salt = AdminService.shaHash(System.currentTimeMillis() + "salt");
+                            password = AdminService.encrypt(password, salt);
                         } else if (oldPasswordMap.get(email) != null) {
                             password = oldPasswordMap.get(email);
                             salt = oldSaltMap.get(email);
                         }
                         User user1 = new User(0, end, b != null ? b.getId() : loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail());
-                        userDAO.store(user1);
+                        UserDAO.store(user1);
                     }
                     row++;
                 }
-                List<Permission> permissionList = permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId());
+                List<Permission> permissionList = PermissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId());
                 for (Permission permission : permissionList) {
                     if (permission.getUserId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
-                        permissionDAO.removeById(permission);
+                        PermissionDAO.removeById(permission);
                     }
                 }
                 row = 1;
@@ -189,16 +163,16 @@ public final class ImportService {
                     String database = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
                     String email = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
                     if (!loggedInUser.getUser().getEmail().equals(email)) { // leave the logged in user alone!
-                        User user = userDAO.findByEmail(email);
+                        User user = UserDAO.findByEmail(email);
                         if (user != null) {
-                            Database database1 = databaseDAO.findForName(user.getBusinessId(), database);
+                            Database database1 = DatabaseDAO.findForName(user.getBusinessId(), database);
                             if (database1 != null) {
                                 String reportName = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
-                                final OnlineReport forDatabaseIdAndName = onlineReportDAO.findForDatabaseIdAndName(database1.getId(), reportName);
+                                final OnlineReport forDatabaseIdAndName = OnlineReportDAO.findForDatabaseIdAndName(database1.getId(), reportName);
                                 String readList = userSheet.getInternalSheet().getCell(row, 3).getStringValue();
                                 String writeList = userSheet.getInternalSheet().getCell(row, 4).getStringValue();
                                 Permission newPermission = new Permission(0, forDatabaseIdAndName.getId(), user.getId(), database1.getId(), readList, writeList);
-                                permissionDAO.store(newPermission);
+                                PermissionDAO.store(newPermission);
                             }
                         }
                     }
@@ -215,11 +189,11 @@ public final class ImportService {
                 // keep them to use if not set. Should I be updating records instead? I'm not sure.
                 Map<String, String> oldPasswordMap = new HashMap<>();
                 Map<String, String> oldSaltMap = new HashMap<>();
-                List<User> userList = adminService.getUserListForBusiness(loggedInUser); // this will switch logic internally given that the user is a master (only return users created by this one)
+                List<User> userList = AdminService.getUserListForBusiness(loggedInUser); // this will switch logic internally given that the user is a master (only return users created by this one)
                 for (User user : userList) {// as before cache the passwords in case new ones have not been entered
                     oldPasswordMap.put(user.getEmail(), user.getPassword());
                     oldSaltMap.put(user.getEmail(), user.getSalt());
-                    userDAO.removeById(user);
+                    UserDAO.removeById(user);
                 }
                 while (userSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && userSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
                     String user = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
@@ -230,15 +204,15 @@ public final class ImportService {
                         password = "";
                     }
                     if (password.length() > 0) {
-                        salt = adminService.shaHash(System.currentTimeMillis() + "salt");
-                        password = adminService.encrypt(password, salt);
+                        salt = AdminService.shaHash(System.currentTimeMillis() + "salt");
+                        password = AdminService.encrypt(password, salt);
                     } else if (oldPasswordMap.get(email) != null) {
                         password = oldPasswordMap.get(email);
                         salt = oldSaltMap.get(email);
                     }
                     // copy details from the master user
                     User user1 = new User(0, master.getEndDate(), master.getBusinessId(), email, user, master.getStatus(), password, salt, master.getEmail());
-                    userDAO.store(user1);
+                    UserDAO.store(user1);
                     row++;
                 }
             }
@@ -248,9 +222,9 @@ public final class ImportService {
             Sheet schedulesSheet = book.getSheet("ReportSchedules"); // literals not best practice, could it be factored between this and the xlsx file?
             if (schedulesSheet != null) {
                 int row = 1;
-                final List<ReportSchedule> reportSchedules = adminService.getReportScheduleList(loggedInUser);
+                final List<ReportSchedule> reportSchedules = AdminService.getReportScheduleList(loggedInUser);
                 for (ReportSchedule reportSchedule : reportSchedules) {
-                    reportScheduleDAO.removeById(reportSchedule);
+                    ReportScheduleDAO.removeById(reportSchedule);
                 }
                 while (schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
                     String period = schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue();
@@ -261,16 +235,16 @@ public final class ImportService {
                     } catch (Exception ignored) {
                     }
                     String database = schedulesSheet.getInternalSheet().getCell(row, 3).getStringValue();
-                    Database database1 = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
+                    Database database1 = DatabaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
                     if (database1 != null) {
                         String report = schedulesSheet.getInternalSheet().getCell(row, 4).getStringValue();
-                        OnlineReport onlineReport = onlineReportDAO.findForDatabaseIdAndName(database1.getId(), report);
+                        OnlineReport onlineReport = OnlineReportDAO.findForDatabaseIdAndName(database1.getId(), report);
                         if (onlineReport != null) {
                             String type = schedulesSheet.getInternalSheet().getCell(row, 5).getStringValue();
                             String parameters = schedulesSheet.getInternalSheet().getCell(row, 6).getStringValue();
                             String emailSubject = schedulesSheet.getInternalSheet().getCell(row, 7).getStringValue();
                             ReportSchedule rs = new ReportSchedule(0, period, recipients, nextDue, database1.getId(), onlineReport.getId(), type, parameters, emailSubject);
-                            reportScheduleDAO.store(rs);
+                            ReportScheduleDAO.store(rs);
                         }
                     }
                     row++;
@@ -284,7 +258,7 @@ public final class ImportService {
         }
     }
 
-    private List<File> unZip(String zipFile) {
+    private static List<File> unZip(String zipFile) {
         String outputFolder;
         if (!zipFile.contains("/")) {
             outputFolder = zipFile.substring(0, zipFile.lastIndexOf("\\"));// same dir
@@ -332,7 +306,7 @@ public final class ImportService {
         return toReturn;
     }
 
-    private String tempFileWithoutDecoding(final InputStream data, final String fileName) {
+    private static String tempFileWithoutDecoding(final InputStream data, final String fileName) {
         try {
             File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
             String tempFile = temp.getPath();
@@ -347,7 +321,7 @@ public final class ImportService {
         return "";
     }
 
-    private String uploadReport(LoggedInUser loggedInUser, String sourceName, String fileName, String reportName, String reportType) throws Exception {
+    private static String uploadReport(LoggedInUser loggedInUser, String sourceName, String fileName, String reportName, String reportType) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = 0;
         String pathName = reportType;
@@ -355,7 +329,7 @@ public final class ImportService {
             databaseId = loggedInUser.getDatabase().getId();
             pathName = loggedInUser.getBusinessDirectory();
         }
-        OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
+        OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         // change in logic, no longer making a copy, want to update what's there
         if (or == null) {
             or = new OnlineReport(0, LocalDateTime.now(), businessId, "", reportName, "", fileName, "", "", 1); // default to ZK now
@@ -363,38 +337,37 @@ public final class ImportService {
             or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
         }
         or.setFilename(fileName);
-        String fullPath = spreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
+        String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
         FileOutputStream out = new FileOutputStream(fullPath);
 //        azquoBook.saveBook(fullPath); no, aspose could have changed the sheet, especially if the license is not set . . .
         org.apache.commons.io.FileUtils.copyFile(new File(sourceName), out);// straight copy of the source
         out.close();
-        onlineReportDAO.store(or);
-        databaseReportLinkDAO.link(databaseId, or.getId());
+        OnlineReportDAO.store(or);
+        DatabaseReportLinkDAO.link(databaseId, or.getId());
         return reportName + " uploaded.";
     }
 
-    private String readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
+    private static String readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         final Book book = Importers.getImporter().imports(new File(tempName), "Imported");
-        ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO);
         //AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService, RMIClient);
         //azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = null;
         SName reportRange = book.getInternalBook().getNameByName("az_ReportName");
         if (reportRange != null) {
-            reportName = bookUtils.getSnameCell(reportRange).getStringValue();
+            reportName = ZKAzquoBookUtils.getSnameCell(reportRange).getStringValue();
         }
         if (reportName != null) {
             if (loggedInUser.getUser().isAdministrator() && !isData) {
                 return uploadReport(loggedInUser, tempName, fileName, reportName, "");
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
-            OnlineReport or = onlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
+            OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
             if (or == null) return "no report named " + reportName + " found";
-            Map<String, String> choices = uploadChoices(book, bookUtils);
+            Map<String, String> choices = uploadChoices(book);
             for (String choice : choices.keySet()) {
-                spreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
+                SpreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
             }
             //String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilename();
             String bookPath = tempName;//take the import sheet as a template.
@@ -402,7 +375,7 @@ public final class ImportService {
             reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
             reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
             reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
-            bookUtils.populateBook(reportBook, 0);
+            ZKAzquoBookUtils.populateBook(reportBook, 0);
             String toReturn = fillDataRangesFromCopy(loggedInUser, book, or);
 
             return toReturn;
@@ -419,7 +392,7 @@ public final class ImportService {
         return toReturn.toString();
     }
 
-    private String readSheet(LoggedInUser loggedInUser, Sheet sheet, final String tempFileName, List<String> attributeNames, boolean persistAfter) throws Exception {
+    private static String readSheet(LoggedInUser loggedInUser, Sheet sheet, final String tempFileName, List<String> attributeNames, boolean persistAfter) throws Exception {
         String tempName = convertSheetToCSV(tempFileName, sheet);
         String fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
         return readPreparedFile(loggedInUser, tempName, fileType, attributeNames, persistAfter, true);
@@ -427,7 +400,7 @@ public final class ImportService {
 
     private static String LOCALIP = "127.0.0.1";
 
-    private String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileType, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
+    private static String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileType, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         // right - here we're going to have to move the file if the DB server is not local.
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
@@ -441,7 +414,7 @@ public final class ImportService {
         }
     }
 
-    private String copyFileToDatabaseServer(InputStream inputStream, String sftpDestination) {
+    private static String copyFileToDatabaseServer(InputStream inputStream, String sftpDestination) {
         /*
         StandardFileSystemManager manager = new StandardFileSystemManager();
         String toReturn = null;
@@ -531,13 +504,13 @@ public final class ImportService {
         return "file copied successfully";
     }
 
-    public String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName) throws Exception {
+    public static String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName) throws Exception {
         String success = "image uploaded successfully";
         String sourceName = sourceFile.getOriginalFilename();
         String suffix = sourceName.substring(sourceName.indexOf("."));
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         String pathOffset = loggedInUser.getDatabase().getPersistenceName() + "/images/" + fileName + suffix;
-        String destinationPath = spreadsheetService.getHomeDir() + dbPath + pathOffset;
+        String destinationPath = SpreadsheetService.getHomeDir() + dbPath + pathOffset;
         if (databaseServer.getIp().equals(LOCALIP)) {
             File destination = new File(destinationPath);
             destination.getParentFile().mkdirs();
@@ -564,7 +537,7 @@ public final class ImportService {
         return success;
     }
 
-    private void sftpCd(ChannelSftp sftp, String path) throws SftpException {
+    private static void sftpCd(ChannelSftp sftp, String path) throws SftpException {
         String[] folders = path.split("/");
         for (String folder : folders) {
             if (folder.length() > 0) {
@@ -580,7 +553,7 @@ public final class ImportService {
 
     // for the download, modify and upload the report
 
-    public String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
+    public static String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
         int items = 0;
         String errorMessage = "";
         int nonBlankItems = 0;
@@ -642,7 +615,7 @@ public final class ImportService {
                         }
                     }
                     try {
-                        spreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
+                        SpreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
                     } catch (Exception e) {
                         errorMessage += "- in region " + regionName + " -" +  e.getMessage();
                     }
@@ -655,7 +628,7 @@ public final class ImportService {
         return errorMessage + " - " + nonBlankItems + " data items transferred successfully";
     }
 
-    private String getRegionName(String name) {
+    private static String getRegionName(String name) {
         if (name.toLowerCase().startsWith("az_dataregion")) {
             return name.substring("az_dataregion".length()).toLowerCase();
         }
@@ -665,7 +638,7 @@ public final class ImportService {
         return null;
     }
 
-    public String convertSheetToCSV(final String tempFileName, final Sheet sheet) throws Exception {
+    public static String convertSheetToCSV(final String tempFileName, final Sheet sheet) throws Exception {
         boolean transpose = false;
         String fileType = sheet.getInternalSheet().getSheetName();
         if (fileType.toLowerCase().contains("transpose")) {
@@ -682,7 +655,7 @@ public final class ImportService {
         return tempName;
     }
 
-    private String getCellString(Sheet sheet, int r, int c){
+    private static String getCellString(Sheet sheet, int r, int c){
         Range range = Ranges.range(sheet, r, c);
         CellData cellData = range.getCellData();
         String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
@@ -720,7 +693,7 @@ public final class ImportService {
 
     }
 
-    private void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
+    private static void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
         String cellFormat = getCellString(sheet, r,c);
         if (newNames != null && newNames.get(cellFormat) != null) {
              csvW.write(newNames.get(cellFormat));
@@ -731,7 +704,7 @@ public final class ImportService {
     }
 
 
-    public void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW, CellRegion range, Map<String, String> newNames, boolean transpose) throws Exception {
+    public static void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW, CellRegion range, Map<String, String> newNames, boolean transpose) throws Exception {
 
         /*  NewNames here is a very short list which will convert 'next...' into the next available number for that variable, the value being held as the attribute 'next' on that name - e.g. for invoices
         *   the code is now defunct, but was present at SVN version 1161
@@ -776,7 +749,7 @@ public final class ImportService {
         }
     }
 
-    private String convertDates(String possibleDate) {
+    private static String convertDates(String possibleDate) {
         //this routine should probably be generalised to recognise more forms of date
         int slashPos = possibleDate.indexOf("/");
         if (slashPos < 0) return possibleDate;
@@ -793,18 +766,15 @@ public final class ImportService {
         return df.format(date);
     }
 
-    public Map<String, String> uploadChoices(Book book, ZKAzquoBookUtils bookUtils) {
+    public static Map<String, String> uploadChoices(Book book) {
         //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
         Map<String, String> choices = new HashMap<>();
         for (SName sName : book.getInternalBook().getNames()) {
             String rangeName = sName.getName().toLowerCase();
             if (rangeName.endsWith("chosen")) {
-                choices.put(rangeName.substring(0, rangeName.length() - 6), bookUtils.getSnameCell(sName).getStringValue());
-
+                choices.put(rangeName.substring(0, rangeName.length() - 6), ZKAzquoBookUtils.getSnameCell(sName).getStringValue());
             }
         }
         return choices;
     }
-
-
 }

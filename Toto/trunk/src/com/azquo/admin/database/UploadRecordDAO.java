@@ -1,6 +1,7 @@
 package com.azquo.admin.database;
 
 import com.azquo.admin.StandardDAO;
+import com.azquo.admin.onlinereport.ReportSchedule;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -16,13 +17,9 @@ import java.util.Map;
  * Created by cawley on 07/01/14.
  * record of uploaded files
  */
-public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
+public final class UploadRecordDAO  {
 
-    // the default table name for this data.
-    @Override
-    public String getTableName() {
-        return "upload_record";
-    }
+    private static final String TABLENAME = "upload_record";
 
     // column names except ID which is in the superclass
 
@@ -35,10 +32,9 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
     private static final String COMMENTS = "comments";
     private static final String TEMPPATH = "temp_path";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(final UploadRecord uploadRecord) {
+    public static Map<String, Object> getColumnNameValueMap(final UploadRecord uploadRecord) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, uploadRecord.getId());
+        toReturn.put(StandardDAO.ID, uploadRecord.getId());
         toReturn.put(DATE, uploadRecord.getDate());
         toReturn.put(BUSINESSID, uploadRecord.getBusinessId());
         toReturn.put(DATABASEID, uploadRecord.getDatabaseId());
@@ -55,7 +51,7 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
         public UploadRecord mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new UploadRecord(rs.getInt(ID)
+                return new UploadRecord(rs.getInt(StandardDAO.ID)
                         , rs.getDate(DATE)
                         , rs.getInt(BUSINESSID)
                         , rs.getInt(DATABASEID)
@@ -72,21 +68,30 @@ public final class UploadRecordDAO extends StandardDAO<UploadRecord> {
         }
     }
 
-    @Override
-    public RowMapper<UploadRecord> getRowMapper() {
-        return new UploadRecordRowMapper();
-    }
+    private static final UploadRecordRowMapper uploadRowMapper =  new UploadRecordRowMapper();
 
-    public List<UploadRecord> findForBusinessId(final int businessId) {
+    public static List<UploadRecord> findForBusinessId(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " order by `date` desc", namedParams, false, 0, 100);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " order by `date` desc", TABLENAME, uploadRowMapper, namedParams, 0, 100);
     }
 
-    public void removeForDatabaseId(int databaseId) {
+    public static void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
-        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
-
+        StandardDAO.getJdbcTemplate().update("DELETE FROM " + StandardDAO.MASTER_DB + ".`" + TABLENAME + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
     }
+
+    public static UploadRecord findById(int id){
+        return StandardDAO.findById(id, TABLENAME, uploadRowMapper);
+    }
+
+    public static void removeById(UploadRecord uploadRecord){
+        StandardDAO.removeById(uploadRecord, TABLENAME);
+    }
+
+    public static void store(UploadRecord uploadRecord){
+        StandardDAO.store(uploadRecord, TABLENAME, getColumnNameValueMap(uploadRecord));
+    }
+
 }

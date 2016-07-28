@@ -46,10 +46,6 @@ public class ZKComposer extends SelectorComposer<Component> {
     private Menupopup editPopup = new Menupopup();
     //Label provenanceLabel = new Label();
     private Label instructionsLabel = new Label();
-    private SpreadsheetService spreadsheetService;
-    private LoginService loginService;
-    private UserChoiceDAO userChoiceDAO;
-    private UserRegionOptionsDAO userRegionOptionsDAO;
     private Popup provenancePopup = null;
     private Popup highlightPopup = null;
     private Popup instructionsPopup = null;
@@ -57,13 +53,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     public void doAfterCompose(Component comp) throws Exception {
         super.doAfterCompose(comp);
-        Session session = Sessions.getCurrent();
-        ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
         // todo - check ZK to see if there's a better way to do this
-        spreadsheetService = (SpreadsheetService) applicationContext.getBean("spreadsheetService");
-        loginService = (LoginService) applicationContext.getBean("loginService");
-        userChoiceDAO = (UserChoiceDAO) applicationContext.getBean("userChoiceDao");
-        userRegionOptionsDAO = (UserRegionOptionsDAO) applicationContext.getBean("userRegionOptionsDao");
         editPopup.setId("editPopup");
         editPopup.setStyle("background-color:#ffffff");
         editPopup.setStyle("border: 5px solid #F58030");
@@ -187,8 +177,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellClick(CellMouseEvent event) {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO); // used in more than one place
-        String selectionName = pivotItem(zkAzquoBookUtils, event);
+        String selectionName = pivotItem(event);
         String selectionList = null;
         CellRegion queryResultRegion = null;
         if (selectionName != null) { // we have a pivot menu for that cell. Either the dropdown at the top or a row heading - todo address the row heading having excel style dropdown as well as our pivot style box
@@ -318,14 +307,14 @@ public class ZKComposer extends SelectorComposer<Component> {
                             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
                                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                             }
-                            if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
+                            if (ZKAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
                                 // direct calls to the HTML are perhaps not ideal. Could be replaced with calls to expected functions?
                                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                             }
                             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
                             // check to see if we need to set the selected values in a cell - or in the main cell?
                             if (queryResultRegion2 != null) {
-                                String resultDescription = zkAzquoBookUtils.multiList(loggedInUser, selectionName2, selectionList2);
+                                String resultDescription = ZKAzquoBookUtils.multiList(loggedInUser, selectionName2, selectionList2);
                                 final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(queryResultRegion2.getRow(), queryResultRegion2.getColumn());
                                 cell.setStringValue(resultDescription);
                             }
@@ -355,7 +344,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
-        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO); // used in more than one place
+        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(); // used in more than one place
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
@@ -370,7 +359,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         && ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), "az_dataregion").size() == 0) {
 
                     String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
-                    spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
+                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
                     // I'm not sure exactly why blankDependantChoices was commented, commenting the other two redundant lines
                     //List<String> changedChoice = new ArrayList<>();
                     //changedChoice.add(choice);
@@ -383,7 +372,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             // todo, add row heading later if required
             if (name.getName().startsWith("az_DisplayColumnHeadings")) { // ok going to try for a sorting detect
                 String region = name.getName().substring("az_DisplayColumnHeadings".length());
-                UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+                UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
                     SName optionsRegion = event.getSheet().getBook().getInternalBook().getNameByName(ZKAzquoBookUtils.azOptions + region);
                     String source = null;
@@ -406,13 +395,13 @@ public class ZKComposer extends SelectorComposer<Component> {
                             if (chosen.endsWith("↑")) {
                                 userRegionOptions.setSortColumn(originalHeading);
                                 userRegionOptions.setSortColumnAsc(true);
-                                userRegionOptionsDAO.store(userRegionOptions);
+                                UserRegionOptionsDAO.store(userRegionOptions);
                                 reload = true;
                             }
                             if (chosen.endsWith("↓")) {
                                 userRegionOptions.setSortColumn(originalHeading);
                                 userRegionOptions.setSortColumnAsc(false);
-                                userRegionOptionsDAO.store(userRegionOptions);
+                                UserRegionOptionsDAO.store(userRegionOptions);
                                 reload = true;
                             }
                         }
@@ -582,7 +571,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
 
-    private String pivotItem(ZKAzquoBookUtils zkAzquoBookUtils, CellMouseEvent event) {
+    private String pivotItem(CellMouseEvent event) {
         SName pivotFilters = event.getSheet().getBook().getInternalBook().getNameByName("az_PivotFilters");
         if (pivotFilters != null) {
             String[] filters = ZKAzquoBookUtils.getSnameCell(pivotFilters).getStringValue().split(",");
@@ -595,7 +584,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                 // this logic is repeated from add validation, dedupe?
                 for (String filter : filters) {
-                    List<String> optionsList = zkAzquoBookUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
+                    List<String> optionsList = ZKAzquoBookUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
                     if (optionsList != null && optionsList.size() > 1) {
                         int rowOffset = filterCount % headingRows;
                         int colOffset = filterCount / headingRows;
@@ -617,7 +606,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (firstItem.toLowerCase().startsWith("permute(")) {
                     String[] rowHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
                     String displayRowHeadingsString = "az_Display" + name.getName().substring(3);
-                    CellRegion displayRowHeadings = zkAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), displayRowHeadingsString);
+                    CellRegion displayRowHeadings = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), displayRowHeadingsString);
                     if (displayRowHeadings != null) {
                         int hrow = displayRowHeadings.getRow() - 1;
                         int hcol = displayRowHeadings.getColumn();
@@ -697,7 +686,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
             try {
-                List<TreeNode> treeNodes = spreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
+                List<TreeNode> treeNodes = SpreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
                 if (!treeNodes.isEmpty()) {
                     final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
                     StringBuilder colRowContext = new StringBuilder();
@@ -855,7 +844,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 highlightPopup.removeChild(popupChild);
                 popupChild = highlightPopup.getFirstChild();
             }
-            UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+            UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
             int highlightDays = 0;
             if (userRegionOptions != null) {
                 highlightDays = userRegionOptions.getHighlightDays();
@@ -887,7 +876,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     private void showProvenance(String provline, int valueId) {
         final Book book = myzss.getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        String reportName = spreadsheetService.setChoices(loggedInUser, provline);
+        String reportName = SpreadsheetService.setChoices(loggedInUser, provline);
         OnlineReport or = null;
         Session session = Sessions.getCurrent();
         ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
@@ -1001,7 +990,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith("az_dataregion")) {
                 String region = name.getName().substring(13);
-                UserRegionOptions userRegionOptions = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+                UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
                     if (days == 0) break;
                     userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, "highlight=" + days + "\n");
@@ -1009,7 +998,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     if (userRegionOptions.getHighlightDays() == days) break;
                     userRegionOptions.setHighlightDays(days);
                 }
-                userRegionOptionsDAO.store(userRegionOptions);
+                UserRegionOptionsDAO.store(userRegionOptions);
                 reload = true;
             }
         }
@@ -1020,8 +1009,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
             }
-            ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO);
-            if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
+            if (ZKAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
             }
             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)

@@ -19,13 +19,9 @@ import java.util.Map;
  * Recording which databases are being accessed, not actually being used since the report/DB server split, need to get rid of it or start using it again. Todo
  *
  */
-public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
+public final class OpenDatabaseDAO  {
 
-    // the default table name for this data.
-    @Override
-    public String getTableName() {
-        return "open_database";
-    }
+    private static final String TABLENAME = "open_database";
 
     // column names except ID which is in the superclass
 
@@ -33,10 +29,9 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
     private static final String OPEN = "open";
     private static final String CLOSE = "close";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(OpenDatabase openDatabase) {
+    private static Map<String, Object> getColumnNameValueMap(OpenDatabase openDatabase) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, openDatabase.getId());
+        toReturn.put(StandardDAO.ID, openDatabase.getId());
         toReturn.put(DATABASEID, openDatabase.getDatabaseId());
         toReturn.put(OPEN, openDatabase.getOpen());
         toReturn.put(CLOSE, openDatabase.getClose());
@@ -47,7 +42,7 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
         @Override
         public OpenDatabase mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new OpenDatabase(rs.getInt(ID)
+                return new OpenDatabase(rs.getInt(StandardDAO.ID)
                         , rs.getInt(DATABASEID)
                         , rs.getDate(OPEN)
                         , rs.getDate(CLOSE));
@@ -58,27 +53,36 @@ public final class OpenDatabaseDAO extends StandardDAO<OpenDatabase> {
         }
     }
 
-    @Override
-    public RowMapper<OpenDatabase> getRowMapper() {
-        return new OpenDatabaseRowMapper();
-    }
+    private static final OpenDatabaseRowMapper openDatabaseRowMapper = new OpenDatabaseRowMapper();
 
-    public void closeForDatabaseId(final int databaseId) {
+    public static void closeForDatabaseId(final int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(CLOSE, LocalDateTime.now());
         namedParams.addValue(DATABASEID, databaseId);
-        update(" SET `" + CLOSE + "`=:" + CLOSE + " WHERE `" + CLOSE + "` = '0000-00-00' and `" + DATABASEID + "` = :" + DATABASEID, namedParams);
+        StandardDAO.getJdbcTemplate().update(" SET `" + CLOSE + "`=:" + CLOSE + " WHERE `" + CLOSE + "` = '0000-00-00' and `" + DATABASEID + "` = :" + DATABASEID, namedParams);
     }
 
-    public void removeForDatabaseId(int databaseId) {
+    public static void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
-        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
+        StandardDAO.getJdbcTemplate().update("DELETE FROM " + StandardDAO.MASTER_DB + ".`" + TABLENAME + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
     }
 
-    public List<OpenDatabase> findForDatabaseId(int databaseId) {
+    public static List<OpenDatabase> findForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
-        return findListWithWhereSQLAndParameters("where " + DATABASEID + "` = :" + DATABASEID, namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters("where " + DATABASEID + "` = :" + DATABASEID, TABLENAME, openDatabaseRowMapper, namedParams);
+    }
+
+    public static OpenDatabase findById(int id){
+        return StandardDAO.findById(id, TABLENAME, openDatabaseRowMapper);
+    }
+
+    public static void removeById(OpenDatabase openDatabase){
+        StandardDAO.removeById(openDatabase, TABLENAME);
+    }
+
+    public static void store(OpenDatabase openDatabase){
+        StandardDAO.store(openDatabase, TABLENAME, getColumnNameValueMap(openDatabase));
     }
 }

@@ -14,7 +14,7 @@ import java.util.List;
  *
  * Just a way to factor a few things off from the new fast value and name DAO classes. Maybe should be renamed to include MySQL in the name
  *
- * todo : rename DAO utils and then just have value and name dao call it? Factoring changing now I'm going static
+ * Maybe rename to DAO utils? Factoring changing now I'm going static - might need to check it all makes sense.
  */
 class FastDAO {
 

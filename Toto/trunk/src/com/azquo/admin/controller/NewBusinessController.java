@@ -23,10 +23,6 @@ import javax.servlet.http.HttpServletRequest;
 @Controller
 @RequestMapping("/NewBusiness")
 public class NewBusinessController {
-    @Autowired
-    AdminService adminService;
-    @Autowired
-    LoginService loginService;
 
     private static final Logger logger = Logger.getLogger(ManageUsersController.class);
 
@@ -68,8 +64,8 @@ public class NewBusinessController {
                     error.append("password and confirm do not match<br/>");
                 }
                 if (error.length() == 0){
-                    adminService.registerBusiness(emailUsername,businessName,password,businessName,address1,address2,address3,address4,postcode,telephone,website);
-                    loggedInUser = loginService.loginLoggedInUser(request.getSession().getId(),null, emailUsername, password, false);
+                    AdminService.registerBusiness(emailUsername,businessName,password,businessName,address1,address2,address3,address4,postcode,telephone,website);
+                    loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(),null, emailUsername, password, false);
                     if (loggedInUser != null) {
                         request.getSession().setAttribute( LoginController.LOGGED_IN_USER_SESSION, loggedInUser);
                     }

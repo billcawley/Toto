@@ -28,10 +28,6 @@ import javax.servlet.http.HttpServletRequest;
 public class LoginController {
 
     //   private static final Logger logger = Logger.getLogger(LoginController.class);
-    @Autowired
-    private LoginService loginService;
-    @Autowired
-    private SpreadsheetService spreadsheetService;
 
     public static final String LOGGED_IN_USER_SESSION = "LOGGED_IN_USER_SESSION";
 
@@ -59,7 +55,7 @@ public class LoginController {
         } else {
             if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
                 model.put("userEmail", userEmail);
-                LoggedInUser loggedInUser = loginService.loginLoggedInUser(request.getSession().getId(), null, userEmail, password, false);
+                LoggedInUser loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), null, userEmail, password, false);
                 if (loggedInUser != null) {
                     request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (!loggedInUser.getUser().isAdministrator()) {

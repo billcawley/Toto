@@ -2,17 +2,11 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.user.UserChoiceDAO;
-import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
-import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import org.apache.pdfbox.util.PDFMergerUtility;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.zkoss.json.JSONObject;
@@ -50,21 +44,6 @@ import java.util.*;
 @Controller
 @RequestMapping("/ZKSpreadsheetCommand")
 public class ZKSpreadsheetCommandController {
-
-    @Autowired
-    private SpreadsheetService spreadsheetService;
-
-    @Autowired
-    private LoginService loginService;
-
-    @Autowired
-    private UserChoiceDAO userChoiceDAO;
-
-    @Autowired
-    private OnlineReportDAO onlineReportDAO;
-
-    @Autowired
-    private UserRegionOptionsDAO userRegionOptionsDAO;
 
     @RequestMapping
     public void handleRequest(final HttpServletRequest req, HttpServletResponse resp) throws Exception {
@@ -117,8 +96,8 @@ public class ZKSpreadsheetCommandController {
                             Exporter exporter = Exporters.getExporter();
                             Book book = ss.getBook();
                             int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-                            OnlineReport onlineReport = onlineReportDAO.findById(reportId);
-                            String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename(); // as in the online controller
+                            OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
+                            String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename(); // as in the online controller
                             FileOutputStream fos = null;
                             try {
                                 fos = new FileOutputStream(bookPath); // overwrite the report, should work
@@ -194,11 +173,11 @@ public class ZKSpreadsheetCommandController {
                         // todo - provenance?
                         final Book book = ss.getBook();
                         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-                        OnlineReport onlineReport = onlineReportDAO.findById(reportId);
+                        OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
                         for (SName name : book.getInternalBook().getNames()) {
-                            if (name.getName().toLowerCase().startsWith(AzquoBook.azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
-                                String region = name.getName().substring(AzquoBook.azDataRegion.length());
-                                spreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
+                                String region = name.getName().substring(ZKAzquoBookUtils.azDataRegion.length());
+                                SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
                             }
                             // deal with repeats, annoying!
                             if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.azRepeatScope.toLowerCase())) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
@@ -213,15 +192,14 @@ public class ZKSpreadsheetCommandController {
                                     for (int row = 0; row < repeatRows; row++){
                                         for (int col = 0; col < repeatCols; col++){
                                             //region + "-" + repeatRow + "-" + repeatColumn
-                                            spreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                                            SpreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
                                         }
                                     }
                                 }
                             }
                         }
                         // new thing, look for followon, guess we need an instance of ZK azquobook utils
-                        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO);
-                        zkAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
+                        ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                     }
 
                     if ("RestoreSavedValues".equals(action)) {
@@ -230,8 +208,7 @@ public class ZKSpreadsheetCommandController {
                         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                         }
-                        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService,loginService, userChoiceDAO,userRegionOptionsDAO);
-                        zkAzquoBookUtils.populateBook(newBook, 0, true);
+                        ZKAzquoBookUtils.populateBook(newBook, 0, true, null);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
                     }
@@ -261,7 +238,7 @@ public class ZKSpreadsheetCommandController {
         int index = 0;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         for (String selectedChoice : selectedChoices) {
-            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choices.get(index), selectedChoice);
+            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choices.get(index), selectedChoice);
             index++;
         }
         // ok the options are set, run the book to find our choices
@@ -269,8 +246,7 @@ public class ZKSpreadsheetCommandController {
         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
         }
-        ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO);
-        zkAzquoBookUtils.populateBook(newBook, 0);
+        ZKAzquoBookUtils.populateBook(newBook, 0);
         // here should be the list we're after
         final List<String> choiceList = getChoiceList(newBook, choices.get(selectedChoices.size()));
         if (choiceList.isEmpty()) { // ok if no options on the choice list we want then I guess render this one and return
@@ -279,13 +255,13 @@ public class ZKSpreadsheetCommandController {
             if (selectedChoices.size() == choices.size() - 1) { // that means that with this new list we're at the last level, create pdfs for each option
                 for (String selectedChoice : choiceList) {
                     // previous choices will have been set, just do this last one
-                    spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choices.get(choices.size() - 1), selectedChoice);
+                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choices.get(choices.size() - 1), selectedChoice);
                     // ok ALL the choices are set, run the book
                     newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
                     for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                         newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                     }
-                    zkAzquoBookUtils.populateBook(newBook, 0);
+                    ZKAzquoBookUtils.populateBook(newBook, 0);
                     // and render to PDF
                     toReturn.add(renderBook(newBook));
                 }

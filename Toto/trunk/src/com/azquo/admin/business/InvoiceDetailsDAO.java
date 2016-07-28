@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,12 +17,9 @@ import java.util.Map;
  * Created by edward on 07/01/16. Not relevant to core Azquo functionality, we just needed a way of managing our invoices.
  *
  */
-public final class InvoiceDetailsDAO extends StandardDAO<InvoiceDetails> {
+public final class InvoiceDetailsDAO {
 
-    @Override
-    public String getTableName() {
-        return "invoice_details";
-    }
+    private static final String TABLENAME = "invoice_details";
 
     static final String CUSTOMERREFERENCE = "customer_reference";
     static final String SERVICEDESCRIPTION = "service_description";
@@ -36,10 +34,9 @@ public final class InvoiceDetailsDAO extends StandardDAO<InvoiceDetails> {
     static final String NOVAT = "no_vat";
     static final String SENDTO = "send_to";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(final InvoiceDetails invoiceDetails) {
+    private static Map<String, Object> getColumnNameValueMap(final InvoiceDetails invoiceDetails) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, invoiceDetails.getId());
+        toReturn.put(StandardDAO.ID, invoiceDetails.getId());
         toReturn.put(CUSTOMERREFERENCE, invoiceDetails.getCustomerReference());
         toReturn.put(SERVICEDESCRIPTION, invoiceDetails.getServiceDescription());
         toReturn.put(QUANTITY, invoiceDetails.getQuantity());
@@ -55,18 +52,18 @@ public final class InvoiceDetailsDAO extends StandardDAO<InvoiceDetails> {
         return toReturn;
     }
 
-    private final class InvoiceDetailsRowMapper implements RowMapper<InvoiceDetails> {
+    private static final class InvoiceDetailsRowMapper implements RowMapper<InvoiceDetails> {
         @Override
         public InvoiceDetails mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new InvoiceDetails(rs.getInt(ID)
+                return new InvoiceDetails(rs.getInt(StandardDAO.ID)
                         , rs.getString(CUSTOMERREFERENCE)
                         , rs.getString(SERVICEDESCRIPTION)
                         , rs.getInt(QUANTITY)
                         , rs.getInt(UNITCOST)
                         , rs.getInt(PAYMENTTERMS)
                         , rs.getString(POREFERENCE)
-                        , getLocalDateTimeFromDate(rs.getDate(INVOICEDATE)).toLocalDate()
+                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(INVOICEDATE)).toLocalDate()
                         , rs.getString(INVOICEPERIOD)
                         , rs.getString(INVOICENO)
                         , rs.getString(INVOICEADDRESS)
@@ -80,14 +77,32 @@ public final class InvoiceDetailsDAO extends StandardDAO<InvoiceDetails> {
         }
     }
 
-    @Override
-    public RowMapper<InvoiceDetails> getRowMapper() {
-        return new InvoiceDetailsRowMapper();
-    }
+    private static final InvoiceDetailsRowMapper invoiceDetailsRowMapper = new InvoiceDetailsRowMapper();
 
 /*    public Business findByName(final String businessName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSNAME, businessName);
         return findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSNAME + "` = :" + BUSINESSNAME, namedParams);
     }*/
+
+    public static InvoiceDetails findById(int id){
+        return StandardDAO.findById(id, TABLENAME, invoiceDetailsRowMapper);
+    }
+
+    public static void removeById(InvoiceDetails invoiceDetails){
+        StandardDAO.removeById(invoiceDetails, TABLENAME);
+    }
+
+    public static void store(InvoiceDetails invoiceDetails){
+        StandardDAO.store(invoiceDetails, TABLENAME, getColumnNameValueMap(invoiceDetails));
+    }
+
+    public static List<InvoiceDetails> findAll(){
+        return StandardDAO.findAll(TABLENAME,invoiceDetailsRowMapper);
+    }
+
+    public static int findMaxId(){
+        return StandardDAO.findMaxId(TABLENAME);
+    }
+
 }

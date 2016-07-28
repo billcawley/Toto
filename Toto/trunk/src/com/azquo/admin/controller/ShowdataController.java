@@ -31,9 +31,6 @@ import java.util.Set;
 
 public class ShowdataController {
 
-    @Autowired
-    SpreadsheetService spreadsheetService;
-
     @RequestMapping
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
             , @RequestParam(value = "chosen", required = false) String chosen

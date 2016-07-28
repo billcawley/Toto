@@ -6,7 +6,6 @@ import com.azquo.admin.user.User;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
-import com.azquo.spreadsheet.view.AzquoBook;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.log4j.Logger;
 
@@ -34,8 +33,7 @@ public class LoggedInUser {
     private int reportId;
 
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
-    // need to hold the current one unlike with ZK which holds onto the user after the spreadsheet is created. Will be zapped when Aspose goes.
-    private AzquoBook azquoBook;
+
     private List<String> languages;
 
     private Database database;
@@ -66,7 +64,6 @@ public class LoggedInUser {
         this.businessDirectory = businessDirectory;
         reportId = 0;
         sentCellsMaps = new HashMap<>();
-        azquoBook = null;
         languages = new ArrayList<>(2);
         languages.add(user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
@@ -92,7 +89,6 @@ public class LoggedInUser {
         this.user = originalUser.user;
         reportId = 0;
         sentCellsMaps = new HashMap<>();
-        azquoBook = null;
         languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         languages.add(originalUser.user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
@@ -135,14 +131,6 @@ public class LoggedInUser {
         } else {
             this.sentCellsMaps.put(reportId + "-" + region.toLowerCase(), sentCells);
         }
-    }
-
-    public AzquoBook getAzquoBook() {
-        return this.azquoBook;
-    }
-
-    void setAzquoBook(AzquoBook azquoBook) {
-        this.azquoBook = azquoBook;
     }
 
 

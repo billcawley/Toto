@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.RowMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -15,13 +16,9 @@ import java.util.Map;
  * <p/>
  * the find all and find by id from the superclass should be sufficient. There should be no need for java to modify these records.
  */
-public class DatabaseServerDAO extends StandardDAO<DatabaseServer> {
+public class DatabaseServerDAO {
 
-    // the default table name for this data.
-    @Override
-    public String getTableName() {
-        return "database_server";
-    }
+    private static final String TABLENAME= "database_server";
 
     // column names except ID which is in the superclass
 
@@ -29,10 +26,9 @@ public class DatabaseServerDAO extends StandardDAO<DatabaseServer> {
     private static final String IP = "ip";
     private static final String SFTPURL = "sftp_url";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(DatabaseServer databaseServer) {
+    public static Map<String, Object> getColumnNameValueMap(DatabaseServer databaseServer) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, databaseServer.getId());
+        toReturn.put(StandardDAO.ID, databaseServer.getId());
         toReturn.put(NAME, databaseServer.getName());
         toReturn.put(IP, databaseServer.getIp());
         toReturn.put(SFTPURL, databaseServer.getSftpUrl());
@@ -43,7 +39,7 @@ public class DatabaseServerDAO extends StandardDAO<DatabaseServer> {
         @Override
         public DatabaseServer mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new DatabaseServer(rs.getInt(ID)
+                return new DatabaseServer(rs.getInt(StandardDAO.ID)
                         , rs.getString(NAME)
                         , rs.getString(IP)
                         , rs.getString(SFTPURL));
@@ -54,8 +50,21 @@ public class DatabaseServerDAO extends StandardDAO<DatabaseServer> {
         }
     }
 
-    @Override
-    public RowMapper<DatabaseServer> getRowMapper() {
-        return new DatabaseServerRowMapper();
+    private static DatabaseServerRowMapper databaseServerRowMapper = new DatabaseServerRowMapper();
+
+    public static DatabaseServer findById(int id){
+        return StandardDAO.findById(id, TABLENAME, databaseServerRowMapper);
+    }
+
+    public static void removeById(DatabaseServer databaseServer){
+        StandardDAO.removeById(databaseServer, TABLENAME);
+    }
+
+    public static void store(DatabaseServer databaseServer){
+        StandardDAO.store(databaseServer, TABLENAME, getColumnNameValueMap(databaseServer));
+    }
+
+    public static List<DatabaseServer> findAll(){
+        return StandardDAO.findAll(TABLENAME,databaseServerRowMapper);
     }
 }

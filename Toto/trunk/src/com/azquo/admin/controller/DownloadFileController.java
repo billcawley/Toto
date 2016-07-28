@@ -4,7 +4,6 @@ import com.azquo.admin.database.UploadRecord;
 import com.azquo.admin.database.UploadRecordDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,9 +20,6 @@ import java.io.*;
 @Controller
 @RequestMapping("/DownloadFile")
 public class DownloadFileController {
-    @Autowired
-    UploadRecordDAO uploadRecordDAO;
-
 
     @RequestMapping
     public void handleRequest(HttpServletRequest request
@@ -36,7 +32,7 @@ public class DownloadFileController {
             return;
         }
         if (uploadRecordId != null && uploadRecordId.length() > 0) {
-            final UploadRecord byId = uploadRecordDAO.findById(Integer.parseInt(uploadRecordId));
+            final UploadRecord byId = UploadRecordDAO.findById(Integer.parseInt(uploadRecordId));
             if (byId != null && byId.getTempPath() != null && byId.getTempPath().length() > 0 && byId.getBusinessId() == loggedInUser.getUser().getBusinessId()){
                 if (byId.getTempPath().endsWith(".xls")){
                     response.setContentType("application/vnd.ms-excel");

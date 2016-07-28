@@ -31,12 +31,6 @@ import java.util.List;
 @RequestMapping("/ManageReportSchedules")
 public class ManageReportSchedulesController {
 
-    @Autowired
-    private AdminService adminService;
-    @Autowired
-    private ReportScheduleDAO reportScheduleDAO;
-    @Autowired
-    private SpreadsheetService spreadsheetService;
     private static final Logger logger = Logger.getLogger(ManageReportsController.class);
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
@@ -44,7 +38,7 @@ public class ManageReportSchedulesController {
     {
         if (request.getParameter("testsend") != null){
             try {
-                spreadsheetService.runScheduledReports();
+                SpreadsheetService.runScheduledReports();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -57,10 +51,10 @@ public class ManageReportSchedulesController {
             if (request.getParameter("new") != null){
                 // note, this will fail with no reports or databases
                 ReportSchedule reportSchedule = new ReportSchedule(0,"DAILY", "", LocalDateTime.now().plusYears(30)
-                        , adminService.getDatabaseListForBusiness(loggedInUser).get(0).getId(), adminService.getReportList(loggedInUser).get(0).getId(),"","","");
-                reportScheduleDAO.store(reportSchedule);
+                        , AdminService.getDatabaseListForBusiness(loggedInUser).get(0).getId(), AdminService.getReportList(loggedInUser).get(0).getId(),"","","");
+                ReportScheduleDAO.store(reportSchedule);
             }
-            final List<ReportSchedule> reportSchedules = adminService.getReportScheduleList(loggedInUser);
+            final List<ReportSchedule> reportSchedules = AdminService.getReportScheduleList(loggedInUser);
             StringBuilder error = new StringBuilder();
             if (request.getParameter("submit") != null){
                 for (ReportSchedule reportSchedule : reportSchedules) {
@@ -87,7 +81,7 @@ public class ManageReportSchedulesController {
                     String databaseId = request.getParameter("databaseId" + reportSchedule.getId());
                     if (databaseId != null && !databaseId.equals(reportSchedule.getDatabaseId() + "")) {
                         try{
-                            Database database = adminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
+                            Database database = AdminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
                             if (database != null){
                                 reportSchedule.setDatabaseId(Integer.parseInt(databaseId));
                                 store = true;
@@ -99,7 +93,7 @@ public class ManageReportSchedulesController {
                     String reportId = request.getParameter("reportId" + reportSchedule.getId());
                     if (reportId != null && !reportId.equals(reportSchedule.getReportId() + "")) {
                         try{
-                            OnlineReport onlineReport = adminService.getReportById(Integer.parseInt(reportId), loggedInUser);
+                            OnlineReport onlineReport = AdminService.getReportById(Integer.parseInt(reportId), loggedInUser);
                             if (onlineReport != null){
                                 reportSchedule.setReportId(Integer.parseInt(reportId));
                                 store = true;
@@ -124,7 +118,7 @@ public class ManageReportSchedulesController {
                         store = true;
                     }
                    if (store) {
-                       reportScheduleDAO.store(reportSchedule);
+                       ReportScheduleDAO.store(reportSchedule);
                     }
                 }
             }
@@ -132,8 +126,8 @@ public class ManageReportSchedulesController {
             if (error.length() > 0){
                 model.put("error", error.toString());
             }
-            model.put("reports", adminService.getReportList(loggedInUser));
-            model.put("databases", adminService.getDatabaseListForBusiness(loggedInUser));
+            model.put("reports", AdminService.getReportList(loggedInUser));
+            model.put("databases", AdminService.getDatabaseListForBusiness(loggedInUser));
             return "managereportschedules";
         }
     }

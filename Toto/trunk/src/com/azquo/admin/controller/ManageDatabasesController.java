@@ -37,18 +37,6 @@ import java.util.List;
 @Controller
 @RequestMapping("/ManageDatabases")
 public class ManageDatabasesController {
-    @Autowired
-    private AdminService adminService;
-    @Autowired
-    private DatabaseServerDAO databaseServerDAO;
-    @Autowired
-    private DatabaseDAO databaseDAO;
-    @Autowired
-    private SpreadsheetService spreadsheetService;
-    @Autowired
-    private LoginService loginService;
-    @Autowired
-    private ImportService importService;
 
     private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
 
@@ -114,26 +102,26 @@ public class ManageDatabasesController {
                 request.getSession().removeAttribute("importResult");
             }
             try {
-                final List<DatabaseServer> allServers = databaseServerDAO.findAll();
+                final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
                 if (createDatabase != null && !createDatabase.isEmpty() && (allServers.size() == 1 || (databaseServerId != null && !databaseServerId.isEmpty()))) {
                     if (allServers.size() == 1){
-                        adminService.createDatabase(createDatabase, databaseType, loggedInUser, allServers.get(0));
+                        AdminService.createDatabase(createDatabase, databaseType, loggedInUser, allServers.get(0));
                     } else {
-                        adminService.createDatabase(createDatabase, databaseType, loggedInUser, databaseServerDAO.findById(Integer.parseInt(databaseServerId)));
+                        AdminService.createDatabase(createDatabase, databaseType, loggedInUser, DatabaseServerDAO.findById(Integer.parseInt(databaseServerId)));
                     }
                 }
                 if (emptyId != null && NumberUtils.isNumber(emptyId)) {
-                    adminService.emptyDatabaseById(loggedInUser, Integer.parseInt(emptyId));
+                    AdminService.emptyDatabaseById(loggedInUser, Integer.parseInt(emptyId));
                 }
                 if (deleteId != null && NumberUtils.isNumber(deleteId)) {
-                    adminService.removeDatabaseById(loggedInUser, Integer.parseInt(deleteId));
+                    AdminService.removeDatabaseById(loggedInUser, Integer.parseInt(deleteId));
                 }
                 if (unloadId != null && NumberUtils.isNumber(unloadId)) {
-                    adminService.unloadDatabase(loggedInUser, Integer.parseInt(unloadId));
+                    AdminService.unloadDatabase(loggedInUser, Integer.parseInt(unloadId));
                 }
                 if (backupTarget != null) {
-                    LoggedInUser loggedInUserTarget = loginService.loginLoggedInUser(request.getSession().getId(), backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB
-                    adminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getLanguages());// re languages I should just be followign what was there before . . .
+                    LoggedInUser loggedInUserTarget = LoginService.loginLoggedInUser(request.getSession().getId(), backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB
+                    AdminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getLanguages());// re languages I should just be followign what was there before . . .
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -142,17 +130,17 @@ public class ManageDatabasesController {
             if (error.length() > 0) {
                 model.put("error", error.toString());
             }
-            List<Database> databaseList = adminService.getDatabaseListForBusiness(loggedInUser);
+            List<Database> databaseList = AdminService.getDatabaseListForBusiness(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
             try {
                 for (Database database : databaseList){
-                    boolean isLoaded = adminService.isDatabaseLoaded(loggedInUser, database);
+                    boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database);
                     displayDataBases.add(new DisplayDataBase(isLoaded, database));
-                    if (isLoaded && (adminService.getNameCount(loggedInUser, database) != database.getNameCount()
-                            || adminService.getValueCount(loggedInUser, database) != database.getValueCount())){ // then update the counts
-                        database.setNameCount(adminService.getNameCount(loggedInUser, database));
-                        database.setValueCount(adminService.getValueCount(loggedInUser, database));
-                        databaseDAO.store(database);
+                    if (isLoaded && (AdminService.getNameCount(loggedInUser, database) != database.getNameCount()
+                            || AdminService.getValueCount(loggedInUser, database) != database.getValueCount())){ // then update the counts
+                        database.setNameCount(AdminService.getNameCount(loggedInUser, database));
+                        database.setValueCount(AdminService.getValueCount(loggedInUser, database));
+                        DatabaseDAO.store(database);
                     }
                 }
             } catch (Exception e) {
@@ -167,13 +155,13 @@ public class ManageDatabasesController {
                 model.put("error", exceptionError);
             }
             model.put("databases", displayDataBases);
-            final List<DatabaseServer> allServers = databaseServerDAO.findAll();
+            final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
             if (allServers.size() > 1){
                 model.put("databaseServers", allServers);
             } else {
                 model.put("serverList", false);
             }
-            model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
+            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             return "managedatabases";
         }
@@ -201,10 +189,10 @@ public class ManageDatabasesController {
                 } else {
                     try{
                         HttpSession session = request.getSession();
-                        loginService.switchDatabase(loggedInUser, database); // could be blank now
+                        LoginService.switchDatabase(loggedInUser, database); // could be blank now
                         String fileName = uploadFile.getOriginalFilename();
                         // always move uplaoded files now, they'll need to be transferred to the DB server after code split
-                        File moved = new File(spreadsheetService.getHomeDir() + "/temp/" + fileName);
+                        File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + fileName);
                         uploadFile.transferTo(moved);
                         // need to add in code similar to report loading to give feedback on imports
                             new Thread(() -> {
@@ -213,7 +201,7 @@ public class ManageDatabasesController {
                                     List<String> languages = new ArrayList<>(loggedInUser.getLanguages());
                                     languages.remove(loggedInUser.getUser().getEmail());
                                     session.setAttribute("importResult",
-                                            importService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false)
+                                            ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false)
                                     );
                                 } catch (Exception e) {
                                     //e.printStackTrace();
@@ -240,31 +228,31 @@ public class ManageDatabasesController {
                     }
                 }
             }
-            List<Database> databaseList = adminService.getDatabaseListForBusiness(loggedInUser);
+            List<Database> databaseList = AdminService.getDatabaseListForBusiness(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
             try {
                 for (Database database1 : databaseList){
-                    boolean isLoaded = adminService.isDatabaseLoaded(loggedInUser, database1);
+                    boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database1);
                     displayDataBases.add(new DisplayDataBase(isLoaded, database1));
-                    if (isLoaded && (adminService.getNameCount(loggedInUser, database1) != database1.getNameCount()
-                            || adminService.getValueCount(loggedInUser, database1) != database1.getValueCount())){ // then update the counts
-                        database1.setNameCount(adminService.getNameCount(loggedInUser, database1));
-                        database1.setValueCount(adminService.getValueCount(loggedInUser, database1));
-                        databaseDAO.store(database1);
+                    if (isLoaded && (AdminService.getNameCount(loggedInUser, database1) != database1.getNameCount()
+                            || AdminService.getValueCount(loggedInUser, database1) != database1.getValueCount())){ // then update the counts
+                        database1.setNameCount(AdminService.getNameCount(loggedInUser, database1));
+                        database1.setValueCount(AdminService.getValueCount(loggedInUser, database1));
+                        DatabaseDAO.store(database1);
                     }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
             model.put("databases", displayDataBases);
-            final List<DatabaseServer> allServers = databaseServerDAO.findAll();
+            final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
             if (allServers.size() > 1){
                 model.put("databaseServers", allServers);
             } else {
                 model.put("serverList", false);
             }
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
-            model.put("uploads", adminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
+            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             return "managedatabases";
         }
     }

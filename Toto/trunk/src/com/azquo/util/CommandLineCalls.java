@@ -14,17 +14,17 @@ public class CommandLineCalls {
     // to GPG I think we'd still need to command line but not yet
     // we may not actually need the FTP in the end either
 
-    public boolean runCommand(String command, boolean systemCopy)
+    public static boolean runCommand(String command, boolean systemCopy)
             throws Exception {
         return runCommand(command, systemCopy, null);
     }
 
-    public boolean runCommand(String command, boolean systemCopy, String input)
+    public static boolean runCommand(String command, boolean systemCopy, String input)
             throws Exception {
         return runCommand(command, null, systemCopy, input);
     }
 
-    public boolean runCommand(String command, String[] commandArray, boolean systemCopy, String input)
+    public static boolean runCommand(String command, String[] commandArray, boolean systemCopy, String input)
             throws Exception {
         Runtime rt = Runtime.getRuntime();
         Process proc;

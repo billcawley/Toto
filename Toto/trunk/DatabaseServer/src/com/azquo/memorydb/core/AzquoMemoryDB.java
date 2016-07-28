@@ -448,7 +448,7 @@ public final class AzquoMemoryDB {
             name.setAsPersisted();// The actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
         }
         try {
-                NameDAO.persistNames(this, namesToStore, false);
+                NameDAO.persistNames(this, namesToStore);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -460,7 +460,7 @@ public final class AzquoMemoryDB {
             value.setAsPersisted();
         }
         try {
-                ValueDAO.persistValues(this, valuesToStore, false);
+                ValueDAO.persistValues(this, valuesToStore);
         } catch (Exception e) {
             e.printStackTrace();
         }

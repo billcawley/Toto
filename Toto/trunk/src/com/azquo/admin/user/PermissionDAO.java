@@ -20,12 +20,7 @@ import java.util.Map;
  * Created by cawley on 07/01/14.
  * User permission details
  */
-public final class PermissionDAO extends StandardDAO<Permission> {
-    // the default table name for this data.
-    @Override
-    public String getTableName() {
-        return PERMISSION;
-    }
+public final class PermissionDAO {
 
     private static final String PERMISSION = "permission";
 
@@ -37,10 +32,9 @@ public final class PermissionDAO extends StandardDAO<Permission> {
     private static final String READLIST = "read_list";
     private static final String WRITELIST = "write_list";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(final Permission permission) {
+    private static Map<String, Object> getColumnNameValueMap(final Permission permission) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, permission.getId());
+        toReturn.put(StandardDAO.ID, permission.getId());
         toReturn.put(REPORTID, permission.getReportId());
         toReturn.put(USERID, permission.getUserId());
         toReturn.put(DATABASEID, permission.getDatabaseId());
@@ -51,17 +45,19 @@ public final class PermissionDAO extends StandardDAO<Permission> {
 
     // ok need a bit of heavier sql here, a little join
 
-    public List<Permission> findByBusinessId(int businessId) {
+    public static List<Permission> findByBusinessId(int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DatabaseDAO.BUSINESSID, businessId);
-        return findListWithWhereSQLAndParameters(", `" + MASTER_DB + "`.`" + DatabaseDAO.DATABASE + "`  WHERE `" + MASTER_DB + "`.`" + DatabaseDAO.DATABASE + "`." + ID + " = `" + MASTER_DB + "`.`" + PERMISSION + "`.`" + DATABASEID + "` and  `" + MASTER_DB + "`.`" + DatabaseDAO.DATABASE + "`.`" + DatabaseDAO.BUSINESSID + "` = :" + DatabaseDAO.BUSINESSID, namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseDAO.DATABASE + "`  WHERE `" + StandardDAO.MASTER_DB + "`.`" + DatabaseDAO.DATABASE + "`." + StandardDAO.ID
+                + " = `" + StandardDAO.MASTER_DB + "`.`" + PERMISSION + "`.`" + DATABASEID + "` and  `" + StandardDAO.MASTER_DB + "`.`" + DatabaseDAO.DATABASE + "`.`" + DatabaseDAO.BUSINESSID + "` = :" + DatabaseDAO.BUSINESSID
+                ,PERMISSION, permissionRowMapper, namedParams);
     }
 
-    public Permission findByBusinessUserAndDatabase(User user, Database database) {
+    public static Permission findByBusinessUserAndDatabase(User user, Database database) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, user.getId());
         namedParams.addValue(DATABASEID, database.getId());
-        return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " and " + DATABASEID + " =:" + DATABASEID, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " and " + DATABASEID + " =:" + DATABASEID,PERMISSION, permissionRowMapper, namedParams);
     }
 
 /*    public void deleteForBusinessId(int businessId) {
@@ -71,13 +67,12 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         jdbcTemplate.update(SQL_DELETE, namedParams);
     }*/
 
-    private final class PermissionRowMapper implements RowMapper<Permission> {
-
+    private static final class PermissionRowMapper implements RowMapper<Permission> {
         @Override
         public Permission mapRow(final ResultSet rs, final int row) throws SQLException {
             // not pretty, just make it work for the moment
             try {
-                return new Permission(rs.getInt(ID)
+                return new Permission(rs.getInt(StandardDAO.ID)
                         , rs.getInt(REPORTID)
                         , rs.getInt(USERID)
                         , rs.getInt(DATABASEID)
@@ -90,28 +85,25 @@ public final class PermissionDAO extends StandardDAO<Permission> {
         }
     }
 
-    @Override
-    public RowMapper<Permission> getRowMapper() {
-        return new PermissionRowMapper();
-    }
+    private static final PermissionRowMapper permissionRowMapper = new PermissionRowMapper();
 
-    public List<Permission> findForUserId(final int userId) {
+    public static List<Permission> findForUserId(final int userId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
-        return findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID, namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID, PERMISSION, permissionRowMapper, namedParams);
     }
 
-    private Permission findForUserIdAndDatabaseId(final int userId, int databaseId) {
+    private static Permission findForUserIdAndDatabaseId(final int userId, int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
         namedParams.addValue(DATABASEID, databaseId);
-        return findOneWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " and " + DATABASEID + "= :" + DATABASEID, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " and " + DATABASEID + "= :" + DATABASEID, PERMISSION, permissionRowMapper, namedParams);
     }
 
-    public void removeForDatabaseId(int databaseId) {
+    public static void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
-        jdbcTemplate.update("DELETE FROM " + MASTER_DB + ".`" + getTableName() + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
+        StandardDAO.getJdbcTemplate().update("DELETE FROM " + StandardDAO.MASTER_DB + ".`" + PERMISSION + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
     }
 
     public final void update(int id, Map<String, Object> parameters) {
@@ -123,19 +115,32 @@ public final class PermissionDAO extends StandardDAO<Permission> {
                 id = p.getId();
             } else {
                 p = new Permission(0, 0, 0, 0, "", "");
-                store(p);
+                StandardDAO.store(p, PERMISSION, getColumnNameValueMap(p));
                 id = p.getId();
             }
         }
-        String updateSql = "UPDATE `" + MASTER_DB + "`.`" + getTableName() + "` set ";
+        String updateSql = "UPDATE `" + StandardDAO.MASTER_DB + "`.`" + PERMISSION + "` set ";
         MapSqlParameterSource namedParams = new MapSqlParameterSource();
         for (String columnName : parameters.keySet()) {
             namedParams.addValue(columnName, parameters.get(columnName));
             updateSql += columnName + "= :" + columnName + ", ";
         }
-        namedParams.addValue(ID, id);
+        namedParams.addValue(StandardDAO.ID, id);
         updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
-        updateSql += " where " + ID + " = :" + ID;
-        jdbcTemplate.update(updateSql, namedParams);
+        updateSql += " where " + StandardDAO.ID + " = :" + StandardDAO.ID;
+        StandardDAO.getJdbcTemplate().update(updateSql, namedParams);
     }
+
+    public static Permission findById(int id){
+        return StandardDAO.findById(id, PERMISSION, permissionRowMapper);
+    }
+
+    public static void removeById(Permission permission){
+        StandardDAO.removeById(permission, PERMISSION);
+    }
+
+    public static void store(Permission permission){
+        StandardDAO.store(permission, PERMISSION, getColumnNameValueMap(permission));
+    }
+
 }

@@ -16,13 +16,9 @@ import java.util.Map;
  *
  * Only supports a subset of the objects paramters. Might need to rethink this at some point.
  */
-public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
+public final class UserRegionOptionsDAO {
 
-    // the default table name for this data.
-    @Override
-    public String getTableName() {
-        return "user_region_options";
-    }
+    private static final String TABLENAME = "user_region_options";
 
     // column names except ID which is in the superclass
 
@@ -35,10 +31,9 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
     private static final String SORT_COLUMN_ASC = "sort_column_asc";
     private static final String HIGHLIGHT_DAYS = "highlight_days";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(UserRegionOptions uro) {
+    public static Map<String, Object> getColumnNameValueMap(UserRegionOptions uro) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, uro.getId());
+        toReturn.put(StandardDAO.ID, uro.getId());
         toReturn.put(USERID, uro.getUserId());
         toReturn.put(REPORTID, uro.getReportId());
         toReturn.put(REGION, uro.getRegion());
@@ -51,12 +46,11 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
     }
 
     private static final class UserRegionOptionRowMapper implements RowMapper<UserRegionOptions> {
-
         @Override
         public UserRegionOptions mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 // set some defaults for the data not saved in mysql. As mentioned above this feels a little hacky
-                return new UserRegionOptions(rs.getInt(ID)
+                return new UserRegionOptions(rs.getInt(StandardDAO.ID)
                         , rs.getInt(USERID)
                         , rs.getInt(REPORTID)
                         , rs.getString(REGION)
@@ -78,17 +72,26 @@ public final class UserRegionOptionsDAO extends StandardDAO<UserRegionOptions> {
         }
     }
 
-    @Override
-    public RowMapper<UserRegionOptions> getRowMapper() {
-        return new UserRegionOptionRowMapper();
-    }
+    private static final UserRegionOptionRowMapper userRegionOptionsRowMapper = new UserRegionOptionRowMapper();
 
-    public UserRegionOptions findForUserIdReportIdAndRegion(final int userId, final int reportId, final String region) {
+    public static UserRegionOptions findForUserIdReportIdAndRegion(final int userId, final int reportId, final String region) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
         namedParams.addValue(REPORTID, reportId);
         namedParams.addValue(REGION, region);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + REPORTID + "` = :" + REPORTID + " AND `" + REGION + "` = :" + REGION, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + REPORTID + "` = :" + REPORTID + " AND `" + REGION + "` = :" + REGION, TABLENAME, userRegionOptionsRowMapper, namedParams);
     }
 
- }
+    public static UserRegionOptions findById(int id){
+        return StandardDAO.findById(id, TABLENAME, userRegionOptionsRowMapper);
+    }
+
+    public static void removeById(UserRegionOptions userRegionOptions){
+        StandardDAO.removeById(userRegionOptions, TABLENAME);
+    }
+
+    public static void store(UserRegionOptions userRegionOptions){
+        StandardDAO.store(userRegionOptions, TABLENAME, getColumnNameValueMap(userRegionOptions));
+    }
+
+}

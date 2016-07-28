@@ -35,12 +35,6 @@ import java.util.StringTokenizer;
 @Controller
 @RequestMapping("/ManagePermissions")
 public class ManagePermissionsController {
-    @Autowired
-    private AdminService adminService;
-    @Autowired
-    private PermissionDAO permissionDAO;
-    @Autowired
-    private UserDAO userDAO;
 
     private static final Logger logger = Logger.getLogger(ManagePermissionsController.class);
 
@@ -62,17 +56,17 @@ public class ManagePermissionsController {
         } else {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             if (deleteId != null && NumberUtils.isDigits(deleteId)) {
-                adminService.deletePermissionById(Integer.parseInt(deleteId), loggedInUser);
+                AdminService.deletePermissionById(Integer.parseInt(deleteId), loggedInUser);
             }
             if (editId != null && NumberUtils.isDigits(editId)) {
-                Permission toEdit = adminService.getPermissionById(Integer.parseInt(editId), loggedInUser);
+                Permission toEdit = AdminService.getPermissionById(Integer.parseInt(editId), loggedInUser);
                     // ok check to see if data was submitted
                     StringBuilder error = new StringBuilder();
                     if (submit != null) {
                         if (userId == null || !NumberUtils.isNumber(userId)) {
                             error.append("User Id Required<br/>");
                         } else {
-                            User user = adminService.getUserById(Integer.parseInt(userId), loggedInUser);
+                            User user = AdminService.getUserById(Integer.parseInt(userId), loggedInUser);
                             if (user == null) {
                                 error.append("Applicable User Id Required<br/>");
                             }
@@ -80,7 +74,7 @@ public class ManagePermissionsController {
                         if (databaseId == null || !NumberUtils.isNumber(databaseId)) {
                             error.append("Database Id Required<br/>");
                         } else {
-                            Database database = adminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
+                            Database database = AdminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
                             if (database == null) {
                                 error.append("Applicable Database Id Required<br/>");
                             }
@@ -90,7 +84,7 @@ public class ManagePermissionsController {
                             if (reportId != null && reportId.length() > 0){
                                 StringTokenizer st = new StringTokenizer(reportId, ",");
                                 while (st.hasMoreTokens()){ // will exception if someone plays silly buggers
-                                    OnlineReport onlineReport = adminService.getReportById(Integer.parseInt(st.nextToken()), loggedInUser);
+                                    OnlineReport onlineReport = AdminService.getReportById(Integer.parseInt(st.nextToken()), loggedInUser);
                                     if (onlineReport != null){
                                         reports.add(onlineReport);
                                     }
@@ -100,7 +94,7 @@ public class ManagePermissionsController {
                             if (reportId == null || !NumberUtils.isNumber(reportId)) {
                                 error.append("Report Id Required<br/>");
                             } else {
-                                OnlineReport onlineReport = adminService.getReportById(Integer.parseInt(reportId), loggedInUser);
+                                OnlineReport onlineReport = AdminService.getReportById(Integer.parseInt(reportId), loggedInUser);
                                 if (onlineReport == null) {
                                     error.append("Applicable Repor Id Required<br/>");
                                 }
@@ -115,25 +109,25 @@ public class ManagePermissionsController {
                             // then store, it might be new
                             if (toEdit == null) {
                                     for (OnlineReport report : reports) {
-                                        adminService.createUserPermission(report.getId(), Integer.parseInt(userId), Integer.parseInt(databaseId),
+                                        AdminService.createUserPermission(report.getId(), Integer.parseInt(userId), Integer.parseInt(databaseId),
                                                 readList, writeList, loggedInUser);
                                     }
                                 if (reports.isEmpty()){ // we'll allow a blank one
-                                    adminService.createUserPermission(0, Integer.parseInt(userId), Integer.parseInt(databaseId),
+                                    AdminService.createUserPermission(0, Integer.parseInt(userId), Integer.parseInt(databaseId),
                                             readList, writeList, loggedInUser);
                                 }
                             } else {
-                                User check = userDAO.findById(toEdit.getUserId());
+                                User check = UserDAO.findById(toEdit.getUserId());
                                 if (check.getBusinessId() == loggedInUser.getUser().getBusinessId()){
                                     toEdit.setReportId(Integer.parseInt(reportId));
                                     toEdit.setUserId(Integer.parseInt(userId));
                                     toEdit.setDatabaseId(Integer.parseInt(databaseId));
                                     toEdit.setReadList(readList);
                                     toEdit.setWriteList(writeList);
-                                    permissionDAO.store(toEdit);
+                                    PermissionDAO.store(toEdit);
                                 }
                             }
-                            model.put("permissions", adminService.getDisplayPermissionList(loggedInUser));
+                            model.put("permissions", AdminService.getDisplayPermissionList(loggedInUser));
                             return "managepermissions";
                         } else {
                             model.put("error", error.toString());
@@ -145,7 +139,7 @@ public class ManagePermissionsController {
                         model.put("writeList", writeList);
                 } else {
                     if (toEdit != null) {
-                        User check = userDAO.findById(toEdit.getUserId());
+                        User check = UserDAO.findById(toEdit.getUserId());
                         if (check.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
                             model.put("id", toEdit.getId());
                             model.put("reportId", toEdit.getReportId());
@@ -160,12 +154,12 @@ public class ManagePermissionsController {
                         model.put("multiple", "multiple");
                     }
                 }
-                model.put("databases", adminService.getDatabaseListForBusiness(loggedInUser));
-                model.put("reports", adminService.getReportListForBusiness(loggedInUser));
-                model.put("users", adminService.getUserListForBusiness(loggedInUser));
+                model.put("databases", AdminService.getDatabaseListForBusiness(loggedInUser));
+                model.put("reports", AdminService.getReportListForBusiness(loggedInUser));
+                model.put("users", AdminService.getUserListForBusiness(loggedInUser));
                 return "editpermission";
             }
-            model.put("permissions", adminService.getDisplayPermissionList(loggedInUser));
+            model.put("permissions", AdminService.getDisplayPermissionList(loggedInUser));
             return "managepermissions";
         }
     }

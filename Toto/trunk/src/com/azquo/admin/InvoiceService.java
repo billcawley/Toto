@@ -10,7 +10,6 @@ import org.apache.fop.apps.FOPException;
 import org.apache.fop.apps.Fop;
 import org.apache.fop.apps.FopFactory;
 import org.apache.fop.apps.MimeConstants;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.xml.transform.*;
 import javax.xml.transform.sax.SAXResult;
@@ -31,13 +30,7 @@ import java.util.StringTokenizer;
  */
 public class InvoiceService {
 
-    @Autowired
-    AzquoMailer azquoMailer;
-
-    @Autowired
-    InvoiceSentDAO invoiceSentDAO;
-
-    public boolean sendInvoiceEmail(InvoiceDetails invoiceDetails) throws TransformerException, IOException, FOPException {
+    public static boolean sendInvoiceEmail(InvoiceDetails invoiceDetails) throws TransformerException, IOException, FOPException {
         // note : I'm not allowing currency to be overridden
         double currencyValue = invoiceDetails.getUnitCost() * invoiceDetails.getQuantity();
         double vat = currencyValue * 0.2;
@@ -75,7 +68,7 @@ public class InvoiceService {
         StringBuilder template = new StringBuilder();
         String inputLine;
         try {
-            DataInputStream in = new DataInputStream(getClass().getClassLoader().getResourceAsStream("azquoinvoice.fop"));// used to have a hard coded link, now it's moved to /src this should be better
+            DataInputStream in = new DataInputStream(InvoiceService.class.getClassLoader().getResourceAsStream("azquoinvoice.fop"));// used to have a hard coded link, now it's moved to /src this should be better
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             while ((inputLine = br.readLine()) != null) {
                 // Print the content on the console
@@ -184,7 +177,7 @@ public class InvoiceService {
 
         transformer.transform(src, res);
         fos.close();
-        if (azquoMailer.sendEMail(invoiceDetails.getSendTo(), invoiceDetails.getSendTo(), "Azquo Invoice " + invoiceDetails.getInvoiceNo(), "Please find attached", null, Collections.singletonList(emailAttachment))){
+        if (AzquoMailer.sendEMail(invoiceDetails.getSendTo(), invoiceDetails.getSendTo(), "Azquo Invoice " + invoiceDetails.getInvoiceNo(), "Please find attached", null, Collections.singletonList(emailAttachment))){
             InvoiceSent invoiceSent = new InvoiceSent(0,
                     invoiceDetails.getCustomerReference(),
                     invoiceDetails.getServiceDescription(),
@@ -199,7 +192,7 @@ public class InvoiceService {
                     invoiceDetails.getNoVat(),
                     invoiceDetails.getSendTo(),
                     LocalDateTime.now());
-            invoiceSentDAO.store(invoiceSent);
+            InvoiceSentDAO.store(invoiceSent);
             return true;
         } else {
             System.out.println("Failed sending invoice . . .");

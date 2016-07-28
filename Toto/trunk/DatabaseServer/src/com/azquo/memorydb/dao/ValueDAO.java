@@ -21,9 +21,9 @@ import java.util.concurrent.*;
  * I want faster storing and loading of values, adapted from the NameDAO
  *
  */
-public class ValueDAO extends FastDAO {
+public class ValueDAO {
 
-    public static final String FASTVALUE = "fast_value";
+    static final String FASTVALUE = "fast_value";
     private static final String PROVENANCEID = "provenance_id";
     private static final String TEXT = "text";
     private static final String NAMES = "names";
@@ -41,14 +41,13 @@ public class ValueDAO extends FastDAO {
             byte[] namesBytes = namesBlob.getBytes(1, (int)namesBlob.length()); // from 1, seems non standard!
             namesBlob.free(); // apparently a good idea
             try{
-                return new Value(azquoMemoryDB, rs.getInt(ID), rs.getInt(PROVENANCEID), rs.getString(TEXT), namesBytes);
+                return new Value(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(TEXT), namesBytes);
             } catch (Exception e){
                 e.printStackTrace();
             }
             return null;
         }
     }
-
 
     private static class BulkValuesInserter implements Callable<Void> {
         private final AzquoMemoryDB azquoMemoryDB;
@@ -66,17 +65,17 @@ public class ValueDAO extends FastDAO {
             if (!valuesToInsert.isEmpty()) {
                 long track = System.currentTimeMillis();
                 final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-                final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "` (`" + ID + "`,`" + PROVENANCEID + "`,`"
+                final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "` (`" + FastDAO.ID + "`,`" + PROVENANCEID + "`,`"
                         + TEXT + "`,`" + NAMES + "`) VALUES ");
                 int count = 1;
 
                 for (Value value : valuesToInsert) {
-                    insertSql.append("(:" + ID).append(count)
+                    insertSql.append("(:" + FastDAO.ID).append(count)
                             .append(",:").append(PROVENANCEID).append(count)
                             .append(",:").append(TEXT).append(count)
                             .append(",:").append(NAMES).append(count)
                             .append("), ");
-                    namedParams.addValue(ID + count, value.getId());
+                    namedParams.addValue(FastDAO.ID + count, value.getId());
                     namedParams.addValue(PROVENANCEID + count, value.getProvenance().getId());
                     namedParams.addValue(TEXT + count, value.getText());
                     namedParams.addValue(NAMES + count, value.getNameIdsAsBytes());
@@ -91,25 +90,25 @@ public class ValueDAO extends FastDAO {
         }
     }
 
-    public static void persistValues(final AzquoMemoryDB azquoMemoryDB, final Collection<Value> values, boolean initialInsert) throws Exception {
+    // could this be factored between this class and the NameDao class? Not sure if it's the biggest deal.
+
+    public static void persistValues(final AzquoMemoryDB azquoMemoryDB, final Collection<Value> values) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult
         // old pattern had update, I think this is a pain and unnecessary, just delete than add to the insert
         ExecutorService executor = AzquoMemoryDB.sqlThreadPool;
-        List<Value> toDelete = new ArrayList<>(UPDATELIMIT);
-        List<Value> toInsert = new ArrayList<>(UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
+        List<Value> toDelete = new ArrayList<>(FastDAO.UPDATELIMIT);
+        List<Value> toInsert = new ArrayList<>(FastDAO.UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         // ok since we're not doing updates but rather delete before reinsert the delete will have to go first. I don't think this will be a big problem
-        if (!initialInsert){ // no point deleting on initial insert
             for (Value value : values) {
                 if (!value.getNeedsInserting()) { // either flagged for delete or it exists already and will be reinserted, delete it
                     toDelete.add(value);
-                    if (toDelete.size() == UPDATELIMIT) {
-                        bulkDelete(azquoMemoryDB, toDelete, FASTVALUE);
-                        toDelete = new ArrayList<>(UPDATELIMIT);
+                    if (toDelete.size() == FastDAO.UPDATELIMIT) {
+                        FastDAO.bulkDelete(azquoMemoryDB, toDelete, FASTVALUE);
+                        toDelete = new ArrayList<>(FastDAO.UPDATELIMIT);
                     }
                 }
             }
-        }
-        bulkDelete(azquoMemoryDB, toDelete, FASTVALUE);
+        FastDAO.bulkDelete(azquoMemoryDB, toDelete, FASTVALUE);
         int insertCount = 0;
         for (Value value: values){
             if (!value.getNeedsDeleting()) insertCount++;
@@ -118,10 +117,10 @@ public class ValueDAO extends FastDAO {
         for (Value value : values) {
             if (!value.getNeedsDeleting()) { // then we insert, either it's new or was updated hence deleted ready for reinsertion
                 toInsert.add(value);
-                if (toInsert.size() == UPDATELIMIT) {
-                    insertCount -= UPDATELIMIT;
+                if (toInsert.size() == FastDAO.UPDATELIMIT) {
+                    insertCount -= FastDAO.UPDATELIMIT;
                     futureBatches.add(executor.submit(new BulkValuesInserter(azquoMemoryDB, toInsert, insertCount)));
-                    toInsert = new ArrayList<>(UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
+                    toInsert = new ArrayList<>(FastDAO.UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
             }
         }
@@ -129,7 +128,6 @@ public class ValueDAO extends FastDAO {
         for (Future<?> futureBatch : futureBatches){
             futureBatch.get(1, TimeUnit.HOURS);
         }
-
     }
 
     static void createFastTableIfItDoesntExist(final String databaseName){
@@ -148,6 +146,6 @@ public class ValueDAO extends FastDAO {
     }
 
     public static int findMaxId(final AzquoMemoryDB azquoMemoryDB) throws DataAccessException {
-        return findMaxId(azquoMemoryDB, FASTVALUE);
+        return FastDAO.findMaxId(azquoMemoryDB, FASTVALUE);
     }
 }

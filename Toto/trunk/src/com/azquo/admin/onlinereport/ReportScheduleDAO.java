@@ -1,6 +1,7 @@
 package com.azquo.admin.onlinereport;
 
 import com.azquo.admin.StandardDAO;
+import com.azquo.admin.user.Permission;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -19,14 +20,9 @@ import java.util.Map;
  * Created by edward on 21/09/15.
  *
  */
-public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
+public class ReportScheduleDAO {
 
-    // the default table name for this data.
-    @Override
-    public String getTableName() {
-        return "report_schedule";
-    }
-
+    private static final String TABLENAME = "report_schedule";
     // column names except ID which is in the superclass
     private static final String PERIOD = "period";
     private static final String RECIPIENTS = "recipients";
@@ -37,10 +33,9 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
     private static final String PARAMETERS = "parameters";
     private static final String EMAILSUBJECT = "email_subject";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(final ReportSchedule reportSchedule) {
+    public static Map<String, Object> getColumnNameValueMap(final ReportSchedule reportSchedule) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, reportSchedule.getId());
+        toReturn.put(StandardDAO.ID, reportSchedule.getId());
         toReturn.put(PERIOD,  reportSchedule.getPeriod());
         toReturn.put(RECIPIENTS,  reportSchedule.getRecipients());
         toReturn.put(NEXTDUE,  Date.from(reportSchedule.getNextDue().atZone(ZoneId.systemDefault()).toInstant()));
@@ -52,14 +47,14 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
         return toReturn;
     }
 
-    private final class ReportScheduleRowMapper implements RowMapper<ReportSchedule> {
+    private static final class ReportScheduleRowMapper implements RowMapper<ReportSchedule> {
         @Override
         public ReportSchedule mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new ReportSchedule(rs.getInt(ID)
+                return new ReportSchedule(rs.getInt(StandardDAO.ID)
                         , rs.getString(PERIOD)
                         , rs.getString(RECIPIENTS)
-                        , getLocalDateTimeFromDate(rs.getDate(NEXTDUE))
+                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(NEXTDUE))
                         , rs.getInt(DATABASEID)
                         , rs.getInt(REPORTID)
                         , rs.getString(TYPE)
@@ -73,20 +68,31 @@ public class ReportScheduleDAO extends StandardDAO<ReportSchedule> {
         }
     }
 
-    @Override
-    public RowMapper<ReportSchedule> getRowMapper() {
-        return new ReportScheduleRowMapper();
-    }
+    private static final ReportScheduleRowMapper reportScheduleRowMapper = new ReportScheduleRowMapper();
 
-    public List<ReportSchedule> findForDatabaseId(final int databaseId) {
+    public static List<ReportSchedule> findForDatabaseId(final int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);
-        return findListWithWhereSQLAndParameters("WHERE " + DATABASEID + " = :" + DATABASEID, namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + DATABASEID + " = :" + DATABASEID, TABLENAME, reportScheduleRowMapper, namedParams);
     }
 
-    public List<ReportSchedule> findWhereDueBefore(LocalDateTime due) {
+    public static List<ReportSchedule> findWhereDueBefore(LocalDateTime due) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(NEXTDUE, Date.from(due.atZone(ZoneId.systemDefault()).toInstant()));
-        return findListWithWhereSQLAndParameters("WHERE " + NEXTDUE + " <= :" + NEXTDUE, namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + NEXTDUE + " <= :" + NEXTDUE, TABLENAME, reportScheduleRowMapper, namedParams);
     }
+
+    public static ReportSchedule findById(int id){
+        return StandardDAO.findById(id, TABLENAME, reportScheduleRowMapper);
+    }
+
+    public static void removeById(ReportSchedule reportSchedule){
+        StandardDAO.removeById(reportSchedule, TABLENAME);
+    }
+
+    public static void store(ReportSchedule reportSchedule){
+        StandardDAO.store(reportSchedule, TABLENAME, getColumnNameValueMap(reportSchedule));
+    }
+
+
 }

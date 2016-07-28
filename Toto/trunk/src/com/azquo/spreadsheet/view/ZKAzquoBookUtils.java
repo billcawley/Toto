@@ -38,7 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ZKAzquoBookUtils {
 
-    private static final String azDataRegion = "az_DataRegion";
+    public static final String azDataRegion = "az_DataRegion";
     static final String azOptions = "az_Options";
     public static final String azRepeatRegion = "az_RepeatRegion";
     public static final String azRepeatScope = "az_RepeatScope";
@@ -55,33 +55,13 @@ public class ZKAzquoBookUtils {
     Not to do with pivot tables, initially for the expenses sheet, let us say that the first column is to select a project and then the second to select something based off that, you'd use contents. Not used that often.
      */
 
-    private final SpreadsheetService spreadsheetService;
-    private final LoginService loginService;
-    private final UserChoiceDAO userChoiceDAO;
-    private final UserRegionOptionsDAO userRegionOptionsDAO;
-    private final OnlineReportDAO onlineReportDAO;
-    private final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-    // for scheduling reports
-    private final String reportParameters;
-
-    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO) {
-        this(spreadsheetService, loginService, userChoiceDAO, userRegionOptionsDAO, null, null);// no report parameters or report DAO.
-    }
-
-    public ZKAzquoBookUtils(SpreadsheetService spreadsheetService, LoginService loginService, UserChoiceDAO userChoiceDAO, UserRegionOptionsDAO userRegionOptionsDAO, OnlineReportDAO onlineReportDAO, String reportParameters) {
-        this.spreadsheetService = spreadsheetService;
-        this.loginService = loginService;
-        this.userChoiceDAO = userChoiceDAO;
-        this.userRegionOptionsDAO = userRegionOptionsDAO;
-        this.onlineReportDAO = onlineReportDAO;
-        this.reportParameters = reportParameters;
-    }
+    private static final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
     public static final String EXECUTE = "az_Execute";
 
     public static final String FOLLOWON = "az_Followon";
 
-    public boolean runExecuteCommandForBook(Book book, String sourceNamedRegion) throws Exception {
+    public static boolean runExecuteCommandForBook(Book book, String sourceNamedRegion) throws Exception {
         String executeCommand = null;
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
@@ -107,11 +87,11 @@ public class ZKAzquoBookUtils {
         }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         executeCommands(loggedInUser, commands);
-        spreadsheetService.databasePersist(loggedInUser);
+        SpreadsheetService.databasePersist(loggedInUser);
         return true;
     }
     // we assume cleansed of blank lines
-    public void executeCommands(LoggedInUser loggedInUser, List<String> commands) throws Exception {
+    public static void executeCommands(LoggedInUser loggedInUser, List<String> commands) throws Exception {
         if (commands.size() > 0 && commands.get(0) != null){
             String firstLine = commands.get(0);
             int startingIndent = getIndent(firstLine);
@@ -132,17 +112,17 @@ public class ZKAzquoBookUtils {
                         String choiceQuery = trimmedLine.substring(trimmedLine.indexOf(" in ") + " in ".length()).trim();
                         final List<String> dropdownListForQuery = getDropdownListForQuery(loggedInUser, choiceQuery);
                         for (String choiceValue : dropdownListForQuery){ // run the for :)
-                            spreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`",""), choiceValue);
+                            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`",""), choiceValue);
                             executeCommands(loggedInUser, subCommands);
                         }
                     }
                     // if not a for each I guess we just execute? Will check for "do"
                 } else if (trimmedLine.toLowerCase().startsWith("do")){
                     String reportToRun = trimmedLine.substring(2).trim();
-                    OnlineReport onlineReport = onlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
+                    OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
                     if (onlineReport != null){ // need to prepare it as in the controller todo - factor?
                         onlineReport.setPathname(loggedInUser.getBusinessDirectory());
-                        String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
+                        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                         book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
                         book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
@@ -150,9 +130,9 @@ public class ZKAzquoBookUtils {
                         final boolean save = populateBook(book, 0);
                         if (save){ // so the data was changed and if we save from here it will make changes to the DB
                             for (SName name : book.getInternalBook().getNames()) {
-                                if (name.getName().toLowerCase().startsWith(AzquoBook.azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
-                                    String region = name.getName().substring(AzquoBook.azDataRegion.length());
-                                    spreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName(), false); // to not persist right now
+                                if (name.getName().toLowerCase().startsWith(azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
+                                    String region = name.getName().substring(azDataRegion.length());
+                                    SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName(), false); // to not persist right now
                                 }
                             }
                         }
@@ -162,7 +142,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public int getIndent(String s){
+    public static int getIndent(String s){
         int indent = 0;
         while (indent < s.length() && s.charAt(indent) == ' '){
             indent++;
@@ -170,13 +150,13 @@ public class ZKAzquoBookUtils {
         return indent;
     }
 
-    public boolean populateBook(Book book, int valueId) {
-        return populateBook(book, valueId, false);
+    public static boolean populateBook(Book book, int valueId) {
+        return populateBook(book, valueId, false, null);
     }
 
     public static final String ALLOWABLE_REPORTS = "az_AllowableReports";
 
-    public boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae) {
+    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, String reportParameters) {
         long track = System.currentTimeMillis();
         String imageStoreName = "";
         boolean showSave = false;
@@ -185,7 +165,7 @@ public class ZKAzquoBookUtils {
         Map<String, String> userChoices = new HashMap<>();
         // get the user choices for the report. Can be drop down values, sorting/highlighting etc.
         // a notable point here is that the user choices don't distinguish between sheets
-        List<UserChoice> allChoices = userChoiceDAO.findForUserId(loggedInUser.getUser().getId());
+        List<UserChoice> allChoices = UserChoiceDAO.findForUserId(loggedInUser.getUser().getId());
         for (UserChoice uc : allChoices) {
             userChoices.put(uc.getChoiceName().toLowerCase(), uc.getChoiceValue()); // make case insensitive
         }
@@ -357,7 +337,7 @@ public class ZKAzquoBookUtils {
                     }
                     UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);
                     // UserRegionOptions from MySQL will have limited fields filled
-                    UserRegionOptions userRegionOptions2 = userRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+                    UserRegionOptions userRegionOptions2 = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                     // only these five fields are taken from the table
                     if (userRegionOptions2 != null) {
                         if (userRegionOptions.getSortColumn() == null) {
@@ -377,7 +357,7 @@ public class ZKAzquoBookUtils {
                             Database origDatabase = loggedInUser.getDatabase();
                             DatabaseServer origServer = loggedInUser.getDatabaseServer();
                             try {
-                                loginService.switchDatabase(loggedInUser, databaseName);
+                                LoginService.switchDatabase(loggedInUser, databaseName);
                                 fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
                             } catch (Exception e) {
                                 String eMessage = "Unknown database " + databaseName + " for region " + region;
@@ -530,7 +510,7 @@ public class ZKAzquoBookUtils {
 
     // like rangeToStringLists in azquobook
 
-    private List<List<String>> nameToStringLists(SName sName) {
+    private static List<List<String>> nameToStringLists(SName sName) {
         List<List<String>> toReturn = new ArrayList<>();
         if (sName == null) return toReturn;
         CellRegion region = sName.getRefersToCellRegion();
@@ -576,7 +556,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private void fillRegion(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
+    private static void fillRegion(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
 
         // ok need to deal with the repeat region things
         // the region to be repeated, will contain headings and an item which changes for each repetition
@@ -693,7 +673,7 @@ public class ZKAzquoBookUtils {
                         }
                     }
                 }
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, nameToStringLists(columnHeadingsDescription),
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, nameToStringLists(columnHeadingsDescription),
                         contextList, userRegionOptions);
                 loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
@@ -956,7 +936,7 @@ public class ZKAzquoBookUtils {
                         for (String item : repeatListItems) {
                             contextList.add(Collections.singletonList(item)); // item added to the context
                             // yes this is little inefficient as the headings are being resolved each time but that's just how it is for the moment
-                            cellsAndHeadingsForDisplay = spreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, nameToStringLists(columnHeadingsDescription),
+                            cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, nameToStringLists(columnHeadingsDescription),
                                     contextList, userRegionOptions);
                             displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
                             ,rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
@@ -1021,7 +1001,7 @@ public class ZKAzquoBookUtils {
 
     // factored off to enable multiple regions
 
-    private void dataFill(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion){
+    private static void dataFill(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion){
         int row = displayDataRegion.getRow();
         List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
         if (cellsAndHeadingsForDisplay.getData() != null) {
@@ -1085,7 +1065,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private int getMaxCol(Sheet sheet) {
+    private static int getMaxCol(Sheet sheet) {
         int maxCol = 0;
         for (int i = 0; i <= sheet.getLastRow(); i++) {
             if (sheet.getLastColumn(i) > maxCol) {
@@ -1106,7 +1086,7 @@ public class ZKAzquoBookUtils {
         return names;
     }
 
-    private boolean isHierarchy(List<List<String>> headings) {
+    private static boolean isHierarchy(List<List<String>> headings) {
         for (List<String> oneCol : headings) {
             for (String oneHeading : oneCol) {
                 if (oneHeading.toLowerCase().contains("hierarchy ") || oneHeading.toLowerCase().contains("permute")) {
@@ -1146,7 +1126,7 @@ public class ZKAzquoBookUtils {
      This adds one caveat : the options match the choice name at the time the function ran - if the query in the choice cell updates this needs to be run again
        */
 
-    private Map<String, List<String>> resolveChoiceOptions(Book book, LoggedInUser loggedInUser) {
+    private static Map<String, List<String>> resolveChoiceOptions(Book book, LoggedInUser loggedInUser) {
         Map<String, List<String>> toReturn = new HashMap<>();
         for (SName name : book.getInternalBook().getNames()) {
             //check to create pivot filter choices....
@@ -1188,7 +1168,7 @@ public class ZKAzquoBookUtils {
         return toReturn;
     }
 
-    private String rangeToText(int row, int col) {
+    private static String rangeToText(int row, int col) {
         if (col > 26) {
             int hbit = (col - 1) / 26;
             return "$" + (char) (hbit + 64) + (char) (col - hbit * 26 + 64) + "$" + (row + 1);
@@ -1197,7 +1177,7 @@ public class ZKAzquoBookUtils {
     }
 
 
-    private void resolveDependentChoiceOptions(List<SName> dependentRanges, Book book, LoggedInUser loggedInUser) {
+    private static void resolveDependentChoiceOptions(List<SName> dependentRanges, Book book, LoggedInUser loggedInUser) {
         Sheet validationSheet = book.getSheet(VALIDATION_SHEET);
         SSheet vSheet = validationSheet.getInternalSheet();
         for (SName name : dependentRanges) {
@@ -1276,7 +1256,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private void resolveQueries(Sheet sheet, LoggedInUser loggedInUser) {
+    private static void resolveQueries(Sheet sheet, LoggedInUser loggedInUser) {
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
             if (name != null && name.getName() != null && name.getName().endsWith("Query")) {
                 SCell queryCell = getSnameCell(name);
@@ -1297,7 +1277,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
+    private static List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
         if (book.getSheet(VALIDATION_SHEET) == null) {
             book.getInternalBook().createSheet(VALIDATION_SHEET);
         }
@@ -1448,7 +1428,7 @@ public class ZKAzquoBookUtils {
     }
 
 
-    public String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
+    public static String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
         try {
             List<String> languages = new ArrayList<>();
             languages.add(loggedInUser.getUser().getEmail());
@@ -1490,19 +1470,19 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query) {
+    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query) {
         return getDropdownListForQuery(loggedInUser, query, loggedInUser.getLanguages());
     }
 
 
-    private List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
+    private static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
         //hack to discover a database name
         int arrowsPos = query.indexOf(">>");
         try {
             if (arrowsPos > 0) {
                 Database origDatabase = loggedInUser.getDatabase();
                 DatabaseServer origDatabaseServer = loggedInUser.getDatabaseServer();
-                loginService.switchDatabase(loggedInUser, query.substring(0, arrowsPos));
+                LoginService.switchDatabase(loggedInUser, query.substring(0, arrowsPos));
                 List<String> toReturn = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                         .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query.substring(arrowsPos + 2), languages);
                 loggedInUser.setDatabaseWithServer(origDatabaseServer, origDatabase);
@@ -1516,7 +1496,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private  String getCellString(Sheet sheet, int r, int c){//this is the same routine as in ImportService, so one is redundant, but I'm not sure which (WFC)
+    private static String getCellString(Sheet sheet, int r, int c){//this is the same routine as in ImportService, so one is redundant, but I'm not sure which (WFC)
         Range range = Ranges.range(sheet, r, c);
         CellData cellData = range.getCellData();
         String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
@@ -1549,10 +1529,5 @@ public class ZKAzquoBookUtils {
             return cellFormat;
         }
         return "";
-
-
-
     }
-
-
 }

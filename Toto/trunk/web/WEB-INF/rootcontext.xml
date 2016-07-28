@@ -26,7 +26,6 @@
         -->
     <context:annotation-config/>
     <task:annotation-driven/>
-<!--    <context:property-placeholder location="/WEB-INF/azquo.properties"/> -->
 
     <!-- NOTE : this is not a pooled connection! Not a problem for Azquo's purposes generally but one would want one for more intense MySQL hammering
      something like
@@ -53,37 +52,15 @@
     <bean id="jdbcTemplate" class="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate">
         <constructor-arg type="javax.sql.DataSource" ref="dataSource"/>
     </bean>
+    <bean name="standardDao" class="com.azquo.admin.StandardDAO">
+        <constructor-arg type="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate" ref="jdbcTemplate"/>
+    </bean>
+
     <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
         <!-- Upped to 2 gig, this pushes browser limits but could happen with big zip files-->
         <property name="maxUploadSize" value="2000000000"/>
     </bean>
-    <bean name="azquoMailer" class="com.azquo.util.AzquoMailer"/>
-    <bean name="uploadRecordDao" class="com.azquo.admin.database.UploadRecordDAO"/>
-    <bean name="businessDao" class="com.azquo.admin.business.BusinessDAO"/>
-    <bean name="userDao" class="com.azquo.admin.user.UserDAO"/>
-    <bean name="userChoiceDao" class="com.azquo.admin.user.UserChoiceDAO"/>
-    <bean name="userRegionOptionsDao" class="com.azquo.admin.user.UserRegionOptionsDAO"/>
-    <bean name="databaseDao" class="com.azquo.admin.database.DatabaseDAO"/>
-    <bean name="databaseServerDao" class="com.azquo.admin.database.DatabaseServerDAO"/>
-    <bean name="loginRecordDao" class="com.azquo.admin.user.LoginRecordDAO"/>
-    <bean name="permissionDao" class="com.azquo.admin.user.PermissionDAO"/>
-    <bean name="invoiceDetailsDao" class="com.azquo.admin.business.InvoiceDetailsDAO"/>
-    <bean name="invoiceSentDao" class="com.azquo.admin.business.InvoiceSentDAO"/>
-    <bean name="loginService" class="com.azquo.spreadsheet.LoginService"/>
-    <bean name="importService" class="com.azquo.dataimport.ImportService"/>
-    <bean name="adminService" class="com.azquo.admin.AdminService"/>
-    <bean name="spreadsheetService" class="com.azquo.spreadsheet.SpreadsheetService"/>
-    <bean name="openDatabaseDao" class="com.azquo.admin.database.OpenDatabaseDAO"/>
-    <bean name="onlineReportDao" class="com.azquo.admin.onlinereport.OnlineReportDAO"/>
-    <bean name="reportScheduleDao" class="com.azquo.admin.onlinereport.ReportScheduleDAO"/>
-    <bean name="databaseReportLinkDAO" class="com.azquo.admin.onlinereport.DatabaseReportLinkDAO"/>
-
-    <bean name="magentoService" class="com.azquo.app.magento.service.DataLoadService"/>
-    <bean name="invoiceService" class="com.azquo.admin.InvoiceService"/>
-
-    <bean name="commandLineCalls" class="com.azquo.util.CommandLineCalls"/>
-
-    <bean id="dbCron" class="com.azquo.dataimport.DBCron"></bean>
+    <bean id="dbCron" class="com.azquo.dataimport.DBCron"/>
 
 
     <!--    <util:list id="appServices" value-type="com.azquo.spreadsheetheet.AppEntityService">

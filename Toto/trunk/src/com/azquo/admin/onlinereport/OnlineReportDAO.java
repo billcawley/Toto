@@ -15,12 +15,9 @@ import java.util.*;
  * Created by bill on 15/04/14.
  *
  */
-public class OnlineReportDAO extends StandardDAO<OnlineReport> {
+public class OnlineReportDAO {
     // the default table name for this data.
-    @Override
-    public String getTableName() {
-        return "online_report";
-    }
+    private static String TABLENAME = "online_report";
 
     // column names except ID which is in the superclass
     private static final String  DATECREATED = "date_created";
@@ -34,10 +31,9 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
     private static final String EXPLANATION = "explanation";
     private static final String RENDERER = "renderer";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
+    public static Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, onlineReport.getId());
+        toReturn.put(StandardDAO.ID, onlineReport.getId());
         toReturn.put(DATECREATED,  Date.from(onlineReport.getDateCreated().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(BUSINESSID, onlineReport.getBusinessId());
         toReturn.put(REPORTNAME, onlineReport.getReportName());
@@ -48,12 +44,12 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         return toReturn;
     }
 
-    private final class OnlineReportRowMapper implements RowMapper<OnlineReport> {
+    private static final class OnlineReportRowMapper implements RowMapper<OnlineReport> {
         @Override
         public OnlineReport mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new OnlineReport(rs.getInt(ID)
-                        , getLocalDateTimeFromDate(rs.getDate(DATECREATED))
+                return new OnlineReport(rs.getInt(StandardDAO.ID)
+                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(DATECREATED))
                         , rs.getInt(BUSINESSID)
                         , ""
                         , rs.getString(REPORTNAME)
@@ -69,46 +65,56 @@ public class OnlineReportDAO extends StandardDAO<OnlineReport> {
         }
     }
 
-    @Override
-    public RowMapper<OnlineReport> getRowMapper() {
-        return new OnlineReportRowMapper();
-    }
 
-    public OnlineReport findForDatabaseIdAndName(final int databaseId, String reportName) {
+    private static OnlineReportRowMapper onlineReportRowMapper = new OnlineReportRowMapper();
+
+    public static OnlineReport findForDatabaseIdAndName(final int databaseId, String reportName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DatabaseReportLinkDAO.DATABASE_ID, databaseId);
         namedParams.addValue(REPORTNAME, reportName);
-        return findOneWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
+        return StandardDAO.findOneWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + StandardDAO.ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
                 +  "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
-                + " and `" + REPORTNAME + "` = :" + REPORTNAME, namedParams);
+                + " and `" + REPORTNAME + "` = :" + REPORTNAME, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
-    public OnlineReport findForIdAndBusinessId(final int id, int businessId) {
+    public static OnlineReport findForIdAndBusinessId(final int id, int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(ID, id);
+        namedParams.addValue(StandardDAO.ID, id);
         namedParams.addValue(BUSINESSID, businessId);
-        return findOneWithWhereSQLAndParameters("  WHERE " + ID + " = :" + ID + " and " + BUSINESSID + " = :" + BUSINESSID, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + StandardDAO.ID + " = :" + StandardDAO.ID + " and " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
     // case insensetive - todo - is this a security concern??
-    public OnlineReport findForNameAndBusinessId(final String name, int businessId) {
+    public static OnlineReport findForNameAndBusinessId(final String name, int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(REPORTNAME, name);
         namedParams.addValue(BUSINESSID, businessId);
-        return findOneWithWhereSQLAndParameters("  WHERE " + REPORTNAME + " LIKE :" + REPORTNAME + " and " + BUSINESSID + " = :" + BUSINESSID, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + REPORTNAME + " LIKE :" + REPORTNAME + " and " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
-    public List<OnlineReport> findForBusinessId(int businessId) {
+    public static List<OnlineReport> findForBusinessId(int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        return findListWithWhereSQLAndParameters("  WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters("  WHERE " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
-    public List<OnlineReport> findForDatabaseId(final int databaseId) {
+    public static List<OnlineReport> findForDatabaseId(final int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DatabaseReportLinkDAO.DATABASE_ID, databaseId);
-        return findListWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
+        return StandardDAO.findListWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + StandardDAO.ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
                 +  "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
-                + " order by " + REPORTNAME, namedParams, false);
+                + " order by " + REPORTNAME, TABLENAME, onlineReportRowMapper, namedParams);
+    }
+
+    public static OnlineReport findById(int id){
+        return StandardDAO.findById(id, TABLENAME, onlineReportRowMapper);
+    }
+
+    public static void removeById(OnlineReport onlineReport){
+        StandardDAO.removeById(onlineReport, TABLENAME);
+    }
+
+    public static void store(OnlineReport onlineReport){
+        StandardDAO.store(onlineReport, TABLENAME, getColumnNameValueMap(onlineReport));
     }
 }

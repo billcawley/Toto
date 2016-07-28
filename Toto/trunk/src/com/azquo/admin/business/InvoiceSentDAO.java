@@ -15,19 +15,15 @@ import java.util.Map;
  *
  * Created by edward on 12/01/16.
  */
-public final class InvoiceSentDAO extends StandardDAO<InvoiceSent> {
+public final class InvoiceSentDAO  {
 
-    @Override
-    public String getTableName() {
-        return "invoice_sent";
-    }
+    private static final String TABLENAME = "invoice_sent";
 
     private static final String DATETIMESENT = "date_time_sent";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(final InvoiceSent invoiceSent) {
+    public static Map<String, Object> getColumnNameValueMap(final InvoiceSent invoiceSent) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, invoiceSent.getId());
+        toReturn.put(StandardDAO.ID, invoiceSent.getId());
         toReturn.put(InvoiceDetailsDAO.CUSTOMERREFERENCE, invoiceSent.getCustomerReference());
         toReturn.put(InvoiceDetailsDAO.SERVICEDESCRIPTION, invoiceSent.getServiceDescription());
         toReturn.put(InvoiceDetailsDAO.QUANTITY, invoiceSent.getQuantity());
@@ -44,24 +40,24 @@ public final class InvoiceSentDAO extends StandardDAO<InvoiceSent> {
         return toReturn;
     }
 
-    private final class InvoiceSentRowMapper implements RowMapper<InvoiceSent> {
+    private static final class InvoiceSentRowMapper implements RowMapper<InvoiceSent> {
         @Override
         public InvoiceSent mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new InvoiceSent(rs.getInt(ID)
+                return new InvoiceSent(rs.getInt(StandardDAO.ID)
                         , rs.getString(InvoiceDetailsDAO.CUSTOMERREFERENCE)
                         , rs.getString(InvoiceDetailsDAO.SERVICEDESCRIPTION)
                         , rs.getInt(InvoiceDetailsDAO.QUANTITY)
                         , rs.getInt(InvoiceDetailsDAO.UNITCOST)
                         , rs.getInt(InvoiceDetailsDAO.PAYMENTTERMS)
                         , rs.getString(InvoiceDetailsDAO.POREFERENCE)
-                        , getLocalDateTimeFromDate(rs.getDate(InvoiceDetailsDAO.INVOICEDATE)).toLocalDate()
+                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(InvoiceDetailsDAO.INVOICEDATE)).toLocalDate()
                         , rs.getString(InvoiceDetailsDAO.INVOICEPERIOD)
                         , rs.getString(InvoiceDetailsDAO.INVOICENO)
                         , rs.getString(InvoiceDetailsDAO.INVOICEADDRESS)
                         , rs.getBoolean(InvoiceDetailsDAO.NOVAT)
                         , rs.getString(InvoiceDetailsDAO.SENDTO)
-                        , getLocalDateTimeFromDate(rs.getDate(InvoiceDetailsDAO.INVOICEDATE))
+                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(InvoiceDetailsDAO.INVOICEDATE))
                 );
             } catch (Exception e) {
                 e.printStackTrace();
@@ -70,9 +66,17 @@ public final class InvoiceSentDAO extends StandardDAO<InvoiceSent> {
         }
     }
 
-    @Override
-    public RowMapper<InvoiceSent> getRowMapper() {
-        return new InvoiceSentRowMapper();
+    private static final InvoiceSentRowMapper invoiceSentRowmapper = new InvoiceSentRowMapper();
+
+    public static InvoiceSent findById(int id){
+        return StandardDAO.findById(id, TABLENAME, invoiceSentRowmapper);
     }
 
+    public static void removeById(InvoiceSent invoiceSent){
+        StandardDAO.removeById(invoiceSent, TABLENAME);
+    }
+
+    public static void store(InvoiceSent invoiceSent){
+        StandardDAO.store(invoiceSent, TABLENAME, getColumnNameValueMap(invoiceSent));
+    }
 }

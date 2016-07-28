@@ -26,15 +26,6 @@ import java.io.*;
 @RequestMapping("/Download")
 public class DownloadController {
 
-    @Autowired
-    LoginService loginService;
-
-    @Autowired
-    OnlineReportDAO onlineReportDAO;
-
-    @Autowired
-    SpreadsheetService spreadsheetService;
-
     @RequestMapping
     public void handleRequest(HttpServletRequest request
             , HttpServletResponse response
@@ -56,7 +47,7 @@ public class DownloadController {
             if (databaseServer.getIp().equals(LOCALIP)) {
                 String pathOffset = loggedInUser.getBusinessDirectory() + "/images/" + image;
                 String dbPath = "/databases/";
-                String filePath = spreadsheetService.getHomeDir() + dbPath + pathOffset;
+                String filePath = SpreadsheetService.getHomeDir() + dbPath + pathOffset;
                 try {
                     // new java 8 syntax, a little odd but I'll leave here for the moment
                     try (InputStream input = new BufferedInputStream(new FileInputStream(filePath))) {
@@ -81,31 +72,6 @@ public class DownloadController {
                 return;
             }
 
-        }
-        if (loggedInUser.getAzquoBook()==null){
-            return;
-        }
-        OnlineReport onlineReport = null;
-        int reportId = loggedInUser.getReportId();
-        if (reportId != 0) {
-            try {
-                onlineReport = onlineReportDAO.findById(reportId);
-            } catch (Exception ignored) {
-
-            }
-        }
-        // response passed into the functions to be dealt with there. Should mimetypes be dealt with out here?
-        String fileName = "/azquobook.xls";
-        if (onlineReport != null) {
-            fileName = onlineReport.getFilename();
-        }
-        if (fileName.indexOf("/") > 0) {
-            fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
-        }
-        if (pdf) {
-           loggedInUser.getAzquoBook().saveBookAsPDF(response, fileName);
-        } else {
-           loggedInUser.getAzquoBook().saveBook(response, fileName);
         }
     }
 }

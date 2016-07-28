@@ -10,7 +10,6 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
-import org.springframework.beans.factory.annotation.Autowired;
 import sun.misc.BASE64Encoder;
 
 import java.io.File;
@@ -33,34 +32,9 @@ public class AdminService {
 
     //private static final Logger logger = Logger.getLogger(AdminService.class);
 
-    @Autowired
-    private BusinessDAO businessDAO;
-    @Autowired
-    private DatabaseDAO databaseDAO;
-    @Autowired
-    private DatabaseServerDAO databaseServerDAO;
-    @Autowired
-    private UserDAO userDao;
-    @Autowired
-    private LoginRecordDAO loginRecordDAO;
-    @Autowired
-    private OpenDatabaseDAO openDatabaseDAO;
-    @Autowired
-    private PermissionDAO permissionDAO;
-    @Autowired
-    private UploadRecordDAO uploadRecordDAO;
-    @Autowired
-    private OnlineReportDAO onlineReportDAO;
-    @Autowired
-    private DatabaseReportLinkDAO databaseReportLinkDAO;
-    @Autowired
-    private ReportScheduleDAO reportScheduleDAO;
-    @Autowired
-    private SpreadsheetService spreadsheetService;
-
     // after uncommenting to use it won't requite the activation email initially
 
-    public void registerBusiness(final String email
+    public static void registerBusiness(final String email
             , final String userName
             , final String password
             , final String businessName
@@ -74,22 +48,22 @@ public class AdminService {
         final String key = shaHash(System.currentTimeMillis() + "");
         final Business.BusinessDetails bd = new Business.BusinessDetails(address1, address2, address3, address4, postcode, telephone, website, key);
         final Business business = new Business(0, businessName, bd);
-        final Business existing = businessDAO.findByName(businessName);
+        final Business existing = BusinessDAO.findByName(businessName);
         if (existing != null) {
             throw new Exception(businessName + " already registered");
         }
-        User existingUser = userDao.findByEmail(email);
+        User existingUser = UserDAO.findByEmail(email);
         if (existingUser != null) {
             if (existingUser.getEndDate().isAfter(LocalDateTime.now())) { // active user
                 throw new Exception(email + " already registered");
             } else {
-                userDao.removeById(existingUser); // it will be created again
+                UserDAO.removeById(existingUser); // it will be created again
             }
         }
-        businessDAO.store(business);
+        BusinessDAO.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
         final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business");
-        userDao.store(user);
+        UserDAO.store(user);
         /*
         azquoMailer.sendEMail(user.getEmail()
                 , user.getName()
@@ -122,34 +96,34 @@ this may now not work at all, perhaps delete?
         return "error:  incorrect key";
     }*/
 
-    private String getSQLDatabaseName(final LoggedInUser loggedInUser, final String databaseName) {
+    private static String getSQLDatabaseName(final LoggedInUser loggedInUser, final String databaseName) {
         //TODO  Check name below is unique.
         return getBusinessPrefix(loggedInUser) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
     }
 
-    private String getBusinessPrefix(final LoggedInUser loggedInUser) {
-        Business b = businessDAO.findById(loggedInUser.getUser().getBusinessId());
+    private static String getBusinessPrefix(final LoggedInUser loggedInUser) {
+        Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
         return b != null ? (b.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "") : null;
     }
 
     // ok in new report/database server split creating a database needs distinct bits
 
-    public void createDatabase(final String databaseName, String databaseType, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
+    public static void createDatabase(final String databaseName, String databaseType, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
         if (databaseType == null) {
             databaseType = "";
         }
         if (loggedInUser.getUser().isAdministrator()) {
-            Database existing = databaseDAO.findForName(loggedInUser.getUser().getBusinessId(), databaseName);
+            Database existing = DatabaseDAO.findForName(loggedInUser.getUser().getBusinessId(), databaseName);
             if (existing != null) {
                 throw new Exception("That database already exists");
             }
             final String persistenceName = getSQLDatabaseName(loggedInUser, databaseName);
-            final Business b = businessDAO.findById(loggedInUser.getUser().getBusinessId());
+            final Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
             if (b == null) {
                 throw new Exception("That business does not exist");
             }
             final Database database = new Database(0, b.getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId());
-            databaseDAO.store(database);
+            DatabaseDAO.store(database);
             // will be over to the DB side
             RMIClient.getServerInterface(databaseServer.getIp()).createDatabase(database.getPersistenceName());
             loggedInUser.setDatabaseWithServer(databaseServer, database);
@@ -158,16 +132,16 @@ this may now not work at all, perhaps delete?
         }
     }
 
-    public void emptyDatabase(DatabaseServer databaseServer, Database database) throws Exception {
+    public static void emptyDatabase(DatabaseServer databaseServer, Database database) throws Exception {
         RMIClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getPersistenceName());
     }
 
-    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
+    public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
         RMIClient.getServerInterface(source.getServerIp()).copyDatabase(source, target, nameList, readLanguages);
     }
 
 
-    public void createUser(final String email
+    public static void createUser(final String email
             , final String userName
             , final LocalDateTime endDate
             , final String status
@@ -176,7 +150,7 @@ this may now not work at all, perhaps delete?
         if (loggedInUser.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
             final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail());
-            userDao.store(user);
+            UserDAO.store(user);
         } else {
             throw new Exception("error: you do not have permission to create a user");
         }
@@ -184,20 +158,20 @@ this may now not work at all, perhaps delete?
 
     // now not dependant on selected database
 
-    public void createUserPermission(final int reportId, final int userId, final int databaseId, final String readList, final String writeList, final LoggedInUser loggedInUser) throws Exception {
-        User user = userDao.findById(userId);
-        Database database = databaseDAO.findById(databaseId);
+    public static void createUserPermission(final int reportId, final int userId, final int databaseId, final String readList, final String writeList, final LoggedInUser loggedInUser) throws Exception {
+        User user = UserDAO.findById(userId);
+        Database database = DatabaseDAO.findById(databaseId);
         if (loggedInUser.getUser().isAdministrator()
                 && user != null && user.getBusinessId() == loggedInUser.getUser().getBusinessId()
                 && database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             final Permission permission = new Permission(0, reportId, userId, databaseId, readList, writeList);
-            permissionDAO.store(permission);
+            PermissionDAO.store(permission);
         } else {
             throw new Exception("error: you do not have permission to perform this action");
         }
     }
 
-    public String encrypt(final String password, String salt) throws Exception {
+    public static String encrypt(final String password, String salt) throws Exception {
         // WARNING! DO NOT MODIFY THE reference to "scapbadopbebedop"  bit in the code below or existing passwords will stop working! This is the extra bit on the salt or the number of hash cycles! stay at 3296
         salt += "scapbadopbebedop";
         byte[] passBytes = password.getBytes();
@@ -216,7 +190,7 @@ this may now not work at all, perhaps delete?
         return (new BASE64Encoder()).encode(passBytes);
     }
 
-    public String shaHash(final String toHash) throws Exception {   // for making a password salt
+    public static String shaHash(final String toHash) throws Exception {   // for making a password salt
         java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
         byte[] hash = md.digest(toHash.getBytes());
         Formatter formatter = new Formatter();
@@ -227,40 +201,40 @@ this may now not work at all, perhaps delete?
     }
 
 
-    public Business getBusinessById(int id) {
-        return businessDAO.findById(id);
+    public static Business getBusinessById(int id) {
+        return BusinessDAO.findById(id);
     }
 
-    public List<Database> getDatabaseListForBusiness(final LoggedInUser loggedInUser) {
+    public static List<Database> getDatabaseListForBusiness(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
-            return databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            return DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         }
         return null;
     }
 
-    public List<User> getUserListForBusiness(final LoggedInUser loggedInUser) {
+    public static List<User> getUserListForBusiness(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
-            return userDao.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            return UserDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         }
         if (loggedInUser.getUser().isMaster()) {
-            return userDao.findForBusinessIdAndCreatedBy(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getEmail());
+            return UserDAO.findForBusinessIdAndCreatedBy(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getEmail());
         }
         return null;
     }
 
-    public List<OnlineReport> getReportListForBusiness(final LoggedInUser loggedInUser) {
+    public static List<OnlineReport> getReportListForBusiness(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
-            return onlineReportDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            return OnlineReportDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         }
         return null;
     }
 
 
-    public List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
+    public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
         List<OnlineReport> reportList = new ArrayList<>();
-        List<Database> databases = databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         for (Database database : databases) {
-            List<OnlineReport> reports = onlineReportDAO.findForDatabaseId(database.getId());
+            List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
             for (OnlineReport report : reports) {
                 report.setDatabase(database.getName());
             }
@@ -274,32 +248,32 @@ this may now not work at all, perhaps delete?
         return reportList;
     }
 
-    public List<ReportSchedule> getReportScheduleList(final LoggedInUser loggedInUser) {
+    public static List<ReportSchedule> getReportScheduleList(final LoggedInUser loggedInUser) {
         List<ReportSchedule> toReturn = new ArrayList<>();
-        List<Database> databases = databaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         for (Database database : databases) {
-            List<ReportSchedule> reportSchedules = reportScheduleDAO.findForDatabaseId(database.getId());
+            List<ReportSchedule> reportSchedules = ReportScheduleDAO.findForDatabaseId(database.getId());
             toReturn.addAll(reportSchedules);
 
         }
         return toReturn;
     }
 
-    public List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInUser loggedInUser) {
+    public static List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
-            List<UploadRecord> uploadRecords = uploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            List<UploadRecord> uploadRecords = UploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<>();
             for (UploadRecord uploadRecord : uploadRecords) {
                 String dbName = "";
                 if (uploadRecord.getDatabaseId() > 0) {
-                    Database database = databaseDAO.findById(uploadRecord.getDatabaseId());
+                    Database database = DatabaseDAO.findById(uploadRecord.getDatabaseId());
                     if (database != null) {
                         dbName = database.getName();
                     }
                 }
                 String userName = "";
                 if (uploadRecord.getUserId() > 0) {
-                    User user = userDao.findById(uploadRecord.getUserId());
+                    User user = UserDAO.findById(uploadRecord.getUserId());
                     if (user != null) {
                         userName = user.getName();
                     }
@@ -311,55 +285,55 @@ this may now not work at all, perhaps delete?
                         downloadable = true;
                     }
                 }
-                uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, businessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
+                uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
             }
             return uploadRecordsForDisplay;
         }
         return null;
     }
 
-    public List<Permission.PermissionForDisplay> getDisplayPermissionList(final LoggedInUser loggedInUser) {
+    public static List<Permission.PermissionForDisplay> getDisplayPermissionList(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
             List<Permission.PermissionForDisplay> permissions = new ArrayList<>();
-            for (Permission permission : permissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId())) {
-                permissions.add(new Permission.PermissionForDisplay(permission, databaseDAO, userDao,onlineReportDAO));
+            for (Permission permission : PermissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId())) {
+                permissions.add(new Permission.PermissionForDisplay(permission));
             }
             return permissions;
         }
         return null;
     }
 
-    public void deleteUserById(int userId, LoggedInUser loggedInUser) {
-        User user = userDao.findById(userId);
+    public static void deleteUserById(int userId, LoggedInUser loggedInUser) {
+        User user = UserDAO.findById(userId);
         if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
-            userDao.removeById(user);
-            final List<Permission> forUserId = permissionDAO.findForUserId(userId);
+            UserDAO.removeById(user);
+            final List<Permission> forUserId = PermissionDAO.findForUserId(userId);
             for (Permission permission : forUserId) {
-                permissionDAO.removeById(permission);
+                PermissionDAO.removeById(permission);
             }
         }
     }
 
-    public User getUserById(int userId, LoggedInUser loggedInUser) {
-        User user = userDao.findById(userId);
+    public static User getUserById(int userId, LoggedInUser loggedInUser) {
+        User user = UserDAO.findById(userId);
         if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
             return user;
         }
         return null;
     }
 
-    public void deletePermissionById(int permissionId, LoggedInUser loggedInUser) {
-        Permission permission = permissionDAO.findById(permissionId);
-        User user = userDao.findById(permission.getUserId());
+    public static void deletePermissionById(int permissionId, LoggedInUser loggedInUser) {
+        Permission permission = PermissionDAO.findById(permissionId);
+        User user = UserDAO.findById(permission.getUserId());
         if (loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
-            permissionDAO.removeById(permission);
+            PermissionDAO.removeById(permission);
         }
     }
 
-    public Permission getPermissionById(int permissionId, LoggedInUser loggedInUser) {
-        Permission permission = permissionDAO.findById(permissionId);
+    public static Permission getPermissionById(int permissionId, LoggedInUser loggedInUser) {
+        Permission permission = PermissionDAO.findById(permissionId);
         if (permission != null) {
-            User user = userDao.findById(permission.getUserId());
+            User user = UserDAO.findById(permission.getUserId());
             if (loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
                 return permission;
             }
@@ -367,81 +341,81 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public Database getDatabaseById(int databaseId, LoggedInUser loggedInUser) {
-        Database database = databaseDAO.findById(databaseId);
+    public static Database getDatabaseById(int databaseId, LoggedInUser loggedInUser) {
+        Database database = DatabaseDAO.findById(databaseId);
         if (database != null && loggedInUser.getUser().getBusinessId() == database.getBusinessId()) {
             return database;
         }
         return null;
     }
 
-    public OnlineReport getReportById(int reportId, LoggedInUser loggedInUser) {
-        OnlineReport onlineReport = onlineReportDAO.findById(reportId);
+    public static OnlineReport getReportById(int reportId, LoggedInUser loggedInUser) {
+        OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         if (onlineReport != null && loggedInUser.getUser().getBusinessId() == onlineReport.getBusinessId()) {
             return onlineReport;
         }
         return null;
     }
 
-    public void removeReportById(LoggedInUser loggedInUser, int reportId) {
-        OnlineReport onlineReport = onlineReportDAO.findById(reportId);
+    public static void removeReportById(LoggedInUser loggedInUser, int reportId) {
+        OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         if (onlineReport != null && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            String fullPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename();
+            String fullPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename();
             File file = new File(fullPath);
             if (file.exists()) {
                 file.delete();
             }
-            onlineReportDAO.removeById(onlineReport);
+            OnlineReportDAO.removeById(onlineReport);
         }
     }
 
     // code adapted from spreadsheet service which it wilol be removed from
-    public void removeDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
-        Database db = databaseDAO.findById(databaseId);
+    public static void removeDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
+        Database db = DatabaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             // note, used to delete choices for the reports for this DB, won't do this now as
-            loginRecordDAO.removeForDatabaseId(db.getId());
-            databaseReportLinkDAO.unLinkDatabase(databaseId);
-            openDatabaseDAO.removeForDatabaseId(db.getId());
-            permissionDAO.removeForDatabaseId(db.getId());
-            uploadRecordDAO.removeForDatabaseId(db.getId());
-            databaseDAO.removeById(db);
-            RMIClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).dropDatabase(db.getPersistenceName());
+            LoginRecordDAO.removeForDatabaseId(db.getId());
+            DatabaseReportLinkDAO.unLinkDatabase(databaseId);
+            OpenDatabaseDAO.removeForDatabaseId(db.getId());
+            PermissionDAO.removeForDatabaseId(db.getId());
+            UploadRecordDAO.removeForDatabaseId(db.getId());
+            DatabaseDAO.removeById(db);
+            RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).dropDatabase(db.getPersistenceName());
         }
     }
 
-    public void emptyDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
-        Database db = databaseDAO.findById(databaseId);
+    public static void emptyDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
+        Database db = DatabaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            RMIClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getPersistenceName());
+            RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getPersistenceName());
         }
     }
 
-    public void unloadDatabase(LoggedInUser loggedInUser, int databaseId) throws Exception {
-        Database db = databaseDAO.findById(databaseId);
+    public static void unloadDatabase(LoggedInUser loggedInUser, int databaseId) throws Exception {
+        Database db = DatabaseDAO.findById(databaseId);
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            RMIClient.getServerInterface(databaseServerDAO.findById(db.getDatabaseServerId()).getIp()).unloadDatabase(db.getPersistenceName());
+            RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).unloadDatabase(db.getPersistenceName());
         }
     }
 
     // a little inconsistent but it will be called using a database object, no point looking up again
-    public boolean isDatabaseLoaded(LoggedInUser loggedInUser, Database database) throws Exception {
+    public static boolean isDatabaseLoaded(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            return RMIClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).isDatabaseLoaded(database.getPersistenceName());
+            return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).isDatabaseLoaded(database.getPersistenceName());
         }
         return false;
     }
 
-    public int getNameCount(LoggedInUser loggedInUser, Database database) throws Exception {
+    public static int getNameCount(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            return RMIClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getNameCount(database.getPersistenceName());
+            return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getNameCount(database.getPersistenceName());
         }
         return 0;
     }
 
-    public int getValueCount(LoggedInUser loggedInUser, Database database) throws Exception {
+    public static int getValueCount(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            return RMIClient.getServerInterface(databaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getValueCount(database.getPersistenceName());
+            return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getValueCount(database.getPersistenceName());
         }
         return 0;
     }

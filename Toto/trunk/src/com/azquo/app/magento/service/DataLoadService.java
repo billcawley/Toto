@@ -13,19 +13,19 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 public final class DataLoadService {
 
-    public String findLastUpdate(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
+    public static String findLastUpdate(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).findLastUpdate(databaseAccessToken, remoteAddress);
     }
 
-    public boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception{
+    public static boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception{
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).magentoDBNeedsSettingUp(databaseAccessToken);
     }
 
-    public String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
+    public static String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws Exception {
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).findRequiredTables(databaseAccessToken, remoteAddress);
     }
 
-    public void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress, String user) throws Exception {
+    public static void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress, String user) throws Exception {
         RMIClient.getServerInterface(databaseAccessToken.getServerIp()).loadData(databaseAccessToken, filePath, remoteAddress, user);
     }
 }

@@ -108,26 +108,26 @@ public final class Permission extends StandardEntity {
         private final String userEmail;
         private final String reportName;
         // todo - maybe move the DAO calls out?
-        public PermissionForDisplay(Permission permission, DatabaseDAO databaseDAO, UserDAO userDAO, OnlineReportDAO onlineReportDAO){
+        public PermissionForDisplay(Permission permission){
             this.id = permission.getId();
             this.userId = permission.getUserId();
             this.reportId = permission.getReportId();
             this.databaseId = permission.getDatabaseId();
             this.readList = permission.getReadList();
             this.writeList = permission.getWriteList();
-            Database database = databaseDAO.findById(databaseId);
+            Database database = DatabaseDAO.findById(databaseId);
             if (database != null){
                 databaseName = database.getName();
             } else {
                 databaseName = null;
             }
-            User user = userDAO.findById(userId);
+            User user = UserDAO.findById(userId);
             if (user != null){
                 userEmail = user.getEmail();
             } else {
                 userEmail = null;
             }
-            OnlineReport onlineReport = onlineReportDAO.findById(reportId);
+            OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
             if (onlineReport != null){
                 reportName = onlineReport.getReportName();
             } else {

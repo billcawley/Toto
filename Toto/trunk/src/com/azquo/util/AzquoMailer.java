@@ -4,12 +4,6 @@ import com.sun.mail.imap.IMAPFolder;
 import org.apache.commons.mail.DefaultAuthenticator;
 import org.apache.commons.mail.EmailAttachment;
 import org.apache.commons.mail.HtmlEmail;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.core.env.AbstractEnvironment;
-import org.springframework.core.env.CompositePropertySource;
-import org.springframework.core.env.Environment;
 
 import javax.mail.*;
 import javax.mail.internet.MimeBodyPart;
@@ -27,11 +21,18 @@ import java.util.Properties;
  * <p>
  * Configuration like SpreadsheetService, not ideal but I want mail server details out of here
  */
-@Configuration
-@PropertySource({"classpath:azquo.properties"})
 public class AzquoMailer {
-    @Autowired
-    private Environment env;
+
+    private static final Properties azquoProperties = new Properties();
+
+    static {
+        System.out.println("attempting properties load from classpath");
+        try {
+            azquoProperties.load(AzquoMailer.class.getClassLoader().getResourceAsStream("azquo.properties"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private static final String MAILPREFIX = "mail.";
     private static final String MAILSERVER = "mail.server";
@@ -45,11 +46,11 @@ public class AzquoMailer {
     private static final String MAILBOXUSER = "mailbox.user";
     private static final String MAILBOXPASSWORD = "mailbox.password";
 
-    public boolean sendEMail(String toEmail, String toName, String subject, String body) {
+    public static boolean sendEMail(String toEmail, String toName, String subject, String body) {
         return sendEMail(toEmail, toName, subject, body, null, null);
     }
 
-    public boolean sendEMail(String toEmail, String toName, String subject, String body, List<File> attachments, List<EmailAttachment> emailAttachments) {
+    public static boolean sendEMail(String toEmail, String toName, String subject, String body, List<File> attachments, List<EmailAttachment> emailAttachments) {
         try {
             HtmlEmail email = new HtmlEmail();
             //email.setDebug(true); // useful stuff if things go wrong
@@ -60,33 +61,29 @@ public class AzquoMailer {
             String fromaddress = "";
             String fromname = "";
             int port = 587; // could set from properties?
-            for (org.springframework.core.env.PropertySource<?> propertySource : ((AbstractEnvironment) env).getPropertySources()) {
-                if (propertySource instanceof CompositePropertySource) {// composite being azquo.properties and the like
-                    for (String key : ((CompositePropertySource) propertySource).getPropertyNames()) {
+                    for (String key : azquoProperties.stringPropertyNames()) {
                         if (key.startsWith(MAILPREFIX)) {
                             switch (key) {
                                 case MAILSERVER:
-                                    email.setHostName((String) propertySource.getProperty(key));
+                                    email.setHostName(azquoProperties.getProperty(key));
                                     break;
                                 case MAILUSER:
-                                    user = (String) propertySource.getProperty(key);
+                                    user = azquoProperties.getProperty(key);
                                     break;
                                 case MAILPASSWORD:
-                                    password = (String) propertySource.getProperty(key);
+                                    password = azquoProperties.getProperty(key);
                                     break;
                                 case MAILFROMADDRESS:
-                                    fromaddress = (String) propertySource.getProperty(key);
+                                    fromaddress = azquoProperties.getProperty(key);
                                     break;
                                 case MAILFROMNAME:
-                                    fromname = (String) propertySource.getProperty(key);
+                                    fromname = azquoProperties.getProperty(key);
                                     break;
                                 default:
-                                    System.setProperty(key, (String) propertySource.getProperty(key)); // push extras through
+                                    System.setProperty(key, azquoProperties.getProperty(key)); // push extras through
                             }
                         }
                     }
-                }
-            }
             email.setAuthenticator(new DefaultAuthenticator(user, password));
             email.setStartTLSEnabled(true);
             email.setSmtpPort(port);
@@ -128,7 +125,7 @@ public class AzquoMailer {
     }
 
     // yoinked from tinternet and modified
-    public void readGoogleAnalyticsEmail() {
+    public static void readGoogleAnalyticsEmail() {
         Store store = null;
         IMAPFolder folder = null;
         try {
@@ -136,9 +133,9 @@ public class AzquoMailer {
             props.setProperty("mail.store.protocol", "imap");
             Session session = Session.getDefaultInstance(props, null);
             store = session.getStore("imap");
-            String mailboxIp = env.getProperty(MAILBOXIP);
-            String mailboxUser = env.getProperty(MAILBOXUSER);
-            String mailboxPassword = env.getProperty(MAILBOXPASSWORD);
+            String mailboxIp = azquoProperties.getProperty(MAILBOXIP);
+            String mailboxUser = azquoProperties.getProperty(MAILBOXUSER);
+            String mailboxPassword = azquoProperties.getProperty(MAILBOXPASSWORD);
 
             store.connect(mailboxIp, mailboxUser, mailboxPassword);
             folder = (IMAPFolder) store.getFolder("inbox");

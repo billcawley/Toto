@@ -40,36 +40,6 @@ import java.util.Date;
 
 public class MagentoController {
 
-    @Autowired
-    private DataLoadService dataLoadService;
-
-    @Autowired
-    OnlineReportDAO onlineReportDAO;
-
-    @Autowired
-    BusinessDAO businessDAO;
-
-    @Autowired
-    SpreadsheetService spreadsheetService;
-
-    @Autowired
-    ImportService importService;
-
-    @Autowired
-    LoginService loginService;
-
-    @Autowired
-    DatabaseDAO databaseDAO;
-
-    @Autowired
-    AzquoMailer azquoMailer;
-
-    @Autowired
-    AdminService adminService;
-
-    @Autowired
-    private DatabaseServerDAO databaseServerDAO;
-
     // we should start using the logger really
     //private static final Logger logger = Logger.getLogger(MagentoController.class);
 
@@ -91,16 +61,16 @@ public class MagentoController {
             if (db == null) {
                 db = "temp";
             }
-            LoggedInUser loggedInUser = loginService.loginLoggedInUser("",db, logon, password, false);//will automatically switch the database to 'temp' if that's the only one
+            LoggedInUser loggedInUser = LoginService.loginLoggedInUser("",db, logon, password, false);//will automatically switch the database to 'temp' if that's the only one
             if (loggedInUser == null) {
                 return "error: user " + logon + " with this password does not exist";
             }
             if (!db.equals("temp") && db.length() > 0) {
-                loginService.switchDatabase(loggedInUser, db);
+                LoginService.switchDatabase(loggedInUser, db);
                 //todo  consider what happens if there's an error here (check the result from the line above?)
             }
             if (op.equals("connect")) {
-                if (dataLoadService.findLastUpdate(loggedInUser.getDataAccessToken(), request.getRemoteAddr()) != null) {
+                if (DataLoadService.findLastUpdate(loggedInUser.getDataAccessToken(), request.getRemoteAddr()) != null) {
                     // was connection id here, hacking ths back in to get the logged in connection. We're dealing with the legacy of the conneciton id still in the plugin.
                     String tempConnectionId = System.currentTimeMillis() + "" + hashCode(); // adding the hashcode to make it much harder for someone to hack the connection id (which we need to zap)
                     request.getServletContext().setAttribute(tempConnectionId, loggedInUser);
@@ -112,16 +82,16 @@ public class MagentoController {
             if (op.equals("restart")) {
                 Database existingDb = loggedInUser.getDatabase();
                 if (existingDb != null){
-                    adminService.emptyDatabase(databaseServerDAO.findById(existingDb.getDatabaseServerId()), loggedInUser.getDatabase());
-                    Business business = businessDAO.findById(loggedInUser.getUser().getBusinessId());
+                    AdminService.emptyDatabase(DatabaseServerDAO.findById(existingDb.getDatabaseServerId()), loggedInUser.getDatabase());
+                    Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                     String title = "Magento db clear " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
-                    azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
-                    azquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
-                    azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
-                    azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
+                    AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
+                    AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
+                    AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
+                    AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                 }
                 //loginService.switchDatabase(loggedInUser, null); // something to do with booting it from memory, not sure if we care?
-                loginService.switchDatabase(loggedInUser, existingDb);
+                LoginService.switchDatabase(loggedInUser, existingDb);
                 return findRequiredTables(loggedInUser, request.getRemoteAddr());
             }
             if (op.equals("lastupdate") || op.equals("requiredtables")) { // 'lastupdate' applies only to versions 1.1.0 and 1.1.1  (LazySusan and Lyco)
@@ -136,17 +106,17 @@ public class MagentoController {
                     long start = System.currentTimeMillis();
                     // now copying all files, will make it easier for the client/server split. No passing of input streams just the file name
                     String tempDir = "/temp/" +loggedInUser.getDatabase().getPersistenceName()+ "-" + df.format(new Date());
-                    File moved = new File(spreadsheetService.getHomeDir() + tempDir);
+                    File moved = new File(SpreadsheetService.getHomeDir() + tempDir);
                     data.transferTo(moved);
-                    dataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr(), loggedInUser.getUser().getName());
+                    DataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr(), loggedInUser.getUser().getName());
                     long elapsed = System.currentTimeMillis() - start;
-                    if (!spreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
-                        Business business = businessDAO.findById(loggedInUser.getUser().getBusinessId());
+                    if (!SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
+                        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                         String title = "Magento file upload " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
-                        azquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
-                        azquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
-                        azquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
-                        azquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
+                        AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
+                        AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
+                        AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
+                        AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                     }
                     // was connection id here, hacking ths back in to get the logged in conneciton
                     String tempConnectionId = System.currentTimeMillis() + "";
@@ -184,11 +154,11 @@ public class MagentoController {
         if (loggedInUser.getDatabase() == null){
             return "error: no database selected";
         }
-        if (dataLoadService.magentoDBNeedsSettingUp(loggedInUser.getDataAccessToken())){
-            String magentoSetupFile = spreadsheetService.getHomeDir() + "/databases/ecommerce/setup/ecommerce setup.xlsx";
+        if (DataLoadService.magentoDBNeedsSettingUp(loggedInUser.getDataAccessToken())){
+            String magentoSetupFile = SpreadsheetService.getHomeDir() + "/databases/ecommerce/setup/ecommerce setup.xlsx";
             String fileName = "magentosetup.xlsx";
-            importService.importTheFile(loggedInUser, fileName, magentoSetupFile, Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), false);
+            ImportService.importTheFile(loggedInUser, fileName, magentoSetupFile, Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), false);
         }
-        return dataLoadService.findRequiredTables(loggedInUser.getDataAccessToken(), remoteAddress);
+        return DataLoadService.findRequiredTables(loggedInUser.getDataAccessToken(), remoteAddress);
     }
 }

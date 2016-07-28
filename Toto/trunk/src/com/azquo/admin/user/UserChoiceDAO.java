@@ -17,13 +17,10 @@ import java.util.Map;
  *
  * Modified by edd to remove report specifity, this was per report and included standard options such as sorting etc. Now it does not and options are shared across reports.
  */
-public final class UserChoiceDAO extends StandardDAO<UserChoice> {
+public final class UserChoiceDAO  {
 
     // the default table name for this data.
-    @Override
-    public String getTableName() {
-        return "user_choice";
-    }
+    private static final String TABLENAME = "user_choice";
 
     // column names except ID which is in the superclass
 
@@ -32,10 +29,9 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
     private static final String CHOICEVALUE = "choice_value";
     private static final String TIME = "time";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(UserChoice ucr) {
+    public static Map<String, Object> getColumnNameValueMap(UserChoice ucr) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, ucr.getId());
+        toReturn.put(StandardDAO.ID, ucr.getId());
         toReturn.put(USERID, ucr.getUserId());
         toReturn.put(CHOICENAME, ucr.getChoiceName());
         toReturn.put(CHOICEVALUE, ucr.getChoiceValue());
@@ -48,7 +44,7 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
         @Override
         public UserChoice mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new UserChoice(rs.getInt(ID)
+                return new UserChoice(rs.getInt(StandardDAO.ID)
                         , rs.getInt(USERID)
                         , rs.getString(CHOICENAME)
                         , rs.getString(CHOICEVALUE)
@@ -60,22 +56,32 @@ public final class UserChoiceDAO extends StandardDAO<UserChoice> {
         }
     }
 
-    @Override
-    public RowMapper<UserChoice> getRowMapper() {
-        return new UserChoiceRowMapper();
-    }
+    private static final UserChoiceRowMapper userChoiceRowMapper = new UserChoiceRowMapper();
 
-    public UserChoice findForUserIdAndChoice(final int userId, final String choiceName) {
+    public static UserChoice findForUserIdAndChoice(final int userId, final String choiceName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
         namedParams.addValue(CHOICENAME, choiceName);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + CHOICENAME + "` = :" + CHOICENAME, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + CHOICENAME + "` = :" + CHOICENAME, TABLENAME, userChoiceRowMapper, namedParams);
     }
 
-    public List<UserChoice> findForUserId(final int userId) {
+    public static List<UserChoice> findForUserId(final int userId) {
         //only used by the convert to Azquo_master;
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
-        return findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID, namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID, TABLENAME, userChoiceRowMapper, namedParams);
     }
+
+    public static UserChoice findById(int id){
+        return StandardDAO.findById(id, TABLENAME, userChoiceRowMapper);
+    }
+
+    public static void removeById(UserChoice userChoice){
+        StandardDAO.removeById(userChoice, TABLENAME);
+    }
+
+    public static void store(UserChoice userChoice){
+        StandardDAO.store(userChoice, TABLENAME, getColumnNameValueMap(userChoice));
+    }
+
 }

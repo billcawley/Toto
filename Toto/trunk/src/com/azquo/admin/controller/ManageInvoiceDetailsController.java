@@ -31,10 +31,6 @@ import java.util.List;
 @RequestMapping("/ManageInvoiceDetails")
 public class ManageInvoiceDetailsController {
 
-    @Autowired
-    private InvoiceService invoiceService;
-    @Autowired
-    private InvoiceDetailsDAO invoiceDetailsDao;
     private static final Logger logger = Logger.getLogger(ManageReportsController.class);
 
     @RequestMapping
@@ -52,9 +48,9 @@ public class ManageInvoiceDetailsController {
         } else {
             if (request.getParameter("new") != null){
                 InvoiceDetails invoiceDetails = new InvoiceDetails(0, "", "", 0, 0, 0, "", LocalDate.now(), "", "", "", false, "");
-                invoiceDetailsDao.store(invoiceDetails);
+                InvoiceDetailsDAO.store(invoiceDetails);
             }
-            List<InvoiceDetails> invoiceDetailsList = invoiceDetailsDao.findAll();
+            List<InvoiceDetails> invoiceDetailsList = InvoiceDetailsDAO.findAll();
             StringBuilder error = new StringBuilder();
             if (request.getParameter("submit") != null){
                 for (InvoiceDetails invoiceDetails : invoiceDetailsList) {
@@ -131,26 +127,26 @@ public class ManageInvoiceDetailsController {
                         store = true;
                     }
                     if (store) {
-                        invoiceDetailsDao.store(invoiceDetails);
+                        InvoiceDetailsDAO.store(invoiceDetails);
                     }
                     if (sendnow){
-                        invoiceService.sendInvoiceEmail(invoiceDetails);
+                        InvoiceService.sendInvoiceEmail(invoiceDetails);
                     }
                 }
             }
                 int deleteId = ServletRequestUtils.getIntParameter(request, "deleteId", 0);
             if (deleteId != 0){
-                InvoiceDetails invoiceDetails = invoiceDetailsDao.findById(deleteId);
+                InvoiceDetails invoiceDetails = InvoiceDetailsDAO.findById(deleteId);
                 if (invoiceDetails != null){
-                    invoiceDetailsDao.removeById(invoiceDetails);
-                    invoiceDetailsList = invoiceDetailsDao.findAll(); // and refresh the list!
+                    InvoiceDetailsDAO.removeById(invoiceDetails);
+                    invoiceDetailsList = InvoiceDetailsDAO.findAll(); // and refresh the list!
                 }
             }
             model.put("invoiceDetailsList", invoiceDetailsList);
             if (error.length() > 0){
                 model.put("error", error.toString());
             }
-            model.put("startInvoicesAt", invoiceDetailsDao.findMaxId() + 1);
+            model.put("startInvoicesAt", InvoiceDetailsDAO.findMaxId() + 1);
             model.put("todaysDate", InvoiceDetails.dateFormatter.format(LocalDate.now()));
             model.put("beginningOfMonth", InvoiceDetails.dateFormatter.format(LocalDate.now().withDayOfMonth(1)));
             return "manageinvoicedetails";

@@ -32,12 +32,6 @@ import java.util.List;
 @Controller
 @RequestMapping("/ManageDatabaseBackups")
 public class ManageDatabaseBackupsController {
-    @Autowired
-    private AdminService adminService;
-    @Autowired
-    private SpreadsheetService spreadsheetService;
-    @Autowired
-    private CommandLineCalls commandLineCalls;
 
     private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
 
@@ -78,20 +72,20 @@ public class ManageDatabaseBackupsController {
             try {
                 Database databaseById = null;
                 if (databaseId != null && NumberUtils.isNumber(databaseId)) {
-                    databaseById = adminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
+                    databaseById = AdminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
                 }
                 if (databaseById == null){
                     error.append("Bad database Id.");
                 } else {
                     model.put("database", databaseById.getName());
                     model.put("databaseId", databaseById.getId());
-                    File f = new File(spreadsheetService.getHomeDir() + ImportService.dbPath + "backups/");
+                    File f = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + "backups/");
                     if (!f.exists()){
                         if (!f.mkdir()){
                             throw new Exception("unable to make directory : " + f.getPath());
                         }
                     }
-                    File finalDir = new File(spreadsheetService.getHomeDir() + ImportService.dbPath + "backups/" + databaseById.getPersistenceName() + "/");
+                    File finalDir = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + "backups/" + databaseById.getPersistenceName() + "/");
                     if (!finalDir.exists()){
                         if (!finalDir.mkdir()){
                             throw new Exception("unable to make directory : " + finalDir.getPath());
@@ -105,7 +99,7 @@ public class ManageDatabaseBackupsController {
                         String dump = "mysqldump  --user='toto' --password='ark'  " + databaseById.getPersistenceName() + " > " + finalDir.getPath() + "/" + newBackup;
                         // for some reason need to use the command array, dunno why
                         String[] cmdarray = {"/bin/sh","-c", dump};
-                        commandLineCalls.runCommand(null, cmdarray, true, null);
+                        CommandLineCalls.runCommand(null, cmdarray, true, null);
                     }
 
                     if (deleteBackup != null && !deleteBackup.isEmpty()){
@@ -123,11 +117,11 @@ public class ManageDatabaseBackupsController {
                         restoreBackup = restoreBackup.replace("/", "");
                         restoreBackup = restoreBackup.replace("\\", "");
                         // unload the db first
-                        adminService.unloadDatabase(loggedInUser, databaseById.getId());
+                        AdminService.unloadDatabase(loggedInUser, databaseById.getId());
                         String restore = "mysql --user='toto' --password='ark' " + databaseById.getPersistenceName() + " < " + finalDir.getPath() + "/" + restoreBackup;
                         // for some reason need to use the command array, dunno why
                         String[] cmdarray = {"/bin/sh","-c", restore};
-                        commandLineCalls.runCommand(null, cmdarray, true, null);
+                        CommandLineCalls.runCommand(null, cmdarray, true, null);
                     }
 
                     // ok backup directory is there!

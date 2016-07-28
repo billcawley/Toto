@@ -17,13 +17,7 @@ import java.util.Map;
  * Created by cawley on 07/01/14.
  * Details on each database
  */
-public final class DatabaseDAO extends StandardDAO<Database> {
-
-    // the default table name for this data.
-    @Override
-    public String getTableName() {
-        return DATABASE;
-    }
+public final class DatabaseDAO {
 
     // column names except ID which is in the superclass
 
@@ -37,10 +31,9 @@ public final class DatabaseDAO extends StandardDAO<Database> {
     private static final String VALUECOUNT = "value_count";
     private static final String DATABASESERVERID = "database_server_id";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(Database database) {
+    public static Map<String, Object> getColumnNameValueMap(Database database) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, database.getId());
+        toReturn.put(StandardDAO.ID, database.getId());
         toReturn.put(BUSINESSID, database.getBusinessId());
         toReturn.put(NAME, database.getName());
         toReturn.put(MYSQLNAME, database.getPersistenceName());
@@ -51,12 +44,11 @@ public final class DatabaseDAO extends StandardDAO<Database> {
         return toReturn;
     }
 
-    private final class DatabaseRowMapper implements RowMapper<Database> {
-
+    private static final class DatabaseRowMapper implements RowMapper<Database> {
         @Override
         public Database mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new Database(rs.getInt(ID)
+                return new Database(rs.getInt(StandardDAO.ID)
                         , rs.getInt(BUSINESSID)
                         , rs.getString(NAME)
                         , rs.getString(MYSQLNAME)
@@ -71,31 +63,41 @@ public final class DatabaseDAO extends StandardDAO<Database> {
         }
     }
 
-    @Override
-    public RowMapper<Database> getRowMapper() {
-        return new DatabaseRowMapper();
-    }
+    private static DatabaseRowMapper databaseRowMapper = new DatabaseRowMapper();
 
-    public List<Database> findForBusinessId(final int businessId) {
+    public static List<Database> findForBusinessId(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        return findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " order by " + NAME, namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " order by " + NAME, DATABASE, databaseRowMapper, namedParams);
     }
 
 /*
     SELECT `database`.* FROM `database`,`permission` WHERE `permission`.`user_id` = 271 and `database`.id = `permission`.`database_id`group by `database_id`
      */
 // todo clean
-    public List<Database> findForUserIdViaPermission(final int userId) {
+    public static List<Database> findForUserIdViaPermission(final int userId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(PermissionDAO.USERID, userId);
-        return findListWithWhereSQLAndParameters(",`" + MASTER_DB + "`.`permission` WHERE `permission`.`" + PermissionDAO.USERID + "` =:" + PermissionDAO.USERID +  " and `database`.id = `permission`.`database_id` group by `database_id`", namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters(",`" + StandardDAO.MASTER_DB + "`.`permission` WHERE `permission`.`" + PermissionDAO.USERID + "` =:" + PermissionDAO.USERID +  " and `database`.id = `permission`.`database_id` group by `database_id`", DATABASE, databaseRowMapper, namedParams);
     }
 
-    public Database findForName(final int businessID, final String name) {
+    public static Database findForName(final int businessID, final String name) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessID);
         namedParams.addValue(NAME, name);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` =:" + BUSINESSID + " and `" + NAME + "` = :" + NAME, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` =:" + BUSINESSID + " and `" + NAME + "` = :" + NAME, DATABASE, databaseRowMapper, namedParams);
     }
+
+    public static Database findById(int id){
+        return StandardDAO.findById(id, DATABASE, databaseRowMapper);
+    }
+
+    public static void removeById(Database database){
+        StandardDAO.removeById(database, DATABASE);
+    }
+
+    public static void store(Database database){
+        StandardDAO.store(database, DATABASE, getColumnNameValueMap(database));
+    }
+
 }

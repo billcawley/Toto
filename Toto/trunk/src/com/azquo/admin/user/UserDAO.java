@@ -1,8 +1,6 @@
 package com.azquo.admin.user;
 
 import com.azquo.admin.StandardDAO;
-import com.azquo.admin.AdminService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -20,16 +18,10 @@ import java.util.Map;
  * Created by cawley on 07/01/14.
  * Users as in those who login
  */
-public class UserDAO extends StandardDAO<User> {
-
-    @Autowired
-    AdminService adminService;
+public class UserDAO {
 
     // the default table name for this data.
-    @Override
-    public String getTableName() {
-        return "user";
-    }
+    private static final String TABLENAME = "user";
 
     // column names except ID which is in the superclass
 
@@ -42,10 +34,9 @@ public class UserDAO extends StandardDAO<User> {
     private static final String SALT = "salt";
     private static final String CREATEDBY = "created_by";
 
-    @Override
-    public Map<String, Object> getColumnNameValueMap(final User user) {
+    public static Map<String, Object> getColumnNameValueMap(final User user) {
         final Map<String, Object> toReturn = new HashMap<>();
-        toReturn.put(ID, user.getId());
+        toReturn.put(StandardDAO.ID, user.getId());
         toReturn.put(ENDDATE, Date.from(user.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(BUSINESSID, user.getBusinessId());
         toReturn.put(EMAIL, user.getEmail());
@@ -57,12 +48,12 @@ public class UserDAO extends StandardDAO<User> {
         return toReturn;
     }
 
-    private final class UserRowMapper implements RowMapper<User> {
+    private static final class UserRowMapper implements RowMapper<User> {
         @Override
         public User mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new User(rs.getInt(ID)
-                        , getLocalDateTimeFromDate(rs.getDate(ENDDATE))
+                return new User(rs.getInt(StandardDAO.ID)
+                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(ENDDATE))
                         , rs.getInt(BUSINESSID)
                         , rs.getString(EMAIL)
                         , rs.getString(NAME)
@@ -77,27 +68,37 @@ public class UserDAO extends StandardDAO<User> {
         }
     }
 
-    @Override
-    public RowMapper<User> getRowMapper() {
-        return new UserRowMapper();
-    }
+    private static final UserRowMapper userRowMapper = new UserRowMapper();
 
-    public User findByEmail(final String email) {
+    public static User findByEmail(final String email) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(EMAIL, email);
-        return findOneWithWhereSQLAndParameters(" WHERE `" + EMAIL + "` = :" + EMAIL, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + EMAIL + "` = :" + EMAIL, TABLENAME, userRowMapper, namedParams);
     }
 
-    public List<User> findForBusinessId(final int businessId) {
+    public static List<User> findForBusinessId(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, userRowMapper, namedParams);
     }
 
-    public List<User> findForBusinessIdAndCreatedBy(final int businessId, String createdBy) {
+    public static List<User> findForBusinessIdAndCreatedBy(final int businessId, String createdBy) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         namedParams.addValue(CREATEDBY, createdBy);
-        return findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + CREATEDBY + " = :" + CREATEDBY, namedParams, false);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + CREATEDBY + " = :" + CREATEDBY, TABLENAME, userRowMapper, namedParams);
     }
+
+    public static User findById(int id){
+        return StandardDAO.findById(id, TABLENAME, userRowMapper);
+    }
+
+    public static void removeById(User user){
+        StandardDAO.removeById(user, TABLENAME);
+    }
+
+    public static void store(User user){
+        StandardDAO.store(user, TABLENAME, getColumnNameValueMap(user));
+    }
+
 }
