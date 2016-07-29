@@ -74,7 +74,7 @@ public class DSImportService {
     private static final String EXCLUSIVE = "exclusive";
     private static final String COMMENT = "comment";
     private static final String EXISTING = "existing"; // only works in in context of child of
-    // essentially using either of these keywords switches to pivot mode where a name is created from the line number and in a set called the name of the file, uploading successive files with the same name would of course cause problems for this system
+    // essentially using either of these keywords switches to pivot mode (as in Excel pivot) where a name is created from the line number and in a set called the name of the file, uploading successive files with the same name would of course cause problems for this system
     private static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table
     private static final String LINEDATA = "linedata";
 
@@ -178,7 +178,7 @@ public class DSImportService {
             this.name = mutableImportHeading.name;
             this.indexForAttribute = mutableImportHeading.indexForAttribute;
             this.indexForChild = mutableImportHeading.indexForChild;
-            this.parentNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.parentNames));
+            this.parentNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.parentNames)); // copying the sets in a perhaps paranoid way
             this.attribute = mutableImportHeading.attribute;
             this.isDate = mutableImportHeading.isDate;
             this.peerCellIndexes = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.peerCellIndexes));
@@ -377,7 +377,7 @@ public class DSImportService {
             case NONZERO: // Ignore zero values. This and local will just ignore values after e.g. "nonzero something" I see no harm in this
                 heading.blankZeroes = true;
                 break;
-            case EXCLUSIVE:// it can be blank OR have a value
+            case EXCLUSIVE:// it can be blank OR have a value EFC 28/07/16 : it seems just blank at the moment? Should clarify.
                 heading.exclusive = "";
                 break;
             case EXISTING: // currently simply a boolean that can work with childof
@@ -492,7 +492,7 @@ public class DSImportService {
     /* Created by EFC to try to improve speed through multi threading.
      The basic file parsing is single threaded but since this can start while later lines are being read I don't think this is a problem.
      That is to say on a large file the threads will start to stack up fairly quickly
-     Adapted to Callable from Runnable
+     Adapted to Callable from Runnable - I like the assurances this gives for memory synchronisation
      */
 
     private static class BatchImporter implements Callable<Void> {
@@ -548,7 +548,6 @@ public class DSImportService {
 
     /* calls header validation and batches up the data with headers ready for batch importing
     Get headings first, they can be in a name or in the file, if in a file then they will be set on a name. The key is to set up info in names so a file can be uploaded from a client "as is"
-    There was a "name per heading" option that might have facilitated columns being shifted around but thi seems to have been removed
     */
 
     private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileType, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
@@ -570,10 +569,10 @@ public class DSImportService {
             String secondLine = br.readLine();
             long linesGuess = fileLength / (secondLine != null ? secondLine.length() : 1000); // a very rough approximation
             System.out.println("Lines guessed at : " + linesGuess);
-            int batchSize = 100000;
+            int batchSize = 100_000;
             if (linesGuess < 100_000){
                 System.out.println("less than 100,000, dropping batch size to 1k");
-                batchSize = 1000;
+                batchSize = 1_000;
             } else if (linesGuess < 1_000_000){
                 System.out.println("less than 1,000,000, dropping batch size to 10k");
                 batchSize = 10_000;
@@ -624,7 +623,6 @@ public class DSImportService {
                     throw new Exception("groovy error " + e.getMessage());
                 }
                 System.out.println("Groovy done.");
-
             }
             MappingIterator<String[]> originalLineIterator = csvMapper.reader(String[].class).with(schema).readValues(new File(filePath));
             Iterator<String[]> lineIterator = originalLineIterator; // for the data, it might be reassigned in the case of transposing

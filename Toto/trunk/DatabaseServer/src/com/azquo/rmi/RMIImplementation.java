@@ -255,7 +255,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public void unloadDatabase(String persistenceName) throws RemoteException {
         try {
-            MemoryDBManager.removeDBfromMap(persistenceName);
+            MemoryDBManager.removeDBFromMap(persistenceName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

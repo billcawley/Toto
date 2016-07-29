@@ -9,7 +9,6 @@ import com.azquo.spreadsheet.*;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -411,7 +410,20 @@ public final class ValueService {
                                     Iterator<Name> seekListIterator = seekList.iterator();
                                     while (seekListIterator.hasNext()){
                                         final Name test = seekListIterator.next();
-                                        if (!test.equals(name) && (independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))){
+                                        if (!test.equals(name)
+                                                && (independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))){
+                                            seekListIterator.remove();
+                                        }
+                                    }
+                                }
+                                // opposite of above I think - chance to factor?
+                                if (name.getAttribute(Name.DEPENDENTON) != null){// then this name formula term is saying it wants to exclude some names
+                                    Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.DEPENDENTON));
+                                    Iterator<Name> seekListIterator = seekList.iterator();
+                                    while (seekListIterator.hasNext()){
+                                        final Name test = seekListIterator.next();
+                                        if (!test.equals(name)
+                                                && !(independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))){  // as above but the ther way around, if it's not the "dependent on" remove it from the list
                                             seekListIterator.remove();
                                         }
                                     }

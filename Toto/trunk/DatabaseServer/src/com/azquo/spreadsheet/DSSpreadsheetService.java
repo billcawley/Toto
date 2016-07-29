@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 /*
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  *
- * Created as a result of the report server/database server split
+ * Created as a result of the report server/database server split, was paired roughly with SpreadsheetService on the report side.
  *
  */
 
@@ -86,9 +86,9 @@ public class DSSpreadsheetService {
         return createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, headingRegion, attributeNames, 0, defaultSuffix);
     }
 
-    // now has the option to exception based on large sets being returned by parse query. Used currently on columns, if these name sets are more than a few hundred then that's clearly unworkable - you wouldn't want more than a few hundred columns
     private static final String HIERARCHY = "hierarchy";
 
+    // now has the option to exception based on large sets being returned by parse query. Used currently on columns, if these name sets are more than a few hundred then that's clearly unworkable - you wouldn't want more than a few hundred columns
     private static List<List<List<DataRegionHeading>>> createHeadingArraysFromSpreadsheetRegion(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<String>> headingRegion, List<String> attributeNames, int namesQueryLimit, DataRegionHeading.SUFFIX defaultSuffix) throws Exception {
         List<List<List<DataRegionHeading>>> nameLists = new ArrayList<>(headingRegion.size());
         for (List<String> sourceRow : headingRegion) { // we're stepping through the cells that describe headings
@@ -467,7 +467,7 @@ public class DSSpreadsheetService {
 
     private static <T> List<List<T>> get2DArrayWithAddedPermutation(final List<List<T>> existing2DArray, List<T> permutationWeWantToAdd) {
         List<List<T>> toReturn = new ArrayList<>(existing2DArray.size() * permutationWeWantToAdd.size());
-        int existing = 0;
+        int existing;
         for (existing = permutationWeWantToAdd.size() - 1; existing > 0; existing--) {
             if (permutationWeWantToAdd.get(existing) != null) {
                 break;
@@ -536,7 +536,7 @@ public class DSSpreadsheetService {
                 headingDefinitionRow.add(null);
             }
             if (headingDefinitionRow.get(lastHeadingDefinitionCellIndex) == null) {
-                headingDefinitionRow.set(lastHeadingDefinitionCellIndex, new ArrayList<DataRegionHeading>());
+                headingDefinitionRow.set(lastHeadingDefinitionCellIndex, new ArrayList<>());
                 headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
             }
             int startCount = headingDefinitionRow.get(lastHeadingDefinitionCellIndex).size() - 1;
@@ -1765,17 +1765,14 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     private static boolean isDot(DataRegionHeading dataRegionHeading) {
-        if (dataRegionHeading != null && dataRegionHeading.getAttribute() != null && dataRegionHeading.getAttribute().equals(".")) {
-            return true;
-        }
-        return false;
+        return dataRegionHeading != null && dataRegionHeading.getAttribute() != null && dataRegionHeading.getAttribute().equals(".");
     }
 
     private static List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
             , final List<DataRegionHeading> contextHeadings, List<String> languages, int valueId) throws Exception {
         long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-        long newHeapMarker = oldHeapMarker;
+        long newHeapMarker;
         long track = System.currentTimeMillis();
         int totalRows = headingsForEachRow.size();
         int totalCols = headingsForEachColumn.size();
@@ -1803,7 +1800,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
                 DataRegionHeading lastHeading = rowHeadings.get(rowHeadings.size() - 1);
                 if (isDot(lastHeading)) {
-                    List<DataRegionHeading> newRowHeadings = new ArrayList<DataRegionHeading>();
+                    List<DataRegionHeading> newRowHeadings = new ArrayList<>();
                     for (int headingNo = 0; headingNo < rowHeadings.size() - 1; headingNo++) {
                         newRowHeadings.add(null);
                     }
@@ -1820,7 +1817,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
                     DataRegionHeading lastColHeading = rowHeadings.get(rowHeadings.size() - 1);
                     if (isDot(lastColHeading)) {
-                        List<DataRegionHeading> newColumnHeadings = new ArrayList<DataRegionHeading>();
+                        List<DataRegionHeading> newColumnHeadings = new ArrayList<>();
                         for (int headingNo = 0; headingNo < columnHeadings.size() - 1; headingNo++) {
                             newColumnHeadings.add(null);
                         }
@@ -2155,7 +2152,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                     }
                                     cell.setStringValue(numericValue);
                                 }
-                            } catch (Exception e) {
+                            } catch (Exception ignored) {
                             }
                             if (cell.getStringValue() != null && cell.getStringValue().endsWith("%")) {
                                 String percent = cell.getStringValue().substring(0, cell.getStringValue().length() - 1);

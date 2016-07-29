@@ -48,6 +48,7 @@ public final class Name extends AzquoMemoryDBEntity {
     public static final String CALCULATION = "CALCULATION";
     public static final String APPLIESTO = "APPLIES TO";
     public static final String INDEPENDENTOF = "INDEPENDENT OF";
+    public static final String DEPENDENTON = "DEPENDENT ON";
     private static final String LOCAL = "LOCAL";
     private static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
 
@@ -831,7 +832,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
             clearChildrenCaches();
-            getAzquoMemoryDB().clearSetAndCountCacheForName(this);
+            //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
         }
     }
 
@@ -842,6 +843,7 @@ public final class Name extends AzquoMemoryDBEntity {
         addChildWillBePersisted(child, 0, true);
     }
 
+    // not being used anywhere . . . order might still be there from insert order but adding in a specific position is not
     private static AtomicInteger addChildWillBePersisted2Count = new AtomicInteger(0);
 
     public void addChildWillBePersisted(Name child, int position) throws Exception {
@@ -906,7 +908,7 @@ public final class Name extends AzquoMemoryDBEntity {
         // cache clearing stuff can happen outside the synchronized block
         if (changed && clearCache) {
             clearChildrenCaches();
-            getAzquoMemoryDB().clearSetAndCountCacheForName(this);
+            //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
         }
     }
 
@@ -935,8 +937,8 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         }
         if (clearCache) {
-            getAzquoMemoryDB().clearSetAndCountCacheForName(this);
             clearChildrenCaches();
+            //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
         }
     }
 
@@ -1207,7 +1209,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 children[i].addToParents(this, true);
             }
         }
-
     }
 
     // first of its kind. Try to be comprehensive

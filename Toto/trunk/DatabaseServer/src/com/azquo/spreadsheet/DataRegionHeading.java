@@ -32,7 +32,7 @@ public class DataRegionHeading {
     PERMUTE             Heading function    The system will find all the combinations of the immediate children of the list to be permuted, selected on the basis of sharing common descendants
 
      */
-    public enum SUFFIX {UNLOCKED, LOCKED, SPLIT}
+    enum SUFFIX {UNLOCKED, LOCKED, SPLIT}
     /*
     Additional criteria. Existing locking stands but a new rule is to lock by default on a composite value
      */
@@ -89,7 +89,7 @@ public class DataRegionHeading {
         return function;
     }
 
-    public SUFFIX getSuffix() {
+    SUFFIX getSuffix() {
         return suffix;
     }
 

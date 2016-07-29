@@ -93,7 +93,7 @@ public class DSAdminService {
         if (MemoryDBManager.isDBLoaded(persistenceName)){ // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
             final AzquoMemoryDB azquoMemoryDB = MemoryDBManager.getAzquoMemoryDB(persistenceName, null);
             azquoMemoryDB.synchronizedClear();
-            MemoryDBManager.removeDBfromMap(persistenceName);
+            MemoryDBManager.removeDBFromMap(persistenceName);
         } else {
             emptyDatabaseInPersistence(persistenceName);
         }
@@ -107,7 +107,7 @@ public class DSAdminService {
         if (MemoryDBManager.isDBLoaded(persistenceName)){ // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
             final AzquoMemoryDB azquoMemoryDB = MemoryDBManager.getAzquoMemoryDB(persistenceName, null);
             azquoMemoryDB.synchronizedDrop();
-            MemoryDBManager.removeDBfromMap(persistenceName);
+            MemoryDBManager.removeDBFromMap(persistenceName);
         } else {
             dropDatabaseInPersistence(persistenceName);
         }

@@ -148,7 +148,7 @@ public final class AzquoMemoryDB {
      * Interface to enable initialization of json persisted entities to be more generic.
      * This sort of solves a language problem I was concerned by before but now it will only be used by Provenance and indeed in here hence why it's internal
      */
-    public interface JsonSerializableEntityInitializer {
+    interface JsonSerializableEntityInitializer {
         void initializeEntity(final AzquoMemoryDB azquoMemoryDB, JsonRecordTransport jsonRecordTransport) throws Exception;
     }
 
@@ -394,16 +394,16 @@ public final class AzquoMemoryDB {
     }
 
     // I'm going to force the import to wait if persisting or the like is going on
-    public synchronized void lockTest(){};
+    public synchronized void lockTest(){}
 
     // reads from a list of changed objects
     // should we synchronize on a write lock object? I think it might be a plan.
 
-    private static AtomicInteger persisttoDataStoreCount = new AtomicInteger(0);
+    private static AtomicInteger persistToDataStoreCount = new AtomicInteger(0);
 
     public synchronized void persistToDataStore() {
         System.out.println("PERSIST STARTING");
-        persisttoDataStoreCount.incrementAndGet();
+        persistToDataStoreCount.incrementAndGet();
         // todo : write locking the db probably should start here
         // this is where I need to think carefully about concurrency, azquodb has the last say when the sets are modified although the flags are another point
         // just a simple DB write lock should to it
@@ -697,27 +697,6 @@ public final class AzquoMemoryDB {
         return names;
     }
 
-    private static AtomicInteger zapUnusedNamesCount = new AtomicInteger(0);
-
-    public void zapUnusedNames() throws Exception {
-        zapUnusedNamesCount.incrementAndGet();
-        for (Name name : nameByIdMap.values()) {
-            // remove everything except top layer and names with values. Change parents to top layer where sets deleted
-            if (name.hasParents() && !name.hasValues()) {
-                Name topParent = name.findATopParent();
-                for (Name child : name.getChildren()) {
-                    topParent.addChildWillBePersisted(child);
-                }
-                name.delete();
-            }
-        }
-        for (Name name : nameByIdMap.values()) {
-            if (!name.hasParents() && !name.hasChildren() && !name.hasValues()) {
-                name.delete();
-            }
-        }
-    }
-
     private static AtomicInteger findTopNamesCount = new AtomicInteger(0);
 
     public List<Name> findTopNames(String language) {
@@ -765,11 +744,13 @@ public final class AzquoMemoryDB {
     public void clearCaches() {
         clearCachesCount.incrementAndGet();
         nameByIdMap.values().forEach(com.azquo.memorydb.core.Name::clearChildrenCaches);
-        countCache.clear();
-        setCache.clear();
+        //countCache.clear();
+        //setCache.clear();
     }
 
     // trying for a basic count and set cache
+/*
+Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap it. Not exxcactly difficult to rewrite.
 
     private final Map<String, Integer> countCache = new ConcurrentHashMap<>();
 
@@ -787,7 +768,7 @@ public final class AzquoMemoryDB {
         setCache.put(key, set);
     }
 
-    // TODO. Also, compute if absent?
+    // compute if absent?
     public Set<Name> getSetFromCache(String key) {
         return setCache.get(key);
     }
@@ -823,7 +804,7 @@ public final class AzquoMemoryDB {
                 }
             }
         }
-    }
+    }*/
 
     Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);
@@ -1071,7 +1052,7 @@ public final class AzquoMemoryDB {
         System.out.println("newNameBatchLoaderRunCount\t\t\t\t" + newNameBatchLoaderRunCount.get());
         System.out.println("newValueBatchLoaderRunCount\t\t\t\t" + newValueBatchLoaderRunCount.get());
         System.out.println("loadDataCount\t\t\t\t" + loadDataCount.get());
-        System.out.println("persisttoDataStoreCount\t\t\t\t" + persisttoDataStoreCount.get());
+        System.out.println("persisttoDataStoreCount\t\t\t\t" + persistToDataStoreCount.get());
         System.out.println("getAttributesCount\t\t\t\t" + getAttributesCount.get());
         System.out.println("getNamesForAttributeCount\t\t\t\t" + getNamesForAttributeCount.get());
         System.out.println("attributeExistsInDBCount\t\t\t\t" + attributeExistsInDBCount.get());
@@ -1081,12 +1062,11 @@ public final class AzquoMemoryDB {
         System.out.println("getNameByAttribute2Count\t\t\t\t" + getNameByAttribute2Count.get());
         System.out.println("getNamesWithAttributeContainingCount\t\t\t\t" + getNamesWithAttributeContainingCount.get());
         System.out.println("getNamesByAttributeValueWildcardsCount\t\t\t\t" + getNamesByAttributeValueWildcardsCount.get());
-        System.out.println("zapUnusedNamesCount\t\t\t\t" + zapUnusedNamesCount.get());
         System.out.println("findTopNamesCount\t\t\t\t" + findTopNamesCount.get());
         System.out.println("findTopNames2Count\t\t\t\t" + findTopNames2Count.get());
         System.out.println("clearCachesCount\t\t\t\t" + clearCachesCount.get());
-        System.out.println("clearSetAndCountCacheForNameCount\t\t\t\t" + clearSetAndCountCacheForNameCount.get());
-        System.out.println("clearSetAndCountCacheForStringCount\t\t\t\t" + clearSetAndCountCacheForStringCount.get());
+//        System.out.println("clearSetAndCountCacheForNameCount\t\t\t\t" + clearSetAndCountCacheForNameCount.get());
+//        System.out.println("clearSetAndCountCacheForStringCount\t\t\t\t" + clearSetAndCountCacheForStringCount.get());
         System.out.println("setAttributeForNameInAttributeNameMapCount\t\t\t\t" + setAttributeForNameInAttributeNameMapCount.get());
         System.out.println("removeAttributeFromNameInAttributeNameMapCount\t\t\t\t" + removeAttributeFromNameInAttributeNameMapCount.get());
         System.out.println("batchLinkerRunCount\t\t\t\t" + batchLinkerRunCount.get());
@@ -1105,7 +1085,7 @@ public final class AzquoMemoryDB {
         newNameBatchLoaderRunCount.set(0);
         newValueBatchLoaderRunCount.set(0);
         loadDataCount.set(0);
-        persisttoDataStoreCount.set(0);
+        persistToDataStoreCount.set(0);
         getAttributesCount.set(0);
         getNamesForAttributeCount.set(0);
         attributeExistsInDBCount.set(0);
@@ -1115,12 +1095,11 @@ public final class AzquoMemoryDB {
         getNameByAttribute2Count.set(0);
         getNamesWithAttributeContainingCount.set(0);
         getNamesByAttributeValueWildcardsCount.set(0);
-        zapUnusedNamesCount.set(0);
         findTopNamesCount.set(0);
         findTopNames2Count.set(0);
         clearCachesCount.set(0);
-        clearSetAndCountCacheForNameCount.set(0);
-        clearSetAndCountCacheForStringCount.set(0);
+//        clearSetAndCountCacheForNameCount.set(0);
+//        clearSetAndCountCacheForStringCount.set(0);
         setAttributeForNameInAttributeNameMapCount.set(0);
         removeAttributeFromNameInAttributeNameMapCount.set(0);
         batchLinkerRunCount.set(0);
@@ -1133,6 +1112,7 @@ public final class AzquoMemoryDB {
         removeValueNeedsPersistingCount.set(0);
     }
 
+    // debug suff, I'll allow the warnungs for the moment. Really need calls to be based off a flag, not commented/uncommented
     public static void printAllCountStats() {
         printFunctionCountStats();
         Name.printFunctionCountStats();

@@ -1,7 +1,5 @@
 package com.azquo.memorydb.dao;
 
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.io.IOException;
 import java.util.HashMap;
 

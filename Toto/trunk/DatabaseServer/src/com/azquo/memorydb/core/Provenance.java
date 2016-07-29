@@ -20,7 +20,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
 
     private static final Logger logger = Logger.getLogger(Provenance.class);
 
-    public static String PERSIST_TABLE = "provenance";
+    static String PERSIST_TABLE = "provenance";
 
     private final String user;
     private final Date timeStamp;
@@ -94,7 +94,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
          */
     private static class JsonTransport {
         public final String user;
-        public final Date timeStamp;
+        final Date timeStamp;
         public final String method;
         public final String name;
         public final String context;
