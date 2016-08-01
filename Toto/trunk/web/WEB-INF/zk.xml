@@ -9,6 +9,6 @@
     </library-property>
     <library-property>
         <name>org.zkoss.web.preferred.locale</name>
-        <value>gb</value>
+        <value>en_GB</value>
     </library-property>
 </zk>
