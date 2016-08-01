@@ -175,7 +175,7 @@ public class ZKSpreadsheetCommandController {
                         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
                         for (SName name : book.getInternalBook().getNames()) {
-                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
+                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.azDataRegion.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
                                 String region = name.getName().substring(ZKAzquoBookUtils.azDataRegion.length());
                                 SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
                             }

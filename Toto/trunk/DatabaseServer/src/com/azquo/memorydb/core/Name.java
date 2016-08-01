@@ -358,17 +358,12 @@ public final class Name extends AzquoMemoryDBEntity {
                 Value[] newValuesArray = new Value[values.length - 1];
                 int newArrayPosition = 0;// gotta have a separate index on the new array, they will go out of sync
                 for (Value value1 : values) { // do one copy skipping the element we want removed
-                    // WFC found null pointers in the values list - code amended to remove them.
-                    //if (value1!=null && !value1.equals(value)) { // if it's not the one we want to return then copy
+                    if (!value1.equals(value)) { // if it's not the one we want to return then copy
                         newValuesArray[newArrayPosition] = value1;
                         newArrayPosition++;
-                   // }
+                    }
                 }
-                //if (newArrayPosition==values.length - 1){
-                    values = newValuesArray;
-               // }else{
-              //      values = Arrays.copyOf(newValuesArray,newArrayPosition);
-              //  }
+                values = newValuesArray;
                 valuesIncludingChildrenCache = null;
             }
         }

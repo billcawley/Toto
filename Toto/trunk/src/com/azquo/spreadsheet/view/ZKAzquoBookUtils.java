@@ -38,6 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ZKAzquoBookUtils {
 
+    // todo - make use of this case insensetive
     public static final String azDataRegion = "az_DataRegion";
     static final String azOptions = "az_Options";
     public static final String azRepeatRegion = "az_RepeatRegion";
@@ -130,7 +131,7 @@ public class ZKAzquoBookUtils {
                         final boolean save = populateBook(book, 0);
                         if (save){ // so the data was changed and if we save from here it will make changes to the DB
                             for (SName name : book.getInternalBook().getNames()) {
-                                if (name.getName().toLowerCase().startsWith(azDataRegion)) { // I'm saving on all sheets, this should be fine with zk
+                                if (name.getName().toLowerCase().startsWith(azDataRegion.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
                                     String region = name.getName().substring(azDataRegion.length());
                                     SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName(), false); // to not persist right now
                                 }
