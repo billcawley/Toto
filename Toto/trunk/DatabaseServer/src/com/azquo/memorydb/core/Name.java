@@ -350,7 +350,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (valuesAsSet.remove(value)) {
                     valuesIncludingChildrenCache = null;
                 }
-                //return;
+                return;
             }
             List<Value> valuesList = Arrays.asList(values);
             if (valuesList.contains(value)) {
