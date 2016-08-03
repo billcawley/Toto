@@ -231,7 +231,7 @@ public class DSSpreadsheetService {
      plus I don't think this is a big performance bottleneck. Commented attempt at optimising will be in SVN if required.
     */
 
-    private static <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
+    public static <T> List<List<T>> get2DPermutationOfLists(final List<List<T>> listsToPermute) {
         //this version does full permute
         List<List<T>> toReturn = null;
         for (List<T> permutationDimension : listsToPermute) {

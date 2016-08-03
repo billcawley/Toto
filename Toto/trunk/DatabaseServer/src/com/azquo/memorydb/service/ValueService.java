@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 23/10/13
@@ -65,13 +65,13 @@ public final class ValueService {
     public static String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
         // ok there's an issue of numbers with "," in them, in that case I should remove on the way in
-        if (valueString.contains(",")){
-            try{
-                String replaced = valueString.replace(",","");
+        if (valueString.contains(",")) {
+            try {
+                String replaced = valueString.replace(",", "");
                 Double.parseDouble(replaced);// intellij warns annoyingly
                 // so without "," it IS a valid number (no exception), take commas out of valueString
                 valueString = replaced;
-            }catch (Exception ignored){
+            } catch (Exception ignored) {
 
             }
         }
@@ -128,13 +128,13 @@ public final class ValueService {
 
     public static boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, String newValueString) throws Exception {
         overWriteExistingValueCount.incrementAndGet();
-        if (newValueString.contains(",")){
-            try{
-                String replaced = newValueString.replace(",","");
+        if (newValueString.contains(",")) {
+            try {
+                String replaced = newValueString.replace(",", "");
                 Double.parseDouble(replaced);// intellij warns annoyingly
                 // so without "," it IS a valid number (no exception), take commas out of valueString
                 newValueString = replaced;
-            }catch (Exception ignored){
+            } catch (Exception ignored) {
             }
         }
         if (newValueString.equals(existingValue.getText())) {
@@ -211,7 +211,7 @@ public final class ValueService {
         final Set<Value> smallestValuesSet;
         Set[] setsToCheck;
         List<Value> toReturn = new ArrayList<>();// since the source is a set it will already be deduped - can use ArrayList to return
-        if (nameComboValueCache != null && names.size() > 3){
+        if (nameComboValueCache != null && names.size() > 3) {
 //            List<Name> allButTwo = names.subList(0, names.size() - 2);
             // testing is showing all but one being the fastest - this might make the
             List<Name> allButOne = names.subList(0, names.size() - 1);
@@ -263,8 +263,8 @@ public final class ValueService {
         for (Value value : smallestValuesSet) { // because this could be a whacking great loop! I mean many millions.
             // stopping the iterator in here and moving the declarations out of here made a MASSIVE difference! Be careful doing anything inside this loop,
             add = true;
-            for (index = 0; index < setsToCheck.length; index++){
-                if (setsToCheck[index]!=null && !setsToCheck[index].contains(value)) {//setsToCheck may not have the same dimensionality if there are duplicate headings and 'smallestName' is the duplicate heading
+            for (index = 0; index < setsToCheck.length; index++) {
+                if (setsToCheck[index] != null && !setsToCheck[index].contains(value)) {//setsToCheck may not have the same dimensionality if there are duplicate headings and 'smallestName' is the duplicate heading
                     add = false;
                     break;
                 }
@@ -319,13 +319,18 @@ public final class ValueService {
         String calcString = null; // whether this is null replaces hasCalc
         // add all names to calcnames except the the one with CALCULATION
         // and here's a thing : if more than one name has CALCULATION then only the first will be used
+        boolean lowest = false; // special applies to calc for each permutation of the calc names then sum
         for (Name name : names) {
             if (calcString == null) {// then try and find one - can only happen once
                 String calc = name.getAttribute(Name.CALCULATION, false, null); // using extra parameters to stop parent checking for this attribute
                 if (calc != null) {
-                    if (name.getAttribute(Name.APPLIESTO) != null){
+                    if (name.getAttribute(Name.APPLIESTO) != null) {
                         // will be being looked up by default display name for the moment
-                        appliesToNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(Name.APPLIESTO));
+                        if (name.getAttribute(Name.APPLIESTO).trim().equalsIgnoreCase("lowest")){
+                            lowest = true;
+                        } else {
+                            appliesToNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(Name.APPLIESTO));
+                        }
                     }
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
@@ -347,98 +352,128 @@ public final class ValueService {
                 calcnames.add(name);
             }
         }
-        // ok we've populated calc names is applicable, now check if calc names interacts with applies to (applies to is looking for an intersection with calc names e,g, from the row or context NOT the names in the formulae)
-        // this was just for the applied to names but to reduce code duplication we'll get the first calc name and jam it in here to make a single loop
-        List<Name> outerLoopNames = new ArrayList<>();
-        if (appliesToNames != null){ // then try and find the name
-            Iterator<Name> calcNamesIterator = calcnames.iterator(); // for the remove function otherwise a loop might throw a wobbbler (exception)
-            while (calcNamesIterator.hasNext()){ // go through the names and find the first that crosses over with the appliesTo set
-                Name calcName = calcNamesIterator.next();
-                for (Name appliesToName : appliesToNames){
-                    if (calcName.findAllChildren().contains(appliesToName)){ // we have a hit (one of the applies to list is found in the children of the formula names), add to the list that will replace this calc name
-                        outerLoopNames.add(appliesToName);
+        // lowest then there's no point running outer loops etc
+        if (lowest){
+            // prepare lists to permute - I can't just use the findAllChildrenSets as they're not level lowest
+            List<List<Name>> toPermute = new ArrayList<>();
+            for (Name calcName : calcnames){
+                List<Name> permutationDimension = new ArrayList<>();
+                for (Name name : calcName.findAllChildren()){
+                    if (!name.hasChildren()){
+                        permutationDimension.add(name);
                     }
                 }
-                if (!outerLoopNames.isEmpty()){// we have a restricted list for this calc name, remove that calc name and stop looking
-                    calcNamesIterator.remove();
-                    break;
-                }
+                toPermute.add(permutationDimension);
             }
-
-        }
-        if (outerLoopNames.isEmpty()){ // will be most of the time, put the first in the outer loop
-            outerLoopNames.add(calcnames.remove(0));// as mentioned above in the case of normal use take the first and move it to the outside loop. Yes it will just be added straight back on but otherwise we have code duplication below in an else or a function with many parameters passed
-        }
-        // no reverse polish converted formula, just sum
-        if (calcString == null) {
-            return resolveValuesForNamesIncludeChildren(names, valuesHook, function, locked, nameComboValueCache);
+            // now I think I can just use an existing function!
+            final List<List<Name>> permutationOfLists = DSSpreadsheetService.get2DPermutationOfLists(toPermute);
+            double toReturn = 0;
+            for (List<Name> lowLevelCalcNames : permutationOfLists){ // it's lowLevelCalcNames that we were after
+                toReturn += resolveCalc(azquoMemoryDBConnection,calcString,formulaNames,lowLevelCalcNames,locked,valuesHook,attributeNames,function,nameComboValueCache);
+            }
+            return toReturn;
         } else {
-                double toReturn = 0;
-                for (Name appliesToName : outerLoopNames){ // in normal use just a single
-                    calcnames.add(appliesToName);
-                    double[] values = new double[20];//should be enough!!
-                    int valNo = 0;
-                    StringTokenizer st = new StringTokenizer(calcString, " ");
-                    while (st.hasMoreTokens()) {
-                        String term = st.nextToken();
-                        if (OPS.contains(term)) { // operation
-                            valNo--;
-                            char charTerm = term.charAt(0);
-                            if (charTerm == '+') {
-                                values[valNo - 1] += values[valNo];
-                            } else if (charTerm == '-') {
-                                values[valNo - 1] -= values[valNo];
-                            } else if (charTerm == '*') {
-                                values[valNo - 1] *= values[valNo];
-                            } else if (values[valNo] == 0) {
-                                values[valNo - 1] = 0;
-                            } else {
-                                values[valNo - 1] /= values[valNo];
-                            }
-                        } else { // a value, not in the Azquo sense, a number or reference to a name
-                            if (NumberUtils.isNumber(term)) {
-                                values[valNo++] = Double.parseDouble(term);
-                            } else {
-                                // we assume it's a name id starting with NAMEMARKER
-                                //int id = Integer.parseInt(term.substring(1));
-                                // so get the name and add it to the other names
-                                Name name = NameService.getNameFromListAndMarker(term, formulaNames);
-                                List<Name> seekList = new ArrayList<>(calcnames);
-                                seekList.add(name);
-                                if (name.getAttribute(Name.INDEPENDENTOF) != null){// then this name formula term is saying it wants to exclude some names
-                                    Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.INDEPENDENTOF));
-                                    Iterator<Name> seekListIterator = seekList.iterator();
-                                    while (seekListIterator.hasNext()){
-                                        final Name test = seekListIterator.next();
-                                        if (!test.equals(name)
-                                                && (independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))){
-                                            seekListIterator.remove();
-                                        }
-                                    }
-                                }
-                                // opposite of above I think - chance to factor?
-                                if (name.getAttribute(Name.DEPENDENTON) != null){// then this name formula term is saying it wants to exclude some names
-                                    Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.DEPENDENTON));
-                                    Iterator<Name> seekListIterator = seekList.iterator();
-                                    while (seekListIterator.hasNext()){
-                                        final Name test = seekListIterator.next();
-                                        if (!test.equals(name)
-                                                && !(independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))){  // as above but the ther way around, if it's not the "dependent on" remove it from the list
-                                            seekListIterator.remove();
-                                        }
-                                    }
-                                }
-                                //note - would there be recursion? Resolve order of formulae might be unreliable
-                                values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, function, nameComboValueCache);
-                            }
+            // ok we've populated calc names is applicable, now check if calc names interacts with applies to (applies to is looking for an intersection with calc names e,g, from the row or context NOT the names in the formulae)
+            // this was just for the applied to names but to reduce code duplication we'll get the first calc name and jam it in here to make a single loop
+            List<Name> outerLoopNames = new ArrayList<>();
+            if (appliesToNames != null) { // then try and find the name
+                Iterator<Name> calcNamesIterator = calcnames.iterator(); // for the remove function otherwise a loop might throw a wobbbler (exception)
+                while (calcNamesIterator.hasNext()) { // go through the names and find the first that crosses over with the appliesTo set
+                    Name calcName = calcNamesIterator.next();
+                    for (Name appliesToName : appliesToNames) {
+                        if (calcName.findAllChildren().contains(appliesToName)) { // we have a hit (one of the applies to list is found in the children of the formula names), add to the list that will replace this calc name
+                            outerLoopNames.add(appliesToName);
                         }
                     }
-                    toReturn += values[0];
+                    if (!outerLoopNames.isEmpty()) {// we have a restricted list for this calc name, remove that calc name and stop looking
+                        calcNamesIterator.remove();
+                        break;
+                    }
+                }
+            }
+            if (outerLoopNames.isEmpty()) { // will be most of the time, put the first in the outer loop
+                outerLoopNames.add(calcnames.remove(0));// as mentioned above in the case of normal use take the first and move it to the outside loop. Yes it will just be added straight back on but otherwise we have code duplication below in an else or a function with many parameters passed
+            }
+            // no reverse polish converted formula, just sum
+            if (calcString == null) {
+                return resolveValuesForNamesIncludeChildren(names, valuesHook, function, locked, nameComboValueCache);
+            } else {
+                double toReturn = 0;
+                for (Name appliesToName : outerLoopNames) { // in normal use just a single
+                    calcnames.add(appliesToName);
+                    toReturn += resolveCalc(azquoMemoryDBConnection,calcString,formulaNames,calcnames,locked,valuesHook,attributeNames,function,nameComboValueCache);
                     calcnames.remove(appliesToName);
                 }
                 locked.isTrue = true;
                 return toReturn;
+            }
         }
+    }
+
+    // factored off to implement "lowest" calculation criteria (resolve for each permutation and sum) without duplicated code
+    // fair few params, wonder if there's a way to avoid that?
+    private static double resolveCalc(AzquoMemoryDBConnection azquoMemoryDBConnection, String calcString, List<Name> formulaNames, List<Name> calcnames,
+                               MutableBoolean locked, DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception{
+        double[] values = new double[20];//should be enough!!
+        int valNo = 0;
+        StringTokenizer st = new StringTokenizer(calcString, " ");
+        while (st.hasMoreTokens()) {
+            String term = st.nextToken();
+            if (OPS.contains(term)) { // operation
+                valNo--;
+                char charTerm = term.charAt(0);
+                if (charTerm == '+') {
+                    values[valNo - 1] += values[valNo];
+                } else if (charTerm == '-') {
+                    values[valNo - 1] -= values[valNo];
+                } else if (charTerm == '*') {
+                    values[valNo - 1] *= values[valNo];
+                } else if (values[valNo] == 0) {
+                    values[valNo - 1] = 0;
+                } else {
+                    values[valNo - 1] /= values[valNo];
+                }
+            } else { // a value, not in the Azquo sense, a number or reference to a name
+                if (NumberUtils.isNumber(term)) {
+                    values[valNo++] = Double.parseDouble(term);
+                } else {
+                    // we assume it's a name id starting with NAMEMARKER
+                    //int id = Integer.parseInt(term.substring(1));
+                    // so get the name and add it to the other names
+                    Name name = NameService.getNameFromListAndMarker(term, formulaNames);
+                    List<Name> seekList = calcnames; // was copying here but now only do that where we have relevant attributes. Save instantiation.
+                    seekList.add(name);
+                    if (name.getAttribute(Name.INDEPENDENTOF) != null) {// then this name formula term is saying it wants to exclude some names
+                        seekList = new ArrayList<>(calcnames); // copy before modifying
+                        Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.INDEPENDENTOF));
+                        Iterator<Name> seekListIterator = seekList.iterator();
+                        while (seekListIterator.hasNext()) {
+                            final Name test = seekListIterator.next();
+                            if (!test.equals(name)
+                                    && (independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))) {
+                                seekListIterator.remove();
+                            }
+                        }
+                    }
+                    // opposite of above I think - chance to factor?
+                    if (name.getAttribute(Name.DEPENDENTON) != null) {// then this name formula term is saying it wants to exclude some names
+                        seekList = new ArrayList<>(calcnames); // copy before modifying
+                        Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.DEPENDENTON));
+                        Iterator<Name> seekListIterator = seekList.iterator();
+                        while (seekListIterator.hasNext()) {
+                            final Name test = seekListIterator.next();
+                            if (!test.equals(name)
+                                    && !(independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))) {  // as above but the ther way around, if it's not the "dependent on" remove it from the list
+                                seekListIterator.remove();
+                            }
+                        }
+                    }
+                    //note - would there be recursion? Resolve order of formulae might be unreliable
+                    values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, function, nameComboValueCache);
+                }
+            }
+        }
+        return values[0];
     }
 
     // Added by Edd, like above but uses an attribute (attributes?) and doesn't care about calc for the moment, hence should be much more simple
