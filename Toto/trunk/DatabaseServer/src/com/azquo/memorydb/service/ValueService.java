@@ -439,6 +439,7 @@ public final class ValueService {
                 } else {
                     // we assume it's a name id starting with NAMEMARKER
                     //int id = Integer.parseInt(term.substring(1));
+                    // NOTE! As it stands a term can have one of these attributes, it won't use more than one
                     // so get the name and add it to the other names
                     Name name = NameService.getNameFromListAndMarker(term, formulaNames);
                     List<Name> seekList = calcnames; // was copying here but now only do that where we have relevant attributes. Save instantiation.
@@ -465,6 +466,24 @@ public final class ValueService {
                             if (!test.equals(name)
                                     && !(independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))) {  // as above but the ther way around, if it's not the "dependent on" remove it from the list
                                 seekListIterator.remove();
+                            }
+                        }
+                    }
+                    if (name.getAttribute(Name.USELEVEL) != null) {// will only be used in context of lowest level (as in calc on lowest level then sum)
+                        // what we're saying is check through the calc names at this lowest level and bump any up to the set specified by "USE LEVEL" if possible
+                        seekList = new ArrayList<>(calcnames.size()); // new one of same capacity, we'll be copying in changing as we go
+                        final Collection<Name> useLevelNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(Name.USELEVEL));
+                        for (Name currentName : seekList){ // so for each of the names I need to see if they are in any of them are in the children of the use level names and if so switch to that use level name
+                            boolean found = false;
+                            for (Name useLevelName : useLevelNames){
+                                if (useLevelName.findAllChildren().contains(currentName)){
+                                    found  = true;
+                                    seekList.add(useLevelName);
+                                    break;
+                                }
+                            }
+                            if (!found){
+                                seekList.add(currentName); // leave it as it was
                             }
                         }
                     }

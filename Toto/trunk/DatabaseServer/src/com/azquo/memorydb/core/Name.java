@@ -48,6 +48,7 @@ public final class Name extends AzquoMemoryDBEntity {
     public static final String CALCULATION = "CALCULATION";
     public static final String APPLIESTO = "APPLIES TO";
     public static final String INDEPENDENTOF = "INDEPENDENT OF";
+    public static final String USELEVEL = "USE LEVEL";
     public static final String DEPENDENTON = "DEPENDENT ON";
     private static final String LOCAL = "LOCAL";
     private static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
