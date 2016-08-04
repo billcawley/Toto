@@ -879,24 +879,21 @@ public class ZKComposer extends SelectorComposer<Component> {
         String reportName = SpreadsheetService.setChoices(loggedInUser, provline);
         OnlineReport or = null;
         Session session = Sessions.getCurrent();
-        ApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(session.getWebApp().getServletContext());
-        OnlineReportDAO onlineReportDAO = (OnlineReportDAO) applicationContext.getBean("onlineReportDao");
         String permissionId = null;
         if (reportName != null) {
             if (loggedInUser.getUser().isAdministrator()) {
                 int databaseId = loggedInUser.getDatabase().getId();
-                or = onlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
+                or = OnlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
                 if (or == null) {
-                    or = onlineReportDAO.findForDatabaseIdAndName(0, reportName);
+                    or = OnlineReportDAO.findForDatabaseIdAndName(0, reportName);
                 }
             } else if (loggedInUser.getPermissionsFromReport() != null) {
                 if (loggedInUser.getPermissionsFromReport().get(reportName.toLowerCase()) != null){
                     permissionId = reportName;
                 }
             } else { // need to try to find the permission from the db
-                PermissionDAO permissionDAO = (PermissionDAO) applicationContext.getBean("permissionDao");
-                final List<Permission> forUserId = permissionDAO.findForUserId(loggedInUser.getUser().getId());
-                OnlineReport test = onlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
+                final List<Permission> forUserId = PermissionDAO.findForUserId(loggedInUser.getUser().getId());
+                OnlineReport test = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
                 for (Permission permission1 : forUserId) {
                     if (permission1.getReportId() == test.getId()) { // so they can see this report from permissions
                         permissionId = permission1.getId() + ""; // hacky but now permission id can be report names

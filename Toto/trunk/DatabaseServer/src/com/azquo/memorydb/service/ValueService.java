@@ -357,7 +357,7 @@ public final class ValueService {
             // prepare lists to permute - I can't just use the findAllChildrenSets as they're not level lowest
             List<List<Name>> toPermute = new ArrayList<>();
             for (Name calcName : calcnames){
-                List<Name> permutationDimension = new ArrayList<>();
+                Set<Name> permutationDimension = new HashSet<>(); // could move to koloboke? I need to use sets here to stop duplicates
                 if (!calcName.hasChildren()){
                     permutationDimension.add(calcName);
                 }else {
@@ -367,7 +367,7 @@ public final class ValueService {
                         }
                     }
                 }
-                toPermute.add(permutationDimension);
+                toPermute.add(new ArrayList<>(permutationDimension)); // just wrap back to a lists,not that efficient but can use the existing permute function
             }
             // now I think I can just use an existing function!
             final List<List<Name>> permutationOfLists = DSSpreadsheetService.get2DPermutationOfLists(toPermute);
@@ -463,15 +463,12 @@ public final class ValueService {
                     // opposite of above I think - chance to factor?
                     if (name.getAttribute(Name.DEPENDENTON) != null) {// then this name formula term is saying it wants to exclude some names
                         seekList = new ArrayList<>(calcnames); // copy before modifying
-                        Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.DEPENDENTON));
+                        Name dependentOnSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.DEPENDENTON));
                         Iterator<Name> seekListIterator = seekList.iterator();
                         while (seekListIterator.hasNext()) {
                             final Name test = seekListIterator.next();
-                            if (test==null || independentOfSet==null){
-                                int j=1;
-                            }
                             if (!test.equals(name)
-                                    && !(independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))) {  // as above but the ther way around, if it's not the "dependent on" remove it from the list
+                                    && !(dependentOnSet.equals(test) || dependentOnSet.findAllChildren().contains(test))) {  // as above but the ther way around, if it's not the "dependent on" remove it from the list
                                 seekListIterator.remove();
                             }
                         }
@@ -675,8 +672,18 @@ public final class ValueService {
 
     public static void sortValues(List<Value> values) {
         sortValuesCount.incrementAndGet();
-        Collections.sort(values, (o1, o2) -> (o2.getProvenance().getTimeStamp())
-                .compareTo(o1.getProvenance().getTimeStamp()));
+        Collections.sort(values, (o1, o2) ->
+                {
+                    // check this is the right way around later
+                    if (o1.getProvenance().getTimeStamp() == null){
+                        return 1;
+                    }
+                    if (o2.getProvenance().getTimeStamp() == null){
+                        return -1;
+                    }
+                    return (o2.getProvenance().getTimeStamp())
+                            .compareTo(o1.getProvenance().getTimeStamp());
+                });
     }
 
     // printbatch was creating a value, no good, use this instead
@@ -811,7 +818,7 @@ public final class ValueService {
 
     public static TreeNode getTreeNode(Set<Value> values, Provenance p, int maxSize) {
         getTreeNodeCount.incrementAndGet();
-        String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
+        String source = (p.getTimeStamp() != null ? df.format(p.getTimeStamp()) : "date unknown") + " by " + p.getUser();
         String method = p.getMethod();
         if (p.getName() != null) {
             method += " " + p.getName();
