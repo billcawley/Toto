@@ -358,9 +358,13 @@ public final class ValueService {
             List<List<Name>> toPermute = new ArrayList<>();
             for (Name calcName : calcnames){
                 List<Name> permutationDimension = new ArrayList<>();
-                for (Name name : calcName.findAllChildren()){
-                    if (!name.hasChildren()){
-                        permutationDimension.add(name);
+                if (!calcName.hasChildren()){
+                    permutationDimension.add(calcName);
+                }else {
+                    for (Name name : calcName.findAllChildren()) {
+                        if (!name.hasChildren()) {
+                            permutationDimension.add(name);
+                        }
                     }
                 }
                 toPermute.add(permutationDimension);
@@ -463,6 +467,9 @@ public final class ValueService {
                         Iterator<Name> seekListIterator = seekList.iterator();
                         while (seekListIterator.hasNext()) {
                             final Name test = seekListIterator.next();
+                            if (test==null || independentOfSet==null){
+                                int j=1;
+                            }
                             if (!test.equals(name)
                                     && !(independentOfSet.equals(test) || independentOfSet.findAllChildren().contains(test))) {  // as above but the ther way around, if it's not the "dependent on" remove it from the list
                                 seekListIterator.remove();
