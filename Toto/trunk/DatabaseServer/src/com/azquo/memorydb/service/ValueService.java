@@ -395,13 +395,13 @@ public final class ValueService {
                     }
                 }
             }
-            if (outerLoopNames.isEmpty()) { // will be most of the time, put the first in the outer loop
-                outerLoopNames.add(calcnames.remove(0));// as mentioned above in the case of normal use take the first and move it to the outside loop. Yes it will just be added straight back on but otherwise we have code duplication below in an else or a function with many parameters passed
-            }
             // no reverse polish converted formula, just sum
             if (calcString == null) {
                 return resolveValuesForNamesIncludeChildren(names, valuesHook, function, locked, nameComboValueCache);
             } else {
+                if (outerLoopNames.isEmpty()) { // will be most of the time, put the first in the outer loop
+                    outerLoopNames.add(calcnames.remove(0));// as mentioned above in the case of normal use take the first and move it to the outside loop. Yes it will just be added straight back on but otherwise we have code duplication below in an else or a function with many parameters passed
+                }
                 double toReturn = 0;
                 for (Name appliesToName : outerLoopNames) { // in normal use just a single
                     calcnames.add(appliesToName);
@@ -446,10 +446,9 @@ public final class ValueService {
                     // NOTE! As it stands a term can have one of these attributes, it won't use more than one
                     // so get the name and add it to the other names
                     Name name = NameService.getNameFromListAndMarker(term, formulaNames);
-                    List<Name> seekList = calcnames; // was copying here but now only do that where we have relevant attributes. Save instantiation.
+                    List<Name> seekList = new ArrayList<>(calcnames); // copy before modifying - may be scope for saving this later but in the mean tiem it was causing a problem
                     seekList.add(name);
                     if (name.getAttribute(Name.INDEPENDENTOF) != null) {// then this name formula term is saying it wants to exclude some names
-                        seekList = new ArrayList<>(calcnames); // copy before modifying
                         Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.INDEPENDENTOF));
                         Iterator<Name> seekListIterator = seekList.iterator();
                         while (seekListIterator.hasNext()) {
@@ -462,7 +461,6 @@ public final class ValueService {
                     }
                     // opposite of above I think - chance to factor?
                     if (name.getAttribute(Name.DEPENDENTON) != null) {// then this name formula term is saying it wants to exclude some names
-                        seekList = new ArrayList<>(calcnames); // copy before modifying
                         Name dependentOnSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.DEPENDENTON));
                         Iterator<Name> seekListIterator = seekList.iterator();
                         while (seekListIterator.hasNext()) {
@@ -475,21 +473,22 @@ public final class ValueService {
                     }
                     if (name.getAttribute(Name.USELEVEL) != null) {// will only be used in context of lowest level (as in calc on lowest level then sum)
                         // what we're saying is check through the calc names at this lowest level and bump any up to the set specified by "USE LEVEL" if possible
-                        seekList = new ArrayList<>(calcnames.size()); // new one of same capacity, we'll be copying in changing as we go
+                        List<Name> newSeekList = new ArrayList<>(seekList.size()); // new one of same capacity, we'll be copying in changing as we go
                         final Collection<Name> useLevelNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(Name.USELEVEL));
                         for (Name currentName : seekList){ // so for each of the names I need to see if they are in any of them are in the children of the use level names and if so switch to that use level name
                             boolean found = false;
                             for (Name useLevelName : useLevelNames){
                                 if (useLevelName.findAllChildren().contains(currentName)){
                                     found  = true;
-                                    seekList.add(useLevelName);
+                                    newSeekList.add(useLevelName);
                                     break;
                                 }
                             }
                             if (!found){
-                                seekList.add(currentName); // leave it as it was
+                                newSeekList.add(currentName); // leave it as it was
                             }
                         }
+                        seekList = newSeekList;
                     }
                     //note - would there be recursion? Resolve order of formulae might be unreliable
                     values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, function, nameComboValueCache);
