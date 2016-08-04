@@ -1304,6 +1304,7 @@ public class ZKAzquoBookUtils {
                     int filterCount = 0;
                     //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                     for (String filter : filters) {
+                        filter = filter.trim();
                         List<String> optionsList = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
                         if (optionsList != null && optionsList.size() > 1) {
                             String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children");//leave out any with single choices
