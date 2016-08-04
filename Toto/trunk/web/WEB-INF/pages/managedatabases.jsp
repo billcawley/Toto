@@ -145,7 +145,7 @@ Created by IntelliJ IDEA.
 			</tbody>
 		</table>	
 		<!-- Database Backup -->
-		<div class="well">
+		<div class="well" style="display:none;">
 			<form action="/api/ManageDatabases" method="post">
 			<table>	
 				<tbody>
