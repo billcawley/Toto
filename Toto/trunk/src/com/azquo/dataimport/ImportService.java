@@ -608,7 +608,12 @@ public final class ImportService {
                                 for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
                                     String sourceValue = getCellString(sourceSheet,sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
                                     data.get(row).get(col).setStringValue(sourceValue);
-                                    if (sourceValue.length() > 0) nonBlankItems++;
+                                    if (sourceValue.length() > 0){
+                                        nonBlankItems++;
+                                    }else{
+                                        data.get(row).get(col).setDoubleValue(0.0);
+                                    }
+
                                     items++;
                                 }
                             }
