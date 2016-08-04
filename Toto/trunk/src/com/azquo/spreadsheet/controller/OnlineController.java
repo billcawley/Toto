@@ -240,6 +240,7 @@ public class OnlineController {
                                     book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                                     book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);
                                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
+                                    System.out.println("Loading report : " + finalOnlineReport.getReportName());
                                     book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
                                     if (!templateMode){
                                         boolean executeName = false;
