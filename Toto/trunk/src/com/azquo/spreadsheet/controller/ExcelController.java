@@ -70,6 +70,7 @@ public class ExcelController {
                     namesToReturn.append("\n" + s);
                 }
             }
+            return namesToReturn.toString();
         }
         return "no action taken";
     }
