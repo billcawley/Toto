@@ -658,6 +658,13 @@ public final class AzquoMemoryDB {
         return getNamesByAttributeValueWildcards(attributeName, attributeValue, true, true);
     }
 
+    private static AtomicInteger getNamesWithAttributeStartingCount = new AtomicInteger(0);
+
+    public Set<Name> getNamesWithAttributeStarting(final String attributeName, final String attributeValue) {
+        getNamesWithAttributeContainingCount.incrementAndGet();
+        return getNamesByAttributeValueWildcards(attributeName, attributeValue, true, false);
+    }
+
     // get names containing an attribute using wildcards, start end both
 
     private static AtomicInteger getNamesByAttributeValueWildcardsCount = new AtomicInteger(0);
@@ -1061,6 +1068,7 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         System.out.println("getNameByAttributeCount\t\t\t\t" + getNameByAttributeCount.get());
         System.out.println("getNameByAttribute2Count\t\t\t\t" + getNameByAttribute2Count.get());
         System.out.println("getNamesWithAttributeContainingCount\t\t\t\t" + getNamesWithAttributeContainingCount.get());
+        System.out.println("getNamesWithAttributeStartingCount\t\t\t\t" + getNamesWithAttributeStartingCount.get());
         System.out.println("getNamesByAttributeValueWildcardsCount\t\t\t\t" + getNamesByAttributeValueWildcardsCount.get());
         System.out.println("findTopNamesCount\t\t\t\t" + findTopNamesCount.get());
         System.out.println("findTopNames2Count\t\t\t\t" + findTopNames2Count.get());
@@ -1094,6 +1102,7 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         getNameByAttributeCount.set(0);
         getNameByAttribute2Count.set(0);
         getNamesWithAttributeContainingCount.set(0);
+        getNamesWithAttributeStartingCount.set(0);
         getNamesByAttributeValueWildcardsCount.set(0);
         findTopNamesCount.set(0);
         findTopNames2Count.set(0);

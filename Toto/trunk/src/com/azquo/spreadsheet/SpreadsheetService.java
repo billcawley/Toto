@@ -409,7 +409,7 @@ public class SpreadsheetService {
         }
     }
 
-    // is this an aspose hangover?
+    // is this an aspose hangover? No I don't think so but whether we still need it is another matter. A bit like the barcodes maybe . . .
 
     public static Map<String, String> getImageList(LoggedInUser loggedInUser) throws Exception {
         Map<String, String> images = new HashMap<>();
@@ -425,4 +425,10 @@ public class SpreadsheetService {
         }
         return images;
     }
+
+    public static List<String> nameAutoComplete(LoggedInUser loggedInUser, String name) throws Exception {
+        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+        return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).nameAutoComplete(databaseAccessToken, name, 100);
+    }
+
 }

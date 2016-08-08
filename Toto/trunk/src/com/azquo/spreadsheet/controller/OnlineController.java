@@ -10,7 +10,6 @@ import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.ServletRequestUtils;
@@ -34,9 +33,7 @@ import java.util.Map;
  *
  * Created by bill on 22/04/14.
  * <p>
- * Currently deals with a fair bit for AzquoBook, this may shrink in time.
- *
- * EFC : I'd like to zap a fair few of the parameters, perhaps difficult when Azquobook is still used in places.
+ * EFC : I'd like to zap a fair few of the parameters, now we've zapped AzquoBook more scope.
  */
 
 @Controller
@@ -69,8 +66,6 @@ public class OnlineController {
             , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
-//            , @RequestParam(value = "datachoice", required = false, defaultValue = "") String dataChoice
-//            , @RequestParam(value = "imagestorename", required = false, defaultValue = "") String imageStoreName
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
@@ -83,7 +78,7 @@ public class OnlineController {
                 reportId = reportToLoad;
             }
             //long startTime = System.currentTimeMillis();
-            Permission permission = null;
+            Permission permission;
             try {
                 LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 if (loggedInUser == null) {
@@ -306,8 +301,6 @@ public class OnlineController {
             , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
-//            , @RequestParam(value = "datachoice", required = false, defaultValue = "") String dataChoice
-//            , @RequestParam(value = "imagestorename", required = false, defaultValue = "") String imageStoreName
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "template", required = false, defaultValue = "") String template

@@ -2332,4 +2332,20 @@ Callable interface sorts the memory "happens before" using future gets which run
         }
         return false;
     }
+
+    public static List<String> nameAutoComplete(DatabaseAccessToken databaseAccessToken, String s, int limit) throws Exception {
+        final Set<Name> names = getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getNamesWithAttributeStarting(Constants.DEFAULT_DISPLAY_NAME, s);
+        List<String> toReturn = new ArrayList<>();
+        int count = 0;
+        for (Name name : names){
+            if (count >= limit){
+                break;
+            }
+            toReturn.add(name.getDefaultDisplayName());
+            count++;
+        }
+        return toReturn;
+    }
+
+
 }

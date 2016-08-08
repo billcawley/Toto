@@ -6,6 +6,7 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.MemoryDBManager;
 import com.azquo.memorydb.service.DSAdminService;
+import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
 import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
@@ -354,6 +355,15 @@ class RMIImplementation implements RMIInterface {
     public void setNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute, String attVal)throws RemoteException {
         try {
             JSTreeService.setNameAttribute(databaseAccessToken, nameString, attribute, attVal);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public List<String> nameAutoComplete(DatabaseAccessToken dataAccessToken, String nameString, int limit) throws RemoteException {
+        try {
+            return DSSpreadsheetService.nameAutoComplete(dataAccessToken,nameString,limit);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

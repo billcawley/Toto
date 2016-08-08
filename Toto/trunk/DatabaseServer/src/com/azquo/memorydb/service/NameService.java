@@ -550,7 +550,6 @@ public final class NameService {
         } else {
             throw new Exception("error: " + nameMarker + " is not a valid name");
         }
-
     }
 
     // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
@@ -1382,11 +1381,10 @@ public final class NameService {
 
     // in parse query, we want to find any names with that attribute and value e.g. "BORNIN", "GUILDFORD"
 
-    public static Set<Name> attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, String attributeValue){
+    private static Set<Name> attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, String attributeValue){
         List<String> attributeNames = new ArrayList<>();
         attributeNames.add(attributeName);
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, attributeValue, null);
-
     }
 
     public static void printFunctionCountStats() {
