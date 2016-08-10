@@ -832,7 +832,7 @@ public class DSDataLoadService {
                 marker = System.currentTimeMillis();
                 counter = 0;
                 System.out.println("name spreadsheet time track" + NameService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
-                System.out.println("value spreadsheet time track" + ValueService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
+                //System.out.println("value spreadsheet time track" + ValueService.getTimeTrackMapForConnection(azquoMemoryDBConnection));
                 logMemUseage();
             }
         }

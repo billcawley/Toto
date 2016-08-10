@@ -2,7 +2,6 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.dataimport.ImportService;
-import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -28,8 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequestMapping("/Excel")
 public class ExcelController {
 
-    public Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
+    private Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
 
+    @RequestMapping
     @ResponseBody
     public String handleRequest(@RequestParam(value = "logon", required = false, defaultValue = "") String logon
             , @RequestParam(value = "logoff", required = false, defaultValue = "") String logoff
@@ -41,20 +41,20 @@ public class ExcelController {
         if (logoff != null && logoff.length() > 0) {
             return "removed from map with key : " + (excelConnections.remove(logoff) != null);
         }
+        LoggedInUser loggedInUser = null;
         if (logon != null && logon.length() > 0) {
-            LoggedInUser loggedInUser = LoginService.loginLoggedInUser("", database, logon, password, false);//will automatically switch the database to 'temp' if that's the only one
+            loggedInUser = LoginService.loginLoggedInUser("", database, logon, password, false);//will automatically switch the database to 'temp' if that's the only one
             if (loggedInUser == null) {
                 return "error: user " + logon + " with this password does not exist";
             }
             if (loggedInUser.getDatabase() == null) {
                 return "error: invalid database " + database;
             }
-            String session = AdminService.encrypt("" + System.currentTimeMillis(), "" + hashCode()); // good as any I think
+            String session = AdminService.shaHash(System.currentTimeMillis() + "" + hashCode()); // good as any I think
             excelConnections.put(session, loggedInUser);
             return session;
         }
-        LoggedInUser loggedInUser = null;
-        if (sessionid != null) {
+        if (sessionid != null && sessionid.length() > 0) {
             loggedInUser = excelConnections.get(sessionid);
         }
         if (loggedInUser == null) {

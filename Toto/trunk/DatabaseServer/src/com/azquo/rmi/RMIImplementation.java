@@ -6,7 +6,6 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.MemoryDBManager;
 import com.azquo.memorydb.service.DSAdminService;
-import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
 import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
@@ -293,7 +292,9 @@ class RMIImplementation implements RMIInterface {
             toReturn.append("##### Garbage Collection Suggested #####<br/>");
         }
         NumberFormat nf = NumberFormat.getInstance();
-        toReturn.append("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
+        // variable here is a bit easier to read and makes intellij happier
+        String message = "--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb);
+        toReturn.append(message);
         return toReturn.toString();
     }
 

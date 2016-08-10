@@ -594,6 +594,7 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger addNamesCount = new AtomicInteger(0);
 
     // was in name service, added in here as a static function to give it direct access to the private arrays. Again an effort to reduce garbage.
+    // Used by find all names, this is hammered, efficiency is important
     public static void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
         addNamesCount.incrementAndGet();
         if (!name.hasChildren()) {
@@ -605,7 +606,8 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (name.childrenAsSet != null) {
                     namesFound.addAll(name.childrenAsSet);
                 } else if (name.children.length > 0) {
-                    for (int i = 0; i < name.children.length; i++) { // intellij wants to use the collections implementation, I think this is slightly more efficient
+                    //noinspection ManualArrayToCollectionCopy, surpressing as I believe this is a little more efficient in terms of not instantiating an Iterator
+                    for (int i = 0; i < name.children.length; i++) {
                         namesFound.add(name.children[i]);
                     }
                 }
@@ -618,6 +620,7 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // to support negative levels on children clause, level is seen as parent level, same as above but moving in the opposite direction
+    // Used by find parents at level, this is hammered, efficiency is important
     public static void addParentNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
         addNamesCount.incrementAndGet();
         if (!name.hasParents()) {
@@ -629,7 +632,8 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (name.parentsAsSet != null) {
                     namesFound.addAll(name.parentsAsSet);
                 } else if (name.parents.length > 0) {
-                    for (int i = 0; i < name.parents.length; i++) { // intellij wants to use the collections implementation, I think this is slightly more efficient
+                    //noinspection ManualArrayToCollectionCopy, surpressing as I believe this is a little more efficient in terms of not instantiating an Iterator
+                    for (int i = 0; i < name.parents.length; i++) {
                         namesFound.add(name.parents[i]);
                     }
                 }
@@ -837,14 +841,6 @@ public final class Name extends AzquoMemoryDBEntity {
     public void addChildWillBePersisted(Name child) throws Exception {
         addChildWillBePersistedCount.incrementAndGet();
         addChildWillBePersisted(child, 0, true);
-    }
-
-    // not being used anywhere . . . order might still be there from insert order but adding in a specific position is not
-    private static AtomicInteger addChildWillBePersisted2Count = new AtomicInteger(0);
-
-    public void addChildWillBePersisted(Name child, int position) throws Exception {
-        addChildWillBePersisted2Count.incrementAndGet();
-        addChildWillBePersisted(child, position, true);
     }
 
     // with position, will just add if none passed note : this sees position as starting at 1!
@@ -1166,7 +1162,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     /* protected to only be used by the database loading, can't be called in the constructor as name by id maps may not be populated
     changing synchronized to only relevant portions
-    note : this function is absolutely hammered while linking (surprise!) so optimiseations here are helpful */
+    note : this function is absolutely hammered while linking (surprise!) so optimisations here are helpful */
 
     private static AtomicInteger linkCount = new AtomicInteger(0);
 
@@ -1201,6 +1197,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 newChild.addToParents(this, true);
             }
         } else {
+            //noinspection ForLoopReplaceableByForEach, surpressing as I believe this is a little more efficient in terms of not instantiating an Iterator
             for (int i = 0; i < children.length; i++) { // directly hitting the array could cause a problem if it were reassigned while this happened but here it should be fine. Again intellij wants an API call but I'm sceptical since this is hammered
                 children[i].addToParents(this, true);
             }
@@ -1272,7 +1269,6 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("getChildrenCount\t\t\t\t" + getChildrenCount.get());
         System.out.println("setChildrenCount\t\t\t\t" + setChildrenCount.get());
         System.out.println("addChildWillBePersistedCount\t\t\t\t" + addChildWillBePersistedCount.get());
-        System.out.println("addChildWillBePersisted2Count\t\t\t\t" + addChildWillBePersisted2Count.get());
         System.out.println("addChildWillBePersisted3Count\t\t\t\t" + addChildWillBePersisted3Count.get());
         System.out.println("removeFromChildrenWillBePersistedCount\t\t\t\t" + removeFromChildrenWillBePersistedCount.get());
         System.out.println("removeFromChildrenWillBePersisted2Count\t\t\t\t" + removeFromChildrenWillBePersisted2Count.get());
@@ -1321,7 +1317,6 @@ public final class Name extends AzquoMemoryDBEntity {
         getChildrenCount.set(0);
         setChildrenCount.set(0);
         addChildWillBePersistedCount.set(0);
-        addChildWillBePersisted2Count.set(0);
         addChildWillBePersisted3Count.set(0);
         removeFromChildrenWillBePersistedCount.set(0);
         removeFromChildrenWillBePersisted2Count.set(0);

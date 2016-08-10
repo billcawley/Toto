@@ -83,7 +83,7 @@ public final class NameService {
 
     private static AtomicInteger decodeStringCount = new AtomicInteger(0);
 
-    public static final List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
+    public static List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
         decodeStringCount.incrementAndGet();
         final List<Set<Name>> toReturn = new ArrayList<>();
         List<String> formulaStrings = new ArrayList<>();
@@ -641,7 +641,7 @@ public final class NameService {
     // for deduplicate, inspect search and definition. This is teh same as below and
     private static AtomicInteger parseQueryCount = new AtomicInteger(0);
 
-    public static final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
+    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
         parseQueryCount.incrementAndGet();
         List<String> langs = new ArrayList<>();
         langs.add(Constants.DEFAULT_DISPLAY_NAME);
@@ -650,7 +650,7 @@ public final class NameService {
 
     private static AtomicInteger parseQuery2Count = new AtomicInteger(0);
 
-    public static final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
+    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
         parseQuery2Count.incrementAndGet();
         return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null);
     }
@@ -663,7 +663,7 @@ public final class NameService {
     in places but performance should be better and garbage generation reduced*/
     private static AtomicInteger parseQuery3Count = new AtomicInteger(0);
 
-    public static final Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn) throws Exception {
+    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn) throws Exception {
         parseQuery3Count.incrementAndGet();
         long track = System.currentTimeMillis();
         String formulaCopy = setFormula;
@@ -783,7 +783,7 @@ public final class NameService {
                     throw new Exception("not understood:  " + formulaCopy);
                 } else if (op == '*') { // * meaning intersection here . . .
                     //assume that the second term implies 'level all'
-                    long start = System.currentTimeMillis();
+                    //long start = System.currentTimeMillis();
 //                System.out.println("starting * set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
                     NameSetList previousSet = nameStack.get(stackCount - 1);
                     // preserving ordering important - retainall on a mutable set, if available, might save a bit vs creating a new one
@@ -824,8 +824,8 @@ public final class NameService {
                 } else if (op == '/') { // a possible performance hit here, not sure of other possible optimseations
                     // ok what's on the stack may be mutable but I'm going to have to make a copy - if I modify it the iterator on the loop below will break
                     Set<Name> parents = HashObjSets.newMutableSet(nameStack.get(stackCount).getAsCollection());
-                    long start = System.currentTimeMillis();
-                    long heapMarker = ((runtime.totalMemory() - runtime.freeMemory()) / mb);
+                    //long start = System.currentTimeMillis();
+                    //long heapMarker = ((runtime.totalMemory() - runtime.freeMemory()) / mb);
                     //System.out.println("aft mutable init " + heapMarker);
                     //System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
                     Collection<Name> lastName = nameStack.get(stackCount).getAsCollection();
@@ -844,7 +844,7 @@ public final class NameService {
                         Name.findAllParents(child, parents); // new call to static function cuts garbage generation a lot
                     }
                     //System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
-                    start = System.currentTimeMillis();
+                    //start = System.currentTimeMillis();
                     //nameStack.get(stackCount - 1).retainAll(parents); //can't do this any more, need to make a new one
                     NameSetList previousSet = nameStack.get(stackCount - 1);
                     // ok going to try to get a little clever here since it can be mutable

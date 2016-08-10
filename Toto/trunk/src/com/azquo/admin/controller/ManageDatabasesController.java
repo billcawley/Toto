@@ -86,6 +86,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "emptyId", required = false) String emptyId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "unloadId", required = false) String unloadId
+                                // todo - address whether we're still using such parameters and associated functions
             , @RequestParam(value = "backupTarget", required = false) String backupTarget
             , @RequestParam(value = "summaryLevel", required = false) String summaryLevel
     )

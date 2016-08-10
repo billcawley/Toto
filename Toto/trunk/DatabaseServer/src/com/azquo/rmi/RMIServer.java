@@ -12,7 +12,7 @@ import java.rmi.server.UnicastRemoteObject;
  *
  * Created by cawley on 20/05/15.
  *
- * Just the minimum to make RMI work. Creating a restiry seems to avoid all sorts or problems.
+ * Just the minimum to make RMI work. Creating a registry seems to avoid all sorts or problems.
  */
 public class RMIServer {
 

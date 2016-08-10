@@ -14,7 +14,6 @@ import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -40,9 +39,9 @@ public final class ValueService {
         return new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), provenance, text);
     }
 
-    private static Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
+/*    private static Map<AzquoMemoryDBConnection, Map<String, Long>> timeTrack = new ConcurrentHashMap<>();
 
- /*   private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd) {
+    private void addToTimesForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection, String trackName, long toAdd) {
         long current = 0;
         if (timeTrack.get(azquoMemoryDBConnection) != null) {
             if (timeTrack.get(azquoMemoryDBConnection).get(trackName) != null) {
@@ -52,11 +51,11 @@ public final class ValueService {
             timeTrack.put(azquoMemoryDBConnection, new HashMap<String, Long>());
         }
         timeTrack.get(azquoMemoryDBConnection).put(trackName, current + toAdd);
-    }*/
+    }
 
     public static Map<String, Long> getTimeTrackMapForConnection(AzquoMemoryDBConnection azquoMemoryDBConnection) {
         return timeTrack.get(azquoMemoryDBConnection);
-    }
+    }*/
 
     // this is passed a string for the value, not sure if that is the best practice, need to think on it.
 
@@ -66,13 +65,10 @@ public final class ValueService {
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
         // ok there's an issue of numbers with "," in them, in that case I should remove on the way in
         if (valueString.contains(",")) {
-            try {
-                String replaced = valueString.replace(",", "");
-                Double.parseDouble(replaced);// intellij warns annoyingly
-                // so without "," it IS a valid number (no exception), take commas out of valueString
+            String replaced = valueString.replace(",", "");
+            if (NumberUtils.isNumber(replaced)){ // think that's fine
+                // so without "," it IS a valid number, take commas out of valueString
                 valueString = replaced;
-            } catch (Exception ignored) {
-
             }
         }
 
@@ -129,12 +125,12 @@ public final class ValueService {
     public static boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, String newValueString) throws Exception {
         overWriteExistingValueCount.incrementAndGet();
         if (newValueString.contains(",")) {
-            try {
+            if (newValueString.contains(",")) {
                 String replaced = newValueString.replace(",", "");
-                Double.parseDouble(replaced);// intellij warns annoyingly
-                // so without "," it IS a valid number (no exception), take commas out of valueString
-                newValueString = replaced;
-            } catch (Exception ignored) {
+                if (NumberUtils.isNumber(replaced)){ // think that's fine
+                    // so without "," it IS a valid number, take commas out of valueString
+                    newValueString = replaced;
+                }
             }
         }
         if (newValueString.equals(existingValue.getText())) {
