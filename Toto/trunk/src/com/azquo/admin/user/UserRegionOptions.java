@@ -1,6 +1,9 @@
 package com.azquo.admin.user;
 
 import com.azquo.admin.StandardEntity;
+import com.azquo.spreadsheet.view.RegionOptions;
+
+import java.io.Serializable;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -8,8 +11,9 @@ import com.azquo.admin.StandardEntity;
  * Created by cawley on 29/06/15.
  *
  * Options against a report data region.
+ *
  */
-public class UserRegionOptions extends StandardEntity{
+public class UserRegionOptions extends StandardEntity {
     private final int userId;
     private final int reportId;
     private final String region;
@@ -25,8 +29,12 @@ public class UserRegionOptions extends StandardEntity{
     private int highlightDays;
     private String databaseName;
 
+    private String rowLanguage;
+    private String columnLanguage;
+
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, boolean sortable
-            , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn, boolean sortColumnAsc, int highlightDays, String databaseName) {
+            , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
+            , boolean sortColumnAsc, int highlightDays, String databaseName, String rowLanguage, String columnLanguage) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -41,7 +49,8 @@ public class UserRegionOptions extends StandardEntity{
         this.sortColumnAsc = sortColumnAsc;
         this.highlightDays = highlightDays;
         this.databaseName = databaseName;
-
+        this.rowLanguage = rowLanguage;
+        this.columnLanguage = columnLanguage;
     }
 
     // to read the format of options from the spreadsheet, code adapted from azquobook.
@@ -224,10 +233,29 @@ public class UserRegionOptions extends StandardEntity{
         this.databaseName = databaseName;
     }
 
+    public RegionOptions getRegionOptionsForTransport(){
+        return new RegionOptions(hideRows,sortable,rowLimit,columnLimit,sortRow,sortRowAsc,sortColumn,sortColumnAsc,highlightDays, rowLanguage, columnLanguage);
+    }
+
+    public String getRowLanguage() {
+        return rowLanguage;
+    }
+
+    public void setRowLanguage(String rowLanguage) {
+        this.rowLanguage = rowLanguage;
+    }
+
+    public String getColumnLanguage() {
+        return columnLanguage;
+    }
+
+    public void setColumnLanguage(String columnLanguage) {
+        this.columnLanguage = columnLanguage;
+    }
 
     @Override
     public String toString() {
-        return "UserRegionOption{" +
+        return "UserRegionOptions{" +
                 "id=" + id +
                 ", userId=" + userId +
                 ", reportId=" + reportId +
@@ -241,7 +269,9 @@ public class UserRegionOptions extends StandardEntity{
                 ", sortColumn='" + sortColumn + '\'' +
                 ", sortColumnAsc=" + sortColumnAsc +
                 ", highlightDays=" + highlightDays +
-                ", databaseName=" + databaseName +
+                ", databaseName='" + databaseName + '\'' +
+                ", rowLanguage='" + rowLanguage + '\'' +
+                ", columnLanguage='" + columnLanguage + '\'' +
                 '}';
     }
 }

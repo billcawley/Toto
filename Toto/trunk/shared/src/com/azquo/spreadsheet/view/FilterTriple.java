@@ -7,7 +7,7 @@ import java.io.Serializable;
  *
  */
 public class FilterTriple implements Serializable {
-    public final int nameId;
+    final int nameId;
     public final String name;
     public final Boolean selected;
 

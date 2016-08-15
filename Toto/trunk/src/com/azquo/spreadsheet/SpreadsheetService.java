@@ -1,6 +1,5 @@
 package com.azquo.spreadsheet;
 
-import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
@@ -20,7 +19,6 @@ import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.ui.ModelMap;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
@@ -160,8 +158,7 @@ public class SpreadsheetService {
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , UserRegionOptions userRegionOptions) throws Exception {
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
-                userRegionOptions.getHideRows(), userRegionOptions.getRowLimit(), userRegionOptions.getColumnLimit(), userRegionOptions.getSortRow()
-                , userRegionOptions.getSortRowAsc(), userRegionOptions.getSortColumn(), userRegionOptions.getSortColumnAsc(), userRegionOptions.getHighlightDays());
+                userRegionOptions.getRegionOptionsForTransport());
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)

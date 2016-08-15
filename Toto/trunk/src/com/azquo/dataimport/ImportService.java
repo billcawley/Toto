@@ -9,7 +9,6 @@ import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.controller.OnlineController;
@@ -18,7 +17,6 @@ import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import com.csvreader.CsvWriter;
 import com.jcraft.jsch.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Range;
@@ -27,13 +25,11 @@ import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
-import org.zkoss.zss.range.SRange;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -349,7 +345,7 @@ public final class ImportService {
         return reportName + " uploaded.";
     }
 
-    private static String readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
+    private static String  readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         final Book book = Importers.getImporter().imports(new File(tempName), "Imported");
         //AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService, RMIClient);
         //azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
@@ -749,7 +745,6 @@ public final class ImportService {
                     writeCell(sheet, r, c, csvW, newNames);
                 }
                 csvW.endRecord();
-
             }
         }
     }

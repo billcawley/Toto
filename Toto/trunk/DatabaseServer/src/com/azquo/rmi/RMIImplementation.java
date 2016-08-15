@@ -12,6 +12,7 @@ import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.view.FilterTriple;
+import com.azquo.spreadsheet.view.RegionOptions;
 
 import java.rmi.RemoteException;
 import java.text.NumberFormat;
@@ -106,10 +107,9 @@ class RMIImplementation implements RMIInterface {
     // spreadsheet service
     @Override
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int filterCount, int maxRows, int maxCols, String sortRow,
-                                                                    boolean sortRowAsc, String sortCol, boolean sortColumnAsc, int highlightDays) throws RemoteException {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions) throws RemoteException {
         try {
-            return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColumnAsc, highlightDays);
+            return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

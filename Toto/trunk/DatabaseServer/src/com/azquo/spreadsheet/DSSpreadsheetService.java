@@ -12,6 +12,7 @@ import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.view.FilterTriple;
+import com.azquo.spreadsheet.view.RegionOptions;
 import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
@@ -905,11 +906,10 @@ public class DSSpreadsheetService {
      */
 
     public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int filterCount, int maxRows, int maxCols
-            , String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, int highlightDays) throws Exception {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
-                , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, databaseAccessToken.getLanguages(), highlightDays, valueId);
+                , regionOptions, databaseAccessToken.getLanguages(), valueId);
         if (data.size() == 0) {
             return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null);
         }
@@ -946,8 +946,7 @@ public class DSSpreadsheetService {
     }
 
     private static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int filterCount, int maxRows, int maxCols, String sortRow, boolean sortRowAsc, String sortCol, boolean sortColAsc, List<String> languages, int highlightDays, int valueId) throws Exception {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, List<String> languages, int valueId) throws Exception {
         azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
         long track = System.currentTimeMillis();
         long start = track;
@@ -1002,7 +1001,7 @@ public class DSSpreadsheetService {
         if (rowHeadingsSource.size() == 1 && rowHeadingsSource.get(0).get(0).toLowerCase().startsWith("permute("))
             permute = true;
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
-                , filterCount, maxRows, maxCols, sortRow, sortRowAsc, sortCol, sortColAsc, highlightDays, languages, permute);
+                , regionOptions, languages, permute);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data sort/filter in " + time + "ms");
         System.out.println("region delivered in " + (System.currentTimeMillis() - start) + "ms");
@@ -1133,13 +1132,13 @@ public class DSSpreadsheetService {
     // also deals with highlighting
 
     private static List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
-            , final int filterCount, int maxRows, int maxCols, String sortRowString, boolean sortRowAsc, String sortColString, boolean sortColAsc, int highlightDays, List<String> languages, boolean permute) throws Exception {
+            , RegionOptions regionOptions, List<String> languages, boolean permute) throws Exception {
         List<List<AzquoCell>> toReturn = sourceData;
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
         }
-        Integer sortOnColIndex = findPosition(columnHeadings, sortColString, languages);
-        Integer sortOnRowIndex = findPosition(rowHeadings, sortRowString, languages); // not used at the mo
+        Integer sortOnColIndex = findPosition(columnHeadings, regionOptions.sortColumn, languages);
+        Integer sortOnRowIndex = findPosition(rowHeadings, regionOptions.sortRow, languages); // not used at the mo
         // new logic states that sorting on row or col totals only happens if a sort row or col hasn't been passed and there are more rows or cols than max rows or cols
 
         int totalRows = sourceData.size();
@@ -1147,6 +1146,8 @@ public class DSSpreadsheetService {
 
         boolean sortOnColTotals = false;
         boolean sortOnRowTotals = false;
+        int maxRows = regionOptions.rowLimit;
+        boolean sortColAsc = regionOptions.sortColumnAsc;
         if (maxRows != 0) {
             if (Math.abs(maxRows) < totalRows) {
                 if (sortOnColIndex == -1) { // only cause total sorting if a column hasn't been passed
@@ -1157,6 +1158,7 @@ public class DSSpreadsheetService {
                 maxRows = 0; // zero it as it's a moot point
             }
         }
+        int maxCols = regionOptions.columnLimit;
         if (maxCols != 0) {
             if (Math.abs(maxCols) < totalCols) {
                 if (sortOnRowIndex == -1) { // only cause total sorting if a sorting row hasn't been passed
@@ -1247,7 +1249,7 @@ public class DSSpreadsheetService {
 
             List<Integer> sortedCols = null;
             if (sortOnRowIndex != -1 || sortOnColTotals) { // then we need to sort the cols
-                sortedCols = sortDoubleValues(sortColumnTotals, sortRowAsc);
+                sortedCols = sortDoubleValues(sortColumnTotals, regionOptions.sortRowAsc);
             }
             // OK pasting and changing what was in format data region, it's only called by this
             // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort
@@ -1273,11 +1275,11 @@ public class DSSpreadsheetService {
             }
             toReturn = sortedCells;
         }
-        if (filterCount > 0) {
+        if (regionOptions.hideRows > 0) {
             int rowNo = 0;
             while (rowNo < toReturn.size()) {
                 boolean rowsBlank = true;
-                for (int j = 0; j < filterCount; j++) {
+                for (int j = 0; j < regionOptions.hideRows; j++) {
                     List<AzquoCell> rowToCheck = toReturn.get(rowNo + j); // size - 1 for the last index
                     for (AzquoCell cellToCheck : rowToCheck) {
                         if (cellToCheck.getStringValue() != null && cellToCheck.getStringValue().length() > 0) {
@@ -1290,20 +1292,20 @@ public class DSSpreadsheetService {
                     }
                 }
                 if (rowsBlank) {
-                    for (int i = 0; i < filterCount; i++) {
+                    for (int i = 0; i < regionOptions.hideRows; i++) {
                         toReturn.remove(rowNo);
                     }
                 } else {
-                    rowNo += filterCount;
+                    rowNo += regionOptions.hideRows;
                 }
             }
         }
 
         // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
-        if (highlightDays > 0) {
-            int highlightHours = highlightDays * 24;
+        if (regionOptions.highlightDays > 0) {
+            int highlightHours = regionOptions.highlightDays * 24;
             //hack to allow highlight one hour
-            if (highlightDays==2) highlightHours = 1;
+            if (regionOptions.highlightDays==2) highlightHours = 1;
             for (List<AzquoCell> row : toReturn) {
                 for (AzquoCell azquoCell : row) {
                     long age = 1000000; // about 30 years old as default
@@ -1311,7 +1313,8 @@ public class DSSpreadsheetService {
                     if (valuesForCell != null && (valuesForCell.getValues() != null && !valuesForCell.getValues().isEmpty())) {
                         for (Value value : valuesForCell.getValues()) {
                             if (value.getText().length() > 0) {
-                                if (value.getProvenance() == null) {
+                                if (value.getProvenance() == null || value.getProvenance().getTimeStamp() == null) {
+                                    System.out.println("provenance or timestamp null for " + value); // bit of a hack but lets log it
                                     break;
                                 }
                                 LocalDateTime provdate = LocalDateTime.ofInstant(value.getProvenance().getTimeStamp().toInstant(), ZoneId.systemDefault());

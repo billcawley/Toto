@@ -18,7 +18,7 @@ public class JsonChildren implements Serializable {
         public String text; // also not final as I may need to qualify after setting
         public final boolean children;
         public int nameId; // I had to add these two in so that the client side knows about the name ids which it needs to keep track of
-        public int parentNameId;
+        int parentNameId;
 
         public Node(int id, String text, boolean children, int nameId, int parentNameId) {
             this.id = id;

@@ -30,6 +30,9 @@ public final class UserRegionOptionsDAO {
     private static final String SORT_COLUMN = "sort_column";
     private static final String SORT_COLUMN_ASC = "sort_column_asc";
     private static final String HIGHLIGHT_DAYS = "highlight_days";
+    // todo use these
+    private static final String ROW_LANGUAGE = "row_language";
+    private static final String COLUMN_LANGUAGE = "column_language";
 
     public static Map<String, Object> getColumnNameValueMap(UserRegionOptions uro) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -64,6 +67,8 @@ public final class UserRegionOptionsDAO {
                         , rs.getBoolean(SORT_COLUMN_ASC)
                         , rs.getInt(HIGHLIGHT_DAYS)
                         ,null
+                        ,"" // todo - actually load this from the database!
+                        ,""
                 );
             } catch (Exception e) {
                 e.printStackTrace();
