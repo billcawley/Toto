@@ -585,9 +585,15 @@ public final class ImportService {
                                         && rowInRegion <= dataStartRow + dataHeight
                                         && cellsAndHeadingsForDisplay != null){
                                     final List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                                    String sourceValue = getCellString(sourceSheet,sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setStringValue(sourceValue);
-                                    if (sourceValue.length() > 0) nonBlankItems++;
+                                    final DoubleStringPair cellValue = getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setStringValue(cellValue.string);
+                                    // added by Edd, should sort some numbers being ignored!
+                                    if (cellValue.number != null){
+                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setDoubleValue(cellValue.number);
+                                    } else { // I think defaulting to zero is correct here?
+                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setDoubleValue(0.0);
+                                    }
+                                    if (cellValue.string.length() > 0) nonBlankItems++;
                                     items++;
                                 }
                             }
@@ -602,12 +608,17 @@ public final class ImportService {
                         if (data.size() == sourceRegion.getRowCount() && data.get(0).size() == sourceRegion.getColumnCount()) {//ignore region sizes which do not match (e.g. on transaction entries showing past entries)
                             for (int row = 0; row < sourceRegion.getRowCount(); row++) {
                                 for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
-                                    String sourceValue = getCellString(sourceSheet,sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    data.get(row).get(col).setStringValue(sourceValue);
-                                    if (sourceValue.length() > 0){
-                                        nonBlankItems++;
-                                    }else{
+                                    // note that this function might return a null double but no null string. Perhaps could be mroe consistent? THis area is a bit hacky . . .
+                                    final DoubleStringPair cellValue = getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    data.get(row).get(col).setStringValue(cellValue.string);
+                                    // added by Edd, should sort some numbers being ignored!
+                                    if (cellValue.number != null){
+                                        data.get(row).get(col).setDoubleValue(cellValue.number);
+                                    } else { // I think defaulting to zero is correct here?
                                         data.get(row).get(col).setDoubleValue(0.0);
+                                    }
+                                    if (cellValue.string.length() > 0){
+                                        nonBlankItems++;
                                     }
 
                                     items++;
@@ -656,50 +667,57 @@ public final class ImportService {
         return tempName;
     }
 
-    private static String getCellString(Sheet sheet, int r, int c){
+    // the function below needs to return a number and string really so azquo knows what to do with the data
+
+    static class DoubleStringPair {
+        Double number = null;
+        String string = null;
+    }
+
+    // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO
+
+    private static DoubleStringPair getCellValue(Sheet sheet, int r, int c){
+        DoubleStringPair toReturn = new DoubleStringPair();
         Range range = Ranges.range(sheet, r, c);
         CellData cellData = range.getCellData();
         String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
         //if (colCount++ > 0) bw.write('\t');
         if (cellData != null) {
-            String cellFormat = "";
+            String stringValue = "";
             try {
-                cellFormat = cellData.getFormatText();
+                stringValue = cellData.getFormatText();// I assume means formatted text
                 if (dataFormat.toLowerCase().contains("mm-")) {//fix a ZK bug
-                    cellFormat = cellFormat.replace(" ", "-");//crude replacement of spaces in dates with dashes
+                    stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
-            if (!dataFormat.toLowerCase().contains("m")) {//check that it is not a data or a time
+            if (!dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
                 //if it's a number, remove all formatting
                 try {
                     double d = cellData.getDoubleValue();
-                    cellFormat = d + "";
-                    if (cellFormat.endsWith(".0")) {
-                        cellFormat = cellFormat.substring(0, cellFormat.length() - 2);
+                    toReturn.number = d;
+                    stringValue = d + "";
+                    if (stringValue.endsWith(".0")) {
+                        stringValue = stringValue.substring(0, stringValue.length() - 2);
                     }
-                } catch (Exception e) {
-
+                } catch (Exception ignored) {
                 }
             }
-            if (cellFormat.contains("\"\"") && cellFormat.startsWith("\"") && cellFormat.endsWith("\"")) {
+            if (stringValue.contains("\"\"") && stringValue.startsWith("\"") && stringValue.endsWith("\"")) {
                 //remove spuriouse quote marks
-                cellFormat = cellFormat.substring(1, cellFormat.length() - 1).replace("\"\"", "\"");
+                stringValue = stringValue.substring(1, stringValue.length() - 1).replace("\"\"", "\"");
             }
-            return cellFormat;
+            toReturn.string = stringValue;
         }
-        return "";
-
-
-
+        return toReturn;
     }
 
     private static void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
-        String cellFormat = getCellString(sheet, r,c);
-        if (newNames != null && newNames.get(cellFormat) != null) {
-             csvW.write(newNames.get(cellFormat));
+        final DoubleStringPair cellValue = getCellValue(sheet, r, c);
+        if (newNames != null && newNames.get(cellValue.string) != null) {
+             csvW.write(newNames.get(cellValue.string));
         } else {
-             csvW.write(cellFormat.replace("\n","\\\\n").replace("\t","\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+             csvW.write(cellValue.string.replace("\n","\\\\n").replace("\t","\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
          }
 
     }

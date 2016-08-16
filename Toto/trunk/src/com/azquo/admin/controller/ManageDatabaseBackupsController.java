@@ -118,10 +118,14 @@ public class ManageDatabaseBackupsController {
                         restoreBackup = restoreBackup.replace("\\", "");
                         // unload the db first
                         AdminService.unloadDatabase(loggedInUser, databaseById.getId());
+                        //todo - clear the tables first??
+                        String clear = "mysql --user='toto' --password='ark' -e 'drop table if exists fast_name, fast_value, provenance;' " + databaseById.getPersistenceName();
                         String restore = "mysql --user='toto' --password='ark' " + databaseById.getPersistenceName() + " < " + finalDir.getPath() + "/" + restoreBackup;
                         // for some reason need to use the command array, dunno why
-                        String[] cmdarray = {"/bin/sh","-c", restore};
+                        String[] cmdarray = {"/bin/sh","-c", clear};
                         CommandLineCalls.runCommand(null, cmdarray, true, null);
+                        String[] cmdarray2 = {"/bin/sh","-c", restore};
+                        CommandLineCalls.runCommand(null, cmdarray2, true, null);
                     }
 
                     // ok backup directory is there!
