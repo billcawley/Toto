@@ -1039,7 +1039,7 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         newProvenance.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (provenanceByIdMap.putIfAbsent(newProvenance.getId(), newProvenance) != null) {
-            throw new Exception("tried to add a privenance to the database with an existing id!");
+            throw new Exception("tried to add a provenance to the database with an existing id!");
         }
     }
 

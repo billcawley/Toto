@@ -768,27 +768,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                     Menuitem auditItem = new Menuitem("Audit");
                     editPopup.appendChild(auditItem);
                     auditItem.setPopup(provenancePopup);
-                    // ok, adding new debug info here . . .
-
-                    String debugString = SpreadsheetService.getDebugForCell(loggedInUser, reportId, region, regionRow, regionColumn);
-                    Label debugLabel = new Label();
-                    debugLabel.setMultiline(true);
-                    debugLabel.setValue("Debug\n");
-                    debugPopup.appendChild(debugLabel);
-                    debugLabel = new Label();
-                    debugLabel.setMultiline(true);
-                    debugLabel.setValue(trimString(debugString));
-                    debugPopup.appendChild(debugLabel);
-                    button = new Toolbarbutton("Download Full Debug");
-                    button.addEventListener("onClick",
-                            event -> Filedownload.save(debugString, "text", "debug " + myzss.getSelectedSheet().getSheetName() + ".txt"));
-                    debugPopup.appendChild(button);
-                    Menuitem debugItem = new Menuitem("Debug");
-                    editPopup.appendChild(debugItem);
-                    debugItem.setPopup(debugPopup);
-
-
-
 //                            auditItem.addEventListener("onClick",
 //                                    event -> System.out.println("audit menu item clicked"));
                     // only check for drilldown on proper data, that which could have provenance
@@ -838,7 +817,29 @@ public class ZKComposer extends SelectorComposer<Component> {
                 e.printStackTrace();
             }
 
-            instructionsLabel.setValue("");
+            // ok, adding new debug info here, it doens't require values in the cell unlike provenance
+            try {
+                String debugString = SpreadsheetService.getDebugForCell(loggedInUser, reportId, region, regionRow, regionColumn);
+                Label debugLabel = new Label();
+                debugLabel.setMultiline(true);
+                debugLabel.setValue("Debug\n");
+                debugPopup.appendChild(debugLabel);
+                debugLabel = new Label();
+                debugLabel.setMultiline(true);
+                debugLabel.setValue(trimString(debugString));
+                debugPopup.appendChild(debugLabel);
+                Toolbarbutton button = new Toolbarbutton("Download Full Debug");
+                button.addEventListener("onClick",
+                        event -> Filedownload.save(debugString, "text", "debug " + myzss.getSelectedSheet().getSheetName() + ".txt"));
+                debugPopup.appendChild(button);
+                Menuitem debugItem = new Menuitem("Debug");
+                editPopup.appendChild(debugItem);
+                debugItem.setPopup(debugPopup);
+                instructionsLabel.setValue("");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
             final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
             if (sentCells != null && sentCells.getData().size() > 0) {
                 StringBuilder instructionsText = new StringBuilder();

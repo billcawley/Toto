@@ -87,10 +87,10 @@ public class AzquoMemoryDBConnection {
         return provenance;
     }
 
-    public void setProvenance(final String user,final String method, final String name,final String context)throws Exception{
-        if (this.provenance !=null   && this.provenance.getUser().equals(user)){
-            long elapsed = new Date().getTime() - this.provenance.getTimeStamp().getTime();
-            if(this.provenance.getMethod().equals(method) && this.provenance.getContext().equals(context) &&elapsed < 600000) {// ten minutes
+    public void setProvenance(final String user,final String method, final String name, final String context)throws Exception{
+        if (provenance != null && provenance.getUser().equals(user)){
+            long elapsed = new Date().getTime() - provenance.getTimeStamp().getTime();
+            if (provenance.getMethod().equals(method) && provenance.getContext().equals(context) && elapsed < 600000) {// ten minutes
                 return;
             }
         }
