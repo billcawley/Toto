@@ -302,11 +302,15 @@ public final class ValueService {
     private static long part2NanoCallTime = 0;
     private static int numberOfTimesCalled = 0;
 
+    public static double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final MutableBoolean locked
+            , DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception {
+        return findValueForNames(azquoMemoryDBConnection,names,locked,valuesHook,attributeNames,function,nameComboValueCache,null);
+    }
     // the function that populates each cell.
     private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
 
     public static double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final MutableBoolean locked
-            , DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception {
+            , DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
@@ -320,7 +324,14 @@ public final class ValueService {
             if (calcString == null) {// then try and find one - can only happen once
                 String calc = name.getAttribute(Name.CALCULATION, false, null); // using extra parameters to stop parent checking for this attribute
                 if (calc != null) {
+                    if (debugInfo != null){
+                        debugInfo.append("\nCalculation from " + name.getDefaultDisplayName() + "\n");
+                        debugInfo.append("\t" + calc + "\n");
+                    }
                     if (name.getAttribute(Name.APPLIESTO) != null) {
+                        if (debugInfo != null){
+                            debugInfo.append("\tApplies to " + name.getAttribute(Name.APPLIESTO) + "\n");
+                        }
                         // will be being looked up by default display name for the moment
                         if (name.getAttribute(Name.APPLIESTO).trim().equalsIgnoreCase("lowest")){
                             lowest = true;
@@ -348,7 +359,7 @@ public final class ValueService {
                 calcnames.add(name);
             }
         }
-        // lowest then there's no point running outer loops etc
+        // lowest then there's no point running outer loops etc. Note we assume this is a calc!
         if (lowest){
             // prepare lists to permute - I can't just use the findAllChildrenSets as they're not level lowest
             List<List<Name>> toPermute = new ArrayList<>();
@@ -369,7 +380,7 @@ public final class ValueService {
             final List<List<Name>> permutationOfLists = DSSpreadsheetService.get2DPermutationOfLists(toPermute);
             double toReturn = 0;
             for (List<Name> lowLevelCalcNames : permutationOfLists){ // it's lowLevelCalcNames that we were after
-                toReturn += resolveCalc(azquoMemoryDBConnection,calcString,formulaNames,lowLevelCalcNames,locked,valuesHook,attributeNames,function,nameComboValueCache);
+                toReturn += resolveCalc(azquoMemoryDBConnection,calcString,formulaNames,lowLevelCalcNames,locked,valuesHook,attributeNames,function,nameComboValueCache, debugInfo);
             }
             return toReturn;
         } else {
@@ -393,6 +404,7 @@ public final class ValueService {
             }
             // no reverse polish converted formula, just sum
             if (calcString == null) {
+                // I'll not debug in here for the moment. We should know names and function by now
                 return resolveValuesForNamesIncludeChildren(names, valuesHook, function, locked, nameComboValueCache);
             } else {
                 if (outerLoopNames.isEmpty()) { // will be most of the time, put the first in the outer loop
@@ -401,7 +413,7 @@ public final class ValueService {
                 double toReturn = 0;
                 for (Name appliesToName : outerLoopNames) { // in normal use just a single
                     calcnames.add(appliesToName);
-                    toReturn += resolveCalc(azquoMemoryDBConnection,calcString,formulaNames,calcnames,locked,valuesHook,attributeNames,function,nameComboValueCache);
+                    toReturn += resolveCalc(azquoMemoryDBConnection,calcString,formulaNames,calcnames,locked,valuesHook,attributeNames,function,nameComboValueCache, debugInfo);
                     calcnames.remove(appliesToName);
                 }
                 locked.isTrue = true;
@@ -413,7 +425,21 @@ public final class ValueService {
     // factored off to implement "lowest" calculation criteria (resolve for each permutation and sum) without duplicated code
     // fair few params, wonder if there's a way to avoid that?
     private static double resolveCalc(AzquoMemoryDBConnection azquoMemoryDBConnection, String calcString, List<Name> formulaNames, List<Name> calcnames,
-                               MutableBoolean locked, DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception{
+                               MutableBoolean locked, DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames
+            , DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception{
+        if (debugInfo != null){
+            debugInfo.append("\t");
+            boolean first = true;
+            for (Name n : calcnames){
+                if (first){
+                    debugInfo.append(n.getDefaultDisplayName());
+                    first = false;
+                } else {
+                    debugInfo.append(", " + n.getDefaultDisplayName());
+                }
+            }
+            debugInfo.append("\n\t");
+        }
         double[] values = new double[20];//should be enough!!
         int valNo = 0;
         StringTokenizer st = new StringTokenizer(calcString, " ");
@@ -442,10 +468,16 @@ public final class ValueService {
                     // NOTE! As it stands a term can have one of these attributes, it won't use more than one
                     // so get the name and add it to the other names
                     Name name = NameService.getNameFromListAndMarker(term, formulaNames);
+                    if (debugInfo != null){
+                        debugInfo.append(name.getDefaultDisplayName() + ", ");
+                    }
                     List<Name> seekList = new ArrayList<>(calcnames); // copy before modifying - may be scope for saving this later but in the mean tiem it was causing a problem
                     seekList.add(name);
                     if (name.getAttribute(Name.INDEPENDENTOF) != null) {// then this name formula term is saying it wants to exclude some names
                         Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.INDEPENDENTOF));
+                        if (debugInfo != null){
+                            debugInfo.append("Independent of " + name.getAttribute(Name.INDEPENDENTOF) + " ");
+                        }
                         Iterator<Name> seekListIterator = seekList.iterator();
                         while (seekListIterator.hasNext()) {
                             final Name test = seekListIterator.next();
@@ -458,6 +490,9 @@ public final class ValueService {
                     // opposite of above I think - chance to factor?
                     if (name.getAttribute(Name.DEPENDENTON) != null) {// then this name formula term is saying it wants to exclude some names
                         Name dependentOnSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.DEPENDENTON));
+                        if (debugInfo != null){
+                            debugInfo.append("Dependent on " + name.getAttribute(Name.DEPENDENTON) + " ");
+                        }
                         Iterator<Name> seekListIterator = seekList.iterator();
                         while (seekListIterator.hasNext()) {
                             final Name test = seekListIterator.next();
@@ -471,6 +506,9 @@ public final class ValueService {
                         // what we're saying is check through the calc names at this lowest level and bump any up to the set specified by "USE LEVEL" if possible
                         List<Name> newSeekList = new ArrayList<>(seekList.size()); // new one of same capacity, we'll be copying in changing as we go
                         final Collection<Name> useLevelNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(Name.USELEVEL));
+                        if (debugInfo != null){
+                            debugInfo.append("Use level " + name.getAttribute(Name.USELEVEL) + " ");
+                        }
                         for (Name currentName : seekList){ // so for each of the names I need to see if they are in any of them are in the children of the use level names and if so switch to that use level name
                             boolean found = false;
                             for (Name useLevelName : useLevelNames){
@@ -487,9 +525,16 @@ public final class ValueService {
                         seekList = newSeekList;
                     }
                     //note - would there be recursion? Resolve order of formulae might be unreliable
-                    values[valNo++] = findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, function, nameComboValueCache);
+                    double value = findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, function, nameComboValueCache);
+                    if (debugInfo != null){
+                        debugInfo.append(" = " + valNo + " ");
+                    }
+                    values[valNo++] = value;
                 }
             }
+        }
+        if (debugInfo != null){
+            debugInfo.append("\n");
         }
         return values[0];
     }

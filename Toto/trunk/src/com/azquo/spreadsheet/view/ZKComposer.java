@@ -47,6 +47,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     //Label provenanceLabel = new Label();
     private Label instructionsLabel = new Label();
     private Popup provenancePopup = null;
+    private Popup debugPopup = null;
     private Popup highlightPopup = null;
     private Popup instructionsPopup = null;
     private Popup filterPopup = null;
@@ -76,6 +77,12 @@ public class ZKComposer extends SelectorComposer<Component> {
         provenancePopup.setDroppable("true");
         provenancePopup.setStyle("background-color:#ffffff");
         provenancePopup.setStyle("border: 5px solid #F58030");
+        debugPopup = new Popup();
+        debugPopup.setId("debugPopup");
+        debugPopup.setDraggable("true");
+        debugPopup.setDroppable("true");
+        debugPopup.setStyle("background-color:#ffffff");
+        debugPopup.setStyle("border: 5px solid #F58030");
         instructionsPopup = new Popup();
         instructionsPopup.setId("instructionsPopup");
         instructionsPopup.setStyle("background-color:#ffffff");
@@ -97,6 +104,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(editPopup);
             myzss.getFirstChild().appendChild(provenancePopup);
+            myzss.getFirstChild().appendChild(debugPopup);
             myzss.getFirstChild().appendChild(instructionsPopup);
             myzss.getFirstChild().appendChild(highlightPopup);
             myzss.getFirstChild().appendChild(filterPopup);
@@ -106,6 +114,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             myzss.appendChild(g);
             g.appendChild(editPopup);
             g.appendChild(provenancePopup);
+            g.appendChild(debugPopup);
             g.appendChild(instructionsPopup);
             g.appendChild(highlightPopup);
             g.appendChild(filterPopup);
@@ -639,6 +648,12 @@ public class ZKComposer extends SelectorComposer<Component> {
             provenancePopup.removeChild(popupChild);
             popupChild = provenancePopup.getFirstChild();
         }
+        // clear debug too, factor at some point?
+        popupChild = debugPopup.getFirstChild();
+        while (popupChild != null) {
+            debugPopup.removeChild(popupChild);
+            popupChild = debugPopup.getFirstChild();
+        }
         SCell sCell = myzss.getSelectedSheet().getInternalSheet().getCell(cellRow, cellCol);
         if (sCell.getType() == SCell.CellType.FORMULA) {
             String formula = sCell.getFormulaValue();
@@ -746,13 +761,34 @@ public class ZKComposer extends SelectorComposer<Component> {
                     provenanceLabel.setValue(trimString(stringToShow));
                     provenancePopup.appendChild(provenanceLabel);
 
-                    final Toolbarbutton button = new Toolbarbutton("Download Full Audit");
+                    Toolbarbutton button = new Toolbarbutton("Download Full Audit");
                     button.addEventListener("onClick",
                             event -> Filedownload.save(fullProvenance, "text/csv", "audit " + myzss.getSelectedSheet().getSheetName() + ".txt"));
                     provenancePopup.appendChild(button);
                     Menuitem auditItem = new Menuitem("Audit");
                     editPopup.appendChild(auditItem);
                     auditItem.setPopup(provenancePopup);
+                    // ok, adding new debug info here . . .
+
+                    String debugString = SpreadsheetService.getDebugForCell(loggedInUser, reportId, region, regionRow, regionColumn);
+                    Label debugLabel = new Label();
+                    debugLabel.setMultiline(true);
+                    debugLabel.setValue("Debug\n");
+                    debugPopup.appendChild(debugLabel);
+                    debugLabel = new Label();
+                    debugLabel.setMultiline(true);
+                    debugLabel.setValue(trimString(debugString));
+                    debugPopup.appendChild(debugLabel);
+                    button = new Toolbarbutton("Download Full Debug");
+                    button.addEventListener("onClick",
+                            event -> Filedownload.save(debugString, "text", "debug " + myzss.getSelectedSheet().getSheetName() + ".txt"));
+                    debugPopup.appendChild(button);
+                    Menuitem debugItem = new Menuitem("Debug");
+                    editPopup.appendChild(debugItem);
+                    debugItem.setPopup(debugPopup);
+
+
+
 //                            auditItem.addEventListener("onClick",
 //                                    event -> System.out.println("audit menu item clicked"));
                     // only check for drilldown on proper data, that which could have provenance

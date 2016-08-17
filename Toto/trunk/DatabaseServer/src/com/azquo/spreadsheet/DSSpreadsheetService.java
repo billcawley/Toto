@@ -1059,15 +1059,20 @@ public class DSSpreadsheetService {
         }
         int size = 0;
         if (shared != null) size = shared.size();
-        System.out.println("time to get shared names " + (System.currentTimeMillis() - startTime) + " count = " + size);
+        //System.out.println("time to get shared names " + (System.currentTimeMillis() - startTime) + " count = " + size);
         return shared;
     }
-
-    // when doing things like saving/provenance the client needs to say "here's a region description and original position" to locate a cell server side
 
     private static AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int unsortedRow, int unsortedCol, List<String> languages) throws Exception {
+        return getSingleCellFromRegion(azquoMemoryDBCOnnection,rowHeadingsSource,colHeadingsSource,contextSource,unsortedRow,unsortedCol,languages,null);
+    }
+    // when doing things like saving/provenance the client needs to say "here's a region description and original position" to locate a cell server side
+
+    private static AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource
+            , int unsortedRow, int unsortedCol, List<String> languages, StringBuilder debugInfo) throws Exception {
         // these 25 lines or so are used elsewhere, maybe normalise?
         final List<DataRegionHeading> contextHeadings = getContextHeadings(azquoMemoryDBCOnnection, contextSource, languages);
         DataRegionHeading.SUFFIX contextSuffix = null;
@@ -1087,7 +1092,7 @@ public class DSSpreadsheetService {
         // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
         // that is to say : the outside list's size is the number of columns or headings. So, do we have the row and col?
         if (unsortedRow < rowHeadings.size() && unsortedCol < columnHeadings.size()) {
-            return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextHeadings, unsortedRow, unsortedCol, languages, 0, null);
+            return getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextHeadings, unsortedRow, unsortedCol, languages, 0, null, debugInfo);
         }
         return null; // no headings match the row/col passed
     }
@@ -1479,12 +1484,30 @@ Callable interface sorts the memory "happens before" using future gets which run
         public List<Value> values = null;
     }
 
+    private static AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
+            , List<DataRegionHeading> contextHeadings, int rowNo, int colNo, List<String> languages, int valueId, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception {
+        return getAzquoCellForHeadings(connection,rowHeadings,columnHeadings,contextHeadings,rowNo,colNo,languages,valueId,nameComboValueCache,null);
+    }
     /* factored this off to enable getting a single cell, also useful to be called from the multi threading. Now deals with name functions which
     evaluate a name expression for each cell as opposed to value functions which work off names already resolved in the DataRegionHeadings
      */
 
     private static AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
-            , List<DataRegionHeading> contextHeadings, int rowNo, int colNo, List<String> languages, int valueId, Map<List<Name>, Set<Value>> nameComboValueCache) throws Exception {
+            , List<DataRegionHeading> contextHeadings, int rowNo, int colNo, List<String> languages, int valueId, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
+        if (debugInfo != null){
+            debugInfo.append("\nRow Headings\n\n");
+            for (DataRegionHeading rowHeading : rowHeadings){
+                debugInfo.append("\t" + rowHeading.getDebugInfo() + "\n");
+            }
+            debugInfo.append("\nColumn Headings\n\n");
+            for (DataRegionHeading columnHeading : columnHeadings){
+                debugInfo.append("\t" + columnHeading.getDebugInfo() + "\n");
+            }
+            debugInfo.append("\nContext\n\n");
+            for (DataRegionHeading context : contextHeadings){
+                debugInfo.append("\t" + context.getDebugInfo() + "\n");
+            }
+        }
         boolean selected = false;
         String stringValue = "";
         double doubleValue = 0;
@@ -1507,7 +1530,6 @@ Callable interface sorts the memory "happens before" using future gets which run
         }
         if (!hasData) {
             return new AzquoCell(locked.isTrue, null, rowHeadings, columnHeadings, contextHeadings, rowNo, colNo, "", doubleValue, false, false);
-
         }
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
         // ok under new logic the complex functions will work very differently evaluating a query for each cell rather than gathering headings as below. Hence a big if here
@@ -1562,6 +1584,12 @@ Callable interface sorts the memory "happens before" using future gets which run
             String COLUMNHEADINGLOWERCASE = "[columnheading]";
             if (!columnHeadings.isEmpty() && (cellQuery.contains(COLUMNHEADING) || cellQuery.contains(COLUMNHEADINGLOWERCASE))) {
                 cellQuery = cellQuery.replace(COLUMNHEADING, columnHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(COLUMNHEADINGLOWERCASE, columnHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // and now the col headings
+            }
+            if (debugInfo != null){
+                debugInfo.append("\nFunction\n\n");
+                debugInfo.append("\t" + nameFunctionHeading.getFunction() + "\n");
+                debugInfo.append("\nQuery\n\n");
+                debugInfo.append("\t" + cellQuery + "\n");
             }
             locked.isTrue = true; // they cant edit the results from complex functions
             if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
@@ -1668,10 +1696,14 @@ Callable interface sorts the memory "happens before" using future gets which run
                     if (heading.getFunction() != null) { // should NOT be a name function, that should have been caught before
                         function = heading.getFunction();
                         valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
+                        if (debugInfo != null){
+                            debugInfo.append("\nFunction\n\n");
+                            debugInfo.append("\t" + nameFunctionHeading.getFunction() + "\n");
+                        }
                         break; // can't combine functions I don't think
                     }
                 }
-                if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (as iot was before allowing attributes), need the headings as names,
+                if (!headingsHaveAttributes(headingsForThisCell)) { // we go the value route (as it was before allowing attributes), need the headings as names,
                     ValuesHook valuesHook = new ValuesHook(); // todo, can we use this only when necessary?
                     // now , get the function from the headings
                     if (function != null) {
@@ -1690,7 +1722,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                 locked.isTrue = true;
                             }
                         }
-                        doubleValue = ValueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, function, nameComboValueCache);
+                        doubleValue = ValueService.findValueForNames(connection, namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, function, nameComboValueCache, debugInfo);
                         if (function == DataRegionHeading.FUNCTION.VALUEPARENTCOUNT && valueFunctionSet != null) { // then value parent count, we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             Set<Name> allValueParents = HashObjSets.newMutableSet();
@@ -1724,7 +1756,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         doubleValue = 0;
                     }
                     listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(valuesHook.values);// can we zap the values from here? It might be a bit of a saving if there are loads of values per cell
-                } else {  // attributes in the cells
+                } else {  // attributes in the cells - currently no debug on this, it should be fairly obvious
                     List<Name> names = new ArrayList<>();
                     List<String> attributes = new ArrayList<>();
                     for (DataRegionHeading heading : headingsForThisCell) {
@@ -1935,6 +1967,20 @@ Callable interface sorts the memory "happens before" using future gets which run
             }
         }
         return Collections.emptyList(); //just empty ok? null? Unsure
+    }
+
+    // like above to find the relevant cell BUT in this case we want as much detail about how the cell was made. I'm just going to return a string here
+    public static String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws Exception {
+        int maxDebugLength = 2_000_000; // two million, a bit arbritrary for the moment
+        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+        StringBuilder debugInfo = new StringBuilder();
+        getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, databaseAccessToken.getLanguages(), debugInfo);
+        if (debugInfo.length() > maxDebugLength){
+            return debugInfo.substring(0, maxDebugLength);
+        } else {
+            return debugInfo.toString();
+        }
     }
 
     private static List<TreeNode> nameCountProvenance(AzquoCell azquoCell) {

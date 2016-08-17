@@ -177,6 +177,23 @@ public class SpreadsheetService {
         return new ArrayList<>(); // maybe "not found"?
     }
 
+    // some code duplication with above, a way to factor?
+
+    public static String getDebugForCell(LoggedInUser loggedInUser, int reportId, String region, int rowInt, int colInt) throws Exception {
+        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
+        if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
+                && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
+                && cellsAndHeadingsForDisplay.getData().get(rowInt).size() > colInt
+                && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
+            final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
+            DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getDebugForCell(databaseAccessToken, cellsAndHeadingsForDisplay.getRowHeadingsSource()
+                    , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
+                    , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol());
+        }
+        return "not found";
+    }
+
     public static void databasePersist(LoggedInUser loggedInUser) throws Exception {
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         RMIClient.getServerInterface(databaseAccessToken.getServerIp()).persistDatabase(databaseAccessToken);
