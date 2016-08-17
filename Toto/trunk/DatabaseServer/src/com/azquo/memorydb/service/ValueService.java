@@ -544,7 +544,7 @@ public final class ValueService {
                     //note - would there be recursion? Resolve order of formulae might be unreliable
                     double value = findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, function, nameComboValueCache);
                     if (debugInfo != null) {
-                        debugInfo.append(" = " + valNo + "\t");
+                        debugInfo.append(" = " + value + "\t");
                     }
                     values[valNo++] = value;
                 }
