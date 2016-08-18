@@ -686,7 +686,7 @@ public final class ImportService {
             String stringValue = "";
             try {
                 stringValue = cellData.getFormatText();// I assume means formatted text
-                if (dataFormat.toLowerCase().contains("mm-")) {//fix a ZK bug
+                if (r>0 && dataFormat.toLowerCase().contains("mm-")) {//fix a ZK bug
                     stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
                 }
             } catch (Exception ignored) {
