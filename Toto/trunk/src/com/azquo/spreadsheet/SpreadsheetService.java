@@ -206,8 +206,10 @@ public class SpreadsheetService {
     public static void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName, boolean persist) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
         if (cellsAndHeadingsForDisplay != null) {
-            DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
+            if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
+                DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+                RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
+            }
         }
     }
 
