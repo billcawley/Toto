@@ -66,6 +66,7 @@ public final class UserRegionOptionsDAO {
                         , rs.getString(SORT_COLUMN)
                         , rs.getBoolean(SORT_COLUMN_ASC)
                         , rs.getInt(HIGHLIGHT_DAYS)
+                        ,false
                         ,null
                         ,"" // todo - actually load this from the database!
                         ,""
