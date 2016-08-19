@@ -19,8 +19,10 @@ public class RegionOptions implements Serializable {
     public final int highlightDays;
     public final String rowLanguage;
     public final String columnLanguage;
+    public final boolean noSave;
+    public final String database;
 
-    public RegionOptions(int hideRows, boolean sortable, int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn, boolean sortColumnAsc, int highlightDays, String rowLanguage, String columnLanguage) {
+    public RegionOptions(int hideRows, boolean sortable, int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn, boolean sortColumnAsc, int highlightDays, String rowLanguage, String columnLanguage, boolean noSave, String database) {
         this.hideRows = hideRows;
         this.sortable = sortable;
         this.rowLimit = rowLimit;
@@ -32,5 +34,7 @@ public class RegionOptions implements Serializable {
         this.highlightDays = highlightDays;
         this.rowLanguage = rowLanguage;
         this.columnLanguage = columnLanguage;
+        this.noSave = noSave;
+        this.database = database;
     }
 }
