@@ -911,7 +911,7 @@ public class DSSpreadsheetService {
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
                 , regionOptions, databaseAccessToken.getLanguages(), valueId);
         if (data.size() == 0) {
-            return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null);
+            return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null, regionOptions);
         }
         List<List<CellForDisplay>> displayData = new ArrayList<>(data.size());
         for (List<AzquoCell> sourceRow : data) {
@@ -942,7 +942,7 @@ public class DSSpreadsheetService {
         //AzquoMemoryDB.clearAllCountStats();
         // this is single threaded as I assume not much data should be returned. Need to think about this.
         return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
-                , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource);
+                , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions);
     }
 
     private static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
