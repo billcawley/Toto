@@ -27,6 +27,7 @@ public class UserRegionOptions extends StandardEntity {
     private String sortColumn;
     private boolean sortColumnAsc;
     private int highlightDays;
+    private boolean noSave;
     private String databaseName;
 
     private String rowLanguage;
@@ -34,7 +35,7 @@ public class UserRegionOptions extends StandardEntity {
 
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
-            , boolean sortColumnAsc, int highlightDays, String databaseName, String rowLanguage, String columnLanguage) {
+            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -48,6 +49,7 @@ public class UserRegionOptions extends StandardEntity {
         this.sortColumn = sortColumn;
         this.sortColumnAsc = sortColumnAsc;
         this.highlightDays = highlightDays;
+        this.noSave = noSave;
         this.databaseName = databaseName;
         this.rowLanguage = rowLanguage;
         this.columnLanguage = columnLanguage;
@@ -80,6 +82,7 @@ public class UserRegionOptions extends StandardEntity {
             this.columnLimit = asNumber(getOptionFromSpreadsheetOptions(COLUMNLIMIT, spreadsheetSource));
             String HIGHLIGHT = "highlight";
             this.highlightDays = asNumber(getOptionFromSpreadsheetOptions(HIGHLIGHT, spreadsheetSource));
+            this.noSave = spreadsheetSource.contains("nosave");
             String DATABASENAME = "database";
             this.databaseName = getOptionFromSpreadsheetOptions(DATABASENAME, spreadsheetSource);
         } else {
@@ -87,6 +90,7 @@ public class UserRegionOptions extends StandardEntity {
             this.rowLimit = 0;
             this.columnLimit = 0;
             this.highlightDays = 0;
+            this.noSave = false;
             this.databaseName = null;
         }
         this.sortRow = null;
@@ -234,7 +238,7 @@ public class UserRegionOptions extends StandardEntity {
     }
 
     public RegionOptions getRegionOptionsForTransport(){
-        return new RegionOptions(hideRows,sortable,rowLimit,columnLimit,sortRow,sortRowAsc,sortColumn,sortColumnAsc,highlightDays, rowLanguage, columnLanguage);
+        return new RegionOptions(hideRows,sortable,rowLimit,columnLimit,sortRow,sortRowAsc,sortColumn,sortColumnAsc,highlightDays, rowLanguage, columnLanguage, noSave, databaseName);
     }
 
     public String getRowLanguage() {
