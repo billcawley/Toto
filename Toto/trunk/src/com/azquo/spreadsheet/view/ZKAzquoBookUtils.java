@@ -635,7 +635,7 @@ public class ZKAzquoBookUtils {
                 }
                 dataRegionCells.add(oneRow);
             }
-            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null);
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null, null);//
             loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
             return;
         }
