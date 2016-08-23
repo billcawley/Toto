@@ -132,7 +132,7 @@ public class ZKAzquoBookUtils {
                     if (!subCommands.isEmpty()) { // then we have something to run for the for each!
                         String choiceName = trimmedLine.substring("for each".length(), trimmedLine.indexOf(" in ")).trim();
                         String choiceQuery = trimmedLine.substring(trimmedLine.indexOf(" in ") + " in ".length()).trim();
-                        loopsLog.append(choiceName + " : " + choiceQuery + "\r"); // excel wants carriage returns not new lines
+                        loopsLog.append(choiceName + " : " + choiceQuery + "\r\n");
                         final List<String> dropdownListForQuery = getDropdownListForQuery(loggedInUser, choiceQuery);
                         for (String choiceValue : dropdownListForQuery) { // run the for :)
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
@@ -164,7 +164,7 @@ public class ZKAzquoBookUtils {
                 }
             }
         }
-        loopsLog.append("\r");
+        loopsLog.append("\r\n");
     }
 
     private static int getIndent(String s) {
