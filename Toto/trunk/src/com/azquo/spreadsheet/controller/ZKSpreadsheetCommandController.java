@@ -221,9 +221,12 @@ public class ZKSpreadsheetCommandController {
                         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                         }
-                        ZKAzquoBookUtils.populateBook(newBook, 0, true, null);
+                        ZKAzquoBookUtils.populateBook(newBook, 0, true, null, false);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
+                        if (reloadAfterSave){
+                            Clients.evalJavaScript("alert(\"Save successful\")");
+                        }
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

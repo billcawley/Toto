@@ -223,8 +223,8 @@ public class OnlineController {
                             final String finalReportId = reportId;
                             final OnlineReport finalOnlineReport = onlineReport;
                             final LoggedInUser finalLoggedInUser = loggedInUser;
-                            final boolean templateMode = "TRUE".equalsIgnoreCase(template) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster());
-                            final boolean executeMode = "TRUE".equalsIgnoreCase(execute);
+                            final boolean templateMode = !template.isEmpty() && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster());
+                            final boolean executeMode = !execute.isEmpty();
                             new Thread(() -> {
                                 // so in here the new thread we set up the loading as it was originally before
                                 try {
@@ -251,7 +251,7 @@ public class OnlineController {
                                         }
                                         session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
                                         if (executeMode){
-                                            ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.EXECUTE); // standard, there's the option to execute the contents of a different namers
+                                            ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.EXECUTE); // standard, there's the option to execute the contents of a different names
                                             session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                         } else {
                                             session.setAttribute(finalReportId + SAVE_FLAG, ZKAzquoBookUtils.populateBook(book, valueId));

@@ -144,7 +144,7 @@ main.basicDialog form input{display:block; width:100%; margin-bottom:10px;}
 
 .basic-box .loader, .loading .loader{font-size:65px; text-align:center; padding:20px 0px;}
 
-.basic-box #serverStatus{height:45px; width:100%;font:10px monospace;overflow:auto;}
+.basic-box #serverStatus{height:145px; width:100%;font:10px monospace;overflow:auto;}
 
 /*--------------------------- Manage Database Layout -----------------------------*/
 

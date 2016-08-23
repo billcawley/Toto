@@ -26,6 +26,7 @@ import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -58,6 +59,8 @@ public class ZKAzquoBookUtils {
 
     public static final String EXECUTE = "az_Execute";
 
+    public static final String EXECUTERESULTS = "az_ExecuteResults";
+
     public static final String FOLLOWON = "az_Followon";
 
     public static boolean runExecuteCommandForBook(Book book, String sourceNamedRegion) throws Exception {
@@ -68,66 +71,88 @@ public class ZKAzquoBookUtils {
             for (SName sName : namesForSheet) {
                 if (sName.getName().equalsIgnoreCase(sourceNamedRegion)) {
                     executeCommand = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getStringValue();
+                    break;
                 }
             }
         }
-        if (executeCommand == null || executeCommand.isEmpty()){ // just return the book for the moment, no executing
+        if (executeCommand == null || executeCommand.isEmpty()) { // just return the book for the moment, no executing
             // how to error message there was no execute? Exception? todo. Also why populate the book at all, what's the point?
             return false;
             //return populateBook(book, 0);
         }
         List<String> commands = new ArrayList<>();
         StringTokenizer st = new StringTokenizer(executeCommand, "\n");
-        while (st.hasMoreTokens()){
+        while (st.hasMoreTokens()) {
             String line = st.nextToken();
-            if (!line.trim().isEmpty()){
+            if (!line.trim().isEmpty()) {
                 commands.add(line);
             }
         }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        executeCommands(loggedInUser, commands);
+        StringBuilder loops = new StringBuilder();
+        executeCommands(loggedInUser, commands, loops);
+        // it won't have cleared while executing
+        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
         SpreadsheetService.databasePersist(loggedInUser);
+        for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+            Sheet sheet = book.getSheetAt(sheetNumber);
+            List<SName> namesForSheet = getNamesForSheet(sheet);
+            for (SName sName : namesForSheet) {
+                if (sName.getName().equalsIgnoreCase(EXECUTERESULTS)) {
+                    final SCell cell = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
+                    cell.setStringValue(loops.toString());
+                }
+            }
+        }
+
         return true;
     }
+
     // we assume cleansed of blank lines
-    public static void executeCommands(LoggedInUser loggedInUser, List<String> commands) throws Exception {
-        if (commands.size() > 0 && commands.get(0) != null){
+    private static void executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog) throws Exception {
+        if (commands.size() > 0 && commands.get(0) != null) {
             String firstLine = commands.get(0);
             int startingIndent = getIndent(firstLine);
-            for (int lineNo = 0; lineNo < commands.size(); lineNo++){ // makes checking ahead easier
+            for (int i = 0; i < startingIndent; i++) {
+                loopsLog.append("  ");
+            }
+
+            for (int lineNo = 0; lineNo < commands.size(); lineNo++) { // makes checking ahead easier
                 String line = commands.get(lineNo);
                 String trimmedLine = line.trim();
-                if (trimmedLine.toLowerCase().startsWith("for each")){
+                if (trimmedLine.toLowerCase().startsWith("for each")) {
                     // gather following lines - what we'll be executing
                     int onwardLineNo = lineNo + 1;
                     List<String> subCommands = new ArrayList<>();
-                    while (onwardLineNo < commands.size() && getIndent(commands.get(onwardLineNo)) > startingIndent){
+                    while (onwardLineNo < commands.size() && getIndent(commands.get(onwardLineNo)) > startingIndent) {
                         subCommands.add(commands.get(onwardLineNo));
                         onwardLineNo++;
                     }
                     lineNo = onwardLineNo - 1; // put line back to where it is now
-                    if (!subCommands.isEmpty()){ // then we have something to run for the for each!
+                    if (!subCommands.isEmpty()) { // then we have something to run for the for each!
                         String choiceName = trimmedLine.substring("for each".length(), trimmedLine.indexOf(" in ")).trim();
                         String choiceQuery = trimmedLine.substring(trimmedLine.indexOf(" in ") + " in ".length()).trim();
+                        loopsLog.append(choiceName + " : " + choiceQuery + "\r"); // excel wants carriage returns not new lines
                         final List<String> dropdownListForQuery = getDropdownListForQuery(loggedInUser, choiceQuery);
-                        for (String choiceValue : dropdownListForQuery){ // run the for :)
-                            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`",""), choiceValue);
-                            executeCommands(loggedInUser, subCommands);
+                        for (String choiceValue : dropdownListForQuery) { // run the for :)
+                            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
+                            executeCommands(loggedInUser, subCommands, loopsLog);
                         }
                     }
                     // if not a for each I guess we just execute? Will check for "do"
-                } else if (trimmedLine.toLowerCase().startsWith("do")){
+                } else if (trimmedLine.toLowerCase().startsWith("do")) {
                     String reportToRun = trimmedLine.substring(2).trim();
                     OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
-                    if (onlineReport != null){ // need to prepare it as in the controller todo - factor?
+                    if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
+                        loopsLog.append("Run : " + onlineReport.getReportName());
                         onlineReport.setPathname(loggedInUser.getBusinessDirectory());
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                         book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
                         book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                         book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
-                        final boolean save = populateBook(book, 0);
-                        if (save){ // so the data was changed and if we save from here it will make changes to the DB
+                        final boolean save = populateBook(book, 0, false, null, true); // note true at the end here - keep on logging so users can see changes as they happen
+                        if (save) { // so the data was changed and if we save from here it will make changes to the DB
                             for (SName name : book.getInternalBook().getNames()) {
                                 if (name.getName().toLowerCase().startsWith(azDataRegion.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
                                     String region = name.getName().substring(azDataRegion.length());
@@ -139,23 +164,24 @@ public class ZKAzquoBookUtils {
                 }
             }
         }
+        loopsLog.append("\r");
     }
 
-    public static int getIndent(String s){
+    private static int getIndent(String s) {
         int indent = 0;
-        while (indent < s.length() && s.charAt(indent) == ' '){
+        while (indent < s.length() && s.charAt(indent) == ' ') {
             indent++;
         }
         return indent;
     }
 
     public static boolean populateBook(Book book, int valueId) {
-        return populateBook(book, valueId, false, null);
+        return populateBook(book, valueId, false, null, false);
     }
 
     public static final String ALLOWABLE_REPORTS = "az_AllowableReports";
 
-    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, String reportParameters) {
+    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, String reportParameters, boolean dontClearLog) {
         long track = System.currentTimeMillis();
         String imageStoreName = "";
         boolean showSave = false;
@@ -216,17 +242,17 @@ public class ZKAzquoBookUtils {
                 if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
                     CellRegion allowable = sName.getRefersToCellRegion();
                     boolean databases = allowable.getLastColumn() > allowable.getColumn();
-                    for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++){
-                        if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()){
+                    for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
+                        if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                             String key = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
                             String value = "";
-                            if (databases && !sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).isNull()){
+                            if (databases && !sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).isNull()) {
                                 value = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
                             }
-                            if (value.isEmpty()){ // use the current DB
+                            if (value.isEmpty()) { // use the current DB
                                 value = loggedInUser.getDatabase().getName();
                             }
-                            permissionsFromReports.put(key.toLowerCase(),value);
+                            permissionsFromReports.put(key.toLowerCase(), value);
                         }
                     }
                     loggedInUser.setPermissionsFromReport(permissionsFromReports);
@@ -309,9 +335,9 @@ public class ZKAzquoBookUtils {
 
             List<CellRegion> mergesToTemporarilyRemove = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
             Iterator<CellRegion> it = mergesToTemporarilyRemove.iterator();
-            while (it.hasNext()){
+            while (it.hasNext()) {
                 CellRegion merge = it.next();
-                if (regionsToWatchForMerge.contains(merge)){
+                if (regionsToWatchForMerge.contains(merge)) {
                     CellOperationUtil.unmerge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()));
                 } else {
                     it.remove(); // a merge we just leave alone
@@ -350,22 +376,22 @@ public class ZKAzquoBookUtils {
                         userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                     }
                     String databaseName = userRegionOptions.getDatabaseName();
-                        // fairly simple addition to allow multiple databases on the same report
-                        // todo - support when saving . . .
-                        if (databaseName != null) {
-                            Database origDatabase = loggedInUser.getDatabase();
-                            DatabaseServer origServer = loggedInUser.getDatabaseServer();
-                            try {
-                                LoginService.switchDatabase(loggedInUser, databaseName);
-                                fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
-                            } catch (Exception e) {
-                                String eMessage = "Unknown database " + databaseName + " for region " + region;
-                                sheet.getInternalSheet().getCell(0, 0).setStringValue(eMessage);
-                            }
-                            loggedInUser.setDatabaseWithServer(origServer, origDatabase);
-                        } else {
+                    // fairly simple addition to allow multiple databases on the same report
+                    // todo - support when saving . . .
+                    if (databaseName != null) {
+                        Database origDatabase = loggedInUser.getDatabase();
+                        DatabaseServer origServer = loggedInUser.getDatabaseServer();
+                        try {
+                            LoginService.switchDatabase(loggedInUser, databaseName);
                             fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
+                        } catch (Exception e) {
+                            String eMessage = "Unknown database " + databaseName + " for region " + region;
+                            sheet.getInternalSheet().getCell(0, 0).setStringValue(eMessage);
                         }
+                        loggedInUser.setDatabaseWithServer(origServer, origDatabase);
+                    } else {
+                        fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
+                    }
                 }
             }
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
@@ -434,7 +460,7 @@ public class ZKAzquoBookUtils {
                                             // we now want to compare in the case of non formulae changes - a value from one data region importing into another,
                                             // the other typically being of the "ad hoc" no row headings type
                                             // notably this will hit a lot of cells (all the rest)
-                                            String cellString = getCellString(sheet,row, col);
+                                            String cellString = getCellString(sheet, row, col);
                                             if (sCell.getType() == SCell.CellType.NUMBER) {
                                                 if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
                                                     cellForDisplay.setNewStringValue(cellString);//to cover dates as well as numbers -EFC, I don't really understand but I'm moving this inside the conditional
@@ -498,10 +524,13 @@ public class ZKAzquoBookUtils {
         //
         loggedInUser.setImageStoreName(imageStoreName);
         loggedInUser.setContext(context);
-        // after stripping off some redundant exception throwing this was the only possibility left, ignore it
-        try {
-            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
-        } catch (Exception ignored) {
+        // we won't clear the log in the case of execute
+        if (!dontClearLog) {
+            // after stripping off some redundant exception throwing this was the only possibility left, ignore it
+            try {
+                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
+            } catch (Exception ignored) {
+            }
         }
         return showSave;
     }
@@ -608,8 +637,8 @@ public class ZKAzquoBookUtils {
                 }
                 // and do hidden
                 boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
-                if (hidden){
-                    for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++){
+                if (hidden) {
+                    for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
                         sheet.getInternalSheet().getRow(row).setHidden(true);
                     }
                 }
@@ -644,7 +673,7 @@ public class ZKAzquoBookUtils {
                 //check if this is a pivot - if so, then add in any additional filter needed
                 SName contextFilters = sheet.getBook().getInternalBook().getNameByName("az_ContextFilters");
                 if (contextFilters == null) {
-                    contextFilters  = sheet.getBook().getInternalBook().getNameByName("az_PivotFilters");
+                    contextFilters = sheet.getBook().getInternalBook().getNameByName("az_PivotFilters");
                 }
                 // a comma separated list of names
                 if (contextFilters != null) {
@@ -697,8 +726,8 @@ public class ZKAzquoBookUtils {
                             insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
                         }
                         boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
-                        if (hidden){
-                            for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++){
+                        if (hidden) {
+                            for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
                                 sheet.getInternalSheet().getRow(row).setHidden(true);
                             }
                         }
@@ -718,8 +747,8 @@ public class ZKAzquoBookUtils {
                             insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
                         }
                         boolean hidden = sheet.getInternalSheet().getColumn(insertCol - 1).isHidden();
-                        if (hidden){
-                            for (int col = insertRange.getColumn(); col <= insertRange.getLastColumn(); col++){
+                        if (hidden) {
+                            for (int col = insertRange.getColumn(); col <= insertRange.getLastColumn(); col++) {
                                 sheet.getInternalSheet().getColumn(col).setHidden(true);
                             }
                         }
@@ -897,7 +926,7 @@ public class ZKAzquoBookUtils {
                 }*/
                     }
                     displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
-                    if (repeatListItems != null){ // then we need to prepare the repeated regions. Row and col headings have been made so copy paste them where required
+                    if (repeatListItems != null) { // then we need to prepare the repeated regions. Row and col headings have been made so copy paste them where required
                         int rootRow = repeatRegion.getRefersToCellRegion().getRow();
                         int rootCol = repeatRegion.getRefersToCellRegion().getColumn();
                         int repeatColumn = 0;
@@ -916,13 +945,13 @@ public class ZKAzquoBookUtils {
 
                         Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
                         // yes the first will simply be copying over itself
-                        for (String item : repeatListItems){
+                        for (String item : repeatListItems) {
                             Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth);
                             CellOperationUtil.paste(copySource, insertRange);
                             // and set the item
                             sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset).setStringValue(item);
                             repeatColumn++;
-                            if (repeatColumn == repeatColumns){ // zap if back to the first column
+                            if (repeatColumn == repeatColumns) { // zap if back to the first column
                                 repeatColumn = 0;
                                 repeatRow++;
                             }
@@ -937,15 +966,15 @@ public class ZKAzquoBookUtils {
                             cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, nameToStringLists(columnHeadingsDescription),
                                     contextList, userRegionOptions);
                             displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
-                            ,rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
+                                    , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
 
                             loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!
 
-                            dataFill(sheet, cellsAndHeadingsForDisplay,displayDataRegion);
+                            dataFill(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
                             contextList.remove(contextList.size() - 1); // item removed from the context
 
                             repeatColumn++;
-                            if (repeatColumn == repeatColumns){ // zap if back to the first column
+                            if (repeatColumn == repeatColumns) { // zap if back to the first column
                                 repeatColumn = 0;
                                 repeatRow++;
                             }
@@ -953,7 +982,7 @@ public class ZKAzquoBookUtils {
                         }
 
                     } else {
-                        dataFill(sheet, cellsAndHeadingsForDisplay,displayDataRegion);
+                        dataFill(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
                     }
                 }
             } catch (RemoteException re) {
@@ -999,7 +1028,7 @@ public class ZKAzquoBookUtils {
 
     // factored off to enable multiple regions
 
-    private static void dataFill(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion){
+    private static void dataFill(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion) {
         int row = displayDataRegion.getRow();
         List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
         if (cellsAndHeadingsForDisplay.getData() != null) {
@@ -1288,7 +1317,7 @@ public class ZKAzquoBookUtils {
                 String region = name.getName().substring("az_pivotFilters".length());
                 String[] filters = getSnameCell(name).getStringValue().split(",");
                 SName contextHeadings = book.getInternalBook().getNameByName("az_ContextHeadings" + region);
-                if (contextHeadings==null){
+                if (contextHeadings == null) {
                     //original name...
                     contextHeadings = book.getInternalBook().getNameByName("az_PivotHeadings" + region);
                 }
@@ -1356,7 +1385,7 @@ public class ZKAzquoBookUtils {
                         String query = choiceCell.getStringValue();
                         int contentPos = query.toLowerCase().indexOf(CONTENTS);
                         if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
-                              if (contentPos < 0) {//not a dependent range
+                            if (contentPos < 0) {//not a dependent range
                                 validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
                                 int row = 0;
                                 // yes, this can null pointer but if it does something is seriously wrong
@@ -1407,7 +1436,7 @@ public class ZKAzquoBookUtils {
 
     // moved/adapted from ZKComposer and made static
     static List<SName> getNamedDataRegionForRowAndColumnSelectedSheet(int row, int col, Sheet sheet) {
-        return  getNamedRegionForRowAndColumnSelectedSheet(row,col,sheet, "az_dataregion");
+        return getNamedRegionForRowAndColumnSelectedSheet(row, col, sheet, "az_dataregion");
     }
 
     // moved/adapted from ZKComposer and made static
@@ -1495,7 +1524,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private static String getCellString(Sheet sheet, int r, int c){//this is the same routine as in ImportService, so one is redundant, but I'm not sure which (WFC)
+    private static String getCellString(Sheet sheet, int r, int c) {//this is the same routine as in ImportService, so one is redundant, but I'm not sure which (WFC)
         Range range = Ranges.range(sheet, r, c);
         CellData cellData = range.getCellData();
         String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
