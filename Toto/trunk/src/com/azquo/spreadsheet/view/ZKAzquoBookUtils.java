@@ -13,7 +13,6 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.commons.math.util.OpenIntToDoubleHashMap;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Range;
@@ -23,7 +22,6 @@ import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
 import java.io.File;
-import java.io.IOException;
 import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -415,19 +413,19 @@ public class ZKAzquoBookUtils {
                                                     if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB, only if not ignored
                                                         sCell.setNumberValue(cellForDisplay.getDoubleValue());
                                                     } else { // the formula overrode the DB, get the value ready of saving if the user wants that
-                                                        cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                        cellForDisplay.setNewDoubleValue(sCell.getNumberValue()); // should flag as changed
                                                         showSave = true;
                                                     }
                                                 }
                                                 if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
-                                                    cellForDisplay.setStringValue(df.format(sCell.getDateValue()));//set a string value as our date for saving purposes
+                                                    cellForDisplay.setNewStringValue(df.format(sCell.getDateValue()));//set a string value as our date for saving purposes
                                                 }
                                             } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
                                                 if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
                                                     if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB
                                                         sCell.setStringValue(cellForDisplay.getStringValue());
                                                     } else { // the formula overrode the DB, get the value ready of saving if the user wants that
-                                                        cellForDisplay.setStringValue(sCell.getStringValue());
+                                                        cellForDisplay.setNewStringValue(sCell.getStringValue());
                                                         showSave = true;
                                                     }
                                                 }
@@ -437,16 +435,15 @@ public class ZKAzquoBookUtils {
                                             // the other typically being of the "ad hoc" no row headings type
                                             // notably this will hit a lot of cells (all the rest)
                                             String cellString = getCellString(sheet,row, col);
-
                                             if (sCell.getType() == SCell.CellType.NUMBER) {
-                                                cellForDisplay.setStringValue(cellString);//to cover dates as well as numbers
                                                 if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
-                                                    cellForDisplay.setDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                    cellForDisplay.setNewStringValue(cellString);//to cover dates as well as numbers -EFC, I don't really understand but I'm moving this inside the conditional
+                                                    cellForDisplay.setNewDoubleValue(sCell.getNumberValue()); // should flag as changed
                                                     showSave = true;
                                                 }
                                             } else if (sCell.getType() == SCell.CellType.STRING) {
                                                 if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
-                                                    cellForDisplay.setStringValue(sCell.getStringValue());
+                                                    cellForDisplay.setNewStringValue(sCell.getStringValue());
                                                     showSave = true;
                                                 }
                                             }
@@ -635,7 +632,7 @@ public class ZKAzquoBookUtils {
                 }
                 dataRegionCells.add(oneRow);
             }
-            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null, null);//
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport());// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
             loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
             return;
         }
@@ -1396,7 +1393,7 @@ public class ZKAzquoBookUtils {
                         }
                     }
                 } else {
-                    SName multi = book.getInternalBook().getNameByName(choiceName + "multiresult"); // as ever I do wonder about these string literals
+                    SName multi = book.getInternalBook().getNameByName(choiceName + "multi"); // as ever I do wonder about these string literals
                     if (multi != null) {
                         SCell resultCell = getSnameCell(multi);
                         // all multi list is is a fancy way of saying to the user what is selected, e.g. all, various, all but or a list of those selected. The actual selection box is created in the composer, onclick

@@ -586,12 +586,12 @@ public final class ImportService {
                                         && cellsAndHeadingsForDisplay != null){
                                     final List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
                                     final DoubleStringPair cellValue = getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setStringValue(cellValue.string);
+                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewStringValue(cellValue.string);
                                     // added by Edd, should sort some numbers being ignored!
                                     if (cellValue.number != null){
-                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setDoubleValue(cellValue.number);
+                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(cellValue.number);
                                     } else { // I think defaulting to zero is correct here?
-                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setDoubleValue(0.0);
+                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(0.0);
                                     }
                                     if (cellValue.string.length() > 0) nonBlankItems++;
                                     items++;
@@ -610,12 +610,12 @@ public final class ImportService {
                                 for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
                                     // note that this function might return a null double but no null string. Perhaps could be mroe consistent? THis area is a bit hacky . . .
                                     final DoubleStringPair cellValue = getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    data.get(row).get(col).setStringValue(cellValue.string);
+                                    data.get(row).get(col).setNewStringValue(cellValue.string);
                                     // added by Edd, should sort some numbers being ignored!
                                     if (cellValue.number != null){
-                                        data.get(row).get(col).setDoubleValue(cellValue.number);
+                                        data.get(row).get(col).setNewDoubleValue(cellValue.number);
                                     } else { // I think defaulting to zero is correct here?
-                                        data.get(row).get(col).setDoubleValue(0.0);
+                                        data.get(row).get(col).setNewDoubleValue(0.0);
                                     }
                                     if (cellValue.string.length() > 0){
                                         nonBlankItems++;
@@ -627,7 +627,10 @@ public final class ImportService {
                         }
                     }
                     try {
-                        SpreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
+                        final String result = SpreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
+                        if (!result.equals("true")){// unlikely to fail here I think but catch it anyway . . .
+                            errorMessage += "- in region " + regionName + " -" + result;
+                        }
                     } catch (Exception e) {
                         errorMessage += "- in region " + regionName + " -" +  e.getMessage();
                     }

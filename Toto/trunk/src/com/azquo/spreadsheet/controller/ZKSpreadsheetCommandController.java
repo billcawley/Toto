@@ -168,16 +168,23 @@ public class ZKSpreadsheetCommandController {
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".pdf", "pdf", "application/pdf", file, true));
                     }
 
+                    boolean reloadAfterSave = false;
+
                     if ("Save".equals(action)) {
                         LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                         // todo - provenance?
                         final Book book = ss.getBook();
                         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
+                        boolean saveOk = true;
                         for (SName name : book.getInternalBook().getNames()) {
                             if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.azDataRegion.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
                                 String region = name.getName().substring(ZKAzquoBookUtils.azDataRegion.length());
-                                SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                                final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                                if (!result.equals("true")){
+                                    Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
+                                    saveOk = false;
+                                }
                             }
                             // deal with repeats, annoying!
                             if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.azRepeatScope.toLowerCase())) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
@@ -192,7 +199,10 @@ public class ZKSpreadsheetCommandController {
                                     for (int row = 0; row < repeatRows; row++){
                                         for (int col = 0; col < repeatCols; col++){
                                             //region + "-" + repeatRow + "-" + repeatColumn
-                                            SpreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                                            final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                                            if (!result.equals("true")){
+                                                Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
+                                            }
                                         }
                                     }
                                 }
@@ -200,9 +210,12 @@ public class ZKSpreadsheetCommandController {
                         }
                         // new thing, look for followon, guess we need an instance of ZK azquobook utils
                         ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
+                        if (saveOk){
+                            reloadAfterSave = true;
+                        }
                     }
 
-                    if ("RestoreSavedValues".equals(action)) {
+                    if ("RestoreSavedValues".equals(action) || reloadAfterSave) {
                         final Book book = ss.getBook();
                         final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
                         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt

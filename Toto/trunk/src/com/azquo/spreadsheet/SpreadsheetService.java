@@ -199,18 +199,29 @@ public class SpreadsheetService {
         RMIClient.getServerInterface(databaseAccessToken.getServerIp()).persistDatabase(databaseAccessToken);
     }
 
-    public static void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName) throws Exception {
-        saveData(loggedInUser,region,reportId,reportName,true); // default to persist server side
+    public static String saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName) throws Exception {
+        return saveData(loggedInUser,region,reportId,reportName,true); // default to persist server side
     }
 
-    public static void saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName, boolean persist) throws Exception {
+    public static String saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName, boolean persist) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
         if (cellsAndHeadingsForDisplay != null) {
             if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
                 DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-                RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
+                final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, region, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
+                if (result.equals("true")){ // then reset the cells and headings object to reflect the changed state
+                    for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()){
+                        for (CellForDisplay cell : row){
+                            if (cell.isChanged()){
+                                cell.setNewValuesToCurrentAfterSaving();
+                            }
+                        }
+                    }
+                }
+                return result;
             }
         }
+        return "no data passed for that region and report " + region + ", " + reportName;
     }
 
     public static String setChoices(LoggedInUser loggedInUser, String provline) {

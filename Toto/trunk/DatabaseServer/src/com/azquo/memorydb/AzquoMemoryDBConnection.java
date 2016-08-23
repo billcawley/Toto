@@ -97,6 +97,10 @@ public class AzquoMemoryDBConnection {
         this.provenance = new Provenance(getAzquoMemoryDB(),user,new Date(),method, name, context);
     }
 
+    public long getDBLastModifiedTimeStamp(){
+        return azquoMemoryDB.getLastModifiedTimeStamp();
+    }
+
     // tellingly never used.
 
 /*    public void setNewProvenance(String provenanceMethod, String provenanceName) {

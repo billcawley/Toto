@@ -12,6 +12,7 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -1035,12 +1036,21 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         }
     }
 
+    // last modified according to provenance!
+    private final AtomicLong lastModified = new AtomicLong();
+
     void addProvenanceToDb(final Provenance newProvenance) throws Exception {
         newProvenance.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (provenanceByIdMap.putIfAbsent(newProvenance.getId(), newProvenance) != null) {
             throw new Exception("tried to add a provenance to the database with an existing id!");
         }
+        // should I be tolerating no timestamp?
+        lastModified.getAndUpdate(n -> newProvenance.getTimeStamp() != null && n < newProvenance.getTimeStamp().getTime() ? newProvenance.getTimeStamp().getTime() : n); // think that logic it correct for thread safety
+    }
+
+    public long getLastModifiedTimeStamp(){
+        return lastModified.get();
     }
 
     // I may change these later, for the mo I just want to stop drops and clears at the same time as persistence

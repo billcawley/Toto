@@ -14,9 +14,11 @@ public class CellForDisplay implements Serializable {
     private boolean locked;
     private String stringValue;
     private double doubleValue;
-    private boolean highlighted;
-    // it's just convenient to put this here
+    // in order to check if another user has modified the cell keep the old values and put the new ones in instead
     private boolean changed;
+    private String newStringValue;
+    private double newDoubleValue;
+    private boolean highlighted;
     // for looking stuff up later (can do a fast lookup based on the unsorted position)
     private final int unsortedRow;
     private final int unsortedCol;
@@ -30,6 +32,8 @@ public class CellForDisplay implements Serializable {
         this.stringValue = stringValue;
         this.doubleValue = doubleValue;
         this.highlighted = highlighted;
+        newStringValue = null;
+        newDoubleValue = 0;
         changed = false;
         this.unsortedRow = unsortedRow;
         this.unsortedCol = unsortedCol;
@@ -49,18 +53,8 @@ public class CellForDisplay implements Serializable {
         return stringValue;
     }
 
-    public void setStringValue(String stringValue) {
-        changed = true;
-        this.stringValue = stringValue;
-    }
-
     public double getDoubleValue() {
         return doubleValue;
-    }
-
-    public void setDoubleValue(double doubleValue) {
-        changed = true;
-        this.doubleValue = doubleValue;
     }
 
     public boolean isHighlighted() {
@@ -73,6 +67,34 @@ public class CellForDisplay implements Serializable {
 
     public boolean isChanged() {
         return changed;
+    }
+
+    public String getNewStringValue() {
+        return newStringValue;
+    }
+
+    public void setNewStringValue(String newStringValue) {
+        changed = true;
+        this.newStringValue = newStringValue;
+    }
+
+    public double getNewDoubleValue() {
+        return newDoubleValue;
+    }
+
+    public void setNewDoubleValue(double newDoubleValue) {
+        changed = true;
+        this.newDoubleValue = newDoubleValue;
+    }
+
+    //after saving - if we don't do this then sequential saves will cause a problem
+    public void setNewValuesToCurrentAfterSaving(){
+        stringValue = newStringValue;
+        doubleValue = newDoubleValue;
+        // as in the constructor
+        newStringValue = null;
+        newDoubleValue = 0;
+        changed = false;
     }
 
     public int getUnsortedRow() {
@@ -105,8 +127,10 @@ public class CellForDisplay implements Serializable {
                 "locked=" + locked +
                 ", stringValue='" + stringValue + '\'' +
                 ", doubleValue=" + doubleValue +
-                ", highlighted=" + highlighted +
                 ", changed=" + changed +
+                ", newStringValue='" + newStringValue + '\'' +
+                ", newDoubleValue=" + newDoubleValue +
+                ", highlighted=" + highlighted +
                 ", unsortedRow=" + unsortedRow +
                 ", unsortedCol=" + unsortedCol +
                 ", ignored=" + ignored +

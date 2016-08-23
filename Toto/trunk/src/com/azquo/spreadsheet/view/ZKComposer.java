@@ -509,11 +509,17 @@ public class ZKComposer extends SelectorComposer<Component> {
                     CellForDisplay cellForDisplay = sentCells.getData().get(regionRowCol.row).get(regionRowCol.col);
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                     if (isDouble) {
-                        cellForDisplay.setDoubleValue(doubleValue);
-                    }else{
-                        cellForDisplay.setDoubleValue(0);
+                        cellForDisplay.setNewDoubleValue(doubleValue);
+                        // copying a few lines of server side code to try and ensure that successive saves don't cause a mismatch in the string values compared to what they would be on a fresh report load
+                        String numericValue = doubleValue + "";
+                        if (numericValue.endsWith(".0")) {
+                            numericValue = numericValue.substring(0, numericValue.length() - 2);
+                        }
+                        cellForDisplay.setNewStringValue(numericValue);
+                    } else {
+                        cellForDisplay.setNewDoubleValue(0);
+                        cellForDisplay.setNewStringValue(chosen);
                     }
-                    cellForDisplay.setStringValue(chosen);
                     int highlightDays = 0;
                     if (book.getInternalBook().getAttribute("highlightDays") != null) { // maybe factor the string literals??
                         highlightDays = (Integer) book.getInternalBook().getAttribute("highlightDays");

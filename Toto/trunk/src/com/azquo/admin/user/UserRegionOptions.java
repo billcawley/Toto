@@ -59,7 +59,6 @@ public class UserRegionOptions extends StandardEntity {
     // Maybe these things could be better represented by a key pair two column region
 
     public UserRegionOptions(int id, int userId, int reportId, String region, String spreadsheetSource) {
-        spreadsheetSource = spreadsheetSource.toLowerCase();
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -75,6 +74,7 @@ public class UserRegionOptions extends StandardEntity {
             hideRows = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
         }
         if (spreadsheetSource != null) {
+            spreadsheetSource = spreadsheetSource.toLowerCase();
             this.sortable = spreadsheetSource.contains("sortable"); // the get option thing is no good for just an "exists with no value" check, this is the same
             String ROWLIMIT = "maxrows";
             this.rowLimit = asNumber(getOptionFromSpreadsheetOptions(ROWLIMIT, spreadsheetSource));
@@ -237,6 +237,7 @@ public class UserRegionOptions extends StandardEntity {
         this.databaseName = databaseName;
     }
 
+    // As mentioned in RegionOptions,
     public RegionOptions getRegionOptionsForTransport(){
         return new RegionOptions(hideRows,sortable,rowLimit,columnLimit,sortRow,sortRowAsc,sortColumn,sortColumnAsc,highlightDays, rowLanguage, columnLanguage, noSave, databaseName);
     }

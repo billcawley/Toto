@@ -20,16 +20,18 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     private final List<List<String>> rowHeadingsSource;
     private final List<List<String>> colHeadingsSource;
     private final List<List<String>> contextSource;
+    private final long timeStamp;
     private final RegionOptions options;
 
     public CellsAndHeadingsForDisplay(List<List<String>> columnHeadings, List<List<String>> rowHeadings, List<List<CellForDisplay>> data
-            , List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions options) {
+            , List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, long timeStamp, RegionOptions options) {
         this.columnHeadings = columnHeadings;
         this.rowHeadings = rowHeadings;
         this.data = data;
         this.rowHeadingsSource = rowHeadingsSource;
         this.colHeadingsSource = colHeadingsSource;
         this.contextSource = contextSource;
+        this.timeStamp = timeStamp;
         this.options = options;
     }
 
@@ -57,5 +59,11 @@ public class CellsAndHeadingsForDisplay implements Serializable {
         return contextSource;
     }
 
-    public RegionOptions getOptions() {return options; }
+    public long getTimeStamp() {
+        return timeStamp;
+    }
+
+    public RegionOptions getOptions() {
+        return options;
+    }
 }
