@@ -1497,15 +1497,21 @@ Callable interface sorts the memory "happens before" using future gets which run
         if (debugInfo != null) {
             debugInfo.append("\nRow Headings\n\n");
             for (DataRegionHeading rowHeading : rowHeadings) {
-                debugInfo.append("\t" + rowHeading.getDebugInfo() + "\n");
+                if (rowHeading != null){
+                    debugInfo.append("\t" + rowHeading.getDebugInfo() + "\n");
+                }
             }
             debugInfo.append("\nColumn Headings\n\n");
             for (DataRegionHeading columnHeading : columnHeadings) {
-                debugInfo.append("\t" + columnHeading.getDebugInfo() + "\n");
+                if (columnHeading != null){
+                    debugInfo.append("\t" + columnHeading.getDebugInfo() + "\n");
+                }
             }
             debugInfo.append("\nContext\n\n");
             for (DataRegionHeading context : contextHeadings) {
-                debugInfo.append("\t" + context.getDebugInfo() + "\n");
+                if (context != null){
+                    debugInfo.append("\t" + context.getDebugInfo() + "\n");
+                }
             }
         }
         boolean selected = false;
