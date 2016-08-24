@@ -736,9 +736,33 @@ public class ZKAzquoBookUtils {
                     int maxRow = sheet.getLastRow();
                     if (displayDataRegion.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayDataRegion.getColumnCount() > 2) { // then we need to expand
                         colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
+                        int topRow = 0;
+                        CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayColumnHeadings" + region);
+                        if (displayColumnHeadings!=null){
+                            topRow = displayColumnHeadings.getRow();
+                        }
                         int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
-                        Range copySource = Ranges.range(sheet, 0, insertCol - 1, maxRow, insertCol - 1);
-                        Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the 3rd col
+                        Range copySource = Ranges.range(sheet, topRow, insertCol - 1, maxRow, insertCol - 1);
+                        String topLeftHeading = cellsAndHeadingsForDisplay.getColHeadingsSource().get(0).get(0);
+                        List<String> topLeftElements = getDropdownListForQuery( loggedInUser,topLeftHeading);
+                        if (topLeftElements.size()> 1) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
+                            int repeatCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / topLeftElements.size();
+                            if (repeatCount > displayDataRegion.getColumnCount()){
+                                colsToAdd = repeatCount - displayDataRegion.getColumnCount();
+                                Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col
+                                CellOperationUtil.insertColumn(insertRange);
+                                // will this paste the lot?
+                                CellOperationUtil.paste(copySource, insertRange);
+                                insertCol+=colsToAdd;
+                                colsToAdd = repeatCount * (topLeftElements.size() - 1);
+
+
+
+                            }
+                           insertCol++;
+                            copySource = Ranges.range(sheet,topRow, displayDataRegion.getColumn(),maxRow,insertCol - 1);
+                        }
+                         Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col, except for permuted headings
                         CellOperationUtil.insertColumn(insertRange);
                         // will this paste the lot?
                         CellOperationUtil.paste(copySource, insertRange);
@@ -862,7 +886,7 @@ public class ZKAzquoBookUtils {
                                 for (String rowHeading : rowHeadings) {
                                     rowHeading = rowHeading.replace("`", "").trim();
                                     String colHeading = multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
-                                    if (colHeading.equals("[all]")) colHeading = rowHeading;
+                                    if (colHeading==null || colHeading.equals("[all]")) colHeading = rowHeading;
                                     sheet.getInternalSheet().getCell(hrow, hcol++).setStringValue(colHeading);
                                 }
 
@@ -875,6 +899,7 @@ public class ZKAzquoBookUtils {
                         row = displayColumnHeadings.getRow();
                         int ignoreRow = cellsAndHeadingsForDisplay.getColumnHeadings().size() - displayColumnHeadings.getRowCount();
                         for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
+                            String lastHeading = "";
                             if (--ignoreRow < 0) {
                                 boolean columnSort = false;
                                 if (row - displayColumnHeadings.getRow() == displayColumnHeadings.getRowCount() - 1 && userRegionOptions.getSortable()) { // meaning last row of headings and sortable
@@ -882,9 +907,19 @@ public class ZKAzquoBookUtils {
                                 }
                                 int col = displayColumnHeadings.getColumn();
                                 for (String heading : colHeading) {
+                                    if (heading.equals(lastHeading)){
+                                        heading = "";
+                                    }else{
+                                        lastHeading = heading;
+                                    }
+
                                     SCell sCell = sheet.getInternalSheet().getCell(row, col);
                                     if (sCell.getType() != SCell.CellType.STRING && sCell.getType() != SCell.CellType.NUMBER) {
                                         sCell.setStringValue("");
+                                    }else{//new behaviour - if there's a filled in heading, this can be used to detect the sort.
+                                        if (sCell.getStringValue().length() > 0){
+                                            heading = sCell.getStringValue();
+                                        }
                                     }
                                     if (columnSort && !heading.equals(".")) { // don't sort "." headings they are probably derived in the spreadsheet
                                         String sortArrow = " ↕";
