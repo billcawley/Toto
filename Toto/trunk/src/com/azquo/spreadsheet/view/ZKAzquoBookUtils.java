@@ -38,12 +38,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ZKAzquoBookUtils {
 
     // todo - make use of this case insensetive
-    public static final String azDataRegion = "az_DataRegion";
-    static final String azOptions = "az_Options";
-    public static final String azRepeatRegion = "az_RepeatRegion";
-    public static final String azRepeatScope = "az_RepeatScope";
-    public static final String azRepeatItem = "az_RepeatItem";
-    public static final String azRepeatList = "az_RepeatList";
+    public static final String AZDATAREGION = "az_DataRegion";
+    static final String AZOPTIONS = "az_Options";
+    public static final String AZREPEATREGION = "az_RepeatRegion";
+    public static final String AZREPEATSCOPE = "az_RepeatScope";
+    public static final String AZREPEATITEM = "az_RepeatItem";
+    public static final String AZREPEATLIST = "az_RepeatList";
+    public static final String AZDISPLAYROWHEADINGS = "az_diaplayrowheadings";
+    public static final String AZDISPLAYCOLUMNHEADINGS = "az_diaplaycolumnheadings";
+    public static final String AZCOLUMNHEADINGS = "az_columnheadings";
+    public static final String AZROWHEADINGS = "az_rowheadings";
+    public static final String AZCONTEXT = "az_context";
+    public static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continues
+    public static final String AZCONTEXTFILTERS = "az_contextfilters";
+    public static final String AZCONTEXTCHOICES = "az_contextchoices";
+    public static final String AZCOLUMNCHOICES = "az_columnchoices";
+    public static final String AZREPORTNAME = "az_reportname";
 
 
     private static final String CONTENTS = "contents(";
@@ -154,8 +164,8 @@ public class ZKAzquoBookUtils {
                         final boolean save = populateBook(book, 0, false, null, true); // note true at the end here - keep on logging so users can see changes as they happen
                         if (save) { // so the data was changed and if we save from here it will make changes to the DB
                             for (SName name : book.getInternalBook().getNames()) {
-                                if (name.getName().toLowerCase().startsWith(azDataRegion.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
-                                    String region = name.getName().substring(azDataRegion.length());
+                                if (name.getName().toLowerCase().startsWith(AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
+                                    String region = name.getName().substring(AZDATAREGION.length());
                                     SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName(), false); // to not persist right now
                                 }
                             }
@@ -313,7 +323,7 @@ public class ZKAzquoBookUtils {
                         }
                         regionsToWatchForMerge.add(chosen);
                     }
-                    if (sName.getName().equalsIgnoreCase("az_ReportName")) {
+                    if (sName.getName().equalsIgnoreCase(AZREPORTNAME)) {
                         regionsToWatchForMerge.add(sName.getRefersToCellRegion());
                     }
                 }
@@ -353,9 +363,9 @@ public class ZKAzquoBookUtils {
                 if (name.getName().equals("ImageStoreName")) {
                     imageStoreName = getRegionValue(sheet, name.getRefersToCellRegion());
                 }
-                if (name.getName().startsWith(azDataRegion)) { // then we have a data region to deal with here
-                    String region = name.getName().substring(azDataRegion.length()); // might well be an empty string
-                    SName optionsRegion = sheet.getBook().getInternalBook().getNameByName(azOptions + region);
+                if (name.getName().startsWith(AZDATAREGION)) { // then we have a data region to deal with here
+                    String region = name.getName().substring(AZDATAREGION.length()); // might well be an empty string
+                    SName optionsRegion = sheet.getBook().getInternalBook().getNameByName(AZOPTIONS + region);
                     String optionsSource = "";
                     if (optionsRegion != null) {
                         optionsSource = getSnameCell(optionsRegion).getStringValue();
@@ -415,9 +425,9 @@ public class ZKAzquoBookUtils {
             */
             if (!fastLoad) {
                 for (SName name : namesForSheet) {
-                    if (name.getName().startsWith(azDataRegion)) {
-                        String region = name.getName().substring(azDataRegion.length());
-                        CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
+                    if (name.getName().startsWith(AZDATAREGION)) {
+                        String region = name.getName().substring(AZDATAREGION.length());
+                        CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                         final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
                         if (displayDataRegion != null && sentCells != null) {
                             int startRow = displayDataRegion.getRow();
@@ -587,13 +597,13 @@ public class ZKAzquoBookUtils {
 
         // ok need to deal with the repeat region things
         // the region to be repeated, will contain headings and an item which changes for each repetition
-        SName repeatRegion = sheet.getBook().getInternalBook().getNameByName(azRepeatRegion + region);
+        SName repeatRegion = sheet.getBook().getInternalBook().getNameByName(AZREPEATREGION + region);
         // the target space we can repeat into. Can expand down but not across
-        SName repeatScope = sheet.getBook().getInternalBook().getNameByName(azRepeatScope + region);
+        SName repeatScope = sheet.getBook().getInternalBook().getNameByName(AZREPEATSCOPE + region);
         // the list of items we can repeat over
-        SName repeatList = sheet.getBook().getInternalBook().getNameByName(azRepeatList + region);
+        SName repeatList = sheet.getBook().getInternalBook().getNameByName(AZREPEATLIST + region);
         // the cell we'll put the items in the list in
-        SName repeatItem = sheet.getBook().getInternalBook().getNameByName(azRepeatItem + region);
+        SName repeatItem = sheet.getBook().getInternalBook().getNameByName(AZREPEATITEM + region);
         // probably will be required later so declare out here
         int repeatRegionWidth = 0;
         int repeatScopeWidth = 0;
@@ -645,15 +655,15 @@ public class ZKAzquoBookUtils {
             }
             // so the space should be prepared for multi
         }
-        SName columnHeadingsDescription = sheet.getBook().getInternalBook().getNameByName("az_ColumnHeadings" + region);
-        SName rowHeadingsDescription = sheet.getBook().getInternalBook().getNameByName("az_RowHeadings" + region);
-        SName contextDescription = sheet.getBook().getInternalBook().getNameByName("az_Context" + region);
+        SName columnHeadingsDescription = sheet.getBook().getInternalBook().getNameByName(AZCOLUMNHEADINGS + region);
+        SName rowHeadingsDescription = sheet.getBook().getInternalBook().getNameByName(AZROWHEADINGS + region);
+        SName contextDescription = sheet.getBook().getInternalBook().getNameByName(AZCONTEXT + region);
         String errorMessage = null;
         // make a blank area for data to be populated from, an upload in the sheet so to speak
         if (columnHeadingsDescription != null && rowHeadingsDescription == null) {
             List<List<String>> colHeadings = nameToStringLists(columnHeadingsDescription);
             List<List<CellForDisplay>> dataRegionCells = new ArrayList<>();
-            CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
+            CellRegion dataRegion = getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
             for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
                 List<CellForDisplay> oneRow = new ArrayList<>();
                 for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
@@ -671,9 +681,9 @@ public class ZKAzquoBookUtils {
                 List<List<String>> contextList = nameToStringLists(contextDescription);
                 List<List<String>> rowHeadingList = nameToStringLists(rowHeadingsDescription);
                 //check if this is a pivot - if so, then add in any additional filter needed
-                SName contextFilters = sheet.getBook().getInternalBook().getNameByName("az_ContextFilters");
+                SName contextFilters = sheet.getBook().getInternalBook().getNameByName(AZCONTEXTFILTERS);
                 if (contextFilters == null) {
-                    contextFilters = sheet.getBook().getInternalBook().getNameByName("az_PivotFilters");
+                    contextFilters = sheet.getBook().getInternalBook().getNameByName(AZPIVOTFILTERS);
                 }
                 // a comma separated list of names
                 if (contextFilters != null) {
@@ -705,8 +715,8 @@ public class ZKAzquoBookUtils {
                 loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
                 // might be factored into fill range in a bit
-                CellRegion displayRowHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayRowHeadings" + region);
-                CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
+                CellRegion displayRowHeadings = getCellRegionForSheetAndName(sheet, AZDISPLAYROWHEADINGS + region);
+                CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
 
                 int rowsToAdd;
                 int colsToAdd;
@@ -737,16 +747,22 @@ public class ZKAzquoBookUtils {
                     if (displayDataRegion.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayDataRegion.getColumnCount() > 2) { // then we need to expand
                         colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
                         int topRow = 0;
-                        CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayColumnHeadings" + region);
+                        CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
                         if (displayColumnHeadings!=null){
                             topRow = displayColumnHeadings.getRow();
                         }
                         int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
                         Range copySource = Ranges.range(sheet, topRow, insertCol - 1, maxRow, insertCol - 1);
-                        String topLeftHeading = cellsAndHeadingsForDisplay.getColHeadingsSource().get(0).get(0);
-                        List<String> topLeftElements = getDropdownListForQuery( loggedInUser,topLeftHeading);
-                        if (topLeftElements.size()> 1) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
-                            int repeatCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / topLeftElements.size();
+                        int colHeadingRows = cellsAndHeadingsForDisplay.getColHeadingsSource().size();
+                        int copyCount = 1;
+                        if (colHeadingRows>1) {
+                              for (int i = 0;i <colHeadingRows-1;i++) {
+                                   String topLeftHeading = cellsAndHeadingsForDisplay.getColHeadingsSource().get(0).get(i);
+                                   copyCount *= getDropdownListForQuery(loggedInUser, topLeftHeading).size();
+                               }
+                        }
+                        if (copyCount> 1) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
+                            int repeatCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / copyCount;
                             if (repeatCount > displayDataRegion.getColumnCount()){
                                 colsToAdd = repeatCount - displayDataRegion.getColumnCount();
                                 Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col
@@ -754,7 +770,7 @@ public class ZKAzquoBookUtils {
                                 // will this paste the lot?
                                 CellOperationUtil.paste(copySource, insertRange);
                                 insertCol+=colsToAdd;
-                                colsToAdd = repeatCount * (topLeftElements.size() - 1);
+                                colsToAdd = repeatCount * (copyCount - 1);
 
 
 
@@ -778,7 +794,7 @@ public class ZKAzquoBookUtils {
                         }
                     }
                     // these re loadings are because the region may have changed
-                    displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
+                    displayDataRegion = getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                     int row;
                     // ok there should be the right space for the headings
                     if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
@@ -789,7 +805,7 @@ public class ZKAzquoBookUtils {
                             int insertCol = displayRowHeadings.getColumn() + displayRowHeadings.getColumnCount() - 1;
                             Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); //
                             CellOperationUtil.insert(insertRange.toColumnRange(), Range.InsertShift.RIGHT, Range.InsertCopyOrigin.FORMAT_LEFT_ABOVE);
-                            displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
+                            displayDataRegion = getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                         }
                         row = displayRowHeadings.getRow();
                         int lineNo = 0;
@@ -894,7 +910,7 @@ public class ZKAzquoBookUtils {
                         }
                     }
                     //← → ↑ ↓ ↔ ↕ ah I can just paste it here, thanks IntelliJ :)
-                    CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, "az_DisplayColumnHeadings" + region);
+                    CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
                     if (displayColumnHeadings != null) {
                         row = displayColumnHeadings.getRow();
                         int ignoreRow = cellsAndHeadingsForDisplay.getColumnHeadings().size() - displayColumnHeadings.getRowCount();
@@ -960,7 +976,7 @@ public class ZKAzquoBookUtils {
 /*                if (sortable != null && sortable.equalsIgnoreCase("all")) { // criteria from azquobook to make row heading sortable
                 }*/
                     }
-                    displayDataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);
+                    displayDataRegion = getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                     if (repeatListItems != null) { // then we need to prepare the repeated regions. Row and col headings have been made so copy paste them where required
                         int rootRow = repeatRegion.getRefersToCellRegion().getRow();
                         int rootCol = repeatRegion.getRefersToCellRegion().getColumn();
@@ -981,8 +997,10 @@ public class ZKAzquoBookUtils {
                         Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
                         // yes the first will simply be copying over itself
                         for (String item : repeatListItems) {
-                            Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth);
-                            CellOperationUtil.paste(copySource, insertRange);
+                            Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight - 1, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth - 1);
+                            if (repeatRow > 0 || repeatColumn > 0){
+                                CellOperationUtil.paste(copySource, insertRange);
+                            }
                             // and set the item
                             sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset).setStringValue(item);
                             repeatColumn++;
@@ -1040,7 +1058,7 @@ public class ZKAzquoBookUtils {
                 int colNo = 0;
                 while (sheet.getInternalSheet().getColumn(colNo).isHidden() && colNo < 100) colNo++;
                 while (sheet.getInternalSheet().getRow(rowNo).isHidden() && rowNo < 100) rowNo++;
-                String eMessage = "Unable to find matching header and context regions for this data region : az_DataRegion" + region + " : " + errorMessage;
+                String eMessage = "Unable to find matching header and context regions for this data region : " + AZDATAREGION + region + " : " + errorMessage;
                 sheet.getInternalSheet().getCell(rowNo, colNo).setStringValue(eMessage);
                 /*
                 CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
@@ -1052,11 +1070,11 @@ public class ZKAzquoBookUtils {
                 */
             }
         } else {
-            CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
+            CellRegion dataRegion = getCellRegionForSheetAndName(sheet, AZDATAREGION + region);// this function should not be called without a valid data region
             if (dataRegion != null) {
-                sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching header and context regions for this data region : az_DataRegion" + region);
+                sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching header and context regions for this data region : " + AZDATAREGION + region);
             } else {
-                System.out.println("no region found for az_DataRegion" + region);
+                System.out.println("no region found for " + AZDATAREGION + region);
             }
         }
     }
@@ -1348,8 +1366,14 @@ public class ZKAzquoBookUtils {
         int numberOfValidationsAdded = 0;
         List<SName> dependentRanges = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith("az_pivotfilters")) {
-                String region = name.getName().substring("az_pivotFilters".length());
+            String rangeName = name.getName().toLowerCase();
+            if (rangeName.startsWith(AZPIVOTFILTERS) || rangeName.startsWith(AZCONTEXTFILTERS) ) {//the correct version should be 'az_ContextFilters'
+                String region;
+                if (rangeName.startsWith(AZPIVOTFILTERS)){
+                    region = rangeName.substring(AZPIVOTFILTERS.length());
+                }else{
+                    region = rangeName.substring(AZCONTEXTFILTERS.length());
+                }
                 String[] filters = getSnameCell(name).getStringValue().split(",");
                 SName contextHeadings = book.getInternalBook().getNameByName("az_ContextHeadings" + region);
                 if (contextHeadings == null) {
@@ -1471,7 +1495,7 @@ public class ZKAzquoBookUtils {
 
     // moved/adapted from ZKComposer and made static
     static List<SName> getNamedDataRegionForRowAndColumnSelectedSheet(int row, int col, Sheet sheet) {
-        return getNamedRegionForRowAndColumnSelectedSheet(row, col, sheet, "az_dataregion");
+        return getNamedRegionForRowAndColumnSelectedSheet(row, col, sheet, AZDATAREGION);
     }
 
     // moved/adapted from ZKComposer and made static
