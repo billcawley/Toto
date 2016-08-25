@@ -44,16 +44,19 @@ public class ZKAzquoBookUtils {
     public static final String AZREPEATSCOPE = "az_RepeatScope";
     public static final String AZREPEATITEM = "az_RepeatItem";
     public static final String AZREPEATLIST = "az_RepeatList";
-    public static final String AZDISPLAYROWHEADINGS = "az_diaplayrowheadings";
-    public static final String AZDISPLAYCOLUMNHEADINGS = "az_diaplaycolumnheadings";
+    public static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
+    public static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
     public static final String AZCOLUMNHEADINGS = "az_columnheadings";
     public static final String AZROWHEADINGS = "az_rowheadings";
     public static final String AZCONTEXT = "az_context";
-    public static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continues
+    public static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
     public static final String AZCONTEXTFILTERS = "az_contextfilters";
     public static final String AZCONTEXTCHOICES = "az_contextchoices";
-    public static final String AZCOLUMNCHOICES = "az_columnchoices";
-    public static final String AZREPORTNAME = "az_reportname";
+    public static final String AZPIVOTHEADINGS = "az_pivotheadings";//old version
+     public static final String AZREPORTNAME = "az_reportname";
+    public static final String AZCOLUMNFILTERS = "az_columnfilters";
+    public static final String AZCOLUMNCHOICES = "az_columnchoices";//position of column filter choices on screen
+
 
 
     private static final String CONTENTS = "contents(";
@@ -1368,65 +1371,21 @@ public class ZKAzquoBookUtils {
         for (SName name : book.getInternalBook().getNames()) {
             String rangeName = name.getName().toLowerCase();
             if (rangeName.startsWith(AZPIVOTFILTERS) || rangeName.startsWith(AZCONTEXTFILTERS) ) {//the correct version should be 'az_ContextFilters'
-                String region;
-                if (rangeName.startsWith(AZPIVOTFILTERS)){
-                    region = rangeName.substring(AZPIVOTFILTERS.length());
-                }else{
-                    region = rangeName.substring(AZCONTEXTFILTERS.length());
-                }
                 String[] filters = getSnameCell(name).getStringValue().split(",");
-                SName contextHeadings = book.getInternalBook().getNameByName("az_ContextHeadings" + region);
-                if (contextHeadings == null) {
+                SName contextChoices = book.getInternalBook().getNameByName(AZCONTEXTCHOICES);
+                if (contextChoices == null) {
                     //original name...
-                    contextHeadings = book.getInternalBook().getNameByName("az_PivotHeadings" + region);
+                    contextChoices = book.getInternalBook().getNameByName(AZPIVOTHEADINGS);
                 }
-                if (contextHeadings != null) {
-                    Sheet cSheet = book.getSheet(contextHeadings.getRefersToSheetName());
-                    CellRegion chRange = contextHeadings.getRefersToCellRegion();
-                    int headingRow = chRange.getRow();
-                    int headingCol = chRange.getColumn();
-                    int headingRows = chRange.getRowCount();
-                    int filterCount = 0;
-                    //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
-                    for (String filter : filters) {
-                        filter = filter.trim();
-                        List<String> optionsList = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
-                        if (optionsList != null && optionsList.size() > 1) {
-                            String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children");//leave out any with single choices
-                            int rowOffset = filterCount % headingRows;
-                            int colOffset = filterCount / headingRows;
-                            int chosenRow = headingRow + rowOffset;
-                            int chosenCol = headingCol + 3 * colOffset;
-                            if (filterCount > 0) {
-                                Range copySource = Ranges.range(cSheet, headingRow, headingCol, headingRow, headingCol + 1);
-                                Range copyTarget = Ranges.range(cSheet, chosenRow, chosenCol, chosenRow, chosenCol + 1);
-                                CellOperationUtil.paste(copySource, copyTarget);
-                                //Ranges.range(pSheet, chosenRow, chosenCol + 1).setNameName(filter + "Chosen");
-
-                            }
-                            cSheet.getInternalSheet().getCell(chosenRow, chosenCol).setStringValue(filter);
-                            cSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1).setStringValue(selected);
-                         /*
-                        validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(filter);
-                        int row = 0;
-                        List<String> choiceOptions = choiceOptionsMap.get(filter.toLowerCase());
-                        for (String choiceOption : choiceOptions) {
-                            row++;// like starting at 1
-                            validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(choiceOption);
-                        }
-                        if (row > 0) { // if choice options is empty this will not work
-                            Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
-                            Ranges.range(pSheet, chosenRow, chosenCol+1, chosenRow, chosenCol+1).setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
-                                    //true, "title", "msg",
-                                    true, "", "",
-                                    false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
-
-                        }
-                        numberOfValidationsAdded++;
-                         */
-                            filterCount++;
-                        }
-                    }
+                if (contextChoices != null) {
+                    showChoices(loggedInUser,book,contextChoices,filters,3);
+                 }
+            }
+            if (rangeName.startsWith(AZCOLUMNFILTERS)) {
+                String[] filters = getSnameCell(name).getStringValue().split(",");
+                SName columnChoices = book.getInternalBook().getNameByName(AZCOLUMNCHOICES);
+                   if (columnChoices != null) {
+                    showChoices(loggedInUser,book,columnChoices,filters,1);
                 }
             }
 
@@ -1513,6 +1472,43 @@ public class ZKAzquoBookUtils {
         }
         return found;
     }
+
+
+    private static void showChoices(LoggedInUser loggedInUser, Book book, SName contextChoices, String[] filters, int headingWidth){
+        Sheet cSheet = book.getSheet(contextChoices.getRefersToSheetName());
+        CellRegion chRange = contextChoices.getRefersToCellRegion();
+        int headingRow = chRange.getRow();
+        int headingCol = chRange.getColumn();
+        int headingRows = chRange.getRowCount();
+        int filterCount = 0;
+        //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
+        for (String filter : filters) {
+            filter = filter.trim();
+            List<String> optionsList = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
+            if (optionsList != null && optionsList.size() > 1) {
+                String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children");//leave out any with single choices
+                int rowOffset = filterCount % headingRows;
+                int colOffset = filterCount / headingRows;
+                int chosenRow = headingRow + rowOffset;
+                int chosenCol = headingCol + headingWidth * colOffset;
+                if (filterCount > 0) {
+                    Range copySource = Ranges.range(cSheet, headingRow, headingCol, headingRow, headingCol + 1);
+                    Range copyTarget = Ranges.range(cSheet, chosenRow, chosenCol, chosenRow, chosenCol + 1);
+                    CellOperationUtil.paste(copySource, copyTarget);
+                    //Ranges.range(pSheet, chosenRow, chosenCol + 1).setNameName(filter + "Chosen");
+
+                }
+                cSheet.getInternalSheet().getCell(chosenRow, chosenCol).setStringValue(filter);
+                if (headingWidth > 1){
+                    cSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1).setStringValue(selected);
+                }
+                filterCount++;
+            }
+        }
+    }
+
+
+
 
 
     public static String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
