@@ -364,7 +364,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         for (SName name : names) {
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// would have been a one cell name
                 //and it cannot be in an existing data region
-                if (ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ZKAzquoBookUtils.azRepeatScope).size() == 0
+                if (ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ZKAzquoBookUtils.AZREPEATSCOPE).size() == 0
                         && ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), "az_dataregion").size() == 0) {
 
                     String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
@@ -383,7 +383,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 String region = name.getName().substring("az_DisplayColumnHeadings".length());
                 UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
-                    SName optionsRegion = event.getSheet().getBook().getInternalBook().getNameByName(ZKAzquoBookUtils.azOptions + region);
+                    SName optionsRegion = event.getSheet().getBook().getInternalBook().getNameByName(ZKAzquoBookUtils.AZOPTIONS + region);
                     String source = null;
                     if (optionsRegion != null) {
                         source = zkAzquoBookUtils.getSnameCell(optionsRegion).getStringValue();
@@ -484,7 +484,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
         List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet());
-        List<SName> repeatRegionNames = ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ZKAzquoBookUtils.azRepeatScope);
+        List<SName> repeatRegionNames = ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ZKAzquoBookUtils.AZREPEATSCOPE);
         if (names == null && repeatRegionNames == null) return;
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
@@ -538,8 +538,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         SName repeatRegion = null;
         SName repeatDataRegion = null;
         String repeatRegionName = null;
-        repeatRegionName = repeatScopeName.getName().substring(ZKAzquoBookUtils.azRepeatScope.length());
-        repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.azRepeatRegion + repeatRegionName);
+        repeatRegionName = repeatScopeName.getName().substring(ZKAzquoBookUtils.AZREPEATSCOPE.length());
+        repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZREPEATREGION + repeatRegionName);
         repeatDataRegion = book.getInternalBook().getNameByName("az_DataRegion" + repeatRegionName); // todo string literals ergh!
         // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
         if (repeatRegion != null && repeatDataRegion != null) { // ergh, got to try and find the right sent cell!
@@ -685,7 +685,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             int regionRow = 0;
             int regionColumn = 0;
             // adding support for repeat regions. There's an additional check for row headings in a normal data region but I think this is redundant in repeat regions
-            List<SName> repeatRegionNames = ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), ZKAzquoBookUtils.azRepeatScope);
+            List<SName> repeatRegionNames = ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), ZKAzquoBookUtils.AZREPEATSCOPE);
             if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
                 RegionRowCol regionRowColForRepeatRegion = getRegionRowColForRepeatRegion(myzss.getBook(), cellRow, cellCol, repeatRegionNames.get(0));
                 if (regionRowColForRepeatRegion != null) {
