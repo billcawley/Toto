@@ -82,22 +82,17 @@ public class OnlineController {
             try {
                 LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 if (loggedInUser == null) {
-                    if (user == null) {
-                        return "redirect:/api/Login";// I guess redirect to login page
-                    }
-                    loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, user, password, false);
-                    if (loggedInUser == null) {
-                        model.addAttribute("content", "error:no connection id");
-                        return "utf8page";
-                    } else {
-                        request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, loggedInUser);
-                    }
+                    return "redirect:/api/Login";// I guess redirect to login page
                 }
                 // dealing with the report/database combo WAS below but I see no reason for this, try and resolve it now
                 OnlineReport onlineReport = null;
-                if (loggedInUser.getUser().isAdministrator() && reportId != null && reportId.length() > 0 && !reportId.equals("1")) { // admin, we allow a report and possibly db to be set
+                if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && reportId != null && reportId.length() > 0 && !reportId.equals("1")) { // admin, we allow a report and possibly db to be set
                     //report id is assumed to be integer - sent from the website
-                    onlineReport = OnlineReportDAO.findForIdAndBusinessId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
+                    if (loggedInUser.getUser().isDeveloper()){ // for the user
+                        onlineReport = OnlineReportDAO.findForIdAndUserId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
+                    } else { //any for the business for admin
+                        onlineReport = OnlineReportDAO.findForIdAndBusinessId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
+                    }
                     // todo - decide which method to switch databases
                     if (databaseId != null && databaseId.length() > 0){
                         final List<Integer> databaseIdsForReportId = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
@@ -154,7 +149,8 @@ public class OnlineController {
                     } else {
                         model.addAttribute("database", loggedInUser.getDatabase().getName());
                         model.addAttribute("imagestorename", loggedInUser.getImageStoreName());
-                        if (loggedInUser.getUser().isAdministrator()){
+                        // what is this, should developes have access?
+                        if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()){
                             model.addAttribute("datachoice","Y");
                         }else{
                             model.addAttribute("datachoice","N");
@@ -163,7 +159,7 @@ public class OnlineController {
                     }
                 }
                 if ("1".equals(reportId)) {
-                    if (!loggedInUser.getUser().isAdministrator()) {
+                    if (!loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                         final List<Permission> forUserId = PermissionDAO.findForUserId(loggedInUser.getUser().getId());// new model this should be all we need . . .
                         if (forUserId.size() == 1){// one report, show it
                             permission = forUserId.get(0);
@@ -195,8 +191,8 @@ public class OnlineController {
                             session.removeAttribute(reportId);// get rid of it from the session
                             model.put("showSave", session.getAttribute(reportId + SAVE_FLAG));
                             model.put("masterUser", loggedInUser.getUser().isMaster());
-                            model.put("templateMode", "TRUE".equalsIgnoreCase(template) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster()));
-                            model.put("showTemplate", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster());
+                            model.put("templateMode", "TRUE".equalsIgnoreCase(template) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper()));
+                            model.put("showTemplate", loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper());
                             model.put("execute", session.getAttribute(reportId + EXECUTE_FLAG));
                             session.removeAttribute(reportId + SAVE_FLAG);// get rid of it from the session
                             session.removeAttribute(reportId + EXECUTE_FLAG);
@@ -223,7 +219,7 @@ public class OnlineController {
                             final String finalReportId = reportId;
                             final OnlineReport finalOnlineReport = onlineReport;
                             final LoggedInUser finalLoggedInUser = loggedInUser;
-                            final boolean templateMode = !template.isEmpty() && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster());
+                            final boolean templateMode = !template.isEmpty() && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper());
                             final boolean executeMode = !execute.isEmpty();
                             new Thread(() -> {
                                 // so in here the new thread we set up the loading as it was originally before

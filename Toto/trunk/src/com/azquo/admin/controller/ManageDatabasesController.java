@@ -93,9 +93,7 @@ public class ManageDatabasesController {
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
-        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
-            return "redirect:/api/Login";
-        } else {
+        if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             StringBuilder error = new StringBuilder();
             if (request.getSession().getAttribute("importResult") != null){
                 error.append(request.getSession().getAttribute("importResult"));
@@ -163,7 +161,10 @@ public class ManageDatabasesController {
             }
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
+            model.put("developer", loggedInUser.getUser().isDeveloper());
             return "managedatabases";
+        } else {
+            return "redirect:/api/Login";
         }
     }
 
@@ -178,9 +179,7 @@ public class ManageDatabasesController {
         }
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
-        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
-            return "redirect:/api/Login";
-        } else {
+        if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             if (database != null && uploadFile != null) {
                 if (database.isEmpty()){
                     model.put("error", "Please select a database");
@@ -189,34 +188,35 @@ public class ManageDatabasesController {
                 } else {
                     try{
                         HttpSession session = request.getSession();
+                        // todo - security hole here, a developer could hack a file onto a different db . . .
                         LoginService.switchDatabase(loggedInUser, database); // could be blank now
                         String fileName = uploadFile.getOriginalFilename();
                         // always move uplaoded files now, they'll need to be transferred to the DB server after code split
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + fileName);
                         uploadFile.transferTo(moved);
                         // need to add in code similar to report loading to give feedback on imports
-                            new Thread(() -> {
-                                // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
-                                try {
-                                    List<String> languages = new ArrayList<>(loggedInUser.getLanguages());
-                                    languages.remove(loggedInUser.getUser().getEmail());
-                                    session.setAttribute("importResult",
-                                            ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false)
-                                    );
-                                } catch (Exception e) {
-                                    //e.printStackTrace();
-                                    Throwable t = e;
-                                    int check = 0;
-                                    while (t.getCause() != null && check < 20){
-                                        t = t.getCause();
-                                        check++;
-                                    }
-                                    String exceptionError = t.getMessage();
-                                    if (exceptionError != null && exceptionError.contains("error:"))
-                                        exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
-                                    session.setAttribute("importResult", exceptionError);
+                        new Thread(() -> {
+                            // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
+                            try {
+                                List<String> languages = new ArrayList<>(loggedInUser.getLanguages());
+                                languages.remove(loggedInUser.getUser().getEmail());
+                                session.setAttribute("importResult",
+                                        ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false)
+                                );
+                            } catch (Exception e) {
+                                //e.printStackTrace();
+                                Throwable t = e;
+                                int check = 0;
+                                while (t.getCause() != null && check < 20){
+                                    t = t.getCause();
+                                    check++;
                                 }
-                            }).start();
+                                String exceptionError = t.getMessage();
+                                if (exceptionError != null && exceptionError.contains("error:"))
+                                    exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
+                                session.setAttribute("importResult", exceptionError);
+                            }
+                        }).start();
                         return "importrunning";
                     } catch (Exception e){ // now the import has it's on exception catching
                         String exceptionError = e.getMessage();
@@ -253,7 +253,11 @@ public class ManageDatabasesController {
             }
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
+            model.put("developer", loggedInUser.getUser().isDeveloper());
             return "managedatabases";
+        } else {
+            return "redirect:/api/Login";
+
         }
     }
 }

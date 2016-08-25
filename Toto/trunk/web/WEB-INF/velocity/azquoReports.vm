@@ -9,7 +9,6 @@
 				<thead>
 					<tr>
 						 #if($report.image)<td>Image</td>#end
-						<td>Category</td>
 						<td>Name</td>
 						<td>Explanation</td>
 						<td>#</td>
@@ -19,7 +18,6 @@
            			 #foreach($report in $reports)
               		<tr >
 						 #if($report.image)<td><div class="reportimage">$report.image</div></td>#end
-						<td><div class="reportcategory">$report.category</div></td>
 						<td><div class="reportname"><a href="$report.link"> $report.name</a></div></td>
 						<td><div class="reportexplanation">$report.explanation</div></td>
 						<td><a href="$report.link" class="button small"><span class="fa fa-eye"></span></a></td>

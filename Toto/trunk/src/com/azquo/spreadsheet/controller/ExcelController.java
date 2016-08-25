@@ -43,7 +43,7 @@ public class ExcelController {
         }
         LoggedInUser loggedInUser = null;
         if (logon != null && logon.length() > 0) {
-            loggedInUser = LoginService.loginLoggedInUser("", database, logon, password, false);//will automatically switch the database to 'temp' if that's the only one
+            loggedInUser = LoginService.loginLoggedInUser("", database, logon, password, false);
             if (loggedInUser == null) {
                 return "error: user " + logon + " with this password does not exist";
             }

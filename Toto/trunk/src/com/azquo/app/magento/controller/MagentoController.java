@@ -58,17 +58,14 @@ public class MagentoController {
             if (op == null) op = "";// can this happen with the annotation above?
             System.out.println("==================== db sent  : " + db + " op= " + op);
             //for testing only
-            if (db == null) {
+            if (db == null || db.equals("")) { // default to temp if not passed
                 db = "temp";
             }
-            LoggedInUser loggedInUser = LoginService.loginLoggedInUser("",db, logon, password, false);//will automatically switch the database to 'temp' if that's the only one
+            LoggedInUser loggedInUser = LoginService.loginLoggedInUser("",db, logon, password, false);
             if (loggedInUser == null) {
                 return "error: user " + logon + " with this password does not exist";
             }
-            if (!db.equals("temp") && db.length() > 0) {
-                LoginService.switchDatabase(loggedInUser, db);
-                //todo  consider what happens if there's an error here (check the result from the line above?)
-            }
+            // theree was a db switch here - pointless since we've just logged in with the DB
             if (op.equals("connect")) {
                 if (DataLoadService.findLastUpdate(loggedInUser.getDataAccessToken(), request.getRemoteAddr()) != null) {
                     // was connection id here, hacking ths back in to get the logged in connection. We're dealing with the legacy of the conneciton id still in the plugin.
@@ -82,6 +79,7 @@ public class MagentoController {
             if (op.equals("restart")) {
                 Database existingDb = loggedInUser.getDatabase();
                 if (existingDb != null){
+                    // an insecure call . . .
                     AdminService.emptyDatabase(DatabaseServerDAO.findById(existingDb.getDatabaseServerId()), loggedInUser.getDatabase());
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                     String title = "Magento db clear " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
@@ -90,8 +88,6 @@ public class MagentoController {
                     AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
                     AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                 }
-                //loginService.switchDatabase(loggedInUser, null); // something to do with booting it from memory, not sure if we care?
-                LoginService.switchDatabase(loggedInUser, existingDb);
                 return findRequiredTables(loggedInUser, request.getRemoteAddr());
             }
             if (op.equals("lastupdate") || op.equals("requiredtables")) { // 'lastupdate' applies only to versions 1.1.0 and 1.1.1  (LazySusan and Lyco)

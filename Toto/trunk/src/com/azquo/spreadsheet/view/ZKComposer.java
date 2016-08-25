@@ -924,10 +924,9 @@ public class ZKComposer extends SelectorComposer<Component> {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         String reportName = SpreadsheetService.setChoices(loggedInUser, provline);
         OnlineReport or = null;
-        Session session = Sessions.getCurrent();
         String permissionId = null;
         if (reportName != null) {
-            if (loggedInUser.getUser().isAdministrator()) {
+            if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                 int databaseId = loggedInUser.getDatabase().getId();
                 or = OnlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
                 if (or == null) {

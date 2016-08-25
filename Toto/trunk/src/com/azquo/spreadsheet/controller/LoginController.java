@@ -44,10 +44,10 @@ public class LoginController {
                 LoggedInUser loggedInUser = (LoggedInUser)request.getServletContext().getAttribute(connectionid);
                 request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
-                if (!loggedInUser.getUser().isAdministrator()) {
-                    return "redirect:/api/Online?opcode=loadsheet&reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
-                } else {
+                if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                     return "redirect:/api/ManageReports";
+                } else {
+                    return "redirect:/api/Online?opcode=loadsheet&reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                 }
             }
         } else {
@@ -56,10 +56,10 @@ public class LoginController {
                 LoggedInUser loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), null, userEmail, password, false);
                 if (loggedInUser != null) {
                     request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
-                    if (!loggedInUser.getUser().isAdministrator()) {
-                        return "redirect:/api/Online?opcode=loadsheet&reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
-                    } else {
+                    if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                         return "redirect:/api/ManageReports";
+                    } else {
+                        return "redirect:/api/Online?opcode=loadsheet&reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                     }
                 } else {// feedback to users about incorrect details
                     model.put("error", "incorrect login details");

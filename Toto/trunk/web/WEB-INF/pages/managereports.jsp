@@ -14,7 +14,6 @@
 					-->
 					<td>Database</td>
 					<td>Report Name</td>
-					<td>Report Category</td>
 					<!-- <td>File Name</td> -->
                     <td>Explanation</td>
                     <td></td>
@@ -30,7 +29,6 @@
 				 <td>${report.database}</td>
 				 <!-- should reportid be 1??? -->
 				 <td><a href="/api/Online?reportid=1&amp;opcode=loadsheet&amp;reporttoload=${report.id}&amp;database=${report.database}" target="_blank"> <span class="fa fa-table"></span>  ${report.reportName}</a></td>
-				 <td>${report.reportCategory}</td>
 				 <!-- <td>${report.filename}</td> -->
 				 <td>${report.explanation}</td>
 				 <td><a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a>

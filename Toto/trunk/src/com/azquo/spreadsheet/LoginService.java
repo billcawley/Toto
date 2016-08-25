@@ -70,6 +70,18 @@ public class LoginService {
                     }
                 }
             }
+        } else if (user.isDeveloper()) {// a bit wordy? can perhaps be factored later
+            final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(user.getBusinessId());
+            if (forBusinessId.size() == 1 && forBusinessId.get(0).getUserId() == user.getId()) {
+                database = forBusinessId.get(0);
+            } else {
+                for (Database database1 : forBusinessId) {
+                    if (database1.getName().equalsIgnoreCase(databaseName) && database1.getUserId() == user.getId()) {
+                        database = database1;
+                        break;
+                    }
+                }
+            }
         } else { // try and do it by permission - should we allow this at all for non admin users? todo - is the logic here correct, I need both the db and permissions, right now it feels like a double look up
             final List<Database> forUserIdPermission = DatabaseDAO.findForUserIdViaPermission(user.getId());
             if (forUserIdPermission.size() == 1) {
@@ -103,6 +115,7 @@ public class LoginService {
     }
 
     // basic business match check on these functions
+    // todo address insecurity on these two, problem is that some non admin or developer user stuff is ad hoc based off reports. Hence if I try and do security here it won't work . . .
 
     public static void switchDatabase(LoggedInUser loggedInUser, String newDBName) throws Exception {
         Database db = null;

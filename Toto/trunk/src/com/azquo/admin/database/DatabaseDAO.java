@@ -24,6 +24,7 @@ public final class DatabaseDAO {
     public static final String DATABASE = "database"; // need to see it externally
 
     public static final String BUSINESSID = "business_id";
+    private static final String USERID = "user_id";
     private static final String NAME = "name";
     private static final String MYSQLNAME = "mysql_name"; // needs renaming! todo
     private static final String DATABASETYPE = "database_type";
@@ -35,6 +36,7 @@ public final class DatabaseDAO {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(StandardDAO.ID, database.getId());
         toReturn.put(BUSINESSID, database.getBusinessId());
+        toReturn.put(USERID, database.getUserId());
         toReturn.put(NAME, database.getName());
         toReturn.put(MYSQLNAME, database.getPersistenceName());
         toReturn.put(DATABASETYPE, database.getDatabaseType());
@@ -50,6 +52,7 @@ public final class DatabaseDAO {
             try {
                 return new Database(rs.getInt(StandardDAO.ID)
                         , rs.getInt(BUSINESSID)
+                        , rs.getInt(USERID)
                         , rs.getString(NAME)
                         , rs.getString(MYSQLNAME)
                         , rs.getString(DATABASETYPE)
@@ -71,7 +74,13 @@ public final class DatabaseDAO {
         return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " order by " + NAME, DATABASE, databaseRowMapper, namedParams);
     }
 
-/*
+    public static List<Database> findForUserId(final int userId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(USERID, userId);
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` = :" + USERID + " order by " + NAME, DATABASE, databaseRowMapper, namedParams);
+    }
+
+    /*
     SELECT `database`.* FROM `database`,`permission` WHERE `permission`.`user_id` = 271 and `database`.id = `permission`.`database_id`group by `database_id`
      */
 // todo clean

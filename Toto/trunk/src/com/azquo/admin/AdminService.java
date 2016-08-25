@@ -27,6 +27,8 @@ import java.util.*;
  * Used for admin functions. Register, validate etc
  * pretty simple with calls to the vanilla admin dao classes
  * <p/>
+ *
+ * Note - most calls deal with security internally (isAdministrator) but not all, this really should be consistent
  */
 public class AdminService {
 
@@ -112,7 +114,8 @@ this may now not work at all, perhaps delete?
         if (databaseType == null) {
             databaseType = "";
         }
-        if (loggedInUser.getUser().isAdministrator()) {
+        if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
+            // force a developer prefix?
             Database existing = DatabaseDAO.findForName(loggedInUser.getUser().getBusinessId(), databaseName);
             if (existing != null) {
                 throw new Exception("That database already exists");
@@ -122,7 +125,7 @@ this may now not work at all, perhaps delete?
             if (b == null) {
                 throw new Exception("That business does not exist");
             }
-            final Database database = new Database(0, b.getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId());
+            final Database database = new Database(0, b.getId(), loggedInUser.getUser().getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId());
             DatabaseDAO.store(database);
             // will be over to the DB side
             RMIClient.getServerInterface(databaseServer.getIp()).createDatabase(database.getPersistenceName());
@@ -205,9 +208,13 @@ this may now not work at all, perhaps delete?
         return BusinessDAO.findById(id);
     }
 
+    // return empty lists? Not sure . . .
     public static List<Database> getDatabaseListForBusiness(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
             return DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        }
+        if (loggedInUser.getUser().isDeveloper()){
+            return DatabaseDAO.findForUserId(loggedInUser.getUser().getId());
         }
         return null;
     }
@@ -234,15 +241,23 @@ this may now not work at all, perhaps delete?
         List<OnlineReport> reportList = new ArrayList<>();
         List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         for (Database database : databases) {
-            List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
-            for (OnlineReport report : reports) {
-                report.setDatabase(database.getName());
+            if (loggedInUser.getUser().isAdministrator()){// admin gets all
+                List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
+                for (OnlineReport report : reports) {
+                    report.setDatabase(database.getName());
+                }
+                reportList.addAll(reports);
+            } else if (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()){ // develope constrained to their own reports
+                List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
+                for (OnlineReport report : reports) {
+                    report.setDatabase(database.getName());
+                }
+                reportList.addAll(reports);
             }
-            reportList.addAll(reports);
         }
         // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {
-            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, "", "", "", "No reports found", "", "", OnlineReport.AZQUO_BOOK);
+            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0,0, "", "No reports found", "", "", "");
             reportList.add(notFound);
         }
         return reportList;
@@ -260,32 +275,34 @@ this may now not work at all, perhaps delete?
     }
 
     public static List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInUser loggedInUser) {
-        if (loggedInUser.getUser().isAdministrator()) {
+        if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
             List<UploadRecord> uploadRecords = UploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<>();
             for (UploadRecord uploadRecord : uploadRecords) {
-                String dbName = "";
-                if (uploadRecord.getDatabaseId() > 0) {
-                    Database database = DatabaseDAO.findById(uploadRecord.getDatabaseId());
-                    if (database != null) {
-                        dbName = database.getName();
+                if (loggedInUser.getUser().isAdministrator() || uploadRecord.getUserId() == loggedInUser.getUser().getId()){ // admin is all, developer is just theirs
+                    String dbName = "";
+                    if (uploadRecord.getDatabaseId() > 0) {
+                        Database database = DatabaseDAO.findById(uploadRecord.getDatabaseId());
+                        if (database != null) {
+                            dbName = database.getName();
+                        }
                     }
-                }
-                String userName = "";
-                if (uploadRecord.getUserId() > 0) {
-                    User user = UserDAO.findById(uploadRecord.getUserId());
-                    if (user != null) {
-                        userName = user.getName();
+                    String userName = "";
+                    if (uploadRecord.getUserId() > 0) {
+                        User user = UserDAO.findById(uploadRecord.getUserId());
+                        if (user != null) {
+                            userName = user.getName();
+                        }
                     }
-                }
-                boolean downloadable = false;
-                if (uploadRecord.getTempPath() != null && !uploadRecord.getTempPath().isEmpty()){
-                    File test = new File(uploadRecord.getTempPath());
-                    if (test.exists() && test.isFile()){
-                        downloadable = true;
+                    boolean downloadable = false;
+                    if (uploadRecord.getTempPath() != null && !uploadRecord.getTempPath().isEmpty()){
+                        File test = new File(uploadRecord.getTempPath());
+                        if (test.exists() && test.isFile()){
+                            downloadable = true;
+                        }
                     }
+                    uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
                 }
-                uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
             }
             return uploadRecordsForDisplay;
         }
@@ -343,7 +360,8 @@ this may now not work at all, perhaps delete?
 
     public static Database getDatabaseById(int databaseId, LoggedInUser loggedInUser) {
         Database database = DatabaseDAO.findById(databaseId);
-        if (database != null && loggedInUser.getUser().getBusinessId() == database.getBusinessId()) {
+        if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) {
             return database;
         }
         return null;
@@ -351,7 +369,8 @@ this may now not work at all, perhaps delete?
 
     public static OnlineReport getReportById(int reportId, LoggedInUser loggedInUser) {
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
-        if (onlineReport != null && loggedInUser.getUser().getBusinessId() == onlineReport.getBusinessId()) {
+        if (onlineReport != null && ((loggedInUser.getUser().isAdministrator() && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && onlineReport.getBusinessId() == loggedInUser.getUser().getId()))) {
             return onlineReport;
         }
         return null;
@@ -359,7 +378,8 @@ this may now not work at all, perhaps delete?
 
     public static void removeReportById(LoggedInUser loggedInUser, int reportId) {
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
-        if (onlineReport != null && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+        if (onlineReport != null && ((loggedInUser.getUser().isAdministrator() && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && onlineReport.getBusinessId() == loggedInUser.getUser().getId()))) {
             String fullPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename();
             File file = new File(fullPath);
             if (file.exists()) {
@@ -372,7 +392,8 @@ this may now not work at all, perhaps delete?
     // code adapted from spreadsheet service which it wilol be removed from
     public static void removeDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = DatabaseDAO.findById(databaseId);
-        if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+        if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
             // note, used to delete choices for the reports for this DB, won't do this now as
             LoginRecordDAO.removeForDatabaseId(db.getId());
             DatabaseReportLinkDAO.unLinkDatabase(databaseId);
@@ -386,35 +407,40 @@ this may now not work at all, perhaps delete?
 
     public static void emptyDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = DatabaseDAO.findById(databaseId);
-        if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+        if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getPersistenceName());
         }
     }
 
     public static void unloadDatabase(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = DatabaseDAO.findById(databaseId);
-        if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+        if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).unloadDatabase(db.getPersistenceName());
         }
     }
 
     // a little inconsistent but it will be called using a database object, no point looking up again
     public static boolean isDatabaseLoaded(LoggedInUser loggedInUser, Database database) throws Exception {
-        if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+        if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) {
             return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).isDatabaseLoaded(database.getPersistenceName());
         }
         return false;
     }
 
     public static int getNameCount(LoggedInUser loggedInUser, Database database) throws Exception {
-        if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+        if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) {
             return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getNameCount(database.getPersistenceName());
         }
         return 0;
     }
 
     public static int getValueCount(LoggedInUser loggedInUser, Database database) throws Exception {
-        if (database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+        if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) {
             return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getValueCount(database.getPersistenceName());
         }
         return 0;

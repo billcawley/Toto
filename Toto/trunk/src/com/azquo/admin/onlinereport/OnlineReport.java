@@ -1,8 +1,6 @@
 package com.azquo.admin.onlinereport;
 
 import com.azquo.admin.StandardEntity;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDateTime;
 
@@ -15,43 +13,34 @@ import java.time.LocalDateTime;
  */
 public class OnlineReport extends StandardEntity {
 
-//    public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
-
     private LocalDateTime dateCreated;
     private int businessId;
+    private int userId;
     private String database; // for sending parameters only, I think visually, need to think on this given new structure, TODO
     private String reportName;
-    private String reportCategory;
     private String filename;
-    private String pathName; //internal use
+    private String pathName; // runtime use again, need to zap at some point. todo
     private String explanation;
-    private int renderer;
 
-    public static final int AZQUO_BOOK = 0;
-    public static final int ZK_AZQUO_BOOK = 1;
-
-    @JsonCreator
-    public OnlineReport(@JsonProperty("id") int id
-            , @JsonProperty("businessId") LocalDateTime dateCreated
-            , @JsonProperty("businessId") int businessId
-            , @JsonProperty("database") String database
-            , @JsonProperty("reportName") String reportName
-            , @JsonProperty("reportCategory") String reportCategory
-            , @JsonProperty("filename") String filename
-            , @JsonProperty("pathName") String pathName
-            , @JsonProperty("explanation") String explanation
-            , @JsonProperty("renderer") int renderer
+    public OnlineReport(int id
+            , LocalDateTime dateCreated
+            , int businessId
+            , int userId
+            , String database
+            , String reportName
+            , String filename
+            , String explanation
+            , String pathName
             ) {
         this.id = id;
         this.dateCreated = dateCreated;
         this.businessId = businessId;
+        this.userId = userId;
         this.database = database;
         this.reportName = reportName;
-        this.reportCategory = reportCategory;
         this.filename = filename;
         this.pathName = pathName;
         this.explanation = explanation;
-        this.renderer = renderer;
     }
 
     public int getBusinessId() {
@@ -62,6 +51,13 @@ public class OnlineReport extends StandardEntity {
         this.businessId = businessId;
     }
 
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
 
     public LocalDateTime getDateCreated() {
         return dateCreated;
@@ -85,12 +81,6 @@ public class OnlineReport extends StandardEntity {
 
     public void setReportName(String reportName) {
         this.reportName = reportName;
-    }
-
-    public String getReportCategory() { return reportCategory;  }
-
-    public void setReportCategory(String reportCategory) {
-        this.reportCategory = reportCategory;
     }
 
     public String getFilename() {
@@ -118,26 +108,18 @@ public class OnlineReport extends StandardEntity {
         this.explanation = explanation;
     }
 
-    public int getRenderer() {
-        return renderer;
-    }
-
-    public void setRenderer(int renderer) {
-        this.renderer = renderer;
-    }
-
     @Override
     public String toString() {
         return "OnlineReport{" +
-                "dateCreated=" + dateCreated +
-                "businessId=" + businessId +
+                "id=" + id +
+                ", dateCreated=" + dateCreated +
+                ", businessId=" + businessId +
+                ", userId=" + userId +
                 ", database='" + database + '\'' +
                 ", reportName='" + reportName + '\'' +
-                ", reportCategory='" + reportCategory + '\'' +
                 ", filename='" + filename + '\'' +
                 ", pathName='" + pathName + '\'' +
                 ", explanation='" + explanation + '\'' +
-                ", renderer=" + renderer +
                 '}';
     }
 }

@@ -92,7 +92,7 @@ public class ZKSpreadsheetCommandController {
 
                     if ("SaveTemplate".equals(action)) { // similar to above but we're overwriting the report
                         LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-                        if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster()){
+                        if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isMaster()){
                             Exporter exporter = Exporters.getExporter();
                             Book book = ss.getBook();
                             int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);

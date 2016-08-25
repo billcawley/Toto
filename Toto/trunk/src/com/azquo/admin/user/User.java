@@ -1,21 +1,22 @@
 package com.azquo.admin.user;
 
 import com.azquo.admin.StandardEntity;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.time.LocalDateTime;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  *
  * Representing a user who can log in
+ *
+ * Why do we have json properties? A hangover? The old UI??
  */
 public final class User extends StandardEntity {
 
     public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
     private static final String STATUS_MASTER = "MASTER";
+
+    private static final String STATUS_DEVELOPER = "DEVELOPER";
+    //developer means like admin but just reports and databases. Means those tables and the upload tables will need user Id and I'll need to make the right checks . .hhhhhhhhhhhhhhhngh
 
     private LocalDateTime endDate;
     private int businessId;
@@ -27,16 +28,15 @@ public final class User extends StandardEntity {
     private String createdBy;
 
     // salt will probably never be passed
-    @JsonCreator
-    public User(@JsonProperty("id") int id
-            , @JsonProperty("endDate") LocalDateTime endDate
-            , @JsonProperty("businessId") int businessId
-            , @JsonProperty("email") String email
-            , @JsonProperty("name") String name
-            , @JsonProperty("status") String status
-            , @JsonProperty("password") String password
-            , @JsonProperty("salt") String salt
-            , @JsonProperty("createdBy") String createdBy) {
+    public User(int id
+            , LocalDateTime endDate
+            , int businessId
+            , String email
+            , String name
+            , String status
+            , String password
+            , String salt
+            , String createdBy) {
         this.id = id;
         this.endDate = endDate;
         this.businessId = businessId;
@@ -48,14 +48,16 @@ public final class User extends StandardEntity {
         this.createdBy = createdBy;
     }
 
-    @JsonIgnore
     public boolean isAdministrator() {
         return status.equalsIgnoreCase(STATUS_ADMINISTRATOR);
     }
 
-    @JsonIgnore
     public boolean isMaster() {
         return status.equalsIgnoreCase(STATUS_MASTER);
+    }
+
+    public boolean isDeveloper() {
+        return status.equalsIgnoreCase(STATUS_DEVELOPER);
     }
 
     public void setEndDate(LocalDateTime endDate) {
@@ -98,7 +100,6 @@ public final class User extends StandardEntity {
         this.status = status;
     }
 
-    @JsonIgnore
     public String getPassword() {
         return password;
     }
@@ -107,7 +108,6 @@ public final class User extends StandardEntity {
         this.password = password;
     }
 
-    @JsonIgnore
     public String getSalt() {
         return salt;
     }

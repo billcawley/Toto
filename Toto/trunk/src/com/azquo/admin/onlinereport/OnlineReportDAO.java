@@ -23,24 +23,23 @@ public class OnlineReportDAO {
     private static final String  DATECREATED = "date_created";
 
     private static final String BUSINESSID = "business_id";
+    private static final String USERID = "user_id";
     private static final String REPORTNAME = "report_name";
 //    private static final String DATABASETYPE = "database_type";
-    private static final String REPORTCATEGORY = "report_category";
+//    private static final String REPORTCATEGORY = "report_category";
 //    private static final String USERSTATUS = "user_status";
     private static final String FILENAME = "filename";
     private static final String EXPLANATION = "explanation";
-    private static final String RENDERER = "renderer";
 
     public static Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(StandardDAO.ID, onlineReport.getId());
         toReturn.put(DATECREATED,  Date.from(onlineReport.getDateCreated().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(BUSINESSID, onlineReport.getBusinessId());
+        toReturn.put(USERID, onlineReport.getUserId());
         toReturn.put(REPORTNAME, onlineReport.getReportName());
-        toReturn.put(REPORTCATEGORY,onlineReport.getReportCategory());
         toReturn.put(FILENAME, onlineReport.getFilename());
         toReturn.put(EXPLANATION, onlineReport.getExplanation());
-        toReturn.put(RENDERER, onlineReport.getRenderer());
         return toReturn;
     }
 
@@ -51,13 +50,12 @@ public class OnlineReportDAO {
                 return new OnlineReport(rs.getInt(StandardDAO.ID)
                         , StandardDAO.getLocalDateTimeFromDate(rs.getDate(DATECREATED))
                         , rs.getInt(BUSINESSID)
+                        , rs.getInt(USERID)
                         , ""
                         , rs.getString(REPORTNAME)
-                        , rs.getString(REPORTCATEGORY)
                         , rs.getString(FILENAME)
-                        , ""
                         , rs.getString(EXPLANATION)
-                        , rs.getInt(RENDERER));
+                        ,"");
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -84,6 +82,13 @@ public class OnlineReportDAO {
         return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + StandardDAO.ID + " = :" + StandardDAO.ID + " and " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
+    public static OnlineReport findForIdAndUserId(final int id, int userId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(StandardDAO.ID, id);
+        namedParams.addValue(USERID, userId);
+        return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + StandardDAO.ID + " = :" + StandardDAO.ID + " and " + USERID + " = :" + USERID, TABLENAME, onlineReportRowMapper, namedParams);
+    }
+
     // case insensetive - todo - is this a security concern??
     public static OnlineReport findForNameAndBusinessId(final String name, int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -96,6 +101,12 @@ public class OnlineReportDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         return StandardDAO.findListWithWhereSQLAndParameters("  WHERE " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, onlineReportRowMapper, namedParams);
+    }
+
+    public static List<OnlineReport> findForUserId(int userId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(USERID, userId);
+        return StandardDAO.findListWithWhereSQLAndParameters("  WHERE " + USERID + " = :" + USERID, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
     public static List<OnlineReport> findForDatabaseId(final int databaseId) {

@@ -135,12 +135,6 @@ public class SpreadsheetService {
                 final OnlineReport onlineReport = OnlineReportDAO.findById(permission.getReportId());
                 if (onlineReport != null){
                     Map<String, String> vReport = new HashMap<>();
-                    if (onlineReport.getReportCategory() != null && !onlineReport.getReportCategory().equals(reportCategory)) {
-                        vReport.put("category", onlineReport.getReportCategory());
-                    } else {
-                        vReport.put("category", "");
-                    }
-                    reportCategory = onlineReport.getReportCategory();
                     vReport.put("name", onlineReport.getReportName());
                     vReport.put("explanation", onlineReport.getExplanation());
                     vReport.put("link", "/api/Online/?opcode=loadsheet&permissionid=" + permission.getId()); // todo - address how this will be used!

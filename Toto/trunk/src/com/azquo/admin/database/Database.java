@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 public final class Database extends StandardEntity {
 
     private int businessId;
+    private int userId;
     private String name;
     private String persistenceName;
     private String databaseType;
@@ -25,6 +26,7 @@ public final class Database extends StandardEntity {
 
     public Database(int id
             , int businessId
+            , int userId
             , String name
             , String persistenceName
             , String databaseType
@@ -34,6 +36,7 @@ public final class Database extends StandardEntity {
                     ) {
         this.id = id;
         this.businessId = businessId;
+        this.userId = userId;
         this.name = name;
         this.persistenceName = persistenceName;
         this.databaseType = databaseType;
@@ -48,6 +51,14 @@ public final class Database extends StandardEntity {
 
     public void setBusinessId(int businessId) {
         this.businessId = businessId;
+    }
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
     }
 
     public String getName() {
@@ -108,8 +119,8 @@ public final class Database extends StandardEntity {
     @Override
     public String toString() {
         return "Database{" +
-                "id=" + id +
-                ", businessId=" + businessId +
+                "businessId=" + businessId +
+                ", userId=" + userId +
                 ", name='" + name + '\'' +
                 ", persistenceName='" + persistenceName + '\'' +
                 ", databaseType='" + databaseType + '\'' +

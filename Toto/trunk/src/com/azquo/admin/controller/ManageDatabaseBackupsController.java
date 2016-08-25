@@ -65,16 +65,14 @@ public class ManageDatabaseBackupsController {
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
-        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
-            return "redirect:/api/Login";
-        } else {
+        if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             StringBuilder error = new StringBuilder();
             try {
                 Database databaseById = null;
                 if (databaseId != null && NumberUtils.isNumber(databaseId)) {
                     databaseById = AdminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
                 }
-                if (databaseById == null){
+                if (databaseById == null || (loggedInUser.getUser().isDeveloper() && databaseById.getUserId() != loggedInUser.getUser().getId())){
                     error.append("Bad database Id.");
                 } else {
                     model.put("database", databaseById.getName());
@@ -133,6 +131,7 @@ public class ManageDatabaseBackupsController {
                     for (File file : finalDir.listFiles()){
                         displayBackupList.add(new DisplayBackup(file.getName(), df.format(file.lastModified())));
                     }
+                    model.put("developer", loggedInUser.getUser().isDeveloper());
                     model.put("backups", displayBackupList);
                 }
             } catch (Exception e) {
@@ -146,7 +145,10 @@ public class ManageDatabaseBackupsController {
                     exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
                 model.put("error", exceptionError);
             }
+            model.put("developer", loggedInUser.getUser().isDeveloper());
             return "managedatabasebackups";
+        } else {
+            return "redirect:/api/Login";
         }
     }
 

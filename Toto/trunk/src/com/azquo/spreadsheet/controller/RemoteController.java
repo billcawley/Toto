@@ -150,7 +150,7 @@ public class RemoteController {
                 }
                 // database switching should be done by being logged in
                 OnlineReport onlineReport = null;
-                if (jsonParameters.reportName != null && loggedInUser.getUser().isAdministrator()) {
+                if (jsonParameters.reportName != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     //report id is assumed to be integer - sent from the website
                     onlineReport = OnlineReportDAO.findForNameAndBusinessId(jsonParameters.reportName, loggedInUser.getUser().getBusinessId());
                     onlineReport.setDatabase(jsonParameters.database);

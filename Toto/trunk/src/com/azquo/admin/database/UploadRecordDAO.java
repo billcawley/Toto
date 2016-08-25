@@ -76,6 +76,12 @@ public final class UploadRecordDAO  {
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " order by `date` desc", TABLENAME, uploadRowMapper, namedParams, 0, 100);
     }
 
+    public static List<UploadRecord> findForUserId(final int userId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(USERID, userId);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " order by `date` desc", TABLENAME, uploadRowMapper, namedParams, 0, 100);
+    }
+
     public static void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);

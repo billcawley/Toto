@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS `business` (
 CREATE TABLE IF NOT EXISTS `database` (
   `id` int(11) NOT NULL,
   `business_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `mysql_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `database_type` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
@@ -79,11 +80,10 @@ CREATE TABLE IF NOT EXISTS `online_report` (
   `id` int(11) NOT NULL,
   `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `business_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
   `report_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `report_category` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `filename` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `explanation` text COLLATE utf8_unicode_ci NOT NULL,
-  `renderer` int(11) NOT NULL DEFAULT '0',
   `active` tinyint(1) NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB AUTO_INCREMENT=223 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 

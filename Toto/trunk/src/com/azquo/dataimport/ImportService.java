@@ -328,7 +328,7 @@ public final class ImportService {
         OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
         // change in logic, no longer making a copy, want to update what's there
         if (or == null) {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, "", reportName, "", fileName, "", "", 1); // default to ZK now
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), "", reportName, fileName, "", ""); // default to ZK now
         } else {
             or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
         }
@@ -355,7 +355,7 @@ public final class ImportService {
             reportName = ZKAzquoBookUtils.getSnameCell(reportRange).getStringValue();
         }
         if (reportName != null) {
-            if (loggedInUser.getUser().isAdministrator() && !isData) {
+            if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
                 return uploadReport(loggedInUser, tempName, fileName, reportName, "");
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
@@ -366,15 +366,12 @@ public final class ImportService {
                 SpreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
             }
             //String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilename();
-            String bookPath = tempName;//take the import sheet as a template.
-            final Book reportBook = Importers.getImporter().imports(new File(bookPath), "Report name");
-            reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
+            final Book reportBook = Importers.getImporter().imports(new File(tempName), "Report name");
+            reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, tempName);
             reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
             reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
             ZKAzquoBookUtils.populateBook(reportBook, 0);
-            String toReturn = fillDataRangesFromCopy(loggedInUser, book, or);
-
-            return toReturn;
+            return fillDataRangesFromCopy(loggedInUser, book, or);
         }
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("no database set");

@@ -38,9 +38,7 @@ public class ShowdataController {
     {
         // I assume secure until we move to proper spring security
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
-            return "redirect:/api/Login";
-        } else {
+        if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             // ok we'll put the id parsing bits in here now, much better
             String[] namesString = chosen.split(",");
             if (namesString[0].startsWith("jstreeids:")){
@@ -66,6 +64,8 @@ public class ShowdataController {
             }
             // this jsp has JSTL which will render tree nodes correctly
             return "showdata";
+        } else {
+            return "redirect:/api/Login";
         }
     }
 }
