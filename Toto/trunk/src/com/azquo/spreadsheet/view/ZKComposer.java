@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.view;
 
+import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.*;
@@ -9,6 +10,7 @@ import com.azquo.spreadsheet.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
 import org.zkoss.chart.ChartsEvent;
+import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.*;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
@@ -29,6 +31,8 @@ import org.zkoss.zul.*;
 import com.azquo.memorydb.TreeNode;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.util.*;
 
@@ -771,8 +775,50 @@ public class ZKComposer extends SelectorComposer<Component> {
                     provenancePopup.appendChild(provenanceLabel);
 
                     Toolbarbutton button = new Toolbarbutton("Download Full Audit");
+                    // todo - factor with very similar code to downloiad debug info
                     button.addEventListener("onClick",
-                            event -> Filedownload.save(fullProvenance, "text/csv", "audit " + myzss.getSelectedSheet().getSheetName() + ".txt"));
+                            event ->
+                            {
+                                OnlineReport or = OnlineReportDAO.findById(reportId);
+                                Book book1 = Importers.getImporter().imports(Sessions.getCurrent().getWebApp().getResourceAsStream("/WEB-INF/DebugAudit.xlsx"), "Report name");
+                                for (int sheetNumber = 0; sheetNumber < book1.getNumberOfSheets(); sheetNumber++) {
+                                    Sheet sheet = book1.getSheetAt(sheetNumber);
+                                    List<SName> namesForSheet = ZKAzquoBookUtils.getNamesForSheet(sheet);
+                                    for (SName sName : namesForSheet) {
+                                        if (sName.getName().equalsIgnoreCase("Title")) {
+                                            final SCell cell = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
+                                            cell.setStringValue("Audit " + or.getReportName());
+                                        }
+                                        if (sName.getName().equalsIgnoreCase("Data")) {
+                                            // here we parse out the string into cells. It could be passed as arrays but I'm not sure how much help that is
+                                            final String[] split = fullProvenance.split("\n");
+                                            int yOffset = 0;
+                                            for (String line : split){
+                                                int xOffset = 0;
+                                                String[] cells = line.split("\t");
+                                                for(String cell : cells){
+                                                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(cell);
+                                                    xOffset++;
+                                                }
+                                                yOffset++;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Exporter exporter = Exporters.getExporter();
+                                File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
+                                FileOutputStream fos = null;
+                                try {
+                                    fos = new FileOutputStream(file);
+                                    exporter.export(book1, fos);
+                                } finally {
+                                    if (fos != null) {
+                                        fos.close();
+                                    }
+                                }
+                                Filedownload.save(new AMedia("Audit " + or.getReportName() + ".xlsx", null, null, file, true));
+                            });
                     provenancePopup.appendChild(button);
                     Menuitem auditItem = new Menuitem("Audit");
                     editPopup.appendChild(auditItem);
@@ -839,7 +885,47 @@ public class ZKComposer extends SelectorComposer<Component> {
                 debugPopup.appendChild(debugLabel);
                 Toolbarbutton button = new Toolbarbutton("Download Full Debug");
                 button.addEventListener("onClick",
-                        event -> Filedownload.save(debugString, "text", "debug " + myzss.getSelectedSheet().getSheetName() + ".txt"));
+                        event -> {
+                            OnlineReport or = OnlineReportDAO.findById(reportId);
+                            Book book1 = Importers.getImporter().imports(Sessions.getCurrent().getWebApp().getResourceAsStream("/WEB-INF/DebugAudit.xlsx"), "Report name");
+                            for (int sheetNumber = 0; sheetNumber < book1.getNumberOfSheets(); sheetNumber++) {
+                                Sheet sheet = book1.getSheetAt(sheetNumber);
+                                List<SName> namesForSheet = ZKAzquoBookUtils.getNamesForSheet(sheet);
+                                for (SName sName : namesForSheet) {
+                                    if (sName.getName().equalsIgnoreCase("Title")) {
+                                        final SCell cell = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
+                                        cell.setStringValue("Debug " + or.getReportName());
+                                    }
+                                    if (sName.getName().equalsIgnoreCase("Data")) {
+                                        // here we parse out the string into cells. It could be passed as arrays but I'm not sure how much help that is
+                                        final String[] split = debugString.split("\n");
+                                        int yOffset = 0;
+                                        for (String line : split){
+                                            int xOffset = 0;
+                                            String[] cells = line.split("\t");
+                                            for(String cell : cells){
+                                                sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(cell);
+                                                xOffset++;
+                                            }
+                                            yOffset++;
+                                        }
+                                    }
+                                }
+                            }
+
+                            Exporter exporter = Exporters.getExporter();
+                            File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
+                            FileOutputStream fos = null;
+                            try {
+                                fos = new FileOutputStream(file);
+                                exporter.export(book1, fos);
+                            } finally {
+                                if (fos != null) {
+                                    fos.close();
+                                }
+                            }
+                            Filedownload.save(new AMedia("Debug " + or.getReportName() + ".xlsx", null, null, file, true));
+                        });
                 debugPopup.appendChild(button);
                 Menuitem debugItem = new Menuitem("Debug");
                 editPopup.appendChild(debugItem);

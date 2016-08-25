@@ -1495,7 +1495,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     private static AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
             , List<DataRegionHeading> contextHeadings, int rowNo, int colNo, List<String> languages, int valueId, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
         if (debugInfo != null) {
-            debugInfo.append("\nRow Headings\n\n");
+            debugInfo.append("Row Headings\n\n");
             for (DataRegionHeading rowHeading : rowHeadings) {
                 if (rowHeading != null){
                     debugInfo.append("\t" + rowHeading.getDebugInfo() + "\n");
