@@ -186,7 +186,10 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellClick(CellMouseEvent event) {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        String selectionName = pivotItem(event);
+        String selectionName = pivotItem(event, ZKAzquoBookUtils.AZPIVOTFILTERS, ZKAzquoBookUtils.AZPIVOTHEADINGS,3);//OLD STYLE
+        if (selectionName == null){
+            selectionName = pivotItem(event, ZKAzquoBookUtils.AZCONTEXTFILTERS, ZKAzquoBookUtils.AZCONTEXTCHOICES,3);
+        }
         String selectionList = null;
         CellRegion queryResultRegion = null;
         if (selectionName != null) { // we have a pivot menu for that cell. Either the dropdown at the top or a row heading - todo address the row heading having excel style dropdown as well as our pivot style box
@@ -586,15 +589,15 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
 
-    private String pivotItem(CellMouseEvent event) {
-        SName pivotFilters = event.getSheet().getBook().getInternalBook().getNameByName("az_PivotFilters");
-        if (pivotFilters != null) {
-            String[] filters = ZKAzquoBookUtils.getSnameCell(pivotFilters).getStringValue().split(",");
-            CellRegion pivotHeadings = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), "az_PivotHeadings");
-            if (pivotHeadings != null) {
-                int headingRow = pivotHeadings.getRow();
-                int headingCol = pivotHeadings.getColumn();
-                int headingRows = pivotHeadings.getRowCount();
+    private String pivotItem(CellMouseEvent event, String filterName, String choicesName, int choiceWidth) {
+        SName contextFilters = event.getSheet().getBook().getInternalBook().getNameByName(filterName);//obsolete
+       if (contextFilters != null) {
+            String[] filters = ZKAzquoBookUtils.getSnameCell(contextFilters).getStringValue().split(",");
+            CellRegion contextChoices = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), choicesName);
+            if (contextChoices != null) {
+                int headingRow = contextChoices.getRow();
+                int headingCol = contextChoices.getColumn();
+                int headingRows = contextChoices.getRowCount();
                 int filterCount = 0;
                 //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                 // this logic is repeated from add validation, dedupe?
@@ -604,7 +607,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         int rowOffset = filterCount % headingRows;
                         int colOffset = filterCount / headingRows;
                         int chosenRow = headingRow + rowOffset;
-                        int chosenCol = headingCol + 3 * colOffset + 1;
+                        int chosenCol = headingCol + choiceWidth * colOffset + 1;
                         if (chosenRow == event.getRow() && chosenCol == event.getColumn()) {
                             return filter.trim();
                         }
