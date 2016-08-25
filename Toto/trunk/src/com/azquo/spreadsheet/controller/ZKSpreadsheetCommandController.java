@@ -178,8 +178,8 @@ public class ZKSpreadsheetCommandController {
                         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
                         boolean saveOk = true;
                         for (SName name : book.getInternalBook().getNames()) {
-                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.azDataRegion.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
-                                String region = name.getName().substring(ZKAzquoBookUtils.azDataRegion.length());
+                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
+                                String region = name.getName().substring(ZKAzquoBookUtils.AZDATAREGION.length());
                                 final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
                                 if (!result.equals("true")){
                                     Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
@@ -187,9 +187,9 @@ public class ZKSpreadsheetCommandController {
                                 }
                             }
                             // deal with repeats, annoying!
-                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.azRepeatScope.toLowerCase())) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
-                                String region = name.getName().substring(ZKAzquoBookUtils.azRepeatScope.length());
-                                final SName repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.azRepeatRegion + region);
+                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZREPEATSCOPE.toLowerCase())) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
+                                String region = name.getName().substring(ZKAzquoBookUtils.AZREPEATSCOPE.length());
+                                final SName repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZREPEATREGION + region);
                                 if (repeatRegion != null){
                                     int regionRows = repeatRegion.getRefersToCellRegion().getRowCount();
                                     int regionCols = repeatRegion.getRefersToCellRegion().getColumnCount();
