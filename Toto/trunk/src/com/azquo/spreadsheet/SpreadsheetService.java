@@ -200,7 +200,8 @@ public class SpreadsheetService {
     public static String saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName, boolean persist) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
         if (cellsAndHeadingsForDisplay != null) {
-            if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
+            // maybe go back to this later, currently it will be tripped up by a spreadsheet querying from more than one DB
+            //if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
                 DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
                 final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, region, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
                 if (result.equals("true")){ // then reset the cells and headings object to reflect the changed state
@@ -213,7 +214,7 @@ public class SpreadsheetService {
                     }
                 }
                 return result;
-            }
+            //}
         }
         return "no data passed for that region " + region + " and report " + reportName;
     }

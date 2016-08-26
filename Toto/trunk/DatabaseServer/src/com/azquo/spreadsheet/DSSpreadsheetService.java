@@ -2134,10 +2134,10 @@ Callable interface sorts the memory "happens before" using future gets which run
                 if (!firstCol) sb.append("\t");
                 else firstCol = false;
                 // use string if we have it,otherwise double if it's not 0 or explicitly changed (0 allowed if manually entered). Otherwise blank.
-                if (cellForDisplay.getStringValue() != null) {
-                    String val = cellForDisplay.getStringValue().length() > 0 ? cellForDisplay.getStringValue() : cellForDisplay.getDoubleValue() != 0 ? cellForDisplay.getDoubleValue() + "" : "";
+                if (cellForDisplay.getNewStringValue() != null) {
+                    String val = cellForDisplay.getNewStringValue().length() > 0 ? cellForDisplay.getNewStringValue() : cellForDisplay.getNewDoubleValue() != 0 ? cellForDisplay.getNewDoubleValue() + "" : "";
                     //for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
-                    if (cellForDisplay.getStringValue().length() > 0) {
+                    if (cellForDisplay.getNewStringValue().length() > 0) {
                         blankLine = false;
                     }
                     sb.append(val);

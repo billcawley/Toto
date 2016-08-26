@@ -183,6 +183,7 @@ public class ZKSpreadsheetCommandController {
                             if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
                                 String region = name.getName().substring(ZKAzquoBookUtils.AZDATAREGION.length());
                                 // todo - factor this chunk?
+                                // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
                                 SName optionsRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZOPTIONS + region);
                                 String optionsSource = "";
                                 boolean noSave = false;
