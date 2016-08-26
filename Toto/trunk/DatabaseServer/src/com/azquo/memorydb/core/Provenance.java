@@ -94,7 +94,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
          */
     private static class JsonTransport {
         public final String user;
-        final Date timeStamp;
+        public final Date timeStamp;
         public final String method;
         public final String name;
         public final String context;
