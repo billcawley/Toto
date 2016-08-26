@@ -258,6 +258,14 @@ public class UserRegionOptions extends StandardEntity {
         this.columnLanguage = columnLanguage;
     }
 
+    public boolean getNoSave() {
+        return noSave;
+    }
+
+    public void setNoSave(boolean noSave) {
+        this.noSave = noSave;
+    }
+
     @Override
     public String toString() {
         return "UserRegionOptions{" +

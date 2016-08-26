@@ -215,7 +215,7 @@ public class SpreadsheetService {
                 return result;
             }
         }
-        return "no data passed for that region and report " + region + ", " + reportName;
+        return "no data passed for that region " + region + " and report " + reportName;
     }
 
     public static String setChoices(LoggedInUser loggedInUser, String provline) {

@@ -817,7 +817,7 @@ public class DSImportService {
             System.out.println("---------- names found cache size " + namesFoundCache.size());
             return toReturn;
         } catch (Exception e) {
-            // the point of this is to add the file type to the exception message
+            // the point of this is to add the file type to the exception message - I wonder if I should just leave a vanilla exception here and deal with this client side?
             e.printStackTrace();
             Throwable t = e;
             if (t.getCause() != null){ // once should do it, unwrap to reduce java.lang.exception being shown to the user

@@ -10,6 +10,7 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
@@ -204,17 +205,7 @@ public class ManageDatabasesController {
                                         ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false)
                                 );
                             } catch (Exception e) {
-                                //e.printStackTrace();
-                                Throwable t = e;
-                                int check = 0;
-                                while (t.getCause() != null && check < 20){
-                                    t = t.getCause();
-                                    check++;
-                                }
-                                String exceptionError = t.getMessage();
-                                if (exceptionError != null && exceptionError.contains("error:"))
-                                    exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
-                                session.setAttribute("importResult", exceptionError);
+                                session.setAttribute("importResult", ZKAzquoBookUtils.getErrorFromServerSideException(e));
                             }
                         }).start();
                         return "importrunning";

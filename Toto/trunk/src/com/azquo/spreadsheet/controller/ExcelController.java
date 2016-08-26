@@ -5,6 +5,7 @@ import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -98,17 +99,7 @@ public class ExcelController {
             languages.remove(loggedInUser.getUser().getEmail());
             return ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false);
         } catch (Exception e) {
-            //e.printStackTrace();
-            Throwable t = e;
-            int check = 0;
-            while (t.getCause() != null && check < 20) {
-                t = t.getCause();
-                check++;
-            }
-            String exceptionError = t.getMessage();
-            if (exceptionError != null && exceptionError.contains("error:"))
-                exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
-            return exceptionError;
+            return ZKAzquoBookUtils.getErrorFromServerSideException(e);
         }
     }
 }

@@ -2,6 +2,8 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.user.UserRegionOptions;
+import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -180,10 +182,21 @@ public class ZKSpreadsheetCommandController {
                         for (SName name : book.getInternalBook().getNames()) {
                             if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
                                 String region = name.getName().substring(ZKAzquoBookUtils.AZDATAREGION.length());
-                                final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
-                                if (!result.equals("true")){
-                                    Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
-                                    saveOk = false;
+                                // todo - factor this chunk?
+                                SName optionsRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZOPTIONS + region);
+                                String optionsSource = "";
+                                boolean noSave = false;
+                                if (optionsRegion != null) {
+                                    optionsSource = ZKAzquoBookUtils.getSnameCell(optionsRegion).getStringValue();
+                                    UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);
+                                    noSave = userRegionOptions.getNoSave();
+                                }
+                                if (!noSave){
+                                    final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                                    if (!result.equals("true")){
+                                        Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
+                                        saveOk = false;
+                                    }
                                 }
                             }
                             // deal with repeats, annoying!

@@ -39,7 +39,7 @@ public class ZKAzquoBookUtils {
 
     // todo - make use of this case insensetive
     public static final String AZDATAREGION = "az_DataRegion";
-    static final String AZOPTIONS = "az_Options";
+    public static final String AZOPTIONS = "az_Options";
     public static final String AZREPEATREGION = "az_RepeatRegion";
     public static final String AZREPEATSCOPE = "az_RepeatScope";
     public static final String AZREPEATITEM = "az_RepeatItem";
@@ -1355,9 +1355,23 @@ public class ZKAzquoBookUtils {
                             .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
                 } catch (Exception e) {
                     e.printStackTrace();
+                    queryCell.setStringValue(queryCell.getStringValue() +  " - Error executing query : " + getErrorFromServerSideException(e));
                 }
             }
         }
+    }
+
+    public static String getErrorFromServerSideException(Exception e){
+        Throwable t = e;
+        int check = 0;
+        while (t.getCause() != null && check < 20){
+            t = t.getCause();
+            check++;
+        }
+        String exceptionError = t.getMessage();
+        if (exceptionError != null && exceptionError.contains("error:"))// legacy, should be removed at some point?
+            exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
+        return exceptionError;
     }
 
     private static List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {

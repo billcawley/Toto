@@ -2175,7 +2175,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 if (persist) {
                     azquoMemoryDBConnection.persist();
                 }
-                return "";
+                return "true";
             }
             boolean changed = false;
             String toReturn = "";
