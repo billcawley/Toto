@@ -351,8 +351,10 @@ public class DSSpreadsheetService {
         List<Name> sharedNamesList = new ArrayList<>(); // an arraylist is fine it's only going to be iterated later
         // assemble the sets I want to find a cross section o
         for (DataRegionHeading drh : listToPermute) {
-            permuteNames.add(drh.getName());
-            sharedNamesSets.add(drh.getName().findAllChildren());
+            if (drh.getName() != null){
+                permuteNames.add(drh.getName());
+                sharedNamesSets.add(drh.getName().findAllChildren());
+            }
         }
         if (sharedNames != null) {
             sharedNamesSets.add(sharedNames);

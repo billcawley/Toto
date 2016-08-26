@@ -45,6 +45,7 @@ public class JstreeController {
     public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "id", required = false) String jsTreeId
+            , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "json", required = false) String json
             , @RequestParam(value = "parents", required = false) String parents
             , @RequestParam(value = "attribute", required = false) String attribute //only for use at root.
@@ -60,6 +61,12 @@ public class JstreeController {
             return "utf8page";
         }
         try {
+            // todo - is this duplicated below? SLight security concern re developers and database switching . . .
+            if ((database == null || database.length() == 0) && loggedInUser.getDatabase() != null) {
+                database = loggedInUser.getDatabase().getName();
+            } else {
+                LoginService.switchDatabase(loggedInUser, database);
+            }
             int topNodeInt = ServletRequestUtils.getIntParameter(request, "topnode", 0);
             int parentInt = ServletRequestUtils.getIntParameter(request, "parent", 0);
             // todo - clean up the logic here
@@ -97,6 +104,13 @@ public class JstreeController {
                             parents = "false";
                         }
                         model.addAttribute("message", "");
+                        if (database != null && database.length() > 0) {
+                            Database newDB = DatabaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
+                            if (newDB == null) {
+                                model.addAttribute("message", "no database chosen");
+                            }
+                            LoginService.switchDatabase(loggedInUser, newDB);
+                        }
                         if (itemsChosen == null) itemsChosen = "";
                         model.addAttribute("parents", parents);
                         model.addAttribute("rootid", rootId);
