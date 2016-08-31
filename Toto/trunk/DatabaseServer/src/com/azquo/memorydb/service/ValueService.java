@@ -5,6 +5,8 @@ import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
+import com.azquo.memorydb.core.ValueHistory;
+import com.azquo.memorydb.dao.ValueDAO;
 import com.azquo.spreadsheet.*;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.math.NumberUtils;
@@ -751,10 +753,13 @@ public final class ValueService {
         private final String valueText;
         private final Collection<Name> names;
 
-        DummyValue(int id, String valueText, Collection<Name> names) {
+        private final List<String> history;
+
+        DummyValue(int id, String valueText, Collection<Name> names, List<String> history) {
             this.id = id;
             this.valueText = valueText;
             this.names = names;
+            this.history = history;
         }
 
         String getValueText() {
@@ -768,6 +773,10 @@ public final class ValueService {
         public int getId() {
             return id;
         }
+
+        public List<String> getHistory() {
+            return history;
+        }
     }
 
     /* nodify the values. It finds the name which represents the most values and displays
@@ -777,11 +786,27 @@ public final class ValueService {
 
     private static AtomicInteger getTreeNodesFromValuesCount = new AtomicInteger(0);
 
-    private static List<TreeNode> getTreeNodesFromValues(Set<Value> values, int maxSize) {
+    private static List<TreeNode> getTreeNodesFromValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values, int maxSize) {
         getTreeNodesFromValuesCount.incrementAndGet();
         Set<DummyValue> convertedToDummy = new HashSet<>(values.size());
         for (Value value : values) {
-            convertedToDummy.add(new DummyValue(value.getId(), value.getText(), value.getNames()));
+            final List<ValueHistory> historyForValue = ValueDAO.getHistoryForValue(azquoMemoryDBConnection.getAzquoMemoryDB(), value);
+            List<String> history = new ArrayList<>();
+            for (ValueHistory vh : historyForValue){
+                String provenance = null;
+                if (vh.getProvenance() != null){
+                    provenance = (vh.getProvenance().getTimeStamp() != null ? df.format(vh.getProvenance().getTimeStamp()) : "date unknown") + " by " + vh.getProvenance().getUser();
+                    provenance += " Method ";
+                    provenance += vh.getProvenance().getMethod();
+                    if (vh.getProvenance().getName() != null) {
+                        provenance += " " + vh.getProvenance().getName();
+                    }
+                    if (vh.getProvenance().getContext() != null && vh.getProvenance().getContext().length() > 1) provenance += " with " + vh.getProvenance().getContext();
+
+                }
+                history.add(vh.getText() + "\t" + (provenance != null ? (" " + provenance) : ""));
+            }
+            convertedToDummy.add(new DummyValue(value.getId(), value.getText(), value.getNames(), history.size() > 0 ? history : null));
         }
         return getTreeNodesFromDummyValues(convertedToDummy, maxSize);
     }
@@ -802,7 +827,7 @@ public final class ValueService {
             }
             count++;
             if (count > maxSize) {
-                nodeList.add(new TreeNode((values.size() - maxSize) + " more...", "", 0, 0));
+                nodeList.add(new TreeNode((values.size() - maxSize) + " more...", "", 0, 0, null));
                 break;
             }
             String nameFound = null;
@@ -818,7 +843,7 @@ public final class ValueService {
                 }
             } catch (Exception ignored) {
             }
-            nodeList.add(new TreeNode(nameFound, val, d, value.getId()));
+            nodeList.add(new TreeNode(nameFound, val, d, value.getId(), value.getHistory()));
         }
         if (headingNeeded) {
             Name topParent = null;
@@ -840,7 +865,7 @@ public final class ValueService {
                         try {
                             Set<Name> slimNames = new HashSet<>(value.getNames());
                             slimNames.remove(heading);
-                            DummyValue slimValue = new DummyValue(value.getId(), value.getValueText(), slimNames);
+                            DummyValue slimValue = new DummyValue(value.getId(), value.getValueText(), slimNames, value.getHistory());
                             slimExtract.add(slimValue);
                         } catch (Exception e) {
                             // exception from value constructor, should not happen
@@ -873,7 +898,7 @@ public final class ValueService {
 
     private static AtomicInteger getTreeNodeCount = new AtomicInteger(0);
 
-    public static TreeNode getTreeNode(Set<Value> values, Provenance p, int maxSize) {
+    public static TreeNode getTreeNode(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values, Provenance p, int maxSize) {
         getTreeNodeCount.incrementAndGet();
         String source = (p.getTimeStamp() != null ? df.format(p.getTimeStamp()) : "date unknown") + " by " + p.getUser();
         String method = p.getMethod();
@@ -881,7 +906,7 @@ public final class ValueService {
             method += " " + p.getName();
         }
         if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
-        TreeNode toReturn = new TreeNode(source, method, null, 0, getTreeNodesFromValues(values, maxSize));
+        TreeNode toReturn = new TreeNode(source, method, null, 0, getTreeNodesFromValues(azquoMemoryDBConnection, values, maxSize));
         addNodeValues(toReturn);
         return toReturn;
     }

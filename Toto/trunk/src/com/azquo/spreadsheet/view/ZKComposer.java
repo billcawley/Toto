@@ -1077,6 +1077,15 @@ public class ZKComposer extends SelectorComposer<Component> {
                 stringBuilder.append("\t");
 
                 stringBuilder.append(treeNode.getValue());
+                if (treeNode.getValueHistory() != null){
+                    for (String historyItem : treeNode.getValueHistory()){
+                        stringBuilder.append("\n");
+                        for (int i = 0; i < tab; i++) {
+                            stringBuilder.append("\t");
+                        }
+                        stringBuilder.append("\t\tHistory\t" + historyItem); // out one further
+                    }
+                }
             }
             stringBuilder.append("\n");
         }

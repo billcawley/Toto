@@ -111,6 +111,7 @@ public final class NameService {
         List<Name> referencedNames = new ArrayList<>(nameStrings.size());
         for (String nameString : nameStrings) {
             Name toAdd = findNameAndAttribute(azquoMemoryDBConnection, nameString, attributeNames);
+            // a hack for pivot filters, should this be here?
             if (toAdd==null && nameString.startsWith("az_")){
                 //to handle pivot filters...
                 toAdd = findNameAndAttribute(azquoMemoryDBConnection,nameString.substring(3),attributeNames);

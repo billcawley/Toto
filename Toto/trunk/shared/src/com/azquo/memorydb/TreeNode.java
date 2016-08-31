@@ -20,8 +20,8 @@ public class TreeNode implements Serializable{
     private String value;
     private double dValue;
     private List<TreeNode> children;
-    // Edd added, it will help a lot when
     private int valueId;
+    final private List<String> valueHistory; // now I'm adding this just have it as a string to move to the client
 
     public TreeNode(){
         heading = null;
@@ -29,16 +29,18 @@ public class TreeNode implements Serializable{
         value = null;
         dValue = 0;
         children = new ArrayList<>();
+        valueHistory = null;
     }
 
     // for a single value, it's here that it will have a value id
-    public TreeNode(String name, String value, double dValue, int valueId) {
+    public TreeNode(String name, String value, double dValue, int valueId, List<String> valueHistory) {
         this.heading = null;
         this.children = new ArrayList<>();
         this.name = name;
         this.value = value;
         this.dValue = dValue;
         this.valueId = valueId;
+        this.valueHistory = valueHistory;
     }
 
     public TreeNode(String heading, String name, String value, double dValue, List<TreeNode> children){
@@ -48,6 +50,7 @@ public class TreeNode implements Serializable{
         this.value = value;
         this.dValue = dValue;
         this.valueId = 0;
+        this.valueHistory = null;
     }
 
     public void setHeading(String heading){
@@ -93,5 +96,9 @@ public class TreeNode implements Serializable{
 
     public void setValueId(int valueId) {
         this.valueId = valueId;
+    }
+
+    public List<String> getValueHistory() {
+        return valueHistory;
     }
 }

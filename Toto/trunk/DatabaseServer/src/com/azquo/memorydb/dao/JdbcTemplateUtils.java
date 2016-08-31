@@ -80,6 +80,18 @@ public class JdbcTemplateUtils {
         }
     }
 
+    // added for value history
+    static <T> List<T> query(String sql, MapSqlParameterSource paramMap, RowMapper<T> rowMapper){
+        try{
+            return jdbcTemplate.query(sql, paramMap, rowMapper);
+        } catch (DataAccessException e){
+            e.printStackTrace();
+            System.out.println("JDBC Error on " + sql);
+            System.out.println("\ntrying again");
+            return jdbcTemplate.query(sql, paramMap, rowMapper);
+        }
+    }
+
     static <T> T queryForObject(String sql, Map<String, ?> paramMap, Class<T> requiredType) {
         try{
             return jdbcTemplate.queryForObject(sql,paramMap,requiredType);

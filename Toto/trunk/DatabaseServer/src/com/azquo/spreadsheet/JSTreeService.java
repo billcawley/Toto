@@ -22,26 +22,6 @@ import java.util.*;
  */
 public class JSTreeService {
 
-    public static Set<Name> interpretNameFromStrings(DatabaseAccessToken databaseAccessToken, Set<String> nameStrings) throws Exception {
-        Set<Name> names = new HashSet<>();
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        for (String nString : nameStrings) {
-            Name name = NameService.findByName(azquoMemoryDBConnection, nString);
-            if (name != null) names.add(name);
-        }
-        return names;
-    }
-
-    public static Set<Name> interpretNameFromIds(DatabaseAccessToken databaseAccessToken, Set<Integer> ids) throws Exception {
-        Set<Name> names = new HashSet<>();
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        for (int id : ids) {
-            Name name = NameService.findById(azquoMemoryDBConnection, id);
-            if (name != null) names.add(name);
-        }
-        return names;
-    }
-
     public static List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
         return NameService.attributeList(azquoMemoryDBConnection);

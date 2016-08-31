@@ -1964,7 +1964,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 return nameCountProvenance(azquoCell);
             }
             if (valuesForCell.getValues() != null) {
-                return nodify(valuesForCell.getValues(), maxSize);
+                return nodify(azquoMemoryDBConnection, valuesForCell.getValues(), maxSize);
             }
             if (azquoCell.getRowHeadings().get(0).getAttribute() != null || azquoCell.getColumnHeadings().get(0).getAttribute() != null) {
                 if (azquoCell.getRowHeadings().get(0).getAttribute() != null) { // then col name, row attribute
@@ -2037,7 +2037,21 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     // for inspect database I think - should be moved to the JStree service maybe?
-    public static TreeNode getDataList(Set<Name> names, int maxSize) throws Exception {
+    public static TreeNode getDataList(DatabaseAccessToken databaseAccessToken, Set<String> nameStrings, Set<Integer> nameIds, int maxSize) throws Exception {
+        Set<Name> names = new HashSet<>();
+        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        if (nameStrings != null){
+            for (String nString : nameStrings) {
+                Name name = NameService.findByName(azquoMemoryDBConnection, nString);
+                if (name != null) names.add(name);
+            }
+        }
+        if (nameIds != null){
+            for (int id : nameIds) {
+                Name name = NameService.findById(azquoMemoryDBConnection, id);
+                if (name != null) names.add(name);
+            }
+        }
         List<Value> values = null;
         String heading = "";
         for (Name name : names) {
@@ -2053,14 +2067,14 @@ Callable interface sorts the memory "happens before" using future gets which run
         TreeNode toReturn = new TreeNode();
         toReturn.setHeading(heading);
         toReturn.setValue("");
-        toReturn.setChildren(nodify(values, maxSize));
+        toReturn.setChildren(nodify(getConnectionFromAccessToken(databaseAccessToken), values, maxSize));
         ValueService.addNodeValues(toReturn);
         return toReturn;
     }
 
     // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
     // for provenance?
-    private static List<TreeNode> nodify(List<Value> values, int maxSize) {
+    private static List<TreeNode> nodify(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, int maxSize) {
         List<TreeNode> toReturn = new ArrayList<>();
         if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
             ValueService.sortValues(values);
@@ -2073,14 +2087,14 @@ Callable interface sorts the memory "happens before" using future gets which run
                     oneUpdate.add(value);
                     p = value.getProvenance();
                 } else {
-                    toReturn.add(ValueService.getTreeNode(oneUpdate, p, maxSize));
+                    toReturn.add(ValueService.getTreeNode(azquoMemoryDBConnection, oneUpdate, p, maxSize));
                     oneUpdate = new HashSet<>();
                     oneUpdate.add(value);
                     p = value.getProvenance();
                     provdate = value.getProvenance().getTimeStamp();
                 }
             }
-            toReturn.add(ValueService.getTreeNode(oneUpdate, p, maxSize));
+            toReturn.add(ValueService.getTreeNode(azquoMemoryDBConnection, oneUpdate, p, maxSize));
         }
         return toReturn;
     }

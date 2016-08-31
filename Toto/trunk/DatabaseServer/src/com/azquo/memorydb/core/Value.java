@@ -154,6 +154,19 @@ public final class Value extends AzquoMemoryDBEntity {
         return buffer.array();
     }
 
+    public byte[] getNameIdsAsBytesSorted() {
+        getNameIdsAsBytesCount.incrementAndGet();
+        ByteBuffer buffer = ByteBuffer.allocate(names.length * 4);
+        Name[] namesCopy = new Name[names.length];
+        // could exception if names is changed in the mean time? In fact that may apply to the above?
+        System.arraycopy(names, 0, namesCopy, 0, names.length);
+        Arrays.sort(namesCopy, Comparator.comparing(Name::getId)); // I think that will sort it!
+        for (Name name : namesCopy) {
+            buffer.putInt(name.getId());
+        }
+        return buffer.array();
+    }
+
     static void printFunctionCountStats() {
         System.out.println("######### VALUE FUNCTION COUNTS");
         System.out.println("newValueCount\t\t\t\t\t\t\t\t" + newValueCount.get());

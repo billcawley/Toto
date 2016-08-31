@@ -632,13 +632,14 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger getNameByAttribute2Count = new AtomicInteger(0);
 
-    public Name getNameByAttribute(final List<String> attributeNames, final String attributeValue, final Name parent) {
+    public Name getNameByAttribute(final List<String> attributeNames, final String attributeValue, final Name parent) throws Exception {
         getNameByAttribute2Count.incrementAndGet();
         Set<Name> possibles = getNamesForAttributeNamesAndParent(attributeNames, attributeValue, parent);
         // all well and good but now which one to return?
         if (possibles.size() == 1) { // simple
             return possibles.iterator().next();
         } else if (possibles.size() > 1) { // more than one . . . try and replicate logic that was there before
+            // what happens here is a bit arbitrary! Perhaps standardise
             if (parent == null) { // no parent criteria
                 for (Name possible : possibles) {
                     if (!possible.hasParents()) { // we chuck back the first top level one. Not sure this is the best logic, more than one possible with no top levels means return null
@@ -648,6 +649,7 @@ public final class AzquoMemoryDB {
             } else { // if there were more than one found taking into account parent criteria simply return the first
                 return possibles.iterator().next();
             }
+            throw new Exception("Found more than one name for " + attributeValue);
         }
         return null;
     }

@@ -208,7 +208,7 @@ class RMIImplementation implements RMIInterface {
 
     public TreeNode getJstreeDataForOutputUsingNames(DatabaseAccessToken databaseAccessToken, Set<String> nameNames, int maxSize) throws RemoteException {
         try {
-            return DSSpreadsheetService.getDataList(JSTreeService.interpretNameFromStrings(databaseAccessToken, nameNames), maxSize);
+            return DSSpreadsheetService.getDataList(databaseAccessToken, nameNames, null, maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -216,7 +216,7 @@ class RMIImplementation implements RMIInterface {
 
     public TreeNode getJstreeDataForOutputUsingIds(DatabaseAccessToken databaseAccessToken, Set<Integer> nameIds, int maxSize) throws RemoteException {
         try {
-            return DSSpreadsheetService.getDataList(JSTreeService.interpretNameFromIds(databaseAccessToken, nameIds), maxSize);
+            return DSSpreadsheetService.getDataList(databaseAccessToken, null, nameIds, maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

@@ -26,6 +26,7 @@ public class MySQLDatabaseManager {
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE = utf8mb4_unicode_ci AUTO_INCREMENT=1  ;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         NameDAO.createFastTableIfItDoesntExist(databaseName);
         ValueDAO.createFastTableIfItDoesntExist(databaseName);
+        ValueDAO.createValueHistoryTableIfItDoesntExist(databaseName);
     }
 
     public static void emptyDatabase(String databaseName) throws IOException {
@@ -33,6 +34,7 @@ public class MySQLDatabaseManager {
         JdbcTemplateUtils.update("truncate `" + databaseName + "`.provenance", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         JdbcTemplateUtils.update("truncate `" + databaseName + "`." + NameDAO.FASTNAME, JsonRecordDAO.EMPTY_PARAMETERS_MAP);
         JdbcTemplateUtils.update("truncate `" + databaseName + "`." + ValueDAO.FASTVALUE, JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        JdbcTemplateUtils.update("truncate `" + databaseName + "`." + ValueDAO.VALUEHISTORY, JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
     public static void dropDatabase(String databaseName) throws IOException {
