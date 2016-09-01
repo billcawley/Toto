@@ -9,6 +9,7 @@ import java.io.Serializable;
  */
 public class RegionOptions implements Serializable {
     public final int hideRows;
+    public final int hideCols;
     public final boolean sortable;
     public final int rowLimit;
     public final int columnLimit;
@@ -22,8 +23,9 @@ public class RegionOptions implements Serializable {
     public final boolean noSave;
     public final String database;
 
-    public RegionOptions(int hideRows, boolean sortable, int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn, boolean sortColumnAsc, int highlightDays, String rowLanguage, String columnLanguage, boolean noSave, String database) {
+    public RegionOptions(int hideRows, int hideCols, boolean sortable, int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn, boolean sortColumnAsc, int highlightDays, String rowLanguage, String columnLanguage, boolean noSave, String database) {
         this.hideRows = hideRows;
+        this.hideCols = hideCols;
         this.sortable = sortable;
         this.rowLimit = rowLimit;
         this.columnLimit = columnLimit;
