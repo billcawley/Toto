@@ -51,11 +51,9 @@ public class ZKAzquoBookUtils {
     public static final String AZCONTEXT = "az_context";
     public static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
     public static final String AZCONTEXTFILTERS = "az_contextfilters";
-    public static final String AZCONTEXTCHOICES = "az_contextchoices";
+    public static final String AZCONTEXTHEADINGS = "az_contextheadings";
     public static final String AZPIVOTHEADINGS = "az_pivotheadings";//old version
      public static final String AZREPORTNAME = "az_reportname";
-    public static final String AZCOLUMNFILTERS = "az_columnfilters";
-    public static final String AZCOLUMNCHOICES = "az_columnchoices";//position of column filter choices on screen
 
 
 
@@ -363,7 +361,7 @@ public class ZKAzquoBookUtils {
                 if (name.getName().equalsIgnoreCase("az_FastLoad")) {
                     fastLoad = true;
                 }
-                if (name.getName().equals("ImageStoreName")) {
+                if (name.getName().equals("az_ImageStoreName")) {
                     imageStoreName = getRegionValue(sheet, name.getRefersToCellRegion());
                 }
                 if (name.getName().startsWith(AZDATAREGION)) { // then we have a data region to deal with here
@@ -757,15 +755,14 @@ public class ZKAzquoBookUtils {
                         int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
                         Range copySource = Ranges.range(sheet, topRow, insertCol - 1, maxRow, insertCol - 1);
                         int colHeadingRows = cellsAndHeadingsForDisplay.getColHeadingsSource().size();
-                        int copyCount = 1;
-                        if (colHeadingRows>1) {
-                              for (int i = 0;i <colHeadingRows-1;i++) {
-                                   String topLeftHeading = cellsAndHeadingsForDisplay.getColHeadingsSource().get(0).get(i);
-                                   copyCount *= getDropdownListForQuery(loggedInUser, topLeftHeading).size();
-                               }
+                        String lastColHeading = cellsAndHeadingsForDisplay.getColHeadingsSource().get(colHeadingRows-1).get(0);
+                        int repeatCount = cellsAndHeadingsForDisplay.getColHeadingsSource().get(0).size();
+                        if (repeatCount == 1){
+                            repeatCount = getDropdownListForQuery(loggedInUser,lastColHeading).size();
+
                         }
-                        if (copyCount> 1) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
-                            int repeatCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / copyCount;
+                         if (repeatCount> 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
+                            int copyCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / repeatCount;
                             if (repeatCount > displayDataRegion.getColumnCount()){
                                 colsToAdd = repeatCount - displayDataRegion.getColumnCount();
                                 Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col
@@ -1386,7 +1383,7 @@ public class ZKAzquoBookUtils {
             String rangeName = name.getName().toLowerCase();
             if (rangeName.startsWith(AZPIVOTFILTERS) || rangeName.startsWith(AZCONTEXTFILTERS) ) {//the correct version should be 'az_ContextFilters'
                 String[] filters = getSnameCell(name).getStringValue().split(",");
-                SName contextChoices = book.getInternalBook().getNameByName(AZCONTEXTCHOICES);
+                SName contextChoices = book.getInternalBook().getNameByName(AZCONTEXTHEADINGS);
                 if (contextChoices == null) {
                     //original name...
                     contextChoices = book.getInternalBook().getNameByName(AZPIVOTHEADINGS);
@@ -1395,14 +1392,6 @@ public class ZKAzquoBookUtils {
                     showChoices(loggedInUser,book,contextChoices,filters,3);
                  }
             }
-            if (rangeName.startsWith(AZCOLUMNFILTERS)) {
-                String[] filters = getSnameCell(name).getStringValue().split(",");
-                SName columnChoices = book.getInternalBook().getNameByName(AZCOLUMNCHOICES);
-                   if (columnChoices != null) {
-                    showChoices(loggedInUser,book,columnChoices,filters,1);
-                }
-            }
-
             if (name.getName().toLowerCase().endsWith("choice")) {
                 String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
                 SCell choiceCell = getSnameCell(name);
