@@ -58,6 +58,7 @@ public final class UserRegionOptionsDAO {
                         , rs.getInt(REPORTID)
                         , rs.getString(REGION)
                         ,0
+                        ,0
                         ,false
                         ,0
                         ,0
