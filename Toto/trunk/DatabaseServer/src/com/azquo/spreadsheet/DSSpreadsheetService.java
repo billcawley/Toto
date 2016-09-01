@@ -343,8 +343,9 @@ public class DSSpreadsheetService {
     and the listToPermute is the contents of the permute function e.g. permute(`Product category`, `Product subcategory`) in Nisbets
     */
 
-    private static List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute) throws Exception {
+    private static List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<List<DataRegionHeading>> headingRow) throws Exception {
         NumberFormat nf = NumberFormat.getInstance();
+        List<DataRegionHeading> listToPermute = headingRow.get(0);
         long startTime = System.currentTimeMillis();
         List<Collection<Name>> sharedNamesSets = new ArrayList<>();
         List<Name> permuteNames = new ArrayList<>();
@@ -440,9 +441,12 @@ public class DSSpreadsheetService {
             }
             sortLists.add(sortList);
         }
-        List<List<DataRegionHeading>> toReturn = sortCombos(listToPermute, foundCombinations, 0, sortLists);
+        List<List<DataRegionHeading>> permuted = sortCombos(listToPermute, foundCombinations, 0, sortLists);
+        for (int i=1;i < headingRow.size();i++){
+                permuted = get2DArrayWithAddedPermutation(permuted,headingRow.get(i));
+        }
         System.out.println("Headings sorted in " + nf.format((System.currentTimeMillis() - startTime)));
-        return toReturn;
+        return permuted;
     }
 
     /*
@@ -561,7 +565,7 @@ public class DSSpreadsheetService {
                 headingDefinitionRowIndex++;
             }
             if (headingDefinitionRow.get(0) != null && headingDefinitionRow.get(0).size() > 0 && headingDefinitionRow.get(0).get(0) != null && headingDefinitionRow.get(0).get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
-                List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, headingDefinitionRow.get(0));//assumes only one row of headings, it's a list of the permute names
+                List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, headingDefinitionRow);//assumes only one row of headings, it's a list of the permute names
                 permutedLists.add(permuted);
             } else {
                 List<List<DataRegionHeading>> permuted = get2DPermutationOfLists(headingDefinitionRow);
