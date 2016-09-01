@@ -18,6 +18,7 @@ public class UserRegionOptions extends StandardEntity {
     private final int reportId;
     private final String region;
     private int hideRows;
+    private int hideCols;
     private boolean sortable;
     // if set these will default to a total descending sort
     private int rowLimit;
@@ -33,7 +34,7 @@ public class UserRegionOptions extends StandardEntity {
     private String rowLanguage;
     private String columnLanguage;
 
-    UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, boolean sortable
+    UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideCols, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
             , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage) {
         this.id = id;
@@ -41,6 +42,7 @@ public class UserRegionOptions extends StandardEntity {
         this.reportId = reportId;
         this.region = region;
         this.hideRows = hideRows;
+        this.hideCols = hideCols;
         this.sortable = sortable;
         this.rowLimit = rowLimit;
         this.columnLimit = columnLimit;
@@ -64,7 +66,9 @@ public class UserRegionOptions extends StandardEntity {
         this.reportId = reportId;
         this.region = region;
         String SPREADSHEETHIDEROWS = "hiderows";
+        String SPREADSHEETHIDECOLS = "hidecols";
         hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS, spreadsheetSource));
+        hideCols = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDECOLS, spreadsheetSource));
         if (hideRows == 0) {
             String SPREADSHEETHIDEROWS2 = "hiderowvalues";
             hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS2, spreadsheetSource));
@@ -239,7 +243,7 @@ public class UserRegionOptions extends StandardEntity {
 
     // As mentioned in RegionOptions,
     public RegionOptions getRegionOptionsForTransport(){
-        return new RegionOptions(hideRows,sortable,rowLimit,columnLimit,sortRow,sortRowAsc,sortColumn,sortColumnAsc,highlightDays, rowLanguage, columnLanguage, noSave, databaseName);
+        return new RegionOptions(hideRows,hideCols,sortable,rowLimit,columnLimit,sortRow,sortRowAsc,sortColumn,sortColumnAsc,highlightDays, rowLanguage, columnLanguage, noSave, databaseName);
     }
 
     public String getRowLanguage() {
@@ -274,6 +278,7 @@ public class UserRegionOptions extends StandardEntity {
                 ", reportId=" + reportId +
                 ", region='" + region + '\'' +
                 ", hideRows=" + hideRows +
+                ", hideCols=" + hideCols +
                 ", sortable=" + sortable +
                 ", rowLimit=" + rowLimit +
                 ", columnLimit=" + columnLimit +
