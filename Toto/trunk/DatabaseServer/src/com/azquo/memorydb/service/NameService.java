@@ -112,9 +112,9 @@ public final class NameService {
         for (String nameString : nameStrings) {
             Name toAdd = findNameAndAttribute(azquoMemoryDBConnection, nameString, attributeNames);
             // a hack for pivot filters, should this be here?
-            if (toAdd==null && nameString.startsWith("az_")){
+            if (toAdd == null && nameString.startsWith("az_")) {
                 //to handle pivot filters...
-                toAdd = findNameAndAttribute(azquoMemoryDBConnection,nameString.substring(3),attributeNames);
+                toAdd = findNameAndAttribute(azquoMemoryDBConnection, nameString.substring(3), attributeNames);
             }
             if (toAdd == null) {
                 throw new Exception("error: cannot resolve reference to a name " + nameString);
@@ -379,7 +379,11 @@ public final class NameService {
             if (local) {// ok looking only below that parent or just in it's whole set or top parent.
                 existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, parent);
                 if (existing == null) { // couldn't find local - try for one which has no parents or children, that's allowable for local (to be moved)
-                    existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+                    try {
+                        existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+                    } catch (Exception ignored) { // ignore the Found more than one name exception
+                        existing = null;
+                    }
                     if (existing != null && (existing.hasParents() || existing.hasChildren())) {
                         existing = null;
                     }
@@ -387,11 +391,19 @@ public final class NameService {
                 if (profile)
                     marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
             } else {// so we ignore parent if not local, we'll grab what we can to move it into the right parent set
-                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+                try {
+                    existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+                } catch (Exception ignored) { // ignore the Found more than one name exception
+                    existing = null;
+                }
             }
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent3", marker);
         } else { // no parent passed go for a vanilla lookup
-            existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+            try {
+                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+            } catch (Exception ignored) { // ignore the Found more than one name exception
+                existing = null;
+            }
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent4", marker);
         }
         if (existing != null) {
@@ -468,8 +480,8 @@ public final class NameService {
                 //carry on regardless!
             }
         }
-        if (level < 0){
-            return findParentsAtLevel(name,-level);
+        if (level < 0) {
+            return findParentsAtLevel(name, -level);
         }
 
         if (level == 1) { // then no need to get clever, just return the children
@@ -831,12 +843,12 @@ public final class NameService {
                     //System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
                     Collection<Name> lastName = nameStack.get(stackCount).getAsCollection();
                     // if filtering brand it means az_brand - this is for the pivot functionality, pivot filter and pivot header
-                    if (lastName.size()==1){
+                    if (lastName.size() == 1) {
                         Name setName = lastName.iterator().next();
                         lastName = setName.findAllChildren();
-                        if (lastName.size()==0 && setName.getDefaultDisplayName().startsWith("az_")){
-                            setName = findByName(azquoMemoryDBConnection,setName.getDefaultDisplayName().substring(3));
-                            if (setName!=null){
+                        if (lastName.size() == 0 && setName.getDefaultDisplayName().startsWith("az_")) {
+                            setName = findByName(azquoMemoryDBConnection, setName.getDefaultDisplayName().substring(3));
+                            if (setName != null) {
                                 lastName = setName.getChildren();
                             }
                         }
@@ -1003,12 +1015,12 @@ public final class NameService {
         return toReturn;
     }
 
-    private static String getAttributeSetTerm(String term, List<Name> referencedNames, List<String>strings) throws Exception{
+    private static String getAttributeSetTerm(String term, List<Name> referencedNames, List<String> strings) throws Exception {
         term = term.trim();
-        if (term.startsWith("\"")){
+        if (term.startsWith("\"")) {
             return strings.get(Integer.parseInt(term.substring(1, 3))).toLowerCase();
         }
-        if (term.startsWith(NameService.NAMEMARKER + "")){
+        if (term.startsWith(NameService.NAMEMARKER + "")) {
             return getNameFromListAndMarker(term, referencedNames).getDefaultDisplayName();
         }
         return term;
@@ -1210,7 +1222,7 @@ public final class NameService {
                     valRhs = strings.get(Integer.parseInt(clauseRhs.substring(1, 3)));// anything left in quotes is referenced in the strings list
                     fixed = true;
                     //assume here that date will be of the form yyyy-mm-dd
-                    if (DSImportService.isADate(valRhs)!=null){
+                    if (DSImportService.isADate(valRhs) != null) {
                         isADate = true;
                     }
                 }
@@ -1222,7 +1234,7 @@ public final class NameService {
                     if (valLhs == null) {
                         valLhs = "";
                     }
-                    if (isADate){
+                    if (isADate) {
                         valLhs = standardizeDate(valLhs);
                     }
                     if (!fixed) {
@@ -1259,25 +1271,25 @@ public final class NameService {
         return toReturn; // its appropriate member collection should have been modified via namesToFilter above, return it
     }
 
-    private static String standardizeDate(String oldDate){
+    private static String standardizeDate(String oldDate) {
         //dates may be stored in many forms - this attempts to standardize them to yyyy-mm-dd hh:mm:ss
         //IT CANNOT DETECT US DATES!
-        if (oldDate.length() < 8 || oldDate.charAt(4) == '-'){
+        if (oldDate.length() < 8 || oldDate.charAt(4) == '-') {
             return oldDate;
         }
         String newDate = oldDate;
-        if (oldDate.charAt(2) == '-' || oldDate.charAt(2)=='/' || oldDate.charAt(2) == '.'){
-            String monthDay = oldDate.substring(3,5) + "-" + oldDate.substring(0,2);
-            if (oldDate.length() == 8 || oldDate.charAt(8) == ' '){
-                newDate = "20" + oldDate.substring(6,8) + "-" + monthDay;
-                if (oldDate.length() > 9){
+        if (oldDate.charAt(2) == '-' || oldDate.charAt(2) == '/' || oldDate.charAt(2) == '.') {
+            String monthDay = oldDate.substring(3, 5) + "-" + oldDate.substring(0, 2);
+            if (oldDate.length() == 8 || oldDate.charAt(8) == ' ') {
+                newDate = "20" + oldDate.substring(6, 8) + "-" + monthDay;
+                if (oldDate.length() > 9) {
                     newDate += oldDate.substring(8);
                 }
-            }else{
-                if (oldDate.length()==10 || oldDate.charAt(10) == ' '){
-                    newDate = oldDate.substring(6,10) + "-" + monthDay;
+            } else {
+                if (oldDate.length() == 10 || oldDate.charAt(10) == ' ') {
+                    newDate = oldDate.substring(6, 10) + "-" + monthDay;
                 }
-                if (oldDate.length() > 11){
+                if (oldDate.length() > 11) {
                     newDate += oldDate.substring(10);
                 }
             }
@@ -1382,7 +1394,7 @@ public final class NameService {
 
     // in parse query, we want to find any names with that attribute and value e.g. "BORNIN", "GUILDFORD"
 
-    private static Set<Name> attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, String attributeValue){
+    private static Set<Name> attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, String attributeValue) {
         List<String> attributeNames = new ArrayList<>();
         attributeNames.add(attributeName);
         return azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, attributeValue, null);
