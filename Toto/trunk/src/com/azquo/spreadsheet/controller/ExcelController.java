@@ -12,11 +12,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static javax.xml.bind.DatatypeConverter.parseBase64Binary;
 
 /**
  * Created by edward on 04/08/16.
@@ -92,8 +97,12 @@ public class ExcelController {
         String fileName = data.getOriginalFilename();
         // always move uplaoded files now, they'll need to be transferred to the DB server after code split
         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + fileName);
-        data.transferTo(moved);
-        // need to add in code similar to report loading to give feedback on imports
+        FileOutputStream fos  = new FileOutputStream(moved);
+        byte[] byteArray = data.getBytes();
+        String s = new String(byteArray);
+        fos.write(parseBase64Binary(s));
+        fos.close();
+         // need to add in code similar to report loading to give feedback on imports
         try {
             List<String> languages = new ArrayList<>(loggedInUser.getLanguages());
             languages.remove(loggedInUser.getUser().getEmail());
