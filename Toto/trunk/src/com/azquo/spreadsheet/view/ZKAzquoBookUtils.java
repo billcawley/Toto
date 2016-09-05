@@ -754,14 +754,23 @@ public class ZKAzquoBookUtils {
                         }
                         int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
                         Range copySource = Ranges.range(sheet, topRow, insertCol - 1, maxRow, insertCol - 1);
-                        int colHeadingRows = cellsAndHeadingsForDisplay.getColHeadingsSource().size();
-                        String lastColHeading = cellsAndHeadingsForDisplay.getColHeadingsSource().get(colHeadingRows-1).get(0);
-                        int repeatCount = cellsAndHeadingsForDisplay.getColHeadingsSource().get(0).size();
-                        if (repeatCount == 1){
+                         List<List<String>> colHeadingsSource = cellsAndHeadingsForDisplay.getColHeadingsSource();
+                        int colHeadingRow = colHeadingsSource.size();
+                        String lastColHeading = colHeadingsSource.get(colHeadingRow-1).get(0);
+                        int repeatCount = 1;
+                        if (!lastColHeading.startsWith(".")){
                             repeatCount = getDropdownListForQuery(loggedInUser,lastColHeading).size();
-
                         }
-                         if (repeatCount> 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
+                        boolean repeating = false;
+                        colHeadingRow--;
+                        //if the last line is a set, is one of the lines above also a set - if so this is a permutation
+                        while (colHeadingRow-- > 0){
+                            if (getDropdownListForQuery(loggedInUser, colHeadingsSource.get(colHeadingRow).get(0)).size() > 0){
+                                repeating = true;
+                                break;
+                            }
+                        }
+                        if (repeating && repeatCount> 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
                             int copyCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / repeatCount;
                             if (repeatCount > displayDataRegion.getColumnCount()){
                                 colsToAdd = repeatCount - displayDataRegion.getColumnCount();
