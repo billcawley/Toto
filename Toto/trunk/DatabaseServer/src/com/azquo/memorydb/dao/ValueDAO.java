@@ -183,7 +183,7 @@ public class ValueDAO {
 
     // currently a copy of the value table with additional index but for the purposes of lookup the name ids need to be ordered
 
-    static void createValueHistoryTableIfItDoesntExist(final String databaseName){
+    public static void createValueHistoryTableIfItDoesntExist(final String databaseName){
         JdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + VALUEHISTORY + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +
