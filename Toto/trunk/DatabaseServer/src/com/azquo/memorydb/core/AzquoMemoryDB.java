@@ -4,11 +4,15 @@ import com.azquo.memorydb.dao.*;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
+import net.openhft.koloboke.collect.map.hash.HashObjObjMap;
+import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.text.NumberFormat;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,6 +53,12 @@ public final class AzquoMemoryDB {
     private final Map<Integer, Name> nameByIdMap;
     private final Map<Integer, Value> valueByIdMap;
     private final Map<Integer, Provenance> provenanceByIdMap;
+
+    // to manage value locking, first says when a given user last put on a lock
+    private final Map<String, LocalDateTime> valueLockTimes;
+    // and the specific values which are locked
+    private final Map<Value, String> valueLocks;
+
 
     // does this database need loading from the data store, a significant flag that affects rules for memory db entity instantiation for example
     private boolean needsLoading;
@@ -120,6 +130,9 @@ public final class AzquoMemoryDB {
         System.out.println("number of values : " + numberOfValues);*/
         valueByIdMap = new ConcurrentHashMap<>();
         provenanceByIdMap = new ConcurrentHashMap<>();
+
+        valueLockTimes = new ConcurrentHashMap<>();
+        valueLocks = new ConcurrentHashMap<>();
 
         jsonEntitiesToPersist = new ConcurrentHashMap<>();
         namesToPersist = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -270,6 +283,7 @@ public final class AzquoMemoryDB {
     private static AtomicInteger loadDataCount = new AtomicInteger(0);
 
     synchronized private void loadData() {
+        ValueDAO.createValueHistoryTableIfItDoesntExist(getPersistenceName());
         loadDataCount.incrementAndGet();
         boolean memoryTrack = "true".equals(azquoProperties.getProperty("memorytrack"));
         if (needsLoading) { // only allow it once!
@@ -1053,6 +1067,55 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
 
     public long getLastModifiedTimeStamp(){
         return lastModified.get();
+    }
+
+    // note - this function will NOT check for existing locks for thee values, it just sets the time and values
+    public void setValuesLockForUser(Collection<Value> values, String userId){
+        valueLockTimes.put(userId, LocalDateTime.now());
+        for (Value value : values){
+            valueLocks.put(value, userId);
+        }
+    }
+
+    public void removeValuesLockForUser(String userId){
+        if (valueLockTimes.remove(userId) != null){ // only check the values if there was an entry in time so to speak
+            valueLocks.values().removeAll(Collections.singleton(userId)); // need to force a collection rather than an instance to remove all values in the map that match. Hence do NOT remove .singleton here!
+        }
+    }
+
+    public void removeOldLocks(int minutesAllowed){
+        for (String user : valueLockTimes.keySet()){
+            final LocalDateTime lockTime = valueLockTimes.get(user);
+            if (ChronoUnit.MINUTES.between(lockTime, LocalDateTime.now()) > minutesAllowed){
+                removeValuesLockForUser(user);
+            }
+        }
+    }
+
+    public String checkLocksForValue(Value v){
+        String user = valueLocks.get(v);
+        if (user != null){
+            return user + ", time : " + valueLockTimes.get(user); // maybe we can pass the formatting to the client later, or this could be considered a db message
+        }
+        return null;
+    }
+
+    public boolean hasLocks(){
+        return !valueLockTimes.isEmpty();
+    }
+
+    public String checkLocksForValueAndUser(String userId, Set<Value> valuesToCheck){
+        if (valueLockTimes.isEmpty() || (valueLockTimes.size() == 1 && valueLockTimes.get(userId) != null)) {
+            return null; // what I'll call "ok" for the mo
+        }
+        Map<Value, String> locksCopy = HashObjObjMaps.newMutableMap(valueLocks);
+        locksCopy.values().removeAll(Collections.singleton(userId)); // so all the locks that are related to this user are removed
+        locksCopy.keySet().retainAll(valuesToCheck); // this should leave in locksCopy the values locked by another user
+        if (locksCopy.size() > 0){
+            String anotherUser = locksCopy.values().iterator().next(); // just grab the first?
+            return anotherUser + ", time : " + valueLockTimes.get(anotherUser); // maybe we can pass the formatting to the client later, or this could be considered a db message
+        }
+        return null;
     }
 
     // I may change these later, for the mo I just want to stop drops and clears at the same time as persistence
