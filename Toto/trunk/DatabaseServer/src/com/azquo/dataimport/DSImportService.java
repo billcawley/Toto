@@ -1232,11 +1232,16 @@ public class DSImportService {
         if (cellWithHeading.lineValue.length() == 0) { // so nothing to do
             return;
         }
-        if (cellWithHeading.lineValue.contains(",") && !cellWithHeading.lineValue.contains(Name.QUOTE + "")) {//beware of treating commas in cells as set delimiters....
-            cellWithHeading.lineValue = Name.QUOTE + cellWithHeading.lineValue + Name.QUOTE;
+        /* ok this is important - I was adjusting cellWithHeading.lineValue to add quotes,
+        this was not clever as it's referenced in other places (goes back to the idea that ideally this would be immutable)
+        So make a local reference to add quotes to or whatever
+         */
+        String cellWithHeadingLineValue = cellWithHeading.lineValue;
+        if (cellWithHeadingLineValue.contains(",") && !cellWithHeadingLineValue.contains(Name.QUOTE + "")) {//beware of treating commas in cells as set delimiters....
+            cellWithHeadingLineValue = Name.QUOTE + cellWithHeadingLineValue + Name.QUOTE;
         }
         if (cellWithHeading.lineName == null) { // then create it, this will take care of the parents ("child of") while creating
-            cellWithHeading.lineName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeading.lineValue
+            cellWithHeading.lineName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeadingLineValue
                     , cellWithHeading.immutableImportHeading.parentNames, cellWithHeading.immutableImportHeading.isLocal, setLocalLanguage(cellWithHeading.immutableImportHeading, attributeNames));
         } else { // it existed (created below as a child name), sort parents if necessary
             for (Name parent : cellWithHeading.immutableImportHeading.parentNames) { // apparently there can be multiple child ofs, put the name for the line in the appropriate sets, pretty vanilla based off the parents set up
