@@ -754,24 +754,8 @@ public class ZKAzquoBookUtils {
                         }
                         int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
                         Range copySource = Ranges.range(sheet, topRow, insertCol - 1, maxRow, insertCol - 1);
-                         List<List<String>> colHeadingsSource = cellsAndHeadingsForDisplay.getColHeadingsSource();
-                        int colHeadingRow = colHeadingsSource.size();
-                        String lastColHeading = colHeadingsSource.get(colHeadingRow-1).get(0);
-                        int repeatCount = 1;
-                        if (!lastColHeading.startsWith(".")){
-                            repeatCount = getDropdownListForQuery(loggedInUser,lastColHeading).size();
-                        }
-                        boolean repeating = false;
-                        colHeadingRow--;
-                        //if the last line is a set, is one of the lines above also a set - if so this is a permutation
-                        while (colHeadingRow-- > 0){
-                            String colHeading = colHeadingsSource.get(colHeadingRow).get(0);
-                            if (colHeading.toLowerCase().startsWith("permute(") || getDropdownListForQuery(loggedInUser, colHeading).size() > 0){
-                                repeating = true;
-                                break;
-                            }
-                        }
-                        if (repeating && repeatCount> 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
+                        int repeatCount = getRepeatCount(loggedInUser, cellsAndHeadingsForDisplay.getColHeadingsSource());
+                        if (repeatCount> 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
                             int copyCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / repeatCount;
                             if (repeatCount > displayDataRegion.getColumnCount()){
                                 colsToAdd = repeatCount - displayDataRegion.getColumnCount();
@@ -1149,6 +1133,33 @@ public class ZKAzquoBookUtils {
                 row++;
             }
         }
+    }
+
+    private static int getRepeatCount(LoggedInUser loggedInUser,List<List<String>> colHeadingsSource){
+        int colHeadingRow = colHeadingsSource.size();
+        String lastColHeading = colHeadingsSource.get(colHeadingRow-1).get(0);
+        boolean repeating = false;
+        int repeatCount = 1;
+        if (!lastColHeading.startsWith(".")){
+            if (lastColHeading.toLowerCase().startsWith("permute")){
+                  return 1;//permutes are unpredictable unless followed by a set
+             }
+            repeatCount = getDropdownListForQuery(loggedInUser,lastColHeading).size();
+        }
+        colHeadingRow--;
+        //if the last line is a set, is one of the lines above also a set - if so this is a permutation
+        while (!repeating && colHeadingRow-- > 0){
+            String colHeading = colHeadingsSource.get(colHeadingRow).get(0);
+            if (colHeading.toLowerCase().startsWith("permute(") || getDropdownListForQuery(loggedInUser, colHeading).size() > 0){
+                return repeatCount;
+            }
+        }
+        if (!repeating){
+            return 1;
+        }
+        return repeatCount;
+
+
     }
 
     private static int getMaxCol(Sheet sheet) {
