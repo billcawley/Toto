@@ -765,7 +765,8 @@ public class ZKAzquoBookUtils {
                         colHeadingRow--;
                         //if the last line is a set, is one of the lines above also a set - if so this is a permutation
                         while (colHeadingRow-- > 0){
-                            if (getDropdownListForQuery(loggedInUser, colHeadingsSource.get(colHeadingRow).get(0)).size() > 0){
+                            String colHeading = colHeadingsSource.get(colHeadingRow).get(0);
+                            if (colHeading.toLowerCase().startsWith("permute(") || getDropdownListForQuery(loggedInUser, colHeading).size() > 0){
                                 repeating = true;
                                 break;
                             }
