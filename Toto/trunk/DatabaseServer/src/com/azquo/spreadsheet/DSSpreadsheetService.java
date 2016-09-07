@@ -917,9 +917,13 @@ public class DSSpreadsheetService {
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
                 , regionOptions, databaseAccessToken.getLanguages(), valueId);
         if (data.size() == 0) {
-            return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions);
+            return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
         }
         List<List<CellForDisplay>> displayData = new ArrayList<>(data.size());
+        // todo, think about race conditions here
+        Set<Value> toLock = new HashSet<>(); // change to koloboke?
+        StringBuilder lockCheckResult = new StringBuilder();
+        boolean checkLocks = azquoMemoryDBConnection.getAzquoMemoryDB().hasLocksAsideFromThisUser(databaseAccessToken.getUserId());
         for (List<AzquoCell> sourceRow : data) {
             List<CellForDisplay> displayDataRow = new ArrayList<>(sourceRow.size());
             displayData.add(displayDataRow);
@@ -942,13 +946,29 @@ public class DSSpreadsheetService {
                     System.out.println("selected cell");
                 }
                 displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored, sourceCell.isSelected()));
+                if (checkLocks && !sourceCell.isLocked() && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null){ // user locking is a moot point if the cell is already locked e.g. it's the result of a function
+                    String result = azquoMemoryDBConnection.getAzquoMemoryDB().checkLocksForValueAndUser(databaseAccessToken.getUserId(), sourceCell.getListOfValuesOrNamesAndAttributeName().getValues());
+                    if (result != null){ // it is locked
+                        lockCheckResult.append(result); // collate lock message
+                        sourceCell.setLocked(true); // and lock the cell!
+                    }
+                }
+                if (regionOptions.lockRequest && lockCheckResult.length() == 0){ // if we're going to lock gather all relevant values, stop gathering if we found data already locked
+                    if (sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null){
+                        toLock.addAll(sourceCell.getListOfValuesOrNamesAndAttributeName().getValues());
+                    }
+                }
             }
         }
+        if (lockCheckResult.length() == 0 && !toLock.isEmpty()){ // then we can lock
+            azquoMemoryDBConnection.getAzquoMemoryDB().setValuesLockForUser(toLock, databaseAccessToken.getUserId());
+        }
+
         //AzquoMemoryDB.printAllCountStats();
         //AzquoMemoryDB.clearAllCountStats();
         // this is single threaded as I assume not much data should be returned. Need to think about this.
         return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
-                , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions);
+                , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, lockCheckResult.length() > 0 ? lockCheckResult.toString() : null);
     }
 
     private static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
@@ -1767,7 +1787,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         stringValue = "";
                         doubleValue = 0;
                     }
-                    listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(valuesHook.values);// can we zap the values from here? It might be a bit of a saving if there are loads of values per cell
+                    listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(valuesHook.values);// we need this for locking among other things
                 } else {  // attributes in the cells - currently no debug on this, it should be fairly obvious
                     List<Name> names = new ArrayList<>();
                     List<String> attributes = new ArrayList<>();
@@ -1970,6 +1990,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             if (valuesForCell.getValues() != null) {
                 return nodify(azquoMemoryDBConnection, valuesForCell.getValues(), maxSize);
             }
+            // todo - in case of now row headings ( import style data) this may NPE
             if (azquoCell.getRowHeadings().get(0).getAttribute() != null || azquoCell.getColumnHeadings().get(0).getAttribute() != null) {
                 if (azquoCell.getRowHeadings().get(0).getAttribute() != null) { // then col name, row attribute
                     return nodify(azquoCell.getColumnHeadings().get(0).getName(), azquoCell.getRowHeadings().get(0).getAttribute());
@@ -2179,14 +2200,20 @@ Callable interface sorts the memory "happens before" using future gets which run
         azquoMemoryDBConnection.persist();
     }
 
+    public static void unlockData(DatabaseAccessToken databaseAccessToken) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
+        azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId());
+    }
 
-    // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
+                                  // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
+    // could I derive context from cells and headings for display? Also region. Worth considering . . .
     public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String region, String user, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         int numberOfValuesModified = 0;
-        synchronized (azquoMemoryDBConnection.getAzquoMemoryDB()) { // we don't want cuncurrent saves on a single database
+        synchronized (azquoMemoryDBConnection.getAzquoMemoryDB()) { // we don't want concurrent saves on a single database
+            azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId()); // todo - is this the palce to unlock? It's probably fair
             boolean modifiedInTheMeanTime = azquoMemoryDBConnection.getDBLastModifiedTimeStamp() != cellsAndHeadingsForDisplay.getTimeStamp(); // if true we need to check if someone else changed the data
-            // todo - in theory two saves could get past each other as the last modified will only change on the first save. Could lock with an atomic boolean
+            // todo - this saves regardless of changes in the mean time. Perhaps not the best plan . . .
             azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
             if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
                 importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);

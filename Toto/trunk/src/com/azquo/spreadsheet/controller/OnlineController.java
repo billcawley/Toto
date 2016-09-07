@@ -54,6 +54,7 @@ public class OnlineController {
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
     public static final String REPORT_ID = "REPORT_ID";
     public static final String CELL_SELECT = "CELL_SELECT";
+    public static final String LOCK_TEST = "LOCK_TEST";
 
 
     @RequestMapping(headers = "content-type=multipart/*")
@@ -71,6 +72,7 @@ public class OnlineController {
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
             , @RequestParam(value = "template", required = false) String template
             , @RequestParam(value = "execute", required = false) String execute
+            , @RequestParam(value = "locktest", required = false) String locktest
 
     ) {
         try {
@@ -189,6 +191,8 @@ public class OnlineController {
                             Book book = (Book) session.getAttribute(reportId);
                             request.setAttribute(OnlineController.BOOK, book); // push the rendered book into the request to be sent to the user
                             session.removeAttribute(reportId);// get rid of it from the session
+                            // todo sort the locking!
+                            model.put("showUnlockButton", false);
                             model.put("showSave", session.getAttribute(reportId + SAVE_FLAG));
                             model.put("masterUser", loggedInUser.getUser().isMaster());
                             model.put("templateMode", "TRUE".equalsIgnoreCase(template) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper()));
@@ -221,6 +225,7 @@ public class OnlineController {
                             final LoggedInUser finalLoggedInUser = loggedInUser;
                             final boolean templateMode = !template.isEmpty() && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper());
                             final boolean executeMode = !execute.isEmpty();
+                            final boolean lockMode = !locktest.isEmpty();
                             new Thread(() -> {
                                 // so in here the new thread we set up the loading as it was originally before
                                 try {
@@ -228,6 +233,7 @@ public class OnlineController {
                                     long newHeapMarker = oldHeapMarker;
                                     String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + finalOnlineReport.getPathname() + "/onlinereports/" + finalOnlineReport.getFilename();
                                     final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                                    book.getInternalBook().setAttribute(LOCK_TEST, lockMode); // to be removed after testing
                                     book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                                     book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);
                                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
@@ -245,6 +251,7 @@ public class OnlineController {
                                                 }
                                             }
                                         }
+                                        // todo, lock check here like execute
                                         session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
                                         if (executeMode){
                                             ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.EXECUTE); // standard, there's the option to execute the contents of a different names
@@ -301,7 +308,8 @@ public class OnlineController {
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "template", required = false, defaultValue = "") String template
             , @RequestParam(value = "execute", required = false, defaultValue = "") String execute
+            , @RequestParam(value = "locktest", required = false, defaultValue = "") String locktest
     ) {
-        return handleRequest(model, request, user, password, reportId, databaseId, permissionId, opcode, database, reportToLoad, /*dataChoice,imageStoreName, */ imageName, submit, null, template, execute);
+        return handleRequest(model, request, user, password, reportId, databaseId, permissionId, opcode, database, reportToLoad, /*dataChoice,imageStoreName, */ imageName, submit, null, template, execute, locktest);
     }
 }

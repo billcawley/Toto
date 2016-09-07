@@ -216,6 +216,7 @@ public class ZKSpreadsheetCommandController {
                                             final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
                                             if (!result.equals("true")){
                                                 Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
+                                                saveOk = false;
                                             }
                                         }
                                     }
@@ -242,6 +243,14 @@ public class ZKSpreadsheetCommandController {
                             Clients.evalJavaScript("alert(\"Save successful\")");
                         }
                     }
+
+                    if ("Unlock".equals(action)) {
+                        LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+                        // should be all that's required
+                        SpreadsheetService.unlockData(loggedInUser);
+                        Clients.evalJavaScript("document.getElementById(\"unlockButton\").style.display=\"none\";");
+                    }
+
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

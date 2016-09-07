@@ -11,6 +11,8 @@ import java.util.List;
  * I don't see much reason for this class to be mutable though the data cells can be changed
  *
  * I've added the source, the criteria sent to the DB to create the data
+ *
+ * Also going to add a lock report, a place to put it for the mo
  */
 public class CellsAndHeadingsForDisplay implements Serializable {
 
@@ -22,9 +24,10 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     private final List<List<String>> contextSource;
     private final long timeStamp;
     private final RegionOptions options;
+    private final String lockRequest;
 
     public CellsAndHeadingsForDisplay(List<List<String>> columnHeadings, List<List<String>> rowHeadings, List<List<CellForDisplay>> data
-            , List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, long timeStamp, RegionOptions options) {
+            , List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, long timeStamp, RegionOptions options, String lockRequest) {
         this.columnHeadings = columnHeadings;
         this.rowHeadings = rowHeadings;
         this.data = data;
@@ -33,6 +36,7 @@ public class CellsAndHeadingsForDisplay implements Serializable {
         this.contextSource = contextSource;
         this.timeStamp = timeStamp;
         this.options = options;
+        this.lockRequest = lockRequest;
     }
 
     public List<List<String>> getColumnHeadings() {
@@ -65,5 +69,9 @@ public class CellsAndHeadingsForDisplay implements Serializable {
 
     public RegionOptions getOptions() {
         return options;
+    }
+
+    public String getLockRequest() {
+        return lockRequest;
     }
 }

@@ -1069,8 +1069,9 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         return lastModified.get();
     }
 
-    // note - this function will NOT check for existing locks for thee values, it just sets the time and values
+    // note - this function will NOT check for existing locks for these values, it just clears for this user then sets new locks
     public void setValuesLockForUser(Collection<Value> values, String userId){
+        removeValuesLockForUser(userId);
         valueLockTimes.put(userId, LocalDateTime.now());
         for (Value value : values){
             valueLocks.put(value, userId);
@@ -1092,19 +1093,11 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         }
     }
 
-    public String checkLocksForValue(Value v){
-        String user = valueLocks.get(v);
-        if (user != null){
-            return user + ", time : " + valueLockTimes.get(user); // maybe we can pass the formatting to the client later, or this could be considered a db message
-        }
-        return null;
+    public boolean hasLocksAsideFromThisUser(String userId) {// intellij simplified, not sure how clear it is - empty = false, one is false too if it's the user we care about
+        return !valueLockTimes.isEmpty() && !(valueLockTimes.size() == 1 && valueLockTimes.keySet().iterator().next().equals(userId));
     }
 
-    public boolean hasLocks(){
-        return !valueLockTimes.isEmpty();
-    }
-
-    public String checkLocksForValueAndUser(String userId, Set<Value> valuesToCheck){
+    public String checkLocksForValueAndUser(String userId, Collection<Value> valuesToCheck){
         if (valueLockTimes.isEmpty() || (valueLockTimes.size() == 1 && valueLockTimes.get(userId) != null)) {
             return null; // what I'll call "ok" for the mo
         }

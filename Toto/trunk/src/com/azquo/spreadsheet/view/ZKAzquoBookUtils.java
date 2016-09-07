@@ -26,7 +26,6 @@ import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -528,7 +527,7 @@ public class ZKAzquoBookUtils {
                 CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), false);
             }
         }
-        List<SName> dependentRanges = addValidation(loggedInUser, book, choiceOptionsMap, userChoices);
+        List<SName> dependentRanges = addValidation(loggedInUser, book, choiceOptionsMap);
         if (dependentRanges.size() > 0) {
             resolveDependentChoiceOptions(dependentRanges, book, loggedInUser);
         }
@@ -595,7 +594,6 @@ public class ZKAzquoBookUtils {
     }
 
     private static void fillRegion(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
-
         // ok need to deal with the repeat region things
         // the region to be repeated, will contain headings and an item which changes for each repetition
         SName repeatRegion = sheet.getBook().getInternalBook().getNameByName(AZREPEATREGION + region);
@@ -605,6 +603,8 @@ public class ZKAzquoBookUtils {
         SName repeatList = sheet.getBook().getInternalBook().getNameByName(AZREPEATLIST + region);
         // the cell we'll put the items in the list in
         SName repeatItem = sheet.getBook().getInternalBook().getNameByName(AZREPEATITEM + region);
+        // temporary push through of the lock test parameter, remove later
+        userRegionOptions.setUserLocked((Boolean) sheet.getBook().getInternalBook().getAttribute(OnlineController.LOCK_TEST));
         // probably will be required later so declare out here
         int repeatRegionWidth = 0;
         int repeatScopeWidth = 0;
@@ -672,7 +672,7 @@ public class ZKAzquoBookUtils {
                 }
                 dataRegionCells.add(oneRow);
             }
-            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport());// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
             loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
             return;
         }
@@ -844,7 +844,6 @@ public class ZKAzquoBookUtils {
                                         break;
                                     }
                                 }
-
                                 //format the row headings for hierarchy.  Each total level has a different format.   clear visible names in all but on eheading
                                 if (sameValues < rowHeading.size() - 1) {
                                     int totalCount = rowHeading.size() - sameValues - 1;
@@ -1030,12 +1029,9 @@ public class ZKAzquoBookUtils {
                                     contextList, userRegionOptions);
                             displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
                                     , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
-
                             loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!
-
                             dataFill(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
                             contextList.remove(contextList.size() - 1); // item removed from the context
-
                             repeatColumn++;
                             if (repeatColumn == repeatColumns) { // zap if back to the first column
                                 repeatColumn = 0;
@@ -1206,6 +1202,7 @@ public class ZKAzquoBookUtils {
 
     public static SCell getSnameCell(SName sName) {
         if (sName == null) return null;
+        // todo - with a poorly configured sheet this can NPE
         return sName.getBook().getSheetByName(sName.getRefersToSheetName()).getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
     }
 
@@ -1381,7 +1378,7 @@ public class ZKAzquoBookUtils {
         return exceptionError;
     }
 
-    private static List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap, Map<String, String> userChoices) {
+    private static List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap) {
         if (book.getSheet(VALIDATION_SHEET) == null) {
             book.getInternalBook().createSheet(VALIDATION_SHEET);
         }
@@ -1574,7 +1571,7 @@ public class ZKAzquoBookUtils {
     private static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
         //hack to discover a database name
         int arrowsPos = query.indexOf(">>");
-        try {
+        try{
             if (arrowsPos > 0) {
                 Database origDatabase = loggedInUser.getDatabase();
                 DatabaseServer origDatabaseServer = loggedInUser.getDatabaseServer();
@@ -1587,9 +1584,13 @@ public class ZKAzquoBookUtils {
             }
             return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                     .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, languages);
-        } catch (Exception e) {
-            return null;
+        } catch (Exception e){
+            e.printStackTrace();
+            List<String> error = new ArrayList<>();
+            error.add("Error : " + e.getMessage());
+            return error;
         }
+
     }
 
     private static String getCellString(Sheet sheet, int r, int c) {//this is the same routine as in ImportService, so one is redundant, but I'm not sure which (WFC)

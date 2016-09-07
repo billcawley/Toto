@@ -180,7 +180,7 @@ public class LoggedInUser {
     }
 
     public DatabaseAccessToken getDataAccessToken(){
-        return new DatabaseAccessToken(sessionId, databaseServer.getIp(), database.getPersistenceName(), readPermissions,writePermissions,languages);
+        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), database.getPersistenceName(), readPermissions,writePermissions,languages);
     }
 
     public String getBusinessDirectory() {

@@ -58,12 +58,13 @@ public final class Name extends AzquoMemoryDBEntity {
     private static final int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
 
     // just a cache while the names by id map is being populated. I experimented with various ideas e.g. a parent cache also, this seemed the best compromise
+    // it may be possible with some kind of hack to take this pointer out of name if we're really pushing memory limits and want to save 8 bytes
 
     private byte[] childrenCache = null;
 
 //    private static final Logger logger = Logger.getLogger(Name.class);
 
-    private Provenance provenance; // should be volatile? Don't care about being completely up to date but could a prtially constructed object get in here?
+    private Provenance provenance; // should be volatile? Don't care about being completely up to date but could a partially constructed object get in here?
 
     /* Going to try for attributes as two arrays as this should save a lot of space vs a LinkedHashMap.
     That is to say one makes a new one of these when updating attributes and then switch it in. Immutable, hence atomic
@@ -1039,7 +1040,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // criteria for fall back attributes added by WFC, not entirely sure I'd have done this but anyway
     private static AtomicInteger findParentAttributesCount = new AtomicInteger(0);
 
-    private String findParentAttributes(Name child, String attributeName, Set<Name> checked) {
+    private static String findParentAttributes(Name child, String attributeName, Set<Name> checked) {
         findParentAttributesCount.incrementAndGet();
         attributeName = attributeName.trim().toUpperCase();
         for (Name parent : child.getParents()) {

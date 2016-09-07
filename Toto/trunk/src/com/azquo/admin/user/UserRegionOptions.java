@@ -3,8 +3,6 @@ package com.azquo.admin.user;
 import com.azquo.admin.StandardEntity;
 import com.azquo.spreadsheet.view.RegionOptions;
 
-import java.io.Serializable;
-
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  *
@@ -30,13 +28,14 @@ public class UserRegionOptions extends StandardEntity {
     private int highlightDays;
     private boolean noSave;
     private String databaseName;
+    private boolean userLocked;
 
     private String rowLanguage;
     private String columnLanguage;
 
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideCols, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
-            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage) {
+            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -55,6 +54,7 @@ public class UserRegionOptions extends StandardEntity {
         this.databaseName = databaseName;
         this.rowLanguage = rowLanguage;
         this.columnLanguage = columnLanguage;
+        this.userLocked = userLocked;
     }
 
     // to read the format of options from the spreadsheet, code adapted from azquobook.
@@ -101,6 +101,7 @@ public class UserRegionOptions extends StandardEntity {
         this.sortRowAsc = false;
         this.sortColumn = null;
         this.sortColumnAsc = false;
+        this.userLocked = getOptionFromSpreadsheetOptions("userlocked", spreadsheetSource) != null;
 
         String sortColumn = getOptionFromSpreadsheetOptions("sortcolumn", spreadsheetSource);
         if (sortColumn != null) {
@@ -243,7 +244,7 @@ public class UserRegionOptions extends StandardEntity {
 
     // As mentioned in RegionOptions,
     public RegionOptions getRegionOptionsForTransport(){
-        return new RegionOptions(hideRows,hideCols,sortable,rowLimit,columnLimit,sortRow,sortRowAsc,sortColumn,sortColumnAsc,highlightDays, rowLanguage, columnLanguage, noSave, databaseName);
+        return new RegionOptions(hideRows,hideCols,sortable,rowLimit,columnLimit,sortRow,sortRowAsc,sortColumn,sortColumnAsc,highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked);
     }
 
     public String getRowLanguage() {
@@ -268,6 +269,14 @@ public class UserRegionOptions extends StandardEntity {
 
     public void setNoSave(boolean noSave) {
         this.noSave = noSave;
+    }
+
+    public boolean getUserLocked() {
+        return userLocked;
+    }
+
+    public void setUserLocked(boolean userLocked) {
+        this.userLocked = userLocked;
     }
 
     @Override

@@ -249,6 +249,15 @@ class RMIImplementation implements RMIInterface {
         }
     }
 
+    @Override
+    public void unlockData(DatabaseAccessToken databaseAccessToken) throws RemoteException {
+        try {
+            DSSpreadsheetService.unlockData(databaseAccessToken);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
     // to allow execute to save multiple times then persist
     @Override
     public void persistDatabase(DatabaseAccessToken databaseAccessToken) throws RemoteException {

@@ -202,21 +202,25 @@ public class SpreadsheetService {
         if (cellsAndHeadingsForDisplay != null) {
             // maybe go back to this later, currently it will be tripped up by a spreadsheet querying from more than one DB
             //if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
-                DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-                final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, region, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
-                if (result.equals("true")){ // then reset the cells and headings object to reflect the changed state
-                    for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()){
-                        for (CellForDisplay cell : row){
-                            if (cell.isChanged()){
-                                cell.setNewValuesToCurrentAfterSaving();
-                            }
+            DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+            final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, region, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
+            if (result.equals("true")){ // then reset the cells and headings object to reflect the changed state
+                for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()){
+                    for (CellForDisplay cell : row){
+                        if (cell.isChanged()){
+                            cell.setNewValuesToCurrentAfterSaving();
                         }
                     }
                 }
-                return result;
+            }
+            return result;
             //}
         }
         return "no data passed for that region " + region + " and report " + reportName;
+    }
+
+    public static void unlockData(LoggedInUser loggedInUser) throws Exception {
+        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).unlockData(loggedInUser.getDataAccessToken());
     }
 
     public static String setChoices(LoggedInUser loggedInUser, String provline) {

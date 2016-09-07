@@ -19,7 +19,7 @@ import java.util.List;
  *
  */
 class AzquoCell {
-    private final boolean locked;
+    private boolean locked;
     private final ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName;
     private final List<DataRegionHeading> rowHeadings;
     private final List<DataRegionHeading> columnHeadings;
@@ -51,6 +51,10 @@ class AzquoCell {
 
     boolean isLocked() {
         return locked;
+    }
+
+    public void setLocked(boolean locked) {
+        this.locked = locked;
     }
 
     ListOfValuesOrNamesAndAttributeName getListOfValuesOrNamesAndAttributeName() {
