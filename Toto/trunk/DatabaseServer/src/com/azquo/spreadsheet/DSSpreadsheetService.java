@@ -917,12 +917,12 @@ public class DSSpreadsheetService {
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
                 , regionOptions, databaseAccessToken.getLanguages(), valueId);
         if (data.size() == 0) {
-            return new CellsAndHeadingsForDisplay(colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
+            return new CellsAndHeadingsForDisplay(regionName, colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
         }
         List<List<CellForDisplay>> displayData = new ArrayList<>(data.size());
         // todo, think about race conditions here
         Set<Value> toLock = new HashSet<>(); // change to koloboke?
-        StringBuilder lockCheckResult = new StringBuilder();
+        Set<String> lockCheckResult = new HashSet<>();
         boolean checkLocks = azquoMemoryDBConnection.getAzquoMemoryDB().hasLocksAsideFromThisUser(databaseAccessToken.getUserId());
         for (List<AzquoCell> sourceRow : data) {
             List<CellForDisplay> displayDataRow = new ArrayList<>(sourceRow.size());
@@ -949,26 +949,36 @@ public class DSSpreadsheetService {
                 if (checkLocks && !sourceCell.isLocked() && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null){ // user locking is a moot point if the cell is already locked e.g. it's the result of a function
                     String result = azquoMemoryDBConnection.getAzquoMemoryDB().checkLocksForValueAndUser(databaseAccessToken.getUserId(), sourceCell.getListOfValuesOrNamesAndAttributeName().getValues());
                     if (result != null){ // it is locked
-                        lockCheckResult.append(result); // collate lock message
+                        lockCheckResult.add(result); // collate lock message
                         sourceCell.setLocked(true); // and lock the cell!
                     }
                 }
-                if (regionOptions.lockRequest && lockCheckResult.length() == 0){ // if we're going to lock gather all relevant values, stop gathering if we found data already locked
-                    if (sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null){
+                if (regionOptions.lockRequest && lockCheckResult.size() == 0){ // if we're going to lock gather all relevant values, stop gathering if we found data already locked
+                    if (sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null
+                            && !sourceCell.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()){
                         toLock.addAll(sourceCell.getListOfValuesOrNamesAndAttributeName().getValues());
                     }
                 }
             }
         }
-        if (lockCheckResult.length() == 0 && !toLock.isEmpty()){ // then we can lock
+        if (lockCheckResult.size() == 0 && !toLock.isEmpty()){ // then we can lock
             azquoMemoryDBConnection.getAzquoMemoryDB().setValuesLockForUser(toLock, databaseAccessToken.getUserId());
         }
 
         //AzquoMemoryDB.printAllCountStats();
         //AzquoMemoryDB.clearAllCountStats();
         // this is single threaded as I assume not much data should be returned. Need to think about this.
-        return new CellsAndHeadingsForDisplay(convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
-                , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, lockCheckResult.length() > 0 ? lockCheckResult.toString() : null);
+        String lockCheckResultString = null;
+        if (!lockCheckResult.isEmpty()){
+            StringBuilder sb = new StringBuilder();
+            for (String result : lockCheckResult){
+                sb.append(result);
+                sb.append("\n");
+            }
+            lockCheckResultString = sb.toString();
+        }
+        return new CellsAndHeadingsForDisplay(regionName, convertDataRegionHeadingsToStrings(getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
+                , convertDataRegionHeadingsToStrings(getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, lockCheckResultString);
     }
 
     private static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
@@ -2207,7 +2217,7 @@ Callable interface sorts the memory "happens before" using future gets which run
 
                                   // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
     // could I derive context from cells and headings for display? Also region. Worth considering . . .
-    public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String region, String user, String reportName, String context, boolean persist) throws Exception {
+    public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         int numberOfValuesModified = 0;
         synchronized (azquoMemoryDBConnection.getAzquoMemoryDB()) { // we don't want concurrent saves on a single database
@@ -2226,7 +2236,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             String toReturn = "";
             //modifiedInTheMeanTime = true;
             if (modifiedInTheMeanTime) { // then we need to compare data as sent to what it is now before trying to save - assuming this is not relevant to the import style above
-                List<List<AzquoCell>> currentData = getDataRegion(azquoMemoryDBConnection, region, cellsAndHeadingsForDisplay.getRowHeadingsSource(), cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
+                List<List<AzquoCell>> currentData = getDataRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getRowHeadingsSource(), cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                         , cellsAndHeadingsForDisplay.getOptions(), databaseAccessToken.getLanguages(), 0);
                 List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
                 if (currentData.size() != sentData.size()) {
@@ -2237,14 +2247,14 @@ Callable interface sorts the memory "happens before" using future gets which run
                         List<CellForDisplay> sentRow = sentData.get(y);
                         if (currentRow.size() != sentRow.size()) {
                             changed = true;
-                            toReturn = "Data region " + region + " has changed size!";
+                            toReturn = "Data region " + cellsAndHeadingsForDisplay.getRegion() + " has changed size!";
                             break;
                         } else {
                             for (int x = 0; x < currentRow.size(); x++) {
                                 if (!currentRow.get(x).getStringValue().equals(sentRow.get(x).getStringValue())) { // then I think data changed in the mean time? Need to test against blank areas etc
                                     changed = true;
                                     final ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = currentRow.get(x).getListOfValuesOrNamesAndAttributeName();
-                                    toReturn = "Data in region " + region + " modified - cell  " + x + ", " + y;
+                                    toReturn = "Data in region " + cellsAndHeadingsForDisplay.getRegion() + " modified - cell  " + x + ", " + y;
                                     if (listOfValuesOrNamesAndAttributeName.getValues() != null && !listOfValuesOrNamesAndAttributeName.getValues().isEmpty()) {
                                         toReturn += " provenance  " + listOfValuesOrNamesAndAttributeName.getValues().iterator().next().getProvenance();
                                     }

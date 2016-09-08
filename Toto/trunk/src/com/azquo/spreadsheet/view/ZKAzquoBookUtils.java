@@ -192,10 +192,18 @@ public class ZKAzquoBookUtils {
     public static final String ALLOWABLE_REPORTS = "az_AllowableReports";
 
     public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, String reportParameters, boolean dontClearLog) {
+        book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
         long track = System.currentTimeMillis();
         String imageStoreName = "";
         boolean showSave = false;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        // unlock data on every report load. Maybe make this clear to the user?
+        // is the exception a concern here?
+        try {
+            SpreadsheetService.unlockData(loggedInUser);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         Map<String, String> userChoices = new HashMap<>();
         // get the user choices for the report. Can be drop down values, sorting/highlighting etc.
@@ -404,6 +412,30 @@ public class ZKAzquoBookUtils {
                     }
                 }
             }
+            // after loading deal with lock stuff
+            final List<CellsAndHeadingsForDisplay> sentForReport = loggedInUser.getSentForReport(reportId);
+            StringBuilder lockWarnings = new StringBuilder();
+            for (CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay : sentForReport){
+                if (cellsAndHeadingsForDisplay.getLockResult() != null){
+                    if (lockWarnings.length() == 0){
+                        lockWarnings.append("Data on this sheet is locked\n");
+                    }
+                    lockWarnings.append("Region : " + cellsAndHeadingsForDisplay.getRegion() + ",  " + cellsAndHeadingsForDisplay.getLockResult());
+                }
+            }
+            if (lockWarnings.length() > 0){
+                sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, lockWarnings);
+                // any locks applied need to be let go
+                if (sheet.getBook().getInternalBook().getAttribute(OnlineController.LOCKED) == Boolean.TRUE){ // I think that's allowed, it was locked then unlock and switch the flag
+                    try {
+                        SpreadsheetService.unlockData(loggedInUser);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, false);
+                }
+            }
+
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
             // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
             // can't do this in the fill region as formulae need to be dealt with outside
@@ -603,8 +635,11 @@ public class ZKAzquoBookUtils {
         SName repeatList = sheet.getBook().getInternalBook().getNameByName(AZREPEATLIST + region);
         // the cell we'll put the items in the list in
         SName repeatItem = sheet.getBook().getInternalBook().getNameByName(AZREPEATITEM + region);
-        // temporary push through of the lock test parameter, remove later
-        userRegionOptions.setUserLocked((Boolean) sheet.getBook().getInternalBook().getAttribute(OnlineController.LOCK_TEST));
+
+        if (userRegionOptions.getUserLocked()){ // then put the flag on the book, remember to take it off (and unlock!) if there was an error
+            sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
+        }
+
         // probably will be required later so declare out here
         int repeatRegionWidth = 0;
         int repeatScopeWidth = 0;
@@ -672,7 +707,7 @@ public class ZKAzquoBookUtils {
                 }
                 dataRegionCells.add(oneRow);
             }
-            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(colHeadings, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(region, colHeadings, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
             loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
             return;
         }

@@ -1071,7 +1071,6 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
 
     // note - this function will NOT check for existing locks for these values, it just clears for this user then sets new locks
     public void setValuesLockForUser(Collection<Value> values, String userId){
-        removeValuesLockForUser(userId);
         valueLockTimes.put(userId, LocalDateTime.now());
         for (Value value : values){
             valueLocks.put(value, userId);
@@ -1082,6 +1081,7 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         if (valueLockTimes.remove(userId) != null){ // only check the values if there was an entry in time so to speak
             valueLocks.values().removeAll(Collections.singleton(userId)); // need to force a collection rather than an instance to remove all values in the map that match. Hence do NOT remove .singleton here!
         }
+        removeOldLocks(60); // arbitrary time, this seems as good a palce as any to check
     }
 
     public void removeOldLocks(int minutesAllowed){

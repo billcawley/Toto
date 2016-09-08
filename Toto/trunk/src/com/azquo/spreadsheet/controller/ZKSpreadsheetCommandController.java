@@ -226,6 +226,8 @@ public class ZKSpreadsheetCommandController {
                         // new thing, look for followon, guess we need an instance of ZK azquobook utils
                         ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                         if (saveOk){
+                            // unlock here makes sense think, if duff save probably leave locked
+                            SpreadsheetService.unlockData(loggedInUser);
                             reloadAfterSave = true;
                         }
                     }

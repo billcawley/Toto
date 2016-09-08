@@ -61,10 +61,12 @@
 			<c:if test="${imagestorename.length()>0}">
 				<a onclick="uploadFile()" style="position:relative;top:20px">Upload image</a>
 			</c:if>
+<!-- sort out valign at some point -->
+			<c:if test="${not empty lockedResult}">
+				<textarea id="lockedResult" style="height:60px;width:500px;font:10px monospace;overflow:auto;vertical-align: middle">${lockedResult}</textarea>
+			</c:if>
 
 			<nav class="nav">
-
-
 				<ul>
 					<c:if test="${templateMode == true}">
 						<li ><a href="#" onclick="postAjax('SaveTemplate'); return false;">Save Template</a></li>

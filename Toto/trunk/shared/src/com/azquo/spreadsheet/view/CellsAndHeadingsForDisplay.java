@@ -16,6 +16,7 @@ import java.util.List;
  */
 public class CellsAndHeadingsForDisplay implements Serializable {
 
+    private final String region; // convenient
     private final List<List<String>> columnHeadings;
     private final List<List<String>> rowHeadings;
     private final List<List<CellForDisplay>> data;
@@ -24,10 +25,11 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     private final List<List<String>> contextSource;
     private final long timeStamp;
     private final RegionOptions options;
-    private final String lockRequest;
+    private final String lockResult;
 
-    public CellsAndHeadingsForDisplay(List<List<String>> columnHeadings, List<List<String>> rowHeadings, List<List<CellForDisplay>> data
-            , List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, long timeStamp, RegionOptions options, String lockRequest) {
+    public CellsAndHeadingsForDisplay(String region, List<List<String>> columnHeadings, List<List<String>> rowHeadings, List<List<CellForDisplay>> data
+            , List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, long timeStamp, RegionOptions options, String lockResult) {
+        this.region = region;
         this.columnHeadings = columnHeadings;
         this.rowHeadings = rowHeadings;
         this.data = data;
@@ -36,7 +38,11 @@ public class CellsAndHeadingsForDisplay implements Serializable {
         this.contextSource = contextSource;
         this.timeStamp = timeStamp;
         this.options = options;
-        this.lockRequest = lockRequest;
+        this.lockResult = lockResult;
+    }
+
+    public String getRegion() {
+        return region;
     }
 
     public List<List<String>> getColumnHeadings() {
@@ -71,7 +77,7 @@ public class CellsAndHeadingsForDisplay implements Serializable {
         return options;
     }
 
-    public String getLockRequest() {
-        return lockRequest;
+    public String getLockResult() {
+        return lockResult;
     }
 }

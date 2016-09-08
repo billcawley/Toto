@@ -6,6 +6,7 @@ import com.azquo.admin.user.User;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
+import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import org.apache.log4j.Logger;
 
@@ -123,6 +124,16 @@ public class LoggedInUser {
         } else {
             return sentCellsMaps.get(reportId + "-" + region.toLowerCase());
         }
+    }
+
+    public List<CellsAndHeadingsForDisplay> getSentForReport(final int reportId) {
+        List<CellsAndHeadingsForDisplay> toReturn = new ArrayList<>();
+        for (String key : sentCellsMaps.keySet()){
+            if (key.startsWith(reportId + "-")){
+                toReturn.add(sentCellsMaps.get(key));
+            }
+        }
+        return toReturn;
     }
 
     public void setSentCells(final int reportId, final String region, final CellsAndHeadingsForDisplay sentCells) {
