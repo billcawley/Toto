@@ -1390,6 +1390,7 @@ public class ZKAzquoBookUtils {
     }
 
     private static List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap) {
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         if (book.getSheet(VALIDATION_SHEET) == null) {
             book.getInternalBook().createSheet(VALIDATION_SHEET);
         }
@@ -1430,7 +1431,16 @@ public class ZKAzquoBookUtils {
                                 // yes, this can null pointer but if it does something is seriously wrong
                                 for (String choiceOption : choiceOptions) {
                                     row++;// like starting at 1
-                                    validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded).setStringValue(choiceOption);
+                                    SCell vCell = validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded);
+                                    try{
+                                        Date date = df.parse(choiceOption);
+                                        vCell.setDateValue(date);
+                                        vCell.setCellStyle(sheet.getInternalSheet().getCell(chosenRegion.getRow(), chosenRegion.getColumn()).getCellStyle());
+
+
+                                    }catch(Exception e){
+                                        vCell.setStringValue(choiceOption);
+                                    }
                                 }
                                 if (row > 0) { // if choice options is empty this will not work
                                     Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
