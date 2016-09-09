@@ -780,6 +780,7 @@ public class ZKAzquoBookUtils {
                     }
                     // add columns
                     int maxRow = sheet.getLastRow();
+                    int cloneCols = 0;
                     if (displayDataRegion.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayDataRegion.getColumnCount() > 2) { // then we need to expand
                         colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
                         int topRow = 0;
@@ -787,11 +788,12 @@ public class ZKAzquoBookUtils {
                         if (displayColumnHeadings!=null){
                             topRow = displayColumnHeadings.getRow();
                         }
-                        int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
+                         int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
                         Range copySource = Ranges.range(sheet, topRow, insertCol - 1, maxRow, insertCol - 1);
                         int repeatCount = getRepeatCount(loggedInUser, cellsAndHeadingsForDisplay.getColHeadingsSource());
                         if (repeatCount> 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
                             int copyCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / repeatCount;
+                            cloneCols = colsToAdd;
                             if (repeatCount > displayDataRegion.getColumnCount()){
                                 colsToAdd = repeatCount - displayDataRegion.getColumnCount();
                                 Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col
@@ -800,7 +802,7 @@ public class ZKAzquoBookUtils {
                                 CellOperationUtil.paste(copySource, insertRange);
                                 insertCol+=colsToAdd;
                                 colsToAdd = repeatCount * (copyCount - 1);
-
+                                cloneCols = colsToAdd;
 
 
                             }
@@ -868,7 +870,7 @@ public class ZKAzquoBookUtils {
                                     int totalCount = rowHeading.size() - sameValues - 1;
                                     //this is a total line
                                     int selStart = displayRowHeadings.getColumn();
-                                    int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1;
+                                    int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1 + cloneCols;
                                     SCell lineFormat = getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + totalCount + region));
                                     Range selection = Ranges.range(sheet, row - 1, selStart, row - 1, selEnd);
                                     if (lineFormat == null) {
@@ -961,8 +963,17 @@ public class ZKAzquoBookUtils {
                                     if (sCell.getType() != SCell.CellType.STRING && sCell.getType() != SCell.CellType.NUMBER) {
                                         sCell.setStringValue("");
                                     }else{//new behaviour - if there's a filled in heading, this can be used to detect the sort.
-                                        if (sCell.getStringValue().length() > 0){
-                                            heading = sCell.getStringValue();
+                                        try{
+                                            if (sCell.getStringValue().length() > 0){
+                                                heading = sCell.getStringValue();
+                                            }
+                                        }catch(Exception e){//to catch the rare cases where someone has hardcoded a year into the headings
+                                            if (sCell.getNumberValue() > 0){
+                                                heading = sCell.getNumberValue() + "";
+                                                if (heading.length() > 5 && heading.endsWith(".0")){
+                                                    heading = heading.substring(0,heading.length()-2);
+                                                }
+                                            }
                                         }
                                     }
                                     if (columnSort && !heading.equals(".")) { // don't sort "." headings they are probably derived in the spreadsheet
