@@ -235,8 +235,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     queryResultRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), selectionName + RESULT);
                     final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
                     if (filterQueryCell != null) {
-                        final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(filterQueryCell.getRefersToCellRegion().getRow(), filterQueryCell.getRefersToCellRegion().getColumn());
-                        selectionList = cell.getStringValue();
+                          selectionList = ZKAzquoBookUtils.getSnameCell(filterQueryCell).getStringValue();
                     }
                     break;
                 }
