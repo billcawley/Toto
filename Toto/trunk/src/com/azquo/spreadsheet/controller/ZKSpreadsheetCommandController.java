@@ -213,10 +213,12 @@ public class ZKSpreadsheetCommandController {
                                     for (int row = 0; row < repeatRows; row++){
                                         for (int col = 0; col < repeatCols; col++){
                                             //region + "-" + repeatRow + "-" + repeatColumn
-                                            final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
-                                            if (!result.equals("true")){
-                                                Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
-                                                saveOk = false;
+                                            if (loggedInUser.getSentCells(reportId, region.toLowerCase() + "-" + row + "-" + col) != null){ // the last ones on the repeat scope might be blank
+                                                final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                                                if (!result.equals("true")){
+                                                    Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
+                                                    saveOk = false;
+                                                }
                                             }
                                         }
                                     }
