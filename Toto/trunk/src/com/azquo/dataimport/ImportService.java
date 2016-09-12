@@ -320,7 +320,7 @@ public final class ImportService {
             databaseId = loggedInUser.getDatabase().getId();
             pathName = loggedInUser.getBusinessDirectory();
         }
-        OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(databaseId, reportName);
+        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
         // change in logic, no longer making a copy, want to update what's there
         if (or == null) {
             or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), "", reportName, fileName, "", ""); // default to ZK now
