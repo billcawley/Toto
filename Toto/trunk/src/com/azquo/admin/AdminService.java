@@ -396,7 +396,14 @@ this may now not work at all, perhaps delete?
                 || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
             // note, used to delete choices for the reports for this DB, won't do this now as
             LoginRecordDAO.removeForDatabaseId(db.getId());
+            // before unlinking get the reports to see if they need zapping
+            final List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(db.getId());
             DatabaseReportLinkDAO.unLinkDatabase(databaseId);
+            for (OnlineReport or : reports){
+                if (DatabaseReportLinkDAO.getDatabaseIdsForReportId(or.getId()).isEmpty()){ // then this report no longer has any databases
+                    removeReportById(loggedInUser, or.getId());
+                }
+            }
             OpenDatabaseDAO.removeForDatabaseId(db.getId());
             PermissionDAO.removeForDatabaseId(db.getId());
             UploadRecordDAO.removeForDatabaseId(db.getId());
