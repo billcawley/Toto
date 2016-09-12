@@ -252,17 +252,6 @@ public final class NameService {
         return null;
     }
 
-    // used by sets import - should this be a function against name?
-
-    private static AtomicInteger clearChildrenCount = new AtomicInteger(0);
-
-    public static void clearChildren(Name name) throws Exception {
-        clearChildrenCount.incrementAndGet();
-        for (Name child : name.getChildren()) {
-            name.removeFromChildrenWillBePersisted(child);
-        }
-    }
-
     private static AtomicInteger findTopNamesCount = new AtomicInteger(0);
 
     public static List<Name> findTopNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String language) {
@@ -360,9 +349,6 @@ public final class NameService {
         findOrCreateNameInParent2Count.incrementAndGet();
         long marker = System.currentTimeMillis();
         if (name == null || name.length() == 0) {
-//            System.out.println("returning null on findOrCreateNameInParent, db : " + azquoMemoryDBConnection.getAzquoMemoryDB().getPersistenceName() + " name : " + name + " parent : " + parent + " local : " + local + " attributeNames : " + attributeNames);
-//            return null;
-            // dammit can't throw this just yet, caused a problem for callum, to invstigate
             throw new Exception("Name to be created is blank or null!");
         }
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an dataimport),and insert a structure into it*/
@@ -1411,7 +1397,6 @@ public final class NameService {
         System.out.println("getNameByAttributeCount\t\t\t\t\t\t\t\t" + getNameByAttributeCount.get());
         System.out.println("findByNameCount\t\t\t\t\t\t\t\t" + findByNameCount.get());
         System.out.println("findByName2Count\t\t\t\t\t\t\t\t" + findByName2Count.get());
-        System.out.println("clearChildrenCount\t\t\t\t\t\t\t\t" + clearChildrenCount.get());
         System.out.println("findTopNamesCount\t\t\t\t\t\t\t\t" + findTopNamesCount.get());
         System.out.println("findOrCreateNameStructureCount\t\t\t\t\t\t\t\t" + findOrCreateNameStructureCount.get());
         System.out.println("findOrCreateNameStructure2Count\t\t\t\t\t\t\t\t" + findOrCreateNameStructure2Count.get());
@@ -1444,7 +1429,6 @@ public final class NameService {
         getNameByAttributeCount.set(0);
         findByNameCount.set(0);
         findByName2Count.set(0);
-        clearChildrenCount.set(0);
         findTopNamesCount.set(0);
         findOrCreateNameStructureCount.set(0);
         findOrCreateNameStructure2Count.set(0);

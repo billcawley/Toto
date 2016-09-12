@@ -38,16 +38,11 @@ import java.util.zip.ZipInputStream;
  * <p>
  * Created by bill on 13/12/13.
  * <p>
- * Preliminary processing before being sent over to the database server for loading.
+ * Split and then refactored by EFC - does pre processing such as unzipping and extracting csvs from sheets before being sent to the DB server.
  */
 
 public final class ImportService {
     public static final String dbPath = "/databases/";
-
-    private static SimpleDateFormat ukdflong = new SimpleDateFormat("dd/MM/yy hh:mm:ss");
-    private static SimpleDateFormat ukdf = new SimpleDateFormat("dd/MM/yy");
-    private static SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
@@ -250,7 +245,7 @@ public final class ImportService {
         } else if (fileName.contains(".xls")) { // normal. I'm not entirely sure the code for users etc above should be in this file, maybe a different importer?
             return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter, isData);
         } else {
-            return readPreparedFile(loggedInUser, filePath, fileName.substring(0, fileName.indexOf(".")), attributeNames, persistAfter, false); // no file type
+            return readPreparedFile(loggedInUser, filePath, fileName, attributeNames, persistAfter, false);
         }
     }
 
@@ -347,8 +342,6 @@ public final class ImportService {
 
     private static String  readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         final Book book = Importers.getImporter().imports(new File(tempName), "Imported");
-        //AzquoBook azquoBook = new AzquoBook(userChoiceDAO, userRegionOptionsDAO, spreadsheetService, RMIClient);
-        //azquoBook.loadBook(tempName, spreadsheetService.useAsposeLicense());
         String reportName = null;
         SName reportRange = book.getInternalBook().getNameByName("az_ReportName");
         if (reportRange != null) {
@@ -386,25 +379,32 @@ public final class ImportService {
     }
 
     private static String readSheet(LoggedInUser loggedInUser, Sheet sheet, final String tempFileName, List<String> attributeNames, boolean persistAfter) throws Exception {
-        String tempName = convertSheetToCSV(tempFileName, sheet);
-        String fileType = tempName.substring(tempName.lastIndexOf(".") + 1);
-        return readPreparedFile(loggedInUser, tempName, fileType, attributeNames, persistAfter, true);
+        boolean transpose = false;
+        String sheetName = sheet.getInternalSheet().getSheetName();
+        if (sheetName.toLowerCase().contains("transpose")) {
+            transpose = true;
+        }
+        File temp = File.createTempFile(tempFileName, ".csv");
+        String tempPath = temp.getPath();
+        temp.deleteOnExit();
+        //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
+        CsvWriter csvW = new CsvWriter(new FileWriter(tempPath), '\t');
+        csvW.setUseTextQualifier(false);
+        convertRangeToCSV(sheet, csvW, null, null, transpose);
+        csvW.close();
+        return readPreparedFile(loggedInUser, tempPath, sheetName, attributeNames, persistAfter, true);
     }
 
     private static String LOCALIP = "127.0.0.1";
 
-    private static String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileType, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
-        // right - here we're going to have to move the file if the DB server is not local.
+    private static String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileName, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-        if (databaseServer.getIp().equals(LOCALIP)) {
-            return RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
-        } else {
-            // move it
-            File f = new File(filePath);
-            String remoteFilePath = copyFileToDatabaseServer(new FileInputStream(f), databaseServer.getSftpUrl());
-            return RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, remoteFilePath, fileType, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
+        // right - here we're going to have to move the file if the DB server is not local.
+        if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is hte same the question is whether the path refers to this machine or another
+            filePath = copyFileToDatabaseServer(new FileInputStream(filePath), databaseServer.getSftpUrl());
         }
+        return RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileName, attributeNames, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
     }
 
     private static String copyFileToDatabaseServer(InputStream inputStream, String sftpDestination) {
@@ -546,8 +546,7 @@ public final class ImportService {
 
     // for the download, modify and upload the report
 
-    public static String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
-        int items = 0;
+    private static String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
         String errorMessage = "";
         int nonBlankItems = 0;
         Sheet sourceSheet = sourceBook.getSheetAt(0);
@@ -591,7 +590,6 @@ public final class ImportService {
                                         data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(0.0);
                                     }
                                     if (cellValue.string.length() > 0) nonBlankItems++;
-                                    items++;
                                 }
                             }
                         }
@@ -617,8 +615,6 @@ public final class ImportService {
                                     if (cellValue.string.length() > 0){
                                         nonBlankItems++;
                                     }
-
-                                    items++;
                                 }
                             }
                         }
@@ -633,10 +629,7 @@ public final class ImportService {
                     }
                 }
             }
-
         }
-
-
         return errorMessage + " - " + nonBlankItems + " data items transferred successfully";
     }
 
@@ -650,26 +643,9 @@ public final class ImportService {
         return null;
     }
 
-    public static String convertSheetToCSV(final String tempFileName, final Sheet sheet) throws Exception {
-        boolean transpose = false;
-        String fileType = sheet.getInternalSheet().getSheetName();
-        if (fileType.toLowerCase().contains("transpose")) {
-            transpose = true;
-        }
-        File temp = File.createTempFile(tempFileName, "." + fileType);
-        String tempName = temp.getPath();
-        temp.deleteOnExit();
-        //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
-        CsvWriter csvW = new CsvWriter(new FileWriter(tempName), '\t');
-        csvW.setUseTextQualifier(false);
-        convertRangeToCSV(sheet, csvW, null, null, transpose);
-        csvW.close();
-        return tempName;
-    }
-
     // the function below needs to return a number and string really so azquo knows what to do with the data
 
-    static class DoubleStringPair {
+    private static class DoubleStringPair {
         Double number = null;
         String string = null;
     }
@@ -723,7 +699,7 @@ public final class ImportService {
     }
 
 
-    public static void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW, CellRegion range, Map<String, String> newNames, boolean transpose) throws Exception {
+    private static void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW, CellRegion range, Map<String, String> newNames, boolean transpose) throws Exception {
 
         /*  NewNames here is a very short list which will convert 'next...' into the next available number for that variable, the value being held as the attribute 'next' on that name - e.g. for invoices
         *   the code is now defunct, but was present at SVN version 1161
@@ -767,24 +743,7 @@ public final class ImportService {
         }
     }
 
-    private static String convertDates(String possibleDate) {
-        //this routine should probably be generalised to recognise more forms of date
-        int slashPos = possibleDate.indexOf("/");
-        if (slashPos < 0) return possibleDate;
-        Date date;
-        try {
-            date = ukdflong.parse(possibleDate);// try with time
-        } catch (Exception e) {
-            try {
-                date = ukdf.parse(possibleDate); //try without time
-            } catch (Exception e2) {
-                return possibleDate;
-            }
-        }
-        return df.format(date);
-    }
-
-    public static Map<String, String> uploadChoices(Book book) {
+    private static Map<String, String> uploadChoices(Book book) {
         //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
         Map<String, String> choices = new HashMap<>();
         for (SName sName : book.getInternalBook().getNames()) {
