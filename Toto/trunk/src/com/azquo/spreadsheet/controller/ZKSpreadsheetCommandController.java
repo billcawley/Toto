@@ -224,6 +224,9 @@ public class ZKSpreadsheetCommandController {
                                     }
                                 }
                             }
+                            if (!saveOk){
+                                break; // stop looping through the names if a save failed
+                            }
                         }
                         // new thing, look for followon, guess we need an instance of ZK azquobook utils
                         // need to show readout like executing todo. On that topic could the executing loading screen say "running command?" or something similar?
