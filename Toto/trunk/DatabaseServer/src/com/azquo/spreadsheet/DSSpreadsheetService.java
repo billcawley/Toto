@@ -2266,9 +2266,11 @@ Callable interface sorts the memory "happens before" using future gets which run
                                     }
                                     if (!sameUser){
                                         changed = true;
-                                        toReturn = "Data in region " + cellsAndHeadingsForDisplay.getRegion() + " modified - cell  " + x + ", " + y;
+                                        toReturn = "Data in region " + cellsAndHeadingsForDisplay.getRegion() + " modified ";// - cell  " + x + ", " + y;
                                         if (listOfValuesOrNamesAndAttributeName.getValues() != null && !listOfValuesOrNamesAndAttributeName.getValues().isEmpty()) {
-                                            toReturn += " provenance  " + listOfValuesOrNamesAndAttributeName.getValues().iterator().next().getProvenance();
+                                            Provenance provenance = listOfValuesOrNamesAndAttributeName.getValues().iterator().next().getProvenance();
+                                            toReturn += " by " + provenance.getUser() + " Dated: " + provenance.getTimeStamp();
+                                            //toReturn += " provenance  " + listOfValuesOrNamesAndAttributeName.getValues().iterator().next().getProvenance();
                                         }
                                         break;
                                     }
