@@ -103,7 +103,6 @@ public class UserRegionOptions extends StandardEntity {
         this.sortRowAsc = false;
         this.sortColumn = null;
         this.sortColumnAsc = false;
-        this.userLocked = getOptionFromSpreadsheetOptions("userlocked", spreadsheetSource) != null;
 
         String sortColumn = getOptionFromSpreadsheetOptions("sortcolumn", spreadsheetSource);
         if (sortColumn != null) {
