@@ -2252,13 +2252,22 @@ Callable interface sorts the memory "happens before" using future gets which run
                         } else {
                             for (int x = 0; x < currentRow.size(); x++) {
                                 if (!currentRow.get(x).getStringValue().equals(sentRow.get(x).getStringValue())) { // then I think data changed in the mean time? Need to test against blank areas etc
-                                    changed = true;
                                     final ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = currentRow.get(x).getListOfValuesOrNamesAndAttributeName();
-                                    toReturn = "Data in region " + cellsAndHeadingsForDisplay.getRegion() + " modified - cell  " + x + ", " + y;
-                                    if (listOfValuesOrNamesAndAttributeName.getValues() != null && !listOfValuesOrNamesAndAttributeName.getValues().isEmpty()) {
-                                        toReturn += " provenance  " + listOfValuesOrNamesAndAttributeName.getValues().iterator().next().getProvenance();
+                                    // need to check provenance - if it's the same user then we don't flag the changes, could be an overlapping data region
+                                    boolean sameUser = false;
+                                    if (listOfValuesOrNamesAndAttributeName.getValues() != null && listOfValuesOrNamesAndAttributeName.getValues().size() == 1){
+                                        if (listOfValuesOrNamesAndAttributeName.getValues().get(0).getProvenance().getUser().equals(user)){ // it's the same user!
+                                            sameUser = true;
+                                        }
                                     }
-                                    break;
+                                    if (!sameUser){
+                                        changed = true;
+                                        toReturn = "Data in region " + cellsAndHeadingsForDisplay.getRegion() + " modified - cell  " + x + ", " + y;
+                                        if (listOfValuesOrNamesAndAttributeName.getValues() != null && !listOfValuesOrNamesAndAttributeName.getValues().isEmpty()) {
+                                            toReturn += " provenance  " + listOfValuesOrNamesAndAttributeName.getValues().iterator().next().getProvenance();
+                                        }
+                                        break;
+                                    }
                                 }
                             }
                         }
