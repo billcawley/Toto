@@ -1757,7 +1757,11 @@ Callable interface sorts the memory "happens before" using future gets which run
                             valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
                         }
                         for (DataRegionHeading lockCheck : headingsForThisCell) {
-                            if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.LOCKED) {
+                            //'unlocked' on any cell allows entry
+                            if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED){
+                                locked.isTrue = false;
+                                break;
+                            }else if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.LOCKED) {
                                 locked.isTrue = true;
                             } else if (lockCheck.getName() != null && lockCheck.getName().hasChildren() && // a name with children so default locked UNLESS defined as unlocked or split
                                     lockCheck.getSuffix() != DataRegionHeading.SUFFIX.UNLOCKED && lockCheck.getSuffix() != DataRegionHeading.SUFFIX.SPLIT) {
