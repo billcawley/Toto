@@ -945,7 +945,6 @@ public class DSSpreadsheetService {
                 if (sourceCell.isSelected()) {
                     System.out.println("selected cell");
                 }
-                displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored, sourceCell.isSelected()));
                 if (checkLocks && !sourceCell.isLocked() && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null){ // user locking is a moot point if the cell is already locked e.g. it's the result of a function
                     String result = azquoMemoryDBConnection.getAzquoMemoryDB().checkLocksForValueAndUser(databaseAccessToken.getUserId(), sourceCell.getListOfValuesOrNamesAndAttributeName().getValues());
                     if (result != null){ // it is locked
@@ -953,6 +952,7 @@ public class DSSpreadsheetService {
                         sourceCell.setLocked(true); // and lock the cell!
                     }
                 }
+                displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored, sourceCell.isSelected()));
                 if (regionOptions.lockRequest && lockCheckResult.size() == 0){ // if we're going to lock gather all relevant values, stop gathering if we found data already locked
                     if (sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null
                             && !sourceCell.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()){
@@ -2430,7 +2430,9 @@ Callable interface sorts the memory "happens before" using future gets which run
                             }
                         }
                     }
+                    columnCounter++;
                 }
+                rowCounter++;
             }
         } // the close of the block synchronised on the database, close it here before persisting since that is synchronized on the same object - if anything inside the block synchronizes on the database we'll find out pretty quickly!
 
