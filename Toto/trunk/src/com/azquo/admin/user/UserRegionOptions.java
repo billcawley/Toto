@@ -89,7 +89,7 @@ public class UserRegionOptions extends StandardEntity {
             this.noSave = spreadsheetSource.contains("nosave");
             String DATABASENAME = "database";
             this.databaseName = getOptionFromSpreadsheetOptions(DATABASENAME, spreadsheetSource);
-            this.userLocked = spreadsheetSource.contains("userlocked"); // the get option thing is no good for just an "exists with no value" check, this is the same
+            this.userLocked = spreadsheetSource.toLowerCase().contains("userlocked"); // the get option thing is no good for just an "exists with no value" check, this is the same
         } else {
             this.sortable = false;
             this.rowLimit = 0;

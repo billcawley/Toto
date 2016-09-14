@@ -541,12 +541,9 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     // work out what the local region and row and column is for a given cell in a repeat score
     private RegionRowCol getRegionRowColForRepeatRegion(Book book, int row, int col, SName repeatScopeName) {
-        SName repeatRegion = null;
-        SName repeatDataRegion = null;
-        String repeatRegionName = null;
-        repeatRegionName = repeatScopeName.getName().substring(ZKAzquoBookUtils.AZREPEATSCOPE.length());
-        repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZREPEATREGION + repeatRegionName);
-        repeatDataRegion = book.getInternalBook().getNameByName("az_DataRegion" + repeatRegionName); // todo string literals ergh!
+        String repeatRegionName = repeatScopeName.getName().substring(ZKAzquoBookUtils.AZREPEATSCOPE.length());
+        SName repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZREPEATREGION + repeatRegionName);
+        SName repeatDataRegion = book.getInternalBook().getNameByName("az_DataRegion" + repeatRegionName); // todo string literals ergh!
         // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
         if (repeatRegion != null && repeatDataRegion != null) { // ergh, got to try and find the right sent cell!
             // local row ancd col starts off local to the repeat scope then the region and finally the data region in the repeated region

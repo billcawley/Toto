@@ -90,6 +90,7 @@ public class ManageDatabaseBackupsController {
                         }
                     }
                     if (newBackup != null && !newBackup.isEmpty()){ // since the user has to be admin I'm not sure how much I need to protect against things here
+                        newBackup = newBackup.replace(" ", "");
                         newBackup = newBackup.replace("..", "");
                         newBackup = newBackup.replace("/", "");
                         newBackup = newBackup.replace("\\", "");
@@ -101,6 +102,7 @@ public class ManageDatabaseBackupsController {
                     }
 
                     if (deleteBackup != null && !deleteBackup.isEmpty()){
+                        deleteBackup = deleteBackup.replace(" ", "");
                         deleteBackup = deleteBackup.replace("..", "");
                         deleteBackup = deleteBackup.replace("/", "");
                         deleteBackup = deleteBackup.replace("\\", "");
@@ -111,6 +113,7 @@ public class ManageDatabaseBackupsController {
                     }
 
                     if (restoreBackup != null && !restoreBackup.isEmpty()){
+                        restoreBackup = restoreBackup.replace(" ", "");
                         restoreBackup = restoreBackup.replace("..", "");
                         restoreBackup = restoreBackup.replace("/", "");
                         restoreBackup = restoreBackup.replace("\\", "");
