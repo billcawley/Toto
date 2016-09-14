@@ -513,6 +513,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (regionRowCol.row >= 0 && regionRowCol.col >= 0 &&
                         sentCells.getData().size() > regionRowCol.row && sentCells.getData().get(regionRowCol.row).size() > regionRowCol.col) {
                     CellForDisplay cellForDisplay = sentCells.getData().get(regionRowCol.row).get(regionRowCol.col);
+                    // todo address locking here - maybe revert the cell
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                     if (isDouble) {
                         cellForDisplay.setNewDoubleValue(doubleValue);

@@ -1,5 +1,6 @@
 package com.azquo.memorydb.service;
 
+import com.azquo.dataimport.BatchImporter;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
@@ -1208,7 +1209,7 @@ public final class NameService {
                     valRhs = strings.get(Integer.parseInt(clauseRhs.substring(1, 3)));// anything left in quotes is referenced in the strings list
                     fixed = true;
                     //assume here that date will be of the form yyyy-mm-dd
-                    if (DSImportService.isADate(valRhs) != null) {
+                    if (BatchImporter.isADate(valRhs) != null) {
                         isADate = true;
                     }
                 }
