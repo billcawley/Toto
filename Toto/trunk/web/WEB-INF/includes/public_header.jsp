@@ -63,7 +63,7 @@
 			</c:if>
 <!-- sort out valign at some point -->
 			<c:if test="${not empty lockedResult}">
-				<textarea id="lockedResult" style="height:60px;width:500px;font:10px monospace;overflow:auto;vertical-align: middle">${lockedResult}</textarea>
+				<textarea id="lockedResult" class="public" style="height:60px;width:500px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;text-align:center;border:0">${lockedResult}</textarea>
 			</c:if>
 
 			<nav class="nav">
