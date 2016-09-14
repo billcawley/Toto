@@ -1159,7 +1159,10 @@ public class ZKAzquoBookUtils {
                                         date = df.parse(cellValue.getStringValue());
                                     }
                                     if (date != null) {
-                                        cell.setValue(date.getTime() / (1000 * 3600 * 24) + 25569);//convert date to days relative to 1970
+                                        // bit of a nasty hack to compensate for BST knocking of an hour from some times
+                                        TimeZone tz = TimeZone.getTimeZone("GMT");
+                                        boolean inDs = tz.inDaylightTime(date);
+                                        cell.setValue((date.getTime() + (inDs ? 1000 * 60 * 60 : 0)) / (1000 * 3600 * 24) + 25569);//convert date to days relative to 1970
                                         hasValue = true;
                                     }
                                 } catch (Exception ignored) {
