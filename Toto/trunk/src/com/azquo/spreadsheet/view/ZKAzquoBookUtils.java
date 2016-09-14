@@ -4,10 +4,7 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.user.UserChoiceDAO;
-import com.azquo.admin.user.UserChoice;
-import com.azquo.admin.user.UserRegionOptions;
-import com.azquo.admin.user.UserRegionOptionsDAO;
+import com.azquo.admin.user.*;
 import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
@@ -420,11 +417,11 @@ public class ZKAzquoBookUtils {
                     if (lockWarnings.length() == 0){
                         lockWarnings.append("Data on this sheet is locked\n");
                     }
-                    lockWarnings.append("Region : " + cellsAndHeadingsForDisplay.getRegion() + ",  " + cellsAndHeadingsForDisplay.getLockResult());
+                    lockWarnings.append("by " + cellsAndHeadingsForDisplay.getLockResult());
                 }
             }
             if (lockWarnings.length() > 0){
-                sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, lockWarnings);
+                sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, interpretWarnings(lockWarnings.toString()));
                 // any locks applied need to be let go
                 if (sheet.getBook().getInternalBook().getAttribute(OnlineController.LOCKED) == Boolean.TRUE){ // I think that's allowed, it was locked then unlock and switch the flag
                     try {
@@ -575,6 +572,26 @@ public class ZKAzquoBookUtils {
             }
         }
         return showSave;
+    }
+
+    private static String interpretWarnings(String lockWarnings){
+        //makes the warning more 'user-friendly'
+        int pos=0;
+        while (lockWarnings.indexOf("by ", pos) > 0){
+            int startName = lockWarnings.indexOf("by ", pos);
+            int endName = lockWarnings.indexOf(",", startName);
+            String user = lockWarnings.substring(startName + 3, endName);
+            String userName = user;
+            try{
+                userName = UserDAO.findByEmail(user).getName();
+            }catch(Exception e){
+
+            }
+            lockWarnings = lockWarnings.substring(0, startName + 3) + userName + lockWarnings.substring(endName).replaceFirst("T"," at ");
+            pos = startName + 3 + userName.length();
+         }
+
+        return lockWarnings.substring(0,lockWarnings.lastIndexOf(":"));//should be done on every line, but I doubt that there'll ever be more than one line - WFC
     }
 
     // like rangeToStringLists in azquobook
