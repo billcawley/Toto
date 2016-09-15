@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.dataimport.BatchImporter;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
@@ -2257,7 +2258,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                             break;
                         } else {
                             for (int x = 0; x < currentRow.size(); x++) {
-                                if (!currentRow.get(x).getStringValue().equals(sentRow.get(x).getStringValue())) { // then I think data changed in the mean time? Need to test against blank areas etc
+                                if (!compareCells(currentRow.get(x).getStringValue(),sentRow.get(x).getStringValue())) { // then I think data changed in the mean time? Need to test against blank areas etc
                                     final ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = currentRow.get(x).getListOfValuesOrNamesAndAttributeName();
                                     // need to check provenance - if it's the same user then we don't flag the changes, could be an overlapping data region
                                     boolean sameUser = false;
@@ -2460,6 +2461,16 @@ Callable interface sorts the memory "happens before" using future gets which run
             }
         }
         return contextHeadings;
+    }
+
+    private static boolean compareCells(String a1, String a2){
+        if (a1.equals(a2)){
+            return true;
+        }
+        if (BatchImporter.isADate(a1)!=null && BatchImporter.isADate(a1) == BatchImporter.isADate(a2)){
+            return true;
+        }
+        return false;
     }
 
     private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
