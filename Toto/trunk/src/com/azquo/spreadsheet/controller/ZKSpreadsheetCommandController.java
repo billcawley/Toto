@@ -109,8 +109,7 @@ public class ZKSpreadsheetCommandController {
                                     fos.close();
                                 }
                             }
-                            // /api/Online?reportid=1&amp;opcode=loadsheet&amp;reporttoload=${report.id}&amp;database=${report.database}
-                            Clients.evalJavaScript("window.location.assign(\"/api/Online?reportid=1&opcode=loadsheet&reporttoload=" + reportId + "&database=" + onlineReport.getDatabase() + "\")");
+                            Clients.evalJavaScript("window.location.assign(\"/api/Online?reportid=" + reportId + "&opcode=loadsheet&database=" + onlineReport.getDatabase() + "\")");
                         }
                     }
                     boolean pdfDefault = false;

@@ -1056,7 +1056,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (permissionId != null) { // database removed from permission, redundant
             Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + permissionId + "&opcode=loadsheet" + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
         } else if (or != null) {
-            Clients.evalJavaScript("window.open(\"/api/Online?reporttoload=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
+            Clients.evalJavaScript("window.open(\"/api/Online?reportid=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
         } else {
             Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
         }

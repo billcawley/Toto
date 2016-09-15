@@ -34,6 +34,8 @@ import java.util.Map;
  * Created by bill on 22/04/14.
  * <p>
  * EFC : I'd like to zap a fair few of the parameters, now we've zapped AzquoBook more scope.
+ *
+ * For starters push template and execute into the opcode
  */
 
 @Controller
@@ -65,7 +67,6 @@ public class OnlineController {
             , @RequestParam(value = "permissionid", required = false) String permissionId
             , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
-            , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
@@ -74,9 +75,6 @@ public class OnlineController {
 
     ) {
         try {
-            if (reportToLoad != null && reportToLoad.length() > 0) {
-                reportId = reportToLoad;
-            }
             //long startTime = System.currentTimeMillis();
             Permission permission;
             try {
@@ -298,12 +296,11 @@ public class OnlineController {
             , @RequestParam(value = "permissionid", required = false) String permissionId
             , @RequestParam(value = "opcode", required = false, defaultValue = "") String opcode
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
-            , @RequestParam(value = "reporttoload", required = false, defaultValue = "") String reportToLoad
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
             , @RequestParam(value = "template", required = false, defaultValue = "") String template
             , @RequestParam(value = "execute", required = false, defaultValue = "") String execute
     ) {
-        return handleRequest(model, request, reportId, databaseId, permissionId, opcode, database, reportToLoad, /*dataChoice,imageStoreName, */ imageName, submit, null, template, execute);
+        return handleRequest(model, request, reportId, databaseId, permissionId, opcode, database, /*dataChoice,imageStoreName, */ imageName, submit, null, template, execute);
     }
 }
