@@ -2227,7 +2227,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         synchronized (azquoMemoryDBConnection.getAzquoMemoryDB()) { // we don't want concurrent saves on a single database
             azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId()); // todo - is this the palce to unlock? It's probably fair
             boolean modifiedInTheMeanTime = azquoMemoryDBConnection.getDBLastModifiedTimeStamp() != cellsAndHeadingsForDisplay.getTimeStamp(); // if true we need to check if someone else changed the data
-            // todo - this saves regardless of changes in the mean time. Perhaps not the best plan . . .
+            // ad hoc saves regardless of changes in the mean time. Perhaps not the best plan . . .
             azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
             if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
                 importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
@@ -2236,6 +2236,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 }
                 return "true";
             }
+            // check we're not getting cellsAndHeadingsForDisplay.getTimeStamp() = 0 here, it should only happen due tio ad hoc which should have returned by now . . .
             boolean changed = false;
             String toReturn = "";
             //modifiedInTheMeanTime = true;
@@ -2244,6 +2245,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         , cellsAndHeadingsForDisplay.getOptions(), databaseAccessToken.getLanguages(), 0);
                 List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
                 if (currentData.size() != sentData.size()) {
+                    toReturn = "Data region " + cellsAndHeadingsForDisplay.getRegion() + " has changed size!";
                     changed = true;
                 } else {
                     for (int y = 0; y < currentData.size(); y++) {
