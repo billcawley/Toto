@@ -9,9 +9,8 @@
 	<table>
 		<thead>
 			<tr>
-				<td>Id</td>
+		    	<td>User Email</td>
 				<td>Name</td>
-				<td>User Email</td>
 				<td>End Date</td>
 				<!--<td>Business Id</td>-->
 				
@@ -24,10 +23,9 @@
 		<tbody>
 		<c:forEach items="${users}" var="user">
 			<tr>
-				<td>${user.id}</td>
-				<td>${user.name}</td>
 				<td>${user.email}</td>
-				
+				<td>${user.name}</td>
+
 				<td>${user.endDate}</td>
 				<!--<td>${user.businessId}</td>-->
 				
