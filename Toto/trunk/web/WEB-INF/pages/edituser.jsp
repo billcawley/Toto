@@ -17,16 +17,22 @@
 						<h3>User Details</h3>
 						<div class="well">
 							<div>
+								<label for="email">Email/logon</label>
+								<input name="email" id="email" value="${email}">
+							</div>
+							<div>
 								<label for="name">Name</label>
 								<input name="name" id="name" value="${name}">
 							</div>
 							<div>
-								<label for="email">Email</label>
-								<input name="email" id="email" value="${email}">
-							</div>
-							<div>
 								<label for="status">Status</label>
-								<input name="status" id="status" value="${status}">
+								<select name="status" id="status">
+									<option value="ADMINISTRATOR" ${status =="ADMINISTRATOR"?"selected":""}>Administrator</option>
+									<option value="DEVELOPER"  ${status =="DEVELOPER"?"selected":""}>Developer</option>
+									<option value="MASTER"  ${status =="MASTER"?"selected":""}>Master</option>
+									<option value="USER" ${status =="USER"?"selected":""}>User</option>
+
+								</select>
 							</div>
 						</div>
 					</td>
