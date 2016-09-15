@@ -417,7 +417,7 @@ public class ZKAzquoBookUtils {
                     if (lockWarnings.length() == 0){
                         lockWarnings.append("Data on this sheet is locked\n");
                     }
-                    lockWarnings.append("by " + cellsAndHeadingsForDisplay.getLockResult());
+                    lockWarnings.append("by  " + cellsAndHeadingsForDisplay.getLockResult());
                 }
             }
             if (lockWarnings.length() > 0){
@@ -581,17 +581,11 @@ public class ZKAzquoBookUtils {
             int startName = lockWarnings.indexOf("by ", pos);
             int endName = lockWarnings.indexOf(",", startName);
             String user = lockWarnings.substring(startName + 3, endName);
-            String userName = user;
-            try{
-                userName = UserDAO.findByEmail(user).getName();
-            }catch(Exception e){
-
-            }
+            String userName = UserDAO.findByEmail(user).getName();
             lockWarnings = lockWarnings.substring(0, startName + 3) + userName + lockWarnings.substring(endName).replaceFirst("T"," at ");
             pos = startName + 3 + userName.length();
          }
-
-        return lockWarnings.substring(0,lockWarnings.lastIndexOf(":"));//should be done on every line, but I doubt that there'll ever be more than one line - WFC
+        return lockWarnings;
     }
 
     // like rangeToStringLists in azquobook
