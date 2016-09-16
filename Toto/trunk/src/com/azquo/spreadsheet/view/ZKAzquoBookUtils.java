@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet.view;
 
+import com.azquo.TypedPair;
 import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
@@ -246,7 +248,7 @@ public class ZKAzquoBookUtils {
 
         String context = "";
         Map<String, List<String>> choiceOptionsMap = resolveChoiceOptions(book, loggedInUser);
-        Map<String, String> permissionsFromReports = loggedInUser.getPermissionsFromReport() != null ? loggedInUser.getPermissionsFromReport() : new ConcurrentHashMap<>(); // cumulative permissions. Might as well make concurrent
+        Map<String, TypedPair<OnlineReport, Database>> permissionsFromReports = loggedInUser.getPermissionsFromReport() != null ? loggedInUser.getPermissionsFromReport() : new ConcurrentHashMap<>(); // cumulative permissions. Might as well make concurrent
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
             // these two lines moved from below the unmerge command, shouldn't be a big problem - I need the options to check that we're setting valid options directly below
@@ -256,21 +258,38 @@ public class ZKAzquoBookUtils {
             for (SName sName : namesForSheet) {
                 if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
                     CellRegion allowable = sName.getRefersToCellRegion();
-                    boolean databases = allowable.getLastColumn() > allowable.getColumn();
-                    for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
-                        if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
-                            String key = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
-                            String value = "";
-                            if (databases && !sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).isNull()) {
-                                value = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
+                    // need to detect 2nd AND 3rd column here - 2nd = db, if 3rd then last is db 2nd report and 1st name (key)
+                    if (allowable.getLastColumn() - allowable.getColumn() == 3){ // name, report, database
+                        for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
+                            if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
+                                String name = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
+                                final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
+                                final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+                                final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 2).getStringValue();
+                                final Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
+                                permissionsFromReports.put(name.toLowerCase(), new TypedPair<>(report,database));
                             }
-                            if (value.isEmpty()) { // use the current DB
-                                value = loggedInUser.getDatabase().getName();
+                        }
+                    } else if (allowable.getLastColumn() - allowable.getColumn() == 2){ // report, database
+                        for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
+                            if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
+                                final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
+                                final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+                                final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
+                                final Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
+                                permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, database));
                             }
-                            permissionsFromReports.put(key.toLowerCase(), value);
+                        }
+                    } else { // just the report
+                        for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
+                            if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
+                                final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
+                                final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+                                permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId())));
+                            }
                         }
                     }
-                    loggedInUser.setPermissionsFromReport(permissionsFromReports);
+                    loggedInUser.setPermissionsFromReport(permissionsFromReports); // re set it in case it was null above
                 }
             }
 

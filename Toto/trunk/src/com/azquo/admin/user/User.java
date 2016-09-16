@@ -1,6 +1,11 @@
 package com.azquo.admin.user;
 
 import com.azquo.admin.StandardEntity;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
+
 import java.time.LocalDateTime;
 
 /**
@@ -11,6 +16,8 @@ import java.time.LocalDateTime;
  * Why do we have json properties? A hangover? The old UI??
  */
 public final class User extends StandardEntity {
+
+    //ALTER TABLE `user` ADD `database_id` INT(11) NOT NULL DEFAULT '0' , ADD `report_id` INT(11) NOT NULL DEFAULT '0' ;
 
     public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
     private static final String STATUS_MASTER = "MASTER";
@@ -26,17 +33,10 @@ public final class User extends StandardEntity {
     private String password;
     private String salt;
     private String createdBy;
+    private int databaseId;
+    private int reportId;
 
-    // salt will probably never be passed
-    public User(int id
-            , LocalDateTime endDate
-            , int businessId
-            , String email
-            , String name
-            , String status
-            , String password
-            , String salt
-            , String createdBy) {
+    public User(int id, LocalDateTime endDate, int businessId, String email, String name, String status, String password, String salt, String createdBy, int databaseId, int reportId) {
         this.id = id;
         this.endDate = endDate;
         this.businessId = businessId;
@@ -46,6 +46,8 @@ public final class User extends StandardEntity {
         this.password = password;
         this.salt = salt;
         this.createdBy = createdBy;
+        this.databaseId = databaseId;
+        this.reportId = reportId;
     }
 
     public boolean isAdministrator() {
@@ -124,9 +126,38 @@ public final class User extends StandardEntity {
         this.createdBy = createdBy;
     }
 
+    public int getDatabaseId() {
+        return databaseId;
+    }
+
+    // for display
+    public String getDatabaseName() {
+        final Database byId = DatabaseDAO.findById(databaseId);
+        return byId != null ? byId.getName() : "";
+    }
+
+    public void setDatabaseId(int databaseId) {
+        this.databaseId = databaseId;
+    }
+
+    public int getReportId() {
+        return reportId;
+    }
+
+    // for display
+    public String getReportName() {
+        final OnlineReport byId = OnlineReportDAO.findById(reportId);
+        return byId != null ? byId.getReportName() : "";
+    }
+
+    public void setReportId(int reportId) {
+        this.reportId = reportId;
+    }
+
     @Override
     public String toString() {
         return "User{" +
+                "id=" + id +
                 ", endDate=" + endDate +
                 ", businessId=" + businessId +
                 ", email='" + email + '\'' +
@@ -135,6 +166,8 @@ public final class User extends StandardEntity {
                 ", password='" + password + '\'' +
                 ", salt='" + salt + '\'' +
                 ", createdBy='" + createdBy + '\'' +
+                ", databaseId=" + databaseId +
+                ", reportId=" + reportId +
                 '}';
     }
 }

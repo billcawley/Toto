@@ -31,17 +31,34 @@
 									<option value="DEVELOPER"  ${status =="DEVELOPER"?"selected":""}>Developer</option>
 									<option value="MASTER"  ${status =="MASTER"?"selected":""}>Master</option>
 									<option value="USER" ${status =="USER"?"selected":""}>User</option>
-
 								</select>
 							</div>
 						</div>
 					</td>
 					<td width="33%">
-						<h3>End Date</h3>
+						<h3>&nbsp;</h3>
 						<div class="well">
 							<div>
 								<label for="endDate">End Date</label>
 								<input name="endDate" id="endDate" value="${endDate}">
+							</div>
+							<div>
+								<label for="status">Database</label>
+								<select name="databaseId">
+									<option value="0">None</option>
+									<c:forEach items="${databases}" var="database">
+										<option value="${database.id}"<c:if test="${database.id == user.databaseId}"> selected</c:if>>${database.name}</option>
+									</c:forEach>
+								</select>
+							</div>
+							<div>
+								<label for="status">Report</label>
+								<select name="reportId">
+									<option value="0">None</option>
+									<c:forEach items="${reports}" var="report">
+										<option value="${report.id}"<c:if test="${report.id == user.reportId}"> selected</c:if>>${report.reportName}</option>
+									</c:forEach>
+								</select>
 							</div>
 						</div>
 					</td>

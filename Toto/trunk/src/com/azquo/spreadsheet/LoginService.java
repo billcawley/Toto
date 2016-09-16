@@ -6,9 +6,6 @@ import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.admin.user.*;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -48,12 +45,11 @@ public class LoginService {
         return null;
     }
 
-    // todo - what to do about database here, it's not ideal and based on the old model
+    // todo - what to do about database here, it's not ideal and based on the old model. Also inline the function?
 
     private static LoggedInUser loginLoggedInUser(final String sessionId, String databaseName, final User user) throws Exception {
         Database database = null;
         // ok user should be ok :)
-        Permission permission = null;
         if (databaseName == null) {
             databaseName = "";
         }
@@ -82,20 +78,11 @@ public class LoginService {
                     }
                 }
             }
-        } else { // try and do it by permission - should we allow this at all for non admin users? todo - is the logic here correct, I need both the db and permissions, right now it feels like a double look up
-            final List<Database> forUserIdPermission = DatabaseDAO.findForUserIdViaPermission(user.getId());
-            if (forUserIdPermission.size() == 1) {
-                database = forUserIdPermission.get(0);
-            } else {
-                for (Database database1 : forUserIdPermission) {
-                    if (database1.getName().equalsIgnoreCase(databaseName)) {
-                        database = database1;
-                        permission = PermissionDAO.findByBusinessUserAndDatabase(user, database);
-                        break;
-                    }
-                }
-            }
         }
+        if (database == null){ // now we have a DB against the user we could perhaps remove the defaults to a single one above? Perhaps different for admin or developer
+            database = DatabaseDAO.findById(user.getDatabaseId());
+        }
+
         DatabaseServer databaseServer = null;
         if (database != null) {
             databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
@@ -106,7 +93,7 @@ public class LoginService {
             throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
         }
         String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user, databaseServer, database, permission != null ? permission.getReadList() : null, permission != null ? permission.getWriteList() : null, null, businessDirectory);
+        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user, databaseServer, database, null, null, null, businessDirectory);// null the read/write list for the mo
         if (loggedInUser.getUser().getId() != 25) { // stop recording Nic's logins which are also used by the monitoring software!
             LoginRecordDAO.store(new LoginRecord(0, user.getId(), database != null ? database.getId() : 0, new Date()));
         }
@@ -120,7 +107,7 @@ public class LoginService {
     public static void switchDatabase(LoggedInUser loggedInUser, String newDBName) throws Exception {
         Database db = null;
         if (newDBName != null && newDBName.length() != 0) {
-            db = DatabaseDAO.findForName(loggedInUser.getUser().getBusinessId(), newDBName);
+            db = DatabaseDAO.findForNameAndBusinessId(newDBName, loggedInUser.getUser().getBusinessId());
             if (db == null) {
                 throw new Exception(newDBName + " - no such database");
             }

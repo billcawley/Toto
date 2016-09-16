@@ -1040,23 +1040,14 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (loggedInUser.getPermissionsFromReport().get(reportName.toLowerCase()) != null){
                     permissionId = reportName;
                 }
-            } else { // need to try to find the permission from the db
-                final List<Permission> forUserId = PermissionDAO.findForUserId(loggedInUser.getUser().getId());
-                OnlineReport test = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
-                for (Permission permission1 : forUserId) {
-                    if (permission1.getReportId() == test.getId()) { // so they can see this report from permissions
-                        permissionId = permission1.getId() + ""; // hacky but now permission id can be report names
-                        break;
-                    }
-                }
             }
         } else {
             reportName = "unspecified";
         }
         if (permissionId != null) { // database removed from permission, redundant
-            Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + permissionId + "&opcode=loadsheet" + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
+            Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + permissionId + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
         } else if (or != null) {
-            Clients.evalJavaScript("window.open(\"/api/Online?reportid=" + or.getId() + "&opcode=loadsheet&database=" + loggedInUser.getDatabase().getName() + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
+            Clients.evalJavaScript("window.open(\"/api/Online?reportid=" + or.getId() + "&database=" + loggedInUser.getDatabase().getName() + (valueId != 0 ? "&valueid=" + valueId : "") + "\")");
         } else {
             Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
         }

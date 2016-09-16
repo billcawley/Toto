@@ -35,7 +35,6 @@
 		<li><a href="/api/ManageDatabases"${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageDatabases') ? ' class="on"' : ''}>Databases</a></li>
 		<c:if test="${!developer}">
 		<li><a href="/api/ManageUsers"${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageUsers') ? ' class="on"' : ''}>Users</a></li>
-		<li><a href="/api/ManagePermissions"${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManagePermissions') ? ' class="on"' : ''}>Permissions</a></li>
 		</c:if>
 		<li><a href="/api/Login?logoff=true">Log Off</a></li>
 	</ul>

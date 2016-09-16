@@ -1,7 +1,9 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.TypedPair;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
+import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.user.User;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -30,8 +32,6 @@ public class LoggedInUser {
     private final String sessionId; // it's used to match to a log server side
     private final User user;
 
-    // this report id should only be there for legacy reasons for AzquoBook, it makes no sense in the context of mulitple tabs hence ZK should not use it
-    private int reportId;
 
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
 
@@ -49,7 +49,7 @@ public class LoggedInUser {
 
     private final String businessDirectory;
 
-    private Map<String, String> permissionsFromReport; // hold them here after they're set by a "home page" report for linking
+    private Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport; // hold them here after they're set by a "home page" report for linking
 
     private static final String defaultRegion = "default-region";
 
@@ -63,7 +63,6 @@ public class LoggedInUser {
         this.sessionId = sessionId;
         this.user = user;
         this.businessDirectory = businessDirectory;
-        reportId = 0;
         sentCellsMaps = new HashMap<>();
         languages = new ArrayList<>(2);
         languages.add(user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
@@ -88,7 +87,6 @@ public class LoggedInUser {
 
         this.sessionId = originalUser.sessionId;
         this.user = originalUser.user;
-        reportId = 0;
         sentCellsMaps = new HashMap<>();
         languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
@@ -106,14 +104,6 @@ public class LoggedInUser {
     public void assignIdForJsTreeNode(JsonChildren.Node node){
         node.id = lastJSTreeNodeId.incrementAndGet();
         jsTreeLookupMap.put(node.id, node);
-    }
-
-    public int getReportId() {
-        return reportId;
-    }
-
-    public void setReportId(int reportId) {
-        this.reportId = reportId;
     }
 
     // adding in report id (a little hacky, could maybe change later?) otherwise two reports on different tabs could clash on identically named regions - bug identified by drilldowns
@@ -198,11 +188,11 @@ public class LoggedInUser {
         return businessDirectory;
     }
 
-    public Map<String, String> getPermissionsFromReport() {
+    public Map<String, TypedPair<OnlineReport, Database>> getPermissionsFromReport() {
         return permissionsFromReport;
     }
 
-    public void setPermissionsFromReport(Map<String, String> permissionsFromReport) {
+    public void setPermissionsFromReport(Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport) {
         this.permissionsFromReport = permissionsFromReport;
     }
 }

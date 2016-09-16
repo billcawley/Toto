@@ -47,7 +47,7 @@ public class LoginController {
                 if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                     return "redirect:/api/ManageReports";
                 } else {
-                    return "redirect:/api/Online?opcode=loadsheet&reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
+                    return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                 }
             }
         } else {
@@ -59,7 +59,7 @@ public class LoginController {
                     if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                         return "redirect:/api/ManageReports";
                     } else {
-                        return "redirect:/api/Online?opcode=loadsheet&reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
+                        return "redirect:/api/Online?reportid=1"; // redirect to menu, will need to be changed when we sort the parameters out
                     }
                 } else {// feedback to users about incorrect details
                     model.put("error", "incorrect login details");

@@ -1,8 +1,7 @@
 package com.azquo.dataimport;
 
+import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
-import com.azquo.admin.business.Business;
-import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.*;
 import com.azquo.admin.user.*;
@@ -27,7 +26,6 @@ import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
 import java.io.*;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -96,11 +94,10 @@ public final class ImportService {
     }
 
     private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
-        if (fileName.equals(CreateExcelForDownloadController.USERSPERMISSIONSFILENAME) && loggedInUser.getUser().isAdministrator()) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
+        if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) &&  (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(fileName), "Report name");
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
-            Sheet permissionsSheet = book.getSheet("Permissions"); // literals not best practice, could it be factored between this and the xlsx file?
-            if (userSheet != null && permissionsSheet != null) {
+            if (userSheet != null) {
                 int row = 1;
                 // keep them to use if not set. Should I be updating records instead? I'm not sure.
                 Map<String, String> oldPasswordMap = new HashMap<>();
@@ -108,27 +105,30 @@ public final class ImportService {
                 List<User> userList = AdminService.getUserListForBusiness(loggedInUser);
                 for (User user : userList) {
                     if (user.getId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
+                        // todo leave admins alone unless admin!
                         oldPasswordMap.put(user.getEmail(), user.getPassword());
                         oldSaltMap.put(user.getEmail(), user.getSalt());
                         UserDAO.removeById(user);
                     }
                 }
                 while (userSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && userSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
+                    //Name	Email	Password	End Date	Status	Database	Report
                     String user = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
                     String email = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
                     if (!loggedInUser.getUser().getEmail().equals(email)) { // leave the logged in user alone!
+                        String salt = "";
+                        String password = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
+                        if (password == null) {
+                            password = "";
+                        }
                         LocalDateTime end = LocalDateTime.now();
                         try {
                             end = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
                         } catch (Exception ignored) {
                         }
-                        // should we allow them to change businesses?
-                        Business b = BusinessDAO.findByName(userSheet.getInternalSheet().getCell(row, 4).getStringValue());
-                        String status = userSheet.getInternalSheet().getCell(row, 5).getStringValue();
-                        String salt = "";
-                        String password = userSheet.getInternalSheet().getCell(row, 5).getStringValue();
-                        if (password == null) {
-                            password = "";
+                        String status = userSheet.getInternalSheet().getCell(row, 4).getStringValue();
+                        if (!loggedInUser.getUser().isAdministrator()){
+                            status = ""; // only admins can set status
                         }
                         // Probably could be factored somewhere
                         if (password.length() > 0) {
@@ -138,76 +138,33 @@ public final class ImportService {
                             password = oldPasswordMap.get(email);
                             salt = oldSaltMap.get(email);
                         }
-                        User user1 = new User(0, end, b != null ? b.getId() : loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail());
-                        UserDAO.store(user1);
-                    }
-                    row++;
-                }
-                List<Permission> permissionList = PermissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId());
-                for (Permission permission : permissionList) {
-                    if (permission.getUserId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
-                        PermissionDAO.removeById(permission);
-                    }
-                }
-                row = 1;
-                while (permissionsSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && permissionsSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
-                    String database = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
-                    String email = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
-                    if (!loggedInUser.getUser().getEmail().equals(email)) { // leave the logged in user alone!
-                        User user = UserDAO.findByEmail(email);
-                        if (user != null) {
-                            Database database1 = DatabaseDAO.findForName(user.getBusinessId(), database);
-                            if (database1 != null) {
-                                String reportName = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
-                                final OnlineReport forDatabaseIdAndName = OnlineReportDAO.findForDatabaseIdAndName(database1.getId(), reportName);
-                                String readList = userSheet.getInternalSheet().getCell(row, 3).getStringValue();
-                                String writeList = userSheet.getInternalSheet().getCell(row, 4).getStringValue();
-                                Permission newPermission = new Permission(0, forDatabaseIdAndName.getId(), user.getId(), database1.getId(), readList, writeList);
-                                PermissionDAO.store(newPermission);
+                        Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 5).getStringValue(), loggedInUser.getUser().getBusinessId());
+                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 6).getStringValue(), loggedInUser.getUser().getBusinessId());
+                        if (!loggedInUser.getUser().isAdministrator()){ // then I need to check against the session for allowable reports and databases
+                            final Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport = loggedInUser.getPermissionsFromReport();
+                            boolean stored = false;
+                            for (TypedPair<OnlineReport, Database> allowedCombo : permissionsFromReport.values()){
+                                if (allowedCombo.getFirst().getId() == or.getId() && allowedCombo.getSecond().getId() == d.getId()){ // then we can add the user with this info
+                                    User user1 = new User(0, end, loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId());
+                                    UserDAO.store(user1);
+                                    stored = true;
+                                    break;
+                                }
                             }
+                            if (!stored){ // default to the current users home menu
+                                User user1 = new User(0, end, loggedInUser.getUser().getBusinessId(), email, user, status,
+                                        password, salt, loggedInUser.getUser().getEmail(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getReportId());
+                                UserDAO.store(user1);
+                            }
+                        } else {
+                            User user1 = new User(0, end, loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId());
+                            UserDAO.store(user1);
                         }
                     }
                     row++;
                 }
             }
-            return "User Permissions file uploaded"; // I hope that's what it is looking for.
-        } else if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) && loggedInUser.getUser().isMaster()) {
-            User master = loggedInUser.getUser();
-            Book book = Importers.getImporter().imports(new File(fileName), "Report name");
-            Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
-            if (userSheet != null) {
-                int row = 1;
-                // keep them to use if not set. Should I be updating records instead? I'm not sure.
-                Map<String, String> oldPasswordMap = new HashMap<>();
-                Map<String, String> oldSaltMap = new HashMap<>();
-                List<User> userList = AdminService.getUserListForBusiness(loggedInUser); // this will switch logic internally given that the user is a master (only return users created by this one)
-                for (User user : userList) {// as before cache the passwords in case new ones have not been entered
-                    oldPasswordMap.put(user.getEmail(), user.getPassword());
-                    oldSaltMap.put(user.getEmail(), user.getSalt());
-                    UserDAO.removeById(user);
-                }
-                while (userSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && userSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
-                    String user = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
-                    String email = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
-                    String salt = "";
-                    String password = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
-                    if (password == null) {
-                        password = "";
-                    }
-                    if (password.length() > 0) {
-                        salt = AdminService.shaHash(System.currentTimeMillis() + "salt");
-                        password = AdminService.encrypt(password, salt);
-                    } else if (oldPasswordMap.get(email) != null) {
-                        password = oldPasswordMap.get(email);
-                        salt = oldSaltMap.get(email);
-                    }
-                    // copy details from the master user
-                    User user1 = new User(0, master.getEndDate(), master.getBusinessId(), email, user, master.getStatus(), password, salt, master.getEmail());
-                    UserDAO.store(user1);
-                    row++;
-                }
-            }
-            return "User Permissions file uploaded"; // I hope that's what it is looking for.
+            return "User file uploaded";
         } else if (fileName.equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
             Book book = Importers.getImporter().imports(new File(fileName), "Report name");
             Sheet schedulesSheet = book.getSheet("ReportSchedules"); // literals not best practice, could it be factored between this and the xlsx file?
@@ -226,7 +183,7 @@ public final class ImportService {
                     } catch (Exception ignored) {
                     }
                     String database = schedulesSheet.getInternalSheet().getCell(row, 3).getStringValue();
-                    Database database1 = DatabaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
+                    Database database1 = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
                     if (database1 != null) {
                         String report = schedulesSheet.getInternalSheet().getCell(row, 4).getStringValue();
                         OnlineReport onlineReport = OnlineReportDAO.findForDatabaseIdAndName(database1.getId(), report);
@@ -581,15 +538,15 @@ public final class ImportService {
                                         && rowInRegion <= dataStartRow + dataHeight
                                         && cellsAndHeadingsForDisplay != null){
                                     final List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                                    final DoubleStringPair cellValue = getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewStringValue(cellValue.string);
+                                    final TypedPair<Double, String> cellValue = getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewStringValue(cellValue.getSecond());
                                     // added by Edd, should sort some numbers being ignored!
-                                    if (cellValue.number != null){
-                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(cellValue.number);
+                                    if (cellValue.getFirst() != null){
+                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(cellValue.getFirst());
                                     } else { // I think defaulting to zero is correct here?
                                         data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(0.0);
                                     }
-                                    if (cellValue.string.length() > 0) nonBlankItems++;
+                                    if (cellValue.getSecond().length() > 0) nonBlankItems++;
                                 }
                             }
                         }
@@ -604,15 +561,15 @@ public final class ImportService {
                             for (int row = 0; row < sourceRegion.getRowCount(); row++) {
                                 for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
                                     // note that this function might return a null double but no null string. Perhaps could be mroe consistent? THis area is a bit hacky . . .
-                                    final DoubleStringPair cellValue = getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    data.get(row).get(col).setNewStringValue(cellValue.string);
+                                    final TypedPair<Double, String> cellValue = getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    data.get(row).get(col).setNewStringValue(cellValue.getSecond());
                                     // added by Edd, should sort some numbers being ignored!
-                                    if (cellValue.number != null){
-                                        data.get(row).get(col).setNewDoubleValue(cellValue.number);
+                                    if (cellValue.getFirst() != null){
+                                        data.get(row).get(col).setNewDoubleValue(cellValue.getFirst());
                                     } else { // I think defaulting to zero is correct here?
                                         data.get(row).get(col).setNewDoubleValue(0.0);
                                     }
-                                    if (cellValue.string.length() > 0){
+                                    if (cellValue.getSecond().length() > 0){
                                         nonBlankItems++;
                                     }
                                 }
@@ -643,17 +600,11 @@ public final class ImportService {
         return null;
     }
 
-    // the function below needs to return a number and string really so azquo knows what to do with the data
-
-    private static class DoubleStringPair {
-        Double number = null;
-        String string = null;
-    }
-
     // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO
 
-    private static DoubleStringPair getCellValue(Sheet sheet, int r, int c){
-        DoubleStringPair toReturn = new DoubleStringPair();
+    private static TypedPair<Double, String> getCellValue(Sheet sheet, int r, int c){
+        Double returnNumber = null;
+        String returnString = null;
         Range range = Ranges.range(sheet, r, c);
         CellData cellData = range.getCellData();
         String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
@@ -671,7 +622,7 @@ public final class ImportService {
                 //if it's a number, remove all formatting
                 try {
                     double d = cellData.getDoubleValue();
-                    toReturn.number = d;
+                    returnNumber = d;
                     stringValue = d + "";
                     if (stringValue.endsWith(".0")) {
                         stringValue = stringValue.substring(0, stringValue.length() - 2);
@@ -683,17 +634,17 @@ public final class ImportService {
                 //remove spuriouse quote marks
                 stringValue = stringValue.substring(1, stringValue.length() - 1).replace("\"\"", "\"");
             }
-            toReturn.string = stringValue;
+            returnString = stringValue;
         }
-        return toReturn;
+        return new TypedPair<>(returnNumber, returnString);
     }
 
     private static void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
-        final DoubleStringPair cellValue = getCellValue(sheet, r, c);
-        if (newNames != null && newNames.get(cellValue.string) != null) {
-             csvW.write(newNames.get(cellValue.string));
+        final TypedPair<Double, String> cellValue = getCellValue(sheet, r, c);
+        if (newNames != null && newNames.get(cellValue.getSecond()) != null) {
+             csvW.write(newNames.get(cellValue.getSecond()));
         } else {
-             csvW.write(cellValue.string.replace("\n","\\\\n").replace("\t","\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+             csvW.write(cellValue.getSecond().replace("\n","\\\\n").replace("\t","\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
          }
 
     }

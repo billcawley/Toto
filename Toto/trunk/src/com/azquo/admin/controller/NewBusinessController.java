@@ -70,7 +70,7 @@ public class NewBusinessController {
                         request.getSession().setAttribute( LoginController.LOGGED_IN_USER_SESSION, loggedInUser);
                     }
 
-                    return "redirect:/api/Online?opcode=loadsheet&reportid=1";
+                    return "redirect:/api/Online?reportid=1";
                 } else {
                     model.put("error", error.toString());
                 }

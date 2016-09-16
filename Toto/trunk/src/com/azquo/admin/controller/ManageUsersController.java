@@ -42,6 +42,8 @@ public class ManageUsersController {
             , @RequestParam(value = "name", required = false) String name
             , @RequestParam(value = "status", required = false) String status
             , @RequestParam(value = "password", required = false) String password
+            , @RequestParam(value = "databaseId", required = false) String databaseId
+            , @RequestParam(value = "reportId", required = false) String reportId
             , @RequestParam(value = "submit", required = false) String submit
     ) throws Exception
 
@@ -87,12 +89,16 @@ public class ManageUsersController {
                         // then store, it might be new
                         if (toEdit == null){
                             // Have to use  a LocalDate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
-                            AdminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser);
+                            AdminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser
+                                    ,databaseId != null && NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0
+                                    ,reportId != null && NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0);
                         } else {
                             toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());
                             toEdit.setEmail(email);
                             toEdit.setName(name);
                             toEdit.setStatus(status);
+                            toEdit.setDatabaseId(databaseId != null && NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0);
+                            toEdit.setReportId(reportId != null && NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0);
                             if (password != null && !password.isEmpty()){
                                 final String salt = AdminService.shaHash(System.currentTimeMillis() + "salt");
                                 toEdit.setSalt(salt);
@@ -117,10 +123,13 @@ public class ManageUsersController {
                         model.put("email", toEdit.getEmail());
                         model.put("name", toEdit.getName());
                         model.put("status", toEdit.getStatus());
+                        model.put("user", toEdit);
                     } else {
                         model.put("id", "0");
                     }
                 }
+                model.put("databases", AdminService.getDatabaseListForBusiness(loggedInUser));
+                model.put("reports", AdminService.getReportList(loggedInUser));
                 return "edituser";
             }
             final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);

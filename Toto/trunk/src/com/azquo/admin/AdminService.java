@@ -64,7 +64,7 @@ public class AdminService {
         }
         BusinessDAO.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business");
+        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0,0);// Admin with
         UserDAO.store(user);
         /*
         azquoMailer.sendEMail(user.getEmail()
@@ -116,7 +116,7 @@ this may now not work at all, perhaps delete?
         }
         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
             // force a developer prefix?
-            Database existing = DatabaseDAO.findForName(loggedInUser.getUser().getBusinessId(), databaseName);
+            Database existing = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
             if (existing != null) {
                 throw new Exception("That database already exists");
             }
@@ -149,28 +149,15 @@ this may now not work at all, perhaps delete?
             , final LocalDateTime endDate
             , final String status
             , final String password
-            , final LoggedInUser loggedInUser) throws Exception {
+            , final LoggedInUser loggedInUser
+    , int databaseId
+    , int userId) throws Exception {
         if (loggedInUser.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail());
+            final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail(), databaseId, userId);
             UserDAO.store(user);
         } else {
             throw new Exception("error: you do not have permission to create a user");
-        }
-    }
-
-    // now not dependant on selected database
-
-    public static void createUserPermission(final int reportId, final int userId, final int databaseId, final String readList, final String writeList, final LoggedInUser loggedInUser) throws Exception {
-        User user = UserDAO.findById(userId);
-        Database database = DatabaseDAO.findById(databaseId);
-        if (loggedInUser.getUser().isAdministrator()
-                && user != null && user.getBusinessId() == loggedInUser.getUser().getBusinessId()
-                && database != null && database.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-            final Permission permission = new Permission(0, reportId, userId, databaseId, readList, writeList);
-            PermissionDAO.store(permission);
-        } else {
-            throw new Exception("error: you do not have permission to perform this action");
         }
     }
 
@@ -228,14 +215,6 @@ this may now not work at all, perhaps delete?
         }
         return null;
     }
-
-    public static List<OnlineReport> getReportListForBusiness(final LoggedInUser loggedInUser) {
-        if (loggedInUser.getUser().isAdministrator()) {
-            return OnlineReportDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
-        }
-        return null;
-    }
-
 
     public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
         List<OnlineReport> reportList = new ArrayList<>();
@@ -309,51 +288,14 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static List<Permission.PermissionForDisplay> getDisplayPermissionList(final LoggedInUser loggedInUser) {
-        if (loggedInUser.getUser().isAdministrator()) {
-            List<Permission.PermissionForDisplay> permissions = new ArrayList<>();
-            for (Permission permission : PermissionDAO.findByBusinessId(loggedInUser.getUser().getBusinessId())) {
-                permissions.add(new Permission.PermissionForDisplay(permission));
-            }
-            return permissions;
-        }
-        return null;
-    }
-
     public static void deleteUserById(int userId, LoggedInUser loggedInUser) {
         User user = UserDAO.findById(userId);
-        if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
-            UserDAO.removeById(user);
-            final List<Permission> forUserId = PermissionDAO.findForUserId(userId);
-            for (Permission permission : forUserId) {
-                PermissionDAO.removeById(permission);
-            }
-        }
     }
 
     public static User getUserById(int userId, LoggedInUser loggedInUser) {
         User user = UserDAO.findById(userId);
         if (user != null && loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
             return user;
-        }
-        return null;
-    }
-
-    public static void deletePermissionById(int permissionId, LoggedInUser loggedInUser) {
-        Permission permission = PermissionDAO.findById(permissionId);
-        User user = UserDAO.findById(permission.getUserId());
-        if (loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
-            PermissionDAO.removeById(permission);
-        }
-    }
-
-    public static Permission getPermissionById(int permissionId, LoggedInUser loggedInUser) {
-        Permission permission = PermissionDAO.findById(permissionId);
-        if (permission != null) {
-            User user = UserDAO.findById(permission.getUserId());
-            if (loggedInUser.getUser().getBusinessId() == user.getBusinessId()) {
-                return permission;
-            }
         }
         return null;
     }
@@ -405,7 +347,6 @@ this may now not work at all, perhaps delete?
                 }
             }
             OpenDatabaseDAO.removeForDatabaseId(db.getId());
-            PermissionDAO.removeForDatabaseId(db.getId());
             UploadRecordDAO.removeForDatabaseId(db.getId());
             DatabaseDAO.removeById(db);
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).dropDatabase(db.getPersistenceName());

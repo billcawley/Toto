@@ -3,12 +3,10 @@ package com.azquo.spreadsheet.controller;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.user.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
-import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -76,7 +74,6 @@ public class OnlineController {
     ) {
         try {
             //long startTime = System.currentTimeMillis();
-            Permission permission;
             try {
                 LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 if (loggedInUser == null) {
@@ -104,22 +101,14 @@ public class OnlineController {
                         LoginService.switchDatabase(loggedInUser, database);
                     }
                 } else if (permissionId != null && permissionId.length() > 0) {
-                    if (NumberUtils.isNumber(permissionId)){
-                        permission = PermissionDAO.findById(Integer.parseInt(permissionId));
-                        if (permission != null && permission.getUserId() == loggedInUser.getUser().getId()){
-                            onlineReport = OnlineReportDAO.findById(permission.getReportId());
-                            reportId = onlineReport.getId() + ""; // hack for permissions
-                            LoginService.switchDatabase(loggedInUser, DatabaseDAO.findById(permission.getDatabaseId()));
-                        }
-                    } else { //new logic for permissions ad hoc on a report
+ //new logic for permissions ad hoc on a report
                         if (loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase()) != null){ // then we have a permission as set by a report
                             onlineReport = OnlineReportDAO.findForNameAndBusinessId(permissionId, loggedInUser.getUser().getBusinessId());
                             if (onlineReport != null){
                                 reportId = onlineReport.getId() + ""; // hack for permissions
-                                LoginService.switchDatabase(loggedInUser, DatabaseDAO.findForName(loggedInUser.getUser().getBusinessId(), loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase())));
+                                LoginService.switchDatabase(loggedInUser, loggedInUser.getPermissionsFromReport().get(permissionId).getSecond());
                             }
                         }
-                    }
                 }
                 if (onlineReport != null){
                     onlineReport.setPathname(loggedInUser.getBusinessDirectory()); // todo - sort this, it makes no sense
@@ -156,25 +145,17 @@ public class OnlineController {
                         return "upload";
                     }
                 }
+                // "1" - perhaps don't do this, or make it the default?
                 if ("1".equals(reportId)) {
-                    if (!loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                        final List<Permission> forUserId = PermissionDAO.findForUserId(loggedInUser.getUser().getId());// new model this should be all we need . . .
-                        if (forUserId.size() == 1){// one report, show it
-                            permission = forUserId.get(0);
-                            onlineReport = OnlineReportDAO.findById(permission.getReportId());
-                            onlineReport.setPathname(loggedInUser.getBusinessDirectory()); // hack! todo, sort
-                            reportId = onlineReport.getId() + ""; // hack for permissions
-                            LoginService.switchDatabase(loggedInUser, DatabaseDAO.findById(permission.getDatabaseId()));
-                        } else {
-                            SpreadsheetService.showUserMenu(model, loggedInUser);// user menu being what magento users typically see when logging in, a velocity page
-                            return "azquoReports";
-                        }
-                    } else {
+                    if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                         return "redirect:/api/ManageReports";
+                    } else {
+                        // db should have been set by the login, just set the default report
+                        onlineReport = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
                     }
                 }
                 // db and report should be sorted by now
-                if ((opcode.length() == 0 || opcode.equals("loadsheet")) && onlineReport != null) {
+                if (onlineReport != null) {
                     // ok the new sheet and the loading screen have added chunks of code here, should it be in a service or can it "live" here?
                     final int valueId = ServletRequestUtils.getIntParameter(request, "valueid", 0); // the value to be selected if it's in any of the regions . . . how to select?
                         HttpSession session = request.getSession();

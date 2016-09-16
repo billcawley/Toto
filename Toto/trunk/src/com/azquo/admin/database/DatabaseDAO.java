@@ -1,7 +1,6 @@
 package com.azquo.admin.database;
 
 import com.azquo.admin.StandardDAO;
-import com.azquo.admin.user.PermissionDAO;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -80,17 +79,7 @@ public final class DatabaseDAO {
         return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` = :" + USERID + " order by " + NAME, DATABASE, databaseRowMapper, namedParams);
     }
 
-    /*
-    SELECT `database`.* FROM `database`,`permission` WHERE `permission`.`user_id` = 271 and `database`.id = `permission`.`database_id`group by `database_id`
-     */
-// todo clean
-    public static List<Database> findForUserIdViaPermission(final int userId) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(PermissionDAO.USERID, userId);
-        return StandardDAO.findListWithWhereSQLAndParameters(",`" + StandardDAO.MASTER_DB + "`.`permission` WHERE `permission`.`" + PermissionDAO.USERID + "` =:" + PermissionDAO.USERID +  " and `database`.id = `permission`.`database_id` group by `database_id`", DATABASE, databaseRowMapper, namedParams);
-    }
-
-    public static Database findForName(final int businessID, final String name) {
+    public static Database findForNameAndBusinessId(final String name, final int businessID) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessID);
         namedParams.addValue(NAME, name);

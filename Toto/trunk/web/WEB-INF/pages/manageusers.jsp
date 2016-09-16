@@ -15,6 +15,8 @@
 				<!--<td>Business Id</td>-->
 				
 				<td>Status</td>
+				<td>Database</td>
+				<td>Start Menu</td>
 				<td width="30"></td>
 				<td width="30"></td>
 				<!-- password and salt pointless here -->
@@ -30,6 +32,8 @@
 				<!--<td>${user.businessId}</td>-->
 				
 				<td>${user.status}</td>
+				<td>${user.reportName}</td>
+				<td>${user.databaseName}</td>
 				<td><a href="/api/ManageUsers?deleteId=${user.id}" title="Delete ${user.name}" onclick="return confirm('Are you sure?')" class="button small alt fa fa-trash"></a></td>
 				<td><a href="/api/ManageUsers?editId=${user.id}" title="Edit ${user.name}" class="button small fa fa-edit"></a></td>
 			</tr>
@@ -38,7 +42,7 @@
 	</table>
 
 	<div class="centeralign">
-		<a href="/api/ManageUsers?editId=0" class="button"><span class="fa fa-plus-circle"></span> Add New User</a>&nbsp;<c:if test="${showDownload}"><a href="/api/CreateExcelForDownload" class="button">Download Users and Permissions as Excel</a></c:if>
+		<a href="/api/ManageUsers?editId=0" class="button"><span class="fa fa-plus-circle"></span> Add New User</a>&nbsp;<c:if test="${showDownload}"><a href="/api/CreateExcelForDownload" class="button">Download Users as Excel</a></c:if>
 	</div>
 </main>
 <%@ include file="../includes/admin_footer.jsp" %>

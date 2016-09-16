@@ -44,7 +44,7 @@
     <div class="basic-box-container">
         <div class="basic-head">
             <div class="logo">
-                <a href="/api/Online?opcode=loadsheet&reportid=1"><img src="/images/logo_alt.png" alt="azquo"></a>
+                <a href="/api/Online?reportid=1"><img src="/images/logo_alt.png" alt="azquo"></a>
             </div>
         </div>
         <div class="basic-box">

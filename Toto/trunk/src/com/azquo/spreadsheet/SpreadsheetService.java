@@ -121,30 +121,6 @@ public class SpreadsheetService {
         }
     }
 
-    // on logging into Magento reports for example
-
-    public static void showUserMenu(ModelMap model, LoggedInUser loggedInUser) {
-        model.addAttribute("welcome", "Welcome to Azquo!");
-        List<Map<String, String>> reports = new ArrayList<>();
-
-
-        final List<Permission> forUserId = PermissionDAO.findForUserId(loggedInUser.getUser().getId());// new model this should be all we need . . .
-//            model.addAttribute("database", database);
-        String reportCategory = "";
-            for (Permission permission : forUserId) {
-                final OnlineReport onlineReport = OnlineReportDAO.findById(permission.getReportId());
-                if (onlineReport != null){
-                    Map<String, String> vReport = new HashMap<>();
-                    vReport.put("name", onlineReport.getReportName());
-                    vReport.put("explanation", onlineReport.getExplanation());
-                    vReport.put("link", "/api/Online/?opcode=loadsheet&permissionid=" + permission.getId()); // todo - address how this will be used!
-                    reports.add(vReport);
-                }
-            }
-        model.addAttribute("reports", reports);
-    }
-
-
     // function that can be called by the front end to deliver the data and headings
     // this is sort of a proxy but the number of parameters changes a fair bit, I'll leave it for the mo
 

@@ -105,7 +105,7 @@ public class JstreeController {
                         }
                         model.addAttribute("message", "");
                         if (database != null && database.length() > 0) {
-                            Database newDB = DatabaseDAO.findForName(loggedInUser.getUser().getBusinessId(), database);
+                            Database newDB = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
                             if (newDB == null) {
                                 model.addAttribute("message", "no database chosen");
                             }

@@ -123,7 +123,7 @@ public class MagentoController {
                 }
             }
             if (op.equals("reports")) {
-                response.sendRedirect("/api/Online?opcode=loadsheet&reportid=1"); // I think that will do it
+                response.sendRedirect("/api/Online?reportid=1"); // I think that will do it
             }
             return "unknown op";
         } catch (Exception e) {

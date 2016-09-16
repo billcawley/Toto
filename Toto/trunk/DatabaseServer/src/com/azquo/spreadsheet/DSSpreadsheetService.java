@@ -884,6 +884,7 @@ public class DSSpreadsheetService {
                     }
                 }
                 returnRow.add(cellValue != null ? cellValue : "");
+                // can index out of bounde here with duff inputs better error? todo
                 int extraColsForThisRow = maxColOffsets.get(colIndex);
                 for (int i = 0; i < extraColsForThisRow - (heading != null && heading.getOffsetHeadings() != null ? heading.getOffsetHeadings().size() : 0); i++) {
                     returnRow.add("");
