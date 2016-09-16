@@ -733,12 +733,15 @@ public final class ValueService {
         sortValuesCount.incrementAndGet();
         Collections.sort(values, (o1, o2) ->
         {
+            if (o1.getProvenance().getTimeStamp() == null && o2.getProvenance().getTimeStamp() == null){
+                return 0;
+            }
             // check this is the right way around later
             if (o1.getProvenance().getTimeStamp() == null) {
-                return 1;
+                return -1;
             }
             if (o2.getProvenance().getTimeStamp() == null) {
-                return -1;
+                return 1;
             }
             return (o2.getProvenance().getTimeStamp())
                     .compareTo(o1.getProvenance().getTimeStamp());
