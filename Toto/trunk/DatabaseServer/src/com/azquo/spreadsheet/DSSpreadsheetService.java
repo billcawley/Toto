@@ -946,7 +946,7 @@ public class DSSpreadsheetService {
                 if (sourceCell.isSelected()) {
                     System.out.println("selected cell");
                 }
-                if (checkLocks && !sourceCell.isLocked() && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null){ // user locking is a moot point if the cell is already locked e.g. it's the result of a function
+                if (checkLocks && !sourceCell.isLocked() && sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null){ // user locking is a moot point if the cell is already locked e.g. it's the result of a function
                     String result = azquoMemoryDBConnection.getAzquoMemoryDB().checkLocksForValueAndUser(databaseAccessToken.getUserId(), sourceCell.getListOfValuesOrNamesAndAttributeName().getValues());
                     if (result != null){ // it is locked
                         lockCheckResult.add(result); // collate lock message
@@ -1741,7 +1741,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
                         if (debugInfo != null) {
                             debugInfo.append("\nFunction\n\n");
-                            debugInfo.append("\t" + nameFunctionHeading.getFunction() + "\n");
+                            debugInfo.append("\t" + function + "\n"); // was nameFunctionHeading.getFunction(), think that was wrong
                         }
                         break; // can't combine functions I don't think
                     }
