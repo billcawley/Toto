@@ -25,6 +25,7 @@ import java.rmi.RemoteException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -100,7 +101,7 @@ public class ZKAzquoBookUtils {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Starting execute");
         StringBuilder loops = new StringBuilder();
-        executeCommands(loggedInUser, commands, loops, 1);
+        executeCommands(loggedInUser, commands, loops, new AtomicInteger(0));
         // it won't have cleared while executing
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
         SpreadsheetService.databasePersist(loggedInUser);
@@ -119,7 +120,7 @@ public class ZKAzquoBookUtils {
     }
 
     // we assume cleansed of blank lines
-    private static void executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, int count) throws Exception {
+    private static void executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, AtomicInteger count) throws Exception {
         if (commands.size() > 0 && commands.get(0) != null) {
             String firstLine = commands.get(0);
             int startingIndent = getIndent(firstLine);
@@ -145,7 +146,7 @@ public class ZKAzquoBookUtils {
                         loopsLog.append(choiceName + " : " + choiceQuery + "\r\n");
                         final List<String> dropdownListForQuery = getDropdownListForQuery(loggedInUser, choiceQuery);
                         for (String choiceValue : dropdownListForQuery) { // run the for :)
-                            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceQuery);
+                            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
                             executeCommands(loggedInUser, subCommands, loopsLog, count);
                         }
@@ -156,7 +157,7 @@ public class ZKAzquoBookUtils {
                     OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
                     if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
                         loopsLog.append("Run : " + onlineReport.getReportName());
-                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Running  " + onlineReport.getReportName() + " ," + count++);
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Running  " + onlineReport.getReportName() + " ," + count.incrementAndGet());
                         onlineReport.setPathname(loggedInUser.getBusinessDirectory());
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
