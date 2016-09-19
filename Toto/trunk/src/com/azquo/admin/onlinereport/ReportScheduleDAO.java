@@ -1,7 +1,6 @@
 package com.azquo.admin.onlinereport;
 
 import com.azquo.admin.StandardDAO;
-import com.azquo.admin.user.Permission;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
