@@ -40,7 +40,10 @@ public class DownloadFileController {
                         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
                     }
                     response.setHeader("Content-Disposition", "inline; filename=\"" + byId.getFileName() + "\"");
-                    File f = new File(byId.getTempPath());
+                    File f = new File(byId.getTempPath() + "." + uploadRecordId);
+                    if (!f.exists()){
+                        f = new File(byId.getTempPath());
+                    }
                     response.setHeader("Content-Length", String.valueOf(f.length()));
                     // maybe add a few more later
                     OutputStream out = response.getOutputStream();
