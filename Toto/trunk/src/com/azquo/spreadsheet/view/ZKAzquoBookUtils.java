@@ -115,7 +115,7 @@ public class ZKAzquoBookUtils {
                 }
             }
         }
-
+        ZKAzquoBookUtils.populateBook(book, 0);// vanilla populate it at the end
         return true;
     }
 
