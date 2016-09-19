@@ -99,23 +99,32 @@ public final class ImportService {
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             if (userSheet != null) {
                 int row = 1;
+                SName listRegion = book.getInternalBook().getNameByName("az_ListStart");
+                if (listRegion!=null){
+                    row = listRegion.getRefersToCellRegion().getRow();
+                }
                 // keep them to use if not set. Should I be updating records instead? I'm not sure.
                 Map<String, String> oldPasswordMap = new HashMap<>();
                 Map<String, String> oldSaltMap = new HashMap<>();
+                List<String> illegals = new ArrayList<>();
                 List<User> userList = AdminService.getUserListForBusiness(loggedInUser);
+                //todo - work out what users DEVELOPERs can upload
                 for (User user : userList) {
                     if (user.getId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
-                        // todo leave admins alone unless admin!
-                        oldPasswordMap.put(user.getEmail(), user.getPassword());
-                        oldSaltMap.put(user.getEmail(), user.getSalt());
-                        UserDAO.removeById(user);
+                        if (loggedInUser.getUser().getStatus().equals("MASTER") && !user.getCreatedBy().equals(loggedInUser.getUser().getEmail())){
+                            illegals.add(user.getEmail());
+                        }else{
+                            oldPasswordMap.put(user.getEmail(), user.getPassword());
+                            oldSaltMap.put(user.getEmail(), user.getSalt());
+                            UserDAO.removeById(user);
+                        }
                     }
                 }
                 while (userSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && userSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
-                    //Name	Email	Password	End Date	Status	Database	Report
-                    String user = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
-                    String email = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
-                    if (!loggedInUser.getUser().getEmail().equals(email)) { // leave the logged in user alone!
+                    //Email	Name  Password	End Date	Status	Database	Report
+                    String user = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
+                    String email = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
+                    if (!loggedInUser.getUser().getEmail().equals(email) && !illegals.contains(email)) { // leave the logged in user alone!
                         String salt = "";
                         String password = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
                         if (password == null) {
@@ -128,7 +137,7 @@ public final class ImportService {
                         }
                         String status = userSheet.getInternalSheet().getCell(row, 4).getStringValue();
                         if (!loggedInUser.getUser().isAdministrator()){
-                            status = ""; // only admins can set status
+                            status = "USER"; // only admins can set status
                         }
                         // Probably could be factored somewhere
                         if (password.length() > 0) {
@@ -138,8 +147,8 @@ public final class ImportService {
                             password = oldPasswordMap.get(email);
                             salt = oldSaltMap.get(email);
                         }
-                        Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 6).getStringValue(), loggedInUser.getUser().getBusinessId());
-                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 7).getStringValue(), loggedInUser.getUser().getBusinessId());
+                        Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 5).getStringValue(), loggedInUser.getUser().getBusinessId());
+                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 6).getStringValue(), loggedInUser.getUser().getBusinessId());
                         if (!loggedInUser.getUser().isAdministrator()){ // then I need to check against the session for allowable reports and databases
                             boolean stored = false;
                             if (d != null && or != null){
@@ -280,7 +289,6 @@ public final class ImportService {
             pathName = loggedInUser.getBusinessDirectory();
         }
         OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-         // change in logic, no longer making a copy, want to update what's there
         int origUploadId = 0;
         //rename the old file by adding a suffix which is the ID of the upload record
         String messageSuffix = "";
