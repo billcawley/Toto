@@ -1079,10 +1079,14 @@ public class ZKComposer extends SelectorComposer<Component> {
         for (int i = 0; i < tab; i++) {
             stringBuilder.append("\t");
         }
+        boolean needsValue = true;
         if (treeNode.getName() != null) {
             stringBuilder.append(treeNode.getName());
             String value = treeNode.getValue();
-            if (value != null) {
+            if (treeNode.getChildren().size()==1){
+                needsValue = false;
+            }
+            if (needsValue && value != null) {
                 stringBuilder.append("\t");
 
                 stringBuilder.append(treeNode.getValue());
@@ -1101,7 +1105,9 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (treeNode.getHeading() != null) { // then assume we have items too!
             stringBuilder.append(treeNode.getHeading());
             //stringBuilder.append("\n");
-            tab++;
+            if (tab==0 || needsValue){
+                tab++;
+            }
             for (TreeNode treeNode1 : treeNode.getChildren()) {
                 resolveTreeNode(tab, stringBuilder, treeNode1);
             }
