@@ -2317,9 +2317,9 @@ Callable interface sorts the memory "happens before" using future gets which run
                         if (azquoCell != null && !azquoCell.isLocked()) {
                             numberOfValuesModified++;
                             // this save logic is the same as before but getting necessary info from the AzquoCell
-                            logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
                             if (valuesForCell != null) {
+                                logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                                 // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
                                 // first align text and numbers where appropriate
                         /* edd commenting 07/03/2016, this was stopping deleting a cell and I think it makes no sense looking at the ZK code that happens on editing, maybe a hangover from Aspose?
