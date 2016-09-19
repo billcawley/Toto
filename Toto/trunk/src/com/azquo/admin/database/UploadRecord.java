@@ -20,7 +20,7 @@ public final class UploadRecord extends StandardEntity {
     final private String fileName;
     final private String fileType;
     final private String comments;
-    final private String tempPath;// where the file might still be!
+    private String tempPath;// where the file might still be!
 
     public UploadRecord(int id, Date date, int businessId, int databaseId, int userId, String fileName, String fileType, String comments, String tempPath) {
         this.id = id;
@@ -65,6 +65,11 @@ public final class UploadRecord extends StandardEntity {
     public String getTempPath() {
         return tempPath;
     }
+
+    public void setTempPath(String tempPath) {
+        this.tempPath = tempPath;
+    }
+
 
     @Override
     public String toString() {
