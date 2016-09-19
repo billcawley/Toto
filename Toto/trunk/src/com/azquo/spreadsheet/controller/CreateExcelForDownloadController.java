@@ -2,6 +2,7 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -17,6 +18,7 @@ import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
+import org.zkoss.zss.model.SName;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -57,20 +59,30 @@ public class CreateExcelForDownloadController {
                 if (userSheet != null) {
                     final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);
                     int row = 1;
+                    SName listRegion = book.getInternalBook().getNameByName("az_ListStart");
+                    SName business = book.getInternalBook().getNameByName("az_Business");
+                    if (listRegion!=null){
+                        row = listRegion.getRefersToCellRegion().getRow();
+                    }
+                    Business businessById = null;
                     for (User user : userListForBusiness) {
-                        // todo don't show admins if not admin
-                        userSheet.getInternalSheet().getCell(row, 0).setStringValue(user.getName());
-                        userSheet.getInternalSheet().getCell(row, 1).setStringValue(user.getEmail());
-                        //password not there
-                        userSheet.getInternalSheet().getCell(row, 3).setStringValue(dateTimeFormatter.format(user.getEndDate()));
-                        final Business businessById = AdminService.getBusinessById(user.getBusinessId());
-                        userSheet.getInternalSheet().getCell(row, 4).setStringValue(businessById != null ? businessById.getBusinessName() : "");
-                        userSheet.getInternalSheet().getCell(row, 5).setStringValue(user.getStatus());
-                        final Database databaseById = DatabaseDAO.findById(user.getDatabaseId());
-                        userSheet.getInternalSheet().getCell(row, 6).setStringValue(databaseById != null ? databaseById.getName() : "");
-                        final OnlineReport reportById = OnlineReportDAO.findById(user.getReportId());
-                        userSheet.getInternalSheet().getCell(row, 7).setStringValue(reportById != null ? reportById.getReportName() : "");
-                        row++;
+                        if (loggedInUser.getUser().getStatus().equals("ADMINISTRATOR") || loggedInUser.getUser().getStatus().equals("MASTER") || loggedInUser.getUser().getEmail().equals(user.getCreatedBy())) {
+                            // todo don't show admins if not admin
+                            userSheet.getInternalSheet().getCell(row, 0).setStringValue(user.getEmail());
+                            userSheet.getInternalSheet().getCell(row, 1).setStringValue(user.getName());
+                            //password not there
+                            userSheet.getInternalSheet().getCell(row, 3).setStringValue(dateTimeFormatter.format(user.getEndDate()));
+                            businessById = AdminService.getBusinessById(user.getBusinessId());
+                            userSheet.getInternalSheet().getCell(row, 4).setStringValue(user.getStatus());
+                            final Database databaseById = DatabaseDAO.findById(user.getDatabaseId());
+                            userSheet.getInternalSheet().getCell(row, 5).setStringValue(databaseById != null ? databaseById.getName() : "");
+                            final OnlineReport reportById = OnlineReportDAO.findById(user.getReportId());
+                            userSheet.getInternalSheet().getCell(row, 6).setStringValue(reportById != null ? reportById.getReportName() : "");
+                            row++;
+                        }
+                    }
+                    if (business!=null && businessById!=null){
+                        book.getSheetAt(0).getInternalSheet().getCell(business.getRefersToCellRegion().getRow(), business.getRefersToCellRegion().getColumn()).setStringValue(businessById.getBusinessName());
                     }
                 }
                 response.setContentType("application/vnd.ms-excel"); // Set up mime type
@@ -101,6 +113,7 @@ public class CreateExcelForDownloadController {
                         }
                     }
                 }
+
                 response.setContentType("application/vnd.ms-excel"); // Set up mime type
                 response.addHeader("Content-Disposition", "attachment; filename=" + REPORTSCHEDULESFILENAME);
                 OutputStream out = response.getOutputStream();
@@ -110,5 +123,6 @@ public class CreateExcelForDownloadController {
         } else {
             response.sendRedirect("/api/Login");
         }
-    }
+
+     }
 }
