@@ -15,8 +15,8 @@
 				<!--<td>Business Id</td>-->
 				
 				<td>Status</td>
-				<td>Database</td>
 				<td>Start Menu</td>
+				<td>Database</td>
 				<td width="30"></td>
 				<td width="30"></td>
 				<!-- password and salt pointless here -->

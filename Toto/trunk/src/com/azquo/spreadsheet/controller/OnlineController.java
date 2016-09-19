@@ -106,14 +106,14 @@ public class OnlineController {
                             onlineReport = OnlineReportDAO.findForNameAndBusinessId(permissionId, loggedInUser.getUser().getBusinessId());
                             if (onlineReport != null){
                                 reportId = onlineReport.getId() + ""; // hack for permissions
-                                LoginService.switchDatabase(loggedInUser, loggedInUser.getPermissionsFromReport().get(permissionId).getSecond());
+                                LoginService.switchDatabase(loggedInUser, loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase()).getSecond());
                             }
                         }
                 }
                 if (onlineReport != null){
                     onlineReport.setPathname(loggedInUser.getBusinessDirectory()); // todo - sort this, it makes no sense
                 }
-                String result = "error: no action taken";
+                String result = "error: user has no home report";
                 // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
                 // I wonder if this should be a different controller
                 if (opcode.equals("upload")) {
@@ -154,6 +154,9 @@ public class OnlineController {
                     } else {
                         // db should have been set by the login, just set the default report
                         onlineReport = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
+                        if (onlineReport != null){
+                            onlineReport.setPathname(loggedInUser.getBusinessDirectory()); // todo - sort this, it makes no sense
+                        }
                     }
                 }
                 // db and report should be sorted by now

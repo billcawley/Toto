@@ -289,7 +289,9 @@ public class ZKAzquoBookUtils {
                             if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                                 final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
                                 final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-                                permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId())));
+                                if (report != null){
+                                    permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId())));
+                                }
                             }
                         }
                     }

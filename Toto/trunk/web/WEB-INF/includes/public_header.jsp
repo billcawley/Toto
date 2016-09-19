@@ -92,6 +92,10 @@
 					</li>
 				</ul>
 			</nav>
+			<script>
+				document.getElementById("lockedResult").value = 'ljgh kjg lkg lkjh lkjgh ly lk gjh tgkj gkjg  lt utrf ydf o;iuy ';
+				document.getElementById("lockedResult").style.display="block";
+			</script>
 		</c:if>
 	</div>
 </header>

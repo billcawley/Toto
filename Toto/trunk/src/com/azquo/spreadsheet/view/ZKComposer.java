@@ -435,7 +435,8 @@ public class ZKComposer extends SelectorComposer<Component> {
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                 }
                 if (newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) != null){
-                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").value=\"" + newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) + "\";document.getElementById(\"lockedResult\").style.display=\"block\";");
+                    System.out.println("lock js debug : " + newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT));
+                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").value = '" + newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) + "';document.getElementById(\"lockedResult\").style.display=\"block\";");
                 } else {
                     Clients.evalJavaScript("document.getElementById(\"lockedResult\").style.display=\"none\";");
                 }
