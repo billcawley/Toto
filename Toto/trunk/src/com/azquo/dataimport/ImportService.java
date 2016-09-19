@@ -95,7 +95,7 @@ public final class ImportService {
 
     private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) &&  (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
-            Book book = Importers.getImporter().imports(new File(fileName), "Report name");
+            Book book = Importers.getImporter().imports(new File(filePath), "Report name");
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             if (userSheet != null) {
                 int row = 1;
@@ -138,17 +138,19 @@ public final class ImportService {
                             password = oldPasswordMap.get(email);
                             salt = oldSaltMap.get(email);
                         }
-                        Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 5).getStringValue(), loggedInUser.getUser().getBusinessId());
-                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 6).getStringValue(), loggedInUser.getUser().getBusinessId());
+                        Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 6).getStringValue(), loggedInUser.getUser().getBusinessId());
+                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 7).getStringValue(), loggedInUser.getUser().getBusinessId());
                         if (!loggedInUser.getUser().isAdministrator()){ // then I need to check against the session for allowable reports and databases
-                            final Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport = loggedInUser.getPermissionsFromReport();
                             boolean stored = false;
-                            for (TypedPair<OnlineReport, Database> allowedCombo : permissionsFromReport.values()){
-                                if (allowedCombo.getFirst().getId() == or.getId() && allowedCombo.getSecond().getId() == d.getId()){ // then we can add the user with this info
-                                    User user1 = new User(0, end, loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId());
-                                    UserDAO.store(user1);
-                                    stored = true;
-                                    break;
+                            if (d != null && or != null){
+                                final Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport = loggedInUser.getPermissionsFromReport();
+                                for (TypedPair<OnlineReport, Database> allowedCombo : permissionsFromReport.values()){
+                                    if (allowedCombo.getFirst().getId() == or.getId() && allowedCombo.getSecond().getId() == d.getId()){ // then we can add the user with this info
+                                        User user1 = new User(0, end, loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(),or.getId());
+                                        UserDAO.store(user1);
+                                        stored = true;
+                                        break;
+                                    }
                                 }
                             }
                             if (!stored){ // default to the current users home menu
@@ -157,7 +159,7 @@ public final class ImportService {
                                 UserDAO.store(user1);
                             }
                         } else {
-                            User user1 = new User(0, end, loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId());
+                            User user1 = new User(0, end, loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d != null ? d.getId() : 0, or != null ? or.getId() : 0);
                             UserDAO.store(user1);
                         }
                     }
