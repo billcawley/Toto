@@ -278,14 +278,33 @@ public final class ImportService {
             pathName = loggedInUser.getBusinessDirectory();
         }
         OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-        // change in logic, no longer making a copy, want to update what's there
-        if (or == null) {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), "", reportName, fileName, "", ""); // default to ZK now
-        } else {
-            or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
+         // change in logic, no longer making a copy, want to update what's there
+        int origUploadId = 0;
+        //rename the old file by adding a suffix which is the ID of the upload record
+        String messageSuffix = "";
+        String origFileName = fileName;
+        if (or != null){
+            origFileName = or.getFilename();
         }
-        or.setFilename(fileName);
-        String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
+        String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + origFileName;
+        UploadRecord uploadRecord = UploadRecordDAO.findForBusinessIdAndFileName(loggedInUser.getUser().getBusinessId(), fileName);
+        if (uploadRecord != null) {
+            origUploadId = uploadRecord.getId();
+            File origFile = new File(fullPath);
+            File newFile = new File(fullPath + origUploadId);
+            if (!newFile.exists()) {
+                origFile.renameTo(newFile);
+            }
+            uploadRecord.setTempPath(fullPath);
+            UploadRecordDAO.store(uploadRecord);
+            messageSuffix = "  Replaced " + origFileName + " uploaded by " + UserDAO.findById(uploadRecord.getUserId()).getName() + " on " + uploadRecord.getDate();
+        }
+         if(or != null){
+            or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
+        }else{
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), "", reportName, fileName, "", ""); // default to ZK now
+        }
+
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
         FileOutputStream out = new FileOutputStream(fullPath);
@@ -294,7 +313,8 @@ public final class ImportService {
         out.close();
         OnlineReportDAO.store(or);
         DatabaseReportLinkDAO.link(databaseId, or.getId());
-        return reportName + " uploaded.";
+
+        return reportName + " uploaded." + messageSuffix;
     }
 
     private static String  readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
