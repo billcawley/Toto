@@ -434,6 +434,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                 }
+                if (newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) != null){
+                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").value=\"" + newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) + "\";document.getElementById(\"lockedResult\").style.display=\"block\";");
+                } else {
+                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").style.display=\"none\";");
+                }
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             } catch (Exception e) {
                 e.printStackTrace();
