@@ -799,7 +799,7 @@ public final class ValueService {
                 String provenance = null;
                 if (vh.getProvenance() != null){
                     provenance = (vh.getProvenance().getTimeStamp() != null ? df.format(vh.getProvenance().getTimeStamp()) : "date unknown") + " by " + vh.getProvenance().getUser();
-                    provenance += " Method ";
+                    provenance += " ";
                     provenance += vh.getProvenance().getMethod();
                     if (vh.getProvenance().getName() != null) {
                         provenance += " " + vh.getProvenance().getName();
