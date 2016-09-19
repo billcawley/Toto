@@ -28,7 +28,7 @@
 				 -->
 				 <td>${report.database}</td>
 				 <!-- should reportid be 1??? -->
-				 <td><a href="/api/Online?oreportid=${report.id}&amp;database=${report.database}" target="_blank"> <span class="fa fa-table"></span>  ${report.reportName}</a></td>
+				 <td><a href="/api/Online?reportid=${report.id}&amp;database=${report.database}" target="_blank"> <span class="fa fa-table"></span>  ${report.reportName}</a></td>
 				 <!-- <td>${report.filename}</td> -->
 				 <td>${report.explanation}</td>
 				 <td><a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a>
