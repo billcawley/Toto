@@ -157,7 +157,7 @@ public class ZKAzquoBookUtils {
                     OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
                     if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
                         loopsLog.append("Run : " + onlineReport.getReportName());
-                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Running  " + onlineReport.getReportName() + " ," + count.incrementAndGet());
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), count.incrementAndGet() + " Running  " + onlineReport.getReportName() + " ,");
                         onlineReport.setPathname(loggedInUser.getBusinessDirectory());
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
