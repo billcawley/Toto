@@ -107,9 +107,9 @@ class RMIImplementation implements RMIInterface {
     // spreadsheet service
     @Override
     public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions) throws RemoteException {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws RemoteException {
         try {
-            return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions);
+            return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions, quiet);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -345,6 +345,15 @@ class RMIImplementation implements RMIInterface {
     public void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws RemoteException {
         try {
             DSSpreadsheetService.sendStopMessageToLog(databaseAccessToken);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public void addToLog(DatabaseAccessToken databaseAccessToken, String message) throws RemoteException {
+        try {
+            DSSpreadsheetService.addToLog(databaseAccessToken, message);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

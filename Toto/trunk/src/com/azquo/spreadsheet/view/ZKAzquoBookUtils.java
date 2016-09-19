@@ -98,8 +98,9 @@ public class ZKAzquoBookUtils {
             }
         }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Starting execute");
         StringBuilder loops = new StringBuilder();
-        executeCommands(loggedInUser, commands, loops);
+        executeCommands(loggedInUser, commands, loops, 1);
         // it won't have cleared while executing
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
         SpreadsheetService.databasePersist(loggedInUser);
@@ -118,7 +119,7 @@ public class ZKAzquoBookUtils {
     }
 
     // we assume cleansed of blank lines
-    private static void executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog) throws Exception {
+    private static void executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, int count) throws Exception {
         if (commands.size() > 0 && commands.get(0) != null) {
             String firstLine = commands.get(0);
             int startingIndent = getIndent(firstLine);
@@ -144,8 +145,9 @@ public class ZKAzquoBookUtils {
                         loopsLog.append(choiceName + " : " + choiceQuery + "\r\n");
                         final List<String> dropdownListForQuery = getDropdownListForQuery(loggedInUser, choiceQuery);
                         for (String choiceValue : dropdownListForQuery) { // run the for :)
+                            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceQuery);
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
-                            executeCommands(loggedInUser, subCommands, loopsLog);
+                            executeCommands(loggedInUser, subCommands, loopsLog, count);
                         }
                     }
                     // if not a for each I guess we just execute? Will check for "do"
@@ -154,6 +156,7 @@ public class ZKAzquoBookUtils {
                     OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
                     if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
                         loopsLog.append("Run : " + onlineReport.getReportName());
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Running  " + onlineReport.getReportName() + " ," + count++);
                         onlineReport.setPathname(loggedInUser.getBusinessDirectory());
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
@@ -190,7 +193,7 @@ public class ZKAzquoBookUtils {
 
     public static final String ALLOWABLE_REPORTS = "az_AllowableReports";
 
-    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, String reportParameters, boolean dontClearLog) {
+    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, String reportParameters, boolean executeMode) {
         book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
         long track = System.currentTimeMillis();
         String imageStoreName = "";
@@ -417,14 +420,14 @@ public class ZKAzquoBookUtils {
                         DatabaseServer origServer = loggedInUser.getDatabaseServer();
                         try {
                             LoginService.switchDatabase(loggedInUser, databaseName);
-                            fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
+                            fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode); // in this case execute mode is telling the logs to be quiet
                         } catch (Exception e) {
                             String eMessage = "Unknown database " + databaseName + " for region " + region;
                             sheet.getInternalSheet().getCell(0, 0).setStringValue(eMessage);
                         }
                         loggedInUser.setDatabaseWithServer(origServer, origDatabase);
                     } else {
-                        fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser);
+                        fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode);
                     }
                 }
             }
@@ -583,7 +586,7 @@ public class ZKAzquoBookUtils {
         loggedInUser.setImageStoreName(imageStoreName);
         loggedInUser.setContext(context);
         // we won't clear the log in the case of execute
-        if (!dontClearLog) {
+        if (!executeMode) {
             // after stripping off some redundant exception throwing this was the only possibility left, ignore it
             try {
                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
@@ -660,7 +663,7 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private static void fillRegion(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser) {
+    private static void fillRegion(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet) {
         // ok need to deal with the repeat region things
         // the region to be repeated, will contain headings and an item which changes for each repetition
         SName repeatRegion = sheet.getBook().getInternalBook().getNameByName(AZREPEATREGION + region);
@@ -782,7 +785,7 @@ public class ZKAzquoBookUtils {
                     }
                 }
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, nameToStringLists(columnHeadingsDescription),
-                        contextList, userRegionOptions);
+                        contextList, userRegionOptions, quiet);
                 loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
                 // might be factored into fill range in a bit
@@ -1091,7 +1094,7 @@ public class ZKAzquoBookUtils {
                             contextList.add(Collections.singletonList(item)); // item added to the context
                             // yes this is little inefficient as the headings are being resolved each time but that's just how it is for the moment
                             cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, nameToStringLists(columnHeadingsDescription),
-                                    contextList, userRegionOptions);
+                                    contextList, userRegionOptions, quiet);
                             displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
                                     , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
                             loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!

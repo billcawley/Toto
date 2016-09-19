@@ -908,16 +908,20 @@ public class DSSpreadsheetService {
         getConnectionFromAccessToken(databaseAccessToken).setStopInUserLog();
     }
 
+    public static void addToLog(DatabaseAccessToken databaseAccessToken, String message) throws Exception {
+        getConnectionFromAccessToken(databaseAccessToken).addToUserLog(message);
+    }
+
     /* function that can be called by the front end to deliver the data and headings
     Region name as defined in the Excel. valueId if it's to be the default selected cell. Row and Column headings and context as parsed straight off the sheet (2d array of cells).
       Filtercount is to remove sets of blank rows, what size chunks we look for. Highlightdays means highlight data where the provenance is less than x days old.
      */
 
     public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions) throws Exception {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
-                , regionOptions, databaseAccessToken.getLanguages(), valueId);
+                , regionOptions, databaseAccessToken.getLanguages(), valueId, quiet);
         if (data.size() == 0) {
             return new CellsAndHeadingsForDisplay(regionName, colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
         }
@@ -984,8 +988,10 @@ public class DSSpreadsheetService {
     }
 
     private static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, List<String> languages, int valueId) throws Exception {
-        azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, List<String> languages, int valueId, boolean quiet) throws Exception {
+        if (!quiet){
+            azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
+        }
         long track = System.currentTimeMillis();
         long start = track;
         long threshold = 1000;
@@ -1027,7 +1033,7 @@ public class DSSpreadsheetService {
             rowHeadings.add(new ArrayList<>());
             rowHeadings.get(0).add(new DataRegionHeading(null, false));
         }
-        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings, columnHeadings, contextHeadings, languages, valueId);
+        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings, columnHeadings, contextHeadings, languages, valueId, quiet);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
         if (time > 5000) { // a bit arbitrary
@@ -1401,10 +1407,11 @@ Callable interface sorts the memory "happens before" using future gets which run
         private final AzquoMemoryDBConnection connection;
         private final AtomicInteger counter;
         private final int progressBarStep;
+        private final boolean quiet;
 
 
         RowFiller(int row, List<List<DataRegionHeading>> headingsForEachColumn, List<List<DataRegionHeading>> headingsForEachRow
-                , List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep) {
+                , List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep, boolean quiet) {
             this.row = row;
             this.headingsForEachColumn = headingsForEachColumn;
             this.headingsForEachRow = headingsForEachRow;
@@ -1414,6 +1421,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             this.connection = connection;
             this.counter = counter;
             this.progressBarStep = progressBarStep;
+            this.quiet = quiet;
         }
 
         @Override
@@ -1427,7 +1435,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 returnRow.add(getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextHeadings, row, colNo, languages, valueId, null));
                 // for some reason this was before, it buggered up the ability to find the right column!
                 colNo++;
-                if (counter.incrementAndGet() % progressBarStep == 0) {
+                if (!quiet && counter.incrementAndGet() % progressBarStep == 0) {
                     connection.addToUserLog("=", false);
                 }
             }
@@ -1448,11 +1456,12 @@ Callable interface sorts the memory "happens before" using future gets which run
         private final AzquoMemoryDBConnection connection;
         private final AtomicInteger counter;
         private final int progressBarStep;
+        private final boolean quiet;
 
         private final Map<List<Name>, Set<Value>> nameComboValueCache;
 
         CellFiller(int row, int col, List<DataRegionHeading> headingsForColumn, List<DataRegionHeading> headingsForRow,
-                   List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep, Map<List<Name>, Set<Value>> nameComboValueCache) {
+                   List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, AzquoMemoryDBConnection connection, AtomicInteger counter, int progressBarStep, Map<List<Name>, Set<Value>> nameComboValueCache, boolean quiet) {
             this.row = row;
             this.col = col;
             this.headingsForColumn = headingsForColumn;
@@ -1464,6 +1473,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             this.counter = counter;
             this.progressBarStep = progressBarStep;
             this.nameComboValueCache = nameComboValueCache;
+            this.quiet = quiet;
         }
 
         // this should sort my memory concerns (I mean the AzquoCell being appropriately visible), call causing a memory barrier which runnable didn't.
@@ -1473,7 +1483,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         public AzquoCell call() throws Exception {
             // connection.addToUserLog(".", false);
             final AzquoCell azquoCell = getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextHeadings, row, col, languages, valueId, nameComboValueCache);
-            if (counter.incrementAndGet() % progressBarStep == 0) {
+            if (!quiet && counter.incrementAndGet() % progressBarStep == 0) {
                 connection.addToUserLog("=", false);
             }
             return azquoCell;
@@ -1853,7 +1863,7 @@ Callable interface sorts the memory "happens before" using future gets which run
 
     private static List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
-            , final List<DataRegionHeading> contextHeadings, List<String> languages, int valueId) throws Exception {
+            , final List<DataRegionHeading> contextHeadings, List<String> languages, int valueId, boolean quiet) throws Exception {
         long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
         long newHeapMarker;
         long track = System.currentTimeMillis();
@@ -1863,8 +1873,10 @@ Callable interface sorts the memory "happens before" using future gets which run
             toReturn.add(null);// null the rows, basically adding spaces to the return list
         }*/
         List<List<AzquoCell>> toReturn = new ArrayList<>(totalRows);
-        connection.addToUserLog("Size = " + totalRows + " * " + totalCols);
-        connection.addToUserLog("1%--------25%---------50%---------75%--------100%");
+        if (!quiet){
+            connection.addToUserLog("Size = " + totalRows + " * " + totalCols);
+            connection.addToUserLog("1%--------25%---------50%---------75%--------100%");
+        }
         int maxRegionSize = 2000000;//random!  set by WFC 29/6/15
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
@@ -1908,7 +1920,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         columnHeadings = newColumnHeadings;
                     }
                     // inconsistent parameter ordering?
-                    futureRow.add(executor.submit(new CellFiller(row, colNo, columnHeadings, rowHeadings, contextHeadings, languages, valueId, connection, counter, progressBarStep, nameComboValueCache)));
+                    futureRow.add(executor.submit(new CellFiller(row, colNo, columnHeadings, rowHeadings, contextHeadings, languages, valueId, connection, counter, progressBarStep, nameComboValueCache, quiet)));
 
 
                     colNo++;
@@ -1928,7 +1940,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             List<Future<List<AzquoCell>>> futureRowArray = new ArrayList<>();
             for (int row = 0; row < totalRows; row++) {
                 // row passed twice as
-                futureRowArray.add(executor.submit(new RowFiller(row, headingsForEachColumn, headingsForEachRow, contextHeadings, languages, valueId, connection, counter, progressBarStep)));
+                futureRowArray.add(executor.submit(new RowFiller(row, headingsForEachColumn, headingsForEachRow, contextHeadings, languages, valueId, connection, counter, progressBarStep, quiet)));
             }
             for (Future<List<AzquoCell>> futureRow : futureRowArray) {
                 toReturn.add(futureRow.get(1, TimeUnit.HOURS));
@@ -1940,7 +1952,9 @@ Callable interface sorts the memory "happens before" using future gets which run
         System.out.println("Heap cost to make on multi thread : " + (newHeapMarker - oldHeapMarker) / mb);
         System.out.println();
         //oldHeapMarker = newHeapMarker;
-        connection.addToUserLog(" time : " + (System.currentTimeMillis() - track) + "ms");
+        if (!quiet){
+            connection.addToUserLog(" time : " + (System.currentTimeMillis() - track) + "ms");
+        }
         return toReturn;
     }
 
@@ -2244,7 +2258,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             //modifiedInTheMeanTime = true;
             if (modifiedInTheMeanTime) { // then we need to compare data as sent to what it is now before trying to save - assuming this is not relevant to the import style above
                 List<List<AzquoCell>> currentData = getDataRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getRowHeadingsSource(), cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
-                        , cellsAndHeadingsForDisplay.getOptions(), databaseAccessToken.getLanguages(), 0);
+                        , cellsAndHeadingsForDisplay.getOptions(), databaseAccessToken.getLanguages(), 0, true);
                 List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
                 if (currentData.size() != sentData.size()) {
                     toReturn = "Data region " + cellsAndHeadingsForDisplay.getRegion() + " has changed size!";

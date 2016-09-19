@@ -19,7 +19,6 @@ import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
-import org.springframework.ui.ModelMap;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
@@ -126,9 +125,9 @@ public class SpreadsheetService {
 
     public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , UserRegionOptions userRegionOptions) throws Exception {
+            , UserRegionOptions userRegionOptions, boolean quiet) throws Exception {
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
-                userRegionOptions.getRegionOptionsForTransport());
+                userRegionOptions.getRegionOptionsForTransport(), quiet);
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
@@ -348,8 +347,7 @@ public class SpreadsheetService {
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
-                ZKAzquoBookUtils bookUtils = new ZKAzquoBookUtils();
-                bookUtils.populateBook(book, 0);
+                ZKAzquoBookUtils.populateBook(book, 0);
                 // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
                 if ("PDF".equals(reportSchedule.getType())) {
                     Exporter exporter = Exporters.getExporter("pdf");

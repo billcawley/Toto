@@ -42,7 +42,7 @@ public interface RMIInterface extends Remote {
     String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, List<String> attributeNames, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException;
 
     CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions) throws RemoteException;
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws RemoteException;
 
     JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws RemoteException;
 
@@ -87,6 +87,8 @@ public interface RMIInterface extends Remote {
     void clearSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
     void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
+
+    void addToLog(DatabaseAccessToken databaseAccessToken, String message) throws RemoteException;
 
     JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException;
 
