@@ -261,6 +261,7 @@ public class ZKAzquoBookUtils {
             //have a look for "az_AllowableReports", it's read only, getting it here seems as reasonable as anything
             for (SName sName : namesForSheet) {
                 // run through every cell in any names region unlocking to I can later lock. Setting locking on a large selection seems to zap formatting, do it cell by cell
+
                 for (int i = sName.getRefersToCellRegion().getRow(); i <= sName.getRefersToCellRegion().getLastRow(); i++) {
                     for (int j = sName.getRefersToCellRegion().getColumn(); j <= sName.getRefersToCellRegion().getLastColumn(); j++){
                         Range selection =  Ranges.range(sheet, i,j);
@@ -292,7 +293,10 @@ public class ZKAzquoBookUtils {
                                 final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
                                 final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                                 final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
-                                final Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
+                                Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
+                                if (database == null){
+                                    database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
+                                }
                                 permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, database));
                             }
                         }
@@ -1330,25 +1334,27 @@ public class ZKAzquoBookUtils {
                     choiceCell.clearFormulaResultCache();
                 }
                 //System.out.println("Choice cell : " + choiceCell);
-                String query = choiceCell.getStringValue();
-                if (!query.toLowerCase().contains("contents(")) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
-                    if (query.toLowerCase().contains("default")) {
-                        query = query.substring(0, query.toLowerCase().indexOf("default"));
-                    }
-                    try {
-                        if (query.startsWith("\"") || query.startsWith("“")) {
-                            //crude - if there is a comma in any option this will fail
-                            query = query.replace("\"", "").replace("“", "").replace("”", "");
-                            String[] choices = query.split(",");
-                            Collections.addAll(choiceOptions, choices);
-                        } else {
-                            choiceOptions = getDropdownListForQuery(loggedInUser, query);
+                if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)){
+                    String query = choiceCell.getStringValue();
+                    if (!query.toLowerCase().contains("contents(")) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
+                        if (query.toLowerCase().contains("default")) {
+                            query = query.substring(0, query.toLowerCase().indexOf("default"));
                         }
-                    } catch (Exception e) {
-                        choiceOptions.add(e.getMessage());
+                        try {
+                            if (query.startsWith("\"") || query.startsWith("“")) {
+                                //crude - if there is a comma in any option this will fail
+                                query = query.replace("\"", "").replace("“", "").replace("”", "");
+                                String[] choices = query.split(",");
+                                Collections.addAll(choiceOptions, choices);
+                            } else {
+                                choiceOptions = getDropdownListForQuery(loggedInUser, query);
+                            }
+                        } catch (Exception e) {
+                            choiceOptions.add(e.getMessage());
+                        }
+                        toReturn.put(name.getName().toLowerCase(), choiceOptions);
                     }
-                    toReturn.put(name.getName().toLowerCase(), choiceOptions);
-                }
+                } // do anything in case of an error?
             }
 
         }
@@ -1453,13 +1459,15 @@ public class ZKAzquoBookUtils {
                     queryCell.getFormulaResultType();
                     queryCell.clearFormulaResultCache();
                 }
-                try {
-                    String queryString = queryCell.getStringValue();
-                    RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                            .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    queryCell.setStringValue(queryCell.getStringValue() +  " - Error executing query : " + getErrorFromServerSideException(e));
+                if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR)){
+                    try {
+                        String queryString = queryCell.getStringValue();
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        queryCell.setStringValue(queryCell.getStringValue() +  " - Error executing query : " + getErrorFromServerSideException(e));
+                    }
                 }
             }
         }
@@ -1511,53 +1519,56 @@ public class ZKAzquoBookUtils {
                     if (chosenRegion != null) {
                         List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
                         boolean dataRegionDropdown = !getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
-                        String query = choiceCell.getStringValue();
-                        int contentPos = query.toLowerCase().indexOf(CONTENTS);
-                        if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
-                            if (contentPos < 0) {//not a dependent range
-                                validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
-                                int row = 0;
-                                // yes, this can null pointer but if it does something is seriously wrong
-                                for (String choiceOption : choiceOptions) {
-                                    row++;// like starting at 1
-                                    SCell vCell = validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded);
-                                    try{
-                                        Date date = df.parse(choiceOption);
-                                        vCell.setDateValue(date);
-                                        vCell.setCellStyle(sheet.getInternalSheet().getCell(chosenRegion.getRow(), chosenRegion.getColumn()).getCellStyle());
+                        if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
+                            String query = choiceCell.getStringValue();
+                            int contentPos = query.toLowerCase().indexOf(CONTENTS);
+                            if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
+                                if (contentPos < 0) {//not a dependent range
+                                    validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded).setStringValue(name.getName());
+                                    int row = 0;
+                                    // yes, this can null pointer but if it does something is seriously wrong
+                                    for (String choiceOption : choiceOptions) {
+                                        row++;// like starting at 1
+                                        SCell vCell = validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded);
+                                        try{
+                                            Date date = df.parse(choiceOption);
+                                            vCell.setDateValue(date);
+                                            vCell.setCellStyle(sheet.getInternalSheet().getCell(chosenRegion.getRow(), chosenRegion.getColumn()).getCellStyle());
 
 
-                                    }catch(Exception e){
-                                        vCell.setStringValue(choiceOption);
-                                    }
-                                }
-                                if (row > 0) { // if choice options is empty this will not work
-                                    Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
-                                    //validationValues.createName("az_Validation" + numberOfValidationsAdded);
-                                    for (int rowNo = chosenRegion.getRow(); rowNo < chosenRegion.getRow() + chosenRegion.getRowCount(); rowNo++) {
-                                        for (int colNo = chosenRegion.getColumn(); colNo < chosenRegion.getColumn() + chosenRegion.getColumnCount(); colNo++) {
-                                            Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
-                                            //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
-                                            chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
-                                                    //true, "title", "msg",
-                                                    true, "", "",
-                                                    false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
-
+                                        }catch(Exception e){
+                                            vCell.setStringValue(choiceOption);
                                         }
                                     }
-                                    numberOfValidationsAdded++;
+                                    if (row > 0) { // if choice options is empty this will not work
+                                        Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
+                                        //validationValues.createName("az_Validation" + numberOfValidationsAdded);
+                                        for (int rowNo = chosenRegion.getRow(); rowNo < chosenRegion.getRow() + chosenRegion.getRowCount(); rowNo++) {
+                                            for (int colNo = chosenRegion.getColumn(); colNo < chosenRegion.getColumn() + chosenRegion.getColumnCount(); colNo++) {
+                                                Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
+                                                //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
+                                                chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
+                                                        //true, "title", "msg",
+                                                        true, "", "",
+                                                        false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
+
+                                            }
+                                        }
+                                        numberOfValidationsAdded++;
+                                    } else {
+                                        System.out.println("no choices for : " + choiceCell.getStringValue());
+                                    }
                                 } else {
-                                    System.out.println("no choices for : " + choiceCell.getStringValue());
+                                    dependentRanges.add(name);
                                 }
-                            } else {
-                                dependentRanges.add(name);
-                            }
                             /*Unlike above where the setting of the choice has already been done we need to set the
                             existing choices here, hence why user choices is required for this. The check for userChoices not being null
                              is that it might be null when re adding the validation sheet when switching between sheets which can happen.
                              Under these circumstances I assume we won't need to re-do the filter adding. I guess need to test.
                              */
-                        }
+                            }
+                        }// do anything in the case of excel error?
+
                     }
                 } else {
                     SName multi = book.getInternalBook().getNameByName(choiceName + "multi"); // as ever I do wonder about these string literals
