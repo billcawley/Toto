@@ -22,7 +22,12 @@ import org.zkoss.zss.model.*;
 
 import java.io.File;
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -334,6 +339,7 @@ public class ZKAzquoBookUtils {
                                 // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
                                 List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
                                 String userChoice = userChoices.get(choiceName);
+                                LocalDate date = isADate(userChoice);
                                 if (validOptions != null) {
                                     if (FIRST_PLACEHOLDER.equals(userChoice)) {
                                         userChoice = validOptions.get(0);
@@ -346,11 +352,21 @@ public class ZKAzquoBookUtils {
                                         userChoice = userChoice.substring(userChoice.indexOf("->") + 2);
                                     }
                                     if ((userChoice == null || !validOptions.contains(userChoice)) && !validOptions.isEmpty()) { // just set the first for the mo.
-                                        userChoice = validOptions.get(0);
+                                        //check that userChoice is not a valid date...
+                                         if (date==null || !validOptions.contains(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))){
+                                            userChoice = validOptions.get(0);
+                                        }
                                     }
                                 }
                                 if (userChoice != null) {
-                                    sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn()).setStringValue(userChoice);
+                                    SCell sCell = sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn());
+                                    sCell.setStringValue(userChoice);
+                                    if (date!=null){
+                                        TimeZone tz = TimeZone.getDefault();
+                                        Date uDate = Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant());
+                                        boolean inDs = tz.inDaylightTime(uDate);
+                                        sCell.setValue((uDate.getTime() + (inDs ? 1000 * 60 * 60 : 0)) / (1000 * 3600 * 24) + 25569);//convert date to days relative to 1970
+                                    }
                                     context += choiceName + " = " + userChoice + ";";
                                 }
                             }
@@ -601,6 +617,34 @@ public class ZKAzquoBookUtils {
         }
         return showSave;
     }
+
+    private static LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
+        try {
+            return LocalDate.parse(maybeDate, dateTimeFormatter);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd/MM/yy");
+    private static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd MMM yyyy");
+    private static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter ukdf5 = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+    public static LocalDate isADate(String maybeDate) {
+        if (maybeDate == null) return null;
+          LocalDate date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, dateTimeFormatter);
+        if (date != null) return date;
+        date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, ukdf4);
+        if (date != null) return date;
+        date = tryDate(maybeDate.length() > 11 ? maybeDate.substring(0, 11) : maybeDate, ukdf3);
+        if (date != null) return date;
+        date = tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
+        if (date != null) return date;
+        return tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 10) : maybeDate, ukdf5);
+    }
+
 
     private static String interpretWarnings(String lockWarnings){
         //makes the warning more 'user-friendly'
@@ -1485,6 +1529,8 @@ public class ZKAzquoBookUtils {
             exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
         return exceptionError;
     }
+
+
 
     private static List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap) {
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
