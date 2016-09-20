@@ -80,7 +80,7 @@ public final class UploadRecordDAO  {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         namedParams.addValue(FILENAME, fileName);
-        return StandardDAO.findOneWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " order by `date` desc", TABLENAME, uploadRowMapper, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + FILENAME + " = :" + FILENAME + " order by `date` desc", TABLENAME, uploadRowMapper, namedParams);
     }
 
 
