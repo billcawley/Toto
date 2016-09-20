@@ -288,8 +288,13 @@ public class ZKAzquoBookUtils {
                                 final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
                                 final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                                 final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 2).getStringValue();
-                                final Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
-                                permissionsFromReports.put(name.toLowerCase(), new TypedPair<>(report,database));
+                                Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
+                                if (database == null){
+                                    database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
+                                }
+                                if (report != null) {
+                                    permissionsFromReports.put(name.toLowerCase(), new TypedPair<>(report, database));
+                                }
                             }
                         }
                     } else if (allowable.getLastColumn() - allowable.getColumn() == 1){ // report, database
@@ -302,7 +307,9 @@ public class ZKAzquoBookUtils {
                                 if (database == null){
                                     database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
                                 }
-                                permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, database));
+                                if (report != null){
+                                    permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, database));
+                                }
                             }
                         }
                     } else { // just the report
