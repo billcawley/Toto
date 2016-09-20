@@ -1,14 +1,12 @@
 package com.azquo.spreadsheet.view;
 
-import com.azquo.admin.AdminService;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.*;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
-import org.springframework.context.ApplicationContext;
-import org.springframework.web.context.support.WebApplicationContextUtils;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.zkoss.chart.ChartsEvent;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.*;
@@ -32,7 +30,6 @@ import com.azquo.memorydb.TreeNode;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.util.*;
 
@@ -359,7 +356,6 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     @Listen("onStopEditing = #myzss")
     public void onStopEditing(StopEditingEvent event) {
-        final ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(); // used in more than one place
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
@@ -392,7 +388,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     SName optionsRegion = event.getSheet().getBook().getInternalBook().getNameByName(ZKAzquoBookUtils.AZOPTIONS + region);
                     String source = null;
                     if (optionsRegion != null) {
-                        source = zkAzquoBookUtils.getSnameCell(optionsRegion).getStringValue();
+                        source = ZKAzquoBookUtils.getSnameCell(optionsRegion).getStringValue();
                     }
                     userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
                 }
@@ -431,12 +427,14 @@ public class ZKComposer extends SelectorComposer<Component> {
                 for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
-                if (zkAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
+                newBook.getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, null); // zap the locked result, it will be checked below and we only want it there if  populate book put it there
+                if (ZKAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                 }
                 if (newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) != null){
-                    System.out.println("lock js debug : " + newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT));
-                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").value = '" + newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) + "';document.getElementById(\"lockedResult\").style.display=\"block\";");
+                    String message = (String) newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT);
+                    System.out.println("lock js debug : " + message);
+                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").value = '" + StringEscapeUtils.escapeJavaScript(message)  + "';document.getElementById(\"lockedResult\").style.display=\"\";");
                 } else {
                     Clients.evalJavaScript("document.getElementById(\"lockedResult\").style.display=\"none\";");
                 }

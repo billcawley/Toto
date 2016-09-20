@@ -260,10 +260,22 @@ public class ZKAzquoBookUtils {
             List<SName> namesForSheet = getNamesForSheet(sheet);
             //have a look for "az_AllowableReports", it's read only, getting it here seems as reasonable as anything
             for (SName sName : namesForSheet) {
+                // run through every cell in any names region unlocking to I can later lock. Setting locking on a large selection seems to zap formatting, do it cell by cell
+                for (int i = sName.getRefersToCellRegion().getRow(); i <= sName.getRefersToCellRegion().getLastRow(); i++) {
+                    for (int j = sName.getRefersToCellRegion().getColumn(); j <= sName.getRefersToCellRegion().getLastColumn(); j++){
+                        Range selection =  Ranges.range(sheet, i,j);
+                        CellStyle oldStyle = selection.getCellStyle();
+                        EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
+                        newStyle.setLocked(false);
+                        selection.setCellStyle(newStyle);
+                    }
+                }
+
+
                 if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
                     CellRegion allowable = sName.getRefersToCellRegion();
                     // need to detect 2nd AND 3rd column here - 2nd = db, if 3rd then last is db 2nd report and 1st name (key)
-                    if (allowable.getLastColumn() - allowable.getColumn() == 3){ // name, report, database
+                    if (allowable.getLastColumn() - allowable.getColumn() == 2){ // name, report, database
                         for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
                             if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                                 String name = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
@@ -274,7 +286,7 @@ public class ZKAzquoBookUtils {
                                 permissionsFromReports.put(name.toLowerCase(), new TypedPair<>(report,database));
                             }
                         }
-                    } else if (allowable.getLastColumn() - allowable.getColumn() == 2){ // report, database
+                    } else if (allowable.getLastColumn() - allowable.getColumn() == 1){ // report, database
                         for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
                             if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                                 final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
@@ -301,18 +313,6 @@ public class ZKAzquoBookUtils {
 
 
             // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
-
-            /* commenting locked for the mo
-            // run through every cell unlocking to I can later lock. Setting locking on a large selection seems to zap formatting
-            for (int i = 0; i <= sheet.getLastRow(); i++) {
-                for (int j = 0; j < sheet.getLastColumn(i); j++){
-                    Range selection =  Ranges.range(sheet, i,j);
-                    CellStyle oldStyle = selection.getCellStyle();
-                    EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
-                    newStyle.setLocked(false);
-                    selection.setCellStyle(newStyle);
-                }
-            }*/
 
             // choices can be a real pain, I effectively need to keep resolving them until they don't change due to choices being based on choices (dependencies in excel)
             boolean resolveChoices = true;
@@ -545,7 +545,7 @@ public class ZKAzquoBookUtils {
                     }
                 }
             }
-/* commenting locking for the moment
+// commenting locking for the moment
             // now protect. Doing so before seems to cause problems
             Ranges.range(sheet).protectSheet("azquo",
                     true, //allowSelectingLockedCells
@@ -563,8 +563,7 @@ public class ZKAzquoBookUtils {
                     true, //allowUsingPivotTables
                     true, //drawingObjects
                     true  //boolean scenarios
-            );*/
-
+            );
             // all data for that sheet should be populated
             // snap the charts - currently just top left, do bottom right also?
             for (SChart chart : sheet.getInternalSheet().getCharts()) {
@@ -1207,14 +1206,14 @@ public class ZKAzquoBookUtils {
                             if (cellValue.isHighlighted()) {
                                 CellOperationUtil.applyFontColor(Ranges.range(sheet, row, col), "#FF0000");
                             }
-                                    /* commented for the moment, requires the overall unlock per sheet followed by the protect later
+                                    // commented for the moment, requires the overall unlock per sheet followed by the protect later
                                     if (cellValue.isLocked()){
                                         Range selection =  Ranges.range(sheet, row, col);
                                         CellStyle oldStyle = selection.getCellStyle();
                                         EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
                                         newStyle.setLocked(true);
                                         selection.setCellStyle(newStyle);
-                                    }*/
+                                    }
                         }
                     }
                     col++;
