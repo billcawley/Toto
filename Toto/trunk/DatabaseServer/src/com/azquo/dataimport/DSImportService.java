@@ -289,7 +289,7 @@ public class DSImportService {
             int colNo = 0;
             lastfilled = false;
             for (String heading : nextLine) {
-                if (heading.length() > 2 && colNo < headers.length) { //ignore "--", not sure why
+                if (heading.length() > 2 && colNo < headers.length) { //ignore "--", can be used to give space below the headers
                     if (heading.startsWith(".")) {
                         headers[colNo] += heading;
                     } else {

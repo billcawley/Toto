@@ -97,6 +97,10 @@ public class CreateExcelForDownloadController {
                 final List<ReportSchedule> reportSchedules = AdminService.getReportScheduleList(loggedInUser);
                 if (schedulesSheet != null) {
                     int row = 1;
+                    SName listRegion = book.getInternalBook().getNameByName("data");
+                    if (listRegion!=null){
+                        row = listRegion.getRefersToCellRegion().getRow();
+                    }
                     for (ReportSchedule reportSchedule : reportSchedules) {
                         final Database databaseById = AdminService.getDatabaseById(reportSchedule.getDatabaseId(), loggedInUser);
                         final OnlineReport reportById = AdminService.getReportById(reportSchedule.getReportId(), loggedInUser);

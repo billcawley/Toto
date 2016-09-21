@@ -96,6 +96,7 @@ public final class ImportService {
     private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) &&  (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(filePath), "Report name");
+            List<String> rejected = new ArrayList<>();
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             if (userSheet != null) {
                 int row = 1;
@@ -106,13 +107,12 @@ public final class ImportService {
                 // keep them to use if not set. Should I be updating records instead? I'm not sure.
                 Map<String, String> oldPasswordMap = new HashMap<>();
                 Map<String, String> oldSaltMap = new HashMap<>();
-                List<String> illegals = new ArrayList<>();
-                List<User> userList = AdminService.getUserListForBusiness(loggedInUser);
+                 List<User> userList = AdminService.getUserListForBusiness(loggedInUser);
                 //todo - work out what users DEVELOPERs can upload
                 for (User user : userList) {
                     if (user.getId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
-                        if (loggedInUser.getUser().getStatus().equals("MASTER") && !user.getCreatedBy().equals(loggedInUser.getUser().getEmail())){
-                            illegals.add(user.getEmail());
+                        if (loggedInUser.getUser().getBusinessId()!= user.getBusinessId() || (loggedInUser.getUser().getStatus().equals("MASTER") && !user.getCreatedBy().equals(loggedInUser.getUser().getEmail()))){
+                            rejected.add(user.getEmail());
                         }else{
                             oldPasswordMap.put(user.getEmail(), user.getPassword());
                             oldSaltMap.put(user.getEmail(), user.getSalt());
@@ -124,7 +124,7 @@ public final class ImportService {
                     //Email	Name  Password	End Date	Status	Database	Report
                     String user = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
                     String email = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
-                    if (!loggedInUser.getUser().getEmail().equals(email) && !illegals.contains(email)) { // leave the logged in user alone!
+                    if (!loggedInUser.getUser().getEmail().equals(email) && !rejected.contains(email)) { // leave the logged in user alone!
                         String salt = "";
                         String password = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
                         if (password == null) {
@@ -175,12 +175,23 @@ public final class ImportService {
                     row++;
                 }
             }
-            return "User file uploaded";
+            String message = "User file uploaded.";
+            if (rejected.size() > 0){
+                message += "  Some users rejected: ";
+                for (String reject:rejected){
+                    message += reject + ", ";
+                }
+            }
+            return message;
         } else if (fileName.equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
             Book book = Importers.getImporter().imports(new File(fileName), "Report name");
             Sheet schedulesSheet = book.getSheet("ReportSchedules"); // literals not best practice, could it be factored between this and the xlsx file?
             if (schedulesSheet != null) {
                 int row = 1;
+                SName listRegion = book.getInternalBook().getNameByName("data");
+                if (listRegion!=null){
+                    row = listRegion.getRefersToCellRegion().getRow();
+                }
                 final List<ReportSchedule> reportSchedules = AdminService.getReportScheduleList(loggedInUser);
                 for (ReportSchedule reportSchedule : reportSchedules) {
                     ReportScheduleDAO.removeById(reportSchedule);
