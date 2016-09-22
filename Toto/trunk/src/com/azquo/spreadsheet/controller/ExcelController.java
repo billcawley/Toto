@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -66,6 +68,9 @@ public class ExcelController {
         if (loggedInUser == null) {
             return "error: invalid sessionid " + sessionid;
         }
+        if (database!=null && !database.equals(loggedInUser.getDatabase().getName())){
+            LoginService.switchDatabase(loggedInUser,database);
+        }
         if (name != null && name.length() > 0){
             List<String> names = SpreadsheetService.nameAutoComplete(loggedInUser, name);
             StringBuilder namesToReturn = new StringBuilder();
@@ -78,12 +83,28 @@ public class ExcelController {
             }
             return namesToReturn.toString();
         }
+        if (database.equals("listall")){
+            List<Database> databases = null;
+            if (loggedInUser.getUser().getStatus().equals("ADMINISTRATOR")){
+                databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            }else{
+                databases = DatabaseDAO.findForUserId(loggedInUser.getUser().getId());
+            }
+            StringBuilder toReturn = new StringBuilder();
+            for (Database db:databases){
+                if (toReturn.length() == 0) toReturn.append(db.getName());
+                else toReturn.append("," + db.getName());
+
+            }
+            return toReturn.toString();
+        }
         return "no action taken";
     }
 
     @RequestMapping(headers = "content-type=multipart/*")
     @ResponseBody
     public String handleRequest(@RequestParam(value = "sessionid", required = false, defaultValue = "") String sessionid
+            , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "data", required = false) MultipartFile data
     ) throws Exception {
         LoggedInUser loggedInUser = null;
@@ -92,6 +113,9 @@ public class ExcelController {
         }
         if (loggedInUser == null) {
             return "error: invalid sessionid " + sessionid;
+        }
+        if (database!=null && !database.equals(loggedInUser.getDatabase().getName())){
+            LoginService.switchDatabase(loggedInUser,database);
         }
         // similar to code in manage databases
         String fileName = data.getOriginalFilename();
