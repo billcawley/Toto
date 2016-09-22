@@ -679,6 +679,9 @@ public final class AzquoMemoryDB {
 
     public Set<Name> getNamesWithAttributeStarting(final String attributeName, final String attributeValue) {
         getNamesWithAttributeContainingCount.incrementAndGet();
+        if (attributeValue.charAt(0)=='*'){
+            return getNamesByAttributeValueWildcards(attributeName, attributeValue.substring(1), true, true);
+        }
         return getNamesByAttributeValueWildcards(attributeName, attributeValue, true, false);
     }
 
