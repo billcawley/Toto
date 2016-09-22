@@ -649,7 +649,7 @@ public class ZKAzquoBookUtils {
         if (date != null) return date;
         date = tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
         if (date != null) return date;
-        return tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 10) : maybeDate, ukdf5);
+        return tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, ukdf5);
     }
 
 
