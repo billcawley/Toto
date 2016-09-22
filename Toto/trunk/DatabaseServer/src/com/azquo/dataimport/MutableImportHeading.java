@@ -37,15 +37,12 @@ class MutableImportHeading {
     String attribute = null;
     //should we try to treat the cell as a date?
     boolean isDate = false;
-    /* the results of the peers clause are jammed in peers but then we need to know which headings those peers refer to - if context assign the name otherwise it's going to be the cell index that's used */
-    Set<Integer> peerCellIndexes = new HashSet<>();
-    // if context provides any of the peers they're in here
-    Set<Name> peersFromContext = new HashSet<>();
-    // todo clarify in the comments why these are needed given that context headings will have them internally
-    // the same as the above two but for a peer set defined in the context. The normal peers can get names from context, the context can get names from itself
-    Set<Integer> contextPeerCellIndexes = new HashSet<>();
-    Set<Name> contextPeersFromContext = new HashSet<>();
-
+    /* the results of the peers clause are jammed in peers but then we need to know which headings those peers refer to. The heading with the clause can immediately be resolved as a name
+    * as can peers referenced in the context, the others come from other columns referred to by their indexes. Peers can be defined in the main heading or context,
+    * there's no difference to how they're used but I'm going to throw an error if they're defined in both as you can't have more than one set of peers defined.*/
+    Set<Name> peerNames = new HashSet<>();
+    // Indexes of columns to be resolved on each line in the BatchImporter
+    Set<Integer> peerIndexes = new HashSet<>();
     /*if there are multiple attributes then effectively there will be multiple columns with the same "heading", define which one we're using when the heading is referenced by other headings.
     Language will trigger something as being the attribute subject, after if on searching there is only one it might be set for convenience when sorting attributes */
     boolean isAttributeSubject = false;

@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 /**
  * Extracted from DSImportService on by edward on 12/09/16.
  *
- * Created by EFC to try to improve speed through multi threading.
+ * Created by EFC to improve speed through multi threading.
  * The basic file parsing is single threaded but since this can start while later lines are being read I don't think this is a problem.
  * That is to say on a large file the threads will start to stack up fairly quickly
  * Adapted to Callable from Runnable - I like the assurances this gives for memory synchronisation
@@ -293,36 +293,17 @@ public class BatchImporter implements Callable<Void> {
              */
             boolean peersOk = true;
             final Set<Name> namesForValue = new HashSet<>(); // the names we're going to look for for this value
-            if (!cell.getImmutableImportHeading().contextPeersFromContext.isEmpty() || !cell.getImmutableImportHeading().contextPeerCellIndexes.isEmpty()) { // new criteria,this means there are context peers to deal with
-                namesForValue.addAll(cell.getImmutableImportHeading().contextPeersFromContext);// start with the ones we have to hand, including the main name
-                for (int peerCellIndex : cell.getImmutableImportHeading().contextPeerCellIndexes) {
-                    // Clarified now - normally contextPeerCellIndexes refers to the line name but if it's "this" then it's the heading name. Inconsistent.
-                    if (peerCellIndex == -1) {
-                        namesForValue.add(cell.getImmutableImportHeading().name);
-                    } else {
-                        ImportCellWithHeading peerCell = cells.get(peerCellIndex);
-                        if (peerCell.getLineName() != null) {
-                            namesForValue.add(peerCell.getLineName());
-                        } else {// fail - I plan to have resolved all possible line names by this point!
-                            peersOk = false;
-                            break;
-                        }
-                    }
-                }
-                // can't have more than one peers defined so if not from context check standard peers - peers from context is as it says, from context but not defined in there!
-            } else if (!cell.getImmutableImportHeading().peerCellIndexes.isEmpty() || !cell.getImmutableImportHeading().peersFromContext.isEmpty()) {
-                namesForValue.add(cell.getImmutableImportHeading().name); // the one at the top of this headingNo, the name with peers.
-                // the old logic added the context peers straight in so I see no problem doing this here - this is what might be called inherited peers, from a col to the left.
-                // On the col where context peers are defined normal peers should not be defined or used
-                namesForValue.addAll(cell.getImmutableImportHeading().peersFromContext);
-                // Ok I had to stick to indexes to get the cells
-                for (Integer peerCellIndex : cell.getImmutableImportHeading().peerCellIndexes) { // go looking for non context peers
-                    ImportCellWithHeading peerCell = cells.get(peerCellIndex); // get the cell
-                    if (peerCell.getLineName() != null) {// under new logic the line name would have been created if possible so if it's not there fail
+            // The heading reader has now improved to hand over one set of peer names and indexes, this class need not know if they came from context or not
+            // Fairly simple, add the names we already have then look up the ones from the lines based on the peerIndexes
+            if (!cell.getImmutableImportHeading().peerNames.isEmpty() || !cell.getImmutableImportHeading().peerIndexes.isEmpty()) { // new criteria,this means there are context peers to deal with
+                namesForValue.addAll(cell.getImmutableImportHeading().peerNames);// start with the ones we have to hand, including the main name
+                for (int peerCellIndex : cell.getImmutableImportHeading().peerIndexes) {
+                    ImportCellWithHeading peerCell = cells.get(peerCellIndex);
+                    if (peerCell.getLineName() != null) {
                         namesForValue.add(peerCell.getLineName());
-                    } else {
+                    } else {// fail - I plan to have resolved all possible line names by this point!
                         peersOk = false;
-                        break; // no point continuing gathering the names
+                        break;
                     }
                 }
             }
@@ -482,7 +463,6 @@ public class BatchImporter implements Callable<Void> {
         }
         return child;
     }
-
 
     private static List<String> setLocalLanguage(ImmutableImportHeading heading, List<String> defaultLanguages) {
         List<String> languages = new ArrayList<>();

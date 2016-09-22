@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  * <p>
- * Created by cawley on 20/05/15.
+ * Created by Edd on 20/05/15.
  * <p>
  * Has a fair bit of the logic that was in the original import service.
  * Note : large chunks of this were originally written by WFC and then refactored by EFC, spread across new files in this package.
@@ -30,15 +30,17 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Azquo has no schema like an SQL database but to load data a basic set structure needs to be defined
  * and rules for interpreting files need to be also. These two together effectively are the equivalent of an SQL schema.
  * <p>
- * I'm trying to write up as much of the non obvious logic as possible in comments in the code.
+ * The cell on a line can be a value or an attribute or a name - or a part of another cell via composite.
  * <p>
- * The cell on a line can be a value or an attribute or a name - or a part of another cell
+ * Status 20/09/2016 : functions broken up, could probably be improved further. Some longish functions.
  */
 public class DSImportService {
     // Attribute names for a name in the database with importing instructions.
-    // to do with reading the file in the first place, do we read the headers or not, how many lines to skip before data, is there a groovy pre processor
+    // to do with reading the file in the first place, are the headings already in the DB as an attribute?
     private static final String HEADINGSSTRING = "HEADINGS";
+    // how many lines to skip before data?
     private static final String SKIPLINESSTRING = "SKIPLINES";
+    // is there a groovy pre processor?
     private static final String GROOVYPROCESSOR = "GROOVYPROCESSOR";
 
     /*
@@ -51,7 +53,7 @@ public class DSImportService {
     public static String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, List<String> attributeNames, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         System.out.println("Reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        // in an ad hoc spreadsheet area should it say imported?
+        // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an XLSX import, a different thing from a data entry area.
         azquoMemoryDBConnection.setProvenance(user, "imported", fileName, "");
         return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, attributeNames, persistAfter, isSpreadsheet);
     }
@@ -61,9 +63,7 @@ public class DSImportService {
     public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
         // of course this doesn't currently stop the opposite, a persist being started while an import is going on.
-        System.out.println("Preparing to import, lock test");
         azquoMemoryDBConnection.lockTest();
-        System.out.println("Import lock passed");
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         String toReturn;
         if (fileName.toLowerCase().startsWith("sets")) { // typically from a sheet with that name in a book
@@ -77,7 +77,7 @@ public class DSImportService {
         return toReturn;
     }
 
-    // typically used to create the basic structure
+    // typically used to create the basic name structure, an Excel set up workbook with many sheets would have a sets sheet
 
     private static String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String filePath, String fileName, List<String> attributeNames) throws Exception {
         BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filePath)));
@@ -101,7 +101,7 @@ public class DSImportService {
                 if (!cell.isEmpty()) { // why we're not just grabbing the first cell for the set, might be blank
                     if (set == null) { // assign it - I'm not just grabbing the first cell since there may be cells with spaces or "" at the beginning
                         set = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, null, false, attributeNames);
-                        // empty it
+                        // empty it in case it existed and had children
                         set.setChildrenWillBePersisted(Collections.emptyList());
                     } else { // set is created or found, so start gathering children
                         set.addChildWillBePersisted(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, set, false, attributeNames));
@@ -113,150 +113,64 @@ public class DSImportService {
         return fileName + " imported. " + lines + " line(s) of a set file.<br/>";  // HTML in DB code! Will let it slide for the mo.
     }
 
-    /* calls header validation and batches up the data with headers ready for batch importing
-    Get headings first, they can be in a name or in the file, if in a file then they will be set on a name. The key is to set up info in names so a file can be uploaded from a client "as is"
+    /* Calls header validation and batches up the data with headers ready for batch importing. Get headings first,
+    they can be in a name or in the file, if in a file then they will be set on a name after for future reference.
+    The key is to set up info in names so a file can be uploaded from a client "as is". Function a little longer than I'd like.
     */
 
     private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
         try {
             long track = System.currentTimeMillis();
-            // I'd like to break assigning the import interpreter off but it's tied rather closely with code below
-            String importInterpreterLookup = fileName; // breaking this off as a new field - used to find names in the db with info to interpret the file
-            if (importInterpreterLookup.contains(".")) {
-                importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
+            // A fair amount is going on in here checking various upload options and parsing the headers. It delivers the
+            // parsed headings, the iterator for the data lines and how many lines should be processed by each task in the thread pool
+            HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize = getHeadersWithIteratorAndBatchSize(azquoMemoryDBConnection, fileName, isSpreadsheet, filePath, attributeNames);
+            if (headingsWithIteratorAndBatchSize == null) {
+                return "First line blank"; //most likely cause of it being null
             }
-            Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
-            while (!isSpreadsheet && importInterpreter == null && (importInterpreterLookup.contains(" ") || importInterpreterLookup.contains("_"))) { //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
-                //There may, though, be separate interpreters for A_B_xxx and A_xxx, so we try A_B first
-                if (importInterpreterLookup.contains(" ")) {
-                    importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf(" "));
-                } else {
-                    importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("_"));
-                }
-                importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
-            }
-            filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
-            // keep this one separate so it can be closed at the end. Transposing may assign a new iterator
-            final LineIteratorAndBatchSize lineIteratorAndBatchSize = getLineIteratorAndBatchSize(filePath);
-            if (lineIteratorAndBatchSize == null) {
-                return "First line blank"; //if he first line is blank, ignore the sheet
-            }
-            int batchSize = lineIteratorAndBatchSize.batchSize;
-            Iterator<String[]> lineIterator = lineIteratorAndBatchSize.lineIterator; // to read the data, it might be reassigned in the case of transposing which will return the more generic iterator
-            String[] headers = null;
-            int skipLines = 0;
-            if (!isSpreadsheet && importInterpreter != null) {
-                lineIterator = checkTranspose(importInterpreter, lineIterator); // transpose the file if required, this was for spark response, we'll leave it in for the moment
-                // The code below should be none the wiser that a transpose happened if it did.
-                String importHeaders = importInterpreter.getAttribute(HEADINGSSTRING); // typically they will be in there
-                if (importHeaders != null) {
-                    String skipLinesSt = importInterpreter.getAttribute(SKIPLINESSTRING);
-                    if (skipLinesSt != null) {
-                        try {
-                            skipLines = Integer.parseInt(skipLinesSt);
-                        } catch (Exception ignored) {
-                        }
-                    }
-                    System.out.println("has headers " + importHeaders);
-                    headers = importHeaders.split("¬"); // a bit arbitrary, would like a better solution if I can think of one.
-                }
-            }
-
-            // finally we might use the headers on the data file, this is notably used when setting up the headers themselves :)
-            if (headers == null) {
-                headers = lineIterator.next();
-                boolean hasClauses = false;
-                for (String header : headers) {
-                    if (header.contains(".") || header.contains(";")) {
-                        hasClauses = true;
-                    }
-                }
-                if (!hasClauses) {
-                    if (!lineIterator.hasNext()) {
-                        throw new Exception("Invalid headers on import file - is this a report that required az_ReportName?");
-                    }
-                    buildHeadersFromVerticallyListedClauses(headers, lineIterator);
-                }
-                if (isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
-                    Name importSheets = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All import sheets", null, false);
-                    Name dataImportThis = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,
-                            "DataImport " + importInterpreterLookup, importSheets, true);
-                    StringBuilder sb = new StringBuilder();
-                    for (String header : headers) {
-                        sb.append(header).append("¬");
-                    }
-                    dataImportThis.setAttributeWillBePersisted(HEADINGSSTRING, sb.toString());
-                    dataImportThis.setAttributeWillBePersisted(SKIPLINESSTRING, "1");//  currently assuming one line - may need to adjust
-                }
-            } else {
-                while (skipLines-- > 0) {
-                    lineIterator.next();
-                }
-            }
-
-        /*
-        End preparatory stuff
-        readHeaders is about creating a set of ImportHeadings
-        notable that internally it might use attributes from the relevant data import name to supplement the header information
-        to be more specific : that name called by "dataimport " + fileType has been hit for its "HEADINGSSTRING" attribute already to produce headers
-        but it could be asked for something more specific according to the header name.
-        This method where columns can be called by name will look nicer in the heading set up but it requires data files to have headings.
-        */
-            // read the clauses, assign the heading.name if you can find it, add on the context headings
-            final List<ImmutableImportHeading> immutableImportHeadings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, importInterpreterLookup, attributeNames);
-            // having read the headers go through each record
-            // now, since this will be multi threaded need to make line objects, Cannot be completely immutable due to the current logic e.g. composite values
-            int lineNo = 1; // for error checking etc. Generally the first line of data is line 2, this is incremented at the beginning of the loop
-            // pretty vanilla multi threading bits
             AtomicInteger valueTracker = new AtomicInteger(0);
-            ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(batchSize);
-            int colCount = immutableImportHeadings.size();
-            while (immutableImportHeadings.get(colCount - 1).compositionPattern != null)
-                colCount--;
+            // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
+            ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
             List<Future> futureBatches = new ArrayList<>();
             // Local cache of names just to speed things up, a name could be referenced millions of times in one file
             final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
-            while (lineIterator.hasNext()) {
-                String[] lineValues = lineIterator.next();
+            int lineNo = 1; // for error checking etc. Generally the first line of data is line 2, this is incremented at the beginning of the loop. Might be inaccurate if there are vertically stacked headers.
+            while (headingsWithIteratorAndBatchSize.lineIterator.hasNext()) {
+                String[] lineValues = headingsWithIteratorAndBatchSize.lineIterator.next();
                 lineNo++;
                 List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
                 int columnIndex = 0;
                 boolean corrupt = false;
-                for (ImmutableImportHeading immutableImportHeading : immutableImportHeadings) {
+                for (ImmutableImportHeading immutableImportHeading : headingsWithIteratorAndBatchSize.headings) {
                     // intern may save a little memory. Column Index could point past line values for things like composite. Possibly other things but I can't think of them at the moment
-                    String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern().replace("~~", "\r\n") : "";//hack to replace carriage returns from Excel sheets
-                    if (lineValue.equals("\"")) {
-                        //this has happened
+                    String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern() : "";
+                    if (lineValue.equals("\"")) {// was a problem, might be worth checking if it is still
                         corrupt = true;
                         break;
                     }
                     if (lineValue.startsWith("\"") && lineValue.endsWith("\""))
                         lineValue = lineValue.substring(1, lineValue.length() - 1).replace("\"\"", "\"");//strip spurious quote marks inserted by Excel
-                    //remove spurious quotes (put in when Groovyscript sent)
                     importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null));
                     columnIndex++;
                 }
                 if (!corrupt) {
-                    //batch it up!
                     linesBatched.add(importCellsWithHeading);
                     // rack up the futures to check in a mo to see that things are complete
-                    if (linesBatched.size() == batchSize) {
-                        futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - batchSize)));// line no should be the start
-                        linesBatched = new ArrayList<>(batchSize);
+                    if (linesBatched.size() == headingsWithIteratorAndBatchSize.batchSize) {
+                        futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - headingsWithIteratorAndBatchSize.batchSize)));// line no should be the start
+                        linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
                     }
                 }
             }
             // load leftovers
-            int loadLine = lineNo - linesBatched.size(); // NOT batch size!
-            if (loadLine < 1) loadLine = 1; // could it ever be? Need to confirm this check
-            futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, loadLine)));// line no should be the start
+            int loadLine = lineNo - linesBatched.size(); // NOT batch size! A problem here isn't a functional problem but it makes logging incorrect.
+            futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, loadLine)));
             // check all work is done and memory is in sync
             for (Future<?> futureBatch : futureBatches) {
                 futureBatch.get(1, TimeUnit.HOURS);
             }
             // wasn't closing before, maybe why the files stayed there. Use the original one to close in case the lineIterator field was reassigned by transpose
-            lineIteratorAndBatchSize.lineIterator.close();
-            // edd adding a delete check for tomcat temp files, if read from the other temp directly then leave it alone
+            headingsWithIteratorAndBatchSize.originalIterator.close();
+            // Delete check for tomcat temp files, if read from the other temp directly then leave it alone
             if (filePath.contains("/usr/")) {
                 File test = new File(filePath);
                 if (test.exists()) {
@@ -278,6 +192,106 @@ public class DSImportService {
             }
             throw new Exception(fileName + " : " + t.getMessage());
         }
+    }
+
+    // little class to gather the objects required to start the values import
+
+    private static class HeadingsWithIteratorAndBatchSize {
+        MappingIterator<String[]> originalIterator;
+        Iterator<String[]> lineIterator;
+        int batchSize;
+        List<ImmutableImportHeading> headings;
+
+        HeadingsWithIteratorAndBatchSize(MappingIterator<String[]> originalIterator, int batchSize) {
+            this.originalIterator = originalIterator;
+            this.batchSize = batchSize;
+            this.lineIterator = originalIterator; // initially use the original, it may be overwritten
+        }
+    }
+
+    // The function to make the an instance of HeadingsWithIteratorAndBatchSize. It will itself call a few utility functions as well as the HeadingReader class.
+    // This function is mainly concerned with possible sources of the headers either in the database as attributes or in the uploaded file
+
+    private static HeadingsWithIteratorAndBatchSize getHeadersWithIteratorAndBatchSize(AzquoMemoryDBConnection azquoMemoryDBConnection
+            , String importInterpreterLookup, boolean isSpreadsheet, String filePath, List<String> attributeNames) throws Exception {
+        if (importInterpreterLookup.contains(".")) {
+            importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
+        }
+        // try to find a name which might have the headings in its attributes
+        Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
+        //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
+        while (!isSpreadsheet && importInterpreter == null && (importInterpreterLookup.contains(" ") || importInterpreterLookup.contains("_"))) {
+            //There may, though, be separate interpreters for A_B_xxx and A_xxx, so we try A_B first
+            if (importInterpreterLookup.contains(" ")) {
+                importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf(" "));
+            } else {
+                importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("_"));
+            }
+            importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
+        }
+        // check if that name (assuming it's not null!) has groovy in an attribute
+        filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
+        // checks the first few lines to sort batch size and get a hopefully correctly configured line iterator
+        final HeadingsWithIteratorAndBatchSize lineIteratorAndBatchSize = getLineIteratorAndBatchSize(filePath); // created here but it has no headers
+        if (lineIteratorAndBatchSize == null) {
+            return null;
+        }
+        String[] headers = null;
+        int skipLines = 0;
+        if (!isSpreadsheet && importInterpreter != null) {
+            // transpose the file and reassign the line iterator if required, this was for spark response, we'll leave it in for the moment
+            // The code below should be none the wiser that a transpose happened if it did.
+            checkTranspose(importInterpreter, lineIteratorAndBatchSize);
+            String importHeaders = importInterpreter.getAttribute(HEADINGSSTRING); // look for headers and parse them if they are there
+            if (importHeaders != null) {
+                String skipLinesSt = importInterpreter.getAttribute(SKIPLINESSTRING);
+                if (skipLinesSt != null) {
+                    try {
+                        skipLines = Integer.parseInt(skipLinesSt);
+                    } catch (Exception ignored) {
+                    }
+                }
+                System.out.println("has headers " + importHeaders);
+                headers = importHeaders.split("¬"); // delimiter a bit arbitrary, would like a better solution if I can think of one.
+            }
+        }
+        // We might use the headers on the data file, this is notably used when setting up the headers themselves.
+        if (headers == null) {
+            headers = lineIteratorAndBatchSize.lineIterator.next();
+            boolean hasClauses = false;
+            for (String header : headers) {
+                if (header.contains(".") || header.contains(";")) {
+                    hasClauses = true;
+                }
+            }
+            if (!hasClauses) {
+                if (!lineIteratorAndBatchSize.lineIterator.hasNext()) {
+                    throw new Exception("Invalid headers on import file - is this a report that required az_ReportName?");
+                }
+                // option to stack the clauses vertically
+                buildHeadersFromVerticallyListedClauses(headers, lineIteratorAndBatchSize.lineIterator);
+            }
+            if (isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
+                // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
+                // as in add the headings to the first upload then upload again without headings (assuming the file name is the same!)
+                Name importSheets = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All import sheets", null, false);
+                Name dataImportThis = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,
+                        "DataImport " + importInterpreterLookup, importSheets, true);
+                StringBuilder sb = new StringBuilder();
+                for (String header : headers) {
+                    sb.append(header).append("¬");
+                }
+                dataImportThis.setAttributeWillBePersisted(HEADINGSSTRING, sb.toString());
+                dataImportThis.setAttributeWillBePersisted(SKIPLINESSTRING, "1");//  currently assuming one line - may need to adjust
+            }
+        } else {
+            while (skipLines-- > 0) {
+                lineIteratorAndBatchSize.lineIterator.next();
+            }
+        }
+        // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
+        lineIteratorAndBatchSize.headings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, importInterpreterLookup, attributeNames);
+        return lineIteratorAndBatchSize;
     }
 
     // the idea is that a header could be followed by successive clauses on cells below and this might be easier to read
@@ -303,12 +317,12 @@ public class DSImportService {
         }
     }
 
-    private static Iterator<String[]> checkTranspose(Name importInterpreter, Iterator<String[]> lineIterator) {
+    private static void checkTranspose(Name importInterpreter, HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize) {
         if ("true".equalsIgnoreCase(importInterpreter.getAttribute("transpose"))) {
-            // ok we want to transpose, will use similar logic to the server side transpose
             final List<String[]> sourceList = new ArrayList<>();
-            while (lineIterator.hasNext()) { // it will be closed at the end. Worth noting that transposing shouldn't really be done on massive files, I can't imagine it would be
-                sourceList.add(lineIterator.next());
+            // originalIterator will be closed at the end. Worth noting that transposing shouldn't really be done on massive files, I can't imagine it would be
+            while (headingsWithIteratorAndBatchSize.originalIterator.hasNext()) {
+                sourceList.add(headingsWithIteratorAndBatchSize.originalIterator.next());
             }
             final List<String[]> flipped = new ArrayList<>(); // from ths I can get a compatible iterator
             if (!sourceList.isEmpty()) { // there's data to transpose
@@ -322,24 +336,15 @@ public class DSImportService {
                     }
                     flipped.add(newRow);
                 }
-                lineIterator = flipped.iterator(); // replace the iterator, I was keen to keep the pattern the Jackson uses, this seems to support it, the original is closed at the bottom either way
+                // replace the line iterator, the values imp[orting code won't notice but either way the original needs to be closed at the end, hence the originalIterator field
+                headingsWithIteratorAndBatchSize.lineIterator = flipped.iterator();
             }
         }
-        return lineIterator;// most of the time will just return the unmodified lineIterator
     }
 
-    private static class LineIteratorAndBatchSize {
-        final MappingIterator<String[]> lineIterator;
-        final int batchSize;
-
-        LineIteratorAndBatchSize(MappingIterator<String[]> lineIterator, int batchSize) {
-            this.lineIterator = lineIterator;
-            this.batchSize = batchSize;
-        }
-    }
-
-    // as it says, getting some simple info about the file to set up the csv reader and determine batch size
-    private static LineIteratorAndBatchSize getLineIteratorAndBatchSize(String filePath) throws Exception {
+    // Getting some simple info about the file to set up the csv reader and determine batch size
+    // Makes the HeadingsWithIteratorAndBatchSize but without the ImmutableImportHeadings object
+    private static HeadingsWithIteratorAndBatchSize getLineIteratorAndBatchSize(String filePath) throws Exception {
         File sizeTest = new File(filePath);
         final long fileLength = sizeTest.length();
         BufferedReader br = new BufferedReader(new FileReader(filePath));
@@ -361,7 +366,6 @@ public class DSImportService {
             batchSize = 10_000;
         }
         br.close();
-        // guess delimiter
         char delimiter = ',';
         if (firstLine.contains("|")) {
             delimiter = '|';
@@ -378,7 +382,7 @@ public class DSImportService {
         if (delimiter == '\t') {
             schema = schema.withoutQuoteChar();
         }
-        return new LineIteratorAndBatchSize(csvMapper.reader(String[].class).with(schema).readValues(new File(filePath)), batchSize);
+        return new HeadingsWithIteratorAndBatchSize(csvMapper.reader(String[].class).with(schema).readValues(new File(filePath)), batchSize);
     }
 
     // typically groovy scripts write out to a different file, helps a lot for debugging! Most of the time with no groovy specified will just send back the filePath unchanged.
