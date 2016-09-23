@@ -26,6 +26,7 @@ import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
 import java.io.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -96,6 +97,7 @@ public final class ImportService {
     private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
         if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) &&  (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(filePath), "Report name");
+            List<String> notAllowed = new ArrayList<>();
             List<String> rejected = new ArrayList<>();
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             if (userSheet != null) {
@@ -112,7 +114,7 @@ public final class ImportService {
                 for (User user : userList) {
                     if (user.getId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
                         if (loggedInUser.getUser().getBusinessId()!= user.getBusinessId() || (loggedInUser.getUser().getStatus().equals("MASTER") && !user.getCreatedBy().equals(loggedInUser.getUser().getEmail()))){
-                            rejected.add(user.getEmail());
+                            notAllowed.add(user.getEmail());
                         }else{
                             oldPasswordMap.put(user.getEmail(), user.getPassword());
                             oldSaltMap.put(user.getEmail(), user.getSalt());
@@ -124,15 +126,16 @@ public final class ImportService {
                     //Email	Name  Password	End Date	Status	Database	Report
                     String user = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
                     String email = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
-                    if (!loggedInUser.getUser().getEmail().equals(email) && !rejected.contains(email)) { // leave the logged in user alone!
+                    if (notAllowed.contains(email)) rejected.add(email);
+                    if (!loggedInUser.getUser().getEmail().equals(email) && !notAllowed.contains(email)) { // leave the logged in user alone!
                         String salt = "";
                         String password = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
                         if (password == null) {
                             password = "";
                         }
-                        LocalDateTime end = LocalDateTime.now();
+                        LocalDate end = LocalDate.now().plusYears(10);
                         try {
-                            end = LocalDateTime.parse(userSheet.getInternalSheet().getCell(row, 3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
+                            end = LocalDate.parse(userSheet.getInternalSheet().getCell(row, 3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
                         } catch (Exception ignored) {
                         }
                         String status = userSheet.getInternalSheet().getCell(row, 4).getStringValue();
@@ -155,7 +158,7 @@ public final class ImportService {
                                 final Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport = loggedInUser.getPermissionsFromReport();
                                 for (TypedPair<OnlineReport, Database> allowedCombo : permissionsFromReport.values()){
                                     if (allowedCombo.getFirst().getId() == or.getId() && allowedCombo.getSecond().getId() == d.getId()){ // then we can add the user with this info
-                                        User user1 = new User(0, end, loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(),or.getId());
+                                        User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(),or.getId());
                                         UserDAO.store(user1);
                                         stored = true;
                                         break;
@@ -163,12 +166,12 @@ public final class ImportService {
                                 }
                             }
                             if (!stored){ // default to the current users home menu
-                                User user1 = new User(0, end, loggedInUser.getUser().getBusinessId(), email, user, status,
+                                User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status,
                                         password, salt, loggedInUser.getUser().getEmail(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getReportId());
                                 UserDAO.store(user1);
                             }
                         } else {
-                            User user1 = new User(0, end, loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d != null ? d.getId() : 0, or != null ? or.getId() : 0);
+                            User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d != null ? d.getId() : 0, or != null ? or.getId() : 0);
                             UserDAO.store(user1);
                         }
                     }
@@ -320,10 +323,11 @@ public final class ImportService {
             UploadRecordDAO.store(uploadRecord);
             messageSuffix = "  Replaced " + origFileName + " uploaded by " + UserDAO.findById(uploadRecord.getUserId()).getName() + " on " + uploadRecord.getDate();
         }
+
          if(or != null){
             or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
         }else{
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), "", reportName, fileName, "", ""); // default to ZK now
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName() , reportName, fileName, "", ""); // default to ZK now
         }
 
         File file = new File(fullPath);
