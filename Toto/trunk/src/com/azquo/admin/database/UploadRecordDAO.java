@@ -73,21 +73,21 @@ public final class UploadRecordDAO  {
     public static List<UploadRecord> findForBusinessId(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " order by `date` desc", TABLENAME, uploadRowMapper, namedParams, 0, 100);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " order by `id` desc", TABLENAME, uploadRowMapper, namedParams, 0, 100);
     }
 
     public static UploadRecord findForBusinessIdAndFileName(final int businessId, String fileName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         namedParams.addValue(FILENAME, fileName);
-        return StandardDAO.findOneWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + FILENAME + " = :" + FILENAME + " order by `date` desc", TABLENAME, uploadRowMapper, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + FILENAME + " = :" + FILENAME + " order by `id` desc", TABLENAME, uploadRowMapper, namedParams);
     }
 
 
     public static List<UploadRecord> findForUserId(final int userId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
-        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " order by `date` desc", TABLENAME, uploadRowMapper, namedParams, 0, 100);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " order by `id` desc", TABLENAME, uploadRowMapper, namedParams, 0, 100);
     }
 
     public static void removeForDatabaseId(int databaseId) {
