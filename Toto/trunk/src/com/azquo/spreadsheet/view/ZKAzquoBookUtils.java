@@ -260,24 +260,28 @@ public class ZKAzquoBookUtils {
         Map<String, TypedPair<OnlineReport, Database>> permissionsFromReports = loggedInUser.getPermissionsFromReport() != null ? loggedInUser.getPermissionsFromReport() : new ConcurrentHashMap<>(); // cumulative permissions. Might as well make concurrent
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
+
+            // should unlock the lot
+            Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator();
+            while (rowIterator.hasNext()) {
+                Iterator<SCell> cellIterator = sheet.getInternalSheet().getCellIterator(rowIterator.next().getIndex());
+                while (cellIterator.hasNext()) {
+                    SCell cell = cellIterator.next();
+                    Ranges.range(sheet, cell.getRowIndex(),cell.getColumnIndex());
+                    if (cell.getType() == SCell.CellType.FORMULA) {
+                        //System.out.println("doing the cell thing on " + cell);
+                        cell.getFormulaResultType();
+                        cell.clearFormulaResultCache();
+                    }
+                }
+            }
+
             // these two lines moved from below the unmerge command, shouldn't be a big problem - I need the options to check that we're setting valid options directly below
             // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
             List<SName> namesForSheet = getNamesForSheet(sheet);
             //have a look for "az_AllowableReports", it's read only, getting it here seems as reasonable as anything
             for (SName sName : namesForSheet) {
                 // run through every cell in any names region unlocking to I can later lock. Setting locking on a large selection seems to zap formatting, do it cell by cell
-
-                for (int i = sName.getRefersToCellRegion().getRow(); i <= sName.getRefersToCellRegion().getLastRow(); i++) {
-                    for (int j = sName.getRefersToCellRegion().getColumn(); j <= sName.getRefersToCellRegion().getLastColumn(); j++){
-                        Range selection =  Ranges.range(sheet, i,j);
-                        CellStyle oldStyle = selection.getCellStyle();
-                        EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
-                        newStyle.setLocked(false);
-                        selection.setCellStyle(newStyle);
-                    }
-                }
-
-
                 if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
                     CellRegion allowable = sName.getRefersToCellRegion();
                     // need to detect 2nd AND 3rd column here - 2nd = db, if 3rd then last is db 2nd report and 1st name (key)
@@ -488,7 +492,7 @@ public class ZKAzquoBookUtils {
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
             // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
             // can't do this in the fill region as formulae need to be dealt with outside
-            Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator(); // only rows with values in them
+            rowIterator = sheet.getInternalSheet().getRowIterator(); // only rows with values in them
             while (rowIterator.hasNext()) {
                 Iterator<SCell> cellIterator = sheet.getInternalSheet().getCellIterator(rowIterator.next().getIndex());
                 while (cellIterator.hasNext()) {
