@@ -261,7 +261,6 @@ public class ZKAzquoBookUtils {
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
 
-            /*
             int maxRow = sheet.getLastRow();
             int maxCol = 0;
             for (int row = 0; row <= maxRow; row++) {
@@ -271,23 +270,14 @@ public class ZKAzquoBookUtils {
             }
             for (int row = 0; row <= maxRow; row++) {
                 for (int col = 0; col <= maxCol; col++) {
-                }
-            }*/
-
-            // should unlock the lot
-            Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator();
-            while (rowIterator.hasNext()) {
-                Iterator<SCell> cellIterator = sheet.getInternalSheet().getCellIterator(rowIterator.next().getIndex());
-                while (cellIterator.hasNext()) {
-                    SCell cell = cellIterator.next();
-                    Ranges.range(sheet, cell.getRowIndex(),cell.getColumnIndex());
-                    Range selection =  Ranges.range(sheet, cell.getRowIndex(),cell.getColumnIndex());
+                    Range selection =  Ranges.range(sheet, row,col);
                     CellStyle oldStyle = selection.getCellStyle();
                     EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
                     newStyle.setLocked(false);
                     selection.setCellStyle(newStyle);
                 }
             }
+
 
             // these two lines moved from below the unmerge command, shouldn't be a big problem - I need the options to check that we're setting valid options directly below
             // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
@@ -505,7 +495,7 @@ public class ZKAzquoBookUtils {
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
             // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
             // can't do this in the fill region as formulae need to be dealt with outside
-            rowIterator = sheet.getInternalSheet().getRowIterator(); // only rows with values in them
+            final Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator();// only rows with values in them
             while (rowIterator.hasNext()) {
                 Iterator<SCell> cellIterator = sheet.getInternalSheet().getCellIterator(rowIterator.next().getIndex());
                 while (cellIterator.hasNext()) {
