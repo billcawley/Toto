@@ -261,6 +261,19 @@ public class ZKAzquoBookUtils {
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
 
+            /*
+            int maxRow = sheet.getLastRow();
+            int maxCol = 0;
+            for (int row = 0; row <= maxRow; row++) {
+                if (maxCol < sheet.getLastColumn(row)) {
+                    maxCol = sheet.getLastColumn(row);
+                }
+            }
+            for (int row = 0; row <= maxRow; row++) {
+                for (int col = 0; col <= maxCol; col++) {
+                }
+            }*/
+
             // should unlock the lot
             Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator();
             while (rowIterator.hasNext()) {
@@ -268,11 +281,11 @@ public class ZKAzquoBookUtils {
                 while (cellIterator.hasNext()) {
                     SCell cell = cellIterator.next();
                     Ranges.range(sheet, cell.getRowIndex(),cell.getColumnIndex());
-                    if (cell.getType() == SCell.CellType.FORMULA) {
-                        //System.out.println("doing the cell thing on " + cell);
-                        cell.getFormulaResultType();
-                        cell.clearFormulaResultCache();
-                    }
+                    Range selection =  Ranges.range(sheet, cell.getRowIndex(),cell.getColumnIndex());
+                    CellStyle oldStyle = selection.getCellStyle();
+                    EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
+                    newStyle.setLocked(false);
+                    selection.setCellStyle(newStyle);
                 }
             }
 
