@@ -307,12 +307,12 @@ public final class ImportService {
         if (or != null){
             origFileName = or.getFilename();
         }
-        String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + origFileName;
-        UploadRecord uploadRecord = UploadRecordDAO.findForBusinessIdAndFileName(loggedInUser.getUser().getBusinessId(), fileName);
+        String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
+        UploadRecord uploadRecord = UploadRecordDAO.findForBusinessIdAndFileName(loggedInUser.getUser().getBusinessId(), origFileName);
         if (uploadRecord != null) {
             origUploadId = uploadRecord.getId();
             File origFile = new File(fullPath);
-            File newFile = new File(fullPath + origUploadId);
+            File newFile = new File(fullPath + "." + origUploadId);
             if (!newFile.exists()) {
                 origFile.renameTo(newFile);
             }
