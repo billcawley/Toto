@@ -68,7 +68,7 @@ public class ExcelController {
         if (loggedInUser == null) {
             return "error: invalid sessionid " + sessionid;
         }
-        if (database!=null && !database.equals(loggedInUser.getDatabase().getName())){
+        if (database!=null && !database.equals("listall") && !database.equals(loggedInUser.getDatabase().getName())){
             LoginService.switchDatabase(loggedInUser,database);
         }
         if (name != null && name.length() > 0){
