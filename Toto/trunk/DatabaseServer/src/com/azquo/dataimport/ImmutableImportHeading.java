@@ -16,7 +16,6 @@ import java.util.Set;
  */
 class ImmutableImportHeading {
     final String heading;
-    final Name name;
     final int indexForAttribute;
     final int indexForChild;
     // ok the set will be fixed, I suppose names can be modified but they should be thread safe
@@ -37,7 +36,6 @@ class ImmutableImportHeading {
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
-        this.name = mutableImportHeading.name;
         this.indexForAttribute = mutableImportHeading.indexForAttribute;
         this.indexForChild = mutableImportHeading.indexForChild;
         this.parentNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.parentNames)); // copying the sets in a perhaps paranoid way

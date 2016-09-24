@@ -110,6 +110,24 @@ class HeadingReader {
                         lastHeading = header;
                     }
                 }
+                // adding the code back in, apparently required!
+                int fileNamePos = header.toLowerCase().indexOf("right(filename,");
+                if (fileNamePos > 0) {
+                    //extract this part of the file name.  This is currently limited to this format
+                    int functionEnd = header.indexOf(")", fileNamePos);
+                    if (functionEnd > 0) {
+                        try {
+                            int len = Integer.parseInt(header.substring(fileNamePos + "right(filename,".length(), functionEnd));
+                            String replacement = "";
+                            if (len < importInterpreterLookup.length()) {
+                                replacement = importInterpreterLookup.substring(importInterpreterLookup.length() - len);
+                            }
+                            header = header.replace(header.substring(fileNamePos - 1, functionEnd + 2), replacement);// accomodating the quote marks
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+
                 header = header.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
                 /* line heading and data
                 Line heading means that the cell data on the line will be a name that is a parent of the line no
@@ -160,6 +178,12 @@ class HeadingReader {
         // loop over the clauses making sense and modifying the heading object as you go
         for (int i = 1; i < clauses.length; i++) {
             interpretClause(azquoMemoryDBConnection, heading, clauses[i].trim());
+        }
+        // exclusive error checks
+        if ("".equals(heading.exclusive) && heading.parentNames.isEmpty()){ // then exclusive what is the name exclusive of?
+            throw new Exception("blank exclusive and no \"child of\" clause in " + heading.heading + " in headings"); // other clauses cannot be blank!
+        } else if (heading.exclusive != null && heading.parentOfClause == null){ // exclusive means nothing without parent of
+            throw new Exception("exclusive and no \"parent of\" clause in " + heading.heading + " in headings");
         }
         return heading;
     }
@@ -271,14 +295,16 @@ class HeadingReader {
                 if (mutableImportHeading.peers.size() > 0) { // has peers (of course) and a name. A bit braces and a belt, the two should go together.
                     resolvePeers(mutableImportHeading, null, headings);
                 }
-                // Resolve context heading peers if we have them. Context only really works with name in the heading otherwise how would the context differ over different headings, hence check name too.
-                if (mutableImportHeading.contextHeadings.size() > 0 && mutableImportHeading.name != null){
+                // Resolve context heading peers if we have them.
+                if (mutableImportHeading.contextHeadings.size() > 0){
                     for (MutableImportHeading contextHeading : mutableImportHeading.contextHeadings) {
                         // non zero in context pushes onto the headings
                         if (contextHeading.blankZeroes) {
                             mutableImportHeading.blankZeroes = true;
                         }
                         if (!contextHeading.peers.isEmpty()) { // then try to resolve the peers! Generally context headings will feature one with peers but it's not 100%
+                            // Context only really works with name in the heading otherwise how would the context differ over different headings, hence make the main heading if it's not there
+                            mutableImportHeading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, false);
                             if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()){
                                 throw new Exception("error: context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName());
                             }
