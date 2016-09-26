@@ -53,8 +53,7 @@ class HeadingReader {
 
     // Manages the context being assigned automatically to subsequent headers. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.
-    static List<ImmutableImportHeading> readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, String importInterpreterLookup, List<String> attributeNames) throws Exception {
-        headers = preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection,attributeNames,headers,importInterpreterLookup);
+    static List<ImmutableImportHeading> readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<String> attributeNames) throws Exception {
         List<MutableImportHeading> headings = new ArrayList<>();
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
         for (String header : headers) {
@@ -87,7 +86,7 @@ class HeadingReader {
 
     // deal with attribute short hand and pivot stuff, essentially pre processing that can be done before making any MutableImportHeadings
 
-    private static String[] preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames, String[] headers, String importInterpreterLookup) throws Exception {
+    static String[] preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames, String[] headers, String importInterpreterLookup, String fileName) throws Exception {
         //  if the file is of type (e.g.) 'sales' and there is a name 'dataimport sales', this is used as an interpreter. Attributes with the header's name override the header.
         Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
         String lastHeading = "";
@@ -119,8 +118,11 @@ class HeadingReader {
                         try {
                             int len = Integer.parseInt(header.substring(fileNamePos + "right(filename,".length(), functionEnd));
                             String replacement = "";
-                            if (len < importInterpreterLookup.length()) {
-                                replacement = importInterpreterLookup.substring(importInterpreterLookup.length() - len);
+                            if (fileName.contains(".")){// hack aagh todo
+                                fileName = fileName.substring(0, fileName.lastIndexOf("."));
+                            }
+                            if (len < fileName.length()) {
+                                replacement = fileName.substring(fileName.length() - len);
                             }
                             header = header.replace(header.substring(fileNamePos - 1, functionEnd + 2), replacement);// accomodating the quote marks
                         } catch (Exception ignored) {

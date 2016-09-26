@@ -5,11 +5,10 @@ import com.azquo.spreadsheet.view.RegionOptions;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 29/06/15.
- *
+ * <p>
  * Options against a report data region.
- *
  */
 public class UserRegionOptions extends StandardEntity {
     private final int userId;
@@ -32,10 +31,12 @@ public class UserRegionOptions extends StandardEntity {
 
     private String rowLanguage;
     private String columnLanguage;
+    private boolean ignoreHeadingErrors;
+
 
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideCols, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
-            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked) {
+            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, boolean ignoreHeadingErrors) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -55,6 +56,7 @@ public class UserRegionOptions extends StandardEntity {
         this.rowLanguage = rowLanguage;
         this.columnLanguage = columnLanguage;
         this.userLocked = userLocked;
+        this.ignoreHeadingErrors = ignoreHeadingErrors;
     }
 
     // to read the format of options from the spreadsheet, code adapted from azquobook.
@@ -90,6 +92,7 @@ public class UserRegionOptions extends StandardEntity {
             String DATABASENAME = "database";
             this.databaseName = getOptionFromSpreadsheetOptions(DATABASENAME, spreadsheetSource);
             this.userLocked = spreadsheetSource.toLowerCase().contains("userlocked"); // the get option thing is no good for just an "exists with no value" check, this is the same
+            this.ignoreHeadingErrors = spreadsheetSource.contains("ignoreheadingerrors");
         } else {
             this.sortable = false;
             this.rowLimit = 0;
@@ -98,6 +101,7 @@ public class UserRegionOptions extends StandardEntity {
             this.noSave = false;
             this.databaseName = null;
             this.userLocked = false;
+            this.ignoreHeadingErrors = false;
         }
         this.sortRow = null;
         this.sortRowAsc = false;
@@ -108,7 +112,7 @@ public class UserRegionOptions extends StandardEntity {
         if (sortColumn != null) {
             this.sortColumnAsc = true;
             this.sortColumn = sortColumn;
-           if (sortColumn.toLowerCase().endsWith(" desc")) {
+            if (sortColumn.toLowerCase().endsWith(" desc")) {
                 this.sortColumnAsc = false;
                 this.sortColumn = sortColumn.substring(0, sortColumn.length() - 5);
             }
@@ -129,7 +133,7 @@ public class UserRegionOptions extends StandardEntity {
     private String getOptionFromSpreadsheetOptions(String optionName, String optionsForRegion) {
         if (optionsForRegion != null) {
             int foundPos = optionsForRegion.toLowerCase().indexOf(optionName.toLowerCase());
-            if (foundPos != -1){
+            if (foundPos != -1) {
                 if (optionsForRegion.length() > foundPos + optionName.length()) {
                     optionsForRegion = optionsForRegion.substring(foundPos + optionName.length());//allow for a space or '=' at the end of the option name
                     char operator = optionsForRegion.charAt(0);
@@ -244,8 +248,8 @@ public class UserRegionOptions extends StandardEntity {
     }
 
     // As mentioned in RegionOptions,
-    public RegionOptions getRegionOptionsForTransport(){
-        return new RegionOptions(hideRows,hideCols,sortable,rowLimit,columnLimit,sortRow,sortRowAsc,sortColumn,sortColumnAsc,highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked);
+    public RegionOptions getRegionOptionsForTransport() {
+        return new RegionOptions(hideRows, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, ignoreHeadingErrors);
     }
 
     public String getRowLanguage() {
@@ -280,11 +284,18 @@ public class UserRegionOptions extends StandardEntity {
         this.userLocked = userLocked;
     }
 
+    public boolean getIgnoreHeadingErrors() {
+        return ignoreHeadingErrors;
+    }
+
+    public void setIgnoreHeadingErrors(boolean ignoreHeadingErrors) {
+        this.ignoreHeadingErrors = ignoreHeadingErrors;
+    }
+
     @Override
     public String toString() {
         return "UserRegionOptions{" +
-                "id=" + id +
-                ", userId=" + userId +
+                "userId=" + userId +
                 ", reportId=" + reportId +
                 ", region='" + region + '\'' +
                 ", hideRows=" + hideRows +
@@ -297,9 +308,12 @@ public class UserRegionOptions extends StandardEntity {
                 ", sortColumn='" + sortColumn + '\'' +
                 ", sortColumnAsc=" + sortColumnAsc +
                 ", highlightDays=" + highlightDays +
+                ", noSave=" + noSave +
                 ", databaseName='" + databaseName + '\'' +
+                ", userLocked=" + userLocked +
                 ", rowLanguage='" + rowLanguage + '\'' +
                 ", columnLanguage='" + columnLanguage + '\'' +
+                ", ignoreHeadingErrors=" + ignoreHeadingErrors +
                 '}';
     }
 }

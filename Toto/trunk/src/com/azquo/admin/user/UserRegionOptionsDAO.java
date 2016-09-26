@@ -72,6 +72,7 @@ public final class UserRegionOptionsDAO {
                         ,"" // todo - actually load this from the database!
                         ,""
                         ,false
+                        ,false
                 );
             } catch (Exception e) {
                 e.printStackTrace();

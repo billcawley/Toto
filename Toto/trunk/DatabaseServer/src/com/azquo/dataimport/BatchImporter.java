@@ -35,14 +35,16 @@ public class BatchImporter implements Callable<Void> {
     private final List<List<ImportCellWithHeading>> dataToLoad;
     private final Map<String, Name> namesFoundCache;
     private final List<String> attributeNames;
+    private final Set<Integer> linesRejected;
 
-    BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection, AtomicInteger valueTracker, List<List<ImportCellWithHeading>> dataToLoad, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo) {
+    BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection, AtomicInteger valueTracker, List<List<ImportCellWithHeading>> dataToLoad, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo, Set<Integer> linesRejected) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
         this.valueTracker = valueTracker;
         this.dataToLoad = dataToLoad;
         this.namesFoundCache = namesFoundCache;
         this.attributeNames = attributeNames;
         this.lineNo = lineNo;
+        this.linesRejected = linesRejected;
     }
 
     @Override
@@ -68,8 +70,8 @@ public class BatchImporter implements Callable<Void> {
                         System.out.println("line no " + lineNo + " time = " + (now - time) + "ms");
                     }
                     time = now;
-                } else {
-                    // todo add lines rejected , limit count
+                } else if (linesRejected.size() < 1_000){
+                    linesRejected.add(lineNo);
                 }
             }
             lineNo++;

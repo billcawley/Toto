@@ -133,6 +133,7 @@ public class DSImportService {
             List<Future> futureBatches = new ArrayList<>();
             // Local cache of names just to speed things up, a name could be referenced millions of times in one file
             final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
+            final Set<Integer> linesRejected = Collections.newSetFromMap(new ConcurrentHashMap<>(0)); // track line numbers rejected
             int lineNo = 1; // for error checking etc. Generally the first line of data is line 2, this is incremented at the beginning of the loop. Might be inaccurate if there are vertically stacked headers.
             while (headingsWithIteratorAndBatchSize.lineIterator.hasNext()) {
                 String[] lineValues = headingsWithIteratorAndBatchSize.lineIterator.next();
@@ -156,14 +157,14 @@ public class DSImportService {
                     linesBatched.add(importCellsWithHeading);
                     // rack up the futures to check in a mo to see that things are complete
                     if (linesBatched.size() == headingsWithIteratorAndBatchSize.batchSize) {
-                        futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - headingsWithIteratorAndBatchSize.batchSize)));// line no should be the start
+                        futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - headingsWithIteratorAndBatchSize.batchSize, linesRejected)));// line no should be the start
                         linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
                     }
                 }
             }
             // load leftovers
             int loadLine = lineNo - linesBatched.size(); // NOT batch size! A problem here isn't a functional problem but it makes logging incorrect.
-            futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, loadLine)));
+            futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, loadLine, linesRejected)));
             // check all work is done and memory is in sync
             for (Future<?> futureBatch : futureBatches) {
                 futureBatch.get(1, TimeUnit.HOURS);
@@ -179,10 +180,33 @@ public class DSImportService {
                     }
                 }
             }
-            String toReturn = fileName + " imported. Dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + (lineNo - 1) + " lines<br/>\n";
-            azquoMemoryDBConnection.addToUserLogNoException(toReturn, true);
+            StringBuilder toReturn = new StringBuilder();
+            toReturn.append(fileName);
+            toReturn.append(" imported. Dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + (lineNo - 1) + " lines<br/>\n");
+            if (!linesRejected.isEmpty()){
+                toReturn.append("Line numbers rejected : <br/>\n");
+                int col = 0;
+                ArrayList<Integer> lineNumbersList = new ArrayList<>(linesRejected);
+                Collections.sort(lineNumbersList); // should do the basic sort
+                for (int line : lineNumbersList){
+                    if (col > 0){
+                        toReturn.append(", ");
+                    }
+                    toReturn.append(line);
+                    col++;
+                    if (col == 20){
+                        col = 0;
+                        toReturn.append("<br/>\n");
+                    }
+                }
+                if (linesRejected.size() == 1_000){ // it was full - factor the static variable?
+                    toReturn.append("etc.");
+                }
+                toReturn.append("<br/>\n");
+            }
+            azquoMemoryDBConnection.addToUserLogNoException(toReturn.toString(), true);
             System.out.println("---------- names found cache size " + namesFoundCache.size());
-            return toReturn;
+            return toReturn.toString();
         } catch (Exception e) {
             // the point of this is to add the file name to the exception message - I wonder if I should just leave a vanilla exception here and deal with this client side?
             e.printStackTrace();
@@ -217,6 +241,8 @@ public class DSImportService {
         if (importInterpreterLookup.contains(".")) {
             importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
         }
+        // this distinction was previously dealt with by fileType and fileName, we still support the filename being replaced in the headings and it expects this, importInterpreterLookup is no good as it may be mangled further
+        String fileNameForReplace = importInterpreterLookup;
         // try to find a name which might have the headings in its attributes
         Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
         //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
@@ -290,7 +316,8 @@ public class DSImportService {
             }
         }
         // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
-        lineIteratorAndBatchSize.headings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, importInterpreterLookup, attributeNames);
+        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection,attributeNames,headers,importInterpreterLookup,fileNameForReplace);
+        lineIteratorAndBatchSize.headings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, attributeNames);
         return lineIteratorAndBatchSize;
     }
 
