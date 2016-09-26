@@ -2545,8 +2545,15 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     public static List<String> nameAutoComplete(DatabaseAccessToken databaseAccessToken, String s, int limit) throws Exception {
-        final Set<Name> names = getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getNamesWithAttributeStarting(Constants.DEFAULT_DISPLAY_NAME, s);
+        Collection<Name> names = getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getNamesWithAttributeStarting(Constants.DEFAULT_DISPLAY_NAME, s);
         List<String> toReturn = new ArrayList<>();
+
+        if (names==null || names.size()==0){//maybe it is a query
+            names = NameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken),s);
+            if (names.size() > 0){
+                toReturn.add("QUERY RESULTS");
+            }
+        }
         int count = 0;
         for (Name name : names) {
             if (count >= limit) {
