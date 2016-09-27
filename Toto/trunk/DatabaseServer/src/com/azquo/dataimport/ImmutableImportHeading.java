@@ -8,7 +8,7 @@ import java.util.Set;
 
 /**
  * Extracted from DSImportService by edward on 09/09/16.
- *
+ * <p>
  * See MutableImportHeading, does not have a few "interim" fields that that has, notable is removal of the context info, it has no reason to care how its peers were constructed.
  * I see no reason for getters here. Class members only, saves a load of space. Note added later : getters and setters may make the code clearer though this could be done by better names also I think
  * From a purely pragmatic point of view this class is not necessary but I'm very keen to make sure that heading info is fixed before data loading - possible errors resulting from modifying the mutable
@@ -24,7 +24,6 @@ class ImmutableImportHeading {
     final boolean isDate;
     final Set<Name> peerNames;
     final Set<Integer> peerIndexes;
-    final boolean isAttributeSubject;
     final boolean isLocal;
     final String only;
     final String compositionPattern;
@@ -43,7 +42,6 @@ class ImmutableImportHeading {
         this.isDate = mutableImportHeading.isDate;
         this.peerNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.peerNames));
         this.peerIndexes = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.peerIndexes));
-        this.isAttributeSubject = mutableImportHeading.isAttributeSubject;
         this.isLocal = mutableImportHeading.isLocal;
         this.only = mutableImportHeading.only;
         this.compositionPattern = mutableImportHeading.compositionPattern;

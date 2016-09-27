@@ -11,10 +11,8 @@ import java.util.stream.Collectors;
 /**
  * Created by edward on 10/09/16.
  * <p>
- * To extract heading reading logic from DSImportService.
+ * To extract heading reading logic from DSImportService. All context logic is now resolved here and not passed to the BatchImporter.
  * <p>
- * Status 22/09/2016 - hopefully successful attempts to break up functions and simplify some context logic
- * so that no context specific logic happens outside this class.
  */
 class HeadingReader {
     // to define context headings use this divider
@@ -31,7 +29,7 @@ class HeadingReader {
     How these are used is described in more detail in MutableImportHeading and the clause interpreter.
      */
 
-    private static final String CHILDOF = "child of "; // trailing space I suppose one could otherwise get a false child ofweryhwrs match which can't happen with the others
+    private static final String CHILDOF = "child of "; // trailing space I suppose one could otherwise get a false "child ofweryhwrs" match which can't happen with the others
     // parent of another heading (as opposed to name), would like the clause to be more explicit, as in differentiate between a name in the database and a column
     private static final String PARENTOF = "parent of ";
     private static final String ATTRIBUTE = "attribute";
@@ -109,7 +107,6 @@ class HeadingReader {
                         lastHeading = header;
                     }
                 }
-                // adding the code back in, apparently required!
                 int fileNamePos = header.toLowerCase().indexOf("right(filename,");
                 if (fileNamePos > 0) {
                     //extract this part of the file name.  This is currently limited to this format
@@ -118,7 +115,7 @@ class HeadingReader {
                         try {
                             int len = Integer.parseInt(header.substring(fileNamePos + "right(filename,".length(), functionEnd));
                             String replacement = "";
-                            if (fileName.contains(".")){// hack aagh todo
+                            if (fileName.contains(".")) {// hack aagh todo
                                 fileName = fileName.substring(0, fileName.lastIndexOf("."));
                             }
                             if (len < fileName.length()) {
@@ -129,7 +126,6 @@ class HeadingReader {
                         }
                     }
                 }
-
                 header = header.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
                 /* line heading and data
                 Line heading means that the cell data on the line will be a name that is a parent of the line no
@@ -182,9 +178,9 @@ class HeadingReader {
             interpretClause(azquoMemoryDBConnection, heading, clauses[i].trim());
         }
         // exclusive error checks
-        if ("".equals(heading.exclusive) && heading.parentNames.isEmpty()){ // then exclusive what is the name exclusive of?
+        if ("".equals(heading.exclusive) && heading.parentNames.isEmpty()) { // then exclusive what is the name exclusive of?
             throw new Exception("blank exclusive and no \"child of\" clause in " + heading.heading + " in headings"); // other clauses cannot be blank!
-        } else if (heading.exclusive != null && heading.parentOfClause == null){ // exclusive means nothing without parent of
+        } else if (heading.exclusive != null && heading.parentOfClause == null) { // exclusive means nothing without parent of
             throw new Exception("exclusive and no \"parent of\" clause in " + heading.heading + " in headings");
         }
         return heading;
@@ -267,8 +263,8 @@ class HeadingReader {
             case NONZERO: // Ignore zero values. This and local will just ignore values after e.g. "nonzero something" I see no harm in this
                 heading.blankZeroes = true;
                 break;
-            case EXCLUSIVE:// it can be blank OR have a value EFC 28/07/16 : it seems just blank at the moment? Should clarify.
-                heading.exclusive = "";
+            case EXCLUSIVE:
+                heading.exclusive = result;
                 break;
             case EXISTING: // currently simply a boolean that can work with childof
                 heading.existing = true;
@@ -281,33 +277,31 @@ class HeadingReader {
     /* Fill header information that is interdependent */
 
     private static void resolvePeersAttributesAndParentOf(AzquoMemoryDBConnection azquoMemoryDBConnection, List<MutableImportHeading> headings) throws Exception {
-        // while looping collect column indexes that indicate that the cell value in that column needs to be resolved to a nams
+        // while looping collect column indexes that indicate that the cell value in that column needs to be resolved to a name
         Set<Integer> indexesNeedingNames = new HashSet<>();
         for (MutableImportHeading mutableImportHeading : headings) {
             if (mutableImportHeading.heading != null) { // could be null in the case of an empty heading
                 // Resolve context names. Context names are used by peers.
                 for (MutableImportHeading contextCheck : mutableImportHeading.contextHeadings) {
                     if (contextCheck.name == null) {
-                        List<String> languages = new ArrayList<>();
-                        languages.add(Constants.DEFAULT_DISPLAY_NAME);
-                        contextCheck.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, contextCheck.heading, null, false, languages);
+                        contextCheck.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, contextCheck.heading, null, false, null); // no attributes, default display name internally
                     }
                 }
                 // Resolve any peers in headers
-                if (mutableImportHeading.peers.size() > 0) { // has peers (of course) and a name. A bit braces and a belt, the two should go together.
+                if (mutableImportHeading.peers.size() > 0) {
                     resolvePeers(mutableImportHeading, null, headings);
                 }
                 // Resolve context heading peers if we have them.
-                if (mutableImportHeading.contextHeadings.size() > 0){
+                if (mutableImportHeading.contextHeadings.size() > 0) {
                     for (MutableImportHeading contextHeading : mutableImportHeading.contextHeadings) {
-                        // non zero in context pushes onto the headings
+                        // non zero in context pushes onto the heading
                         if (contextHeading.blankZeroes) {
                             mutableImportHeading.blankZeroes = true;
                         }
                         if (!contextHeading.peers.isEmpty()) { // then try to resolve the peers! Generally context headings will feature one with peers but it's not 100%
-                            // Context only really works with name in the heading otherwise how would the context differ over different headings, hence make the main heading if it's not there
+                            // Context only really works with name in the heading otherwise how would the context differ over different headings, hence make the main heading name if it's not there
                             mutableImportHeading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, false);
-                            if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()){
+                            if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()) {
                                 throw new Exception("error: context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName());
                             }
                             resolvePeers(mutableImportHeading, contextHeading, headings);
@@ -352,7 +346,7 @@ class HeadingReader {
      since a set of context headings is spread across multiple columns "this" will change. For non context the contextHeading parameter will be null.
      Fairly simple - add the name attached to the source heading then run through the peers, try and find them by looking for another column
        that matches or in the context names. */
-    private static void resolvePeers(MutableImportHeading heading, MutableImportHeading contextHeading, List<MutableImportHeading> headings) throws Exception{
+    private static void resolvePeers(MutableImportHeading heading, MutableImportHeading contextHeading, List<MutableImportHeading> headings) throws Exception {
         MutableImportHeading peersSource = contextHeading != null ? contextHeading : heading;
         heading.peerNames.add(peersSource.name);// ok the "defining" name with the peers.
         for (String peer : peersSource.peers) { // we assume the source has peers otherwise this function wouldn't be called
@@ -366,7 +360,7 @@ class HeadingReader {
                 int peerHeadingIndex = findMutableHeadingIndex(peer, headings);
                 if (peerHeadingIndex >= 0) {
                     heading.peerIndexes.add(peerHeadingIndex);
-                    found  = true;
+                    found = true;
                 } else { // try context for a name we can resolve now rather than one that will be resolved based on the line value
                     for (MutableImportHeading contextCheck : heading.contextHeadings) {
                         if (contextCheck.name.getDefaultDisplayName().equalsIgnoreCase(peer)) {

@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * The cell on a line can be a value or an attribute or a name - or a part of another cell via composite.
  * <p>
- * Status 20/09/2016 : functions broken up, could probably be improved further. Some longish functions.
  */
 public class DSImportService {
     // Attribute names for a name in the database with importing instructions.
@@ -87,8 +86,7 @@ public class DSImportService {
             if (sheetLanguage.contains(".")) { // knock off the suffix if it's there. Used to be removed client side, makes more sense here
                 sheetLanguage = sheetLanguage.substring(0, sheetLanguage.lastIndexOf("."));
             }
-            attributeNames = new ArrayList<>();
-            attributeNames.add(sheetLanguage);
+            attributeNames = Collections.singletonList(sheetLanguage);
         }
         String line;
         int lines = 0;
@@ -135,14 +133,14 @@ public class DSImportService {
             final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
             final Set<Integer> linesRejected = Collections.newSetFromMap(new ConcurrentHashMap<>(0)); // track line numbers rejected
             int lineNo = 1; // for error checking etc. Generally the first line of data is line 2, this is incremented at the beginning of the loop. Might be inaccurate if there are vertically stacked headers.
-            while (headingsWithIteratorAndBatchSize.lineIterator.hasNext()) {
+            while (headingsWithIteratorAndBatchSize.lineIterator.hasNext()) { // the main line reading loop
                 String[] lineValues = headingsWithIteratorAndBatchSize.lineIterator.next();
                 lineNo++;
                 List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
                 int columnIndex = 0;
                 boolean corrupt = false;
                 for (ImmutableImportHeading immutableImportHeading : headingsWithIteratorAndBatchSize.headings) {
-                    // intern may save a little memory. Column Index could point past line values for things like composite. Possibly other things but I can't think of them at the moment
+                    // Intern may save a little memory if strings are repeated a lot. Column Index could point past line values for things like composite.
                     String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern() : "";
                     if (lineValue.equals("\"")) {// was a problem, might be worth checking if it is still
                         corrupt = true;
@@ -155,7 +153,7 @@ public class DSImportService {
                 }
                 if (!corrupt) {
                     linesBatched.add(importCellsWithHeading);
-                    // rack up the futures to check in a mo to see that things are complete
+                    // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
                     if (linesBatched.size() == headingsWithIteratorAndBatchSize.batchSize) {
                         futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - headingsWithIteratorAndBatchSize.batchSize, linesRejected)));// line no should be the start
                         linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
@@ -182,24 +180,28 @@ public class DSImportService {
             }
             StringBuilder toReturn = new StringBuilder();
             toReturn.append(fileName);
-            toReturn.append(" imported. Dataimport took " + (System.currentTimeMillis() - track) / 1000 + " second(s) for " + (lineNo - 1) + " lines<br/>\n");
-            if (!linesRejected.isEmpty()){
+            toReturn.append(" imported. Dataimport took ")// I'm not sure I agree with intellij warning about non chained
+                    .append((System.currentTimeMillis() - track) / 1000)
+                    .append(" second(s) for ")
+                    .append(lineNo - 1).append(" lines<br/>\n");
+            // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
+            if (!linesRejected.isEmpty()) {
                 toReturn.append("Line numbers rejected : <br/>\n");
                 int col = 0;
                 ArrayList<Integer> lineNumbersList = new ArrayList<>(linesRejected);
                 Collections.sort(lineNumbersList); // should do the basic sort
-                for (int line : lineNumbersList){
-                    if (col > 0){
+                for (int line : lineNumbersList) {
+                    if (col > 0) {
                         toReturn.append(", ");
                     }
                     toReturn.append(line);
                     col++;
-                    if (col == 20){
+                    if (col == 20) {
                         col = 0;
                         toReturn.append("<br/>\n");
                     }
                 }
-                if (linesRejected.size() == 1_000){ // it was full - factor the static variable?
+                if (linesRejected.size() == 1_000) { // it was full - factor the size?
                     toReturn.append("etc.");
                 }
                 toReturn.append("<br/>\n");
@@ -241,7 +243,8 @@ public class DSImportService {
         if (importInterpreterLookup.contains(".")) {
             importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
         }
-        // this distinction was previously dealt with by fileType and fileName, we still support the filename being replaced in the headings and it expects this, importInterpreterLookup is no good as it may be mangled further
+        // this distinction was previously dealt with by fileType and fileName, we still support the filename being replaced
+        // in the headings and it expects this (filename without extension), importInterpreterLookup is no good as it may be mangled further
         String fileNameForReplace = importInterpreterLookup;
         // try to find a name which might have the headings in its attributes
         Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
@@ -316,7 +319,7 @@ public class DSImportService {
             }
         }
         // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
-        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection,attributeNames,headers,importInterpreterLookup,fileNameForReplace);
+        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, attributeNames, headers, importInterpreterLookup, fileNameForReplace);
         lineIteratorAndBatchSize.headings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, attributeNames);
         return lineIteratorAndBatchSize;
     }
@@ -370,7 +373,7 @@ public class DSImportService {
     }
 
     // Getting some simple info about the file to set up the csv reader and determine batch size
-    // Makes the HeadingsWithIteratorAndBatchSize but without the ImmutableImportHeadings object
+    // Makes the HeadingsWithIteratorAndBatchSize but without the ImmutableImportHeadings
     private static HeadingsWithIteratorAndBatchSize getLineIteratorAndBatchSize(String filePath) throws Exception {
         File sizeTest = new File(filePath);
         final long fileLength = sizeTest.length();

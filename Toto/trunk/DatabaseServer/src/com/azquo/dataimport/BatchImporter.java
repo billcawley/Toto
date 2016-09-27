@@ -24,7 +24,6 @@ import java.util.regex.Pattern;
  * That is to say on a large file the threads will start to stack up fairly quickly
  * Adapted to Callable from Runnable - I like the assurances this gives for memory synchronisation
  * <p>
- * TODO - existing feedback to the user
  */
 public class BatchImporter implements Callable<Void> {
 
@@ -56,11 +55,11 @@ public class BatchImporter implements Callable<Void> {
                happy for the check to remain in here - more stuff for the multi threaded bit */
             ImportCellWithHeading first = lineToLoad.get(0);
             if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null || first.getImmutableImportHeading().compositionPattern != null) {
-                resolveCompositeValues(lineToLoad,lineNo);
+                resolveCompositeValues(lineToLoad, lineNo);
                 if (checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames)) {
                     try {
                         // valueTracker simply the number of values imported
-                        valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo));
+                        valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo, linesRejected));
                     } catch (Exception e) {
                         azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
                         throw e;
@@ -70,7 +69,7 @@ public class BatchImporter implements Callable<Void> {
                         System.out.println("line no " + lineNo + " time = " + (now - time) + "ms");
                     }
                     time = now;
-                } else if (linesRejected.size() < 1_000){
+                } else if (linesRejected.size() < 1_000) {
                     linesRejected.add(lineNo);
                 }
             }
@@ -130,7 +129,7 @@ public class BatchImporter implements Callable<Void> {
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
     // Now supports basic excel like string operations, left right and mid, also simple single operator calculation on the results.
 
-    private static void resolveCompositeValues(List<ImportCellWithHeading> cells, int lineNo){
+    private static void resolveCompositeValues(List<ImportCellWithHeading> cells, int lineNo) {
         boolean adjusted = true;
         //loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
         while (adjusted) {
@@ -238,7 +237,7 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
-    // more simple than the column index look up - we just wana a match, don't care about attributes etc.
+    // more simple than the column index look up - we just want a a match, don't care about attributes etc.
     private static ImportCellWithHeading findCellWithHeadingForComposite(String nameToFind, List<ImportCellWithHeading> importCellWithHeadings) {
         for (ImportCellWithHeading importCellWithHeading : importCellWithHeadings) {
             ImmutableImportHeading heading = importCellWithHeading.getImmutableImportHeading();
@@ -250,7 +249,7 @@ public class BatchImporter implements Callable<Void> {
     }
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
-    private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo) throws Exception {
+    private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo, Set<Integer> linesRejected) throws Exception {
         int valueCount = 0;
         // initial pass to deal with defaults, dates and local parents
         // set defaults before dealing with local parent/child
@@ -308,7 +307,9 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
             }
-            if (peersOk && !namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
+            if (!peersOk){
+                linesRejected.add(lineNo); // new logic to mark unstored values in the lines rejected
+            } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
                 // now we have the set of names for that name with peers get the value from that headingNo it's a header for
                 String value = cell.getLineValue();
                 if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
@@ -316,7 +317,7 @@ public class BatchImporter implements Callable<Void> {
                     // finally store our value and names for it
                     ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
                 }
-            } // todo add to rejected lines
+            }
             // ok that's the peer/value stuff done I think, now onto attributes
             if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null
                     && cell.getLineValue().length() > 0) {
@@ -431,22 +432,22 @@ public class BatchImporter implements Callable<Void> {
                       might well have been built using the composite functionality above so it's possible another azquo upload could have jammed "White Poplin Shirt"
                       somewhere under "All Categories" many levels below. */
                     for (Name childCellParent : childCell.getLineName().getParents()) {
-                        if (childCellParent == cellWithHeading.getLineName()){
+                        if (childCellParent == cellWithHeading.getLineName()) {
                             needsAdding = false;
-                        } else if (childCellParent == exclusiveName || exclusiveName.findAllChildren().contains(childCellParent)){
+                        } else if (childCellParent == exclusiveName || exclusiveName.findAllChildren().contains(childCellParent)) {
                             childCellParent.removeFromChildrenWillBePersisted(childCell.getLineName());
                         }
                     }
                 }
             }
             // having hopefully sorted a new name or exclusive add the child
-            if (needsAdding){
+            if (needsAdding) {
                 cellWithHeading.getLineName().addChildWillBePersisted(childCell.getLineName());
             }
         }
     }
 
-    // I think the cache is purely a performance thing though it's used for a little logging later (total number of names inserted)
+    // The cache is purely a performance thing though it's used for a little logging later (total number of names inserted)
 
     private static Name findOrCreateNameStructureWithCache(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
         //namesFound is a quick lookup to avoid going to findOrCreateNameInParent - note it will fail if the name was changed e.g. parents removed by exclusive but that's not a problem
