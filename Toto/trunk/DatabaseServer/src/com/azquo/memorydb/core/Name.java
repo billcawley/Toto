@@ -472,7 +472,10 @@ public final class Name extends AzquoMemoryDBEntity {
     }
     /* don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
     this is absolutely hammered on loading, saving bits of logic or bytes of garbage generated is worth it!
-    for notes about the pattern here see addToValues */
+    for notes about the pattern here see addToValues. I'm going to set needs persisting on parent modifications regardless
+    so no_parents in the db is kept correct. Could check to see if teh parents actually changed before setNeedsPersisting
+    but due to where these functions are called internally I think there would be little gain, these two functions only tend to be
+     called after it is confirmed that changed to children actually happened*/
 
     private static AtomicInteger addToParentsCount = new AtomicInteger(0);
 
@@ -506,6 +509,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
         }
+        setNeedsPersisting();
     }
 
     private static AtomicInteger removeFromParentsCount = new AtomicInteger(0);
@@ -523,6 +527,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 parents = nameArrayRemoveIfExists(parents, name);
             }
         }
+        setNeedsPersisting();
     }
 
     /* returns a collection, I think this is just iterated over to check stuff but a set internally as it should not have duplicates. These two functions moved
