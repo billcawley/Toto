@@ -491,7 +491,6 @@ public class ZKAzquoBookUtils {
                     sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, false);
                 }
             }
-
             System.out.println("regions populated in : " + (System.currentTimeMillis() - track) + "ms");
             // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
             // can't do this in the fill region as formulae need to be dealt with outside

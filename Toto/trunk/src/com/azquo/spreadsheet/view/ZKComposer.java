@@ -433,10 +433,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
                 if (newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) != null){
                     String message = (String) newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT);
-                    System.out.println("lock js debug : " + message);
-                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").value = '" + StringEscapeUtils.escapeJavaScript(message)  + "';document.getElementById(\"lockedResult\").style.display=\"\";");
+                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").innerHTML='<textarea class=\"public\" style=\"height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0\">" + StringEscapeUtils.escapeJavaScript(message)  + "</textarea>';");
                 } else {
-                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").style.display=\"none\";");
+                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").innerHTML='';");
                 }
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             } catch (Exception e) {
