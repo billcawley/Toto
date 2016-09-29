@@ -62,7 +62,7 @@
 				<a onclick="uploadFile()" style="position:relative;top:20px">Upload image</a>
 			</c:if>
 <!-- sort out valign at some point -->
-				<textarea id="lockedResult" class="public" style="height:60px;width:500px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;text-align:center;border:0"<c:if test="${empty lockedResult}"> style="display:none;"</c:if>>${lockedResult}</textarea>
+				<span id="lockedResult"><c:if test="${not empty lockedResult}"><textarea class="public" style="height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0">${lockedResult}</textarea></c:if></span>
 			<nav class="nav">
 				<ul>
 					<c:if test="${templateMode == true}">

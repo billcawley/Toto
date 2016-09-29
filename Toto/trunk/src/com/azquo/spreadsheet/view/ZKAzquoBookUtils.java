@@ -1048,6 +1048,9 @@ public class ZKAzquoBookUtils {
                                 int hcol = displayRowHeadings.getColumn();
                                 for (String rowHeading : rowHeadings) {
                                     rowHeading = rowHeading.replace("`", "").trim();
+                                    if (rowHeading.contains(" sorted")){ // maybe factor the string literal? Need to make it work for the mo
+                                        rowHeading = rowHeading.substring(0, rowHeading.indexOf(" sorted")).trim();
+                                    }
                                     String colHeading = multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
                                     if (colHeading==null || colHeading.equals("[all]")) colHeading = rowHeading;
                                     sheet.getInternalSheet().getCell(hrow, hcol++).setStringValue(colHeading);

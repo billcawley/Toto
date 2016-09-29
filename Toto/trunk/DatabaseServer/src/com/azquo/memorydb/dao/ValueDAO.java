@@ -1,5 +1,6 @@
 package com.azquo.memorydb.dao;
 
+import com.azquo.ThreadPools;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.ValueHistory;
@@ -128,7 +129,7 @@ public class ValueDAO {
     public static void persistValues(final AzquoMemoryDB azquoMemoryDB, final Collection<Value> values) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult
         // old pattern had update, I think this is a pain and unnecessary, just delete than add to the insert
-        ExecutorService executor = AzquoMemoryDB.sqlThreadPool;
+        ExecutorService executor = ThreadPools.getSqlThreadPool();
         List<Value> toDelete = new ArrayList<>(FastDAO.UPDATELIMIT); // not full stop, as part of this process. Those that will stay deleted need to go into the history table
         List<Value> toInsert = new ArrayList<>(FastDAO.UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         List<Value> toHistory = new ArrayList<>(FastDAO.UPDATELIMIT); // to move to this history table

@@ -1,12 +1,11 @@
 package com.azquo.memorydb.core;
 
+import com.azquo.ThreadPools;
 import com.azquo.memorydb.dao.*;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import net.openhft.koloboke.collect.map.hash.HashObjObjMap;
 import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
-import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -25,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * User: cawley
  * Date: 25/10/13
  * Time: 10:33
- * created after it became apparent that Mysql in the way I'd arranged the objects didn't have a hope in hell of
+ * Created after it became apparent that Mysql in the way I'd arranged the objects didn't have a hope in hell of
  * delivering data fast enough. Leverage collections to implement Azquo spec.
  * <p>
  * I'm using intern when adding strings to objects, it should be used wherever that string is going to hang around.
@@ -33,13 +32,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class AzquoMemoryDB {
 
-    // have given up trying this through spring for the moment
     private static Properties azquoProperties = new Properties();
 
     // no point doing this on every constructor!
     static {
         try {
-            azquoProperties.load(AzquoMemoryDB.class.getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring -
+            azquoProperties.load(AzquoMemoryDB.class.getClassLoader().getResourceAsStream("azquo.properties")); // easier than messing around with spring
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -47,7 +45,7 @@ public final class AzquoMemoryDB {
 
     private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
 
-    private final Map<String, Map<String, List<Name>>> nameByAttributeMap; // a map of maps of lists of names. Fun! Moved back to lists to save memory, the lists are unlikely to be big
+    private final AzquoMemoryDBIndex index;
 
     // simple by id maps, if an object is in one of these three it's in the database
     private final Map<Integer, Name> nameByIdMap;
@@ -58,7 +56,6 @@ public final class AzquoMemoryDB {
     private final Map<String, LocalDateTime> valueLockTimes;
     // and the specific values which are locked
     private final Map<Value, String> valueLocks;
-
 
     // does this database need loading from the data store, a significant flag that affects rules for memory db entity instantiation for example
     private boolean needsLoading;
@@ -78,44 +75,12 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger newDatabaseCount = new AtomicInteger(0);
 
-    // may need to tweak this - since SQL is IO Bound then ramping it up more may not be the best idea. Also persistence will be using processors of course.
-    private static ExecutorService getSQLThreadPool() {
-        int availableProcessors = Runtime.getRuntime().availableProcessors();
-        int possibleLoadingThreads = availableProcessors < 4 ? availableProcessors : (availableProcessors / 2);
-        if (possibleLoadingThreads > 8) { // I think more than this asks for trouble - processors isn't really the prob with persistence it's IO! I should be asking : is the disk SSD?
-            possibleLoadingThreads = 8;
-        }
-        System.out.println("memory db transport threads : " + possibleLoadingThreads);
-        return Executors.newFixedThreadPool(possibleLoadingThreads);
-    }
-
-    private static ExecutorService getMainThreadPool() {
-        int availableProcessors = Runtime.getRuntime().availableProcessors();
-        if (availableProcessors == 1) {
-            return Executors.newFixedThreadPool(availableProcessors);
-        } else {
-            if (availableProcessors > 15){
-                System.out.println("reportFillerThreads : " + 15);
-                return Executors.newFixedThreadPool(15);
-            } else {
-                System.out.println("reportFillerThreads : " + (availableProcessors - 1));
-                return Executors.newFixedThreadPool(availableProcessors - 1);
-            }
-        }
-    }
-
-    // it is true that having these two as separate pools could make more threads than processors (as visible to the OS) but it's not the end of the world and it's still
-    // an improvement over the old situation. Not only for thread management but also not creating and destroying the thread pools is better for garbage.
-
-    public static final ExecutorService mainThreadPool = getMainThreadPool();
-    public static final ExecutorService sqlThreadPool = getSQLThreadPool();
-
     protected AzquoMemoryDB(String persistenceName, StringBuffer sessionLog) {
+        index = new AzquoMemoryDBIndex(this);
         newDatabaseCount.incrementAndGet();
         this.sessionLog = sessionLog;
         this.persistenceName = persistenceName;
         needsLoading = true;
-        nameByAttributeMap = new ConcurrentHashMap<>();
         // commenting the map init numbers, inno db can overestimate quite heavily.
 /*        int numberOfNames = standardDAO.findNumberOfRows(persistenceName, "fast_name");
         if (numberOfNames == -1){
@@ -149,23 +114,27 @@ public final class AzquoMemoryDB {
         return persistenceName;
     }
 
-    // not sure what to do with this, on its own it would stop persisting but not much else
-    /*public void zapDatabase() {
-        persistenceName = null;
-    }*/
-
     boolean getNeedsLoading() {
         return needsLoading;
+    }
+
+    void removeAttributeFromNameInAttributeNameMap(String attributeName, String existing, Name name) throws Exception{
+        index.removeAttributeFromNameInAttributeNameMap(attributeName,existing, name);
+    }
+
+    void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
+        index.setAttributeForNameInAttributeNameMap(attributeName,attributeValue, name);
     }
 
     /**
      * Interface to enable initialization of json persisted entities to be more generic.
      * This sort of solves a language problem I was concerned by before but now it will only be used by Provenance and indeed in here hence why it's internal
+     * It's an interface for a lambda passed to a map which will instantiate an memory db object based off the
+     * JsonRecordTransport, initialise takes these two variables to then say new AzquoEntity(azquoMemoryDB, jsonRecordTransport)
      */
     interface JsonSerializableEntityInitializer {
         void initializeEntity(final AzquoMemoryDB azquoMemoryDB, JsonRecordTransport jsonRecordTransport) throws Exception;
     }
-
 
     // task for multi threaded loading of a database, JSON storing style, now just for provenance.
 
@@ -206,8 +175,6 @@ public final class AzquoMemoryDB {
         }
     }
 
-    // needs factoring
-
     private static AtomicInteger newNameBatchLoaderRunCount = new AtomicInteger(0);
 
     private class NameBatchLoader implements Callable<Void> {
@@ -238,8 +205,6 @@ public final class AzquoMemoryDB {
             return null;
         }
     }
-
-    // needs factoring - if the dao were passed then one could use one Batch Loader instead of theses two. Todo.
 
     private static AtomicInteger newValueBatchLoaderRunCount = new AtomicInteger(0);
 
@@ -289,7 +254,6 @@ public final class AzquoMemoryDB {
         if (needsLoading) { // only allow it once!
             long startTime = System.currentTimeMillis();
             logInSessionLogAndSystem("loading data for " + getPersistenceName());
-            // using system.gc before and after loading to get an idea of DB memory overhead
             long marker = System.currentTimeMillis();
             Runtime runtime = Runtime.getRuntime();
             long usedMB = 0;
@@ -298,18 +262,13 @@ public final class AzquoMemoryDB {
                 System.gc(); // assuming of course the JVM actually listens :)
                 System.out.println("gc time : " + (System.currentTimeMillis() - marker));
                 usedMB = (runtime.totalMemory() - runtime.freeMemory()) / mb;
-                System.out.println("Used Memory:"
-                        + usedMB);
-                System.out.println("Free Memory:"
-                        + runtime.freeMemory() / mb);
+                System.out.println("Used Memory:" + usedMB);
+                System.out.println("Free Memory:" + runtime.freeMemory() / mb);
             }
             try {
                 // here we'll populate the memory DB from the database
 
-                /* ok this code is a bit annoying, one could run through the table names from the outside but then you need to switch on it for the constructor
-                one could use AzquoMemoryDBEntity if having some kind of init from Json function but this makes the objects more mutable than I'd like
-                so we stay with this for the moment
-                these 3 commands will automatically load the data into the memory DB set as persisted
+                /*
                 Load order is important as value and name use provenance and value uses names. Names uses itself hence all names need initialisation finished after the id map is sorted
 
                 This is why when multi threading we wait util a type of entity is fully loaded before moving onto the next
@@ -317,7 +276,7 @@ public final class AzquoMemoryDB {
                 Atomic integers to pass through to the multi threaded code to track numbers
 
                 */
-                AtomicInteger provenaceLoaded = new AtomicInteger();
+                AtomicInteger provenanceLoaded = new AtomicInteger();// not used?
                 AtomicInteger namesLoaded = new AtomicInteger();
                 AtomicInteger valuesLoaded = new AtomicInteger();
                 AtomicInteger jsonRecordsLoaded = new AtomicInteger();
@@ -329,55 +288,52 @@ public final class AzquoMemoryDB {
                 Map<String, JsonSerializableEntityInitializer> jsonTablesAndInitializers = new HashMap<>();
                 // add lines like this for loading other json entities. A note is table names repeated, might have a think about that
                 jsonTablesAndInitializers.put(Provenance.PERSIST_TABLE, (azquoMemoryDB, jsonRecordTransport) -> new Provenance(azquoMemoryDB, jsonRecordTransport.id, jsonRecordTransport.json));
-                    int from;
-                    int maxIdForTable;
-                    List<Future<?>> futureBatches;
-                    for (String tableName : jsonTablesAndInitializers.keySet()) {
-                        jsonRecordsLoaded.set(0);
-                        from = 0;
-                        maxIdForTable = JsonRecordDAO.findMaxId(this, tableName);
-                        futureBatches = new ArrayList<>();
-                        while (from < maxIdForTable) {
-                            futureBatches.add(sqlThreadPool.submit(new SQLBatchLoader(tableName, jsonTablesAndInitializers.get(tableName), from, from + step, this, jsonRecordsLoaded)));
-                            from += step;
-                        }
-                        for (Future future : futureBatches) {
-                            future.get(1, TimeUnit.HOURS);
-                        }
-                        logInSessionLogAndSystem(tableName + ", " + jsonRecordsLoaded + " records loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
-                    }
-                    marker = System.currentTimeMillis();
+                int from;
+                int maxIdForTable;
+                List<Future<?>> futureBatches;
+                // currently just provenance
+                for (String tableName : jsonTablesAndInitializers.keySet()) {
+                    jsonRecordsLoaded.set(0);
                     from = 0;
-                    NameDAO.zapAdditive(getPersistenceName());
-                    maxIdForTable = NameDAO.findMaxId(this);
+                    maxIdForTable = JsonRecordDAO.findMaxId(this, tableName);
                     futureBatches = new ArrayList<>();
                     while (from < maxIdForTable) {
-                        futureBatches.add(sqlThreadPool.submit(new NameBatchLoader(from, from + step, this, namesLoaded)));
+                        futureBatches.add(ThreadPools.getSqlThreadPool().submit(new SQLBatchLoader(tableName, jsonTablesAndInitializers.get(tableName), from, from + step, this, tableName.equals(Provenance.PERSIST_TABLE) ? provenanceLoaded : jsonRecordsLoaded)));
                         from += step;
                     }
                     for (Future future : futureBatches) {
                         future.get(1, TimeUnit.HOURS);
                     }
-                    logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
-                    marker = System.currentTimeMillis();
-                    // todo finish hbase detection and loading!
-                    from = 0;
-                    maxIdForTable = ValueDAO.findMaxId(this);
-                    futureBatches = new ArrayList<>();
-                    while (from < maxIdForTable) {
-                        futureBatches.add(sqlThreadPool.submit(new ValueBatchLoader(from, from + step, this, valuesLoaded)));
-                        from += step;
-                    }
-                    for (Future future : futureBatches) {
-                        future.get(1, TimeUnit.HOURS);
-                    }
-                    logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
-
-
-
+                    logInSessionLogAndSystem(tableName + ", " + jsonRecordsLoaded + " records loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
+                }
+                marker = System.currentTimeMillis();
+                from = 0;
+                NameDAO.zapAdditive(getPersistenceName());
+                maxIdForTable = NameDAO.findMaxId(this);
+                futureBatches = new ArrayList<>();
+                while (from < maxIdForTable) {
+                    futureBatches.add(ThreadPools.getSqlThreadPool().submit(new NameBatchLoader(from, from + step, this, namesLoaded)));
+                    from += step;
+                }
+                for (Future future : futureBatches) {
+                    future.get(1, TimeUnit.HOURS);
+                }
+                logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
+                marker = System.currentTimeMillis();
+                from = 0;
+                maxIdForTable = ValueDAO.findMaxId(this);
+                futureBatches = new ArrayList<>();
+                while (from < maxIdForTable) {
+                    futureBatches.add(ThreadPools.getSqlThreadPool().submit(new ValueBatchLoader(from, from + step, this, valuesLoaded)));
+                    from += step;
+                }
+                for (Future future : futureBatches) {
+                    future.get(1, TimeUnit.HOURS);
+                }
+                logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
                 marker = System.currentTimeMillis();
                 // wait until all are loaded before linking
-                System.out.println(provenaceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded in " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
+                System.out.println(provenanceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded in " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
                 if (memoryTrack) {
                     System.out.println("Used Memory after list load:"
                             + (runtime.totalMemory() - runtime.freeMemory()) / mb);
@@ -409,7 +365,8 @@ public final class AzquoMemoryDB {
     }
 
     // I'm going to force the import to wait if persisting or the like is going on
-    public synchronized void lockTest(){}
+    public synchronized void lockTest() {
+    }
 
     // reads from a list of changed objects
     // should we synchronize on a write lock object? I think it might be a plan.
@@ -424,7 +381,6 @@ public final class AzquoMemoryDB {
         // just a simple DB write lock should to it
         // for the moment just make it work.
         // ok first do the json bits, as mentioned currently this is just provenance, may well be others
-        // new switch on habse or not
         for (String tableName : jsonEntitiesToPersist.keySet()) {
             Set<AzquoMemoryDBEntity> entities = jsonEntitiesToPersist.get(tableName);
             if (!entities.isEmpty()) {
@@ -446,7 +402,7 @@ public final class AzquoMemoryDB {
                 }
                 // and end here
                 try {
-                        JsonRecordDAO.persistJsonRecords(this, tableName, recordsToStore);// note this is multi threaded internally
+                    JsonRecordDAO.persistJsonRecords(this, tableName, recordsToStore);// note this is multi threaded internally
                 } catch (Exception e) {
                     // currently I'll just stack trace this, not sure of what would be the best strategy
                     e.printStackTrace();
@@ -463,7 +419,7 @@ public final class AzquoMemoryDB {
             name.setAsPersisted();// The actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
         }
         try {
-                NameDAO.persistNames(this, namesToStore);
+            NameDAO.persistNames(this, namesToStore);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -475,7 +431,7 @@ public final class AzquoMemoryDB {
             value.setAsPersisted();
         }
         try {
-                ValueDAO.persistValues(this, valuesToStore);
+            ValueDAO.persistValues(this, valuesToStore);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -484,6 +440,10 @@ public final class AzquoMemoryDB {
 
     int getNextId() {
         return nextId.getAndIncrement(); // should correctly replace the old logic, exactly what atomic ints are for.
+    }
+
+    public AzquoMemoryDBIndex getIndex() {
+        return index;
     }
 
     // for debug purposes, is there a harm in being public??
@@ -506,250 +466,6 @@ public final class AzquoMemoryDB {
 
     public int getValueCount() {
         return valueByIdMap.size();
-    }
-
-    private static AtomicInteger getAttributesCount = new AtomicInteger(0);
-
-    public List<String> getAttributes() {
-        getAttributesCount.incrementAndGet();
-        return Collections.unmodifiableList(new ArrayList<>(nameByAttributeMap.keySet()));
-    }
-
-    //fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
-    // Is wrapping in a hashSet such a big deal? Using koloboke immutable should be a little more efficient
-
-    private static AtomicInteger getNamesForAttributeCount = new AtomicInteger(0);
-
-    private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
-        getNamesForAttributeCount.incrementAndGet();
-        Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
-        if (map != null) { // that attribute is there
-            List<Name> names = map.get(attributeValue.toLowerCase().trim());
-            if (names != null) { // were there any entries for that value?
-                return HashObjSets.newMutableSet(names); // I've seen this modified outside, I guess no harm in that
-            }
-        }
-        return Collections.emptySet(); // moving away from nulls
-    }
-
-    // for checking confidential, will save considerable time
-
-    private static AtomicInteger attributeExistsInDBCount = new AtomicInteger(0);
-
-    public boolean attributeExistsInDB(final String attributeName) {
-        attributeExistsInDBCount.incrementAndGet();
-        return nameByAttributeMap.get(attributeName.toUpperCase().trim()) != null;
-    }
-
-    // same as above but then zap any not in the parent
-
-    private static AtomicInteger getNamesForAttributeAndParentCount = new AtomicInteger(0);
-
-    private Set<Name> getNamesForAttributeAndParent(final String attributeName, final String attributeValue, Name parent) {
-        getNamesForAttributeAndParentCount.incrementAndGet();
-        Set<Name> possibles = getNamesForAttribute(attributeName, attributeValue);
-        for (Name possible : possibles) {
-            if (possible.getParents().contains(parent)) { //trying for immediate parent first
-                Set<Name> found = HashObjSets.newMutableSet();
-                found.add(possible);
-                return found; // and return straight away
-            }
-        }
-        Iterator<Name> iterator = possibles.iterator();
-        while (iterator.hasNext()) {
-            Name possible = iterator.next();
-            if (!possible.findAllParents().contains(parent)) {//logic changed by WFC 30/06/15 to allow sets import to search within a general set (e.g. 'date') rather than need an immediate parent (e.g. 'All dates')
-                iterator.remove();
-            }
-        }
-        return possibles; // so this could be more than one if there were multiple in a big parent set (presumably at different levels)
-    }
-
-    // work through a list of possible names for a given attribute in order that the attribute names are listed. Parent optional
-
-    private static AtomicInteger getNamesForAttributeNamesAndParentCount = new AtomicInteger(0);
-
-    public Set<Name> getNamesForAttributeNamesAndParent(final List<String> attributeNames, final String attributeValue, Name parent) {
-        getNamesForAttributeNamesAndParentCount.incrementAndGet();
-        if (parent != null) {
-            for (String attributeName : attributeNames) {
-                Set<Name> names = getNamesForAttributeAndParent(attributeName, attributeValue, parent);
-                if (!names.isEmpty()) {
-                    return names;
-                }
-            }
-        } else {
-            if (attributeNames != null) {
-                for (String attributeName : attributeNames) {
-                    Set<Name> names = getNamesForAttribute(attributeName, attributeValue);
-                    if (!names.isEmpty()) {
-                        return names;
-                    }
-                }
-            }
-        }
-        return Collections.emptySet();
-    }
-
-/*    public Name getNameByDefaultDisplayName(final String attributeValue) {
-        return getNameByAttribute( Arrays.asList(Name.DEFAULT_DISPLAY_NAME), attributeValue, null);
-    }
-
-    public Name getNameByDefaultDisplayName(final String attributeValue, final Name parent) {
-        return getNameByAttribute( Arrays.asList(Name.DEFAULT_DISPLAY_NAME), attributeValue, parent);
-    }*/
-
-    private static AtomicInteger getNameByAttributeCount = new AtomicInteger(0);
-
-    public List<Name> findDuplicateNames(String attributeName, Set<String> exceptions) {
-        List<Name> found = new ArrayList<>();
-        Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
-        if (map == null) return null;
-        int dupCount = 0;
-        int testCount = 0;
-        for (String string : map.keySet()) {
-            if (testCount++ % 50000 == 0)
-                System.out.println("testing for duplicates - count " + testCount + " dups found " + dupCount);
-            if (map.get(string).size() > 1) {
-                List<Name> names = map.get(string);
-                boolean nameadded = false;
-                for (Name name : names) {
-                    for (String attribute : name.getAttributeKeys()) {
-                        if (name.getAttributes().size() == 1 || (!attribute.equals(attributeName) && !exceptions.contains(attribute))) {
-                            String attValue = name.getAttribute(attribute);
-                            for (Name name2 : names) {
-                                if (name2.getId() == name.getId()) break;
-                                List<String> attKeys2 = name2.getAttributeKeys();
-                                //note checking here only on the attribute values of the name itself (not parent names)
-                                if (attKeys2.contains(attribute) && name2.getAttribute(attribute).equals(attValue)) {
-                                    if (!nameadded) {
-                                        found.add(name);
-                                        nameadded = true;
-                                    }
-                                    found.add(name2);
-                                    dupCount++;
-
-                                }
-                            }
-                        }
-
-                    }
-
-                }
-                if (dupCount > 100) {
-                    break;
-                }
-            }
-        }
-        return found;
-    }
-
-    private static AtomicInteger getNameByAttribute2Count = new AtomicInteger(0);
-
-    public Name getNameByAttribute(final List<String> attributeNames, final String attributeValue, final Name parent) throws Exception {
-        getNameByAttribute2Count.incrementAndGet();
-        Set<Name> possibles = getNamesForAttributeNamesAndParent(attributeNames, attributeValue, parent);
-        // all well and good but now which one to return?
-        if (possibles.size() == 1) { // simple
-            return possibles.iterator().next();
-        } else if (possibles.size() > 1) { // more than one . . . try and replicate logic that was there before
-            // what happens here is a bit arbitrary! Perhaps standardise
-            if (parent == null) { // no parent criteria
-                for (Name possible : possibles) {
-                    if (!possible.hasParents()) { // we chuck back the first top level one. Not sure this is the best logic, more than one possible with no top levels means return null
-                        return possible;
-                    }
-                }
-            } else { // if there were more than one found taking into account parent criteria simply return the first
-                return possibles.iterator().next();
-            }
-            throw new Exception("Found more than one name for " + attributeValue);
-        }
-        return null;
-    }
-
-    private static AtomicInteger getNamesWithAttributeContainingCount = new AtomicInteger(0);
-
-    public Set<Name> getNamesWithAttributeContaining(final String attributeName, final String attributeValue) {
-        getNamesWithAttributeContainingCount.incrementAndGet();
-        return getNamesByAttributeValueWildcards(attributeName, attributeValue, true, true);
-    }
-
-    private static AtomicInteger getNamesWithAttributeStartingCount = new AtomicInteger(0);
-
-    public Set<Name> getNamesWithAttributeStarting(final String attributeName, final String attributeValue) {
-        getNamesWithAttributeContainingCount.incrementAndGet();
-        if (attributeValue.charAt(0)=='*'){
-            return getNamesByAttributeValueWildcards(attributeName, attributeValue.substring(1), true, true);
-        }
-        return getNamesByAttributeValueWildcards(attributeName, attributeValue, true, false);
-    }
-
-    // get names containing an attribute using wildcards, start end both
-
-    private static AtomicInteger getNamesByAttributeValueWildcardsCount = new AtomicInteger(0);
-
-    private Set<Name> getNamesByAttributeValueWildcards(final String attributeName, final String attributeValueSearch, final boolean startsWith, final boolean endsWith) {
-        getNamesByAttributeValueWildcardsCount.incrementAndGet();
-        final Set<Name> names = HashObjSets.newMutableSet();
-        if (attributeName.length() == 0) { // odd that it might be
-            for (String attName : nameByAttributeMap.keySet()) {
-                names.addAll(getNamesByAttributeValueWildcards(attName, attributeValueSearch, startsWith, endsWith)); // and when attribute name is blank we don't return for all attribute names, just the first that contains this
-                if (names.size() > 0) {
-                    return names;
-                }
-            }
-            return names;
-        }
-        final String uctAttributeName = attributeName.toUpperCase().trim();
-        final String lctAttributeValueSearch = attributeValueSearch.toLowerCase().trim();
-        if (nameByAttributeMap.get(uctAttributeName) == null) {
-            return names;
-        }
-        for (String attributeValue : nameByAttributeMap.get(uctAttributeName).keySet()) {
-            if (startsWith && endsWith) {
-                if (attributeValue.contains(lctAttributeValueSearch)) {
-                    names.addAll(nameByAttributeMap.get(uctAttributeName).get(attributeValue));
-                }
-            } else if (startsWith) {
-                if (attributeValue.startsWith(lctAttributeValueSearch)) {
-                    names.addAll(nameByAttributeMap.get(uctAttributeName).get(attributeValue));
-                }
-            } else if (endsWith) {
-                if (attributeValue.endsWith(lctAttributeValueSearch)) {
-                    names.addAll(nameByAttributeMap.get(uctAttributeName).get(attributeValue));
-                }
-            }
-        }
-        return names;
-    }
-
-    private static AtomicInteger findTopNamesCount = new AtomicInteger(0);
-
-    public List<Name> findTopNames(String language) {
-        findTopNamesCount.incrementAndGet();
-        Map<String, List<Name>> thisMap = nameByAttributeMap.get(language);
-        final List<Name> toReturn = new ArrayList<>();
-        for (List<Name> names : thisMap.values()) {
-            for (Name name : names) {
-                if (!name.hasParents()) { // top parent full stop
-                    toReturn.add(name);
-                } else { // little hazy on the logic here but I think the point is to say that if all the parents of the name are NOT in the language specified then that's a top name for this language.
-                    // Kind of makes sense but where is this used?
-                    boolean include = true;
-                    for (Name parent : name.getParents()) {
-                        if (parent.getAttribute(language) != null) {
-                            include = false;
-                            break;
-                        }
-                    }
-                    if (include) {
-                        toReturn.add(name);
-                    }
-                }
-            }
-        }
-        return toReturn;
     }
 
     private static AtomicInteger findTopNames2Count = new AtomicInteger(0);
@@ -776,62 +492,6 @@ public final class AzquoMemoryDB {
     }
 
     // trying for a basic count and set cache
-/*
-Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap it. Not exxcactly difficult to rewrite.
-
-    private final Map<String, Integer> countCache = new ConcurrentHashMap<>();
-
-    public void setCountInCache(String key, Integer count) {
-        countCache.put(key, count);
-    }
-
-    public Integer getCountFromCache(String key) {
-        return countCache.get(key);
-    }
-
-    private final Map<String, Set<Name>> setCache = new ConcurrentHashMap<>();
-
-    public void setSetInCache(String key, Set<Name> set) {
-        setCache.put(key, set);
-    }
-
-    // compute if absent?
-    public Set<Name> getSetFromCache(String key) {
-        return setCache.get(key);
-    }
-
-    // should do the trick though I worry a little about concurrency, that is to say how fast does the cache invalidation need to become visible
-    // headings should be sorted after the options so hopefully ok? Watch for this
-    private static AtomicInteger clearSetAndCountCacheForNameCount = new AtomicInteger(0);
-
-    void clearSetAndCountCacheForName(Name name) {
-        clearSetAndCountCacheForNameCount.incrementAndGet();
-        for (Name parent : name.findAllParents()) { // I hope this isn't too expensive
-            clearSetAndCountCacheForString(parent.getDefaultDisplayName()); // in another language could cause a problem. If we could get the ids this would be more reliable.
-            // Of course the ids means we could get a name list from parse query. A thought.
-        }
-    }
-
-    private static AtomicInteger clearSetAndCountCacheForStringCount = new AtomicInteger(0);
-
-    private void clearSetAndCountCacheForString(String s) {
-        clearSetAndCountCacheForStringCount.incrementAndGet();
-        if (s != null) {
-            s = s.toUpperCase();
-            for (Iterator<Map.Entry<String, Integer>> it = countCache.entrySet().iterator(); it.hasNext(); ) {
-                Map.Entry<String, Integer> entry = it.next();
-                if (entry.getKey().toUpperCase().contains(s)) {
-                    it.remove();
-                }
-            }
-            for (Iterator<Map.Entry<String, Set<Name>>> it = setCache.entrySet().iterator(); it.hasNext(); ) {
-                Map.Entry<String, Set<Name>> entry = it.next();
-                if (entry.getKey().toUpperCase().contains(s)) {
-                    it.remove();
-                }
-            }
-        }
-    }*/
 
     Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);
@@ -855,89 +515,6 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         nameByIdMap.remove(toRemove.getId());
     }
 
-    // ok I'd have liked this to be part of add name to db but the name won't have been initialised, add name to db is called in the name constructor
-    // before the attributes have been initialised
-
-    private static AtomicInteger addNameToAttributeNameMapCount = new AtomicInteger(0);
-
-    private void addNameToAttributeNameMap(final Name newName) throws Exception {
-        addNameToAttributeNameMapCount.incrementAndGet();
-        newName.checkDatabaseMatches(this);
-        // skip the map to save the memory
-        int i = 0;
-        List<String> attributeValues = newName.getAttributeValues();
-        for (String attributeName : newName.getAttributeKeys()) {
-            setAttributeForNameInAttributeNameMap(attributeName, attributeValues.get(i), newName);
-            i++;
-        }
-    }
-
-    // only used when looking up for "DEFINITION", inline?
-
-    public Collection<Name> namesForAttribute(String attribute) {
-        Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(attribute);
-        if (namesForThisAttribute == null) return null;
-        Collection<Name> toReturn = new HashSet<>();
-        for (String key : namesForThisAttribute.keySet()) {
-            toReturn.addAll(namesForThisAttribute.get(key));
-        }
-        return toReturn;
-    }
-
-    // Sets indexes for names, this needs to be thread safe to support multi threaded name linking.
-
-    private static AtomicInteger setAttributeForNameInAttributeNameMapCount = new AtomicInteger(0);
-
-    void setAttributeForNameInAttributeNameMap(String attributeName, String attributeValue, Name name) {
-        setAttributeForNameInAttributeNameMapCount.incrementAndGet();
-        // upper and lower seems a bit arbitrary, I need a way of making it case insensitive.
-        // these interns have been tested as helping memory usage.
-        String lcAttributeValue = attributeValue.toLowerCase().trim().intern();
-        String ucAttributeName = attributeName.toUpperCase().trim().intern();
-        if (lcAttributeValue.indexOf(Name.QUOTE) >= 0 && !ucAttributeName.equals(Name.CALCULATION)) {
-            lcAttributeValue = lcAttributeValue.replace(Name.QUOTE, '\'').intern();
-        }
-        // The way to use putIfAbsent correctly according to a stack overflow example
-        Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
-        if (namesForThisAttribute == null) {
-            final Map<String, List<Name>> newNamesForThisAttribute = new ConcurrentHashMap<>();
-            namesForThisAttribute = nameByAttributeMap.putIfAbsent(ucAttributeName, newNamesForThisAttribute);// in ConcurrentHashMap this is atomic, thanks Doug!
-            if (namesForThisAttribute == null) {// the new one went in, use it, otherwise use the one that "sneaked" in there in the mean time :)
-                namesForThisAttribute = newNamesForThisAttribute;
-            }
-        }
-        // same pattern but for the lists. Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
-        List<Name> names = namesForThisAttribute.get(lcAttributeValue);
-        if (names == null) {
-            final List<Name> newNames = new CopyOnWriteArrayList<>();// cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
-            names = namesForThisAttribute.putIfAbsent(lcAttributeValue, newNames);
-            if (names == null) {
-                names = newNames;
-            }
-        }
-        // ok, got names
-        names.add(name); // thread safe, internally locked but of course just for this particular attribute and value heh.
-        // Could maybe get a little speed by adding a special case for the first name (as in singleton)
-    }
-
-    // I think this is just much more simple re thread safety in that if we can't find the map and list we just don't do anything and the final remove should be safe according to CopyOnWriteArray
-
-    private static AtomicInteger removeAttributeFromNameInAttributeNameMapCount = new AtomicInteger(0);
-
-    void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
-        removeAttributeFromNameInAttributeNameMapCount.incrementAndGet();
-        String ucAttributeName = attributeName.toUpperCase().trim();
-        String lcAttributeValue = attributeValue.toLowerCase().trim();
-        name.checkDatabaseMatches(this);
-        final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
-        if (namesForThisAttribute != null) {// the map we care about
-            final List<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(lcAttributeValue);
-            if (namesForThatAttributeAndAttributeValue != null) {
-                namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the list . . .
-            }
-        }
-    }
-
     private static AtomicInteger batchLinkerRunCount = new AtomicInteger(0);
 
     private class BatchLinker implements Callable<Void> {
@@ -954,7 +531,7 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
             batchLinkerRunCount.incrementAndGet();
             for (Name name : batchToLink) {
                 name.link();
-                addNameToAttributeNameMap(name);
+                index.addNameToAttributeNameMap(name);
             }
             logInSessionLogAndSystem("Linked : " + loadTracker.addAndGet(batchToLink.size()));
             return null;
@@ -977,12 +554,12 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         for (Name name : nameByIdMap.values()) {
             batchLink.add(name);
             if (batchLink.size() == batchLinkSize) {
-                linkFutures.add(mainThreadPool.submit(new BatchLinker(loadTracker, batchLink)));
+                linkFutures.add(ThreadPools.getMainThreadPool().submit(new BatchLinker(loadTracker, batchLink)));
                 batchLink = new ArrayList<>(batchLinkSize);
             }
         }
         // link leftovers
-        linkFutures.add(mainThreadPool.submit(new BatchLinker(loadTracker, batchLink)));
+        linkFutures.add(ThreadPools.getMainThreadPool().submit(new BatchLinker(loadTracker, batchLink)));
         // instead of the old shutdown do the gets on the futures to ensure all work is done before returning from the function
         // tracking and exception handling easier with this method
         // note tracking on the linking seems bad on some databases is heavy stuff happens first. Hmmm . . . tracking back into the linker?
@@ -1068,29 +645,29 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         lastModified.getAndUpdate(n -> newProvenance.getTimeStamp() != null && n < newProvenance.getTimeStamp().getTime() ? newProvenance.getTimeStamp().getTime() : n); // think that logic it correct for thread safety
     }
 
-    public long getLastModifiedTimeStamp(){
+    public long getLastModifiedTimeStamp() {
         return lastModified.get();
     }
 
     // note - this function will NOT check for existing locks for these values, it just clears for this user then sets new locks
-    public void setValuesLockForUser(Collection<Value> values, String userId){
+    public void setValuesLockForUser(Collection<Value> values, String userId) {
         valueLockTimes.put(userId, LocalDateTime.now());
-        for (Value value : values){
+        for (Value value : values) {
             valueLocks.put(value, userId);
         }
     }
 
-    public void removeValuesLockForUser(String userId){
-        if (valueLockTimes.remove(userId) != null){ // only check the values if there was an entry in time so to speak
+    public void removeValuesLockForUser(String userId) {
+        if (valueLockTimes.remove(userId) != null) { // only check the values if there was an entry in time so to speak
             valueLocks.values().removeAll(Collections.singleton(userId)); // need to force a collection rather than an instance to remove all values in the map that match. Hence do NOT remove .singleton here!
         }
         removeOldLocks(60); // arbitrary time, this seems as good a palce as any to check
     }
 
-    public void removeOldLocks(int minutesAllowed){
-        for (String user : valueLockTimes.keySet()){
+    private void removeOldLocks(int minutesAllowed) {
+        for (String user : valueLockTimes.keySet()) {
             final LocalDateTime lockTime = valueLockTimes.get(user);
-            if (ChronoUnit.MINUTES.between(lockTime, LocalDateTime.now()) > minutesAllowed){
+            if (ChronoUnit.MINUTES.between(lockTime, LocalDateTime.now()) > minutesAllowed) {
                 removeValuesLockForUser(user);
             }
         }
@@ -1100,14 +677,14 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         return !valueLockTimes.isEmpty() && !(valueLockTimes.size() == 1 && valueLockTimes.keySet().iterator().next().equals(userId));
     }
 
-    public String checkLocksForValueAndUser(String userId, Collection<Value> valuesToCheck){
+    public String checkLocksForValueAndUser(String userId, Collection<Value> valuesToCheck) {
         if (valueLockTimes.isEmpty() || (valueLockTimes.size() == 1 && valueLockTimes.get(userId) != null)) {
             return null; // what I'll call "ok" for the mo
         }
         Map<Value, String> locksCopy = HashObjObjMaps.newMutableMap(valueLocks);
         locksCopy.values().removeAll(Collections.singleton(userId)); // so all the locks that are related to this user are removed
         locksCopy.keySet().retainAll(valuesToCheck); // this should leave in locksCopy the values locked by another user
-        if (locksCopy.size() > 0){
+        if (locksCopy.size() > 0) {
             String anotherUser = locksCopy.values().iterator().next(); // just grab the first?
             return anotherUser + ", time : " + valueLockTimes.get(anotherUser); // maybe we can pass the formatting to the client later, or this could be considered a db message
         }
@@ -1131,23 +708,8 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         System.out.println("newValueBatchLoaderRunCount\t\t\t\t" + newValueBatchLoaderRunCount.get());
         System.out.println("loadDataCount\t\t\t\t" + loadDataCount.get());
         System.out.println("persisttoDataStoreCount\t\t\t\t" + persistToDataStoreCount.get());
-        System.out.println("getAttributesCount\t\t\t\t" + getAttributesCount.get());
-        System.out.println("getNamesForAttributeCount\t\t\t\t" + getNamesForAttributeCount.get());
-        System.out.println("attributeExistsInDBCount\t\t\t\t" + attributeExistsInDBCount.get());
-        System.out.println("getNamesForAttributeAndParentCount\t\t\t\t" + getNamesForAttributeAndParentCount.get());
-        System.out.println("getNamesForAttributeNamesAndParentCount\t\t\t\t" + getNamesForAttributeNamesAndParentCount.get());
-        System.out.println("getNameByAttributeCount\t\t\t\t" + getNameByAttributeCount.get());
-        System.out.println("getNameByAttribute2Count\t\t\t\t" + getNameByAttribute2Count.get());
-        System.out.println("getNamesWithAttributeContainingCount\t\t\t\t" + getNamesWithAttributeContainingCount.get());
-        System.out.println("getNamesWithAttributeStartingCount\t\t\t\t" + getNamesWithAttributeStartingCount.get());
-        System.out.println("getNamesByAttributeValueWildcardsCount\t\t\t\t" + getNamesByAttributeValueWildcardsCount.get());
-        System.out.println("findTopNamesCount\t\t\t\t" + findTopNamesCount.get());
         System.out.println("findTopNames2Count\t\t\t\t" + findTopNames2Count.get());
         System.out.println("clearCachesCount\t\t\t\t" + clearCachesCount.get());
-//        System.out.println("clearSetAndCountCacheForNameCount\t\t\t\t" + clearSetAndCountCacheForNameCount.get());
-//        System.out.println("clearSetAndCountCacheForStringCount\t\t\t\t" + clearSetAndCountCacheForStringCount.get());
-        System.out.println("setAttributeForNameInAttributeNameMapCount\t\t\t\t" + setAttributeForNameInAttributeNameMapCount.get());
-        System.out.println("removeAttributeFromNameInAttributeNameMapCount\t\t\t\t" + removeAttributeFromNameInAttributeNameMapCount.get());
         System.out.println("batchLinkerRunCount\t\t\t\t" + batchLinkerRunCount.get());
         System.out.println("linkEntitiesCount\t\t\t\t" + linkEntitiesCount.get());
         System.out.println("setJsonEntityNeedsPersistingCount\t\t\t\t" + setJsonEntityNeedsPersistingCount.get());
@@ -1165,23 +727,8 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         newValueBatchLoaderRunCount.set(0);
         loadDataCount.set(0);
         persistToDataStoreCount.set(0);
-        getAttributesCount.set(0);
-        getNamesForAttributeCount.set(0);
-        attributeExistsInDBCount.set(0);
-        getNamesForAttributeAndParentCount.set(0);
-        getNamesForAttributeNamesAndParentCount.set(0);
-        getNameByAttributeCount.set(0);
-        getNameByAttribute2Count.set(0);
-        getNamesWithAttributeContainingCount.set(0);
-        getNamesWithAttributeStartingCount.set(0);
-        getNamesByAttributeValueWildcardsCount.set(0);
-        findTopNamesCount.set(0);
         findTopNames2Count.set(0);
         clearCachesCount.set(0);
-//        clearSetAndCountCacheForNameCount.set(0);
-//        clearSetAndCountCacheForStringCount.set(0);
-        setAttributeForNameInAttributeNameMapCount.set(0);
-        removeAttributeFromNameInAttributeNameMapCount.set(0);
         batchLinkerRunCount.set(0);
         linkEntitiesCount.set(0);
         setJsonEntityNeedsPersistingCount.set(0);
@@ -1192,7 +739,7 @@ Commented 28/07/16 as unused. If it stays unused over the coming months I'll zap
         removeValueNeedsPersistingCount.set(0);
     }
 
-    // debug suff, I'll allow the warnungs for the moment. Really need calls to be based off a flag, not commented/uncommented
+    // debug stuff, I'll allow the warnings for the moment. Really need calls to be based off a flag, not commented/uncommented
     public static void printAllCountStats() {
         printFunctionCountStats();
         Name.printFunctionCountStats();

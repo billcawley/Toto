@@ -116,7 +116,7 @@ public class BatchImporter implements Callable<Void> {
                 }
                 // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
                 for (Name parent : cell.getImmutableImportHeading().parentNames) { // try to find any names from anywhere
-                    if (!azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(languages, cell.getLineValue(), parent).isEmpty()) { // NOT empty, we found one!
+                    if (!azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, cell.getLineValue(), parent).isEmpty()) { // NOT empty, we found one!
                         return true; // no point carrying on
                     }
                 }

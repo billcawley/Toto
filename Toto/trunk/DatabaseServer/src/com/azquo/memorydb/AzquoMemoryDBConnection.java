@@ -1,6 +1,7 @@
 package com.azquo.memorydb;
 
 import com.azquo.memorydb.core.AzquoMemoryDB;
+import com.azquo.memorydb.core.AzquoMemoryDBIndex;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.service.NameService;
@@ -28,6 +29,8 @@ public class AzquoMemoryDBConnection {
 
     private final AzquoMemoryDB azquoMemoryDB;
 
+    private final AzquoMemoryDBIndex azquoMemoryDBIndex; // just shorthand - always set to the memoryDB's index
+
     private final List<Set<Name>> readPermissions;
 
     private final List<Set<Name>> writePermissions;
@@ -39,6 +42,7 @@ public class AzquoMemoryDBConnection {
 
     public AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, DatabaseAccessToken databaseAccessToken, List<String> languages, StringBuffer userLog)  throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
+        this.azquoMemoryDBIndex = azquoMemoryDB.getIndex();
         if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
             writePermissions = NameService.decodeString(this, databaseAccessToken.getWritePermissions(), languages);
             addExtraPermissionIfRequired(writePermissions);
@@ -73,6 +77,10 @@ public class AzquoMemoryDBConnection {
 
     public AzquoMemoryDB getAzquoMemoryDB() {
         return azquoMemoryDB;
+    }
+
+    public AzquoMemoryDBIndex getAzquoMemoryDBIndex() {
+        return azquoMemoryDBIndex;
     }
 
     protected Provenance provenance = null;

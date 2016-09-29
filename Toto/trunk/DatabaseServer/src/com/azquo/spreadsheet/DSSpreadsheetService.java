@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.ThreadPools;
 import com.azquo.dataimport.BatchImporter;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
@@ -156,18 +157,29 @@ public class DSSpreadsheetService {
                             }
                         } else if (function == DataRegionHeading.FUNCTION.PERMUTE) {
                             String[] permutedNames = sourceCell.split(",");
-                            List<Name> permuteNames = new ArrayList<>();
+                            List<DataRegionHeading> headings = new ArrayList<>();
                             for (String permutedName : permutedNames) {
+                                boolean sorted = permutedName.contains(" sorted");
+                                if (sorted){
+                                    permutedName = permutedName.substring(0, permutedName.indexOf(" sorted")).trim();
+                                }
                                 // EFC noting the hack, looking for a name created by pivot selections to permute as the first possibility.Need to see how this is set to confirm if it can be improved. todo
                                 Name pName = NameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
                                 // if no set chosen, find the original set
                                 if (pName == null || pName.getChildren().size() == 0) {
                                     pName = NameService.findByName(azquoMemoryDBConnection, permutedName);
                                 }
-                                permuteNames.add(pName);
+                                // ok now we are using sorted heare we can't use dataRegionHeadingsFromNames, this is similar to the check internally
+                                // I'm going to jam sorted in the description, hopefully won't be a problem
+                                if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
+                                    // will the new write permissions cause an overhead?
+                                    headings.add(new DataRegionHeading(pName, NameService.isAllowed(pName, azquoMemoryDBConnection.getWritePermissions()), function, suffix, sorted ? "sorted" : null, null, null));
+                                } else { // don't bother checking permissions, write permissions to true
+                                    headings.add(new DataRegionHeading(pName, true, function, suffix, sorted ? "sorted" : null, null,null));
+                                }
                             }
                             row.clear();
-                            row.add(dataRegionHeadingsFromNames(permuteNames, azquoMemoryDBConnection, function, suffix, null, null));
+                            row.add(headings);
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             Collection<Name> names;
                             try{
@@ -360,11 +372,15 @@ public class DSSpreadsheetService {
         List<Collection<Name>> sharedNamesSets = new ArrayList<>();
         List<Name> permuteNames = new ArrayList<>();
         List<Name> sharedNamesList = new ArrayList<>(); // an arraylist is fine it's only going to be iterated later
-        // assemble the sets I want to find a cross section o
+        // assemble the sets I want to find a cross section of
+        Set<Integer> permuteNameIndexesThatNeedSorting = new HashSet<>(); //  a bit hacky. After extracting the permute names from the data region headings we need to check if any were flagged as sorted, jam their indexes in here
+        int nameIndex = 0;
         for (DataRegionHeading drh : listToPermute) {
             if (drh.getName() != null){
                 permuteNames.add(drh.getName());
                 sharedNamesSets.add(drh.getName().findAllChildren());
+                permuteNameIndexesThatNeedSorting.add(nameIndex);
+                nameIndex++;
             }
         }
         if (sharedNames != null) {
@@ -418,7 +434,7 @@ public class DSSpreadsheetService {
         if (size > 100_000) {// arbitrary cut off for multi threading, this multi threading helps, no question
             System.out.println("multi threading the combo resolution");
             foundCombinations = Collections.newSetFromMap(new ConcurrentHashMap<>()); // has to be concurrent for multi threading!
-            ExecutorService executor = AzquoMemoryDB.mainThreadPool;
+            ExecutorService executor = ThreadPools.getMainThreadPool();
             final int divider = 50; // a bit arbitrary perhaps
             List<Future<Void>> tasks = new ArrayList<>(50);
             for (int i = 0; i < divider; i++) {
@@ -443,13 +459,21 @@ public class DSSpreadsheetService {
         // this is running through each of the name's children (the categories we're permuting) assigning a "natural" position
         // it's created out here as sortCombos is recursive hence we don't want to recreate it each time
         List<Map<Name, Integer>> sortLists = new ArrayList<>();
+        nameIndex = 0;
         for (Name permuteName : permuteNames) {
             Map<Name, Integer> sortList = new HashMap<>();
+            Collection<Name> children = permuteName.getChildren();
+            if (permuteNameIndexesThatNeedSorting.contains(nameIndex)){ // then new code to sort. Override the "natural" sorting if it exists
+                List<Name> sorted = new ArrayList<>(children);
+                NameService.sortCaseInsensitive(sorted);
+                children = sorted;
+            }
             int sortPos = 0;
-            for (Name name : permuteName.getChildren()) {
+            for (Name name : children) {
                 sortList.put(name, sortPos++);
             }
             sortLists.add(sortList);
+            nameIndex++;
         }
         List<List<DataRegionHeading>> permuted = sortCombos(listToPermute, foundCombinations, 0, sortLists);
         for (int i=1;i < headingRow.size();i++){
@@ -1890,7 +1914,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
-        ExecutorService executor = AzquoMemoryDB.mainThreadPool;
+        ExecutorService executor = ThreadPools.getMainThreadPool();
         int progressBarStep = (totalCols * totalRows) / 50 + 1;
         AtomicInteger counter = new AtomicInteger();
         Map<List<Name>, Set<Value>> nameComboValueCache = null;
@@ -2438,7 +2462,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                         Name toChange = valuesForCell.getNames().get(0);
                                         String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(Name.QUOTE + "", "");//remove the initial '.' and any `
                                         Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
-                                        if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDB().attributeExistsInDB(attribute)) {
+                                        if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDBIndex().attributeExistsInDB(attribute)) {
                                     /* right : when populating attribute based data findParentAttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
                                     returned is not in fact attributes but the name of an intermediate set in the hierarchy - suppose you want the category of a product the structure is
                                     all categories -> category -> product and .all categories is the column heading and the products are row headings then you'll get the category for the product as the cell value
@@ -2545,7 +2569,7 @@ Callable interface sorts the memory "happens before" using future gets which run
     }
 
     public static List<String> nameAutoComplete(DatabaseAccessToken databaseAccessToken, String s, int limit) throws Exception {
-        Collection<Name> names = getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getNamesWithAttributeStarting(Constants.DEFAULT_DISPLAY_NAME, s);
+        Collection<Name> names = getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDBIndex().getNamesWithAttributeStarting(Constants.DEFAULT_DISPLAY_NAME, s);
         List<String> toReturn = new ArrayList<>();
 
         if (names==null || names.size()==0){//maybe it is a query

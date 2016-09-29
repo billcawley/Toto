@@ -1,5 +1,6 @@
 package com.azquo.memorydb.dao;
 
+import com.azquo.ThreadPools;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
@@ -150,7 +151,7 @@ WHERE id IN (1,2,3)
 
     public static void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult - todo, perhaps for update and possible list optimisation there?
-        ExecutorService executor = AzquoMemoryDB.sqlThreadPool;
+        ExecutorService executor = ThreadPools.getSqlThreadPool();
         List<JsonRecordTransport> toInsert = new ArrayList<>(UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         int totalCount = records.size();
         List<Future> futureBatches = new ArrayList<>();

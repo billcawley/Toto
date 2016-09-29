@@ -634,6 +634,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                         int hcol = displayRowHeadings.getColumn();
                         for (String rowHeading : rowHeadings) {
                             if (hrow == event.getRow() && hcol++ == event.getColumn()) {
+                                if (rowHeading.contains(" sorted")) { // maybe factor the string literal? Need to make it work for the mo
+                                    rowHeading = rowHeading.substring(0, rowHeading.indexOf(" sorted")).trim();
+                                }
                                 return rowHeading.replace("`", "");
                             }
                         }
@@ -655,6 +658,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                         int hcol = displayColHeadings.getColumn()-1;
                         for (String colHeading : colHeadings) {
                             if (hrow++ == event.getRow() && hcol == event.getColumn()) {
+                                if (colHeading.contains(" sorted")){
+                                    colHeading = colHeading.substring(0, colHeading.indexOf(" sorted")).trim();
+                                }
                                 return colHeading.replace("`", "");
                             }
                         }

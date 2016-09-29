@@ -59,7 +59,6 @@ public final class NameService {
     public static final String WHERE = "where";
     private static final String languageIndicator = "<-";
 
-    // hopefully thread safe??
     private static AtomicInteger nameCompareCount = new AtomicInteger(0);
 
     private static final Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = (n1, n2) -> {
@@ -79,6 +78,12 @@ public final class NameService {
         }
         return n1.getDefaultDisplayName().toUpperCase().compareTo(n2.getDefaultDisplayName().toUpperCase()); // think that will give us a case insensitive sort!
     };
+
+    private static AtomicInteger sortCaseInsensitiveCount = new AtomicInteger(0);
+
+    public static void sortCaseInsensitive(List<Name> namesList) throws Exception {
+        Collections.sort(namesList, defaultLanguageCaseInsensitiveNameComparator);
+    }
 
     // get names from a comma separated list. Well expressions describing names - only used for read and write permissions at the moment.
 
@@ -133,7 +138,7 @@ public final class NameService {
 
     static public ArrayList<Name> getNamesWithAttributeContaining(final AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute, final String searchString) {
         findContainingNameCount.incrementAndGet();
-        ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDB().getNamesWithAttributeContaining(attribute, searchString));
+        ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeContaining(attribute, searchString));
         if (namesList.size() == 0 && attribute.length() > 0) {
             namesList = getNamesWithAttributeContaining(azquoMemoryDBConnection, "", searchString);//try all the attributes
         }
@@ -156,7 +161,7 @@ public final class NameService {
         if (attributeValue.length() > 0 && attributeValue.charAt(0) == NAMEMARKER) {
             throw new Exception("error: getNameByAttribute should no longer have name marker passed to it!");
         }
-        return azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, attributeValue.replace(Name.QUOTE, ' ').trim(), parent);
+        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, attributeValue.replace(Name.QUOTE, ' ').trim(), parent);
     }
 
     private static AtomicInteger findByNameCount = new AtomicInteger(0);
@@ -225,7 +230,7 @@ public final class NameService {
         for (String parent : parents) {
             if (possibleParents == null) { // will happen on the first one
                 // most of the time would only be one but the name on the right (top for this expression) might not be a top name in the DB hence there could be multiple
-                possibleParents = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, parent, null);
+                possibleParents = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(attributeNames, parent, null);
             } else {
                 Set<Name> nextPossibleParents = HashObjSets.newMutableSet();
                 for (Name possibleParent : possibleParents) {
@@ -260,7 +265,7 @@ public final class NameService {
         if (language.equals(Constants.DEFAULT_DISPLAY_NAME)) {
             return azquoMemoryDBConnection.getAzquoMemoryDB().findTopNames();
         } else {
-            return azquoMemoryDBConnection.getAzquoMemoryDB().findTopNames(language);
+            return azquoMemoryDBConnection.getAzquoMemoryDBIndex().findTopNames(language);
         }
     }
 
@@ -364,10 +369,10 @@ public final class NameService {
         if (parent != null) { // ok try to find it in that parent
             //try for an existing name already with the same parent
             if (local) {// ok looking only below that parent or just in it's whole set or top parent.
-                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, parent);
+                existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, parent);
                 if (existing == null) { // couldn't find local - try for one which has no parents or children, that's allowable for local (to be moved)
                     try {
-                        existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+                        existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, null);
                     } catch (Exception ignored) { // ignore the Found more than one name exception
                         existing = null;
                     }
@@ -379,7 +384,7 @@ public final class NameService {
                     marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
             } else {// so we ignore parent if not local, we'll grab what we can to move it into the right parent set
                 try {
-                    existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+                    existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, null);
                 } catch (Exception ignored) { // ignore the Found more than one name exception
                     existing = null;
                 }
@@ -387,7 +392,7 @@ public final class NameService {
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent3", marker);
         } else { // no parent passed go for a vanilla lookup
             try {
-                existing = azquoMemoryDBConnection.getAzquoMemoryDB().getNameByAttribute(attributeNames, storeName, null);
+                existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, null);
             } catch (Exception ignored) { // ignore the Found more than one name exception
                 existing = null;
             }
@@ -971,7 +976,7 @@ public final class NameService {
         }
         if (resetDefs) {
             //currently recalculates ALL definitions regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
-            Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDB().namesForAttribute("DEFINITION");
+            Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute("DEFINITION");
             if (defNames != null) {
                 for (Name defName : defNames) {
                     String definition = defName.getAttribute("DEFINITION");
@@ -1036,7 +1041,7 @@ public final class NameService {
 
     public static List<String> attributeList(AzquoMemoryDBConnection azquoMemoryDBConnection) {
         attributeListCount.incrementAndGet();
-        return azquoMemoryDBConnection.getAzquoMemoryDB().getAttributes();
+        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().getAttributes();
     }
 
     private static AtomicInteger findAllParentsCount = new AtomicInteger(0);
@@ -1088,7 +1093,7 @@ public final class NameService {
             }
         }
        /*input syntax 'findduplicates`   probably need to add 'exception' list of cases where duplicates are expected (e.g.   Swimshop product categories)*/
-        return azquoMemoryDBConnection.getAzquoMemoryDB().findDuplicateNames(Constants.DEFAULT_DISPLAY_NAME, attributeExceptions);
+        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().findDuplicateNames(Constants.DEFAULT_DISPLAY_NAME, attributeExceptions);
     }
 
     private static List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula) throws Exception {
@@ -1123,7 +1128,7 @@ public final class NameService {
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         for (Name child : name.findAllChildren()) {
             if (!rubbishBin.getChildren().contains(child)) {
-                Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(languages, child.getDefaultDisplayName(), name);
+                Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, child.getDefaultDisplayName(), name);
                 if (possibles.size() > 1) {
                     dedupeOne(child, possibles, rubbishBin);
                 }
@@ -1384,13 +1389,14 @@ public final class NameService {
     private static Set<Name> attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, String attributeValue) {
         List<String> attributeNames = new ArrayList<>();
         attributeNames.add(attributeName);
-        return azquoMemoryDBConnection.getAzquoMemoryDB().getNamesForAttributeNamesAndParent(attributeNames, attributeValue, null);
+        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(attributeNames, attributeValue, null);
     }
 
     public static void printFunctionCountStats() {
         System.out.println("######### NAME SERVICE FUNCTION COUNTS");
 
         System.out.println("nameCompareCount\t\t\t\t\t\t\t\t" + nameCompareCount.get());
+        System.out.println("sortCaseInsensitiveCount\t\t\t\t\t\t\t\t" + sortCaseInsensitiveCount.get());
         System.out.println("decodeStringCount\t\t\t\t\t\t\t\t" + decodeStringCount.get());
         System.out.println("getNameListFromStringListCount\t\t\t\t\t\t\t\t" + getNameListFromStringListCount.get());
         System.out.println("findContainingNameCount\t\t\t\t\t\t\t\t" + findContainingNameCount.get());
@@ -1423,6 +1429,7 @@ public final class NameService {
 
     public static void clearFunctionCountStats() {
         nameCompareCount.set(0);
+        sortCaseInsensitiveCount.set(0);
         decodeStringCount.set(0);
         getNameListFromStringListCount.set(0);
         findContainingNameCount.set(0);

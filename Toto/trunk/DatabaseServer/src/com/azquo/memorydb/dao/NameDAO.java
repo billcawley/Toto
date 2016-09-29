@@ -1,5 +1,6 @@
 package com.azquo.memorydb.dao;
 
+import com.azquo.ThreadPools;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import org.springframework.dao.DataAccessException;
@@ -104,7 +105,7 @@ public class NameDAO {
     public static void persistNames(final AzquoMemoryDB azquoMemoryDB, final Collection<Name> names) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult
         // old pattern had update, I think this is a pain and unnecessary, just delete than add to the insert
-        ExecutorService executor = AzquoMemoryDB.sqlThreadPool;
+        ExecutorService executor = ThreadPools.getSqlThreadPool();
         List<Name> toDelete = new ArrayList<>(FastDAO.UPDATELIMIT);
         List<Name> toInsert = new ArrayList<>(FastDAO.UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         int counter = 0;

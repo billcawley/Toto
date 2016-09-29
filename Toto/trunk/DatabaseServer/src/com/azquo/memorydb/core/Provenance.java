@@ -14,7 +14,8 @@ import java.util.Date;
  * Date: 24/10/13
  * Time: 17:38
  * Attached to each value/name.
- * I think this is immutable, pleasing
+ * Unlike Value and Name immutable. Currently the only one using the Json persist pattern,
+ * Value and Name now have custom classes to improve speed on loading and saving.
  */
 public final class Provenance extends AzquoMemoryDBEntity {
 
@@ -27,7 +28,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
     private final String method;
     private final String name;
     private final String context;
-    // won't have this call the other constructor, does not factor in the same way now
+    // won't have this call the package local constructor below, does not factor in the same way now
     // this is the practical use constructor, calling it adds it to the memory db
     public Provenance(final AzquoMemoryDB azquoMemoryDB
             , final String user
@@ -91,6 +92,8 @@ public final class Provenance extends AzquoMemoryDBEntity {
     /* ok I'm well aware one could just annotate this class but there is a problem : I want it immutable.
         This would mean json using the constructor and given things like the AzquoMemoryDB in there this is
         just not going to be elegant, best to just hive the json off to here to be called in the constructor
+
+        Ignore the IntelliJ warnings about public here, the jacksonMapper needs to see them.
          */
     private static class JsonTransport {
         public final String user;

@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.ThreadPools;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.AzquoMemoryDB;
@@ -155,14 +156,14 @@ public class DSImportService {
                     linesBatched.add(importCellsWithHeading);
                     // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
                     if (linesBatched.size() == headingsWithIteratorAndBatchSize.batchSize) {
-                        futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - headingsWithIteratorAndBatchSize.batchSize, linesRejected)));// line no should be the start
+                        futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - headingsWithIteratorAndBatchSize.batchSize, linesRejected)));// line no should be the start
                         linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
                     }
                 }
             }
             // load leftovers
             int loadLine = lineNo - linesBatched.size(); // NOT batch size! A problem here isn't a functional problem but it makes logging incorrect.
-            futureBatches.add(AzquoMemoryDB.mainThreadPool.submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, loadLine, linesRejected)));
+            futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, loadLine, linesRejected)));
             // check all work is done and memory is in sync
             for (Future<?> futureBatch : futureBatches) {
                 futureBatch.get(1, TimeUnit.HOURS);

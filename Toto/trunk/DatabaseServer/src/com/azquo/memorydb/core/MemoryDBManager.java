@@ -5,9 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  *
- * Oh-kay. While one can spin up a memory db from spring this is probably not the way to go, this will be the object that
- * reads the entries in the database table and spins up the memory databases according to that - it will need support for different servers.
- *
+ * Simple class to lookup/load different AzquoMemoryDB instances.
  *
  */
 public final class MemoryDBManager {
@@ -20,7 +18,8 @@ public final class MemoryDBManager {
             loaded = new AzquoMemoryDB(persistenceName, sessionLog);
             return loaded;
         }
-        // should be fine. Notably allows concurrent loading of databases. Two big ones might be a prob but we don't want to jam up loading of small ones while a big one loads.
+        // should be fine. Notably allows concurrent loading of databases.
+        // Large ones loading concurrently might be a problem
         return memoryDatabaseMap.computeIfAbsent(persistenceName, t-> new AzquoMemoryDB(persistenceName, sessionLog));
 
         // todo, add back in client side?

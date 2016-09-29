@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Notable that the names list object here is what defines the relationship between values and names, value sets against each name is just a lookup
  * I'm using an array internally to save memory,
  * <p>
- * Should store a double value also? Will it save loads of parsing?
  */
 public final class Value extends AzquoMemoryDBEntity {
 
@@ -25,7 +24,8 @@ public final class Value extends AzquoMemoryDBEntity {
 
     // issue of final here and bits of the init being in a try block. Need to have a little think about that
     private Provenance provenance;
-    // todo, test DB size with char arrays? Smaller but not pooled.
+    // todo, consider alternate value representation. Double option with this null? Char array?
+    // Empty String is about 40 bytes I think so maybe 30 bytes saved if there's a null pointer and double instead.
     private String text;//no longer final.   May be adjusted during imports (if duplicate lines are found will sum...)
 
     // changing to array to save memory
@@ -41,7 +41,6 @@ public final class Value extends AzquoMemoryDBEntity {
         this.provenance = provenance;
         this.text = text;
         names = new Name[0];
-        // added 10/12/2014, wasn't there before, why??? I suppose it just worked. Inconsistent though!
         getAzquoMemoryDB().addValueToDb(this);
     }
 
@@ -154,6 +153,8 @@ public final class Value extends AzquoMemoryDBEntity {
         return buffer.array();
     }
 
+    // used when deleting values and the value needs to be put in the values history table. We want an index by a combination of name ids
+    // , that requires ordering of the ids
     public byte[] getNameIdsAsBytesSorted() {
         getNameIdsAsBytesCount.incrementAndGet();
         ByteBuffer buffer = ByteBuffer.allocate(names.length * 4);

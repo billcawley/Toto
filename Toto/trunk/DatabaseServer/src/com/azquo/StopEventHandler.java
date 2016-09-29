@@ -17,6 +17,6 @@ public class StopEventHandler implements ApplicationListener<ContextClosedEvent>
 
     @Override
     public void onApplicationEvent(final ContextClosedEvent event) {
-        System.out.println("Stopped, closing Executor services : " + AzquoMemoryDB.mainThreadPool.shutdownNow() + " " + AzquoMemoryDB.sqlThreadPool.shutdownNow());
+        System.out.println("Stopped, closing Executor services : " +  ThreadPools.getMainThreadPool().shutdownNow() + " " + ThreadPools.getSqlThreadPool().shutdownNow());
     }
 }

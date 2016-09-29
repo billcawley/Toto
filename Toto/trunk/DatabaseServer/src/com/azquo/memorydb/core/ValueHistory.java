@@ -4,14 +4,13 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by edward on 31/08/16.
- *
+ * <p>
  * To facilitate a history of values for a given name set. I'm not entirely happy about this as a new class in core, we'll see.
- *
- * Immutable! THough
+ * <p>
+ * Immutable which is nice though a bit of a mute point due to how it's accessed.
  */
 public class ValueHistory {
 
@@ -27,10 +26,8 @@ public class ValueHistory {
         this.provenance = azquoMemoryDB.getProvenanceById(provenanceId);
         this.id = id;
         this.text = text.intern();
-        // ok populate the names here but unlike before we're not doing any managing of the names themselves (as in adding this value to them), this just sets the names straight in there so to speak
         int noNames = namesCache.length / 4;
         ByteBuffer byteBuffer = ByteBuffer.wrap(namesCache);
-        // we assume the names are loaded (though they may not be linked yet)
         Name[] newNames = new Name[noNames];
         for (int i = 0; i < noNames; i++) {
             newNames[i] = azquoMemoryDB.getNameById(byteBuffer.getInt(i * 4));
@@ -51,7 +48,7 @@ public class ValueHistory {
     }
 
     public Collection<Name> getNames() {
-        return Collections.unmodifiableList(Arrays.asList(names)); // should be ok?
+        return Collections.unmodifiableList(Arrays.asList(names));
     }
 
     @Override
