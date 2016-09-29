@@ -990,6 +990,7 @@ public class ZKAzquoBookUtils {
                                     int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1 + cloneCols;
                                     SCell lineFormat = getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + totalCount + region));
                                     Range selection = Ranges.range(sheet, row - 1, selStart, row - 1, selEnd);
+                                    Range headingRange = Ranges.range(sheet, row - 1, selStart, row - 1, selStart + displayRowHeadings.getColumnCount() - 1);
                                     if (lineFormat == null) {
                                         CellOperationUtil.applyFontBoldweight(selection, Font.Boldweight.BOLD);
                                     } else {
@@ -1024,6 +1025,13 @@ public class ZKAzquoBookUtils {
                                         }
                                         CellOperationUtil.applyBackColor(selection, lineFormat.getCellStyle().getBackColor().getHtmlColor());
                                         CellOperationUtil.applyFontColor(selection, lineFormat.getCellStyle().getFont().getColor().getHtmlColor());
+                                        Range formatRange = Ranges.range(sheet.getBook().getSheet(lineFormat.getSheet().getSheetName()), lineFormat.getRowIndex(), lineFormat.getColumnIndex());
+                                        CellOperationUtil.pasteSpecial(formatRange,headingRange, Range.PasteType.FORMATS, Range.PasteOperation.NONE,false,false);
+                                        int blankout = sameValues;
+                                        if (blankout > 0) {
+                                            Range blanks = Ranges.range(sheet, row - 1, displayRowHeadings.getColumn(), row - 1, displayRowHeadings.getColumn() + blankout - 1);
+                                            CellOperationUtil.applyFontColor(blanks, sheet.getInternalSheet().getCell(row - 1, displayRowHeadings.getColumn()).getCellStyle().getBackColor().getHtmlColor());
+                                        }
                                     }
                                     if (row > displayRowHeadings.getRow()) {
                                         Ranges.range(sheet, row - 1, selStart + sameValues + 1, row - 1, selStart + displayRowHeadings.getColumnCount() - 1).clearContents();
@@ -1032,7 +1040,7 @@ public class ZKAzquoBookUtils {
                                 }
                                 if (sameValues > 0) {
                                     Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayRowHeadings.getColumn() + sameValues - 1);
-                                    CellOperationUtil.clearStyles(selection);
+                                    //CellOperationUtil.clearStyles(selection);
                                     CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row, displayRowHeadings.getColumn()).getCellStyle().getBackColor().getHtmlColor());
                                 }
                             }
@@ -1300,6 +1308,7 @@ public class ZKAzquoBookUtils {
             }
         }
     }
+
 
     private static int getRepeatCount(LoggedInUser loggedInUser,List<List<String>> colHeadingsSource){
         int colHeadingRow = colHeadingsSource.size();
