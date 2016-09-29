@@ -935,6 +935,7 @@ public class ZKAzquoBookUtils {
                     int row;
                     // ok there should be the right space for the headings
                     if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
+                        int rowHeadingsColumn = displayRowHeadings.getColumn();
                         boolean isHierarchy = isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
                         int rowHeadingCols = cellsAndHeadingsForDisplay.getRowHeadings().get(0).size();
                         colsToAdd = rowHeadingCols - displayRowHeadings.getColumnCount();
@@ -1029,8 +1030,16 @@ public class ZKAzquoBookUtils {
                                         CellOperationUtil.pasteSpecial(formatRange,headingRange, Range.PasteType.FORMATS, Range.PasteOperation.NONE,false,false);
                                         int blankout = sameValues;
                                         if (blankout > 0) {
-                                            Range blanks = Ranges.range(sheet, row - 1, displayRowHeadings.getColumn(), row - 1, displayRowHeadings.getColumn() + blankout - 1);
-                                            CellOperationUtil.applyFontColor(blanks, sheet.getInternalSheet().getCell(row - 1, displayRowHeadings.getColumn()).getCellStyle().getBackColor().getHtmlColor());
+                                            Range blanks = Ranges.range(sheet, row - 1, rowHeadingsColumn, row - 1, rowHeadingsColumn + blankout - 1);
+                                            CellOperationUtil.applyFontColor(blanks, sheet.getInternalSheet().getCell(row - 1, rowHeadingsColumn).getCellStyle().getBackColor().getHtmlColor());
+                                        }
+                                        SCell first = sheet.getInternalSheet().getCell(row,rowHeadingsColumn);
+                                        //the last line of the pivot table shows the set name of the first set, which is not very useful!
+                                        try{
+                                            if (first.getStringValue().startsWith("az_")){
+                                                first.setStringValue("TOTAL");
+                                            }
+                                        }catch (Exception ignored){
                                         }
                                     }
                                     if (row > displayRowHeadings.getRow()) {
@@ -1039,9 +1048,9 @@ public class ZKAzquoBookUtils {
                                     lastTotalRow = row - 1;
                                 }
                                 if (sameValues > 0) {
-                                    Range selection = Ranges.range(sheet, row, displayRowHeadings.getColumn(), row, displayRowHeadings.getColumn() + sameValues - 1);
+                                    Range selection = Ranges.range(sheet, row, rowHeadingsColumn, row, rowHeadingsColumn + sameValues - 1);
                                     //CellOperationUtil.clearStyles(selection);
-                                    CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row, displayRowHeadings.getColumn()).getCellStyle().getBackColor().getHtmlColor());
+                                    CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row, rowHeadingsColumn).getCellStyle().getBackColor().getHtmlColor());
                                 }
                             }
                             lastRowHeadings = rowHeading;
@@ -1053,7 +1062,7 @@ public class ZKAzquoBookUtils {
                             if (rowHeadingsString.toLowerCase().startsWith("permute(")) {
                                 String[] rowHeadings = rowHeadingsString.substring("permute(".length(), rowHeadingsString.length() - 1).split(",");
                                 int hrow = displayRowHeadings.getRow() - 1;
-                                int hcol = displayRowHeadings.getColumn();
+                                int hcol = rowHeadingsColumn;
                                 for (String rowHeading : rowHeadings) {
                                     rowHeading = rowHeading.replace("`", "").trim();
                                     if (rowHeading.contains(" sorted")){ // maybe factor the string literal? Need to make it work for the mo
