@@ -376,10 +376,7 @@ public class ZKAzquoBookUtils {
                                     SCell sCell = sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn());
                                     sCell.setStringValue(userChoice);
                                     if (date!=null){
-                                        TimeZone tz = TimeZone.getDefault();
-                                        Date uDate = Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant());
-                                        boolean inDs = tz.inDaylightTime(uDate);
-                                        sCell.setValue((uDate.getTime() + (inDs ? 1000 * 60 * 60 : 0)) / (1000 * 3600 * 24) + 25569);//convert date to days relative to 1970
+                                        sCell.setValue(excelTime(Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant())));
                                     }
                                     context += choiceName + " = " + userChoice + ";";
                                 }
@@ -639,6 +636,13 @@ public class ZKAzquoBookUtils {
         }
     }
 
+    private static double excelTime(Date date){
+        TimeZone tz = TimeZone.getDefault();
+        boolean inDs = tz.inDaylightTime(date);
+       return(date.getTime() + (inDs ? 1000 * 60 * 60 : 0)) / (1000 * 3600 * 24) + 25569;//convert date to days relative to 1970
+
+    }
+
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd/MM/yy");
     private static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -736,6 +740,7 @@ public class ZKAzquoBookUtils {
         SName repeatList = sheet.getBook().getInternalBook().getNameByName(AZREPEATLIST + region);
         // the cell we'll put the items in the list in
         SName repeatItem = sheet.getBook().getInternalBook().getNameByName(AZREPEATITEM + region);
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
         if (userRegionOptions.getUserLocked()){ // then put the flag on the book, remember to take it off (and unlock!) if there was an error
             sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
@@ -949,7 +954,18 @@ public class ZKAzquoBookUtils {
                             int startCol = col;
                             for (String heading : rowHeading) {
                                 if (heading != null && (sheet.getInternalSheet().getCell(row, col).getType() != SCell.CellType.STRING || sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
-                                    sheet.getInternalSheet().getCell(row, col).setValue(heading);
+                                    SCell cell = sheet.getInternalSheet().getCell(row, col);
+                                    Date date = null;
+                                    try {
+                                        date = df.parse(heading);
+                                    }catch(Exception ignored){
+
+                                    }
+                                    if (date!=null){
+                                        cell.setValue(excelTime(date));
+                                    }else{
+                                        cell.setValue(heading);
+                                    }
                                     if (lineNo > 0 && lastRowHeadings.get(col - startCol) != null && lastRowHeadings.get(col - startCol).equals(heading)) {
                                         //disguise the heading by making foreground colour = background colour
                                         Range selection = Ranges.range(sheet, row, col, row, col);
@@ -1243,10 +1259,7 @@ public class ZKAzquoBookUtils {
                                         date = df.parse(cellValue.getStringValue());
                                     }
                                     if (date != null) {
-                                        // bit of a nasty hack to compensate for BST knocking of an hour from some times
-                                        TimeZone tz = TimeZone.getDefault();
-                                        boolean inDs = tz.inDaylightTime(date);
-                                        cell.setValue((date.getTime() + (inDs ? 1000 * 60 * 60 : 0)) / (1000 * 3600 * 24) + 25569);//convert date to days relative to 1970
+                                          cell.setValue(excelTime(date));//convert date to days relative to 1970
                                         hasValue = true;
                                     }
                                 } catch (Exception ignored) {
