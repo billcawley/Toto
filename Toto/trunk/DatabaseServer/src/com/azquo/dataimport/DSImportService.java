@@ -260,7 +260,9 @@ public class DSImportService {
             importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
         }
         // check if that name (assuming it's not null!) has groovy in an attribute
-        filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
+        if (!isSpreadsheet){
+            filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
+        }
         // checks the first few lines to sort batch size and get a hopefully correctly configured line iterator
         final HeadingsWithIteratorAndBatchSize lineIteratorAndBatchSize = getLineIteratorAndBatchSize(filePath); // created here but it has no headers
         if (lineIteratorAndBatchSize == null) {
