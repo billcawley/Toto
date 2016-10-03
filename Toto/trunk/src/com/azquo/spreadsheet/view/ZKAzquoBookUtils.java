@@ -957,10 +957,12 @@ public class ZKAzquoBookUtils {
                                 if (heading != null && (sheet.getInternalSheet().getCell(row, col).getType() != SCell.CellType.STRING || sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                                     SCell cell = sheet.getInternalSheet().getCell(row, col);
                                     Date date = null;
-                                    try {
-                                        date = df.parse(heading);
-                                    }catch(Exception ignored){
+                                    if (heading.length()==10 && heading.charAt(5) == '-' && heading.charAt(7)=='-') { //it seems that the parser will parse 12-34-567 as a date!
+                                        try {
+                                            date = df.parse(heading);
+                                        } catch (Exception ignored) {
 
+                                        }
                                     }
                                     if (date!=null){
                                         cell.setValue(excelTime(date));
@@ -1056,6 +1058,10 @@ public class ZKAzquoBookUtils {
                             lastRowHeadings = rowHeading;
                             row++;
                         }
+
+
+
+
                         if (isHierarchy) {
                             //paste in row headings
                             String rowHeadingsString = cellsAndHeadingsForDisplay.getRowHeadingsSource().get(0).get(0);
