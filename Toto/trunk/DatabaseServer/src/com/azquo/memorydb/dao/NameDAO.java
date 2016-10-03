@@ -57,12 +57,12 @@ public class NameDAO {
 
     // I think sticking to callable even if the return type is null is more consistent
     private static class BulkNameInserter implements Callable<Void> {
-        private final AzquoMemoryDB azquoMemoryDB;
+        private final String persistenceName;
         private final List<Name> namesToInsert;
         private final String message;
 
-        BulkNameInserter(final AzquoMemoryDB azquoMemoryDB, final List<Name> namesToInsert, String message) {
-            this.azquoMemoryDB = azquoMemoryDB;
+        BulkNameInserter(final String persistenceName, final List<Name> namesToInsert, String message) {
+            this.persistenceName = persistenceName;
             this.namesToInsert = namesToInsert;
             this.message = message;
         }
@@ -71,7 +71,7 @@ public class NameDAO {
         public Void call() {
             if (!namesToInsert.isEmpty()) {
                 final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-                final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTNAME + "` (`" + FastDAO.ID + "`,`" + PROVENANCEID + "`,`"
+                final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + persistenceName + "`.`" + FASTNAME + "` (`" + FastDAO.ID + "`,`" + PROVENANCEID + "`,`"
                         + ATTRIBUTES + "`,`" + CHILDREN + "`,`" + NOPARENTS + "`,`" + NOVALUES + "`) VALUES ");
                 int count = 1;
 
@@ -102,7 +102,7 @@ public class NameDAO {
         }
     }
 
-    public static void persistNames(final AzquoMemoryDB azquoMemoryDB, final Collection<Name> names) throws Exception {
+    public static void persistNames(final String persistenceName, final Collection<Name> names) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult
         // old pattern had update, I think this is a pain and unnecessary, just delete than add to the insert
         ExecutorService executor = ThreadPools.getSqlThreadPool();
@@ -114,7 +114,7 @@ public class NameDAO {
                 if (!name.getNeedsInserting()) { // either flagged for delete or it exists already and will be reinserted, delete it
                     toDelete.add(name);
                     if (toDelete.size() == FastDAO.UPDATELIMIT) {
-                        FastDAO.bulkDelete(azquoMemoryDB, toDelete, FASTNAME);
+                        FastDAO.bulkDelete(persistenceName, toDelete, FASTNAME);
                         toDelete = new ArrayList<>(FastDAO.UPDATELIMIT);
                     }
                     counter++;
@@ -123,7 +123,7 @@ public class NameDAO {
                     }
                 }
             }
-            FastDAO.bulkDelete(azquoMemoryDB, toDelete, FASTNAME);
+            FastDAO.bulkDelete(persistenceName, toDelete, FASTNAME);
         System.out.println("bulk deleted " + counter);
         int insertCount = 0;
         for (Name name:names){
@@ -137,19 +137,19 @@ public class NameDAO {
                 insertCount--;
                 toInsert.add(name);
                 if (toInsert.size() == FastDAO.UPDATELIMIT) {
-                    futureBatches.add(executor.submit(new BulkNameInserter(azquoMemoryDB, toInsert, counter%1_000_000 == 0 ? "bulk inserted " + counter + " remaining to add "  + insertCount: null)));
+                    futureBatches.add(executor.submit(new BulkNameInserter(persistenceName, toInsert, counter%1_000_000 == 0 ? "bulk inserted " + counter + " remaining to add "  + insertCount: null)));
                     toInsert = new ArrayList<>(FastDAO.UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
             }
         }
-        futureBatches.add(executor.submit(new BulkNameInserter(azquoMemoryDB, toInsert,"bulk inserted " + counter)));
+        futureBatches.add(executor.submit(new BulkNameInserter(persistenceName, toInsert,"bulk inserted " + counter)));
         for (Future<?> futureBatch : futureBatches){
             futureBatch.get(1, TimeUnit.HOURS);
         }
         System.out.println("Name save complete.");
     }
 
-    public static List<Name> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
+    public static List<Name> findForMinMaxId(AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTNAME + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTNAME + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
         return JdbcTemplateUtils.query(SQL_SELECT_ALL, new NameRowMapper(azquoMemoryDB));
     }
@@ -171,7 +171,7 @@ public class NameDAO {
         JdbcTemplateUtils.updateNoException("ALTER TABLE `" + databaseName + "`.`" + FASTNAME + "` DROP `additive`;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
-    public static int findMaxId(final AzquoMemoryDB azquoMemoryDB) throws DataAccessException {
-        return FastDAO.findMaxId(azquoMemoryDB, FASTNAME);
+    public static int findMaxId(final String persistenceName) throws DataAccessException {
+        return FastDAO.findMaxId(persistenceName, FASTNAME);
     }
 }

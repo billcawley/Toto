@@ -9,17 +9,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by edward on 28/09/16.
- *
+ * <p>
  * Factoring off the name indexes. Queries to the index can be public, changes should be package private.
+ *
+ * Thread safety is deferred to standard Java classes, should be fine.
+ *
+ * Doesn't know which memory database it's held against, I see no reason for it to currently.
  */
 public class AzquoMemoryDBIndex {
 
-    private final Map<String, Map<String, List<Name>>> nameByAttributeMap; // a map of maps of lists of names. Fun! Moved back to lists to save memory, the lists are unlikely to be big
-    private final AzquoMemoryDB azquoMemoryDB;
+    // immutable in a superficial sense?
 
+    private final Map<String, Map<String, List<Name>>> nameByAttributeMap; // a map of maps of lists of names. Fun! Moved back to lists to save memory, the lists are unlikely to be big (implemented by CopyOnWriteArray)
 
-    AzquoMemoryDBIndex(AzquoMemoryDB azquoMemoryDB) {
-        this.azquoMemoryDB = azquoMemoryDB;
+    AzquoMemoryDBIndex() {
         nameByAttributeMap = new ConcurrentHashMap<>();
     }
 
@@ -28,6 +31,23 @@ public class AzquoMemoryDBIndex {
     public List<String> getAttributes() {
         getAttributesCount.incrementAndGet();
         return Collections.unmodifiableList(new ArrayList<>(nameByAttributeMap.keySet()));
+    }
+
+    // fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
+    // Is wrapping in a hashSet such a big deal?
+
+    private static AtomicInteger getNamesForAttributeCount = new AtomicInteger(0);
+
+    private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
+        getNamesForAttributeCount.incrementAndGet();
+        Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
+        if (map != null) { // that attribute is there
+            List<Name> names = map.get(attributeValue.toLowerCase().trim());
+            if (names != null) { // were there any entries for that value?
+                return HashObjSets.newMutableSet(names); // I've seen this modified outside, I guess no harm in that
+            }
+        }
+        return Collections.emptySet(); // moving away from nulls - this will complain outside if it is modified though!
     }
 
     // same as above but then zap any not in the parent
@@ -39,7 +59,7 @@ public class AzquoMemoryDBIndex {
         Set<Name> possibles = getNamesForAttribute(attributeName, attributeValue);
         for (Name possible : possibles) {
             if (possible.getParents().contains(parent)) { //trying for immediate parent first
-                Set<Name> found = HashObjSets.newMutableSet();
+                Set<Name> found = HashObjSets.newMutableSet();// leave as mutable for the moment, the NameSetList may change it
                 found.add(possible);
                 return found; // and return straight away
             }
@@ -53,25 +73,6 @@ public class AzquoMemoryDBIndex {
         }
         return possibles; // so this could be more than one if there were multiple in a big parent set (presumably at different levels)
     }
-
-    // fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
-    // Is wrapping in a hashSet such a big deal? Using koloboke immutable should be a little more efficient
-
-    private static AtomicInteger getNamesForAttributeCount = new AtomicInteger(0);
-
-    private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
-        getNamesForAttributeCount.incrementAndGet();
-        Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
-        if (map != null) { // that attribute is there
-            List<Name> names = map.get(attributeValue.toLowerCase().trim());
-            if (names != null) { // were there any entries for that value?
-                return HashObjSets.newMutableSet(names); // I've seen this modified outside, I guess no harm in that
-            }
-        }
-        return Collections.emptySet(); // moving away from nulls
-    }
-
-    // for checking confidential, will save considerable time
 
     private static AtomicInteger attributeExistsInDBCount = new AtomicInteger(0);
 
@@ -106,13 +107,7 @@ public class AzquoMemoryDBIndex {
         return Collections.emptySet();
     }
 
-/*    public Name getNameByDefaultDisplayName(final String attributeValue) {
-        return getNameByAttribute( Arrays.asList(Name.DEFAULT_DISPLAY_NAME), attributeValue, null);
-    }
-
-    public Name getNameByDefaultDisplayName(final String attributeValue, final Name parent) {
-        return getNameByAttribute( Arrays.asList(Name.DEFAULT_DISPLAY_NAME), attributeValue, parent);
-    }*/
+    // the root is a command in the UI tree edit findduplicates
 
     private static AtomicInteger getNameByAttributeCount = new AtomicInteger(0);
 
@@ -123,8 +118,9 @@ public class AzquoMemoryDBIndex {
         int dupCount = 0;
         int testCount = 0;
         for (String string : map.keySet()) {
-            if (testCount++ % 50000 == 0)
+            if (testCount++ % 50000 == 0){
                 System.out.println("testing for duplicates - count " + testCount + " dups found " + dupCount);
+            }
             if (map.get(string).size() > 1) {
                 List<Name> names = map.get(string);
                 boolean nameadded = false;
@@ -143,13 +139,10 @@ public class AzquoMemoryDBIndex {
                                     }
                                     found.add(name2);
                                     dupCount++;
-
                                 }
                             }
                         }
-
                     }
-
                 }
                 if (dupCount > 100) {
                     break;
@@ -250,7 +243,7 @@ public class AzquoMemoryDBIndex {
                 if (!name.hasParents()) { // top parent full stop
                     toReturn.add(name);
                 } else { // little hazy on the logic here but I think the point is to say that if all the parents of the name are NOT in the language specified then that's a top name for this language.
-                    // Kind of makes sense but where is this used?
+                    // Kind of makes sense but where is this used? I can only see when attribute is passed to JSTree. Maybe clarify with WFC.
                     boolean include = true;
                     for (Name parent : name.getParents()) {
                         if (parent.getAttribute(language) != null) {
@@ -267,23 +260,6 @@ public class AzquoMemoryDBIndex {
         return toReturn;
     }
 
-    // ok I'd have liked this to be part of add name to db but the name won't have been initialised, add name to db is called in the name constructor
-    // before the attributes have been initialised
-
-    private static AtomicInteger addNameToAttributeNameMapCount = new AtomicInteger(0);
-
-    void addNameToAttributeNameMap(final Name newName) throws Exception {
-        addNameToAttributeNameMapCount.incrementAndGet();
-        newName.checkDatabaseMatches(azquoMemoryDB);
-        // skip the map to save the memory
-        int i = 0;
-        List<String> attributeValues = newName.getAttributeValues();
-        for (String attributeName : newName.getAttributeKeys()) {
-            setAttributeForNameInAttributeNameMap(attributeName, attributeValues.get(i), newName);
-            i++;
-        }
-    }
-
     // only used when looking up for "DEFINITION", inline?
 
     public Collection<Name> namesForAttribute(String attribute) {
@@ -297,6 +273,7 @@ public class AzquoMemoryDBIndex {
     }
 
     // Sets indexes for names, this needs to be thread safe to support multi threaded name linking.
+    // Thread safe by API use not anything clever on my part.
 
     private static AtomicInteger setAttributeForNameInAttributeNameMapCount = new AtomicInteger(0);
 
@@ -309,27 +286,13 @@ public class AzquoMemoryDBIndex {
         if (lcAttributeValue.indexOf(Name.QUOTE) >= 0 && !ucAttributeName.equals(Name.CALCULATION)) {
             lcAttributeValue = lcAttributeValue.replace(Name.QUOTE, '\'').intern();
         }
-        // The way to use putIfAbsent correctly according to a stack overflow example
-        Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
-        if (namesForThisAttribute == null) {
-            final Map<String, List<Name>> newNamesForThisAttribute = new ConcurrentHashMap<>();
-            namesForThisAttribute = nameByAttributeMap.putIfAbsent(ucAttributeName, newNamesForThisAttribute);// in ConcurrentHashMap this is atomic, thanks Doug!
-            if (namesForThisAttribute == null) {// the new one went in, use it, otherwise use the one that "sneaked" in there in the mean time :)
-                namesForThisAttribute = newNamesForThisAttribute;
-            }
-        }
-        // same pattern but for the lists. Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
-        List<Name> names = namesForThisAttribute.get(lcAttributeValue);
-        if (names == null) {
-            final List<Name> newNames = new CopyOnWriteArrayList<>();// cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
-            names = namesForThisAttribute.putIfAbsent(lcAttributeValue, newNames);
-            if (names == null) {
-                names = newNames;
-            }
-        }
-        // ok, got names
+        // moved to computeIfAbsent, saved a fair few lines of code
+        Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.computeIfAbsent(ucAttributeName, s -> new ConcurrentHashMap<>());
+        // Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
+        // cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
+        List<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
         names.add(name); // thread safe, internally locked but of course just for this particular attribute and value heh.
-        // Could maybe get a little speed by adding a special case for the first name (as in singleton)
+        // Could maybe get a little speed by adding a special case for the first name (as in singleton)?
     }
 
     // I think this is just much more simple re thread safety in that if we can't find the map and list we just don't do anything and the final remove should be safe according to CopyOnWriteArray
@@ -340,7 +303,6 @@ public class AzquoMemoryDBIndex {
         removeAttributeFromNameInAttributeNameMapCount.incrementAndGet();
         String ucAttributeName = attributeName.toUpperCase().trim();
         String lcAttributeValue = attributeValue.toLowerCase().trim();
-        name.checkDatabaseMatches(azquoMemoryDB);
         final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
         if (namesForThisAttribute != null) {// the map we care about
             final List<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(lcAttributeValue);

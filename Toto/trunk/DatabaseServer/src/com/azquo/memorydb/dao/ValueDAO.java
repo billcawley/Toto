@@ -76,14 +76,14 @@ public class ValueDAO {
     }
 
     private static class BulkValuesInserter implements Callable<Void> {
-        private final AzquoMemoryDB azquoMemoryDB;
+        private final String persistenceName;
         private final List<Value> valuesToInsert;
         private final int totalCount;
         private final String insertTable;
         private final boolean sortNameIds; // for the history
 
-        BulkValuesInserter(final AzquoMemoryDB azquoMemoryDB, final List<Value> valuesToInsert, String insertTable, int totalCount, boolean sortNameIds) {
-            this.azquoMemoryDB = azquoMemoryDB;
+        BulkValuesInserter(final String persistenceName, final List<Value> valuesToInsert, String insertTable, int totalCount, boolean sortNameIds) {
+            this.persistenceName = persistenceName;
             this.valuesToInsert = valuesToInsert;
             this.totalCount = totalCount;
             this.insertTable = insertTable;
@@ -95,7 +95,7 @@ public class ValueDAO {
             if (!valuesToInsert.isEmpty()) {
                 long track = System.currentTimeMillis();
                 final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-                final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getPersistenceName() + "`.`" + insertTable + "` (`" + FastDAO.ID + "`,`" + PROVENANCEID + "`,`"
+                final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + persistenceName + "`.`" + insertTable + "` (`" + FastDAO.ID + "`,`" + PROVENANCEID + "`,`"
                         + TEXT + "`,`" + NAMES + "`) VALUES ");
                 int count = 1;
 
@@ -126,7 +126,7 @@ public class ValueDAO {
 
     // could this be factored between this class and the NameDao class? Not sure if it's the biggest deal.
 
-    public static void persistValues(final AzquoMemoryDB azquoMemoryDB, final Collection<Value> values) throws Exception {
+    public static void persistValues(final String persistenceName, final Collection<Value> values) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult
         // old pattern had update, I think this is a pain and unnecessary, just delete than add to the insert
         ExecutorService executor = ThreadPools.getSqlThreadPool();
@@ -138,12 +138,12 @@ public class ValueDAO {
                 if (!value.getNeedsInserting()) { // either flagged for delete or it exists already and will be reinserted, delete it
                     toDelete.add(value);
                     if (toDelete.size() == FastDAO.UPDATELIMIT) {
-                        FastDAO.bulkDelete(azquoMemoryDB, toDelete, FASTVALUE);
+                        FastDAO.bulkDelete(persistenceName, toDelete, FASTVALUE);
                         toDelete = new ArrayList<>(FastDAO.UPDATELIMIT);
                     }
                 }
             }
-        FastDAO.bulkDelete(azquoMemoryDB, toDelete, FASTVALUE);
+        FastDAO.bulkDelete(persistenceName, toDelete, FASTVALUE);
         int insertCount = 0;
         for (Value value: values){
             if (!value.getNeedsDeleting()) insertCount++;
@@ -154,19 +154,19 @@ public class ValueDAO {
                 toInsert.add(value);
                 if (toInsert.size() == FastDAO.UPDATELIMIT) {
                     insertCount -= FastDAO.UPDATELIMIT;
-                    futureBatches.add(executor.submit(new BulkValuesInserter(azquoMemoryDB, toInsert, FASTVALUE, insertCount, false)));
+                    futureBatches.add(executor.submit(new BulkValuesInserter(persistenceName, toInsert, FASTVALUE, insertCount, false)));
                     toInsert = new ArrayList<>(FastDAO.UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
             } else {
                 toHistory.add(value);
                 if (toHistory.size() == FastDAO.UPDATELIMIT) {
-                    futureBatches.add(executor.submit(new BulkValuesInserter(azquoMemoryDB, toInsert, VALUEHISTORY, insertCount, true)));
+                    futureBatches.add(executor.submit(new BulkValuesInserter(persistenceName, toInsert, VALUEHISTORY, insertCount, true)));
                     toHistory = new ArrayList<>(FastDAO.UPDATELIMIT);
                 }
             }
         }
-        futureBatches.add(executor.submit(new BulkValuesInserter(azquoMemoryDB, toInsert, FASTVALUE, 0, false)));
-        futureBatches.add(executor.submit(new BulkValuesInserter(azquoMemoryDB, toHistory, VALUEHISTORY, 0, true)));
+        futureBatches.add(executor.submit(new BulkValuesInserter(persistenceName, toInsert, FASTVALUE, 0, false)));
+        futureBatches.add(executor.submit(new BulkValuesInserter(persistenceName, toHistory, VALUEHISTORY, 0, true)));
         for (Future<?> futureBatch : futureBatches){
             futureBatch.get(1, TimeUnit.HOURS);
         }
@@ -200,8 +200,8 @@ public class ValueDAO {
         return JdbcTemplateUtils.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));
     }
 
-    public static int findMaxId(final AzquoMemoryDB azquoMemoryDB) throws DataAccessException {
-        return FastDAO.findMaxId(azquoMemoryDB, FASTVALUE);
+    public static int findMaxId(final String persistenceName) throws DataAccessException {
+        return FastDAO.findMaxId(persistenceName, FASTVALUE);
     }
 
     public static List<ValueHistory> getHistoryForValue(final AzquoMemoryDB azquoMemoryDB, Value value){

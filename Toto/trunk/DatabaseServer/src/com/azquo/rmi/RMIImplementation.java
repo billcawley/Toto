@@ -4,7 +4,7 @@ import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
-import com.azquo.memorydb.core.MemoryDBManager;
+import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
@@ -271,7 +271,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public void unloadDatabase(String persistenceName) throws RemoteException {
         try {
-            MemoryDBManager.removeDBFromMap(persistenceName);
+            AzquoMemoryDB.removeDBFromMap(persistenceName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -280,7 +280,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public boolean isDatabaseLoaded(String persistenceName) throws RemoteException {
         try {
-            return MemoryDBManager.isDBLoaded(persistenceName);
+            return AzquoMemoryDB.isDBLoaded(persistenceName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -289,7 +289,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public int getNameCount(String persistenceName) throws RemoteException {
         try {
-            return MemoryDBManager.getAzquoMemoryDB(persistenceName, null).getNameCount();
+            return AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null).getNameCount();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -317,7 +317,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public int getValueCount(String persistenceName) throws RemoteException {
         try {
-            return MemoryDBManager.getAzquoMemoryDB(persistenceName, null).getValueCount();
+            return AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null).getValueCount();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

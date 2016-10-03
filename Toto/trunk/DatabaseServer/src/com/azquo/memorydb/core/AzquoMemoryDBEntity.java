@@ -114,15 +114,12 @@ public abstract class AzquoMemoryDBEntity {
 
     void setAsPersisted(){
         needsInserting = false;
-        entitySpecificSetAsPersisted();
     }
 
     // will be fine for the moment, I might change how this is arranged later - this is here to keep control over needsInserting
     void setNeedsPersisting(){
         entitySpecificSetNeedsPersisting();
     }
-
-    protected abstract void entitySpecificSetAsPersisted();
 
     protected abstract void entitySpecificSetNeedsPersisting();
 

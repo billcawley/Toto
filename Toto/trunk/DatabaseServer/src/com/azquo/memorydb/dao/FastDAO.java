@@ -26,11 +26,10 @@ class FastDAO {
 
     // possibly very similar to what's in JsonRecordDAO. Not sure if it's worth factoring (if so use a list of ids)
 
-    static void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final List<? extends AzquoMemoryDBEntity> entities, String tableName) throws DataAccessException {
+    static void bulkDelete(final String persistenceName, final List<? extends AzquoMemoryDBEntity> entities, String tableName) throws DataAccessException {
         if (!entities.isEmpty()) {
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            final StringBuilder updateSql = new StringBuilder("delete from `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "` where " + ID + " in (");
-
+            final StringBuilder updateSql = new StringBuilder("delete from `" + persistenceName + "`.`" + tableName + "` where " + ID + " in (");
             int count = 1;
             for (AzquoMemoryDBEntity azquoMemoryDBEntity : entities) {
                 if (count == 1) {
@@ -46,8 +45,8 @@ class FastDAO {
         }
     }
 
-    static int findMaxId(final AzquoMemoryDB azquoMemoryDB, String tableName) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "`";
+    static int findMaxId(final String persistenceName, String tableName) throws DataAccessException {
+        final String SQL_SELECT_ALL = "Select max(id) from `" + persistenceName + "`.`" + tableName + "`";
         Integer toReturn = JdbcTemplateUtils.queryForObject (SQL_SELECT_ALL, JsonRecordDAO.EMPTY_PARAMETERS_MAP, Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }

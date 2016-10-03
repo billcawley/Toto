@@ -172,6 +172,7 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // For loading, it should only be used by the NameDAO. Can I reshuffle and make it non public? Todo.
+    // yes I am exposing "this". Seems ok so far.
 
     private static AtomicInteger newName3Count = new AtomicInteger(0);
 
@@ -187,6 +188,7 @@ public final class Name extends AzquoMemoryDBEntity {
         for (int i = 0; i < attributeKeys.length; i++) {
             attributeKeys[i] = attsArray[i * 2];
             attributeValues[i] = attsArray[(i * 2) + 1];
+            azquoMemoryDB.getIndex().setAttributeForNameInAttributeNameMap(attributeKeys[i], attributeValues[i], this); // used to be done after, can't se a reason not to do this here
         }
         nameAttributes = new NameAttributes(attributeKeys, attributeValues);
         valuesAsSet = noValues > ARRAYTHRESHOLD ? Collections.newSetFromMap(new ConcurrentHashMap<>(noValues)) : null; // should help loading - prepare the space
@@ -989,7 +991,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 attributeKeys.remove(index);
                 attributeValues.remove(index);
                 //attributes.remove(attributeName);
-                getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
+                getAzquoMemoryDB().getIndex().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
                 nameAttributes = new NameAttributes(attributeKeys, attributeValues);
                 setNeedsPersisting();
             }
@@ -1002,7 +1004,7 @@ public final class Name extends AzquoMemoryDBEntity {
             // just update the values
             attributeValues.remove(index);
             attributeValues.add(index, attributeValue);
-            getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
+            getAzquoMemoryDB().getIndex().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
         } else {
             // a new one
             attributeKeys.add(attributeName);
@@ -1011,7 +1013,7 @@ public final class Name extends AzquoMemoryDBEntity {
         nameAttributes = new NameAttributes(attributeKeys, attributeValues);
         // now deal with the DB maps!
         // ok here I did say addNameToAttributeNameMap but that is inefficient, it uses every attribute, we've only changed one
-        getAzquoMemoryDB().setAttributeForNameInAttributeNameMap(attributeName, attributeValue, this);
+        getAzquoMemoryDB().getIndex().setAttributeForNameInAttributeNameMap(attributeName, attributeValue, this);
         setNeedsPersisting();
     }
 
@@ -1024,7 +1026,7 @@ public final class Name extends AzquoMemoryDBEntity {
         if (index != -1) {
             List<String> attributeKeys = new ArrayList<>(nameAttributes.getAttributeKeys());
             List<String> attributeValues = new ArrayList<>(nameAttributes.getAttributeValues());
-            getAzquoMemoryDB().removeAttributeFromNameInAttributeNameMap(attributeName, attributeValues.get(index), this);
+            getAzquoMemoryDB().getIndex().removeAttributeFromNameInAttributeNameMap(attributeName, attributeValues.get(index), this);
             attributeKeys.remove(index);
             attributeValues.remove(index);
             nameAttributes = new NameAttributes(attributeKeys, attributeValues);
@@ -1099,11 +1101,6 @@ public final class Name extends AzquoMemoryDBEntity {
         }
         return false;
     }*/
-
-    @Override
-    final protected void entitySpecificSetAsPersisted() {
-        getAzquoMemoryDB().removeNameNeedsPersisting(this);
-    }
 
     @Override
     final protected void entitySpecificSetNeedsPersisting() {

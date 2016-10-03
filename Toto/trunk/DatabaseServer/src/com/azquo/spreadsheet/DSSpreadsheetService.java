@@ -56,7 +56,7 @@ public class DSSpreadsheetService {
     public static AzquoMemoryDBConnection getConnectionFromAccessToken(DatabaseAccessToken databaseAccessToken) throws Exception {
         // todo - address opendb count (do we care?) and exceptions
         StringBuffer sessionLog = sessionLogs.computeIfAbsent(databaseAccessToken.getUserSessionId(), t -> new StringBuffer()); // computeIfAbsent is such a wonderful thread safe call
-        AzquoMemoryDB memoryDB = MemoryDBManager.getAzquoMemoryDB(databaseAccessToken.getPersistenceName(), sessionLog);
+        AzquoMemoryDB memoryDB = AzquoMemoryDB.getAzquoMemoryDB(databaseAccessToken.getPersistenceName(), sessionLog);
         // we can't do the lookup for permissions out here as it requires the connection, hence pass things through
         return new AzquoMemoryDBConnection(memoryDB, databaseAccessToken, databaseAccessToken.getLanguages(), sessionLog);
     }

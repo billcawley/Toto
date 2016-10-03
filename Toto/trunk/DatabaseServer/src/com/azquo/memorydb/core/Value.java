@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Time: 22:31
  * To reflect a fundamental Azquo idea : a piece of data which has names attached
  * Notable that the names list object here is what defines the relationship between values and names, value sets against each name is just a lookup
- * I'm using an array internally to save memory,
+ * I'm using an array internally to save memory, there's an assumption it won't ever get that big. Like a CopyOnWriteArray but I'm saving a few bytes of memory.
  * <p>
  */
 public final class Value extends AzquoMemoryDBEntity {
@@ -52,7 +52,6 @@ public final class Value extends AzquoMemoryDBEntity {
         newValue3Count.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId);
         this.text = text.intern();
-        // ok populate the names here but unlike before we're not doing any managing of the names themselves (as in adding this value to them), this just sets the names straight in there so to speak
         int noNames = namesCache.length / 4;
         ByteBuffer byteBuffer = ByteBuffer.wrap(namesCache);
         // we assume the names are loaded (though they may not be linked yet)
@@ -63,7 +62,7 @@ public final class Value extends AzquoMemoryDBEntity {
         this.names = newNames;
         // this should be fine being handled here while loading a db - was storing this against the name but too much space
         for (Name newName : this.names) {
-            newName.addToValues(this, true); // true here means don't check duplicates
+            newName.addToValues(this, true); // true here means don't check duplicates, we assume integrity in persistence
         }
         getAzquoMemoryDB().addValueToDb(this);
     }
@@ -96,9 +95,10 @@ public final class Value extends AzquoMemoryDBEntity {
         return Collections.unmodifiableList(Arrays.asList(names)); // should be ok?
     }
 
-    // make sure to adjust the values lists on the name objects :)
-    // synchronised but I'm not sure if this is good enough? Certainly better then nothing
-    // change to a list internally
+    /* make sure to adjust the values lists on the name objects :)
+     synchronised but I'm not sure if this is good enough? One problem is names/values not being 100% in sync
+     (remove value from names, reassign names here, add value to new names). Not sure if it's a big deal or if there's even a way around that.
+    */
 
     private static AtomicInteger setNamesWillBePersistedCount = new AtomicInteger(0);
 
@@ -130,11 +130,6 @@ public final class Value extends AzquoMemoryDBEntity {
             newName.removeFromValues(this);
         }
         setNeedsPersisting();
-    }
-
-    @Override
-    protected void entitySpecificSetAsPersisted() {
-        getAzquoMemoryDB().removeValueNeedsPersisting(this);
     }
 
     @Override

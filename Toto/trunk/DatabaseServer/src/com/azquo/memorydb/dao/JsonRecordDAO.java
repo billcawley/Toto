@@ -1,7 +1,6 @@
 package com.azquo.memorydb.dao;
 
 import com.azquo.ThreadPools;
-import com.azquo.memorydb.core.AzquoMemoryDB;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -49,13 +48,13 @@ public class JsonRecordDAO {
 
 
     private static class BulkInserter implements Callable<Void> {
-        private final AzquoMemoryDB azquoMemoryDB;
+        private final String persistenceName;
         private final String tableName;
         private final List<JsonRecordTransport> records;
         private int totalCount;
 
-        BulkInserter(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records, int totalCount) {
-            this.azquoMemoryDB = azquoMemoryDB;
+        BulkInserter(final String persistenceName, final String tableName, final List<JsonRecordTransport> records, int totalCount) {
+            this.persistenceName = persistenceName;
             this.tableName = tableName;
             this.records = records;
             this.totalCount = totalCount;
@@ -66,7 +65,7 @@ public class JsonRecordDAO {
                 if (!records.isEmpty()) {
                     long track = System.currentTimeMillis();
                     final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-                    final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "` (" + ID + "," + JSON + ") VALUES ");
+                    final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + persistenceName + "`.`" + tableName + "` (" + ID + "," + JSON + ") VALUES ");
                     int count = 1;
 
                     for (JsonRecordTransport record : records) {
@@ -96,11 +95,11 @@ WHERE id IN (1,2,3)
 
      */
 
-    private static void bulkUpdate(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
+    private static void bulkUpdate(final String persistenceName, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
         if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            final StringBuilder updateSql = new StringBuilder("update `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "` SET " + JSON + " = CASE " + ID);
+            final StringBuilder updateSql = new StringBuilder("update `" + persistenceName + "`.`" + tableName + "` SET " + JSON + " = CASE " + ID);
 
             int count = 1;
 
@@ -127,11 +126,11 @@ WHERE id IN (1,2,3)
         }
     }
 
-    private static void bulkDelete(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
+    private static void bulkDelete(final String persistenceName, final String tableName, final List<JsonRecordTransport> records) throws DataAccessException {
         if (!records.isEmpty()) {
             long track = System.currentTimeMillis();
             final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-            final StringBuilder updateSql = new StringBuilder("delete from `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "` where " + ID + " in (");
+            final StringBuilder updateSql = new StringBuilder("delete from `" + persistenceName + "`.`" + tableName + "` where " + ID + " in (");
 
             int count = 1;
             for (JsonRecordTransport record : records) {
@@ -149,7 +148,7 @@ WHERE id IN (1,2,3)
         }
     }
 
-    public static void persistJsonRecords(final AzquoMemoryDB azquoMemoryDB, final String tableName, final List<JsonRecordTransport> records) throws Exception {
+    public static void persistJsonRecords(final String persistenceName, final String tableName, final List<JsonRecordTransport> records) throws Exception {
         // currently only the inserter is multithreaded, adding the others should not be difficult - todo, perhaps for update and possible list optimisation there?
         ExecutorService executor = ThreadPools.getSqlThreadPool();
         List<JsonRecordTransport> toInsert = new ArrayList<>(UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
@@ -160,12 +159,12 @@ WHERE id IN (1,2,3)
                 toInsert.add(record);
                 if (toInsert.size() == UPDATELIMIT) {
                     totalCount -= toInsert.size();
-                    futureBatches.add(executor.submit(new BulkInserter(azquoMemoryDB, tableName, toInsert, totalCount)));
+                    futureBatches.add(executor.submit(new BulkInserter(persistenceName, tableName, toInsert, totalCount)));
                     toInsert = new ArrayList<>(UPDATELIMIT); // I considered using clear here but of course the object has been passed into the bulk inserter, bad idea!
                 }
             }
         }
-        futureBatches.add(executor.submit(new BulkInserter(azquoMemoryDB, tableName, toInsert, 0)));
+        futureBatches.add(executor.submit(new BulkInserter(persistenceName, tableName, toInsert, 0)));
         for (Future<?> futureBatch : futureBatches){
             futureBatch.get(1, TimeUnit.HOURS);
         }
@@ -178,30 +177,30 @@ WHERE id IN (1,2,3)
             if (record.state == JsonRecordTransport.State.DELETE) {
                 toDelete.add(record);
                 if (toDelete.size() == UPDATELIMIT) {
-                    bulkDelete(azquoMemoryDB, tableName, toDelete);
+                    bulkDelete(persistenceName, tableName, toDelete);
                     toDelete = new ArrayList<>();
                 }
             }
             if (record.state == JsonRecordTransport.State.UPDATE) {
                 toUpdate.add(record);
                 if (toUpdate.size() == UPDATELIMIT) {
-                    bulkUpdate(azquoMemoryDB, tableName, toUpdate);
+                    bulkUpdate(persistenceName, tableName, toUpdate);
                     toUpdate = new ArrayList<>();
                 }
             }
         }
-        bulkDelete(azquoMemoryDB, tableName, toDelete);
-        bulkUpdate(azquoMemoryDB, tableName, toUpdate);
+        bulkDelete(persistenceName, tableName, toDelete);
+        bulkUpdate(persistenceName, tableName, toUpdate);
 
     }
 
-    public static List<JsonRecordTransport> findFromTableMinMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName, int minId, int maxId) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
+    public static List<JsonRecordTransport> findFromTableMinMaxId(final String persistenceName, final String tableName, int minId, int maxId) throws DataAccessException {
+        final String SQL_SELECT_ALL = "Select `" + persistenceName + "`.`" + tableName + "`.* from `" + persistenceName + "`.`" + tableName + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
         return JdbcTemplateUtils.query(SQL_SELECT_ALL, new JsonRecordTransportRowMapper());
     }
 
-    public static int findMaxId(final AzquoMemoryDB azquoMemoryDB, final String tableName) throws DataAccessException {
-        final String SQL_SELECT_ALL = "Select max(id) from `" + azquoMemoryDB.getPersistenceName() + "`.`" + tableName + "`";
+    public static int findMaxId(final String persistenceName, final String tableName) throws DataAccessException {
+        final String SQL_SELECT_ALL = "Select max(id) from `" + persistenceName + "`.`" + tableName + "`";
         Integer toReturn = JdbcTemplateUtils.queryForObject(SQL_SELECT_ALL, new HashMap<>(), Integer.class);
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pinter boxing to int!
     }

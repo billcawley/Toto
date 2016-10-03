@@ -126,11 +126,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
     }
 
     @Override
-    protected void entitySpecificSetAsPersisted() {
-        getAzquoMemoryDB().removeJsonEntityNeedsPersisting(PERSIST_TABLE, this);
-    }
-
-    @Override
     protected void entitySpecificSetNeedsPersisting() {
         getAzquoMemoryDB().setJsonEntityNeedsPersisting(PERSIST_TABLE, this);
     }

@@ -58,9 +58,6 @@ public class MagentoController {
             if (op == null) op = "";// can this happen with the annotation above?
             System.out.println("==================== db sent  : " + db + " op= " + op);
             //for testing only
-            if (db == null || db.equals("")) { // default to temp if not passed
-                db = "temp";
-            }
             LoggedInUser loggedInUser = LoginService.loginLoggedInUser("",db, logon, password, false);
             if (loggedInUser == null) {
                 return "error: user " + logon + " with this password does not exist";
