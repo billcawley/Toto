@@ -772,6 +772,12 @@ public class DSSpreadsheetService {
         final AzquoMemoryDBConnection connectionFromAccessToken = getConnectionFromAccessToken(databaseAccessToken);
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name filterSet = NameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
+        if (filterSet.getChildren()==null || filterSet.getChildren().size()==0){
+            Collection<Name> possibleNames = NameService.parseQuery(connectionFromAccessToken,query);
+            for (Name possibleName:possibleNames){
+                filterSet.addChildWillBePersisted(possibleName);
+            }
+        }
         int dotPos = query.indexOf(".");
         if (dotPos > 0) {//todo check that it's not part of a name
             Name possibleName = NameService.findByName(connectionFromAccessToken, query.substring(0, dotPos));
