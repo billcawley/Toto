@@ -835,12 +835,19 @@ public class ZKAzquoBookUtils {
                         try {
                             //List<String> possibleOptions = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
                             // the names selected off the pivot filter are jammed into a name with "az_" before the filter name
-                            List<String> choiceOptions = getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
+                              List<String> choiceOptions = getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
                             // This means if it's not empty and not full ignore the filter. Works as the permute function, which needs to be used with pivots,
                             // will constrain by this set, if created, falling back on the set it's passed if not. Means what's in the permute will be a subset of the filters
                             // does this mean a double check? That it's constrained by selection here in context and again by the permute? I suppose no harm.
                             //if (possibleOptions.size() != choiceOptions.size() && choiceOptions.size() > 0) {
-                            if (choiceOptions.size() > 0) {
+                            if (choiceOptions.size()==0){
+                                //create a list
+                                List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                        .getFilterListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "` children", "az_" + filter, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
+                                choiceOptions = getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
+
+                            }
+                            if (choiceOptions.size() > 0) {//conditional should now be irrelevant
                                 List<String> additionalContext = new ArrayList<>();
                                 additionalContext.add("az_" + filter);
                                 // so add it to the context. Could perhaps be one list that's added? I suppose it doesn't really matter.
