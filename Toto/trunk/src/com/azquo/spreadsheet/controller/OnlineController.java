@@ -149,7 +149,9 @@ public class OnlineController {
                 if ("1".equals(reportId)) {
                     if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                         // viewing the menu means remove any locks
-                        SpreadsheetService.unlockData(loggedInUser);
+                        if (loggedInUser.getDatabase() != null){
+                            SpreadsheetService.unlockData(loggedInUser);
+                        }
                         return "redirect:/api/ManageReports";
                     } else {
                         // db should have been set by the login, just set the default report
