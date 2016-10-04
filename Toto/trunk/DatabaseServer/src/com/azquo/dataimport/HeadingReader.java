@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 /**
  * Created by edward on 10/09/16.
  * <p>
- * To extract heading reading logic from DSImportService. All context logic is now resolved here and not passed to the BatchImporter.
+ * This class resolves the headers on a data import file. These headers along with lines of data are passed to the BatchImporter.
  * <p>
  */
 class HeadingReader {

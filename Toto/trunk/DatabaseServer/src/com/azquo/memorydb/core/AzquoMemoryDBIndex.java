@@ -8,13 +8,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Created by edward on 28/09/16.
+ * Extracted from AzquoMemoryDB by edward on 28/09/16.
  * <p>
- * Factoring off the name indexes. Queries to the index can be public, changes should be package private.
+ * This class is responsible for indexing of the AzquoMemoryDB. CUrrently names by attribute.
+ * Queries to the index can be public, changes should be package private.
  *
  * Thread safety is deferred to standard Java classes, should be fine.
  *
  * Doesn't know which memory database it's held against, I see no reason for it to currently.
+ *
+ * I'm using intern when adding strings to objects, it should be used wherever that string is going to hang around.
+ *
  */
 public class AzquoMemoryDBIndex {
 

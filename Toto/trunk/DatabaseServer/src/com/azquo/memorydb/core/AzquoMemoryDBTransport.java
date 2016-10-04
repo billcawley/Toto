@@ -15,16 +15,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Created by edward on 29/09/16.
+ * Extracted from AzquoMemoryDB by edward on 29/09/16.
  * <p>
- * I want to try to get the load/persist out of the main class. I'm a little bothered about memory visibility of the
+ * This class is responsible for loading an saving the AzquoMemoryDB. Currently MySQL is the only form of persistence.
+ *
+ * I'm a little bothered about memory visibility of the
  * populated memory db but breaking the loading off into this class does't affect the logic as it was before or which thread it was running in.
  * Persist sets are using Java concurrency classes, that will be fine, it's population of names for example that might be a concern.
  *
  * The issue is object publication - I think all is well or certainly no worse than before factoring this off.
  *
  * As mentioned in AzquoMemoryDB since all Names have to reference the instance of AzquoMemoryDB then to stop this escaping from the constructor one would
- * either need to assign the AzquoMemory dbs later
+ * either need to assign the AzquoMemory dbs later or somehow not put a reference in the entities which I don't think is practical.
  */
 class AzquoMemoryDBTransport {
 

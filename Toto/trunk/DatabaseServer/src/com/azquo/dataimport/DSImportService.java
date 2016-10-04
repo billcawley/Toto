@@ -3,7 +3,6 @@ package com.azquo.dataimport;
 import com.azquo.ThreadPools;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
@@ -24,9 +23,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  * <p>
  * Created by Edd on 20/05/15.
- * <p>
- * Has a fair bit of the logic that was in the original import service.
- * Note : large chunks of this were originally written by WFC and then refactored by EFC, spread across new files in this package.
+ *
+ * This class is the entry point for processing an uploaded data file. It will do basic preparation e.g. guessing the number of
+ * lines and possible headings that may be stored in the database. Simple sets files are dealt with in here.
+ * Otherwise other classes in this package are required to parse headers and read the lines.
  * <p>
  * Azquo has no schema like an SQL database but to load data a basic set structure needs to be defined
  * and rules for interpreting files need to be also. These two together effectively are the equivalent of an SQL schema.

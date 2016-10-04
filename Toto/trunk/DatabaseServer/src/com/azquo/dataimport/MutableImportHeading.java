@@ -10,7 +10,7 @@ import java.util.Set;
 /**
  * Created by edward on 09/09/16.
  * <p>
- * Extracted from DSImportService as the class was long. It represents the heading of a column in an import file.
+ * This represents the heading of a column in a data import file. Quite a bit of logic or modelling can be described there.
  * <p>
  * To multi thread I wanted this to be immutable but there are things that are only set after in context of other headings so I can't do this initially.
  * No problem, make this very simple and mutable then have an immutable version for the multi threaded stuff which is held against line.

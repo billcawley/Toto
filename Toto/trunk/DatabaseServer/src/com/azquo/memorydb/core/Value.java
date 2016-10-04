@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * User: cawley
  * Date: 22/10/13
  * Time: 22:31
- * To reflect a fundamental Azquo idea : a piece of data which has names attached
+ * This class represents a fundamental Azquo idea : a piece of data which has names attached.
  * Notable that the names list object here is what defines the relationship between values and names, value sets against each name is just a lookup
  * I'm using an array internally to save memory, there's an assumption it won't ever get that big. Like a CopyOnWriteArray but I'm saving a few bytes of memory.
  * <p>
@@ -133,7 +133,7 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     @Override
-    protected void entitySpecificSetNeedsPersisting() {
+    protected void setNeedsPersisting() {
         getAzquoMemoryDB().setValueNeedsPersisting(this);
     }
 

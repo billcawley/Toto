@@ -21,10 +21,16 @@ import java.util.concurrent.atomic.AtomicLong;
  * User: cawley
  * Date: 25/10/13
  * Time: 10:33
+ *
+ * This class represents the azquo database itself through more practically it's holding references to all entities by id and dealing with locking values.
+ *
+ * Also references to instances of this class are held against each entity in that database.
+ *
+ * The entities define how they relate to each other, that's not done here.
+ *
  * Created after it became apparent that Mysql in the way I'd arranged the objects didn't have a hope in hell of
  * delivering data fast enough. Leverage collections to implement Azquo spec.
  * <p>
- * I'm using intern when adding strings to objects, it should be used wherever that string is going to hang around.
  */
 
 public final class AzquoMemoryDB {
@@ -118,9 +124,7 @@ public final class AzquoMemoryDB {
         boolean memoryTrack = "true".equals(azquoProperties.getProperty("memorytrack"));
         // loading in here was synchronized but only one constructor can be run, should be ok.
         // internally all the loading uses future gets to this thread SHOULD all be in sync with loaded data.
-        // If it is then being jammed into a ConcurrentHashMap by the time it's called from said map all should be visible in memory correctly.
-
-
+        // It is then being jammed into a ConcurrentHashMap so by the time it's called from said map all should be visible in memory correctly.
         azquoMemoryDBTransport.loadData(memoryTrack);
         nextId.incrementAndGet(); // bump it up one, the logic later is get and increment;
         needsLoading = false;

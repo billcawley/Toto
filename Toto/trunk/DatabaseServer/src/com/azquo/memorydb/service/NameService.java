@@ -5,6 +5,7 @@ import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.StringUtils;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
@@ -1074,7 +1075,14 @@ public final class NameService {
                     parentInLaw.addChildWillBePersisted(name);
                     parentInLaw.removeFromChildrenWillBePersisted(child2);
                 }
-                name.transferValues(child2);
+
+                for (Value v : new ArrayList<>(child2.getValues())) { // make a copy before iterating as values will be removed from the original
+                    Set<Name> existingForValue = new HashSet<>(v.getNames());
+                    existingForValue.add(name);
+                    existingForValue.remove(child2);
+                    v.setNamesWillBePersisted(existingForValue);
+                }
+
                 child2.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, "duplicate-" + child2.getDefaultDisplayName());
                 rubbishBin.addChildWillBePersisted(child2);
             }

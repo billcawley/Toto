@@ -20,6 +20,9 @@ import java.util.concurrent.*;
  *
  * I want faster storing and loading of names, the old JSON won't cut it, too much garbage
  * adapted from standardDAO , should factor some stuff off at some point
+ *
+ * I'm using intern when adding strings to objects, it should be used wherever that string is going to hang around.
+ *
  */
 public class NameDAO {
 

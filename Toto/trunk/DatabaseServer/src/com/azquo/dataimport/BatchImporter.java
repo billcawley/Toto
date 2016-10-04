@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 /**
  * Extracted from DSImportService on by edward on 12/09/16.
  * <p>
- * Created by EFC to improve speed through multi threading.
+ * This is the class that actually processes each line in a file that's being imported. Designed to be called from a thread pool.
  * The basic file parsing is single threaded but since this can start while later lines are being read I don't think this is a problem.
  * That is to say on a large file the threads will start to stack up fairly quickly
  * Adapted to Callable from Runnable - I like the assurances this gives for memory synchronisation

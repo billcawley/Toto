@@ -13,7 +13,8 @@ import java.util.Date;
  * User: cawley
  * Date: 24/10/13
  * Time: 17:38
- * Attached to each value/name.
+ *
+ * Represents the Provenance, or Audit as we now call it, against a name or value.
  * Unlike Value and Name immutable. Currently the only one using the Json persist pattern,
  * Value and Name now have custom classes to improve speed on loading and saving.
  */
@@ -126,7 +127,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
     }
 
     @Override
-    protected void entitySpecificSetNeedsPersisting() {
+    protected void setNeedsPersisting() {
         getAzquoMemoryDB().setJsonEntityNeedsPersisting(PERSIST_TABLE, this);
     }
 }

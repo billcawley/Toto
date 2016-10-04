@@ -12,7 +12,7 @@ import java.util.Set;
  * User: cawley
  * Date: 17/10/13
  * Time: 09:23
- * After some thinking and learning about generics : entity objects should have as little reference to persistence (back to just mysql at the mo) as possible.
+ *
  * OK with the new in memory DB thing these objects form the in memory database - it would be awkward to make them immutable
  * as I'd kind of like to so instead we want to make it so that it's very clear that modification after creation will flag them to be persisted.
  * Also, these objects act as data objects hence each object SHOULD only exist in context of a azquo memory db, code here is designed to enforce this
@@ -116,12 +116,7 @@ public abstract class AzquoMemoryDBEntity {
         needsInserting = false;
     }
 
-    // will be fine for the moment, I might change how this is arranged later - this is here to keep control over needsInserting
-    void setNeedsPersisting(){
-        entitySpecificSetNeedsPersisting();
-    }
-
-    protected abstract void entitySpecificSetNeedsPersisting();
+    protected abstract void setNeedsPersisting();
 
     // public for the DAOs
     public final boolean getNeedsInserting() {
