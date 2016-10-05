@@ -962,7 +962,8 @@ public class DSSpreadsheetService {
         List<List<AzquoCell>> data = getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
                 , regionOptions, databaseAccessToken.getLanguages(), valueId, quiet);
         if (data.size() == 0) {
-            return new CellsAndHeadingsForDisplay(regionName, colHeadingsSource, null, new ArrayList<>(), null, colHeadingsSource, null, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
+            //when contextSource = null there is an error on attempting to save
+            return new CellsAndHeadingsForDisplay(regionName, colHeadingsSource, null, new ArrayList<>(), rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
         }
         List<List<CellForDisplay>> displayData = new ArrayList<>(data.size());
         // todo, think about race conditions here
@@ -2316,7 +2317,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                     final ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = currentRow.get(x).getListOfValuesOrNamesAndAttributeName();
                                     // need to check provenance - if it's the same user then we don't flag the changes, could be an overlapping data region
                                     boolean sameUser = false;
-                                    if (listOfValuesOrNamesAndAttributeName.getValues() != null && listOfValuesOrNamesAndAttributeName.getValues().size() == 1){
+                                    if (listOfValuesOrNamesAndAttributeName!= null && listOfValuesOrNamesAndAttributeName.getValues() != null && listOfValuesOrNamesAndAttributeName.getValues().size() == 1){
                                         if (listOfValuesOrNamesAndAttributeName.getValues().get(0).getProvenance().getUser().equals(user)){ // it's the same user!
                                             sameUser = true;
                                         }
@@ -2324,7 +2325,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                     if (!sameUser){
                                         changed = true;
                                         toReturn = "Data in region " + cellsAndHeadingsForDisplay.getRegion() + " modified ";// - cell  " + x + ", " + y;
-                                        if (listOfValuesOrNamesAndAttributeName.getValues() != null && !listOfValuesOrNamesAndAttributeName.getValues().isEmpty()) {
+                                        if (listOfValuesOrNamesAndAttributeName!= null && listOfValuesOrNamesAndAttributeName.getValues() != null && !listOfValuesOrNamesAndAttributeName.getValues().isEmpty()) {
                                             Provenance provenance = listOfValuesOrNamesAndAttributeName.getValues().iterator().next().getProvenance();
                                             toReturn += " by " + provenance.getUser() + " Dated: " + provenance.getTimeStamp();
                                             //toReturn += " provenance  " + listOfValuesOrNamesAndAttributeName.getValues().iterator().next().getProvenance();
