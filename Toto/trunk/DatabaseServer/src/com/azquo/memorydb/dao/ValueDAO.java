@@ -145,8 +145,13 @@ public class ValueDAO {
             }
         FastDAO.bulkDelete(persistenceName, toDelete, FASTVALUE);
         int insertCount = 0;
+        int insertHistoryCount = 0;
         for (Value value: values){
-            if (!value.getNeedsDeleting()) insertCount++;
+            if (!value.getNeedsDeleting()) {
+                insertCount++;
+            } else {
+                insertHistoryCount++;
+            }
         }
         List<Future> futureBatches = new ArrayList<>();
         for (Value value : values) {
@@ -160,7 +165,8 @@ public class ValueDAO {
             } else {
                 toHistory.add(value);
                 if (toHistory.size() == FastDAO.UPDATELIMIT) {
-                    futureBatches.add(executor.submit(new BulkValuesInserter(persistenceName, toInsert, VALUEHISTORY, insertCount, true)));
+                    insertHistoryCount -= FastDAO.UPDATELIMIT;
+                    futureBatches.add(executor.submit(new BulkValuesInserter(persistenceName, toHistory, VALUEHISTORY, insertHistoryCount, true)));
                     toHistory = new ArrayList<>(FastDAO.UPDATELIMIT);
                 }
             }
