@@ -648,7 +648,13 @@ public class ZKComposer extends SelectorComposer<Component> {
         for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZCOLUMNHEADINGS)) {
                 //surely there must be a better way of getting the first cell off a region!
-                String firstItem = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn()).getStringValue();
+                SCell sCell = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn());
+                String firstItem = "";
+                try {
+                    firstItem = sCell.getStringValue();
+                }catch(Exception e){
+                    //no need - firstItem = ""
+                }
                 if (firstItem.toLowerCase().startsWith("permute(")) {
                     String[] colHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
                     String displayColHeadingsString = "az_Display" + name.getName().substring(3);
