@@ -62,7 +62,7 @@ public final class Value extends AzquoMemoryDBEntity {
         this.names = newNames;
         // this should be fine being handled here while loading a db - was storing this against the name but too much space
         for (Name newName : this.names) {
-            newName.addToValues(this, true); // true here means don't check duplicates, we assume integrity in persistence
+            newName.checkValue(this); // true here means don't check duplicates, we assume integrity in persistence
         }
         getAzquoMemoryDB().addValueToDb(this);
     }
@@ -161,6 +161,16 @@ public final class Value extends AzquoMemoryDBEntity {
             buffer.putInt(name.getId());
         }
         return buffer.array();
+    }
+
+
+    public boolean hasName(Name name) {
+        for (Name test : names){
+            if (test == name){
+                return true;
+            }
+        }
+        return false;
     }
 
     static void printFunctionCountStats() {

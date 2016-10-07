@@ -84,6 +84,7 @@ public final class AzquoMemoryDB {
     private final Map<Value, String> valueLocks;
 
     // does this database need loading from the data store, a significant flag that affects rules for memory db entity instantiation for example
+    // should it be volatile or AtomicBoolean? Danger is that certain things are allowed while loading that are not after.
     private boolean needsLoading;
 
     // no need to max id at load, it's used for this

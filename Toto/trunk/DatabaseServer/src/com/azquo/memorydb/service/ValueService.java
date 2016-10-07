@@ -32,6 +32,11 @@ public final class ValueService {
 
     private static final String OPS = "+-*/";
 
+    private static final String APPLIESTO = "APPLIES TO";
+    private static final String INDEPENDENTOF = "INDEPENDENT OF";
+    private static final String USELEVEL = "USE LEVEL";
+    private static final String DEPENDENTON = "DEPENDENT ON";
+
     private static final Logger logger = Logger.getLogger(ValueService.class);
 
     private static AtomicInteger nameCompareCount = new AtomicInteger(0);
@@ -331,15 +336,15 @@ public final class ValueService {
                         debugInfo.append("\nCalculation from " + name.getDefaultDisplayName() + "\n");
                         debugInfo.append("\t" + calc + "\n");
                     }
-                    if (name.getAttribute(Name.APPLIESTO) != null) {
+                    if (name.getAttribute(APPLIESTO) != null) {
                         if (debugInfo != null) {
-                            debugInfo.append("\tApplies to " + name.getAttribute(Name.APPLIESTO) + "\n");
+                            debugInfo.append("\tApplies to " + name.getAttribute(APPLIESTO) + "\n");
                         }
                         // will be being looked up by default display name for the moment
-                        if (name.getAttribute(Name.APPLIESTO).trim().equalsIgnoreCase("lowest")) {
+                        if (name.getAttribute(APPLIESTO).trim().equalsIgnoreCase("lowest")) {
                             lowest = true;
                         } else {
-                            appliesToNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(Name.APPLIESTO));
+                            appliesToNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(APPLIESTO));
                         }
                     }
                     // then get the result of it, this used to be stored in RPCALC
@@ -477,11 +482,11 @@ public final class ValueService {
                     List<Name> seekList = new ArrayList<>(calcnames); // copy before modifying - may be scope for saving this later but in the mean tiem it was causing a problem
                     seekList.add(name);
                     boolean changed = false;
-                    if (name.getAttribute(Name.INDEPENDENTOF) != null) {// then this name formula term is saying it wants to exclude some names
+                    if (name.getAttribute(INDEPENDENTOF) != null) {// then this name formula term is saying it wants to exclude some names
                         if (debugInfo != null) {
-                            debugInfo.append("Independent of " + name.getAttribute(Name.INDEPENDENTOF) + " ");
+                            debugInfo.append("Independent of " + name.getAttribute(INDEPENDENTOF) + " ");
                         }
-                        Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.INDEPENDENTOF));
+                        Name independentOfSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(INDEPENDENTOF));
                         Iterator<Name> seekListIterator = seekList.iterator();
                         while (seekListIterator.hasNext()) {
                             final Name test = seekListIterator.next();
@@ -493,11 +498,11 @@ public final class ValueService {
                         }
                     }
                     // opposite of above I think - chance to factor?
-                    if (name.getAttribute(Name.DEPENDENTON) != null) {// then this name formula term is saying it wants to exclude some names
+                    if (name.getAttribute(DEPENDENTON) != null) {// then this name formula term is saying it wants to exclude some names
                         if (debugInfo != null) {
-                            debugInfo.append("Dependent on " + name.getAttribute(Name.DEPENDENTON) + " ");
+                            debugInfo.append("Dependent on " + name.getAttribute(DEPENDENTON) + " ");
                         }
-                        Name dependentOnSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(Name.DEPENDENTON));
+                        Name dependentOnSet = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(DEPENDENTON));
                         Iterator<Name> seekListIterator = seekList.iterator();
                         while (seekListIterator.hasNext()) {
                             final Name test = seekListIterator.next();
@@ -508,13 +513,13 @@ public final class ValueService {
                             }
                         }
                     }
-                    if (name.getAttribute(Name.USELEVEL) != null) {// will only be used in context of lowest level (as in calc on lowest level then sum)
+                    if (name.getAttribute(USELEVEL) != null) {// will only be used in context of lowest level (as in calc on lowest level then sum)
                         // what we're saying is check through the calc names at this lowest level and bump any up to the set specified by "USE LEVEL" if possible
                         if (debugInfo != null) {
-                            debugInfo.append("Use level " + name.getAttribute(Name.USELEVEL) + " ");
+                            debugInfo.append("Use level " + name.getAttribute(USELEVEL) + " ");
                         }
                         List<Name> newSeekList = new ArrayList<>(seekList.size()); // new one of same capacity, we'll be copying in changing as we go
-                        final Collection<Name> useLevelNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(Name.USELEVEL));
+                        final Collection<Name> useLevelNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(USELEVEL));
                         for (Name currentName : seekList) { // so for each of the names I need to see if they are in any of them are in the children of the use level names and if so switch to that use level name
                             boolean found = false;
                             for (Name useLevelName : useLevelNames) {

@@ -2,7 +2,6 @@ package com.azquo.memorydb.core;
 
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.service.NameService;
-import com.azquo.spreadsheet.StringUtils;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.nio.BufferOverflowException;
@@ -46,12 +45,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class Name extends AzquoMemoryDBEntity {
 
     public static final String CALCULATION = "CALCULATION";
-    public static final String APPLIESTO = "APPLIES TO";
-    public static final String INDEPENDENTOF = "INDEPENDENT OF";
-    public static final String USELEVEL = "USE LEVEL";
-    public static final String DEPENDENTON = "DEPENDENT ON";
     private static final String LOCAL = "LOCAL";
-    private static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
+    static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
 
     public static final char QUOTE = '`';
 
@@ -66,74 +61,6 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private Provenance provenance; // should be volatile? Don't care about being completely up to date but could a partially constructed object get in here?
 
-    /* Going to try for attributes as two arrays as this should save a lot of space vs a LinkedHashMap.
-    That is to say one makes a new one of these when updating attributes and then switch it in. Immutable, hence atomic
-    (but not necessarily immediately visible!) switch of two arrays if an object reference is out of date it will at least be two consistent arrays.
-
-    I have no problem with out of date versions as long as object contents remain consistent.
-
-    Gets to wrap with as list, don't want them altering the length anyway, this does have a bit of an overhead vs the old model but I don't think this will be a biggy.
-    Also I know that aslist on two of the gets doesn't make immutable, I consider this class "trusted". If bothered can use unmodifiableList.
-
-    Ok using arrays here has saved about 5% on a database's memory usage. They stay unless there's a big unfixable problem.
-
-    I've put the get in here, stops worry about an object switch in the middle of a get (if it were referenceing the keys and values externally it could go out of sync).
-
-    All fields final, means the constructor should complete before the object reference is generated and the object is published. Immutable as mentioned above.
-    */
-    private static final class NameAttributes {
-        private final String[] attributeKeys;
-        private final String[] attributeValues;
-
-        NameAttributes(List<String> attributeKeys, List<String> attributeValues) throws Exception {
-            if (attributeKeys.size() != attributeValues.size()) {
-                throw new Exception("Keys and values for attributes must match!");
-            }
-            this.attributeKeys = new String[attributeKeys.size()];
-            attributeKeys.toArray(this.attributeKeys);
-            this.attributeValues = new String[attributeValues.size()];
-            attributeValues.toArray(this.attributeValues);
-        }
-
-        // faster init - note this is kind of dangerous in that the arrays could be externally modified, used by the new fast loader
-        NameAttributes(String[] attributeKeys, String[] attributeValues) throws Exception {
-            this.attributeKeys = attributeKeys;
-            this.attributeValues = attributeValues;
-        }
-
-        NameAttributes() { // blank default. Fine.
-            attributeKeys = new String[0];
-            attributeValues = new String[0];
-        }
-
-        List<String> getAttributeKeys() {
-            return Arrays.asList(attributeKeys);
-        }
-
-        List<String> getAttributeValues() {
-            return Arrays.asList(attributeValues);
-        }
-
-        public String getAttribute(String attributeName) {
-            for (int i = 0; i < attributeKeys.length; i++) {
-                if (attributeKeys[i].equals(attributeName)) {
-                    return attributeValues[i];
-                }
-            }
-            return null;
-        }
-
-        Map<String, String> getAsMap() {
-            Map<String, String> attributesAsMap = new HashMap<>(attributeKeys.length);
-            int count = 0;
-            for (String key : attributeKeys) { // hmm, can still access and foreach on the internal array. Np I suppose!
-                attributesAsMap.put(key, attributeValues[count]);
-                count++;
-            }
-            return attributesAsMap;
-        }
-    }
-
     private NameAttributes nameAttributes; // since NameAttributes is immutable there's no need for this to be volatile I don't think. Could test performance, I suppose volatile is slightly preferable? Happens before?
 
     /* memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
@@ -144,10 +71,13 @@ public final class Name extends AzquoMemoryDBEntity {
      Based on recommendations here https://en.wikipedia.org/wiki/Double-checked_locking I switched the sets to volatile
      to protect against half instantiated object references, it seems (Damart test) to have had no performance effect.
      Arrays volatile too seems ok (there may be an effect importing).
+
+     Since parents are very rarely above the array threshold I've left them as array only
+
+     Currently all private but this forces some code into this class which ideally would be outside - a trade off that I'm not entirely happy about.
      */
     private volatile Set<Value> valuesAsSet;
     private volatile Value[] values;
-    private volatile Set<Name> parentsAsSet;
     private volatile Name[] parents;
     private volatile Set<Name> childrenAsSet;
     private volatile Name[] children;
@@ -161,7 +91,6 @@ public final class Name extends AzquoMemoryDBEntity {
         newNameCount.incrementAndGet();
         valuesAsSet = null;
         values = new Value[0]; // Turning these 3 lists to arrays, memory a priority
-        parentsAsSet = null;
         parents = new Name[0];
         childrenAsSet = null;
         children = new Name[0];
@@ -194,8 +123,7 @@ public final class Name extends AzquoMemoryDBEntity {
         valuesAsSet = noValues > ARRAYTHRESHOLD ? Collections.newSetFromMap(new ConcurrentHashMap<>(noValues)) : null; // should help loading - prepare the space
         // could values be nulled if the set is being used? The saving would be minor I think.
         values = new Value[noValues <= ARRAYTHRESHOLD ? noValues : 0]; // prepare the array, as long as this is taken into account later should be fine
-        parentsAsSet = noParents > ARRAYTHRESHOLD ? Collections.newSetFromMap(new ConcurrentHashMap<>(noParents)) : null;
-        parents = new Name[noParents <= ARRAYTHRESHOLD ? noParents : 0];
+        parents = new Name[noParents]; // no parents as set! as mentioned parents will very rarely big big and certainly not in the same way children and values are.
         childrenAsSet = null;// dealt with properly later
         children = new Name[0];
         getAzquoMemoryDB().addNameToDb(this);
@@ -207,22 +135,6 @@ public final class Name extends AzquoMemoryDBEntity {
     public String getDefaultDisplayName() {
         getDefaultDisplayNameCount.incrementAndGet();
         return nameAttributes.getAttribute(Constants.DEFAULT_DISPLAY_NAME);
-    }
-
-    private static AtomicInteger getFullyQualifiedDefaultDisplayNameCount = new AtomicInteger(0);
-
-    public String getFullyQualifiedDefaultDisplayName() {
-        if (getParents().isEmpty()) {
-            return QUOTE + getDefaultDisplayName() + QUOTE;
-        }
-        Collection<Name> parents = getParents();
-        String qualified = getDefaultDisplayName();
-        while (!parents.isEmpty()) {
-            Name parent = parents.iterator().next();
-            qualified = parent.getDefaultDisplayName() + StringUtils.MEMBEROF + qualified;
-            parents = parent.getParents();
-        }
-        return QUOTE + qualified + QUOTE;
     }
 
     // provenance immutable. If it were not then would need to clone
@@ -265,18 +177,23 @@ public final class Name extends AzquoMemoryDBEntity {
         return valuesAsSet != null || values.length > 0;
     }
 
-    // these two are becoming protected so they can be set by Value.
-    // Value will be the reference point for the value name link, the ones here are for fast lookup, no need for persistence
-    // following parent pattern re switching to sets etc
-    void addToValues(final Value value) throws Exception {
-        addToValues(value, false);
+    // replacing public addToValues and RemoveFromValues. Name should handle this internally.
+    // It will do this by checking the value that has been passed to it and seeing if it needs to take action
+    // Not putting up with public add and remove from values as before
+    void checkValue(final Value value) throws Exception {
+        if (value.hasName(this)) {
+            addToValues(value);
+        } else {
+            removeFromValues(value);
+        }
     }
 
     // no duplication is while loading, to reduce work
     private static AtomicInteger addToValuesCount = new AtomicInteger(0);
 
-    void addToValues(final Value value, boolean noDuplicationCheck) throws Exception {
+    void addToValues(final Value value) throws Exception {
         addToValuesCount.incrementAndGet();
+        boolean noDuplicationCheck = getAzquoMemoryDB().getNeedsLoading();
         checkDatabaseMatches(value);
         // may make this more clever as in clearing only if there's a change but not now
         valuesIncludingChildrenCache = null;
@@ -355,100 +272,16 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    // returns list now as that's what it is!
     private static AtomicInteger getParentsCount = new AtomicInteger(0);
 
-    public Collection<Name> getParents() {
+    public List<Name> getParents() {
         getParentsCount.incrementAndGet();
-        return parentsAsSet != null ? Collections.unmodifiableSet(parentsAsSet) : parents.length > 0 ? Collections.unmodifiableList(Arrays.asList(parents)) : Collections.emptyList();
-    }
-
-    public boolean hasParents() {
-        return parentsAsSet != null || parents.length > 0;
-    }
-
-    public boolean hasParentsAsSet() {
-        return parentsAsSet != null;
-    }
-
-    private static AtomicInteger getParentsAsSetCount = new AtomicInteger(0);
-
-    // if used incorrectly means NPE, I don't mind about this for the mo. We're allowing interpretSetTerm low level access to the list and sets to stop unnecessary collection copying in the query parser
-    public Set<Name> getParentsAsSet() {
-        getChildrenAsSetCount.incrementAndGet();
-        return Collections.unmodifiableSet(parentsAsSet);
-    }
-
-    private static AtomicInteger getParentsAsListCount = new AtomicInteger(0);
-
-    public List<Name> getParentsAsList() {
-        getParentsAsListCount.incrementAndGet();
         return parents.length > 0 ? Collections.unmodifiableList(Arrays.asList(parents)) : Collections.emptyList();
     }
 
-    // note these two should be called in synchronized blocks if acting on things like parents, children etc
-    // doesn't check contains, there is logic after the contains when adding which can't go in here (as in are we going to switch to set?)
-    private static AtomicInteger nameArrayAppendCount = new AtomicInteger(0);
-
-    private static Name[] nameArrayAppend(Name[] source, Name toAppend) {
-        nameArrayAppendCount.incrementAndGet();
-        Name[] newArray = new Name[source.length + 1];
-        System.arraycopy(source, 0, newArray, 0, source.length); // intellij simplified it to this, should be fine
-        newArray[source.length] = toAppend;
-        return newArray;
-    }
-
-    // I realise some of this stuff is probably very like the internal workings of ArrayList! Important here to save space with vanilla arrays I'm rolling my own.
-
-    private static AtomicInteger nameArrayAppend2Count = new AtomicInteger(0);
-
-    private static Name[] nameArrayAppend(Name[] source, Name toAppend, int position) {
-        nameArrayAppend2Count.incrementAndGet();
-        if (position >= source.length) {
-            return nameArrayAppend(source, toAppend);
-        }
-        Name[] newArray = new Name[source.length + 1];
-        for (int i = 0; i < source.length; i++) {
-            if (i <= position) {
-                newArray[i] = source[i];
-                if (i == position) {
-                    newArray[i + 1] = toAppend;
-                }
-            } else {
-                newArray[i + 1] = source[i];
-            }
-        }
-        return newArray;
-    }
-
-    // can check contains
-
-    private static AtomicInteger nameArrayRemoveIfExistsCount = new AtomicInteger(0);
-
-    private static Name[] nameArrayRemoveIfExists(Name[] source, Name toRemove) {
-        nameArrayRemoveIfExistsCount.incrementAndGet();
-        List<Name> sourceList = Arrays.asList(source);
-        if (sourceList.contains(toRemove)) {
-            return nameArrayRemove(source, toRemove);
-        } else {
-            return source;
-        }
-    }
-
-    // note, assumes it is in there! Otherwise will be an exception
-
-    private static AtomicInteger nameArrayRemoveCount = new AtomicInteger(0);
-
-    private static Name[] nameArrayRemove(Name[] source, Name toRemove) {
-        nameArrayRemoveCount.incrementAndGet();
-        Name[] newArray = new Name[source.length - 1];
-        int newArrayPosition = 0;// gotta have a separate index on the new array, they will go out of sync
-        for (Name name : source) { // do one copy skipping the element we want removed
-            if (name != toRemove) { // if it's not the one we want to return then copy
-                newArray[newArrayPosition] = name;
-                newArrayPosition++;
-            }
-        }
-        return newArray;
+    public boolean hasParents() {
+        return parents.length > 0;
     }
 
     private void addToParents(final Name name) throws Exception {
@@ -465,51 +298,29 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private void addToParents(final Name name, boolean noDuplicationCheck) throws Exception {
         addToParentsCount.incrementAndGet();
-        if (parentsAsSet != null) {
-            parentsAsSet.add(name);
-        } else {
-            synchronized (this) {
-                if (parentsAsSet != null) {
-                    parentsAsSet.add(name);
-                    return;
-                }
-                if (noDuplicationCheck || !Arrays.asList(parents).contains(name)) {
-                    if (parents.length >= ARRAYTHRESHOLD) {
-                        parentsAsSet = Collections.newSetFromMap(new ConcurrentHashMap<>(ARRAYTHRESHOLD + 1));
-                        parentsAsSet.addAll(Arrays.asList(parents));
-                        parentsAsSet.add(name);
-                    } else {
-                        if (parents.length != 0 && parents[parents.length - 1] == null) {
-                            for (int i = 0; i < parents.length; i++) {
-                                if (parents[i] == null) {
-                                    parents[i] = name;
-                                    break;
-                                }
-                            }
-                        } else {
-                            parents = nameArrayAppend(parents, name);
+        synchronized (this) {
+            if (noDuplicationCheck || !Arrays.asList(parents).contains(name)) {
+                if (parents.length != 0 && parents[parents.length - 1] == null) {
+                    for (int i = 0; i < parents.length; i++) {
+                        if (parents[i] == null) {
+                            parents[i] = name;
+                            break;
                         }
                     }
+                } else {
+                    parents = NameUtils.nameArrayAppend(parents, name);
                 }
+                setNeedsPersisting();
             }
         }
-        setNeedsPersisting();
     }
 
     private static AtomicInteger removeFromParentsCount = new AtomicInteger(0);
 
     private void removeFromParents(final Name name) throws Exception {
         removeFromParentsCount.incrementAndGet();
-        if (parentsAsSet != null) {
-            parentsAsSet.remove(name);
-        } else {
-            synchronized (this) { // just sync on this object to protect the lists
-                if (parentsAsSet != null) { // double check it, I'd forgotten to before! - reads being slightly out of date is fine, modification stuff isn't
-                    parentsAsSet.remove(name);
-                    return;
-                }
-                parents = nameArrayRemoveIfExists(parents, name);
-            }
+        synchronized (this) { // just sync on this object to protect the lists
+            parents = NameUtils.nameArrayRemoveIfExists(parents, name);
         }
         setNeedsPersisting();
     }
@@ -521,7 +332,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public Collection<Name> findAllParents() {
         findAllParentsCount.incrementAndGet();
-        final Set<Name> allParents = HashObjSets.newMutableSet(); // should be ok to use these now
+        final Set<Name> allParents = HashObjSets.newMutableSet(); // should be ok to use these now - maybe use updateable map?
         findAllParents(this, allParents);
         return allParents;
     }
@@ -533,13 +344,7 @@ public final class Name extends AzquoMemoryDBEntity {
     public static void findAllParents(Name name, final Set<Name> allParents) {
         findAllParents2Count.incrementAndGet();
 
-        if (name.parentsAsSet != null) {
-            for (Name parent : name.parentsAsSet) { // we'll allow this kind of access in here
-                if (allParents.add(parent)) {
-                    findAllParents(parent, allParents);
-                }
-            }
-        } else if (name.parents.length > 0) {
+        if (name.parents.length > 0) {
             for (int i = 0; i < name.parents.length; i++) {
                 if (name.parents[i] == null) { // having fixed a bug this should be rare now
                     System.out.println("DATABASE CORRUPTION " + name.getDefaultDisplayName() + " id " + name.getId() + " has a null parent");
@@ -556,17 +361,7 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger memberNameCount = new AtomicInteger(0);
 
     public static Name memberName(Name element, Name topSet) {
-        if (element.parentsAsSet != null) {
-            for (Name parent : element.parentsAsSet) {
-                if (parent.equals(topSet)) {
-                    return element;
-                }
-                Name ancestor = memberName(parent, topSet);
-                if (ancestor != null) {
-                    return ancestor;
-                }
-            }
-        } else if (element.parents.length > 0) {
+        if (element.parents.length > 0) {
             for (int i = 0; i < element.parents.length; i++) {
                 if (element.parents[i].equals(topSet)) {
                     return element;
@@ -619,17 +414,15 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         } else {
             if (currentLevel == (level - 1)) { // then we want the next one up, just add it all . . .
-                if (name.parentsAsSet != null) {
-                    namesFound.addAll(name.parentsAsSet);
-                } else if (name.parents.length > 0) {
+                if (name.parents.length > 0) {
                     //noinspection ManualArrayToCollectionCopy, surpressing as I believe this is a little more efficient in terms of not instantiating an Iterator
                     for (int i = 0; i < name.parents.length; i++) {
                         namesFound.add(name.parents[i]);
                     }
                 }
             } else {
-                for (Name child : name.getParents()) {
-                    addParentNames(child, namesFound, currentLevel + 1, level);
+                for (Name parent : name.parents) {
+                    addParentNames(parent, namesFound, currentLevel + 1, level);
                 }
             }
         }
@@ -642,10 +435,10 @@ public final class Name extends AzquoMemoryDBEntity {
     public Name findATopParent() {
         findATopParentCount.incrementAndGet();
         if (hasParents()) {
-            Name parent = getParents().iterator().next();
+            Name parent = parents[0];
             while (parent != null) { // can this ever be null? I'd say it shouldn't be. Logic works fine though.
                 if (parent.hasParents() && parent.getAttribute(LOCAL) == null) {
-                    parent = parent.getParents().iterator().next();
+                    parent = parent.parents[0];
                 } else {
                     return parent; // it has no parents, must be top
                 }
@@ -865,11 +658,11 @@ public final class Name extends AzquoMemoryDBEntity {
                         // children new arraylist?;
                     } else {
                         if (position != 0) {
-                            children = nameArrayAppend(children, child, position);
+                            children = NameUtils.nameArrayAppend(children, child, position);
                         } else {
                             // unlike with parents and values we don't want to look for an empty initialised array here,
                             // children can be dealt with more cleanly in the linking (as in we'll make the array to size in one shot there after the names have been set in the maps in AzquoMemoryDB)
-                            children = nameArrayAppend(children, child);
+                            children = NameUtils.nameArrayAppend(children, child);
                         }
                     }
                 }
@@ -913,7 +706,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (childrenAsSet != null) {
                     childrenAsSet.remove(name);
                 } else {
-                    children = nameArrayRemove(children, name); // note this will fail if it turns out children does not contain the name. Should be ok.
+                    children = NameUtils.nameArrayRemove(children, name); // note this will fail if it turns out children does not contain the name. Should be ok.
                 }
                 setNeedsPersisting();
             }
@@ -932,13 +725,9 @@ public final class Name extends AzquoMemoryDBEntity {
         return Collections.unmodifiableMap(nameAttributes.getAsMap());
     }
 
-    // to be used in loading - could cause corruption so protected. In fact this if for indexing in AzquoMemoryDB, using getAttributes() above would be much better but that means garbage, need a solution to that TODO
+    // external access hence make unmodifiable. Currently just for a util function in azquomemorydb
     List<String> getAttributeKeys() {
-        return nameAttributes.getAttributeKeys();
-    }
-
-    List<String> getAttributeValues() {
-        return nameAttributes.getAttributeValues();
+        return Collections.unmodifiableList(nameAttributes.getAttributeKeys());
     }
 
     // I think plain old synchronized here is safe enough if not that fast
@@ -1021,7 +810,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public synchronized void clearAttributes() throws Exception {
         clearAttributesCount.incrementAndGet();
-        for (String attribute : nameAttributes.attributeKeys) { // nameAttributes will be reassigned by the function but that should be ok, hang onto the key set as it was at the beginning
+        for (String attribute : nameAttributes.getAttributeKeys()) { // nameAttributes will be reassigned by the function but that should be ok, hang onto the key set as it was at the beginning
             removeAttributeWillBePersisted(attribute);
         }
     }
@@ -1032,7 +821,7 @@ public final class Name extends AzquoMemoryDBEntity {
     private static String findParentAttributes(Name child, String attributeName, Set<Name> checked) {
         findParentAttributesCount.incrementAndGet();
         attributeName = attributeName.trim().toUpperCase();
-        for (Name parent : child.getParents()) {
+        for (Name parent : child.parents) {
             if (parent == null) {
                 System.out.println("null parent on " + child.getDefaultDisplayName());
             } else {
@@ -1060,7 +849,6 @@ public final class Name extends AzquoMemoryDBEntity {
         return getAttribute(attributeName, true, HashObjSets.newMutableSet());
     }
 
-
     private static AtomicInteger getAttribute2Count = new AtomicInteger(0);
 
     public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked) {
@@ -1075,15 +863,6 @@ public final class Name extends AzquoMemoryDBEntity {
         return null;
     }
 
-/*    public boolean hasInParentTree(final Name testParent) {
-        for (Name parent : getParents()) {
-            if (testParent == parent || parent.hasInParentTree(testParent)) {
-                return true;
-            }
-        }
-        return false;
-    }*/
-
     @Override
     final protected void setNeedsPersisting() {
         getAzquoMemoryDB().setNameNeedsPersisting(this);
@@ -1095,17 +874,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public String getAttributesForFastStore() {
         getAttributesForFastStoreCount.incrementAndGet();
-        StringBuilder stringBuilder = new StringBuilder();
-        NameAttributes localNameAttributes = nameAttributes; // grab a reference just to be safe
-        for (int i = 0; i < localNameAttributes.attributeKeys.length; i++) {
-            if (i != 0) {
-                stringBuilder.append(ATTRIBUTEDIVIDER);
-            }
-            stringBuilder.append(localNameAttributes.attributeKeys[i]);
-            stringBuilder.append(ATTRIBUTEDIVIDER);
-            stringBuilder.append(localNameAttributes.attributeValues[i]);
-        }
-        return stringBuilder.toString();
+        return nameAttributes.getAttributesForFastStore();
     }
 
     public byte[] getChildrenIdsAsBytes() {
@@ -1210,7 +979,7 @@ public final class Name extends AzquoMemoryDBEntity {
             for (Name child : getChildren()) {
                 removeFromChildrenWillBePersisted(child);
             }
-            for (String attribute : getAttributeKeys()) {
+            for (String attribute : nameAttributes.getAttributeKeys()) {
                 setAttributeWillBePersisted(attribute, null); // simple way to clear it from the indexes
             }
         }
@@ -1229,15 +998,10 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("newNameCount\t\t\t\t" + newNameCount.get());
         System.out.println("newNameCount3\t\t\t\t" + newName3Count.get());
         System.out.println("getDefaultDisplayNameCount\t\t\t\t" + getDefaultDisplayNameCount.get());
-        System.out.println("getFullyQualifiedDefaultDisplayNameCount\t\t\t\t" + getFullyQualifiedDefaultDisplayNameCount.get());
         System.out.println("getValuesCount\t\t\t\t" + getValuesCount.get());
         System.out.println("addToValuesCount\t\t\t\t" + addToValuesCount.get());
         System.out.println("removeFromValuesCount\t\t\t\t" + removeFromValuesCount.get());
         System.out.println("getParentsCount\t\t\t\t" + getParentsCount.get());
-        System.out.println("nameArrayAppendCount\t\t\t\t" + nameArrayAppendCount.get());
-        System.out.println("nameArrayAppend2Count\t\t\t\t" + nameArrayAppend2Count.get());
-        System.out.println("nameArrayRemoveIfExistsCount\t\t\t\t" + nameArrayRemoveIfExistsCount.get());
-        System.out.println("nameArrayRemoveCount\t\t\t\t" + nameArrayRemoveCount.get());
         System.out.println("addToParentsCount\t\t\t\t" + addToParentsCount.get());
         System.out.println("removeFromParentsCount\t\t\t\t" + removeFromParentsCount.get());
         System.out.println("findAllParentsCount\t\t\t\t" + findAllParentsCount.get());
@@ -1267,8 +1031,6 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("getChildrenIdsAsBytesCount\t\t\t\t" + getChildrenIdsAsBytesCount.get());
         System.out.println("getChildrenAsSet\t\t\t\t" + getChildrenAsSetCount.get());
         System.out.println("getChildrenAsList\t\t\t\t" + getChildrenAsListCount.get());
-        System.out.println("getParentsAsSet\t\t\t\t" + getParentsAsSetCount.get());
-        System.out.println("getParentsAsList\t\t\t\t" + getParentsAsListCount.get());
         System.out.println("linkCount\t\t\t\t" + linkCount.get());
         System.out.println("deleteCount\t\t\t\t" + deleteCount.get());
     }
@@ -1281,10 +1043,6 @@ public final class Name extends AzquoMemoryDBEntity {
         addToValuesCount.set(0);
         removeFromValuesCount.set(0);
         getParentsCount.set(0);
-        nameArrayAppendCount.set(0);
-        nameArrayAppend2Count.set(0);
-        nameArrayRemoveIfExistsCount.set(0);
-        nameArrayRemoveCount.set(0);
         addToParentsCount.set(0);
         removeFromParentsCount.set(0);
         findAllParentsCount.set(0);
@@ -1314,8 +1072,6 @@ public final class Name extends AzquoMemoryDBEntity {
         getChildrenIdsAsBytesCount.set(0);
         getChildrenAsSetCount.set(0);
         getChildrenAsListCount.set(0);
-        getParentsAsSetCount.set(0);
-        getParentsAsListCount.set(0);
         linkCount.set(0);
         deleteCount.set(0);
     }

@@ -1667,7 +1667,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                             if (rowHeadings.get(colNo1).getName() == null) {
                                 cellQuery = "";
                             } else {
-                                cellQuery = cellQuery.replace(fillerAll, rowHeadings.get(colNo1).getName().getFullyQualifiedDefaultDisplayName()); // we assume the row heading has a "legal" description. Probably a name identifier !1234
+                                cellQuery = cellQuery.replace(fillerAll, NameUtils.getFullyQualifiedDefaultDisplayName(rowHeadings.get(colNo1).getName())); // we assume the row heading has a "legal" description. Probably a name identifier !1234
                             }
                         }
                         filler = (colNo1 + 2) + "";
@@ -1677,7 +1677,8 @@ Callable interface sorts the memory "happens before" using future gets which run
             String COLUMNHEADING = "[COLUMNHEADING]";
             String COLUMNHEADINGLOWERCASE = "[columnheading]";
             if (!columnHeadings.isEmpty() && (cellQuery.contains(COLUMNHEADING) || cellQuery.contains(COLUMNHEADINGLOWERCASE))) {
-                cellQuery = cellQuery.replace(COLUMNHEADING, columnHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()).replace(COLUMNHEADINGLOWERCASE, columnHeadings.get(0).getName().getFullyQualifiedDefaultDisplayName()); // and now the col headings
+                cellQuery = cellQuery.replace(COLUMNHEADING, NameUtils.getFullyQualifiedDefaultDisplayName(columnHeadings.get(0).getName()))
+                                     .replace(COLUMNHEADINGLOWERCASE, NameUtils.getFullyQualifiedDefaultDisplayName(columnHeadings.get(0).getName())); // and now the col headings
             }
             if (debugInfo != null) {
                 debugInfo.append("\nFunction\n\n");

@@ -1,7 +1,6 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.dataimport.BatchImporter;
-import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
@@ -61,6 +60,7 @@ public final class NameService {
     private static final String languageIndicator = "<-";
 
     private static AtomicInteger nameCompareCount = new AtomicInteger(0);
+
 
     private static final Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = (n1, n2) -> {
         nameCompareCount.incrementAndGet();
@@ -515,11 +515,7 @@ public final class NameService {
     private static NameSetList findParentsAtLevel(final Name name, int level) throws Exception {
         findChildrenAtLevelCount.incrementAndGet();
         if (level == 1) { // then no need to get clever, just return the parents
-            if (name.hasParentsAsSet()) {
-                return new NameSetList(name.getParentsAsSet(), null, false);
-            } else {
-                return new NameSetList(null, name.getParentsAsList(), false);
-            }
+            return new NameSetList(null, name.getParents(), false);
         }
         // parents are not ordered like children, use a Set
         Set<Name> namesFoundSet = HashObjSets.newMutableSet();
