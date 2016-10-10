@@ -1868,6 +1868,14 @@ Callable interface sorts the memory "happens before" using future gets which run
                     }
                     listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
                     String attributeResult = ValueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked);
+                    if (locked.isTrue){ // check there' wasn't unlocked, this overrides the rule in findValueForHeadings
+                        for (DataRegionHeading lockCheck : headingsForThisCell) {
+                            if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED){
+                                locked.isTrue = false;
+                                break;
+                            }
+                        }
+                    }
                     try {
                         doubleValue = Double.parseDouble(attributeResult);
                     } catch (Exception e) {
