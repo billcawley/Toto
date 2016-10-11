@@ -767,6 +767,11 @@ public class DSSpreadsheetService {
 
     public static List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws Exception {
         //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
+        boolean forceFirstLevel = false;
+        if (query.toLowerCase().trim().endsWith("showparents")) { // a hack to force simple showing of parents regardless
+            query = query.substring(0, query.indexOf("showparents"));
+            forceFirstLevel = true;
+        }
         List<String> justUserNameLanguages = new ArrayList<>();
         justUserNameLanguages.add(userName);
         final AzquoMemoryDBConnection connectionFromAccessToken = getConnectionFromAccessToken(databaseAccessToken);
@@ -789,11 +794,6 @@ public class DSSpreadsheetService {
             }
         }
         //final Collection<Name> names = NameService.parseQuery(connectionFromAccessToken, query, languages);
-        boolean forceFirstLevel = false;
-        if (query.toLowerCase().trim().endsWith("showparents")) { // a hack to force simple showing of parents regardless
-            query = query.substring(0, query.indexOf("showparents"));
-            forceFirstLevel = true;
-        }
         return getFilterPairsFromUniqueNames(getUniqueNames(NameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel), filterSet);
     }
 
