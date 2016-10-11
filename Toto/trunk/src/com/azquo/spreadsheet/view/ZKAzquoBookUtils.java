@@ -575,9 +575,9 @@ public class ZKAzquoBookUtils {
                     }
                 }
             }
-// commenting locking for the moment
+// commenting just this line for the mo
             // now protect. Doing so before seems to cause problems
-            Ranges.range(sheet).protectSheet("azquo",
+/*            Ranges.range(sheet).protectSheet("azquo",
                     true, //allowSelectingLockedCells
                     true, //allowSelectingUnlockedCells,
                     true, //allowFormattingCells
@@ -593,7 +593,7 @@ public class ZKAzquoBookUtils {
                     true, //allowUsingPivotTables
                     true, //drawingObjects
                     true  //boolean scenarios
-            );
+            );*/
             // all data for that sheet should be populated
             // snap the charts - currently just top left, do bottom right also?
             for (SChart chart : sheet.getInternalSheet().getCharts()) {
