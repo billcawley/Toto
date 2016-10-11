@@ -41,6 +41,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * Also I'm using Double Checked Locking. With volatile DCL is correct according to the JMM,
  * Given that synchronization is not inherently expensive it might be worth considering how much places where I'm using DCL might actually be contended much.
+ *
+ * I've extracted NameAttributes and a few static functions but there's still too much code in here. Values and children switching between arrays and sets is a problem.
  */
 public final class Name extends AzquoMemoryDBEntity {
 
@@ -54,6 +56,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // just a cache while the names by id map is being populated. I experimented with various ideas e.g. a parent cache also, this seemed the best compromise
     // it may be possible with some kind of hack to take this pointer out of name if we're really pushing memory limits and want to save 8 bytes
+    // also this would extract the linking code I think
 
     private byte[] childrenCache = null;
 
@@ -924,7 +927,7 @@ public final class Name extends AzquoMemoryDBEntity {
         linkCount.incrementAndGet();
         if (getAzquoMemoryDB().getNeedsLoading() && childrenCache != null) { // if called and these conditions are not true then there's a problem
             synchronized (this) {
-                // it's things like this that I believe will be way faster and lighter ongarbage than the old json method
+                // it's things like this that I believe will be way faster and lighter on garbage than the old json method
                 int noChildren = childrenCache.length / 4;
                 ByteBuffer byteBuffer = ByteBuffer.wrap(childrenCache);
                 if (noChildren > ARRAYTHRESHOLD) {

@@ -1,6 +1,5 @@
 package com.azquo.memorydb.dao;
 
-import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.AzquoMemoryDBEntity;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;

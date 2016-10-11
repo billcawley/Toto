@@ -235,7 +235,6 @@ class AzquoMemoryDBTransport {
             }
             marker = System.currentTimeMillis();
             from = 0;
-            NameDAO.zapAdditive(persistenceName);
             maxIdForTable = NameDAO.findMaxId(persistenceName);
             futureBatches = new ArrayList<>();
             while (from < maxIdForTable) {

@@ -17,11 +17,10 @@ import java.util.concurrent.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by edward on 01/10/15.
- *
+ * <p>
  * I want faster storing and loading of values, adapted from the NameDAO
- *
  */
 public class ValueDAO {
 
@@ -41,11 +40,11 @@ public class ValueDAO {
         @Override
         public Value mapRow(final ResultSet rs, final int row) throws SQLException {
             Blob namesBlob = rs.getBlob(NAMES);
-            byte[] namesBytes = namesBlob.getBytes(1, (int)namesBlob.length()); // from 1, seems non standard!
+            byte[] namesBytes = namesBlob.getBytes(1, (int) namesBlob.length()); // from 1, seems non standard!
             namesBlob.free(); // apparently a good idea
-            try{
+            try {
                 return new Value(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(TEXT), namesBytes);
-            } catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             return null;
@@ -64,11 +63,11 @@ public class ValueDAO {
         @Override
         public ValueHistory mapRow(final ResultSet rs, final int row) throws SQLException {
             Blob namesBlob = rs.getBlob(NAMES);
-            byte[] namesBytes = namesBlob.getBytes(1, (int)namesBlob.length()); // from 1, seems non standard!
+            byte[] namesBytes = namesBlob.getBytes(1, (int) namesBlob.length()); // from 1, seems non standard!
             namesBlob.free(); // apparently a good idea
-            try{
+            try {
                 return new ValueHistory(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(TEXT), namesBytes);
-            } catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             return null;
@@ -108,7 +107,7 @@ public class ValueDAO {
                     namedParams.addValue(FastDAO.ID + count, value.getId());
                     namedParams.addValue(PROVENANCEID + count, value.getProvenance().getId());
                     namedParams.addValue(TEXT + count, value.getText());
-                    if (sortNameIds){
+                    if (sortNameIds) {
                         namedParams.addValue(NAMES + count, value.getNameIdsAsBytesSorted());
                     } else {
                         namedParams.addValue(NAMES + count, value.getNameIdsAsBytes());
@@ -134,19 +133,19 @@ public class ValueDAO {
         List<Value> toInsert = new ArrayList<>(FastDAO.UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         List<Value> toHistory = new ArrayList<>(FastDAO.UPDATELIMIT); // to move to this history table
         // ok since we're not doing updates but rather delete before reinsert the delete will have to go first. I don't think this will be a big problem
-            for (Value value : values) {
-                if (!value.getNeedsInserting()) { // either flagged for delete or it exists already and will be reinserted, delete it
-                    toDelete.add(value);
-                    if (toDelete.size() == FastDAO.UPDATELIMIT) {
-                        FastDAO.bulkDelete(persistenceName, toDelete, FASTVALUE);
-                        toDelete = new ArrayList<>(FastDAO.UPDATELIMIT);
-                    }
+        for (Value value : values) {
+            if (!value.getNeedsInserting()) { // either flagged for delete or it exists already and will be reinserted, delete it
+                toDelete.add(value);
+                if (toDelete.size() == FastDAO.UPDATELIMIT) {
+                    FastDAO.bulkDelete(persistenceName, toDelete, FASTVALUE);
+                    toDelete = new ArrayList<>(FastDAO.UPDATELIMIT);
                 }
             }
+        }
         FastDAO.bulkDelete(persistenceName, toDelete, FASTVALUE);
         int insertCount = 0;
         int insertHistoryCount = 0;
-        for (Value value: values){
+        for (Value value : values) {
             if (!value.getNeedsDeleting()) {
                 insertCount++;
             } else {
@@ -173,12 +172,12 @@ public class ValueDAO {
         }
         futureBatches.add(executor.submit(new BulkValuesInserter(persistenceName, toInsert, FASTVALUE, 0, false)));
         futureBatches.add(executor.submit(new BulkValuesInserter(persistenceName, toHistory, VALUEHISTORY, 0, true)));
-        for (Future<?> futureBatch : futureBatches){
+        for (Future<?> futureBatch : futureBatches) {
             futureBatch.get(1, TimeUnit.HOURS);
         }
     }
 
-    static void createFastTableIfItDoesntExist(final String databaseName){
+    static void createFastTableIfItDoesntExist(final String databaseName) {
         JdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + FASTVALUE + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +
@@ -190,7 +189,7 @@ public class ValueDAO {
 
     // currently a copy of the value table with additional index but for the purposes of lookup the name ids need to be ordered
 
-    public static void createValueHistoryTableIfItDoesntExist(final String databaseName){
+    public static void createValueHistoryTableIfItDoesntExist(final String databaseName) {
         JdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + VALUEHISTORY + "` (\n" +
                 "`id` int(11) NOT NULL,\n" +
                 "  `provenance_id` int(11) NOT NULL,\n" +
@@ -210,7 +209,7 @@ public class ValueDAO {
         return FastDAO.findMaxId(persistenceName, FASTVALUE);
     }
 
-    public static List<ValueHistory> getHistoryForValue(final AzquoMemoryDB azquoMemoryDB, Value value){
+    public static List<ValueHistory> getHistoryForValue(final AzquoMemoryDB azquoMemoryDB, Value value) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(NAMES, value.getNameIdsAsBytesSorted());
         return JdbcTemplateUtils.query("Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + VALUEHISTORY + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + VALUEHISTORY + "` where " + NAMES + " = :" + NAMES, namedParams, new ValueHistoryRowMapper(azquoMemoryDB));

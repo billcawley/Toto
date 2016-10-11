@@ -51,7 +51,7 @@ public final class Value extends AzquoMemoryDBEntity {
         super(azquoMemoryDB, id);
         newValue3Count.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId);
-        this.text = text.intern();
+        this.text = text.intern(); // important for memory, use the string pool where there will be any strings that are simple numbers
         int noNames = namesCache.length / 4;
         ByteBuffer byteBuffer = ByteBuffer.wrap(namesCache);
         // we assume the names are loaded (though they may not be linked yet)
@@ -164,7 +164,7 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
 
-    public boolean hasName(Name name) {
+    boolean hasName(Name name) {
         for (Name test : names){
             if (test == name){
                 return true;

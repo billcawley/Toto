@@ -13,13 +13,12 @@ import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 20/05/15.
- *
+ * <p>
  * New admin stuff, we're no longer doing it via the rendered excel files. Basic functions called from the controllers
- *
+ * <p>
  * It seems the copy stuff was unused?? Commenting for the moment
- *
  */
 public class DSAdminService {
 
@@ -89,7 +88,7 @@ public class DSAdminService {
     }
 
     public static void emptyDatabase(String persistenceName) throws Exception {
-        if (AzquoMemoryDB.isDBLoaded(persistenceName)){ // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
+        if (AzquoMemoryDB.isDBLoaded(persistenceName)) { // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
             final AzquoMemoryDB azquoMemoryDB = AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null);
             azquoMemoryDB.synchronizedClear();
             AzquoMemoryDB.removeDBFromMap(persistenceName);
@@ -99,11 +98,11 @@ public class DSAdminService {
     }
 
     public static void emptyDatabaseInPersistence(String persistenceName) throws Exception {
-            MySQLDatabaseManager.emptyDatabase(persistenceName);
+        MySQLDatabaseManager.emptyDatabase(persistenceName);
     }
 
     public static void dropDatabase(String persistenceName) throws Exception {
-        if (AzquoMemoryDB.isDBLoaded(persistenceName)){ // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
+        if (AzquoMemoryDB.isDBLoaded(persistenceName)) { // then persist via the loaded db, synchronizes thus solving the "delete or empty while persisting" problem
             final AzquoMemoryDB azquoMemoryDB = AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null);
             azquoMemoryDB.synchronizedDrop();
             AzquoMemoryDB.removeDBFromMap(persistenceName);
@@ -113,11 +112,11 @@ public class DSAdminService {
     }
 
     public static void dropDatabaseInPersistence(String persistenceName) throws Exception {
-            MySQLDatabaseManager.dropDatabase(persistenceName);
+        MySQLDatabaseManager.dropDatabase(persistenceName);
     }
 
     public static void createDatabase(final String persistenceName) throws Exception {
-        if (AzquoMemoryDB.isDBLoaded(persistenceName)){
+        if (AzquoMemoryDB.isDBLoaded(persistenceName)) {
             throw new Exception("cannot create new memory database one attached to that mysql database " + persistenceName + " already exists");
         }
         MySQLDatabaseManager.createNewDatabase(persistenceName);

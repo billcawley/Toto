@@ -350,6 +350,7 @@ public final class ImportService {
             reportName = ZKAzquoBookUtils.getSnameCell(reportRange).getStringValue();
         }
         if (reportName != null) {
+            // ok it's a report! Sort out the issue of duplicate names . . . TODO
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
                 return uploadReport(loggedInUser, tempName, fileName, reportName, "");
             }
