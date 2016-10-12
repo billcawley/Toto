@@ -403,6 +403,8 @@ public class ZKComposer extends SelectorComposer<Component> {
                         String originalHeading = cellsAndHeadingsForDisplay.getColumnHeadings().get(localRow).get(localCol);
                         if (originalHeading != null) {
                             //← → ↑ ↓ ↔ ↕
+                            //new behaviour, store the column number rather than the name. - WFC
+                            originalHeading = localCol + "";
                             if (chosen.endsWith("↑")) {
                                 userRegionOptions.setSortColumn(originalHeading);
                                 userRegionOptions.setSortColumnAsc(true);
