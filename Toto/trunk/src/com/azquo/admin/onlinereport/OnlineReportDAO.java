@@ -55,7 +55,7 @@ public class OnlineReportDAO {
                         , rs.getString(REPORTNAME)
                         , rs.getString(FILENAME)
                         , rs.getString(EXPLANATION)
-                        ,"");
+                        );
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

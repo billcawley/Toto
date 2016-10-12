@@ -236,7 +236,7 @@ this may now not work at all, perhaps delete?
         }
         // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {
-            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0,0, "", "No reports found", "", "", "");
+            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0,0, "", "No reports found", "", "");
             reportList.add(notFound);
         }
         return reportList;
@@ -322,7 +322,7 @@ this may now not work at all, perhaps delete?
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         if (onlineReport != null && ((loggedInUser.getUser().isAdministrator() && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId())
                 || (loggedInUser.getUser().isDeveloper() && onlineReport.getBusinessId() == loggedInUser.getUser().getId()))) {
-            String fullPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename();
+            String fullPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilenameForDisk();
             File file = new File(fullPath);
             if (file.exists()) {
                 file.delete();

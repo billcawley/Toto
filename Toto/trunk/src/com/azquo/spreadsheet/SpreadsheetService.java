@@ -320,7 +320,6 @@ public class SpreadsheetService {
             OnlineReport onlineReport = OnlineReportDAO.findById(reportSchedule.getReportId());
             Database database = DatabaseDAO.findById(reportSchedule.getDatabaseId());
             if (onlineReport != null && database != null) {
-                onlineReport.setPathname(database.getPersistenceName());
                 List<User> users = UserDAO.findForBusinessId(database.getBusinessId());
                 User user = null;
                 for (User possible : users) {
@@ -329,7 +328,12 @@ public class SpreadsheetService {
                     }
                 }
                 // similar to normal loading
-                String bookPath = getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
+                Business b = BusinessDAO.findById(user.getBusinessId());
+                if (b == null){
+                    throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
+                }
+                String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
+                String bookPath = getHomeDir() + ImportService.dbPath + businessDirectory + "/onlinereports/" + onlineReport.getFilenameForDisk();
 //                final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name"); // the old temporary one, should be fixed now in the ZK libraries
                 final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                 // the first two make sense. Little funny about the second two but we need a reference to these
@@ -338,11 +342,6 @@ public class SpreadsheetService {
                 DatabaseServer databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
                 // assuming no read permissions?
                 // I should factor these few lines really
-                Business b = BusinessDAO.findById(user.getBusinessId());
-                if (b == null){
-                    throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
-                }
-                String businessDirectory = (b.getBusinessName() + "               ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
                 LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, null, null, businessDirectory);
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one

@@ -110,9 +110,6 @@ public class OnlineController {
                             }
                         }
                 }
-                if (onlineReport != null){
-                    onlineReport.setPathname(loggedInUser.getBusinessDirectory()); // todo - sort this, it makes no sense
-                }
                 String result = "error: user has no home report";
                 // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
                 // I wonder if this should be a different controller
@@ -156,9 +153,6 @@ public class OnlineController {
                     } else {
                         // db should have been set by the login, just set the default report
                         onlineReport = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
-                        if (onlineReport != null){
-                            onlineReport.setPathname(loggedInUser.getBusinessDirectory()); // todo - sort this, it makes no sense
-                        }
                     }
                 }
                 // db and report should be sorted by now
@@ -215,7 +209,7 @@ public class OnlineController {
                                 try {
                                     long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                     long newHeapMarker = oldHeapMarker;
-                                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + finalOnlineReport.getPathname() + "/onlinereports/" + finalOnlineReport.getFilename();
+                                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + finalLoggedInUser.getBusinessDirectory() + "/onlinereports/" + finalOnlineReport.getFilenameForDisk();
                                     final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                                     book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                                     book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);

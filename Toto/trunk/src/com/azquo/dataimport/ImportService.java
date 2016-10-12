@@ -16,6 +16,7 @@ import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import com.csvreader.CsvWriter;
 import com.jcraft.jsch.*;
+import org.springframework.security.access.method.P;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Range;
@@ -304,19 +305,28 @@ public final class ImportService {
             databaseId = loggedInUser.getDatabase().getId();
             pathName = loggedInUser.getBusinessDirectory();
         }
-        OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getBusinessId());
+        OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
         if (or != null) {
+            // zap the old one first
+            try{
+                String oldPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + or.getFilenameForDisk();
+                File old = new File(oldPath);
+                old.delete();
+            } catch (Exception e){
+                System.out.println("problem deleting old report");
+                e.printStackTrace();
+            }
             or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
         } else {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, fileName, "", ""); // default to ZK now
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, fileName, ""); // default to ZK now
         }
-        String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
+        OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
+        String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + or.getFilenameForDisk();
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
         FileOutputStream out = new FileOutputStream(fullPath);
         org.apache.commons.io.FileUtils.copyFile(new File(filePath), out);// straight copy of the source
         out.close();
-        OnlineReportDAO.store(or);
         DatabaseReportLinkDAO.link(databaseId, or.getId());
         return reportName + " uploaded.";
     }
@@ -339,7 +349,7 @@ public final class ImportService {
             for (String choice : choices.keySet()) {
                 SpreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
             }
-            //String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilename();
+            //String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilenameForDisk();
             final Book reportBook = Importers.getImporter().imports(new File(tempPath), "Report name");
             reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, tempPath);
             reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);

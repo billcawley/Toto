@@ -4,6 +4,8 @@ import com.azquo.admin.StandardEntity;
 
 /**
  * Created by edward on 19/09/16.
+ *
+ * Parked for the mo while Sterling wait.
  */
 public class ImportConfig extends StandardEntity {
     private String filename;

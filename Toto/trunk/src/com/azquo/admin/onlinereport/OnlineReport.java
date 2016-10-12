@@ -19,7 +19,6 @@ public class OnlineReport extends StandardEntity {
     private String database; // for sending parameters only, I think visually, need to think on this given new structure, TODO
     private String reportName;
     private String filename;
-    private String pathName; // runtime use again, need to zap at some point. todo
     private String explanation;
 
     public OnlineReport(int id
@@ -30,7 +29,6 @@ public class OnlineReport extends StandardEntity {
             , String reportName
             , String filename
             , String explanation
-            , String pathName
             ) {
         this.id = id;
         this.dateCreated = dateCreated;
@@ -39,7 +37,6 @@ public class OnlineReport extends StandardEntity {
         this.database = database;
         this.reportName = reportName;
         this.filename = filename;
-        this.pathName = pathName;
         this.explanation = explanation;
     }
 
@@ -87,18 +84,16 @@ public class OnlineReport extends StandardEntity {
         return filename;
     }
 
+    public String getFilenameForDisk() {
+        if (dateCreated.isAfter(LocalDateTime.of(2016, 10, 13, 0, 0))){ // then use the new convention - this date should be when the code was deployed. Bit of a hack - remove later? Does it matter?
+            return id + "-" + filename;
+        }
+        return filename;
+    }
+
     public void setFilename(String filename) {
         this.filename = filename;
     }
-
-    public String getPathname() {
-        return pathName;
-    }
-
-    public void setPathname(String pathName) {
-        this.pathName = pathName;
-    }
-
 
     public String getExplanation() {
         return explanation;
@@ -118,7 +113,6 @@ public class OnlineReport extends StandardEntity {
                 ", database='" + database + '\'' +
                 ", reportName='" + reportName + '\'' +
                 ", filename='" + filename + '\'' +
-                ", pathName='" + pathName + '\'' +
                 ", explanation='" + explanation + '\'' +
                 '}';
     }

@@ -169,7 +169,7 @@ public class RemoteController {
                 try {
                     long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                     long newHeapMarker = oldHeapMarker;
-                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + onlineReport.getPathname() + "/onlinereports/" + onlineReport.getFilename();
+                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilenameForDisk();
                     final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                     book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                     book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);

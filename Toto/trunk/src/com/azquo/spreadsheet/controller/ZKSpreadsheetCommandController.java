@@ -99,7 +99,7 @@ public class ZKSpreadsheetCommandController {
                             Book book = ss.getBook();
                             int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                             OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
-                            String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilename(); // as in the online controller
+                            String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilenameForDisk(); // as in the online controller
                             FileOutputStream fos = null;
                             try {
                                 fos = new FileOutputStream(bookPath); // overwrite the report, should work
