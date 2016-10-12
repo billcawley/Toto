@@ -120,7 +120,7 @@ public class ExcelController {
         // similar to code in manage databases
         String fileName = data.getOriginalFilename();
         // always move uplaoded files now, they'll need to be transferred to the DB server after code split
-        File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + fileName);
+        File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // stop overwriting with successive uploads
         FileOutputStream fos  = new FileOutputStream(moved);
         byte[] byteArray = data.getBytes();
         String s = new String(byteArray);

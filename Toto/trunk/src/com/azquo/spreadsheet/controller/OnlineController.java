@@ -125,7 +125,7 @@ public class OnlineController {
                             result = ImportService.uploadImage(loggedInUser,uploadfile, imageName);
                         } else {
                             if (fileName.length()> 0) {
-                                File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + fileName);
+                                File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() +  fileName); // timestamp the upload to stop overwriting with a file with the same name is uploaded after
                                 uploadfile.transferTo(moved);
                                 result = ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages(), true); // always a data upload from here
                             }else{

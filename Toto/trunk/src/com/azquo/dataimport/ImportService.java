@@ -95,7 +95,7 @@ public final class ImportService {
     }
 
     private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
-        if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) &&  (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
+        if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(filePath), "Report name");
             List<String> notAllowed = new ArrayList<>();
             List<String> rejected = new ArrayList<>();
@@ -103,19 +103,19 @@ public final class ImportService {
             if (userSheet != null) {
                 int row = 1;
                 SName listRegion = book.getInternalBook().getNameByName("az_ListStart");
-                if (listRegion!=null){
+                if (listRegion != null) {
                     row = listRegion.getRefersToCellRegion().getRow();
                 }
                 // keep them to use if not set. Should I be updating records instead? I'm not sure.
                 Map<String, String> oldPasswordMap = new HashMap<>();
                 Map<String, String> oldSaltMap = new HashMap<>();
-                 List<User> userList = AdminService.getUserListForBusiness(loggedInUser);
+                List<User> userList = AdminService.getUserListForBusiness(loggedInUser);
                 //todo - work out what users DEVELOPERs can upload
                 for (User user : userList) {
                     if (user.getId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
-                        if (loggedInUser.getUser().getBusinessId()!= user.getBusinessId() || (loggedInUser.getUser().getStatus().equals("MASTER") && !user.getCreatedBy().equals(loggedInUser.getUser().getEmail()))){
+                        if (loggedInUser.getUser().getBusinessId() != user.getBusinessId() || (loggedInUser.getUser().getStatus().equals("MASTER") && !user.getCreatedBy().equals(loggedInUser.getUser().getEmail()))) {
                             notAllowed.add(user.getEmail());
-                        }else{
+                        } else {
                             oldPasswordMap.put(user.getEmail(), user.getPassword());
                             oldSaltMap.put(user.getEmail(), user.getSalt());
                             UserDAO.removeById(user);
@@ -139,7 +139,7 @@ public final class ImportService {
                         } catch (Exception ignored) {
                         }
                         String status = userSheet.getInternalSheet().getCell(row, 4).getStringValue();
-                        if (!loggedInUser.getUser().isAdministrator()){
+                        if (!loggedInUser.getUser().isAdministrator()) {
                             status = "USER"; // only admins can set status
                         }
                         // Probably could be factored somewhere
@@ -152,20 +152,20 @@ public final class ImportService {
                         }
                         Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 5).getStringValue(), loggedInUser.getUser().getBusinessId());
                         OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 6).getStringValue(), loggedInUser.getUser().getBusinessId());
-                        if (!loggedInUser.getUser().isAdministrator()){ // then I need to check against the session for allowable reports and databases
+                        if (!loggedInUser.getUser().isAdministrator()) { // then I need to check against the session for allowable reports and databases
                             boolean stored = false;
-                            if (d != null && or != null){
+                            if (d != null && or != null) {
                                 final Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport = loggedInUser.getPermissionsFromReport();
-                                for (TypedPair<OnlineReport, Database> allowedCombo : permissionsFromReport.values()){
-                                    if (allowedCombo.getFirst().getId() == or.getId() && allowedCombo.getSecond().getId() == d.getId()){ // then we can add the user with this info
-                                        User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(),or.getId());
+                                for (TypedPair<OnlineReport, Database> allowedCombo : permissionsFromReport.values()) {
+                                    if (allowedCombo.getFirst().getId() == or.getId() && allowedCombo.getSecond().getId() == d.getId()) { // then we can add the user with this info
+                                        User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId());
                                         UserDAO.store(user1);
                                         stored = true;
                                         break;
                                     }
                                 }
                             }
-                            if (!stored){ // default to the current users home menu
+                            if (!stored) { // default to the current users home menu
                                 User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status,
                                         password, salt, loggedInUser.getUser().getEmail(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getReportId());
                                 UserDAO.store(user1);
@@ -179,9 +179,9 @@ public final class ImportService {
                 }
             }
             String message = "User file uploaded.";
-            if (rejected.size() > 0){
+            if (rejected.size() > 0) {
                 message += "  Some users rejected: ";
-                for (String reject:rejected){
+                for (String reject : rejected) {
                     message += reject + ", ";
                 }
             }
@@ -192,7 +192,7 @@ public final class ImportService {
             if (schedulesSheet != null) {
                 int row = 1;
                 SName listRegion = book.getInternalBook().getNameByName("data");
-                if (listRegion!=null){
+                if (listRegion != null) {
                     row = listRegion.getRefersToCellRegion().getRow();
                 }
                 final List<ReportSchedule> reportSchedules = AdminService.getReportScheduleList(loggedInUser);
@@ -294,7 +294,9 @@ public final class ImportService {
         return "";
     }
 
-    private static String uploadReport(LoggedInUser loggedInUser, String sourceName, String fileName, String reportName, String reportType) throws Exception {
+    // Reports that share the same file name?? If I just jam the user id on the file name at this point will it be a problem?
+
+    private static String uploadReport(LoggedInUser loggedInUser, String filePath, String fileName, String reportName, String reportType) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = 0;
         String pathName = reportType;
@@ -302,57 +304,33 @@ public final class ImportService {
             databaseId = loggedInUser.getDatabase().getId();
             pathName = loggedInUser.getBusinessDirectory();
         }
-        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-        int origUploadId = 0;
-        //rename the old file by adding a suffix which is the ID of the upload record
-        String messageSuffix = "";
-        String origFileName = fileName;
-        if (or != null){
-            origFileName = or.getFilename();
+        OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getBusinessId());
+        if (or != null) {
+            or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
+        } else {
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, fileName, "", ""); // default to ZK now
         }
         String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + fileName;
-        UploadRecord uploadRecord = UploadRecordDAO.findForBusinessIdAndFileName(loggedInUser.getUser().getBusinessId(), origFileName);
-        if (uploadRecord != null) {
-            origUploadId = uploadRecord.getId();
-            File origFile = new File(fullPath);
-            File newFile = new File(fullPath + "." + origUploadId);
-            if (!newFile.exists()) {
-                origFile.renameTo(newFile);
-            }
-            uploadRecord.setTempPath(fullPath);
-            UploadRecordDAO.store(uploadRecord);
-            messageSuffix = "  Replaced " + origFileName + " uploaded by " + UserDAO.findById(uploadRecord.getUserId()).getName() + " on " + uploadRecord.getDate();
-        }
-
-         if(or != null){
-            or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
-        }else{
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName() , reportName, fileName, "", ""); // default to ZK now
-        }
-
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
         FileOutputStream out = new FileOutputStream(fullPath);
-//        azquoBook.saveBook(fullPath); no, aspose could have changed the sheet, especially if the license is not set . . .
-        org.apache.commons.io.FileUtils.copyFile(new File(sourceName), out);// straight copy of the source
+        org.apache.commons.io.FileUtils.copyFile(new File(filePath), out);// straight copy of the source
         out.close();
         OnlineReportDAO.store(or);
         DatabaseReportLinkDAO.link(databaseId, or.getId());
-
-        return reportName + " uploaded." + messageSuffix;
+        return reportName + " uploaded.";
     }
 
-    private static String  readBook(LoggedInUser loggedInUser, final String fileName, final String tempName, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
-        final Book book = Importers.getImporter().imports(new File(tempName), "Imported");
+    private static String readBook(LoggedInUser loggedInUser, final String fileName, final String tempPath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
+        final Book book = Importers.getImporter().imports(new File(tempPath), "Imported");
         String reportName = null;
         SName reportRange = book.getInternalBook().getNameByName("az_ReportName");
         if (reportRange != null) {
             reportName = ZKAzquoBookUtils.getSnameCell(reportRange).getStringValue();
         }
         if (reportName != null) {
-            // ok it's a report! Sort out the issue of duplicate names . . . TODO
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
-                return uploadReport(loggedInUser, tempName, fileName, reportName, "");
+                return uploadReport(loggedInUser, tempPath, fileName, reportName, "");
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
             OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
@@ -362,8 +340,8 @@ public final class ImportService {
                 SpreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
             }
             //String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilename();
-            final Book reportBook = Importers.getImporter().imports(new File(tempName), "Report name");
-            reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, tempName);
+            final Book reportBook = Importers.getImporter().imports(new File(tempPath), "Report name");
+            reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, tempPath);
             reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
             reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
             ZKAzquoBookUtils.populateBook(reportBook, 0);
@@ -375,7 +353,7 @@ public final class ImportService {
         StringBuilder toReturn = new StringBuilder();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            toReturn.append(readSheet(loggedInUser, sheet, tempName, attributeNames, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
+            toReturn.append(readSheet(loggedInUser, sheet, tempPath, attributeNames, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
             toReturn.append("\n");
         }
         return toReturn.toString();
@@ -573,7 +551,7 @@ public final class ImportService {
                         int dataStartCol = repeatDataRegion.getRefersToCellRegion().getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
                         // we can't really do a size comparison as before, we can simply run the region and see where we think there should be repeat reagions in the scope
                         for (int row = 0; row < sourceRegion.getRowCount(); row++) {
-                            int repeatRow = row/regionHeight;
+                            int repeatRow = row / regionHeight;
                             int rowInRegion = row % regionHeight;
                             for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
                                 int colInRegion = col % regionWitdh;
@@ -582,12 +560,12 @@ public final class ImportService {
                                 if (colInRegion >= dataStartCol && rowInRegion >= dataStartRow
                                         && colInRegion <= dataStartCol + dataWitdh
                                         && rowInRegion <= dataStartRow + dataHeight
-                                        && cellsAndHeadingsForDisplay != null){
+                                        && cellsAndHeadingsForDisplay != null) {
                                     final List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
                                     final TypedPair<Double, String> cellValue = getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
                                     data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewStringValue(cellValue.getSecond());
                                     // added by Edd, should sort some numbers being ignored!
-                                    if (cellValue.getFirst() != null){
+                                    if (cellValue.getFirst() != null) {
                                         data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(cellValue.getFirst());
                                     } else { // I think defaulting to zero is correct here?
                                         data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(0.0);
@@ -610,12 +588,12 @@ public final class ImportService {
                                     final TypedPair<Double, String> cellValue = getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
                                     data.get(row).get(col).setNewStringValue(cellValue.getSecond());
                                     // added by Edd, should sort some numbers being ignored!
-                                    if (cellValue.getFirst() != null){
+                                    if (cellValue.getFirst() != null) {
                                         data.get(row).get(col).setNewDoubleValue(cellValue.getFirst());
                                     } else { // I think defaulting to zero is correct here?
                                         data.get(row).get(col).setNewDoubleValue(0.0);
                                     }
-                                    if (cellValue.getSecond().length() > 0){
+                                    if (cellValue.getSecond().length() > 0) {
                                         nonBlankItems++;
                                     }
                                 }
@@ -624,11 +602,11 @@ public final class ImportService {
                     }
                     try {
                         final String result = SpreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
-                        if (!result.equals("true")){// unlikely to fail here I think but catch it anyway . . .
+                        if (!result.equals("true")) {// unlikely to fail here I think but catch it anyway . . .
                             errorMessage += "- in region " + regionName + " -" + result;
                         }
                     } catch (Exception e) {
-                        errorMessage += "- in region " + regionName + " -" +  e.getMessage();
+                        errorMessage += "- in region " + regionName + " -" + e.getMessage();
                     }
                 }
             }
@@ -648,7 +626,7 @@ public final class ImportService {
 
     // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO
 
-    private static TypedPair<Double, String> getCellValue(Sheet sheet, int r, int c){
+    private static TypedPair<Double, String> getCellValue(Sheet sheet, int r, int c) {
         Double returnNumber = null;
         String returnString = null;
         Range range = Ranges.range(sheet, r, c);
@@ -659,7 +637,7 @@ public final class ImportService {
             String stringValue = "";
             try {
                 stringValue = cellData.getFormatText();// I assume means formatted text
-                if (r>0 && dataFormat.toLowerCase().contains("mm-")) {//fix a ZK bug
+                if (r > 0 && dataFormat.toLowerCase().contains("mm-")) {//fix a ZK bug
                     stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
                 }
             } catch (Exception ignored) {
@@ -688,10 +666,10 @@ public final class ImportService {
     private static void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
         final TypedPair<Double, String> cellValue = getCellValue(sheet, r, c);
         if (newNames != null && newNames.get(cellValue.getSecond()) != null) {
-             csvW.write(newNames.get(cellValue.getSecond()));
+            csvW.write(newNames.get(cellValue.getSecond()));
         } else {
-             csvW.write(cellValue.getSecond().replace("\n","\\\\n").replace("\t","\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
-         }
+            csvW.write(cellValue.getSecond().replace("\n", "\\\\n").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+        }
 
     }
 

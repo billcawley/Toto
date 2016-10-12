@@ -97,16 +97,11 @@ public class OnlineReportDAO {
         return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + REPORTNAME + " LIKE :" + REPORTNAME + " and " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
-    public static List<OnlineReport> findForBusinessId(int businessId) {
+    public static OnlineReport findForNameAndUserId(final String name, int userId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(BUSINESSID, businessId);
-        return StandardDAO.findListWithWhereSQLAndParameters("  WHERE " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, onlineReportRowMapper, namedParams);
-    }
-
-    public static List<OnlineReport> findForUserId(int userId) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(REPORTNAME, name);
         namedParams.addValue(USERID, userId);
-        return StandardDAO.findListWithWhereSQLAndParameters("  WHERE " + USERID + " = :" + USERID, TABLENAME, onlineReportRowMapper, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + REPORTNAME + " LIKE :" + REPORTNAME + " and " + USERID + " = :" + USERID, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
     public static List<OnlineReport> findForDatabaseId(final int databaseId) {

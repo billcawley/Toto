@@ -193,7 +193,7 @@ public class ManageDatabasesController {
                         LoginService.switchDatabase(loggedInUser, database); // could be blank now
                         String fileName = uploadFile.getOriginalFilename();
                         // always move uplaoded files now, they'll need to be transferred to the DB server after code split
-                        File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + fileName);
+                        File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
                         // need to add in code similar to report loading to give feedback on imports
                         new Thread(() -> {

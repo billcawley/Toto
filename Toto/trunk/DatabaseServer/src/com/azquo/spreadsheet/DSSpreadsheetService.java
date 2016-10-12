@@ -778,7 +778,7 @@ public class DSSpreadsheetService {
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name filterSet = NameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
         if (filterSet.getChildren()==null || filterSet.getChildren().size()==0){
-            Collection<Name> possibleNames = NameService.parseQuery(connectionFromAccessToken,query);
+            Collection<Name> possibleNames = NameService.parseQuery(connectionFromAccessToken,query,languages);
             for (Name possibleName:possibleNames){
                 filterSet.addChildWillBePersisted(possibleName);
             }
@@ -2228,7 +2228,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         //write the column headings and data to a temporary file, then import it
         String fileName = "temp_" + user;
         File temp = File.createTempFile(fileName + ".csv", "csv");
-        String tempName = temp.getPath();
+        String tempPath = temp.getPath();
         BufferedWriter bw = new BufferedWriter(new FileWriter(temp));
         StringBuffer sb = new StringBuffer();
         List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(0);
@@ -2268,7 +2268,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         }
         bw.flush();
         bw.close();
-        DSImportService.readPreparedFile(azquoMemoryDBConnection, tempName, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true, true);
+        DSImportService.readPreparedFile(azquoMemoryDBConnection, tempPath, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true, true);
         if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
         }
