@@ -4,6 +4,7 @@ import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.AzquoMemoryDBIndex;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
+import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 //import org.apache.log4j.Logger;
 
@@ -44,13 +45,13 @@ public class AzquoMemoryDBConnection {
         this.azquoMemoryDB = azquoMemoryDB;
         this.azquoMemoryDBIndex = azquoMemoryDB.getIndex();
         if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
-            writePermissions = NameService.decodeString(this, databaseAccessToken.getWritePermissions(), languages);
+            writePermissions = NameQueryParser.decodeString(this, databaseAccessToken.getWritePermissions(), languages);
             addExtraPermissionIfRequired(writePermissions);
         } else {
             writePermissions = new ArrayList<>();
         }
         if (databaseAccessToken.getReadPermissions() != null && !databaseAccessToken.getReadPermissions().isEmpty()) {
-            readPermissions = NameService.decodeString(this, databaseAccessToken.getReadPermissions(), languages);
+            readPermissions = NameQueryParser.decodeString(this, databaseAccessToken.getReadPermissions(), languages);
             addExtraPermissionIfRequired(readPermissions);
         } else {
             readPermissions = new ArrayList<>();

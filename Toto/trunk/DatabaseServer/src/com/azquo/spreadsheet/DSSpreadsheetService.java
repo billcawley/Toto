@@ -141,7 +141,7 @@ public class DSSpreadsheetService {
                         } else if (sourceCell.toLowerCase().contains(HIERARCHY)) { // kind of a special case, supports a name not an expression
                             String name = sourceCell.substring(0, sourceCell.toLowerCase().indexOf(HIERARCHY)).replace("`", "").trim();
                             int level = Integer.parseInt(sourceCell.substring(sourceCell.toLowerCase().indexOf(HIERARCHY) + HIERARCHY.length()).trim()); // fragile?
-                            Collection<Name> names = NameService.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
+                            Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
                             if (!names.isEmpty()) {// it should be just one
                                 List<DataRegionHeading> hierarchyList = new ArrayList<>();
                                 List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null); // I assume this will be only one!
@@ -169,7 +169,7 @@ public class DSSpreadsheetService {
                                 // I'm going to jam sorted in the description, hopefully won't be a problem
                                 if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
                                     // will the new write permissions cause an overhead?
-                                    headings.add(new DataRegionHeading(pName, NameService.isAllowed(pName, azquoMemoryDBConnection.getWritePermissions()), function, suffix, sorted ? "sorted" : null, null, null));
+                                    headings.add(new DataRegionHeading(pName, NameQueryParser.isAllowed(pName, azquoMemoryDBConnection.getWritePermissions()), function, suffix, sorted ? "sorted" : null, null, null));
                                 } else { // don't bother checking permissions, write permissions to true
                                     headings.add(new DataRegionHeading(pName, true, function, suffix, sorted ? "sorted" : null, null,null));
                                 }
@@ -179,7 +179,7 @@ public class DSSpreadsheetService {
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             Collection<Name> names;
                             try{
-                                names = NameService.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
+                                names = NameQueryParser.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
                             } catch (Exception e){
                                 if (ignoreHeadingErrors){ // the ignore is only for vanilla queries, functions probably should error regardless
                                     names = new ArrayList<>();
@@ -758,7 +758,7 @@ public class DSSpreadsheetService {
             query = query.substring(0, query.indexOf("showparents"));
             forceFirstLevel = true;
         }
-        return getUniqueNameStrings(getUniqueNames(NameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel));
+        return getUniqueNameStrings(getUniqueNames(NameQueryParser.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel));
     }
 
     public static List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws Exception {
@@ -774,7 +774,7 @@ public class DSSpreadsheetService {
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name filterSet = NameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
         if (filterSet.getChildren()==null || filterSet.getChildren().size()==0){
-            Collection<Name> possibleNames = NameService.parseQuery(connectionFromAccessToken,query,languages);
+            Collection<Name> possibleNames = NameQueryParser.parseQuery(connectionFromAccessToken,query,languages);
             for (Name possibleName:possibleNames){
                 filterSet.addChildWillBePersisted(possibleName);
             }
@@ -790,12 +790,12 @@ public class DSSpreadsheetService {
             }
         }
         //final Collection<Name> names = NameService.parseQuery(connectionFromAccessToken, query, languages);
-        return getFilterPairsFromUniqueNames(getUniqueNames(NameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel), filterSet);
+        return getFilterPairsFromUniqueNames(getUniqueNames(NameQueryParser.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel), filterSet);
     }
 
     // it doesn't return anything, for things like setting up "as" criteria
     public static void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
-        NameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages);
+        NameQueryParser.parseQuery(getConnectionFromAccessToken(databaseAccessToken), query, languages);
     }
 
     private static List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
@@ -1685,15 +1685,15 @@ Callable interface sorts the memory "happens before" using future gets which run
             locked.isTrue = true; // they cant edit the results from complex functions
             if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
                 Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
-                NameService.parseQuery(connection, cellQuery, languages, namesToCount);
+                NameQueryParser.parseQuery(connection, cellQuery, languages, namesToCount);
                 doubleValue = namesToCount.size();
                 stringValue = doubleValue + "";
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
                 String[] twoSets = nameFunctionHeading.getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
                 Set<Name> leftSet = HashObjSets.newMutableSet();
                 Set<Name> rightSet = HashObjSets.newMutableSet();
-                NameService.parseQuery(connection, twoSets[0], languages, leftSet);
-                NameService.parseQuery(connection, twoSets[1], languages, rightSet);
+                NameQueryParser.parseQuery(connection, twoSets[0], languages, leftSet);
+                NameQueryParser.parseQuery(connection, twoSets[1], languages, rightSet);
                 // ok I have the two sets, I got rid of total name count (which featured caching), I'm going to do the nuts and bolts here, need to think a little
                 Set<Name> alreadyTested = HashObjSets.newMutableSet();
                 // ok this should be like the inside of totalSetIntersectionCount but dealing with left set as the first parameter not a name.
@@ -1714,7 +1714,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                 doubleValue = count;
                 stringValue = count + "";
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.SET) {
-                final Collection<Name> set = NameService.parseQuery(connection, cellQuery, languages);
+                final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages);
                 doubleValue = 0;
                 StringBuilder sb = new StringBuilder();
                 boolean first = true;
@@ -1727,11 +1727,11 @@ Callable interface sorts the memory "happens before" using future gets which run
                 }
                 stringValue = sb.toString();
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.FIRST) { // we may have to pass a hint about ordering to the query parser, let's see how it goes without it
-                final Collection<Name> set = NameService.parseQuery(connection, cellQuery, languages);
+                final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages);
                 doubleValue = 0;
                 stringValue = set.isEmpty() ? "" : set.iterator().next().getDefaultDisplayName();
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.LAST) {
-                final Collection<Name> set = NameService.parseQuery(connection, cellQuery, languages);
+                final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages);
                 doubleValue = 0;
                 stringValue = "";
                 for (Name name : set) { //a bit of a lazy way of doing things but it should be fine, plus with only a collection interface not sure of how to get the last!
@@ -2424,7 +2424,7 @@ Callable interface sorts the memory "happens before" using future gets which run
             // then check permissions
             for (Name name : names) {
                 // will the new write permissions cause an overhead?
-                dataRegionHeadings.add(new DataRegionHeading(name, NameService.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, suffix, null, offsetHeadings, valueFunctionSet));
+                dataRegionHeadings.add(new DataRegionHeading(name, NameQueryParser.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, suffix, null, offsetHeadings, valueFunctionSet));
             }
         } else { // don't bother checking permissions, write permissions to true
             for (Name name : names) {
@@ -2470,7 +2470,7 @@ Callable interface sorts the memory "happens before" using future gets which run
         List<String> toReturn = new ArrayList<>();
 
         if (names==null || names.size()==0){//maybe it is a query
-            names = NameService.parseQuery(getConnectionFromAccessToken(databaseAccessToken),s);
+            names = NameQueryParser.parseQuery(getConnectionFromAccessToken(databaseAccessToken),s);
             if (names.size() > 0){
                 toReturn.add("QUERY RESULTS");
             }

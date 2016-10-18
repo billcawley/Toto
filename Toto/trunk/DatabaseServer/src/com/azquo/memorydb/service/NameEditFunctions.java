@@ -24,7 +24,7 @@ class NameEditFunctions {
             return findDuplicateNames(azquoMemoryDBConnection, setFormula);
         }
         if (setFormula.startsWith("zap ")) {
-            Collection<Name> names = NameService.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages); // defaulting to list here
+            Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages); // defaulting to list here
             if (names != null) {
                 for (Name name : names) name.delete();
                 azquoMemoryDBConnection.persist();
@@ -91,7 +91,7 @@ class NameEditFunctions {
         String baseSet = formula.substring(0, toPos);
         String binSet = formula.substring(toPos + 4);
         Name rubbishBin = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, binSet, null, false);
-        Collection<Name> names = NameService.parseQuery(azquoMemoryDBConnection, baseSet);
+        Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, baseSet);
         if (names.size() == 0) return toReturn;
         if (names.size() > 1) {
             Map<String, Set<Name>> nameMap = new HashMap<>();

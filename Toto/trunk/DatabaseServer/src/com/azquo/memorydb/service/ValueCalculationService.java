@@ -72,7 +72,7 @@ public class ValueCalculationService {
                     //int id = Integer.parseInt(term.substring(1));
                     // NOTE! As it stands a term can have one of these attributes, it won't use more than one
                     // so get the name and add it to the other names
-                    Name name = NameService.getNameFromListAndMarker(term, formulaNames);
+                    Name name = NameQueryParser.getNameFromListAndMarker(term, formulaNames);
                     if (debugInfo != null) {
                         debugInfo.append(name.getDefaultDisplayName()).append(" ");
                     }
@@ -116,7 +116,7 @@ public class ValueCalculationService {
                             debugInfo.append("Use level ").append(name.getAttribute(USELEVEL)).append(" ");
                         }
                         List<Name> newSeekList = new ArrayList<>(seekList.size()); // new one of same capacity, we'll be copying in changing as we go
-                        final Collection<Name> useLevelNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(USELEVEL));
+                        final Collection<Name> useLevelNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, name.getAttribute(USELEVEL));
                         for (Name currentName : seekList) { // so for each of the names I need to see if they are in any of them are in the children of the use level names and if so switch to that use level name
                             boolean found = false;
                             for (Name useLevelName : useLevelNames) {

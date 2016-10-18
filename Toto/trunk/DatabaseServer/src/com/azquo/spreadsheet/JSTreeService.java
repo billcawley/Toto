@@ -6,6 +6,7 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
+import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ProvenanceService;
 import com.azquo.memorydb.service.ValueService;
@@ -97,7 +98,7 @@ public class JSTreeService {
                 children = NameService.findTopNames(azquoMemoryDBConnection, language);// hence we get the top names, OK
             } else {
                 try {
-                    children = NameService.parseQuery(azquoMemoryDBConnection, searchTerm);
+                    children = NameQueryParser.parseQuery(azquoMemoryDBConnection, searchTerm);
                 } catch (Exception e) {//carry on
                 }
                 if (children == null || children.size() == 0) {

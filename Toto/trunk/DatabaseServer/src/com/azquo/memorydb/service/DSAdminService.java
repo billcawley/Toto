@@ -68,7 +68,7 @@ public class DSAdminService {
         }
         targetConnection.setProvenance("generic admin", "transfer from", source.getPersistenceName(), "");
         //can't use 'nameService.decodeString as this may have multiple values in each list
-        List<Set<Name>> namesToTransfer = NameService.decodeString(sourceConnection, nameList, readLanguages);
+        List<Set<Name>> namesToTransfer = NameQueryParser.decodeString(sourceConnection, nameList, readLanguages);
         //find the data to transfer
         Map<Set<Name>, Set<Value>> showValues = getSearchValues(namesToTransfer);
 

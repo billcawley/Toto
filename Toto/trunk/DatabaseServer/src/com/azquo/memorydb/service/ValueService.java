@@ -315,7 +315,7 @@ public final class ValueService {
                         if (name.getAttribute(APPLIESTO).trim().equalsIgnoreCase("lowest")) {
                             lowest = true;
                         } else {
-                            appliesToNames = NameService.parseQuery(azquoMemoryDBConnection, name.getAttribute(APPLIESTO));
+                            appliesToNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, name.getAttribute(APPLIESTO));
                         }
                     }
                     // then get the result of it, this used to be stored in RPCALC
@@ -324,7 +324,7 @@ public final class ValueService {
                     List<String> nameStrings = new ArrayList<>();
                     List<String> attributeStrings = new ArrayList<>();
                     calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
-                    formulaNames = NameService.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
+                    formulaNames = NameQueryParser.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
                     calc = StringUtils.shuntingYardAlgorithm(calc);
                     //todo : make sure name lookups below use the new style of marker
                     if (!calc.startsWith("error")) { // there should be a better way to deal with errors

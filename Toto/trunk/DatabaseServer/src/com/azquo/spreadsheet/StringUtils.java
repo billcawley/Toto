@@ -280,4 +280,31 @@ I should be ok for StringTokenizer at this point
         }
         return sb.toString();
     }
+
+    public static String standardizeDate(String oldDate) {
+        //dates may be stored in many forms - this attempts to standardize them to yyyy-mm-dd hh:mm:ss
+        //IT CANNOT DETECT US DATES!
+        if (oldDate.length() < 8 || oldDate.charAt(4) == '-') {
+            return oldDate;
+        }
+        String newDate = oldDate;
+        if (oldDate.charAt(2) == '-' || oldDate.charAt(2) == '/' || oldDate.charAt(2) == '.') {
+            String monthDay = oldDate.substring(3, 5) + "-" + oldDate.substring(0, 2);
+            if (oldDate.length() == 8 || oldDate.charAt(8) == ' ') {
+                newDate = "20" + oldDate.substring(6, 8) + "-" + monthDay;
+                if (oldDate.length() > 9) {
+                    newDate += oldDate.substring(8);
+                }
+            } else {
+                if (oldDate.length() == 10 || oldDate.charAt(10) == ' ') {
+                    newDate = oldDate.substring(6, 10) + "-" + monthDay;
+                }
+                if (oldDate.length() > 11) {
+                    newDate += oldDate.substring(10);
+                }
+            }
+        }
+        return newDate;
+    }
+
 }
