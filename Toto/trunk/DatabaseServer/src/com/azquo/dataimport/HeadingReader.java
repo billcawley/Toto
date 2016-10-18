@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
@@ -171,7 +172,7 @@ class HeadingReader {
     private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames) throws Exception {
         MutableImportHeading heading = new MutableImportHeading();
         String[] clauses = headingString.split(";");
-        heading.heading = clauses[0].replace(Name.QUOTE + "", ""); // the heading name being the first
+        heading.heading = clauses[0].replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
         heading.name = NameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames); // at this stage, look for a name, but don't create it unless necessary
         // loop over the clauses making sense and modifying the heading object as you go
         for (int i = 1; i < clauses.length; i++) {
@@ -206,10 +207,10 @@ class HeadingReader {
         String result = clause.substring(firstWord.length()).trim();
         switch (firstWord) {
             case PARENTOF: // not NOT parent of an existing name in the DB, parent of other data in the line
-                heading.parentOfClause = result.replace(Name.QUOTE + "", "");// parent of names in the specified column
+                heading.parentOfClause = result.replace(StringLiterals.QUOTE + "", "");// parent of names in the specified column
                 break;
             case CHILDOF: // e.g. child of all orders, unlike above this references data in the DB
-                String childOfString = result.replace(Name.QUOTE + "", "");
+                String childOfString = result.replace(StringLiterals.QUOTE + "", "");
                 // used to store the child of string here and interpret it later, I see no reason not to do it here.
                 String[] parents = childOfString.split(",");//TODO this does not take into account names with commas inside
                 for (String parent : parents) {
@@ -227,7 +228,7 @@ class HeadingReader {
                 }
                 break;
             case ATTRIBUTE: // same as language really but .Name is special - it means default display name. Watch out for this.
-                heading.attribute = result.replace(Name.QUOTE + "", "");
+                heading.attribute = result.replace(StringLiterals.QUOTE + "", "");
                 if (heading.attribute.equalsIgnoreCase("name")) {
                     heading.attribute = Constants.DEFAULT_DISPLAY_NAME;
                 }

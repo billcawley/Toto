@@ -1,5 +1,6 @@
 package com.azquo.app.magento;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -7,7 +8,6 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
-import com.azquo.spreadsheet.StringUtils;
 import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
@@ -285,7 +285,7 @@ public class DSDataLoadService {
                 if (path.isEmpty()) {
                     path = catNo;
                 } else {
-                    path = path + StringUtils.MEMBEROF + catNo;
+                    path = path + StringLiterals.MEMBEROF + catNo;
                 }
             }
             //TODO consider what might happen if importing categories from two different databases - don't do it!
@@ -507,7 +507,7 @@ public class DSDataLoadService {
         Name allOrdersName = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All orders", ordersName, false);
         Name orderStatusName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All Order statuses", ordersName, false);
         Name allCurrenciesName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All currencies", ordersName, false);
-        Name allHours = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, "date" + StringUtils.MEMBEROF + "All hours", null, false);
+        Name allHours = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, "date" + StringLiterals.MEMBEROF + "All hours", null, false);
 
         Name customersName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "customer", null, false, defaultLanguage);
         Name allCustomersName = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, defaultLanguage);

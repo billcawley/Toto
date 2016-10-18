@@ -1,5 +1,7 @@
 package com.azquo.memorydb.core;
 
+import com.azquo.StringLiterals;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -79,10 +81,10 @@ final class NameAttributes {
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < attributeKeys.length; i++) {
             if (i != 0) {
-                stringBuilder.append(Name.ATTRIBUTEDIVIDER);
+                stringBuilder.append(StringLiterals.ATTRIBUTEDIVIDER);
             }
             stringBuilder.append(attributeKeys[i]);
-            stringBuilder.append(Name.ATTRIBUTEDIVIDER);
+            stringBuilder.append(StringLiterals.ATTRIBUTEDIVIDER);
             stringBuilder.append(attributeValues[i]);
         }
         return stringBuilder.toString();

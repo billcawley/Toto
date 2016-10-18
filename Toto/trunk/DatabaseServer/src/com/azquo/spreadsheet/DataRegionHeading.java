@@ -109,7 +109,7 @@ public class DataRegionHeading {
                 + (function != null ? " Function : " + function : "");
     }
 
-    String getDescription() {
+    public String getDescription() {
         return description;
     }
 

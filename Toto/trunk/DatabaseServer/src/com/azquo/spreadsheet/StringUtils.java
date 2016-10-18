@@ -1,7 +1,6 @@
 package com.azquo.spreadsheet;
 
-import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.service.NameService;
+import com.azquo.StringLiterals;
 import org.apache.commons.lang.math.NumberUtils;
 
 import java.text.DecimalFormat;
@@ -20,18 +19,16 @@ import java.util.regex.Pattern;
  */
 public class StringUtils {
 
-    public static final String MEMBEROF = "->"; // used to qualify names, no longer using ","
-
     // returns parsed names from a name qualified with parents, the parents are returned first. Note, support for "," removed
 
     public static List<String> parseNameQualifiedWithParents(String source) {
         List<String> toReturn = new ArrayList<>();
         if (source == null || source.isEmpty()) return toReturn;
-        while (source.contains(MEMBEROF) && !source.endsWith(MEMBEROF)) {
-            toReturn.add(source.substring(0, source.indexOf(MEMBEROF)).replace(Name.QUOTE, ' ').trim());
-            source = source.substring(source.indexOf(MEMBEROF) + MEMBEROF.length()); // chop that one off source
+        while (source.contains(StringLiterals.MEMBEROF) && !source.endsWith(StringLiterals.MEMBEROF)) {
+            toReturn.add(source.substring(0, source.indexOf(StringLiterals.MEMBEROF)).replace(StringLiterals.QUOTE, ' ').trim());
+            source = source.substring(source.indexOf(StringLiterals.MEMBEROF) + StringLiterals.MEMBEROF.length()); // chop that one off source
         }
-        toReturn.add(source.replace(Name.QUOTE, ' ').trim()); // what's left
+        toReturn.add(source.replace(StringLiterals.QUOTE, ' ').trim()); // what's left
         return toReturn;
     }
 
@@ -88,7 +85,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
     public static String prepareStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
         // sort the name quotes - will be replaces with !01 !02 etc.
         StringBuilder modifiedStatement = new StringBuilder();
-        Pattern p = Pattern.compile("" + Name.QUOTE + ".*?" + Name.QUOTE + ""); // don't need escaping here I don't think. Possible to add though.
+        Pattern p = Pattern.compile("" + StringLiterals.QUOTE + ".*?" + StringLiterals.QUOTE + ""); // don't need escaping here I don't think. Possible to add though.
         Matcher matcher = p.matcher(statement);
         int lastEnd = 0;
         List<String> quotedNameCache = new ArrayList<>();
@@ -112,7 +109,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
                 throw new Exception("More than 100 quoted names.");
             }
             // I don't even need the number here but I'll leave it here for the moment
-            modifiedStatement.append(NameService.NAMEMARKER).append(twoDigit.format(quotedNameCache.size()));
+            modifiedStatement.append(StringLiterals.NAMEMARKER).append(twoDigit.format(quotedNameCache.size()));
         }
         if (lastEnd != 0) {
             modifiedStatement.append(statement.substring(lastEnd));
@@ -194,8 +191,8 @@ I should be ok for StringTokenizer at this point
             modifiedStatement.append(" ");
             String term = st.nextToken();
             if (!isKeywordOrOperator(term) && !NumberUtils.isNumber(term) && !term.startsWith("\"")) { // then we assume a name or attribute
-                while (term.indexOf(NameService.NAMEMARKER) != -1) { // we need to put the quoted ones back in, it will be the same order they were taken out in, hence remove(0) will work.
-                    term = term.substring(0, term.indexOf(NameService.NAMEMARKER)) + quotedNameCache.remove(0) + term.substring(term.indexOf(NameService.NAMEMARKER) + 3);
+                while (term.indexOf(StringLiterals.NAMEMARKER) != -1) { // we need to put the quoted ones back in, it will be the same order they were taken out in, hence remove(0) will work.
+                    term = term.substring(0, term.indexOf(StringLiterals.NAMEMARKER)) + quotedNameCache.remove(0) + term.substring(term.indexOf(StringLiterals.NAMEMARKER) + 3);
                 }
                 /* ok the use of name marker might be a bit ambiguous. First used internally here for names or fragments in quotes.
                  Now used in the returned string and the names strings are chucked into an array to be resolved in name spreadsheet
@@ -204,10 +201,10 @@ I should be ok for StringTokenizer at this point
                 */
                 if (term.startsWith(".")) {
                     // I was using name marker, no good as it would be caught by a later conditional parser
-                    modifiedStatement.append(NameService.ATTRIBUTEMARKER).append(twoDigit.format(attributeStrings.size()));
+                    modifiedStatement.append(StringLiterals.ATTRIBUTEMARKER).append(twoDigit.format(attributeStrings.size()));
                     attributeStrings.add(term.substring(1).replace("`", "")); // knock off the . and remove ``
                 } else {
-                    modifiedStatement.append(NameService.NAMEMARKER).append(twoDigit.format(nameNames.size()));
+                    modifiedStatement.append(StringLiterals.NAMEMARKER).append(twoDigit.format(nameNames.size()));
                     nameNames.add(term);
                 }
             } else {
@@ -225,16 +222,16 @@ I should be ok for StringTokenizer at this point
                 || term.equals("(") || term.equals(")")
                 || term.equals("[") || term.equals("]")
                 || term.equalsIgnoreCase("and")
-                || term.equalsIgnoreCase(NameService.LEVEL) || term.equalsIgnoreCase(NameService.FROM)
-                || term.equalsIgnoreCase(NameService.TO) || term.equalsIgnoreCase(NameService.COUNT)
-                || term.equalsIgnoreCase(NameService.SORTED) || term.equalsIgnoreCase(NameService.CHILDREN)
-                || term.equalsIgnoreCase(NameService.PARENTS)|| term.equalsIgnoreCase(NameService.ATTRIBUTESET)
-                || term.equalsIgnoreCase(NameService.COUNTBACK) || term.equalsIgnoreCase(NameService.COMPAREWITH)
-                || term.equalsIgnoreCase(NameService.AS)
-                || term.equalsIgnoreCase(NameService.CREATE)
-                || term.equalsIgnoreCase(NameService.EDIT) || term.equalsIgnoreCase(NameService.NEW)
-                || term.equalsIgnoreCase(NameService.SELECT)
-                || term.equalsIgnoreCase(NameService.DELETE) || term.equalsIgnoreCase(NameService.WHERE);
+                || term.equalsIgnoreCase(StringLiterals.LEVEL) || term.equalsIgnoreCase(StringLiterals.FROM)
+                || term.equalsIgnoreCase(StringLiterals.TO) || term.equalsIgnoreCase(StringLiterals.COUNT)
+                || term.equalsIgnoreCase(StringLiterals.SORTED) || term.equalsIgnoreCase(StringLiterals.CHILDREN)
+                || term.equalsIgnoreCase(StringLiterals.PARENTS)|| term.equalsIgnoreCase(StringLiterals.ATTRIBUTESET)
+                || term.equalsIgnoreCase(StringLiterals.COUNTBACK) || term.equalsIgnoreCase(StringLiterals.COMPAREWITH)
+                || term.equalsIgnoreCase(StringLiterals.AS)
+                || term.equalsIgnoreCase(StringLiterals.CREATE)
+                || term.equalsIgnoreCase(StringLiterals.EDIT) || term.equalsIgnoreCase(StringLiterals.NEW)
+                || term.equalsIgnoreCase(StringLiterals.SELECT)
+                || term.equalsIgnoreCase(StringLiterals.DELETE) || term.equalsIgnoreCase(StringLiterals.WHERE);
     }
 
     /*
@@ -243,7 +240,7 @@ I should be ok for StringTokenizer at this point
     */
 
     public static String shuntingYardAlgorithm(String calc) {
-        Pattern p = Pattern.compile("[" + NameService.ASSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);

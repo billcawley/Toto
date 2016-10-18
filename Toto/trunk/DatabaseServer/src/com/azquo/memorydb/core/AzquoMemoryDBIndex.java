@@ -1,5 +1,6 @@
 package com.azquo.memorydb.core;
 
+import com.azquo.StringLiterals;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.util.*;
@@ -292,8 +293,8 @@ public class AzquoMemoryDBIndex {
         // these interns have been tested as helping memory usage.
         String lcAttributeValue = attributeValue.toLowerCase().trim().intern();
         String ucAttributeName = attributeName.toUpperCase().trim().intern();
-        if (lcAttributeValue.indexOf(Name.QUOTE) >= 0 && !ucAttributeName.equals(Name.CALCULATION)) {
-            lcAttributeValue = lcAttributeValue.replace(Name.QUOTE, '\'').intern();
+        if (lcAttributeValue.indexOf(StringLiterals.QUOTE) >= 0 && !ucAttributeName.equals(StringLiterals.CALCULATION)) {
+            lcAttributeValue = lcAttributeValue.replace(StringLiterals.QUOTE, '\'').intern();
         }
         // moved to computeIfAbsent, saved a fair few lines of code
         Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.computeIfAbsent(ucAttributeName, s -> new ConcurrentHashMap<>());

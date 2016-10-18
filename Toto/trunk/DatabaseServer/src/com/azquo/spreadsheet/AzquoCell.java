@@ -18,7 +18,7 @@ import java.util.List;
  * todo : not that important but consider the unused functions
  *
  */
-class AzquoCell {
+public class AzquoCell {
     private boolean locked;
     private final ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName;
     private final List<DataRegionHeading> rowHeadings;
@@ -57,15 +57,15 @@ class AzquoCell {
         this.locked = locked;
     }
 
-    ListOfValuesOrNamesAndAttributeName getListOfValuesOrNamesAndAttributeName() {
+    public ListOfValuesOrNamesAndAttributeName getListOfValuesOrNamesAndAttributeName() {
         return listOfValuesOrNamesAndAttributeName;
     }
 
-    List<DataRegionHeading> getRowHeadings() {
+    public List<DataRegionHeading> getRowHeadings() {
         return rowHeadings;
     }
 
-    List<DataRegionHeading> getColumnHeadings() {
+    public List<DataRegionHeading> getColumnHeadings() {
         return columnHeadings;
     }
 
@@ -82,7 +82,7 @@ class AzquoCell {
         changed = true;
     }
 
-    double getDoubleValue() {
+    public double getDoubleValue() {
         return doubleValue;
     }
 

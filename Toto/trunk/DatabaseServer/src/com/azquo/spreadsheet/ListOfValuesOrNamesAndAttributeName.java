@@ -14,7 +14,7 @@ import java.util.List;
  * be a lit of names and and attributes - typically will be just one attribute and name
  * a little similar to name or value I suppose though this needs attributes specified
  */
-class ListOfValuesOrNamesAndAttributeName {
+public class ListOfValuesOrNamesAndAttributeName {
     private final List<Value> values;
     private final List<Name> names;
     private final List<String> attributeNames;

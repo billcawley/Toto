@@ -1,6 +1,6 @@
 package com.azquo.memorydb.core;
 
-import com.azquo.spreadsheet.StringUtils;
+import com.azquo.StringLiterals;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -68,15 +68,15 @@ public class NameUtils {
 
     public static String getFullyQualifiedDefaultDisplayName(Name name) {
         if (!name.hasParents()) {
-            return Name.QUOTE + name.getDefaultDisplayName() + Name.QUOTE;
+            return StringLiterals.QUOTE + name.getDefaultDisplayName() + StringLiterals.QUOTE;
         }
         Collection<Name> parents = name.getParents();
         String qualified = name.getDefaultDisplayName();
         while (!parents.isEmpty()) {
             Name parent = parents.iterator().next();
-            qualified = parent.getDefaultDisplayName() + StringUtils.MEMBEROF + qualified;
+            qualified = parent.getDefaultDisplayName() + StringLiterals.MEMBEROF + qualified;
             parents = parent.getParents();
         }
-        return Name.QUOTE + qualified + Name.QUOTE;
+        return StringLiterals.QUOTE + qualified + StringLiterals.QUOTE;
     }
 }

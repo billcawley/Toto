@@ -3,8 +3,12 @@ package com.azquo.spreadsheet;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
+import com.azquo.memorydb.service.ProvenanceService;
+import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
@@ -187,4 +191,42 @@ public class JSTreeService {
             name.setAttributeWillBePersisted(attribute, attVal);
         }
     }
+
+    // for inspect database I think - should be moved to the JStree service maybe?
+    public static TreeNode getDataList(DatabaseAccessToken databaseAccessToken, Set<String> nameStrings, Set<Integer> nameIds, int maxSize) throws Exception {
+        Set<Name> names = new HashSet<>();
+        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        if (nameStrings != null){
+            for (String nString : nameStrings) {
+                Name name = NameService.findByName(azquoMemoryDBConnection, nString);
+                if (name != null) names.add(name);
+            }
+        }
+        if (nameIds != null){
+            for (int id : nameIds) {
+                Name name = NameService.findById(azquoMemoryDBConnection, id);
+                if (name != null) names.add(name);
+            }
+        }
+        List<Value> values = null;
+        String heading = "";
+        for (Name name : names) {
+            if (values == null) {
+//                values = new ArrayList<>(valueService.findValuesForNameIncludeAllChildren(name, true));
+                values = new ArrayList<>(name.findValuesIncludingChildren());
+            } else {
+                values.retainAll(name.findValuesIncludingChildren());
+            }
+            if (heading.length() > 0) heading += ", ";
+            heading += name.getDefaultDisplayName();
+        }
+        TreeNode toReturn = new TreeNode();
+        toReturn.setHeading(heading);
+        toReturn.setValue("");
+        toReturn.setChildren(ProvenanceService.nodify(DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), values, maxSize));
+        ProvenanceService.addNodeValues(toReturn);
+        return toReturn;
+    }
+
+
 }

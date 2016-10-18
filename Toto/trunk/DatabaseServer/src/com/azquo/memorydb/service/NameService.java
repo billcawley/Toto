@@ -1,10 +1,10 @@
 package com.azquo.memorydb.service;
 
+import com.azquo.StringLiterals;
 import com.azquo.dataimport.BatchImporter;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.StringUtils;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
@@ -35,32 +35,7 @@ public final class NameService {
 
     private static final Logger logger = Logger.getLogger(NameService.class);
 
-    public static final String LEVEL = "level";
-    public static final String PARENTS = "parents";
-    public static final String FROM = "from";
-    public static final String TO = "to";
-    public static final String COUNT = "count";
-    public static final String SORTED = "sorted";
-    public static final String CHILDREN = "children";
-    public static final String ATTRIBUTESET = "attributeset";
-    public static final String SELECT = "select";
-    //public static final String LOWEST = "lowest";
-    //public static final String ALL = "all";
-    public static final char NAMEMARKER = '!';
-    public static final char ATTRIBUTEMARKER = '|';
-    public static final String CREATE = "create";
-    public static final String EDIT = "edit";
-    public static final String NEW = "new";
-    public static final String DELETE = "delete";
-    public static final String COUNTBACK = "countback";
-    public static final String COMPAREWITH = "comparewith";
-    public static final String AS = "as";
-    public static final char ASSYMBOL = '@';
-    public static final String WHERE = "where";
-    private static final String languageIndicator = "<-";
-
     private static AtomicInteger nameCompareCount = new AtomicInteger(0);
-
 
     private static final Comparator<Name> defaultLanguageCaseInsensitiveNameComparator = (n1, n2) -> {
         nameCompareCount.incrementAndGet();
@@ -159,10 +134,10 @@ public final class NameService {
     private static Name getNameByAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeValue, Name parent, final List<String> attributeNames) throws Exception {
         getNameByAttributeCount.incrementAndGet();
         // attribute value null? Can it happen?
-        if (attributeValue.length() > 0 && attributeValue.charAt(0) == NAMEMARKER) {
+        if (attributeValue.length() > 0 && attributeValue.charAt(0) == StringLiterals.NAMEMARKER) {
             throw new Exception("error: getNameByAttribute should no longer have name marker passed to it!");
         }
-        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, attributeValue.replace(Name.QUOTE, ' ').trim(), parent);
+        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, attributeValue.replace(StringLiterals.QUOTE, ' ').trim(), parent);
     }
 
     private static AtomicInteger findByNameCount = new AtomicInteger(0);
@@ -214,9 +189,9 @@ public final class NameService {
         findByName2Count.incrementAndGet();
         // This routine accepts multiple 'memberof (->) symbols.  It also checks for the 'language indicator' (<-)
         // note if qualifiedName is null this will NPE - not sure if this is a problem
-        int langPos = qualifiedName.indexOf(languageIndicator);
+        int langPos = qualifiedName.indexOf(StringLiterals.languageIndicator);
         if (langPos > 0) {
-            int quotePos = qualifiedName.indexOf(Name.QUOTE);
+            int quotePos = qualifiedName.indexOf(StringLiterals.QUOTE);
             if (quotePos < 0 || quotePos > langPos) {
                 attributeNames.clear();
                 attributeNames.add(qualifiedName.substring(0, langPos));
@@ -363,7 +338,7 @@ public final class NameService {
             attributeNames = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
         }
 
-        String storeName = name.replace(Name.QUOTE, ' ').trim();
+        String storeName = name.replace(StringLiterals.QUOTE, ' ').trim();
         Name existing;
 
         if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent1", marker);
@@ -542,7 +517,7 @@ public final class NameService {
 
     static Name getNameFromListAndMarker(String nameMarker, List<Name> nameList) throws Exception {
         getNameFromListAndMarkerCount.incrementAndGet();
-        if (nameMarker.charAt(0) == NAMEMARKER) {
+        if (nameMarker.charAt(0) == StringLiterals.NAMEMARKER) {
             try {
                 int nameNumber = Integer.parseInt(nameMarker.substring(1).trim());
                 return nameList.get(nameNumber);
@@ -587,7 +562,7 @@ public final class NameService {
             try {
                 from = Integer.parseInt(fromString);
             } catch (NumberFormatException nfe) {// may be a number, may not . . .
-                if (fromString.charAt(0) == NAMEMARKER) {
+                if (fromString.charAt(0) == StringLiterals.NAMEMARKER) {
                     Name fromName = getNameFromListAndMarker(fromString, referencedNames);
                     fromString = fromName.getDefaultDisplayName();
                 }
@@ -603,7 +578,7 @@ public final class NameService {
                 to = Integer.parseInt(toString);
                 if (fromEnd) to = nameSetList.list.size() - to;
             } catch (NumberFormatException nfe) {// may be a number, may not . . .
-                if (toString.charAt(0) == NAMEMARKER) {
+                if (toString.charAt(0) == StringLiterals.NAMEMARKER) {
                     Name toName = getNameFromListAndMarker(toString, referencedNames);
                     toString = toName.getDefaultDisplayName();
                 }
@@ -687,9 +662,9 @@ public final class NameService {
             return toReturn;
         }
         List<String> languages = new ArrayList<>(attributeNames);
-        int languagePos = setFormula.indexOf(languageIndicator);
+        int languagePos = setFormula.indexOf(StringLiterals.languageIndicator);
         if (languagePos > 0) {
-            int namePos = setFormula.indexOf(Name.QUOTE);
+            int namePos = setFormula.indexOf(StringLiterals.QUOTE);
             if (namePos < 0 || namePos > languagePos) {
                 //change the language
                 languages.clear();
@@ -717,7 +692,7 @@ public final class NameService {
         }
         //todo - find a better way of using 'parseQuery` for other operations
         if (setFormula.toLowerCase().startsWith("edit:")) {
-            return handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(), languages);
+            return NameEditFunctions.handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(), languages);
         }
 
         setFormula = StringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
@@ -728,9 +703,9 @@ public final class NameService {
             if (setFormula.toLowerCase().equals("!00 children")) return new ArrayList<>();// what is this??
             throw e;
         }
-        setFormula = setFormula.replace(AS, ASSYMBOL + "");
+        setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "");
         setFormula = StringUtils.shuntingYardAlgorithm(setFormula);
-        Pattern p = Pattern.compile("[\\+\\-\\*/" + NAMEMARKER + NameService.ASSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
+        Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
         boolean resetDefs = false;
         logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
@@ -739,8 +714,8 @@ public final class NameService {
         // now to act on the formulae which has been converted to Reverse Polish, hence stack based parsing and no brackets etc.
         // NOTE THAT THE SHUNTING YARD ALGORITHM HERE LEAVES FUNCTIONS AT THE START (e.g. Attributeset)
         while (pos < setFormula.length()) {
-            if (setFormula.substring(pos).trim().toLowerCase().startsWith(NameService.ATTRIBUTESET)) { // perhaps not elegant but we'll leave for the moment, can't really treat in query functions like operators
-                pos = setFormula.indexOf(NameService.ATTRIBUTESET) + NameService.ATTRIBUTESET.length();
+            if (setFormula.substring(pos).trim().toLowerCase().startsWith(StringLiterals.ATTRIBUTESET)) { // perhaps not elegant but we'll leave for the moment, can't really treat in query functions like operators
+                pos = setFormula.indexOf(StringLiterals.ATTRIBUTESET) + StringLiterals.ATTRIBUTESET.length();
                 //grab a couple of terms (only sets of names can go onto the stack
                 try {
                     int commaPos = setFormula.indexOf(",", pos);
@@ -757,7 +732,7 @@ public final class NameService {
                         pos++;
                     }
                 } catch (Exception e) {
-                    throw new Exception(formulaCopy + " " + NameService.ATTRIBUTESET + " not understood");
+                    throw new Exception(formulaCopy + " " + StringLiterals.ATTRIBUTESET + " not understood");
                 }
             } else {
                 Matcher m = p.matcher(setFormula.substring(pos + 2));
@@ -768,7 +743,7 @@ public final class NameService {
                     nextTerm = m.start() + pos + 2;
                     // PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
                     // need to check for this....
-                    while (nextTerm < setFormula.length() && (StringUtils.precededBy(setFormula, AS, nextTerm) || StringUtils.precededBy(setFormula, TO, nextTerm) || StringUtils.precededBy(setFormula, FROM, nextTerm) || StringUtils.precededBy(setFormula, AS, nextTerm))) {
+                    while (nextTerm < setFormula.length() && (StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.TO, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.FROM, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm))) {
                         int startPos = nextTerm + 1;
                         nextTerm = setFormula.length() + 1;
                         m = p.matcher(setFormula.substring(startPos));
@@ -777,7 +752,7 @@ public final class NameService {
                         }
                     }
                 }
-                if (op == NAMEMARKER) {
+                if (op == StringLiterals.NAMEMARKER) {
                     stackCount++;
                     // now returns a custom little object that hods a list a set and whether it's immutable
                     nameStack.add(interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings));
@@ -926,7 +901,7 @@ public final class NameService {
                         nameStack.set(stackCount - 1, new NameSetList(resultAsSet, resultAsList, true)); // replace the previous NameSetList
                     }
                     nameStack.remove(stackCount);
-                } else if (op == ASSYMBOL) {
+                } else if (op == StringLiterals.ASSYMBOL) {
                     resetDefs = true;
                     Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
                 /* ok here's the thing. We don't want this to be under the default display name, new logic jams the user email as the first "language"
@@ -1009,29 +984,10 @@ public final class NameService {
         if (term.startsWith("\"")) {
             return strings.get(Integer.parseInt(term.substring(1, 3))).toLowerCase();
         }
-        if (term.startsWith(NameService.NAMEMARKER + "")) {
+        if (term.startsWith(StringLiterals.NAMEMARKER + "")) {
             return getNameFromListAndMarker(term, referencedNames).getDefaultDisplayName();
         }
         return term;
-    }
-
-    private static List<Name> handleEdit(AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> languages) throws Exception {
-        List<Name> toReturn = new ArrayList<>();
-        if (setFormula.startsWith("deduplicate")) {
-            return deduplicate(azquoMemoryDBConnection, setFormula.substring(12));
-        }
-        if (setFormula.startsWith("findduplicates")) {
-            return findDuplicateNames(azquoMemoryDBConnection, setFormula);
-        }
-        if (setFormula.startsWith("zap ")) {
-            Collection<Name> names = parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages); // defaulting to list here
-            if (names != null) {
-                for (Name name : names) name.delete();
-                azquoMemoryDBConnection.persist();
-                return toReturn;
-            }
-        }
-        throw new Exception(setFormula + " not understood");
     }
 
     private static AtomicInteger attributeListCount = new AtomicInteger(0);
@@ -1052,96 +1008,6 @@ public final class NameService {
             }
     }*/
 
-    // Edd note - I'm not completely clear on the deduplicate utility functions but they are not core functionality, more to do with importing (should they be in there?)
-    // so happy to just check for code warnings and not understand 100%
-
-    private static AtomicInteger dedupeOneCount = new AtomicInteger(0);
-
-    private static void dedupeOne(Name name, Set<Name> possibles, Name rubbishBin) throws Exception {
-        dedupeOneCount.incrementAndGet();
-        for (Name child2 : possibles) {
-            if (child2.getId() != name.getId()) {
-                Set<Name> existingChildren = new HashSet<>(child2.getChildren());
-                for (Name grandchild : existingChildren) {
-                    name.addChildWillBePersisted(grandchild);
-                    child2.removeFromChildrenWillBePersisted(grandchild);
-                }
-                Set<Name> existingParents = new HashSet<>(child2.getParents());
-                for (Name parentInLaw : existingParents) {
-                    parentInLaw.addChildWillBePersisted(name);
-                    parentInLaw.removeFromChildrenWillBePersisted(child2);
-                }
-
-                for (Value v : new ArrayList<>(child2.getValues())) { // make a copy before iterating as values will be removed from the original
-                    Set<Name> existingForValue = new HashSet<>(v.getNames());
-                    existingForValue.add(name);
-                    existingForValue.remove(child2);
-                    v.setNamesWillBePersisted(existingForValue);
-                }
-
-                child2.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, "duplicate-" + child2.getDefaultDisplayName());
-                rubbishBin.addChildWillBePersisted(child2);
-            }
-        }
-    }
-
-    private static AtomicInteger deduplicateCount = new AtomicInteger(0);
-
-    private static List<Name> findDuplicateNames(AzquoMemoryDBConnection azquoMemoryDBConnection, String instructions) {
-        Set<String> attributeExceptions = new HashSet<>();
-        if (instructions.toLowerCase().contains("except ")) {
-            String exceptionList = instructions.toUpperCase().substring(instructions.toUpperCase().indexOf("EXCEPT ") + 7).trim();
-            String[] eList = exceptionList.split(",");
-            for (String exception : eList) {
-                attributeExceptions.add(exception.trim());
-            }
-        }
-       /*input syntax 'findduplicates`   probably need to add 'exception' list of cases where duplicates are expected (e.g.   Swimshop product categories)*/
-        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().findDuplicateNames(Constants.DEFAULT_DISPLAY_NAME, attributeExceptions);
-    }
-
-    private static List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula) throws Exception {
-        /*The syntax of the query is 'deduplicate <Set<Name>> to <Name>   Any duplicate names within the source set will be renamed and put in the destination name*/
-        deduplicateCount.incrementAndGet();
-        List<Name> toReturn = new ArrayList<>();
-        int toPos = formula.indexOf(" to ");
-        if (toPos < 0) return toReturn;
-        String baseSet = formula.substring(0, toPos);
-        String binSet = formula.substring(toPos + 4);
-        Name rubbishBin = findOrCreateNameInParent(azquoMemoryDBConnection, binSet, null, false);
-        Collection<Name> names = parseQuery(azquoMemoryDBConnection, baseSet);
-        if (names.size() == 0) return toReturn;
-        if (names.size() > 1) {
-            Map<String, Set<Name>> nameMap = new HashMap<>();
-            for (Name name : names) {
-                String nameString = name.getDefaultDisplayName();
-                nameMap.putIfAbsent(nameString, new HashSet<>());
-                nameMap.get(nameString).add(name);
-            }
-            for (String nameString : nameMap.keySet()) {
-                if (nameMap.get(nameString).size() > 1) {
-                    Set<Name> dups = nameMap.get(nameString);
-                    dedupeOne(dups.iterator().next(), dups, rubbishBin);
-                }
-            }
-            toReturn.add(rubbishBin);
-            return toReturn;
-        }
-        Name name = names.iterator().next();
-        List<String> languages = new ArrayList<>();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        for (Name child : name.findAllChildren()) {
-            if (!rubbishBin.getChildren().contains(child)) {
-                Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, child.getDefaultDisplayName(), name);
-                if (possibles.size() > 1) {
-                    dedupeOne(child, possibles, rubbishBin);
-                }
-            }
-        }
-        toReturn.add(rubbishBin);
-        azquoMemoryDBConnection.persist();
-        return toReturn;
-    }
 
     private static AtomicInteger inParentSetCount = new AtomicInteger(0);
 
@@ -1204,10 +1070,10 @@ public final class NameService {
                 // note, given the new parser these clauses will either be literals or begin .
                 // there may be code improvements that can be made knowing this
 
-                if (clauseLhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
+                if (clauseLhs.charAt(0) == StringLiterals.ATTRIBUTEMARKER) {// we need to replace it
                     clauseLhs = attributeNames.get(Integer.parseInt(clauseLhs.substring(1, 3)));
                 }
-                if (clauseRhs.charAt(0) == ATTRIBUTEMARKER) {// we need to replace it
+                if (clauseRhs.charAt(0) == StringLiterals.ATTRIBUTEMARKER) {// we need to replace it
                     clauseRhs = attributeNames.get(Integer.parseInt(clauseRhs.substring(1, 3)));
                 }
 
@@ -1300,18 +1166,18 @@ public final class NameService {
     private static NameSetList interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
         interpretSetTermCount.incrementAndGet();
         //System.out.println("interpret set term . . ." + setTerm);
-        final String levelString = StringUtils.getInstruction(setTerm, LEVEL);
-        String fromString = StringUtils.getInstruction(setTerm, FROM);
-        String parentsString = StringUtils.getInstruction(setTerm, PARENTS);
-        String childrenString = StringUtils.getInstruction(setTerm, CHILDREN);
-        final String sorted = StringUtils.getInstruction(setTerm, SORTED);
-        String toString = StringUtils.getInstruction(setTerm, TO);
-        String countString = StringUtils.getInstruction(setTerm, COUNT);
-        final String countbackString = StringUtils.getInstruction(setTerm, COUNTBACK);
-        final String compareWithString = StringUtils.getInstruction(setTerm, COMPAREWITH);
-        String selectString = StringUtils.getInstruction(setTerm, SELECT);
+        final String levelString = StringUtils.getInstruction(setTerm, StringLiterals.LEVEL);
+        String fromString = StringUtils.getInstruction(setTerm, StringLiterals.FROM);
+        String parentsString = StringUtils.getInstruction(setTerm, StringLiterals.PARENTS);
+        String childrenString = StringUtils.getInstruction(setTerm, StringLiterals.CHILDREN);
+        final String sorted = StringUtils.getInstruction(setTerm, StringLiterals.SORTED);
+        String toString = StringUtils.getInstruction(setTerm, StringLiterals.TO);
+        String countString = StringUtils.getInstruction(setTerm, StringLiterals.COUNT);
+        final String countbackString = StringUtils.getInstruction(setTerm, StringLiterals.COUNTBACK);
+        final String compareWithString = StringUtils.getInstruction(setTerm, StringLiterals.COMPAREWITH);
+        String selectString = StringUtils.getInstruction(setTerm, StringLiterals.SELECT);
 
-        int wherePos = setTerm.toLowerCase().indexOf(WHERE.toLowerCase());
+        int wherePos = setTerm.toLowerCase().indexOf(StringLiterals.WHERE.toLowerCase());
         String whereString = null;
         if (wherePos >= 0) {
             whereString = setTerm.substring(wherePos + 6);//the rest of the string???   maybe need 'group by' in future
@@ -1423,8 +1289,6 @@ public final class NameService {
         System.out.println("parseQuery3Count\t\t\t\t\t\t\t\t" + parseQuery3Count.get());
         System.out.println("attributeListCount\t\t\t\t\t\t\t\t" + attributeListCount.get());
         System.out.println("findAllParentsCount\t\t\t\t\t\t\t\t" + findAllParentsCount.get());
-        System.out.println("dedupeOneCount\t\t\t\t\t\t\t\t" + dedupeOneCount.get());
-        System.out.println("deduplicateCount\t\t\t\t\t\t\t\t" + deduplicateCount.get());
         System.out.println("inParentSetCount\t\t\t\t\t\t\t\t" + inParentSetCount.get());
         System.out.println("isAllowedCount\t\t\t\t\t\t\t\t" + isAllowedCount.get());
         System.out.println("filterCount\t\t\t\t\t\t\t\t" + filterCount.get());
@@ -1456,8 +1320,6 @@ public final class NameService {
         parseQuery3Count.set(0);
         attributeListCount.set(0);
         findAllParentsCount.set(0);
-        dedupeOneCount.set(0);
-        deduplicateCount.set(0);
         inParentSetCount.set(0);
         isAllowedCount.set(0);
         filterCount.set(0);

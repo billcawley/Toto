@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
@@ -381,8 +382,8 @@ public class BatchImporter implements Callable<Void> {
         So make a local reference to add quotes to
          */
         String cellWithHeadingLineValue = cellWithHeading.getLineValue();
-        if (cellWithHeadingLineValue.contains(",") && !cellWithHeadingLineValue.contains(Name.QUOTE + "")) {//beware of treating commas in cells as set delimiters....
-            cellWithHeadingLineValue = Name.QUOTE + cellWithHeadingLineValue + Name.QUOTE;
+        if (cellWithHeadingLineValue.contains(",") && !cellWithHeadingLineValue.contains(StringLiterals.QUOTE + "")) {//beware of treating commas in cells as set delimiters....
+            cellWithHeadingLineValue = StringLiterals.QUOTE + cellWithHeadingLineValue + StringLiterals.QUOTE;
         }
         if (cellWithHeading.getLineName() == null) { // then create it, this will take care of the parents ("child of") while creating
             cellWithHeading.setLineName(includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeadingLineValue

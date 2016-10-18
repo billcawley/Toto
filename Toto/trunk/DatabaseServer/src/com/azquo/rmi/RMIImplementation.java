@@ -6,6 +6,7 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.service.DSAdminService;
+import com.azquo.memorydb.service.ProvenanceService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
 import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
@@ -208,7 +209,7 @@ class RMIImplementation implements RMIInterface {
 
     public TreeNode getJstreeDataForOutputUsingNames(DatabaseAccessToken databaseAccessToken, Set<String> nameNames, int maxSize) throws RemoteException {
         try {
-            return DSSpreadsheetService.getDataList(databaseAccessToken, nameNames, null, maxSize);
+            return JSTreeService.getDataList(databaseAccessToken, nameNames, null, maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -216,7 +217,7 @@ class RMIImplementation implements RMIInterface {
 
     public TreeNode getJstreeDataForOutputUsingIds(DatabaseAccessToken databaseAccessToken, Set<Integer> nameIds, int maxSize) throws RemoteException {
         try {
-            return DSSpreadsheetService.getDataList(databaseAccessToken, null, nameIds, maxSize);
+            return JSTreeService.getDataList(databaseAccessToken, null, nameIds, maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -225,7 +226,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public List<TreeNode> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
         try {
-            return DSSpreadsheetService.getDataRegionProvenance(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, maxSize);
+            return ProvenanceService.getDataRegionProvenance(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

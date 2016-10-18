@@ -1,5 +1,6 @@
 package com.azquo.memorydb.core;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
@@ -45,12 +46,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * I've extracted NameAttributes and a few static functions but there's still too much code in here. Values and children switching between arrays and sets is a problem.
  */
 public final class Name extends AzquoMemoryDBEntity {
-
-    public static final String CALCULATION = "CALCULATION";
-    private static final String LOCAL = "LOCAL";
-    static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
-
-    public static final char QUOTE = '`';
 
     private static final int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
 
@@ -114,7 +109,7 @@ public final class Name extends AzquoMemoryDBEntity {
         this.childrenCache = chidrenCache;
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId); // see no reason not to do this here now
         //this.attributes = transport.attributes;
-        String[] attsArray = attributes.split(ATTRIBUTEDIVIDER);
+        String[] attsArray = attributes.split(StringLiterals.ATTRIBUTEDIVIDER);
         String[] attributeKeys = new String[attsArray.length / 2];
         String[] attributeValues = new String[attsArray.length / 2];
         for (int i = 0; i < attributeKeys.length; i++) {
@@ -440,7 +435,7 @@ public final class Name extends AzquoMemoryDBEntity {
         if (hasParents()) {
             Name parent = parents[0];
             while (parent != null) { // can this ever be null? I'd say it shouldn't be. Logic works fine though.
-                if (parent.hasParents() && parent.getAttribute(LOCAL) == null) {
+                if (parent.hasParents() && parent.getAttribute(StringLiterals.LOCAL) == null) {
                     parent = parent.parents[0];
                 } else {
                     return parent; // it has no parents, must be top
@@ -741,11 +736,11 @@ public final class Name extends AzquoMemoryDBEntity {
     public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
         setAttributeWillBePersistedCount.incrementAndGet();
         // make safe for new way of persisting attributes
-        if (attributeName.contains(ATTRIBUTEDIVIDER)) {
-            attributeName = attributeName.replace(ATTRIBUTEDIVIDER, "");
+        if (attributeName.contains(StringLiterals.ATTRIBUTEDIVIDER)) {
+            attributeName = attributeName.replace(StringLiterals.ATTRIBUTEDIVIDER, "");
         }
-        if (attributeValue != null && attributeValue.contains(ATTRIBUTEDIVIDER)) {
-            attributeValue = attributeValue.replace(ATTRIBUTEDIVIDER, "");
+        if (attributeValue != null && attributeValue.contains(StringLiterals.ATTRIBUTEDIVIDER)) {
+            attributeValue = attributeValue.replace(StringLiterals.ATTRIBUTEDIVIDER, "");
         }
         attributeName = attributeName.trim().toUpperCase(); // I think this is the only point at which attributes are created thus if it's uppercased here we should not need to check anywhere else
         /* important, manage persistence, allowed name rules, db look ups only care about ones in this set

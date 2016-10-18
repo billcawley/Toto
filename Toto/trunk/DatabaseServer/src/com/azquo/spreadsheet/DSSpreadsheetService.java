@@ -1,16 +1,14 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.StringLiterals;
 import com.azquo.ThreadPools;
 import com.azquo.dataimport.BatchImporter;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.*;
-import com.azquo.memorydb.service.MutableBoolean;
-import com.azquo.memorydb.service.NameService;
-import com.azquo.memorydb.service.ValueService;
+import com.azquo.memorydb.service.*;
 import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.view.FilterTriple;
@@ -22,9 +20,7 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 
 import java.io.*;
-import java.text.DateFormat;
 import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -686,7 +682,7 @@ public class DSSpreadsheetService {
                 changed = true; // we actually did something
                 // Edd added check for the parent name containing space and adding quotes
                 // the key here is that whatever is in description can be used to look up a name. Used to be reverse order comma separated, now use new member of notation
-                uName.description = parent.getDefaultDisplayName() + StringUtils.MEMBEROF + uName.description;
+                uName.description = parent.getDefaultDisplayName() + StringLiterals.MEMBEROF + uName.description;
                 uName.topName = parent;
                 break; // no point continuing I guess, the unique name has a further unambiguous qualifier
             }
@@ -702,7 +698,7 @@ public class DSSpreadsheetService {
             toCheck = new ArrayList<>();
             for (Name name : names) {
                 if (name.hasParents()) { // qualify with the first parent
-                    toCheck.add(new UniqueName(name, name.getParents().iterator().next().getDefaultDisplayName() + StringUtils.MEMBEROF + name.getDefaultDisplayName()));
+                    toCheck.add(new UniqueName(name, name.getParents().iterator().next().getDefaultDisplayName() + StringLiterals.MEMBEROF + name.getDefaultDisplayName()));
                 } else {
                     toCheck.add(new UniqueName(name, name.getDefaultDisplayName()));
                 }
@@ -1077,8 +1073,8 @@ public class DSSpreadsheetService {
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
         if (time > 5000) { // a bit arbitrary
-            ValueService.printSumStats();
             ValueService.printFindForNamesIncludeChildrenStats();
+            ValueCalculationService.printSumStats();
         }
         track = System.currentTimeMillis();
         boolean permute = false;
@@ -1147,7 +1143,7 @@ public class DSSpreadsheetService {
         return shared;
     }
 
-    private static AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
+    public static AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , int unsortedRow, int unsortedCol, List<String> languages) throws Exception {
         return getSingleCellFromRegion(azquoMemoryDBCOnnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, languages, null);
@@ -1867,7 +1863,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                         }
                     }
                     listOfValuesOrNamesAndAttributeName = new ListOfValuesOrNamesAndAttributeName(names, attributes);
-                    String attributeResult = ValueService.findValueForHeadings(rowAndColumnHeadingsForThisCell, locked);
+                    String attributeResult = findValueForHeadings(rowAndColumnHeadingsForThisCell, locked);
                     if (locked.isTrue){ // check there' wasn't unlocked, this overrides the rule in findValueForHeadings
                         for (DataRegionHeading lockCheck : headingsForThisCell) {
                             if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED){
@@ -1894,6 +1890,45 @@ Callable interface sorts the memory "happens before" using future gets which run
                 /* something to note : in the old model there was a map of headings used for each cell. I could add headingsForThisCell to the cell which would be a unique set for each cell
                  but instead I'll just add the headings and row and context, I think it would be less memory. 3 object references vs a set*/
         return new AzquoCell(locked.isTrue, listOfValuesOrNamesAndAttributeName, rowHeadings, columnHeadings, contextHeadings, rowNo, colNo, stringValue, doubleValue, false, selected);
+    }
+
+    // Simple attribute summing (assuming attributes are numeric), doesn't use set intersection or name children or anything like that
+    // For the moment on the initial version don't use set intersection, just look at the headings as handed to the function - will it ever need to do this?
+
+    private static String findValueForHeadings(final List<DataRegionHeading> headings, final MutableBoolean locked) throws Exception {
+        List<Name> names = DSSpreadsheetService.namesFromDataRegionHeadings(headings);
+        if (names.size() != 1) {
+            locked.isTrue = true;
+        }
+        Set<String> attributes = DSSpreadsheetService.attributesFromDataRegionHeadings(headings);
+        String stringResult = null;
+        double numericResult = 0;
+        int count = 0;
+        String attValue = null;
+        for (Name n : names) { // go through each name
+            for (String attribute : attributes) { // and for each name the
+                attValue = n.getAttribute(attribute.replace("`", "").toUpperCase());
+                if (attValue != null) {
+                    count++;
+                    if (!locked.isTrue && n.getAttribute(attribute, false, new HashSet<>()) == null) { // the attribute is not against the name itself (it's from the parent or structure)
+                        locked.isTrue = true;
+                    }
+                    // basic sum across the names/attributes (not going into children)
+                    // comma separated for non numeric. If mixed it will default to the string
+                    try {
+                        numericResult += Double.parseDouble(attValue);
+                    } catch (Exception e) {
+                        if (stringResult == null) {
+                            stringResult = attValue;
+                        } else {
+                            stringResult += (", " + attValue);
+                        }
+                    }
+                }
+            }
+        }
+        if (count <= 1) return attValue;//don't allow long numbers to be converted to standard form.
+        return (stringResult != null) ? stringResult : numericResult + "";
     }
 
     // todo : put the size check of each set and hence which way we run through the loop in here, should improve performance if required
@@ -2055,32 +2090,6 @@ Callable interface sorts the memory "happens before" using future gets which run
         return false;
     }
 
-    public static List<TreeNode> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = getConnectionFromAccessToken(databaseAccessToken);
-        AzquoCell azquoCell = getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, databaseAccessToken.getLanguages());
-        if (azquoCell != null) {
-            final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-            //Set<Name> specialForProvenance = new HashSet<Name>();
-            // todo, deal with name functions properly, will need to check through the DataRegionHeadings
-            if (valuesForCell == null) {
-                return nameCountProvenance(azquoCell);
-            }
-            if (valuesForCell.getValues() != null) {
-                return nodify(azquoMemoryDBConnection, valuesForCell.getValues(), maxSize);
-            }
-            // todo - in case of now row headings ( import style data) this may NPE
-            if (azquoCell.getRowHeadings().get(0).getAttribute() != null || azquoCell.getColumnHeadings().get(0).getAttribute() != null) {
-                if (azquoCell.getRowHeadings().get(0).getAttribute() != null) { // then col name, row attribute
-                    return nodify(azquoCell.getColumnHeadings().get(0).getName(), azquoCell.getRowHeadings().get(0).getAttribute());
-                } else { // the other way around
-                    return nodify(azquoCell.getRowHeadings().get(0).getName(), azquoCell.getColumnHeadings().get(0).getAttribute());
-                }
-            }
-        }
-        return Collections.emptyList(); //just empty ok? null? Unsure
-    }
-
     // like above to find the relevant cell BUT in this case we want as much detail about how the cell was made. I'm just going to return a string here
     public static String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws Exception {
@@ -2093,134 +2102,6 @@ Callable interface sorts the memory "happens before" using future gets which run
         } else {
             return debugInfo.toString();
         }
-    }
-
-    private static List<TreeNode> nameCountProvenance(AzquoCell azquoCell) {
-        String provString = "";
-        Set<Name> cellNames = new HashSet<>();
-        Name nameCountHeading = null;
-        for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()) {
-            if (rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
-                provString += "namecount(" + rowHeading.getDescription();
-                nameCountHeading = rowHeading.getName();
-            }
-            if (rowHeading.getName() != null) {
-                cellNames.add(rowHeading.getName());
-            }
-        }
-        for (DataRegionHeading colHeading : azquoCell.getColumnHeadings()) {
-            if (colHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
-                provString += "namecount(" + colHeading.getDescription();
-                nameCountHeading = colHeading.getName();
-                break;
-            }
-            if (colHeading.getName() != null) {
-                cellNames.add(colHeading.getName());
-            }
-        }
-        List<TreeNode> toReturn = new ArrayList<>();
-        if (nameCountHeading != null) {
-            provString = "total" + provString;
-        }
-        Name cellName = cellNames.iterator().next();
-        provString += " * " + cellName.getDefaultDisplayName() + ")";
-        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
-        Provenance p = cellName.getProvenance();
-        TreeNode node = new TreeNode();
-        node.setValue(azquoCell.getDoubleValue() + "");
-        node.setName(provString);
-        String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
-        String method = p.getMethod();
-        if (p.getName() != null) {
-            method += " " + p.getName();
-        }
-        if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
-        node.setHeading(source + " " + method);
-        toReturn.add(node);
-        return toReturn;
-    }
-
-    // for inspect database I think - should be moved to the JStree service maybe?
-    public static TreeNode getDataList(DatabaseAccessToken databaseAccessToken, Set<String> nameStrings, Set<Integer> nameIds, int maxSize) throws Exception {
-        Set<Name> names = new HashSet<>();
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        if (nameStrings != null){
-            for (String nString : nameStrings) {
-                Name name = NameService.findByName(azquoMemoryDBConnection, nString);
-                if (name != null) names.add(name);
-            }
-        }
-        if (nameIds != null){
-            for (int id : nameIds) {
-                Name name = NameService.findById(azquoMemoryDBConnection, id);
-                if (name != null) names.add(name);
-            }
-        }
-        List<Value> values = null;
-        String heading = "";
-        for (Name name : names) {
-            if (values == null) {
-//                values = new ArrayList<>(valueService.findValuesForNameIncludeAllChildren(name, true));
-                values = new ArrayList<>(name.findValuesIncludingChildren());
-            } else {
-                values.retainAll(name.findValuesIncludingChildren());
-            }
-            if (heading.length() > 0) heading += ", ";
-            heading += name.getDefaultDisplayName();
-        }
-        TreeNode toReturn = new TreeNode();
-        toReturn.setHeading(heading);
-        toReturn.setValue("");
-        toReturn.setChildren(nodify(getConnectionFromAccessToken(databaseAccessToken), values, maxSize));
-        ValueService.addNodeValues(toReturn);
-        return toReturn;
-    }
-
-    // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
-    // for provenance?
-    private static List<TreeNode> nodify(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, int maxSize) {
-        List<TreeNode> toReturn = new ArrayList<>();
-        if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
-            ValueService.sortValues(values);
-            //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
-            Date provdate = values.get(0).getProvenance().getTimeStamp();
-            Set<Value> oneUpdate = new HashSet<>();
-            Provenance p = null;
-            for (Value value : values) {
-                if (value.getProvenance().getTimeStamp() == provdate) {
-                    oneUpdate.add(value);
-                    p = value.getProvenance();
-                } else {
-                    toReturn.add(ValueService.getTreeNode(azquoMemoryDBConnection, oneUpdate, p, maxSize));
-                    oneUpdate = new HashSet<>();
-                    oneUpdate.add(value);
-                    p = value.getProvenance();
-                    provdate = value.getProvenance().getTimeStamp();
-                }
-            }
-            toReturn.add(ValueService.getTreeNode(azquoMemoryDBConnection, oneUpdate, p, maxSize));
-        }
-        return toReturn;
-    }
-
-    // another not very helpfully named function, might be able to be rewritten after we zap Azquo Book (the Aspose based functionality)
-    private static List<TreeNode> nodify(Name name, String attribute) {
-        attribute = attribute.substring(1).replace("`", "");
-        List<TreeNode> toReturn = new ArrayList<>();
-        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
-        Provenance p = name.getProvenance();
-        TreeNode node = new TreeNode();
-        node.setValue(name.getAttribute(attribute));
-        node.setName(name.getDefaultDisplayName() + "." + attribute);
-        String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
-        String method = p.getMethod();
-        if (p.getName() != null) {
-            method += " " + p.getName();
-        }
-        if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
-        node.setHeading(source + " " + method);
-        toReturn.add(node);
-        return toReturn;
     }
 
     // create a file to import from a populated region in the spreadsheet
@@ -2476,7 +2357,7 @@ Callable interface sorts the memory "happens before" using future gets which run
                                     if (valuesForCell.getNames() != null && valuesForCell.getNames().size() == 1
                                             && valuesForCell.getAttributeNames() != null && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
                                         Name toChange = valuesForCell.getNames().get(0);
-                                        String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(Name.QUOTE + "", "");//remove the initial '.' and any `
+                                        String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(StringLiterals.QUOTE + "", "");//remove the initial '.' and any `
                                         Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
                                         if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDBIndex().attributeExistsInDB(attribute)) {
                                     /* right : when populating attribute based data findParentAttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
