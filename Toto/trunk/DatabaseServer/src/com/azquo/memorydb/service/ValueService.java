@@ -130,7 +130,7 @@ public final class ValueService {
                 }
             }
         }
-        if (newValueString.equals(existingValue.getText())) {
+        if (DSSpreadsheetService.compareStringValues(existingValue.getText(), newValueString)) { // converted to use compare string values rather than simple replace
             return true;
         }
         Value newValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), newValueString);
