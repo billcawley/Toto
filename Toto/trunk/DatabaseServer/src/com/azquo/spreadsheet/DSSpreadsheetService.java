@@ -155,6 +155,7 @@ public class DSSpreadsheetService {
                             String[] permutedNames = sourceCell.split(",");
                             List<DataRegionHeading> headings = new ArrayList<>();
                             for (String permutedName : permutedNames) {
+                                // todo - what if you have `thingamy whatsit sorted`?
                                 boolean sorted = permutedName.contains(" sorted");
                                 if (sorted){
                                     permutedName = permutedName.substring(0, permutedName.indexOf(" sorted")).trim();
@@ -1390,7 +1391,7 @@ public class DSSpreadsheetService {
         if (regionOptions.highlightDays > 0) {
             int highlightHours = regionOptions.highlightDays * 24;
             //hack to allow highlight one hour
-            if (regionOptions.highlightDays == 2) highlightHours = 1;
+            if (regionOptions.highlightDays == 2) highlightHours = 1; // todo - get rid of this!
             for (List<AzquoCell> row : toReturn) {
                 for (AzquoCell azquoCell : row) {
                     long age = 1000000; // about 30 years old as default
@@ -1400,12 +1401,13 @@ public class DSSpreadsheetService {
                             if (value.getText().length() > 0) {
                                 if (value.getProvenance() == null || value.getProvenance().getTimeStamp() == null) {
                                     System.out.println("provenance or timestamp null for " + value); // bit of a hack but lets log it
-                                    break;
-                                }
-                                LocalDateTime provdate = LocalDateTime.ofInstant(value.getProvenance().getTimeStamp().toInstant(), ZoneId.systemDefault());
-                                long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.HOURS);
-                                if (cellAge < age) {
-                                    age = cellAge;
+                                    //break;
+                                } else {
+                                    LocalDateTime provdate = LocalDateTime.ofInstant(value.getProvenance().getTimeStamp().toInstant(), ZoneId.systemDefault());
+                                    long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.HOURS);
+                                    if (cellAge < age) {
+                                        age = cellAge;
+                                    }
                                 }
                             }
                         }

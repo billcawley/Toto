@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -276,6 +277,8 @@ public final class AzquoMemoryDB {
         }
     }
 
+    private volatile AtomicReference<Provenance> mostRecentProvenance = new AtomicReference<>();
+
     // last modified according to provenance!
     private final AtomicLong lastModified = new AtomicLong();
 
@@ -285,12 +288,17 @@ public final class AzquoMemoryDB {
         if (provenanceByIdMap.putIfAbsent(newProvenance.getId(), newProvenance) != null) {
             throw new Exception("tried to add a provenance to the database with an existing id!");
         }
+        mostRecentProvenance.getAndUpdate(provenance -> provenance != null &&  provenance.getTimeStamp().after(newProvenance.getTimeStamp()) ? provenance : newProvenance);
         // should I be tolerating no timestamp?
         lastModified.getAndUpdate(n -> newProvenance.getTimeStamp() != null && n < newProvenance.getTimeStamp().getTime() ? newProvenance.getTimeStamp().getTime() : n); // think that logic it correct for thread safety
     }
 
     public long getLastModifiedTimeStamp() {
         return lastModified.get();
+    }
+
+    public Provenance getMostRecentProvenance() {
+        return mostRecentProvenance.get();
     }
 
     // note - this function will NOT check for existing locks for these values, it just clears for this user then sets new locks

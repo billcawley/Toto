@@ -840,8 +840,8 @@ public class ZKAzquoBookUtils {
                             // does this mean a double check? That it's constrained by selection here in context and again by the permute? I suppose no harm.
                             //if (possibleOptions.size() != choiceOptions.size() && choiceOptions.size() > 0) {
                             if (choiceOptions.size()==0){
-                                //create a list
-                                List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                                //THis should create the required bits server side . . .
+                                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                                         .getFilterListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "` children", "az_" + filter, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
                                 choiceOptions = getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
 
@@ -1720,9 +1720,9 @@ public class ZKAzquoBookUtils {
         //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
         for (String filter : filters) {
             filter = filter.trim();
-            List<String> optionsList = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
+            List<String> optionsList = getDropdownListForQuery(loggedInUser, "`" + filter + "` children sorted");
             if (optionsList != null && optionsList.size() > 1) {
-                String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children");//leave out any with single choices
+                String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children sorted");//leave out any with single choices
                 int rowOffset = filterCount % headingRows;
                 int colOffset = filterCount / headingRows;
                 int chosenRow = headingRow + rowOffset;

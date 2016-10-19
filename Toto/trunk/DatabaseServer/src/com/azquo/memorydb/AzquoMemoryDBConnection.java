@@ -97,9 +97,11 @@ public class AzquoMemoryDBConnection {
     }
 
     public void setProvenance(final String user,final String method, final String name, final String context)throws Exception{
-        if (provenance != null && provenance.getUser().equals(user)){
-            long elapsed = new Date().getTime() - provenance.getTimeStamp().getTime();
-            if (provenance.getMethod().equals(method) && provenance.getContext().equals(context) && elapsed < 600000) {// ten minutes
+        Provenance latest = azquoMemoryDB.getMostRecentProvenance();
+        if (latest.getUser().equals(user)){
+            long elapsed = new Date().getTime() - latest.getTimeStamp().getTime();
+            if (latest.getMethod().equals(method) && latest.getContext().equals(context) && elapsed < 600000) {// ten minutes
+                this.provenance = latest;
                 return;
             }
         }
