@@ -370,14 +370,14 @@ public class DSSpreadsheetService {
         List<Name> permuteNames = new ArrayList<>();
         List<Name> sharedNamesList = new ArrayList<>(); // an arraylist is fine it's only going to be iterated later
         // assemble the sets I want to find a cross section of
-        Set<Integer> permuteNameIndexesThatNeedSorting = new HashSet<>(); //  a bit hacky. After extracting the permute names from the data region headings we need to check if any were flagged as sorted, jam their indexes in here
-        int nameIndex = 0;
+        Set<Name> permuteNamesThatNeedSorting = new HashSet<>(); //  a bit hacky. After extracting the permute names from the data region headings we need to check if any were flagged as sorted, jam their indexes in here
         for (DataRegionHeading drh : listToPermute) {
             if (drh.getName() != null){
                 permuteNames.add(drh.getName());
                 sharedNamesSets.add(drh.getName().findAllChildren());
-                permuteNameIndexesThatNeedSorting.add(nameIndex);
-                nameIndex++;
+                if (drh.getDescription().equalsIgnoreCase("sorted")){ // hacky, string literal and the description against a heading is not as clear as it could be!
+                    permuteNamesThatNeedSorting.add(drh.getName());
+                }
             }
         }
         if (sharedNames != null) {
@@ -456,11 +456,10 @@ public class DSSpreadsheetService {
         // this is running through each of the name's children (the categories we're permuting) assigning a "natural" position
         // it's created out here as sortCombos is recursive hence we don't want to recreate it each time
         List<Map<Name, Integer>> sortLists = new ArrayList<>();
-        nameIndex = 0;
         for (Name permuteName : permuteNames) {
             Map<Name, Integer> sortList = new HashMap<>();
             Collection<Name> children = permuteName.getChildren();
-            if (permuteNameIndexesThatNeedSorting.contains(nameIndex)){ // then new code to sort. Override the "natural" sorting if it exists
+            if (permuteNamesThatNeedSorting.contains(permuteName)){ // then new code to sort. Override the "natural" sorting if it exists
                 List<Name> sorted = new ArrayList<>(children);
                 NameService.sortCaseInsensitive(sorted);
                 children = sorted;
@@ -470,7 +469,6 @@ public class DSSpreadsheetService {
                 sortList.put(name, sortPos++);
             }
             sortLists.add(sortList);
-            nameIndex++;
         }
         List<List<DataRegionHeading>> permuted = sortCombos(listToPermute, foundCombinations, 0, sortLists);
         for (int i=1;i < headingRow.size();i++){
