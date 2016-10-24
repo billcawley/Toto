@@ -31,7 +31,9 @@ import com.azquo.memorydb.TreeNode;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.Calendar;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -359,6 +361,16 @@ public class ZKComposer extends SelectorComposer<Component> {
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
+        //need to check whether this is a date.  If so then save as a date
+        SCell sCell = event.getSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());
+        String cellFormat = sCell.getCellStyle().getDataFormat();
+        if (cellFormat.toLowerCase().contains("mm")|| cellFormat.toLowerCase().contains("yy")){
+            //format the result as a date
+            //fudge the result for the present
+
+               chosen = fudgeDate(chosen); //1970-01-01-00:00:00
+
+        }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
@@ -580,6 +592,46 @@ public class ZKComposer extends SelectorComposer<Component> {
         return null;
     }
 
+    private String convertMonthString(String month){
+        if (month.contains("jan")) return "01";
+        if (month.contains("feb")) return "02";
+        if (month.contains("mar")) return "03";
+        if (month.contains("apr")) return "04";
+        if (month.contains("may")) return "05";
+        if (month.contains("jun")) return "06";
+        if (month.contains("jul")) return "07";
+        if (month.contains("aug")) return "08";
+        if (month.contains("sep")) return "09";
+        if (month.contains("oct")) return "10";
+        if (month.contains("nov")) return "11";
+        if (month.contains("dec")) return "12";
+        return "00";
+     }
+
+    private String fudgeDate(String chosen){
+        chosen = chosen.replace("/","-").replace(" ","-");
+        try{
+            int firstDash = chosen.indexOf("-");
+            if (firstDash < 0 ) return chosen;
+            int secondDash = chosen.indexOf("-", firstDash + 1);
+            if (secondDash < 0) return chosen;
+            String day = chosen.substring(0, firstDash);
+            if (day.length() == 1) day = "0" + day;
+            String month = chosen.substring(firstDash + 1, secondDash);
+            if (month.length()==1) month = "0" + month;
+            if (month.length() > 2 ){
+                month = convertMonthString(month.toLowerCase());
+
+            }
+            String year = chosen.substring(secondDash + 1);
+            if (year.length()==2) year = "20" + year;
+            return year + "-" + month + "-" + day;
+        }catch(Exception e){
+            return chosen;
+        }
+    }
+
+
     // Commented, why?
     @Listen("onSheetSelect = #myzss")
     public void onSheetSelect(SheetSelectEvent sheetSelectEvent) {
@@ -628,7 +680,12 @@ public class ZKComposer extends SelectorComposer<Component> {
         for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZROWHEADINGS)) {
                 //surely there must be a better way of getting the first cell off a region!
-                String firstItem = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn()).getStringValue();
+                String firstItem = "";
+                try{
+                    firstItem = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn()).getStringValue();
+                }catch(Exception e){
+                    //there's an error in the formula - certainly not a permute!
+                }
                 if (firstItem.toLowerCase().startsWith("permute(")) {
                     String[] rowHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
                     String displayRowHeadingsString = "az_Display" + name.getName().substring(3);
