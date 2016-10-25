@@ -31,6 +31,9 @@
         <property name="maxActive" value="10" />
         <property name="maxIdle" value="5" />
         <property name="minIdle" value="2" />
+        <property name="testOnBorrow" value="true" />
+        <property name="validationQuery" value="Select 1" />
+        <!-- damn, need to work on this <property name="connectionTimeout" value="30000" />8 hours, should solve the "weekend" problem? -->
     </bean>
 
 <!--    <bean name="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
