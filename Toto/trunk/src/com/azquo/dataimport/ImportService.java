@@ -546,7 +546,7 @@ public final class ImportService {
             String regionName = getRegionName(name);
             if (regionName != null) {
                 CellRegion sourceRegion = sName.getRefersToCellRegion();
-                if (name.toLowerCase().contains(ZKAzquoBookUtils.AZREPEATSCOPE.toLowerCase())) { // then deal with the multiple data regions sent due to this
+                if (name.toLowerCase().contains(ZKAzquoBookUtils.AZREPEATSCOPE)) { // then deal with the multiple data regions sent due to this
                     // need to gather associated names for calculations, the region and the data region, code copied and changewd from getRegionRowColForRepeatRegion, it needs to work well for a batch of cells not just one
                     SName repeatRegion = sourceBook.getInternalBook().getNameByName(ZKAzquoBookUtils.AZREPEATREGION + regionName);
                     SName repeatDataRegion = sourceBook.getInternalBook().getNameByName("az_DataRegion" + regionName); // todo string literals ergh!

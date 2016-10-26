@@ -22,7 +22,6 @@ import org.zkoss.zss.model.*;
 
 import java.io.File;
 import java.rmi.RemoteException;
-import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -41,23 +40,23 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ZKAzquoBookUtils {
 
-    // todo - make use of this case insensetive
-    public static final String AZDATAREGION = "az_DataRegion";
-    public static final String AZOPTIONS = "az_Options";
-    public static final String AZREPEATREGION = "az_RepeatRegion";
-    public static final String AZREPEATSCOPE = "az_RepeatScope";
-    public static final String AZREPEATITEM = "az_RepeatItem";
-    public static final String AZREPEATLIST = "az_RepeatList";
-    public static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
-    public static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
-    public static final String AZCOLUMNHEADINGS = "az_columnheadings";
-    public static final String AZROWHEADINGS = "az_rowheadings";
-    public static final String AZCONTEXT = "az_context";
-    public static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
-    public static final String AZCONTEXTFILTERS = "az_contextfilters";
-    public static final String AZCONTEXTHEADINGS = "az_contextheadings";
-    public static final String AZPIVOTHEADINGS = "az_pivotheadings";//old version
-     public static final String AZREPORTNAME = "az_reportname";
+    // all case insensetive now so make these lower case and make the names from the reports .toLowerCase().startsWith().
+    public static final String AZDATAREGION = "az_dataregion";
+    public static final String AZOPTIONS = "az_options";
+    public static final String AZREPEATREGION = "az_repeatregion";
+    public static final String AZREPEATSCOPE = "az_repeatscope";
+    private static final String AZREPEATITEM = "az_repeatitem";
+    private static final String AZREPEATLIST = "az_repeatlist";
+    private static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
+    private static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
+    static final String AZCOLUMNHEADINGS = "az_columnheadings";
+    static final String AZROWHEADINGS = "az_rowheadings";
+    private static final String AZCONTEXT = "az_context";
+    static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
+    static final String AZCONTEXTFILTERS = "az_contextfilters";
+    static final String AZCONTEXTHEADINGS = "az_contextheadings";
+    static final String AZPIVOTHEADINGS = "az_pivotheadings";//old version
+    private static final String AZREPORTNAME = "az_reportname";
 
 
 
@@ -171,7 +170,7 @@ public class ZKAzquoBookUtils {
                         final boolean save = populateBook(book, 0, false, null, true); // note true at the end here - keep on logging so users can see changes as they happen
                         if (save) { // so the data was changed and if we save from here it will make changes to the DB
                             for (SName name : book.getInternalBook().getNames()) {
-                                if (name.getName().toLowerCase().startsWith(AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
+                                if (name.getName().toLowerCase().startsWith(AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
                                     String region = name.getName().substring(AZDATAREGION.length());
                                     SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName(), false); // to not persist right now
                                 }
@@ -423,7 +422,7 @@ public class ZKAzquoBookUtils {
                 if (name.getName().equals("az_ImageStoreName")) {
                     imageStoreName = getRegionValue(sheet, name.getRefersToCellRegion());
                 }
-                if (name.getName().startsWith(AZDATAREGION)) { // then we have a data region to deal with here
+                if (name.getName().toLowerCase().startsWith(AZDATAREGION)) { // then we have a data region to deal with here
                     String region = name.getName().substring(AZDATAREGION.length()); // might well be an empty string
                     SName optionsRegion = sheet.getBook().getInternalBook().getNameByName(AZOPTIONS + region);
                     String optionsSource = "";
@@ -508,7 +507,7 @@ public class ZKAzquoBookUtils {
             */
             if (!fastLoad) {
                 for (SName name : namesForSheet) {
-                    if (name.getName().startsWith(AZDATAREGION)) {
+                    if (name.getName().toLowerCase().startsWith(AZDATAREGION)) {
                         String region = name.getName().substring(AZDATAREGION.length());
                         CellRegion displayDataRegion = getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                         final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
@@ -1602,7 +1601,7 @@ public class ZKAzquoBookUtils {
         List<SName> dependentRanges = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) {
             String rangeName = name.getName().toLowerCase();
-            if (rangeName.startsWith(AZPIVOTFILTERS) || rangeName.startsWith(AZCONTEXTFILTERS) ) {//the correct version should be 'az_ContextFilters'
+            if (rangeName.toLowerCase().startsWith(AZPIVOTFILTERS) || rangeName.toLowerCase().startsWith(AZCONTEXTFILTERS) ) {//the correct version should be 'az_ContextFilters'
                 String[] filters = getSnameCell(name).getStringValue().split(",");
                 SName contextChoices = book.getInternalBook().getNameByName(AZCONTEXTHEADINGS);
                 if (contextChoices == null) {

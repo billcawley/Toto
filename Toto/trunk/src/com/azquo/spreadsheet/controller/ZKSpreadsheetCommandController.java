@@ -200,7 +200,7 @@ public class ZKSpreadsheetCommandController {
                                 }
                             }
                             // deal with repeats, annoying!
-                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZREPEATSCOPE.toLowerCase())) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
+                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZREPEATSCOPE)) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
                                 String region = name.getName().substring(ZKAzquoBookUtils.AZREPEATSCOPE.length());
                                 final SName repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZREPEATREGION + region);
                                 if (repeatRegion != null){
