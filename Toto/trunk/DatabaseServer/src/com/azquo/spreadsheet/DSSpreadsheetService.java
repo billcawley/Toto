@@ -1397,8 +1397,8 @@ public class DSSpreadsheetService {
                     if (valuesForCell != null && (valuesForCell.getValues() != null && !valuesForCell.getValues().isEmpty())) {
                         for (Value value : valuesForCell.getValues()) {
                             if (value.getText().length() > 0) {
-                                if (value.getProvenance() == null || value.getProvenance().getTimeStamp() == null) {
-                                    System.out.println("provenance or timestamp null for " + value); // bit of a hack but lets log it
+                                if (value.getProvenance() == null) {
+                                    System.out.println("provenance null for " + value); // bit of a hack but lets log it
                                     //break;
                                 } else {
                                     LocalDateTime provdate = LocalDateTime.ofInstant(value.getProvenance().getTimeStamp().toInstant(), ZoneId.systemDefault());

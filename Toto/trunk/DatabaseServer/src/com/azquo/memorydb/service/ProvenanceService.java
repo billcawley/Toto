@@ -160,23 +160,9 @@ public class ProvenanceService {
         return toReturn;
     }
 
-    // by time. For database inspect.
-    static void sortValues(List<Value> values) {
-        Collections.sort(values, (o1, o2) ->
-        {
-            if (o1.getProvenance().getTimeStamp() == null && o2.getProvenance().getTimeStamp() == null){
-                return 0;
-            }
-            // check this is the right way around later
-            if (o1.getProvenance().getTimeStamp() == null) {
-                return -1;
-            }
-            if (o2.getProvenance().getTimeStamp() == null) {
-                return 1;
-            }
-            return (o2.getProvenance().getTimeStamp())
-                    .compareTo(o1.getProvenance().getTimeStamp());
-        });
+    // by time. For database inspect. I no longer allow null timestamp so this is simplified
+    private static void sortValues(List<Value> values) {
+        Collections.sort(values, (o1, o2) -> (o2.getProvenance().getTimeStamp()).compareTo(o1.getProvenance().getTimeStamp()));
     }
 
     private static DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
@@ -207,7 +193,7 @@ public class ProvenanceService {
     For inspecting databases
       */
     private static TreeNode getTreeNode(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values, Provenance p, int maxSize) {
-        String source = (p.getTimeStamp() != null ? df.format(p.getTimeStamp()) : "date unknown") + " by " + p.getUser();
+        String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
         String method = p.getMethod();
         if (p.getName() != null) {
             method += " " + p.getName();
@@ -221,12 +207,13 @@ public class ProvenanceService {
     private static List<TreeNode> getTreeNodesFromValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Set<Value> values, int maxSize) {
         Set<DummyValue> convertedToDummy = new HashSet<>(values.size());
         for (Value value : values) {
+            // I think it is this one right here that can overload the connections
             final List<ValueHistory> historyForValue = ValueDAO.getHistoryForValue(azquoMemoryDBConnection.getAzquoMemoryDB(), value);
             List<String> history = new ArrayList<>();
             for (ValueHistory vh : historyForValue){
                 String provenance = null;
                 if (vh.getProvenance() != null){
-                    provenance = (vh.getProvenance().getTimeStamp() != null ? df.format(vh.getProvenance().getTimeStamp()) : "date unknown") + " by " + vh.getProvenance().getUser();
+                    provenance = df.format(vh.getProvenance().getTimeStamp())  + " by " + vh.getProvenance().getUser();
                     provenance += " ";
                     provenance += vh.getProvenance().getMethod();
                     if (vh.getProvenance().getName() != null) {

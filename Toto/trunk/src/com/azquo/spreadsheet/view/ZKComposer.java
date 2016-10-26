@@ -362,6 +362,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
         //need to check whether this is a date.  If so then save as a date
+        /* Edd comment, this buggy
         SCell sCell = event.getSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());
         String cellFormat = sCell.getCellStyle().getDataFormat();
         if (cellFormat.toLowerCase().contains("mm")|| cellFormat.toLowerCase().contains("yy")){
@@ -370,7 +371,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
                chosen = fudgeDate(chosen); //1970-01-01-00:00:00
 
-        }
+        }*/
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());

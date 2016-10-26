@@ -17,6 +17,8 @@ import java.util.Date;
  * Represents the Provenance, or Audit as we now call it, against a name or value.
  * Unlike Value and Name immutable. Currently the only one using the Json persist pattern,
  * Value and Name now have custom classes to improve speed on loading and saving.
+ *
+ * Some old databases may have null timestamps, I'm not going to tolerate this, hence timestamps will default to 1st Jan 1970.
  */
 public final class Provenance extends AzquoMemoryDBEntity {
 
@@ -25,21 +27,20 @@ public final class Provenance extends AzquoMemoryDBEntity {
     static String PERSIST_TABLE = "provenance";
 
     private final String user;
-    private final Date timeStamp;
+    private final Date timeStamp; // should I be using local date time or another class?
     private final String method;
     private final String name;
     private final String context;
     // won't have this call the package local constructor below, does not factor in the same way now
-    // this is the practical use constructor, calling it adds it to the memory db
+    // this is the practical use constructor, calling it adds it to the memory db. I used to pass the date, that made no sense, set it in here.
     public Provenance(final AzquoMemoryDB azquoMemoryDB
             , final String user
-            , final Date timeStamp
             , final String method
             , final String name
             , final String context) throws Exception {
         super(azquoMemoryDB, 0);
         this.user = user;
-        this.timeStamp = timeStamp;
+        this.timeStamp = new Date(0);
         this.method = method;
         this.name = name;
         this.context = context;
@@ -52,7 +53,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
         super(azquoMemoryDB, id);
         JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
         this.user = transport.user;
-        this.timeStamp = transport.timeStamp;
+        this.timeStamp = transport.timeStamp != null ? transport.timeStamp : new Date(0);
         this.method = transport.method;
         this.name = transport.name;
         this.context = transport.context;

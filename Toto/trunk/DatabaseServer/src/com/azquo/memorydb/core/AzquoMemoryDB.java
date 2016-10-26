@@ -288,9 +288,8 @@ public final class AzquoMemoryDB {
         if (provenanceByIdMap.putIfAbsent(newProvenance.getId(), newProvenance) != null) {
             throw new Exception("tried to add a provenance to the database with an existing id!");
         }
-        mostRecentProvenance.getAndUpdate(provenance -> provenance != null &&  provenance.getTimeStamp().after(newProvenance.getTimeStamp()) ? provenance : newProvenance);
-        // should I be tolerating no timestamp?
-        lastModified.getAndUpdate(n -> newProvenance.getTimeStamp() != null && n < newProvenance.getTimeStamp().getTime() ? newProvenance.getTimeStamp().getTime() : n); // think that logic it correct for thread safety
+        mostRecentProvenance.getAndUpdate(provenance -> provenance != null && provenance.getTimeStamp().after(newProvenance.getTimeStamp()) ? provenance : newProvenance);
+        lastModified.getAndUpdate(n -> n < newProvenance.getTimeStamp().getTime() ? newProvenance.getTimeStamp().getTime() : n); // think that logic is correct for thread safety
     }
 
     public long getLastModifiedTimeStamp() {

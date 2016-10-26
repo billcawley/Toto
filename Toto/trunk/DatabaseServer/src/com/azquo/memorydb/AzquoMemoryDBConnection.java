@@ -89,7 +89,7 @@ public class AzquoMemoryDBConnection {
     public Provenance getProvenance() {
         if (provenance == null) {
             try {
-                provenance = new Provenance(getAzquoMemoryDB(), "unknown provenance", new Date(), "", "", "-");
+                provenance = new Provenance(getAzquoMemoryDB(), "unknown provenance", "", "", "-");
             } catch (Exception ignored) {
             }
         }
@@ -105,7 +105,7 @@ public class AzquoMemoryDBConnection {
                 return;
             }
         }
-        this.provenance = new Provenance(getAzquoMemoryDB(),user,new Date(),method, name, context);
+        this.provenance = new Provenance(getAzquoMemoryDB(),user,method, name, context);
     }
 
     public long getDBLastModifiedTimeStamp(){

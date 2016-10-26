@@ -105,4 +105,6 @@ public interface RMIInterface extends Remote {
     void setNameAttribute(DatabaseAccessToken dataAccessToken, String nameString, String attribute, String attVal) throws RemoteException;
 
     List<String> nameAutoComplete(DatabaseAccessToken dataAccessToken, String nameString, int limit) throws RemoteException;
+
+    void copyDatabase(String from, String to) throws RemoteException;
 }

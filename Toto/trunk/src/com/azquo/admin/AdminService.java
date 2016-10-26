@@ -143,6 +143,13 @@ this may now not work at all, perhaps delete?
         RMIClient.getServerInterface(source.getServerIp()).copyDatabase(source, target, nameList, readLanguages);
     }
 
+    public static void copyDatabase(LoggedInUser loggedInUser, Database source, String newName) throws Exception {
+        final String persistenceName = getSQLDatabaseName(loggedInUser, newName);
+        final Database database = new Database(0, source.getBusinessId(), loggedInUser.getUser().getId(), newName, persistenceName, source.getDatabaseType(), 0, 0, source.getDatabaseServerId());
+        DatabaseDAO.store(database);
+        DatabaseServer server = DatabaseServerDAO.findById(database.getDatabaseServerId());
+        RMIClient.getServerInterface(server.getIp()).copyDatabase(source.getPersistenceName(), database.getPersistenceName());
+    }
 
     public static void createUser(final String email
             , final String userName

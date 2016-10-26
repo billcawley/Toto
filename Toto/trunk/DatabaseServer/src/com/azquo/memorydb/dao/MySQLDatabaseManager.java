@@ -37,6 +37,13 @@ public class MySQLDatabaseManager {
         JdbcTemplateUtils.update("truncate `" + databaseName + "`." + ValueDAO.VALUEHISTORY, JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
+    public static void copyDatabase(String from, String to) throws IOException {
+        JdbcTemplateUtils.update("insert into `" + to + "`.provenance select * from `" + from + "`.provenance", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        JdbcTemplateUtils.update("insert into `" + to + "`.fast_name select * from `" + from + "`.fast_name", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        JdbcTemplateUtils.update("insert into `" + to + "`.fast_value select * from `" + from + "`.fast_value", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        JdbcTemplateUtils.update("insert into `" + to + "`.value_history select * from `" + from + "`.value_history", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+    }
+
     public static void dropDatabase(String databaseName) throws IOException {
         // we assume the database name is safe, should we???
         databaseName = databaseName.replace("`", "oh no you don't");

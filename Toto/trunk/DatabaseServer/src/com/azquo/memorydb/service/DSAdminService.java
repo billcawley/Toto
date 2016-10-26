@@ -58,6 +58,12 @@ public class DSAdminService {
         MySQLDatabaseManager.createNewDatabase(persistenceName);
     }
 
+    // simple copy
+    public static void copyDatabase(final String from, final String to) throws Exception {
+        MySQLDatabaseManager.createNewDatabase(to);
+        MySQLDatabaseManager.copyDatabase(from, to);
+    }
+
     // The remaining functions are related to database copying, It's more complex than a simple copy due to the ability to copy at a level
     // EFC note : I'm re-enabling this code but I'm not going to look too closely until it's being used again
     public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {

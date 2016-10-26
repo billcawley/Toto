@@ -59,6 +59,15 @@ class RMIImplementation implements RMIInterface {
         }
     }
 
+    @Override
+    public void copyDatabase(String from, String to) throws RemoteException {
+        try {
+            DSAdminService.copyDatabase(from, to);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
     //Magento data load stuff (I could break these up but I'm not sure a thte moment it's so important for what's essentially proxy code)
 
     @Override
