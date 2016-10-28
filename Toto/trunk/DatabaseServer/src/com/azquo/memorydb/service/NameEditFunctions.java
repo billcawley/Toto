@@ -10,11 +10,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Extracted from NameService by edward on 14/10/16.
- *
+ * <p>
  * Databases can be modified in the queries, this is not used often, I've moved these functions in here.
- *
  */
 class NameEditFunctions {
+
     static List<Name> handleEdit(AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> languages) throws Exception {
         List<Name> toReturn = new ArrayList<>();
         if (setFormula.startsWith("deduplicate")) {

@@ -68,7 +68,6 @@ public final class ValueService {
                 valueString = replaced;
             }
         }
-
         //long marker = System.currentTimeMillis();
         String toReturn = "";
         final List<Value> existingValues = findForNames(names);
@@ -91,7 +90,7 @@ public final class ValueService {
             //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
             //marker = System.currentTimeMillis();
             // won't be true for the same file as it will be caught above but from different files it could well happen
-            if (DSSpreadsheetService.compareStringValues(existingValue.getText(), valueString)) {
+            if (StringUtils.compareStringValues(existingValue.getText(), valueString)) {
                 toReturn += "  that value already exists, skipping";
                 alreadyInDatabase = true;
             } else {
@@ -130,7 +129,7 @@ public final class ValueService {
                 }
             }
         }
-        if (DSSpreadsheetService.compareStringValues(existingValue.getText(), newValueString)) { // converted to use compare string values rather than simple replace
+        if (StringUtils.compareStringValues(existingValue.getText(), newValueString)) { // converted to use compare string values rather than simple replace
             return true;
         }
         Value newValue = new Value(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance(), newValueString);
@@ -289,7 +288,7 @@ public final class ValueService {
     private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
 
     public static double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final MutableBoolean locked
-            , DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
+            , AzquoCellResolver.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
@@ -356,7 +355,7 @@ public final class ValueService {
                 toPermute.add(new ArrayList<>(permutationDimension)); // just wrap back to a lists,not that efficient but can use the existing permute function
             }
             // now I think I can just use an existing function!
-            final List<List<Name>> permutationOfLists = DSSpreadsheetService.get2DPermutationOfLists(toPermute);
+            final List<List<Name>> permutationOfLists = MultidimensionalListUtils.get2DPermutationOfLists(toPermute);
             double toReturn = 0;
             for (List<Name> lowLevelCalcNames : permutationOfLists) { // it's lowLevelCalcNames that we were after
                 toReturn += ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, lowLevelCalcNames, locked, valuesHook, attributeNames, function, nameComboValueCache, debugInfo);

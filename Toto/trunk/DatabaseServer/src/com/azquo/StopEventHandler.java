@@ -1,6 +1,5 @@
 package com.azquo;
 
-import com.azquo.memorydb.core.AzquoMemoryDB;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.stereotype.Component;

@@ -2,6 +2,7 @@ package com.azquo.rmi;
 
 import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
+import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.AzquoMemoryDB;
@@ -9,6 +10,7 @@ import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.memorydb.service.ProvenanceService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
+import com.azquo.spreadsheet.UserChoiceService;
 import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
@@ -183,7 +185,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
         try {
-            return DSSpreadsheetService.getDropDownListForQuery(databaseAccessToken, query, languages);
+            return UserChoiceService.getDropDownListForQuery(databaseAccessToken, query, languages);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -192,7 +194,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws RemoteException {
         try {
-            return DSSpreadsheetService.getFilterListForQuery(databaseAccessToken, query, filterName, userName, languages);
+            return UserChoiceService.getFilterListForQuery(databaseAccessToken, query, filterName, userName, languages);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -201,7 +203,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, List<Integer> childrenIds) throws RemoteException {
         try {
-            DSSpreadsheetService.createFilterSet(databaseAccessToken, setName, userName, childrenIds);
+            UserChoiceService.createFilterSet(databaseAccessToken, setName, userName, childrenIds);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -210,7 +212,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
         try {
-            DSSpreadsheetService.resolveQuery(databaseAccessToken,query,languages);
+            UserChoiceService.resolveQuery(databaseAccessToken,query,languages);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -336,7 +338,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public String getSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException {
         try {
-            return DSSpreadsheetService.getSessionLog(databaseAccessToken);
+            return AzquoMemoryDBConnection.getSessionLog(databaseAccessToken);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

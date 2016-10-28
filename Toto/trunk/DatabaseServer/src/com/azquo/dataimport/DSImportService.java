@@ -5,7 +5,6 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
-import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
@@ -52,7 +51,7 @@ public class DSImportService {
 
     public static String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, List<String> attributeNames, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         System.out.println("Reading file " + filePath);
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an XLSX import, a different thing from a data entry area.
         azquoMemoryDBConnection.setProvenance(user, "imported", fileName, "");
         return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, attributeNames, persistAfter, isSpreadsheet);

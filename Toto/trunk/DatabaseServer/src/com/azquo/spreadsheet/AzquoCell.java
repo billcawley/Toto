@@ -27,12 +27,11 @@ public class AzquoCell {
     // where this cell was before sorting, can be passed on through to the front end, makes finding a specifric cell later easier
     private final int unsortedRow;
     private final int unsortedCol;
-    private String stringValue;
-    private double doubleValue;
-    private boolean changed;
+    private final String stringValue;
+    private final double doubleValue;
     private boolean highlighted;
     // after drilldown or provenance an opened spreadsheet might have a cell selected
-    private boolean selected;
+    private final boolean selected;
 
     AzquoCell(boolean locked, ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName, List<DataRegionHeading> rowHeadings
             , List<DataRegionHeading> columnHeadings, List<DataRegionHeading> contexts, int unsortedRow, int unsortedCol, String stringValue, double doubleValue, boolean highlighted, boolean selected) {
@@ -53,7 +52,7 @@ public class AzquoCell {
         return locked;
     }
 
-    public void setLocked(boolean locked) {
+    void setLocked(boolean locked) {
         this.locked = locked;
     }
 
@@ -77,26 +76,8 @@ public class AzquoCell {
         return stringValue;
     }
 
-    public void setStringValue(String stringValue) {
-        this.stringValue = stringValue;
-        changed = true;
-    }
-
     public double getDoubleValue() {
         return doubleValue;
-    }
-
-    public void setDoubleValue(double doubleValue) {
-        this.doubleValue = doubleValue;
-        changed = true;
-    }
-
-    public boolean isChanged() {
-        return changed;
-    }
-
-    public void setChanged(boolean changed) {
-        this.changed = changed;
     }
 
     boolean isHighlighted() {
@@ -119,7 +100,4 @@ public class AzquoCell {
         return selected;
     }
 
-    public void setSelected(boolean selected) {
-        this.selected = selected;
-    }
 }

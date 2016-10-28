@@ -3,6 +3,7 @@ package com.azquo.memorydb.service;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
+import com.azquo.spreadsheet.AzquoCellResolver;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.DataRegionHeading;
 import org.apache.commons.lang.math.NumberUtils;
@@ -14,9 +15,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by edward on 14/10/16.
- *
+ * <p>
  * Functions that were in ValueService relating specifically to calculations or simple mathematical functions against values now go in here
- *  Some code has been optimised according to rigorous testing.
+ * Some code has been optimised according to rigorous testing.
  */
 public class ValueCalculationService {
 
@@ -30,7 +31,7 @@ public class ValueCalculationService {
     // Factored off to implement "lowest" calculation criteria (resolve for each permutation and sum) without duplicated code
     // fair few params, wonder if there's a way to avoid that?
     static double resolveCalc(AzquoMemoryDBConnection azquoMemoryDBConnection, String calcString, List<Name> formulaNames, List<Name> calcnames,
-                                      MutableBoolean locked, DSSpreadsheetService.ValuesHook valuesHook, List<String> attributeNames
+                              MutableBoolean locked, AzquoCellResolver.ValuesHook valuesHook, List<String> attributeNames
             , DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
         if (debugInfo != null) {
             debugInfo.append("\t");
@@ -168,7 +169,7 @@ public class ValueCalculationService {
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
     static double resolveValues(final List<Value> values
-            , DSSpreadsheetService.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
+            , AzquoCellResolver.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();

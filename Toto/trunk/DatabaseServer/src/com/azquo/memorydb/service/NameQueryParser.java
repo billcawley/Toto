@@ -1,7 +1,6 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.StringLiterals;
-import com.azquo.dataimport.BatchImporter;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
@@ -16,9 +15,9 @@ import java.util.regex.Pattern;
 
 /**
  * Extracted from NameService by edward on 18/10/16.
- *
- * Parsing stuff in here, low level name functions in NameService
- *
+ * <p>
+ * Parsing stuff in here, low level name functions in NameService, filter functions in NameFilterFunctions and Name stack
+ * operators are now dealt with in NameStackOperators.
  */
 public class NameQueryParser {
 
@@ -65,7 +64,7 @@ public class NameQueryParser {
     /* todo : sort exceptions?
     todo - cache option in here
     now uses NameSetList to move connections of names around and only copy them as necessary. Has made the logic a little more complex
-    in places but performance should be better and garbage generation reduced*/
+    in places but performance should be better and garbage generation reduced */
     private static AtomicInteger parseQuery3Count = new AtomicInteger(0);
 
     public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn) throws Exception {
@@ -137,6 +136,7 @@ public class NameQueryParser {
         boolean resetDefs = false;
         logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
+        // could we get rid of stack count and just use the ArrayList's size?
         int stackCount = 0;
         //int stringCount = 0;
         // now to act on the formulae which has been converted to Reverse Polish, hence stack based parsing and no brackets etc.
@@ -180,178 +180,23 @@ public class NameQueryParser {
                         }
                     }
                 }
-                if (op == StringLiterals.NAMEMARKER) {
+                if (op == StringLiterals.NAMEMARKER) { // then a straight name children from to etc. Resolve in interpretSetTerm
                     stackCount++;
                     // now returns a custom little object that hods a list a set and whether it's immutable
                     nameStack.add(interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings));
                 } else if (stackCount-- < 2) {
                     throw new Exception("not understood:  " + formulaCopy);
                 } else if (op == '*') { // * meaning intersection here . . .
-                    //assume that the second term implies 'level all'
-                    //long start = System.currentTimeMillis();
-//                System.out.println("starting * set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
-                    NameSetList previousSet = nameStack.get(stackCount - 1);
-                    // preserving ordering important - retainall on a mutable set, if available, might save a bit vs creating a new one
-                    // for the moment create a new collection, list or set based on the type of "previous set"
-                    Set<Name> setIntersectionSet = null;
-                    List<Name> setIntersectionList = null;
-                    if (previousSet.set != null) { // not ordered
-                        setIntersectionSet = HashObjSets.newMutableSet();
-                        Set<Name> previousSetSet = previousSet.set;
-                        for (Name name : nameStack.get(stackCount).getAsCollection()) { // if the last one on the stack is a list or set it doens't matter I'm not doing a contains on it
-                            if (previousSetSet.contains(name)) {
-                                setIntersectionSet.add(name);
-                            }
-                            for (Name child : name.findAllChildren()) {
-                                if (previousSetSet.contains(child)) {
-                                    setIntersectionSet.add(child);
-                                }
-                            }
-                        }
-                    } else { // I need to use previous set as the outside loop for ordering
-                        setIntersectionList = new ArrayList<>(); // keep it as a list
-                        Set<Name> lastSet = nameStack.get(stackCount).set != null ? nameStack.get(stackCount).set : HashObjSets.newMutableSet(nameStack.get(stackCount).list); // wrap the last one in a set if it's not a set
-                        for (Name name : previousSet.list) {
-                            if (lastSet.contains(name)) {
-                                setIntersectionList.add(name);
-                            } else { // we've already checked the top members, check all children to see if it's in there also
-                                for (Name intersectName : lastSet) {
-                                    if (intersectName.findAllChildren().contains(name)) {
-                                        setIntersectionList.add(name);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    nameStack.set(stackCount - 1, new NameSetList(setIntersectionSet, setIntersectionList, true)); // replace the previous NameSetList
-                    //System.out.println("after new retainall " + (System.currentTimeMillis() - start) + "ms");
-                    nameStack.remove(stackCount);
-                } else if (op == '/') { // a possible performance hit here, not sure of other possible optimseations
-                    // ok what's on the stack may be mutable but I'm going to have to make a copy - if I modify it the iterator on the loop below will break
-                    Set<Name> parents = HashObjSets.newMutableSet(nameStack.get(stackCount).getAsCollection());
-                    //long start = System.currentTimeMillis();
-                    //long heapMarker = ((runtime.totalMemory() - runtime.freeMemory()) / mb);
-                    //System.out.println("aft mutable init " + heapMarker);
-                    //System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
-                    Collection<Name> lastName = nameStack.get(stackCount).getAsCollection();
-                    // if filtering brand it means az_brand - this is for the pivot functionality, pivot filter and pivot header
-                    if (lastName.size() == 1) {
-                        Name setName = lastName.iterator().next();
-                        lastName = setName.findAllChildren();
-                        if (lastName.size() == 0 && setName.getDefaultDisplayName().startsWith("az_")) {
-                            setName = NameService.findByName(azquoMemoryDBConnection, setName.getDefaultDisplayName().substring(3));
-                            if (setName != null) {
-                                lastName = setName.getChildren();
-                            }
-                        }
-                    }
-                    for (Name child : lastName) {
-                        Name.findAllParents(child, parents); // new call to static function cuts garbage generation a lot
-                    }
-                    //System.out.println("find all parents in parse query part 1 " + (now - start) + " set sizes parents " + parents.size() + " heap increase = " + (((runtime.totalMemory() - runtime.freeMemory()) / mb) - heapMarker) + "MB");
-                    //start = System.currentTimeMillis();
-                    //nameStack.get(stackCount - 1).retainAll(parents); //can't do this any more, need to make a new one
-                    NameSetList previousSet = nameStack.get(stackCount - 1);
-                    // ok going to try to get a little clever here since it can be mutable
-                    if (previousSet.mutable) {
-                        if (previousSet.list != null) {
-                            previousSet.list.retainAll(parents);
-                        } else { // I keep assuming set won't be null. I guess we'll see
-                            previousSet.set.retainAll(parents);
-                        }
-                    } else { // need to make a new one
-                        Set<Name> setIntersectionSet = null;
-                        List<Name> setIntersectionList = null;
-                        if (previousSet.list != null) { // ordered
-                            setIntersectionList = new ArrayList<>();
-                            // we must use previous set on the outside
-                            for (Name name : previousSet.list) {
-                                if (parents.contains(name)) {
-                                    setIntersectionList.add(name);
-                                }
-                            }
-                        } else { // need to make a new set, unordered, check set sizes in an attempt to keep speed high
-                            setIntersectionSet = HashObjSets.newMutableSet(); // testing shows no harm, should be a bit faster and better on memory
-                            Set<Name> previousSetSet = previousSet.set;
-                            if (previousSetSet.size() < parents.size()) { // since contains should be the same regardless of set size we want to iterate the smaller one to create the intersection
-                                for (Name name : previousSetSet) {
-                                    if (parents.contains(name)) {
-                                        setIntersectionSet.add(name);
-                                    }
-                                }
-                            } else {
-                                for (Name name : parents) {
-                                    if (previousSetSet.contains(name)) {
-                                        setIntersectionSet.add(name);
-                                    }
-                                }
-                            }
-
-                        }
-                        nameStack.set(stackCount - 1, new NameSetList(setIntersectionSet, setIntersectionList, true)); // replace the previous NameSetList
-                    }
-                    //System.out.println("after retainall " + (System.currentTimeMillis() - start));
-                    nameStack.remove(stackCount);
+                    NameStackOperators.setIntersection(nameStack, stackCount);
+                } else if (op == '/') {
+                    NameStackOperators.childParentsSetIntersection(azquoMemoryDBConnection, nameStack, stackCount);
                 } else if (op == '-') {
-                    // using immutable sets on the stack causes more code here but populating the stack should be MUCH faster
-                    // ok I have the mutable option now
-                    if (nameStack.get(stackCount - 1).mutable) {
-                        nameStack.get(stackCount - 1).getAsCollection().removeAll(nameStack.get(stackCount).getAsCollection());
-                    } else { // make a new one
-                        Set<Name> currentSet = nameStack.get(stackCount).set != null ? nameStack.get(stackCount).set : HashObjSets.newMutableSet(nameStack.get(stackCount).list); // convert to a set if it's not. Faster contains.
-                        NameSetList previousSet = nameStack.get(stackCount - 1);
-                        // standard list or set check
-                        Set<Name> resultAsSet = null;
-                        List<Name> resultAsList = null;
-                        // instantiate the correct type of collection and point result at it
-                        Collection<Name> result = previousSet.set != null ? (resultAsSet = HashObjSets.newMutableSet()) : (resultAsList = new ArrayList<>()); // assignment expression, I hope clear.
-                        // populate result with the difference
-                        for (Name name : previousSet.getAsCollection()) {
-                            if (!currentSet.contains(name)) { // only the ones not in the current set
-                                result.add(name);
-                            }
-                        }
-                        nameStack.set(stackCount - 1, new NameSetList(resultAsSet, resultAsList, true)); // replace the previous NameSetList
-                    }
-                    nameStack.remove(stackCount);
+                    NameStackOperators.removeFromSet(nameStack, stackCount);
                 } else if (op == '+') {
-                    //nameStack.get(stackCount - 1).addAll(nameStack.get(stackCount));
-                    if (nameStack.get(stackCount - 1).mutable) { // can use the old simple call :)
-                        nameStack.get(stackCount - 1).getAsCollection().addAll(nameStack.get(stackCount).getAsCollection()); // simple - note lists won't detect duplicates but I guess they never did
-                    } else { // need to make a new one preserving type for ordering
-                        NameSetList previousSet = nameStack.get(stackCount - 1);
-                        Set<Name> resultAsSet = null;
-                        List<Name> resultAsList = null;
-                        Collection<Name> result;
-                        // instantiate the correct type of collection with the data and point result at it
-                        result = previousSet.set != null ? (resultAsSet = HashObjSets.newMutableSet(previousSet.set)) : (resultAsList = new ArrayList<>(previousSet.list));
-                        result.addAll(nameStack.get(stackCount).getAsCollection());
-                        nameStack.set(stackCount - 1, new NameSetList(resultAsSet, resultAsList, true)); // replace the previous NameSetList
-                    }
-                    nameStack.remove(stackCount);
+                    NameStackOperators.addSets(nameStack, stackCount);
                 } else if (op == StringLiterals.ASSYMBOL) {
                     resetDefs = true;
-                    Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
-                /* ok here's the thing. We don't want this to be under the default display name, new logic jams the user email as the first "language"
-                therefore if there's more than one language, we use the first one as the way to define this name.
-                The point being that the result of "blah blah blah as 'Period Chosen'" will now mean different 'Period Chosen's for each user
-                Need to watch out regarding creating user specific sets : when we get the name see if it's for this user, if so then just change it otherwise make a new one
-                */
-                    if (attributeNames.size() > 1) { // just checking we have have the user added to the list
-                        String userEmail = attributeNames.get(0);
-                        if (totalName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
-                            Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
-                            //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
-                            userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
-                            totalName.addChildWillBePersisted(userSpecificSet);
-                            totalName = userSpecificSet; // switch the new one in, it will be used as normal
-                        }
-                    }
-                    totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection());
-                    nameStack.remove(stackCount);
-                    Set<Name> totalNameSet = HashObjSets.newMutableSet();
-                    totalNameSet.add(totalName);
-                    nameStack.set(stackCount - 1, new NameSetList(totalNameSet, null, true));
+                    NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount);
                 }
                 pos = nextTerm;
             }
@@ -374,6 +219,7 @@ public class NameQueryParser {
         if (time > 50) {
             System.out.println("Parse query : " + formulaCopy + " took : " + time + "ms");
         }
+        // check if this is necessary? Refactor?
         if (resetDefs) {
             //currently recalculates ALL definitions regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
             Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute("DEFINITION");
@@ -454,7 +300,7 @@ public class NameQueryParser {
             if (countString == null) countString = "";
             if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
                 if (namesFound.list != null) { // yeah I know some say this is not best practice but hey ho
-                    namesFound = constrainNameListFromToCount(namesFound, fromString, toString, countString, countbackString, compareWithString, referencedNames);
+                    namesFound = NameFilterFunctions.constrainNameListFromToCount(namesFound, fromString, toString, countString, countbackString, compareWithString, referencedNames);
                 } else {
                     System.out.println("can't from/to/count a non-list, " + setTerm);
                 }
@@ -462,7 +308,7 @@ public class NameQueryParser {
         }
         if (whereString != null) {
             // will only work if it's a list internally
-            namesFound = filter(namesFound, whereString, strings, attributeStrings);
+            namesFound = NameFilterFunctions.filter(namesFound, whereString, strings, attributeStrings);
         }
         // could parents and select be more efficient?
         if (parentsString != null) {
@@ -524,182 +370,7 @@ public class NameQueryParser {
         return referencedNames;
     }
 
-    // since we need different from the standard set ordering use a list, I see no real harm in that in these functions
     // note : in default language!
-    private static AtomicInteger constrainNameListFromToCountCount = new AtomicInteger(0);
-
-    private static NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String countBackString, final String compareWithString, List<Name> referencedNames) throws Exception {
-        if (nameSetList.list == null) {
-            return nameSetList; // don't bother trying to constrain a non list
-        }
-        constrainNameListFromToCountCount.incrementAndGet();
-        final ArrayList<Name> toReturn = new ArrayList<>();
-        int to = -10000;
-        int from = 1;
-        int count = parseInt(countString, -1);
-        int offset = parseInt(countBackString, 0);
-        int compareWith = parseInt(compareWithString, 0);
-        int space = 1; //spacing between 'compare with' fields
-        //first look for integers and encoded names...
-
-        if (toString.length() > 0 && count > 0) {
-            if (!nameSetList.mutable) {
-                nameSetList = new NameSetList(null, new ArrayList<>(nameSetList.list), true);// then make it mutable
-            }
-            //invert the list
-            Collections.reverse(nameSetList.list);
-            fromString = toString;
-            toString = "";
-        }
-
-        if (fromString.length() > 0) {
-            from = -1;
-            try {
-                from = Integer.parseInt(fromString);
-            } catch (NumberFormatException nfe) {// may be a number, may not . . .
-                if (fromString.charAt(0) == StringLiterals.NAMEMARKER) {
-                    Name fromName = getNameFromListAndMarker(fromString, referencedNames);
-                    fromString = fromName.getDefaultDisplayName();
-                }
-            }
-        }
-        if (toString.length() > 0) {
-            boolean fromEnd = false;
-            if (toString.toLowerCase().endsWith("from end")) {
-                fromEnd = true;
-                toString = toString.substring(0, toString.length() - 9);
-            }
-            try {
-                to = Integer.parseInt(toString);
-                if (fromEnd) to = nameSetList.list.size() - to;
-            } catch (NumberFormatException nfe) {// may be a number, may not . . .
-                if (toString.charAt(0) == StringLiterals.NAMEMARKER) {
-                    Name toName = getNameFromListAndMarker(toString, referencedNames);
-                    toString = toName.getDefaultDisplayName();
-                }
-            }
-        }
-        int position = 1;
-        boolean inSet = false;
-        if (to != -1000 && to < 0) {
-            to = nameSetList.list.size() + to;
-        }
-        int added = 0;
-        for (int i = offset; i < nameSetList.list.size() + offset; i++) {
-            if (position == from || (i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(fromString))) {
-                inSet = true;
-            }
-            if (inSet) {
-                toReturn.add(nameSetList.list.get(i - offset));
-                if (compareWith != 0) {
-                    toReturn.add(nameSetList.list.get(i - offset + compareWith));
-                    for (int j = 0; j < space; j++) {
-                        toReturn.add(null);
-                    }
-                }
-                added++;
-            }
-            if (position == to || (i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(toString)) || added == count) {
-                inSet = false;
-            }
-            position++;
-        }
-        while (added++ < count) {
-            toReturn.add(null);
-        }
-        return new NameSetList(null, toReturn, true);
-    }
-
-    private static AtomicInteger filterCount = new AtomicInteger(0);
-
-    // since what it's passed could be immutable need to return
-    private static NameSetList filter(NameSetList nameSetList, String condition, List<String> strings, List<String> attributeNames) {
-        filterCount.incrementAndGet();
-        NameSetList toReturn = nameSetList.mutable ? nameSetList : new NameSetList(nameSetList); // make a new mutable NameSetList if the one passed wasn't mutable
-        //NOT HANDLING 'OR' AT PRESENT
-        int andPos = condition.toLowerCase().indexOf(" and ");
-        // get the correct now mutable member collection to filter
-        Collection<Name> namesToFilter = toReturn.getAsCollection();
-        int lastPos = 0;
-        while (lastPos < condition.length()) {
-            if (andPos < 0) {
-                andPos = condition.length();
-            }
-            String clause = condition.substring(lastPos, andPos).trim();
-            Pattern p = Pattern.compile("[<=>]+");
-            Matcher m = p.matcher(clause);
-
-            if (m.find()) {
-                String opfound = m.group();
-                int pos = m.start();
-                String clauseLhs = clause.substring(0, pos).trim();
-                String clauseRhs = clause.substring(m.end()).trim();
-
-                // note, given the new parser these clauses will either be literals or begin .
-                // there may be code improvements that can be made knowing this
-
-                if (clauseLhs.charAt(0) == StringLiterals.ATTRIBUTEMARKER) {// we need to replace it
-                    clauseLhs = attributeNames.get(Integer.parseInt(clauseLhs.substring(1, 3)));
-                }
-                if (clauseRhs.charAt(0) == StringLiterals.ATTRIBUTEMARKER) {// we need to replace it
-                    clauseRhs = attributeNames.get(Integer.parseInt(clauseRhs.substring(1, 3)));
-                }
-
-                String valRhs = "";
-                boolean fixed = false;
-                boolean isADate = false;
-                if (clauseRhs.charAt(0) == '"') {
-                    valRhs = strings.get(Integer.parseInt(clauseRhs.substring(1, 3)));// anything left in quotes is referenced in the strings list
-                    fixed = true;
-                    //assume here that date will be of the form yyyy-mm-dd
-                    if (BatchImporter.isADate(valRhs) != null) {
-                        isADate = true;
-                    }
-                }
-
-                Set<Name> namesToRemove = HashObjSets.newMutableSet();
-                for (Name name : namesToFilter) {
-                    String valLhs = name.getAttribute(clauseLhs);
-
-                    if (valLhs == null) {
-                        valLhs = "";
-                    }
-                    if (isADate) {
-                        valLhs = StringUtils.standardizeDate(valLhs);
-                    }
-                    if (!fixed) {
-                        valRhs = name.getAttribute(clauseRhs);
-                        if (valRhs == null) {
-                            valRhs = "";
-                        }
-                    }
-                    boolean OK = false;
-                    int comp = valLhs.compareTo(valRhs);
-                    for (int i = 0; i < opfound.length(); i++) {
-                        char op = opfound.charAt(i);
-                        switch (op) {
-                            case '=':
-                                if (comp == 0) OK = true;
-                                break;
-                            case '<':
-                                if (comp < 0) OK = true;
-                                break;
-                            case '>':
-                                if (comp > 0) OK = true;
-                        }
-                    }
-                    if (!OK) {
-                        namesToRemove.add(name);
-                    }
-                }
-                // outside the loop, iterator shouldn't get shirty
-                namesToFilter.removeAll(namesToRemove);
-            }
-            lastPos = andPos + 5;
-            andPos = condition.toLowerCase().indexOf(" and ", lastPos);
-        }
-        return toReturn; // its appropriate member collection should have been modified via namesToFilter above, return it
-    }
 
     // when parsing expressions we replace names with markers and jam them on a list. The expression is manipulated before being executed. On execution the referenced names need to be read from a list.
 
@@ -721,7 +392,7 @@ public class NameQueryParser {
 
     // edd : I wonder a little about this but will leave it for the mo
 
-    private static int parseInt(final String string, int existing) {
+    static int parseInt(final String string, int existing) {
         try {
             return Integer.parseInt(string);
         } catch (Exception e) {
@@ -751,24 +422,20 @@ public class NameQueryParser {
     public static void printFunctionCountStats() {
         System.out.println("######### NAME QUERY PARSER FUNCTION COUNTS");
         System.out.println("interpretSetTermCount\t\t\t\t\t\t\t\t" + interpretSetTermCount.get());
-        System.out.println("constrainNameListFromToCountCount\t\t\t\t\t\t\t\t" + constrainNameListFromToCountCount.get());
         System.out.println("parseQueryCount\t\t\t\t\t\t\t\t" + parseQueryCount.get());
         System.out.println("parseQuery2Count\t\t\t\t\t\t\t\t" + parseQuery2Count.get());
         System.out.println("parseQuery3Count\t\t\t\t\t\t\t\t" + parseQuery3Count.get());
         System.out.println("getNameListFromStringListCount\t\t\t\t\t\t\t\t" + getNameListFromStringListCount.get());
         System.out.println("getNameFromListAndMarkerCount\t\t\t\t\t\t\t\t" + getNameFromListAndMarkerCount.get());
-        System.out.println("filterCount\t\t\t\t\t\t\t\t" + filterCount.get());
     }
 
     public static void clearFunctionCountStats() {
         interpretSetTermCount.set(0);
-        constrainNameListFromToCountCount.set(0);
         parseQueryCount.set(0);
         parseQuery2Count.set(0);
         parseQuery3Count.set(0);
         getNameListFromStringListCount.set(0);
         getNameFromListAndMarkerCount.set(0);
-        filterCount.set(0);
     }
 
     public static boolean isAllowed(Name name, List<Set<Name>> names) {

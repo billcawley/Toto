@@ -2,6 +2,8 @@ package com.azquo;
 
 /**
  * Created by edward on 14/10/16.
+ *
+ * Just a place to collate the String literals. Makes sense given that some are used across classes.
  */
 public class StringLiterals {
     public static final String CALCULATION = "CALCULATION";
@@ -13,6 +15,7 @@ public class StringLiterals {
     public static final String PARENTS = "parents";
     public static final String FROM = "from";
     public static final String TO = "to";
+    public static final String AND = "and";
     public static final String COUNT = "count";
     public static final String SORTED = "sorted";
     public static final String CHILDREN = "children";
@@ -32,4 +35,6 @@ public class StringLiterals {
     public static final char ASSYMBOL = '@';
     public static final String WHERE = "where";
     public static final String languageIndicator = "<-";
+
+    public static final String HIERARCHY = "hierarchy";
 }

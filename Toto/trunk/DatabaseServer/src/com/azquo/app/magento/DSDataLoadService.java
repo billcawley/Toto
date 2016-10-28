@@ -7,7 +7,6 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
-import com.azquo.spreadsheet.DSSpreadsheetService;
 import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
@@ -70,7 +69,7 @@ public class DSDataLoadService {
     // A simple marker in the Azquo DB saying when the last upload happened, set at the end of loadData.
 
     public static String findLastUpdate(final DatabaseAccessToken databaseAccessToken, final String remoteAddress) throws Exception {
-        final AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        final AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         final Name orderName = NameService.findByName(azquoMemoryDBConnection, "order");
         if (orderName == null) {
             return null;
@@ -83,14 +82,14 @@ public class DSDataLoadService {
     }
 
     public static boolean magentoDBNeedsSettingUp(final DatabaseAccessToken databaseAccessToken) throws Exception {
-        final AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        final AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         return NameService.findByName(azquoMemoryDBConnection, "All Months") == null;
     }
 
     // generally default data but after the first time it will stay as it was then.
 
     public static String findRequiredTables(final DatabaseAccessToken databaseAccessToken, final String remoteAddress) throws Exception {
-        final AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        final AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         String requiredTables = defaultData().replace("$starttime", "");
         String date = "never";
         final String lastUpdate = findLastUpdate(databaseAccessToken, remoteAddress);
@@ -114,7 +113,7 @@ public class DSDataLoadService {
     I don't think it could be done by standard import rules, too much logic e.g. calculating bundles.
       */
     public static void loadData(DatabaseAccessToken databaseAccessToken, String filePath, String remoteAddress, String user) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         azquoMemoryDBConnection.setProvenance(user, "imported from Magento", "", "");
         Map<String, List<Map<String, String>>> tableMap = HashObjObjMaps.newMutableMap();

@@ -7,7 +7,6 @@ import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.dao.MySQLDatabaseManager;
-import com.azquo.spreadsheet.DSSpreadsheetService;
 import org.apache.commons.lang.math.NumberUtils;
 
 import java.util.*;
@@ -67,8 +66,8 @@ public class DSAdminService {
     // The remaining functions are related to database copying, It's more complex than a simple copy due to the ability to copy at a level
     // EFC note : I'm re-enabling this code but I'm not going to look too closely until it's being used again
     public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
-        AzquoMemoryDBConnection sourceConnection = DSSpreadsheetService.getConnectionFromAccessToken(source);
-        AzquoMemoryDBConnection targetConnection = DSSpreadsheetService.getConnectionFromAccessToken(target);
+        AzquoMemoryDBConnection sourceConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(source);
+        AzquoMemoryDBConnection targetConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(target);
         if (targetConnection == null) {
             throw new Exception("cannot log in to " + target.getPersistenceName());
         }

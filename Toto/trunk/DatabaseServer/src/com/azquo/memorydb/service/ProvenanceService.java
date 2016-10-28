@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Extracted from a few other service classes by edward on 13/10/16.
- *
+ * <p>
  * Factoring off some server side stuff related to provenance.
  */
 public class ProvenanceService {
@@ -60,11 +60,11 @@ public class ProvenanceService {
         }
     }
 
-    // ok this should NOPT return tree nodes, they should just be for JSTree, ergh!
+    // ok this should NOT return tree nodes, they should just be for JSTree, ergh! Need to discuss with WFC before modifying this, need a clear new target.
 
     public static List<TreeNode> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         AzquoCell azquoCell = DSSpreadsheetService.getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, databaseAccessToken.getLanguages());
         if (azquoCell != null) {
             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
@@ -210,17 +210,17 @@ public class ProvenanceService {
             // I think it is this one right here that can overload the connections
             final List<ValueHistory> historyForValue = ValueDAO.getHistoryForValue(azquoMemoryDBConnection.getAzquoMemoryDB(), value);
             List<String> history = new ArrayList<>();
-            for (ValueHistory vh : historyForValue){
+            for (ValueHistory vh : historyForValue) {
                 String provenance = null;
-                if (vh.getProvenance() != null){
-                    provenance = df.format(vh.getProvenance().getTimeStamp())  + " by " + vh.getProvenance().getUser();
+                if (vh.getProvenance() != null) {
+                    provenance = df.format(vh.getProvenance().getTimeStamp()) + " by " + vh.getProvenance().getUser();
                     provenance += " ";
                     provenance += vh.getProvenance().getMethod();
                     if (vh.getProvenance().getName() != null) {
                         provenance += " " + vh.getProvenance().getName();
                     }
-                    if (vh.getProvenance().getContext() != null && vh.getProvenance().getContext().length() > 1) provenance += " with " + vh.getProvenance().getContext();
-
+                    if (vh.getProvenance().getContext() != null && vh.getProvenance().getContext().length() > 1)
+                        provenance += " with " + vh.getProvenance().getContext();
                 }
                 history.add(vh.getText() + "\t" + (provenance != null ? (" " + provenance) : ""));
             }

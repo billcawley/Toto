@@ -9,7 +9,6 @@ import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ProvenanceService;
-import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
@@ -24,18 +23,20 @@ import java.util.*;
  * All JSTree code that deals with DB objects to go in here.
  * <p>
  * It had controller like code in here but this has been moved out. Might take a few more passes before the representation is up to scratch.
+ *
+ * This should be the only place making TreeNodes but currently the Provenance uses it too.
  */
 public class JSTreeService {
 
     public static List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         return NameService.attributeList(azquoMemoryDBConnection);
     }
 
     // being pared down to just the edit attribute stuff. Json is sueful here, lists of attributes . . .maybe parse to java objects by this point?
 
     public static void editAttributes(DatabaseAccessToken databaseAccessToken, int nameId, Map<String, String> attributes) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name name = azquoMemoryDBConnection.getAzquoMemoryDB().getNameById(nameId);
         if (name == null) {
             throw new Exception("Name not found for id " + nameId);
@@ -57,7 +58,7 @@ public class JSTreeService {
 
     // was about 40 lines before jackson though the class above is of course important. Changing name to details not structure which implies many levels.
     public static JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
-        Name name = NameService.findById(DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), nameId);
+        Name name = NameService.findById(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), nameId);
         Map<String, Object> attributesForJackson = new HashMap<>();
         attributesForJackson.putAll(name.getAttributes());
         return new JsonChildStructure(name.getDefaultDisplayName()
@@ -70,7 +71,7 @@ public class JSTreeService {
     }
 
     public static JsonChildren.Node createJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
-        final AzquoMemoryDBConnection connectionFromAccessToken = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        final AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name name = NameService.findById(connectionFromAccessToken, nameId); // the parent, will be null if -1 passed in the case of adding to root . . .
         Name newName = NameService.findOrCreateNameInParent(connectionFromAccessToken, "newnewnew", name, true);
         newName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, "New node");
@@ -79,14 +80,14 @@ public class JSTreeService {
 
     // left it pretty simple
     public static void deleteJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
-        final AzquoMemoryDBConnection connectionFromAccessToken = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        final AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name name = NameService.findById(connectionFromAccessToken, nameId);
         name.delete();
     }
 
     // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
     public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Map<String, Boolean> state = new HashMap<>();
         state.put("opened", true);
         String text = "";
@@ -176,7 +177,7 @@ public class JSTreeService {
     }
 
     public static String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name name = NameService.findByName(azquoMemoryDBConnection, nameString);
         if (name != null) {
             return name.getAttribute(attribute);
@@ -186,7 +187,7 @@ public class JSTreeService {
     }
 
     public static void setNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute, String attVal) throws Exception {
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name name = NameService.findByName(azquoMemoryDBConnection, nameString);
         if (name != null) {
             name.setAttributeWillBePersisted(attribute, attVal);
@@ -196,14 +197,14 @@ public class JSTreeService {
     // for inspect database I think - should be moved to the JStree service maybe?
     public static TreeNode getDataList(DatabaseAccessToken databaseAccessToken, Set<String> nameStrings, Set<Integer> nameIds, int maxSize) throws Exception {
         Set<Name> names = new HashSet<>();
-        AzquoMemoryDBConnection azquoMemoryDBConnection = DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken);
-        if (nameStrings != null){
+        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        if (nameStrings != null) {
             for (String nString : nameStrings) {
                 Name name = NameService.findByName(azquoMemoryDBConnection, nString);
                 if (name != null) names.add(name);
             }
         }
-        if (nameIds != null){
+        if (nameIds != null) {
             for (int id : nameIds) {
                 Name name = NameService.findById(azquoMemoryDBConnection, id);
                 if (name != null) names.add(name);
@@ -224,10 +225,8 @@ public class JSTreeService {
         TreeNode toReturn = new TreeNode();
         toReturn.setHeading(heading);
         toReturn.setValue("");
-        toReturn.setChildren(ProvenanceService.nodify(DSSpreadsheetService.getConnectionFromAccessToken(databaseAccessToken), values, maxSize));
+        toReturn.setChildren(ProvenanceService.nodify(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), values, maxSize));
         ProvenanceService.addNodeValues(toReturn);
         return toReturn;
     }
-
-
 }

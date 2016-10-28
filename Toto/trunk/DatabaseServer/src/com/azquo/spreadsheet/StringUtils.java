@@ -13,9 +13,8 @@ import java.util.regex.Pattern;
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  * <p>
- * Edd trying to factor off some functions. We want functions that are fairly simple and do not require database access.
+ * Edd trying to factor off some functions. We want functions that are fairly simple, stateless and do not require database access.
  * <p>
- * Generally stateless functions that could be static.
  */
 public class StringUtils {
 
@@ -221,11 +220,11 @@ I should be ok for StringTokenizer at this point
                 || term.equals("<") || term.equals("=") || term.equals(",")
                 || term.equals("(") || term.equals(")")
                 || term.equals("[") || term.equals("]")
-                || term.equalsIgnoreCase("and")
+                || term.equalsIgnoreCase(StringLiterals.AND)
                 || term.equalsIgnoreCase(StringLiterals.LEVEL) || term.equalsIgnoreCase(StringLiterals.FROM)
                 || term.equalsIgnoreCase(StringLiterals.TO) || term.equalsIgnoreCase(StringLiterals.COUNT)
                 || term.equalsIgnoreCase(StringLiterals.SORTED) || term.equalsIgnoreCase(StringLiterals.CHILDREN)
-                || term.equalsIgnoreCase(StringLiterals.PARENTS)|| term.equalsIgnoreCase(StringLiterals.ATTRIBUTESET)
+                || term.equalsIgnoreCase(StringLiterals.PARENTS) || term.equalsIgnoreCase(StringLiterals.ATTRIBUTESET)
                 || term.equalsIgnoreCase(StringLiterals.COUNTBACK) || term.equalsIgnoreCase(StringLiterals.COMPAREWITH)
                 || term.equalsIgnoreCase(StringLiterals.AS)
                 || term.equalsIgnoreCase(StringLiterals.CREATE)
@@ -307,4 +306,31 @@ I should be ok for StringTokenizer at this point
         return newDate;
     }
 
+    public static boolean compareStringValues(final String val1, final String val2) {
+        //tries to work out if numbers expressed with different numbers of decimal places, maybe including percentage signs and currency symbols are the same.
+        if (val1.equals(val2)) return true;
+        String val3 = val1;
+        String val4 = val2;
+        if (val1.endsWith("%") && val2.endsWith("%")) {
+            val3 = val1.substring(0, val1.length() - 1);
+            val4 = val2.substring(0, val2.length() - 1);
+        }
+        val3 = stripCurrency(val3);
+        val4 = stripCurrency(val4);
+        if (NumberUtils.isNumber(val3) && NumberUtils.isNumber(val4)) {
+            Double n1 = Double.parseDouble(val3);
+            Double n2 = Double.parseDouble(val4);
+            if (n1 - n2 == 0) return true;
+        }
+        return false;
+    }
+
+    // used when comparing values. So ignore the currency symbol if the numbers are the same
+    private static String stripCurrency(String val) {
+        //TODO we need to be able to detect other currencies
+        if (val.length() > 1 && "$£".contains(val.substring(0, 1))) {
+            return val.substring(1);
+        }
+        return val;
+    }
 }

@@ -45,7 +45,7 @@ public class LoginController {
                 if (!SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                     LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                    String title = "Logout from the server from outside the office " + userEmail + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
+                    String title = "Logout from the server from outside the office " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                     AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
                     AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
                     AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
@@ -73,7 +73,7 @@ public class LoginController {
                 LoggedInUser loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), null, userEmail, password, false);
                 if (loggedInUser != null) {
                     // same checks as magento controller
-                    if (!SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
+                    if (!"nic@azquo.com".equalsIgnoreCase(userEmail) && !SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                         String title = "Login to the server from outside the office " + userEmail + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                         AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);

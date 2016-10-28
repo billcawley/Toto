@@ -103,7 +103,7 @@ public class DataRegionHeading {
                 '}';
     }
 
-    public String getDebugInfo() {
+    String getDebugInfo() {
         return (name != null ? "Name : " + name.getDefaultDisplayName() : "")
                  + (attribute != null ? " Attribute : " + attribute : "")
                 + (function != null ? " Function : " + function : "");

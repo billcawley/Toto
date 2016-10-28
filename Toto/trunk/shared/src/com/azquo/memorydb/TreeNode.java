@@ -11,7 +11,7 @@ import java.util.List;
  *
  * To facilitate navigating around a database. A result of the reporting server/database server split, it might be worth considering how this would be coded from scratch given the split.
  *
- * TODO - perhaps get rid of this now we don't have AzquoBook
+ * TODO - stop this being used for provenance.
  *
  */
 public class TreeNode implements Serializable{
