@@ -8,7 +8,7 @@ import java.util.Map;
  *
  * Created by edward on 11/11/15.
  *
- * This was a local class but now it needs to be moved betweeen the DB/Report servers, the problem is that the tree UI needs close access to the DB.
+ * This was a local class but now it needs to be moved between the DB/Report servers, the problem is that the tree UI (inspect database) needs close access to the DB.
  */
 public class JsonChildStructure implements Serializable {
     // public for jackson to see them

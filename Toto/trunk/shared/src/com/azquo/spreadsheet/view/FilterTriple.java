@@ -5,6 +5,7 @@ import java.io.Serializable;
 /**
  * Created by edward on 06/04/16.
  *
+ * Used for the filter selection boxes. Maybe create a generic triple? No need right now.
  */
 public class FilterTriple implements Serializable {
     final int nameId;

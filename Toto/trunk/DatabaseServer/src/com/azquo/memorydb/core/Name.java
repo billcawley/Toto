@@ -4,6 +4,7 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
+import org.springframework.expression.spel.ast.StringLiteral;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
@@ -825,9 +826,24 @@ public final class Name extends AzquoMemoryDBEntity {
             } else {
                 if (!checked.contains(parent)) {
                     checked.add(parent);
-                    if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
-                        return child.getDefaultDisplayName();
+                    // ok, check for the parent actually matching the display name, here we need to do a hack supporting the member of
+                    if (attributeName.contains(StringLiterals.MEMBEROF)){ // hacky doing this here but the alternative is bodging an AzquoMemoryDBConnection for NameService. Lesser of two evils.
+                        String checkName = attributeName.substring(attributeName.indexOf(StringLiterals.MEMBEROF) + StringLiterals.MEMBEROF.length());
+                        String parentName = attributeName.substring(0, attributeName.indexOf(StringLiterals.MEMBEROF));
+                        if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(checkName)) { // ok a candidate!
+                            // now check the parents to see if it's correct
+                            for (Name parentParent : parent.getParents()){ // yes parent parent a bit hacky, we're looking to qualify the parent. getParents not idea for garbage but I assume this will NOT be called that often!
+                                if (parentParent.getDefaultDisplayName().equalsIgnoreCase(parentName)){
+                                    return child.getDefaultDisplayName();
+                                }
+                            }
+                        }
+                    } else { // normal
+                        if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
+                            return child.getDefaultDisplayName();
+                        }
                     }
+
                     String attribute = parent.getAttribute(attributeName, true, checked);
                     if (attribute != null) {
                         return attribute;

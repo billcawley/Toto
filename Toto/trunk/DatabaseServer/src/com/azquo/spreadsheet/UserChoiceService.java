@@ -76,7 +76,7 @@ public class UserChoiceService {
     }
 
     // for the drop down, essentially given a collection of names for a query need to give a meaningful list qualifying names with parents where they are duplicates (I suppose high streets in different towns)
-    // it was assumed that names were sorted, one can't guarantee this though preserving the order is important. EFC going to rewrite, won't require ordering, now this returns the unique nnames to enable "selected" for filter lists
+    // it was assumed that names were sorted, one can't guarantee this though preserving the order is important. EFC going to rewrite, won't require ordering, now this returns the unique names to enable "selected" for filter lists
     private static List<UniqueName> getUniqueNames(Collection<Name> names, boolean forceFirstLevel) {
         List<UniqueName> toCheck;
         if (forceFirstLevel) {

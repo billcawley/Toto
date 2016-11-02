@@ -129,6 +129,7 @@ public final class Value extends AzquoMemoryDBEntity {
         for (Name newName : this.names) {
             newName.removeFromValues(this);
         }
+        getAzquoMemoryDB().removeValueFromDb(this);
         setNeedsPersisting();
     }
 

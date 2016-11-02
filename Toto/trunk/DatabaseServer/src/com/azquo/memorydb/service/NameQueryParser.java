@@ -295,16 +295,6 @@ public class NameQueryParser {
             namesFound = new NameSetList(null, singleName, true);// mutable single item list
         } else {
             namesFound = NameService.findChildrenAtLevel(name, levelString); // reassign names from the find children clause
-            if (fromString == null) fromString = "";
-            if (toString == null) toString = "";
-            if (countString == null) countString = "";
-            if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
-                if (namesFound.list != null) { // yeah I know some say this is not best practice but hey ho
-                    namesFound = NameFilterFunctions.constrainNameListFromToCount(namesFound, fromString, toString, countString, countbackString, compareWithString, referencedNames);
-                } else {
-                    System.out.println("can't from/to/count a non-list, " + setTerm);
-                }
-            }
         }
         if (whereString != null) {
             // will only work if it's a list internally
@@ -344,6 +334,17 @@ public class NameQueryParser {
                 namesFound = new NameSetList(null, new ArrayList<>(namesFound.getAsCollection()), true);
             }
             Collections.sort(namesFound.list, NameService.defaultLanguageCaseInsensitiveNameComparator);
+        }
+        // do from/to/count at the end. It was above for no good reason I can see
+        if (fromString == null) fromString = "";
+        if (toString == null) toString = "";
+        if (countString == null) countString = "";
+        if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
+            if (namesFound.list != null) { // yeah I know some say this is not best practice but hey ho
+                namesFound = NameFilterFunctions.constrainNameListFromToCount(namesFound, fromString, toString, countString, countbackString, compareWithString, referencedNames);
+            } else {
+                System.out.println("can't from/to/count a non-list, " + setTerm);
+            }
         }
         return namesFound != null ? namesFound : new NameSetList(null, new ArrayList<>(), true); // empty one if it's null
     }

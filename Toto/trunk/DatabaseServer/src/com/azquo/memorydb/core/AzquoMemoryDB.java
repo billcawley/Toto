@@ -240,6 +240,11 @@ public final class AzquoMemoryDB {
         nameByIdMap.remove(toRemove.getId());
     }
 
+    void removeValueFromDb(final Value toRemove) throws Exception {
+        toRemove.checkDatabaseMatches(this);
+        valueByIdMap.remove(toRemove.getId());
+    }
+
     /* Json then custom ones, maybe refactor later*/
 
     private static AtomicInteger setJsonEntityNeedsPersistingCount = new AtomicInteger(0);

@@ -77,6 +77,8 @@ public class ZKAzquoBookUtils {
 
     public static final String FOLLOWON = "az_Followon";
 
+    public static final String OUTCOME = "az_Outcome";
+
     public static boolean runExecuteCommandForBook(Book book, String sourceNamedRegion) throws Exception {
         String executeCommand = null;
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
@@ -124,14 +126,15 @@ public class ZKAzquoBookUtils {
     }
 
     // we assume cleansed of blank lines
-    private static void executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, AtomicInteger count) throws Exception {
+    // now can return the outcome if there's an az_Outcome cell. Assuming a loop or list of "do"s then the String returned is the last.
+    private static TypedPair<String, Double> executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, AtomicInteger count) throws Exception {
+        TypedPair<String, Double> toReturn = null;
         if (commands.size() > 0 && commands.get(0) != null) {
             String firstLine = commands.get(0);
             int startingIndent = getIndent(firstLine);
             for (int i = 0; i < startingIndent; i++) {
                 loopsLog.append("  ");
             }
-
             for (int lineNo = 0; lineNo < commands.size(); lineNo++) { // makes checking ahead easier
                 String line = commands.get(lineNo);
                 String trimmedLine = line.trim();
@@ -152,7 +155,7 @@ public class ZKAzquoBookUtils {
                         for (String choiceValue : dropdownListForQuery) { // run the for :)
                             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
-                            executeCommands(loggedInUser, subCommands, loopsLog, count);
+                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count);
                         }
                     }
                     // if not a for each I guess we just execute? Will check for "do"
@@ -176,11 +179,103 @@ public class ZKAzquoBookUtils {
                                 }
                             }
                         }
+                        // here we try to get an outcome to return
+                        SName outcomeName = book.getInternalBook().getNameByName(OUTCOME); // I assume only one
+                        if (outcomeName != null){
+                            final CellRegion refersToCellRegion = outcomeName.getRefersToCellRegion();
+                            SCell outcomeCell = book.getInternalBook().getSheetByName(outcomeName.getRefersToSheetName()).getCell(refersToCellRegion.getRow(), refersToCellRegion.getColumn());
+                            // ok now I think I need to be careful of the cell type
+                            if ((outcomeCell.getType() == SCell.CellType.FORMULA && outcomeCell.getFormulaResultType() == SCell.CellType.NUMBER) || outcomeCell.getType() == SCell.CellType.NUMBER) { // I think a decent enough way to number detect?
+                                toReturn = new TypedPair<>(null, outcomeCell.getNumberValue());
+                            } else {
+                                toReturn = new TypedPair<>(outcomeCell.getStringValue(), null);
+                            }
+                        }
                     }
+                } else if (trimmedLine.toLowerCase().startsWith("repeat until outcome")) { // new conditional logic
+                    // similar to the for each - gather sub commands
+                    String condition = trimmedLine.substring("repeat until outcome".length()).trim();
+                    if (condition.contains(" ")){
+                        String operator = condition.substring(0, condition.indexOf(" "));
+                        String constant = condition.substring(condition.indexOf(" ") + 1);
+                        double constantDouble = 0;
+                        if (constant.startsWith("`") && constant.endsWith("`")){
+                            constant = constant.replace("`", "");
+                        } else { // try for a number
+                            try{
+                                constantDouble = Double.parseDouble(constant.replace(",", "")); // zap the commas to try to parse
+                                constant = null; // null the string if we have a parsed number
+                            } catch (Exception ignored){
+                            }
+                        }
+                        int onwardLineNo = lineNo + 1;
+                        List<String> subCommands = new ArrayList<>();
+                        while (onwardLineNo < commands.size() && getIndent(commands.get(onwardLineNo)) > startingIndent) {
+                            subCommands.add(commands.get(onwardLineNo));
+                            onwardLineNo++;
+                        }
+                        lineNo = onwardLineNo - 1; // put line back to where it is now
+                        int counter = 0;
+                        // todo - max clause
+                        int limit = 10_000;
+                        if (!subCommands.isEmpty()) { // then we have something to run for the for each!
+                            boolean stop = true; // make the default be to stop e.g. in the case of bad syntax or whatever . . .
+                            do {
+                                counter++;
+                                final TypedPair<String, Double> stringDoubleTypedPair = executeCommands(loggedInUser, subCommands, loopsLog, count);
+                                if (stringDoubleTypedPair != null){
+                                    // ok I'm going to assume type matching - if the types don't match then forget the comparison
+                                    if ((stringDoubleTypedPair.getFirst() != null && constant != null)){ // string, equals not equals comparison
+                                        if (operator.equals("=")){
+                                            stop = stringDoubleTypedPair.getFirst().equalsIgnoreCase(constant);
+                                        } else if (operator.equals("!=")){
+                                            stop = !stringDoubleTypedPair.getFirst().equalsIgnoreCase(constant);
+                                        } else { // error for dodgy operator??
+                                            loopsLog.append("Unknown operator for repeat until outcome string : " + operator);
+                                        }
+                                    } else if (stringDoubleTypedPair.getFirst() == null && constant == null){ // assume numbers are set
+                                        // '=', '>'. '<'. '<=' '>=' '!='
+                                        switch (operator){
+                                            case "=":
+                                                stop = stringDoubleTypedPair.getSecond() == constantDouble;
+                                                break;
+                                            case ">":
+                                                stop = stringDoubleTypedPair.getSecond() > constantDouble;
+                                                break;
+                                            case "<":
+                                                stop = stringDoubleTypedPair.getSecond() < constantDouble;
+                                                break;
+                                            case ">=":
+                                                stop = stringDoubleTypedPair.getSecond() >= constantDouble;
+                                                break;
+                                            case "<=":
+                                                stop = stringDoubleTypedPair.getSecond() <= constantDouble;
+                                                break;
+                                            case "!=":
+                                                stop = stringDoubleTypedPair.getSecond() != constantDouble;
+                                                break;
+                                            default:
+                                                loopsLog.append("Unknown operator for repeat until outcome number : " + operator);
+                                        }
+
+                                    } else { // mismatched types, error message?
+                                        loopsLog.append("Mismatched String/Number for repeat until outcome : " + trimmedLine);
+                                    }
+                                } else {
+                                    loopsLog.append("Null return on execute for repeat until outcome : " + trimmedLine);
+                                }
+                            } while(!stop && counter < limit);
+                        }
+                    } else {
+                        loopsLog.append("badly formed repeat until outcome : " + trimmedLine);
+                    }
+                } else {
+                    loopsLog.append("badly formed executel line  : " + trimmedLine);
                 }
             }
         }
         loopsLog.append("\r\n");
+        return toReturn;
     }
 
     private static int getIndent(String s) {

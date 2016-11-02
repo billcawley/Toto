@@ -127,7 +127,7 @@ class AzquoCellService {
     // used by the pivot permute function, really it's building a set of shared names based on all the children of names specified in context
 
     static Collection<Name> getSharedNames(List<DataRegionHeading> headingList) {
-        long startTime = System.currentTimeMillis();
+        //long startTime = System.currentTimeMillis();
         Collection<Name> shared = null;
         List<Collection<Name>> relevantNameSets = new ArrayList<>();
         // gather names

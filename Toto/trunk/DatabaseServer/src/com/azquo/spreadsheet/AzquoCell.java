@@ -15,8 +15,6 @@ import java.util.List;
  *
  * Now we're moving to a client/server model I can't push this object through to the client,
  *
- * todo : not that important but consider the unused functions
- *
  */
 public class AzquoCell {
     private boolean locked;

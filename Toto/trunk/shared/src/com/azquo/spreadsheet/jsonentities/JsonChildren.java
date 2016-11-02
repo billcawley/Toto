@@ -9,7 +9,7 @@ import java.util.Map;
  *
  * Created by edward on 11/11/15.
  *
- * Used to be local as part of teh tree service, now it will be part of communication between the client and db server
+ * Used to be local as part of the tree service, now it will be part of communication between the client and db server
  */
 public class JsonChildren implements Serializable {
     // could use a map I suppose but why not define the structure properly

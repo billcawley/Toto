@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Date: 17/10/13
  * Time: 14:18
  * <p>
- * Should now deal with the mrope basic functions for fine and store names. Parsing stuff has been moved out of here to String Utils and the NameQueryParser.
+ * Should now deal with the more basic functions for fine and store names. Parsing stuff has been moved out of here to String Utils and the NameQueryParser.
  *
  */
 public final class NameService {

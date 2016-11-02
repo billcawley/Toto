@@ -4,7 +4,6 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.AzquoCellResolver;
-import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.DataRegionHeading;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;

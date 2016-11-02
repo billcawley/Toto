@@ -19,7 +19,7 @@ import java.util.Set;
  *
  * Created by cawley on 20/05/15.
  *
- * I decided to use RMI to communicate between the servers, it seems to work.
+ * I decided to use RMI to communicate between the servers. I simply want communication between two JVMs I have control over, it seems to work fine.
  *
  */
 public interface RMIInterface extends Remote {

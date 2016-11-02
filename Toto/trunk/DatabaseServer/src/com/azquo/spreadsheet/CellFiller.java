@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Extracted from DSSpreadsheetService by edward on 28/10/16.
  * More granular version of the above, less than 1000 rows, probably typical use.
  * On Damart for example we had 26*9 taking a while and it was reasonable to assume that rows were not even in terms of processing required
- *
  */
 class CellFiller implements Callable<AzquoCell> {
     private final int row;

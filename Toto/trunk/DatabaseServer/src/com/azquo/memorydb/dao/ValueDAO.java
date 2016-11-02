@@ -133,6 +133,7 @@ public class ValueDAO {
         List<Value> toInsert = new ArrayList<>(FastDAO.UPDATELIMIT); // it's going to be this a lot of the time, save all the resizing
         List<Value> toHistory = new ArrayList<>(FastDAO.UPDATELIMIT); // to move to this history table
         // ok since we're not doing updates but rather delete before reinsert the delete will have to go first. I don't think this will be a big problem
+        // the point is the logic is a bit funny here - sat as persisted will have been set before this to try to be safe - hence never needs inserting
         for (Value value : values) {
             if (!value.getNeedsInserting()) { // either flagged for delete or it exists already and will be reinserted, delete it
                 toDelete.add(value);
@@ -188,6 +189,7 @@ public class ValueDAO {
     }
 
     // currently a copy of the value table with additional index but for the purposes of lookup the name ids need to be ordered
+    // don't make ids unique - can be duplicates
 
     public static void createValueHistoryTableIfItDoesntExist(final String databaseName) {
         JdbcTemplateUtils.update("CREATE TABLE IF NOT EXISTS `" + databaseName + "`.`" + VALUEHISTORY + "` (\n" +
@@ -195,8 +197,7 @@ public class ValueDAO {
                 "  `provenance_id` int(11) NOT NULL,\n" +
                 "  `text` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,\n" +
                 "  `names` blob NOT NULL,\n" +
-                "  KEY (`names`(255)),\n" +
-                "  PRIMARY KEY (`id`)\n" +
+                "  KEY (`names`(255))\n" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 

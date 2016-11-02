@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * Extracted from Name by edward on 07/10/16.
  *
- * Just some low level stuff really, trying to
+ * Just some low level stuff extracted from Name, trying to reduce the size of that class.
  */
 public class NameUtils {
 
