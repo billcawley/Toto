@@ -51,6 +51,9 @@
     <listener>
         <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
     </listener>
+    <listener>
+        <listener-class>com.azquo.SessionListener</listener-class>
+    </listener>
     <!--    <security-constraint>
             <web-resource-collection>
                 <web-resource-name>
