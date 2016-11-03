@@ -40,7 +40,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
             , final String context) throws Exception {
         super(azquoMemoryDB, 0);
         this.user = user;
-        this.timeStamp = new Date(0);
+        this.timeStamp = new Date();
         this.method = method;
         this.name = name;
         this.context = context;

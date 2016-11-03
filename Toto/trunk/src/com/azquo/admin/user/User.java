@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
  *
  * Representing a user who can log in
  *
- * Why do we have json properties? A hangover? The old UI??
  */
 public final class User extends StandardEntity {
 
