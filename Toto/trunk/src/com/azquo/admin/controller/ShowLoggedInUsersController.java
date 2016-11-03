@@ -33,7 +33,7 @@ public class ShowLoggedInUsersController {
             Collections.reverse(listSessionByDate); // most recent first
             for (HttpSession session : listSessionByDate){
                 LoggedInUser user = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-                if (user != null){
+                if (user != null && !user.getUser().getEmail().equalsIgnoreCase("nic@azquo.com")){ // don't show the server monitoring logins
                     Date lastAccessed = new Date(session.getLastAccessedTime());
                     list.append("Last accesed :  " + lastAccessed + " " +  user.getUser().getEmail() + "<br/>");
                 }
