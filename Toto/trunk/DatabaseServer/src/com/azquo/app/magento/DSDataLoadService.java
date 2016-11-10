@@ -396,6 +396,13 @@ public class DSDataLoadService {
                         if (attributeNoLookup.contains(attNo)){ // hack for things like boolean
                             resolvedValue = val;
                         }
+                        /* new code added by Edd according to instruction from WFC 10/11/2016. A product (magentoName) cannot be in more than one option
+                        On a clean load this won't happen anyway but on update it can e.g. in stock/out of stock. If the product is not removed from options first
+                        then on a subsequent upload a product could appear as both in and out of stock! So run through existing options taking the product out . . .
+                         */
+                        for (Name existingOption : magentoProductCategory.getChildren()){
+                            existingOption.removeFromChildrenWillBePersisted(magentoName);
+                        }
                         //note - this is NOT a product id, so don't use the product id to find it!
                         Name magentoOptionName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, resolvedValue, magentoProductCategory, true, null);
                         if (!magentoName.findAllParents().contains(magentoOptionName)) {
