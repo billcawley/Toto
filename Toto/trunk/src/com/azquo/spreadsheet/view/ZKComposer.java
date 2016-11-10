@@ -295,9 +295,12 @@ public class ZKComposer extends SelectorComposer<Component> {
                     event1 -> {
                         List<Integer> childIds = new ArrayList<>();
                         final Set<Listitem> selectedItems = listbox.getSelectedItems();
+                        StringBuilder selectedForLog = new StringBuilder();
                         for (Listitem listItem : selectedItems) {
                             childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
+                            selectedForLog.append(listItem.getLabel());
                         }
+                        loggedInUser.userLog("Multi select : " + selectionName2 + "," + selectedForLog.toString());
                         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
                         filterPopup.close();
                     });
@@ -309,9 +312,12 @@ public class ZKComposer extends SelectorComposer<Component> {
                     event1 -> {
                         List<Integer> childIds = new ArrayList<>();
                         final Set<Listitem> selectedItems = listbox.getSelectedItems();
+                        StringBuilder selectedForLog = new StringBuilder();
                         for (Listitem listItem : selectedItems) {
                             childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
+                            selectedForLog.append(listItem.getLabel());
                         }
+                        loggedInUser.userLog("Multi select : " + selectionName2 + "," + selectedForLog.toString());
                         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
                         filterPopup.close();
                         // factor the reload here?
@@ -383,6 +389,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         && ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), "az_dataregion").size() == 0) {
 
                     String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
+                    loggedInUser.userLog("Choice select : " + choice + "," + chosen);
                     SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
                     // I'm not sure exactly why blankDependantChoices was commented, commenting the other two redundant lines
                     //List<String> changedChoice = new ArrayList<>();

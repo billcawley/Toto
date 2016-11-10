@@ -22,7 +22,6 @@ public final class LoginRecordDAO {
     private static final String TABLENAME = "login_record";
 
     // column names except ID which is in the superclass
-
     private static final String USERID = "user_id";
     private static final String DATABASEID = "database_id";
     private static final String TIME = "time";
@@ -76,6 +75,4 @@ public final class LoginRecordDAO {
     public static void store(LoginRecord loginRecord){
         StandardDAO.store(loginRecord, TABLENAME, getColumnNameValueMap(loginRecord));
     }
-
-
 }

@@ -92,6 +92,4 @@ public class ReportScheduleDAO {
     public static void store(ReportSchedule reportSchedule){
         StandardDAO.store(reportSchedule, TABLENAME, getColumnNameValueMap(reportSchedule));
     }
-
-
 }

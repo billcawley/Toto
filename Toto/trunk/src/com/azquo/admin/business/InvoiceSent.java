@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  *
  * Created by edward on 12/01/16.
+ *
+ * A record of invoices sent from the system. Since test invoices can be sent this is not a definitive record!
  */
 public class InvoiceSent extends InvoiceDetails {
 

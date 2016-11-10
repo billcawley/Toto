@@ -69,6 +69,7 @@ public class ZKSpreadsheetCommandController {
             @Override
             protected void process(Desktop desktop) {
                 Spreadsheet ss = (Spreadsheet) desktop.getComponentByUuidIfAny(zssUuid);
+                LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 try {
                     if ("FREEZE".equals(action)) {
                         Ranges.range(ss.getSelectedSheet()).setFreezePanel(ss.getSelection().getRow(), ss.getSelection().getColumn());
@@ -89,16 +90,17 @@ public class ZKSpreadsheetCommandController {
                                 fos.close();
                             }
                         }
+                        loggedInUser.userLog("Save : " + ss.getSelectedSheetName() + ".xlsx");
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".xlsx", null, null, file, true));
                     }
 
                     if ("SaveTemplate".equals(action)) { // similar to above but we're overwriting the report
-                        LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isMaster()){
                             Exporter exporter = Exporters.getExporter();
                             Book book = ss.getBook();
                             int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
                             OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
+                            loggedInUser.userLog("SaveTemplate : " + onlineReport.getReportName());
                             String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilenameForDisk(); // as in the online controller
                             FileOutputStream fos = null;
                             try {
@@ -166,13 +168,13 @@ public class ZKSpreadsheetCommandController {
                                 fos.close();
                             }
                         }
+                        loggedInUser.userLog("Download PDF : " + ss.getSelectedSheetName() + ".pdf");
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".pdf", "pdf", "application/pdf", file, true));
                     }
 
                     boolean reloadAfterSave = false;
 
                     if ("Save".equals(action)) {
-                        LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                         // todo - provenance?
                         final Book book = ss.getBook();
                         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
@@ -230,6 +232,7 @@ public class ZKSpreadsheetCommandController {
                         // new thing, look for followon, guess we need an instance of ZK azquobook utils
                         // need to show readout like executing todo. On that topic could the executing loading screen say "running command?" or something similar?
                         if (saveOk){
+                            loggedInUser.userLog("Save : " + onlineReport.getReportName());
                             ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                             // unlock here makes sense think, if duff save probably leave locked
                             SpreadsheetService.unlockData(loggedInUser);
@@ -252,7 +255,6 @@ public class ZKSpreadsheetCommandController {
                     }
 
                     if ("Unlock".equals(action)) {
-                        LoggedInUser loggedInUser = (LoggedInUser) req.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                         // should be all that's required
                         SpreadsheetService.unlockData(loggedInUser);
                         Clients.evalJavaScript("document.getElementById(\"unlockButton\").style.display=\"none\";");

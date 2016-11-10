@@ -14,7 +14,7 @@ import java.util.Map;
  *
  * Created by bill on 22/04/14.
  *
- * Only supports a subset of the objects paramters. Might need to rethink this at some point.
+ * Only supports a subset of the objects parameters. Might need to rethink this at some point.
  */
 public final class UserRegionOptionsDAO {
 

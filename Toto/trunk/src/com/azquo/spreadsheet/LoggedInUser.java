@@ -5,16 +5,22 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.user.User;
+import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.jsonentities.JsonChildren;
-import com.azquo.spreadsheet.view.CellForDisplay;
 import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
-import org.apache.log4j.Logger;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -28,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class LoggedInUser {
 
-    private static final Logger logger = Logger.getLogger(LoggedInUser.class);
+    private static final String userLogsPath = "User Logs/"; // with a space
 
     private final String sessionId; // it's used to match to a log server side
     private final User user;
@@ -60,6 +66,9 @@ public class LoggedInUser {
 
     private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
 
+    private static final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+    private static final SimpleDateFormat df2 = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+
     protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions, String imageStoreName, String businessDirectory) {
         this.sessionId = sessionId;
         this.user = user;
@@ -77,6 +86,11 @@ public class LoggedInUser {
         this.context = null;
         lastJSTreeNodeId = new AtomicInteger();
         jsTreeLookupMap = new ConcurrentHashMap<>();
+        // make log files dir if required
+            File test = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + userLogsPath);
+            if (!test.exists()){
+                test.mkdirs();
+            }
     }
 
     public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId){
@@ -195,5 +209,14 @@ public class LoggedInUser {
 
     public void setPermissionsFromReport(Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport) {
         this.permissionsFromReport = permissionsFromReport;
+    }
+    // just pop it open and closed, should be a little cleaner
+    public void userLog(String message){
+        try {
+            Files.write(Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + userLogsPath + user.getEmail() + "-" + df.format(new Date()) + ".log"),
+                    (df2.format(new Date()) + "\t" + message + "\n").getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

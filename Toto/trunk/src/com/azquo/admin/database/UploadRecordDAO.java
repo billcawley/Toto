@@ -1,7 +1,6 @@
 package com.azquo.admin.database;
 
 import com.azquo.admin.StandardDAO;
-import com.azquo.admin.onlinereport.ReportSchedule;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
@@ -76,7 +75,7 @@ public final class UploadRecordDAO  {
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " order by `id` desc", TABLENAME, uploadRowMapper, namedParams, 0, 100);
     }
 
-    public static UploadRecord findForBusinessIdAndFileName(final int businessId, String fileName) {
+/*    public static UploadRecord findForBusinessIdAndFileName(final int businessId, String fileName) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         namedParams.addValue(FILENAME, fileName);
@@ -88,7 +87,7 @@ public final class UploadRecordDAO  {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + USERID + " = :" + USERID + " order by `id` desc", TABLENAME, uploadRowMapper, namedParams, 0, 100);
-    }
+    }*/
 
     public static void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();

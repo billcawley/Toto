@@ -28,7 +28,7 @@ import java.util.List;
  * <p>
  * Created by cawley on 24/04/15.
  * <p>
- * No delete or create but updating of reports. Simple as all on one page, a list. May need pagination at some point.
+ * Delete/updating of reports. Simple as all on one page, a list. May need pagination at some point.
  */
 
 @Controller

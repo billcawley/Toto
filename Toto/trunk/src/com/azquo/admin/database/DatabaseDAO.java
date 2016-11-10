@@ -20,9 +20,9 @@ public final class DatabaseDAO {
 
     // column names except ID which is in the superclass
 
-    public static final String DATABASE = "database"; // need to see it externally
+    private static final String DATABASE = "database"; // need to see it externally
 
-    public static final String BUSINESSID = "business_id";
+    private static final String BUSINESSID = "business_id";
     private static final String USERID = "user_id";
     private static final String NAME = "name";
     private static final String MYSQLNAME = "mysql_name"; // needs renaming! todo
@@ -97,5 +97,4 @@ public final class DatabaseDAO {
     public static void store(Database database){
         StandardDAO.store(database, DATABASE, getColumnNameValueMap(database));
     }
-
 }

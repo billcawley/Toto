@@ -39,6 +39,8 @@ public class DSImportService {
     private static final String HEADINGSSTRING = "HEADINGS";
     // how many lines to skip before data?
     private static final String SKIPLINESSTRING = "SKIPLINES";
+    // override default encoding
+    private static final String FILEENCODING = "FILEENCODING";
     // is there a groovy pre processor?
     private static final String GROOVYPROCESSOR = "GROOVYPROCESSOR";
 
@@ -263,7 +265,7 @@ public class DSImportService {
             filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
         }
         // checks the first few lines to sort batch size and get a hopefully correctly configured line iterator
-        final HeadingsWithIteratorAndBatchSize lineIteratorAndBatchSize = getLineIteratorAndBatchSize(filePath); // created here but it has no headers
+        final HeadingsWithIteratorAndBatchSize lineIteratorAndBatchSize = getLineIteratorAndBatchSize(filePath, importInterpreter); // created here but it has no headers
         if (lineIteratorAndBatchSize == null) {
             return null;
         }
@@ -376,7 +378,7 @@ public class DSImportService {
 
     // Getting some simple info about the file to set up the csv reader and determine batch size
     // Makes the HeadingsWithIteratorAndBatchSize but without the ImmutableImportHeadings
-    private static HeadingsWithIteratorAndBatchSize getLineIteratorAndBatchSize(String filePath) throws Exception {
+    private static HeadingsWithIteratorAndBatchSize getLineIteratorAndBatchSize(String filePath, Name importInterpreter) throws Exception {
         File sizeTest = new File(filePath);
         final long fileLength = sizeTest.length();
         BufferedReader br = new BufferedReader(new FileReader(filePath));
@@ -414,7 +416,18 @@ public class DSImportService {
         if (delimiter == '\t') {
             schema = schema.withoutQuoteChar();
         }
-        return new HeadingsWithIteratorAndBatchSize(csvMapper.reader(String[].class).with(schema).readValues(new File(filePath)), batchSize);
+        /*
+        note : for encoding is it worth trying
+        https://tika.apache.org/1.2/api/org/apache/tika/detect/AutoDetectReader.html
+   //get a file stream in utf format for this file (since they are often not in utf by
+   Charset charset = new AutoDetectReader(new FileInputStream(file)).getCharset();
+         */
+        if (importInterpreter != null && importInterpreter.getAttribute(FILEENCODING) != null) {
+            // so override file encoding.
+            return new HeadingsWithIteratorAndBatchSize(csvMapper.reader(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(filePath), importInterpreter.getAttribute(FILEENCODING))), batchSize);
+        } else {
+            return new HeadingsWithIteratorAndBatchSize(csvMapper.reader(String[].class).with(schema).readValues(new File(filePath)), batchSize);
+        }
     }
 
     // typically groovy scripts write out to a different file, helps a lot for debugging! Most of the time with no groovy specified will just send back the filePath unchanged.

@@ -5,7 +5,7 @@ import com.azquo.admin.StandardEntity;
 /**
  * Created by edward on 19/09/16.
  *
- * Parked for the mo while Sterling wait.
+ * Parked for the mo while Sterling wait. Configuration to read import files I think.
  */
 public class ImportConfig extends StandardEntity {
     private String filename;

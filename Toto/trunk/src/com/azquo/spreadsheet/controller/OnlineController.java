@@ -234,6 +234,7 @@ public class OnlineController {
                                             ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.EXECUTE); // standard, there's the option to execute the contents of a different names
                                             session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                         } else {
+                                            loggedInUser.userLog("Load report : " + finalOnlineReport.getReportName());
                                             session.setAttribute(finalReportId + SAVE_FLAG, ZKAzquoBookUtils.populateBook(book, valueId));
                                         }
                                     } else {

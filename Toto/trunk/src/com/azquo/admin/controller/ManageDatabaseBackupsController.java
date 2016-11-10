@@ -154,5 +154,4 @@ public class ManageDatabaseBackupsController {
             return "redirect:/api/Login";
         }
     }
-
 }
