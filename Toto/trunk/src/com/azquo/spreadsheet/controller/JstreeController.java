@@ -96,6 +96,7 @@ public class JstreeController {
                         }
                     }
                     if (op.equals("new")) { // on the first call to the tree it will be new
+                        loggedInUser.userLog("Inspect DB : " + database);
                         int rootId = 0;
                         if (currentNode != null && currentNode.nameId != -1) { // but on new current will be null
                             rootId = currentNode.nameId;
