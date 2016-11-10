@@ -298,7 +298,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         StringBuilder selectedForLog = new StringBuilder();
                         for (Listitem listItem : selectedItems) {
                             childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
-                            selectedForLog.append(listItem.getLabel());
+                            selectedForLog.append(listItem.getLabel() + " ");
                         }
                         loggedInUser.userLog("Multi select : " + selectionName2 + "," + selectedForLog.toString());
                         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
@@ -315,7 +315,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         StringBuilder selectedForLog = new StringBuilder();
                         for (Listitem listItem : selectedItems) {
                             childIds.add(Integer.parseInt(listItem.getValue())); // should never fail on the parse
-                            selectedForLog.append(listItem.getLabel());
+                            selectedForLog.append(listItem.getLabel() + " ");
                         }
                         loggedInUser.userLog("Multi select : " + selectionName2 + "," + selectedForLog.toString());
                         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName2, loggedInUser.getUser().getEmail(), childIds);
