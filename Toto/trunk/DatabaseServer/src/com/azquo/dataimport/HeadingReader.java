@@ -59,9 +59,9 @@ class HeadingReader {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 int dividerPos = header.lastIndexOf(headingDivider); // is there context defined here?
                 // works backwards simply for convenience to chop off the context headings until only the heading is left, there is nothing significant about the ordering in contextHeadings
+                contextHeadings = new ArrayList<>(); // reset/build the context headings
                 while (dividerPos >= 0) {
-                    contextHeadings = new ArrayList<>(); // reset/build the context headings
-                    final String contextHeadingString = header.substring(dividerPos + 1);
+                     final String contextHeadingString = header.substring(dividerPos + 1);
                     // if the heading ends with | the context heading will be blank, ignore it. A way to clear context if you just put a single | at the end of a heading
                     if (contextHeadingString.length() > 0) {
                         // context headings may not use many features but using the standard heading objects and interpreter is fine
