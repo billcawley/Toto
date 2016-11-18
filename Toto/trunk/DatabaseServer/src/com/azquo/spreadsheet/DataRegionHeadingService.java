@@ -363,8 +363,18 @@ class DataRegionHeadingService {
         boolean starting = true;
         // ok the reason I'm doing this is to avoid unnecessary array copying and resizing. If the size is 1 can just return that otherwise create an ArrayList of the right size and copy in
         ArrayList<List<List<DataRegionHeading>>> permutedLists = new ArrayList<>(noOfHeadingDefinitionRows); // could be slightly less elements than this but it's unlikely to be a biggy.
+        List<List<DataRegionHeading>> lastHeadingRow = null;
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) { // not using a vanilla for loop as we want to skip forward to allow folding of rows with one cell on the right into the list above
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
+            if (lastHeadingRow != null) {
+                //copy down titles
+                for (int i = 0; i < headingDefinitionRow.size(); i++) {
+                    if (headingDefinitionRow.get(i) == null && lastHeadingRow.get(i) != null) {
+                        headingDefinitionRow.set(i, lastHeadingRow.get(i));
+                    }
+                }
+            }
+
             if (headingDefinitionRow.size() == 0) {
                 headingDefinitionRow.add(null);
             }
@@ -404,6 +414,7 @@ class DataRegionHeadingService {
                 }
 
             }
+            lastHeadingRow = headingDefinitionRow;
         }
         if (permutedLists.size() == 1) { // it was just one row to permute, return it as is rather than combining the permuted results together which might result in a bit of garbage due to array copying
             return permutedLists.get(0);
