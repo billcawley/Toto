@@ -794,6 +794,7 @@ public class DSDataLoadService {
                     saleItem.qty = qty;
                     bundleItems.add(saleItem);
                 }
+                if (qty == 0) qty = 1;//put in by WFC when Auree quantities turned out to be 0
                 namesForValue.add(orderItemName);
                 namesForValue.add(qtyName);
                 ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, qty + "", namesForValue);
