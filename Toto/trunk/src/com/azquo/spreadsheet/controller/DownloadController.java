@@ -1,12 +1,8 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.database.DatabaseServer;
-import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -69,9 +65,7 @@ public class DownloadController {
                     ex.printStackTrace();
                 }
                 out.flush();
-                return;
             }
-
         }
     }
 }

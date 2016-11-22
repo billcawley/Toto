@@ -47,15 +47,19 @@ class CellFiller implements Callable<AzquoCell> {
     }
 
     // this should sort my memory concerns (I mean the AzquoCell being appropriately visible), call causing a memory barrier which runnable didn't.
-    // this should sort my memory concerns (I mean the AzquoCell being appropriately visible), call causing a memory barrier which runnable didn't.
     // Not 100% sure this error tracking is correct, leave it for the mo
     @Override
     public AzquoCell call() throws Exception {
         // connection.addToUserLog(".", false);
-        final AzquoCell azquoCell = AzquoCellResolver.getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextHeadings, row, col, languages, valueId, nameComboValueCache);
-        if (!quiet && counter.incrementAndGet() % progressBarStep == 0) {
-            connection.addToUserLog("=", false);
+        try{
+            final AzquoCell azquoCell = AzquoCellResolver.getAzquoCellForHeadings(connection, headingsForRow, headingsForColumn, contextHeadings, row, col, languages, valueId, nameComboValueCache);
+            if (!quiet && counter.incrementAndGet() % progressBarStep == 0) {
+                connection.addToUserLog("=", false);
+            }
+            return azquoCell;
+        } catch (Exception e){
+            e.printStackTrace();
+            throw e;
         }
-        return azquoCell;
     }
 }

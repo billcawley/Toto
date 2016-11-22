@@ -151,7 +151,7 @@ public class ZKAzquoBookUtils {
                         String choiceName = trimmedLine.substring("for each".length(), trimmedLine.indexOf(" in ")).trim();
                         String choiceQuery = trimmedLine.substring(trimmedLine.indexOf(" in ") + " in ".length()).trim();
                         loopsLog.append(choiceName + " : " + choiceQuery + "\r\n");
-                        final List<String> dropdownListForQuery = getDropdownListForQuery(loggedInUser, choiceQuery);
+                        final List<String> dropdownListForQuery = AzquoBookUtils.getDropdownListForQuery(loggedInUser, choiceQuery);
                         for (String choiceValue : dropdownListForQuery) { // run the for :)
                             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
@@ -306,13 +306,7 @@ public class ZKAzquoBookUtils {
             e.printStackTrace();
         }
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-        Map<String, String> userChoices = new HashMap<>();
-        // get the user choices for the report. Can be drop down values, sorting/highlighting etc.
-        // a notable point here is that the user choices don't distinguish between sheets
-        List<UserChoice> allChoices = UserChoiceDAO.findForUserId(loggedInUser.getUser().getId());
-        for (UserChoice uc : allChoices) {
-            userChoices.put(uc.getChoiceName().toLowerCase(), uc.getChoiceValue()); // make case insensitive
-        }
+        Map<String, String> userChoices = AzquoBookUtils.getUserChoicesMap(loggedInUser);
         /* right, we need to deal with setting the choices according to report parameters
         category = `Men's suits`, month = last
         currently allowing first or last, if first or last required as names add quotes
@@ -460,7 +454,7 @@ public class ZKAzquoBookUtils {
                                     }
                                     if ((userChoice == null || !validOptions.contains(userChoice)) && !validOptions.isEmpty()) { // just set the first for the mo.
                                         //check that userChoice is not a valid date...
-                                         if (date==null || !validOptions.contains(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))){
+                                        if (date==null || !validOptions.contains(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))){
                                             userChoice = validOptions.get(0);
                                         }
                                     }
@@ -859,7 +853,7 @@ public class ZKAzquoBookUtils {
             repeatItemColumnOffset = repeatItem.getRefersToCellRegion().getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
 
             String repeatListText = getSnameCell(repeatList).getStringValue();
-            repeatListItems = getDropdownListForQuery(loggedInUser, repeatListText);
+            repeatListItems = AzquoBookUtils.getDropdownListForQuery(loggedInUser, repeatListText);
             // so the expansion within each region will be dealt with by fill region internally but out here I need to ensure that there's enough space for the regions unexpanded
             int repeatRowsRequired = repeatListItems.size() / repeatColumns;
             if (repeatListItems.size() % repeatColumns > 0) {
@@ -870,10 +864,10 @@ public class ZKAzquoBookUtils {
                 // slight copy paste from below, todo factor?
                 int maxCol = getMaxCol(sheet);
                 int rowsToAdd = rowsRequired - repeatScopeHeight;
-                int insertRow = repeatScope.getRefersToCellRegion().getRow() + repeatScope.getRefersToCellRegion().getRowCount() - 1; // last but one row
+                int insertRow = repeatScope.getRefersToCellRegion().getRow() + repeatScope.getRefersToCellRegion().getRowCount() - 1; // last row, inserting here shifts the row down - should it be called last row? -1 on the row count as rows are inclusive. Rows 3-4 is not 1 row it's 2!
 //                int insertRow = repeatScope.getRefersToCellRegion().getLastRow(); // last row (different API call, was using the firt row plus the row count - 1, a simple mistake?)
                 Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
-                Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+                Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - rows to add - 1 as rows are inclusive
                 CellOperationUtil.insertRow(insertRange);
                 CellOperationUtil.paste(copySource, insertRange);
                 int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
@@ -928,7 +922,7 @@ public class ZKAzquoBookUtils {
                         try {
                             //List<String> possibleOptions = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
                             // the names selected off the pivot filter are jammed into a name with "az_" before the filter name
-                              List<String> choiceOptions = getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
+                              List<String> choiceOptions = AzquoBookUtils.getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
                             // This means if it's not empty and not full ignore the filter. Works as the permute function, which needs to be used with pivots,
                             // will constrain by this set, if created, falling back on the set it's passed if not. Means what's in the permute will be a subset of the filters
                             // does this mean a double check? That it's constrained by selection here in context and again by the permute? I suppose no harm.
@@ -937,7 +931,7 @@ public class ZKAzquoBookUtils {
                                 //THis should create the required bits server side . . .
                                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                                         .getFilterListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "` children", "az_" + filter, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
-                                choiceOptions = getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
+                                choiceOptions = AzquoBookUtils.getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
 
                             }
                             if (choiceOptions.size() > 0) {//conditional should now be irrelevant
@@ -1019,7 +1013,7 @@ public class ZKAzquoBookUtils {
                         CellOperationUtil.insertColumn(insertRange);
                         // will this paste the lot?
                         CellOperationUtil.paste(copySource, insertRange);
-                        int originalWidth = sheet.getInternalSheet().getColumn(insertCol).getWidth();
+                        int originalWidth = sheet.getInternalSheet().getColumn(insertCol - 1).getWidth();
                         if (originalWidth != sheet.getInternalSheet().getColumn(insertCol).getWidth()) { // height may not match on insert
                             insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
                         }
@@ -1158,10 +1152,6 @@ public class ZKAzquoBookUtils {
                             lastRowHeadings = rowHeading;
                             row++;
                         }
-
-
-
-
                         if (isHierarchy) {
                             //paste in row headings
                             String rowHeadingsString = cellsAndHeadingsForDisplay.getRowHeadingsSource().get(0).get(0);
@@ -1434,13 +1424,13 @@ public class ZKAzquoBookUtils {
             if (lastColHeading.toLowerCase().startsWith("permute")){
                   return 1;//permutes are unpredictable unless followed by a set
              }
-            repeatCount = getDropdownListForQuery(loggedInUser,lastColHeading).size();
+            repeatCount = AzquoBookUtils.getDropdownListForQuery(loggedInUser,lastColHeading).size();
         }
         colHeadingRow--;
         //if the last line is a set, is one of the lines above also a set - if so this is a permutation
         while (!repeating && colHeadingRow-- > 0){
             String colHeading = colHeadingsSource.get(colHeadingRow).get(0);
-            if (colHeading.toLowerCase().startsWith("permute(") || getDropdownListForQuery(loggedInUser, colHeading).size() > 0){
+            if (colHeading.toLowerCase().startsWith("permute(") || AzquoBookUtils.getDropdownListForQuery(loggedInUser, colHeading).size() > 0){
                 return repeatCount;
             }
         }
@@ -1517,7 +1507,7 @@ public class ZKAzquoBookUtils {
     private static Map<String, List<String>> resolveChoiceOptions(Book book, LoggedInUser loggedInUser) {
         Map<String, List<String>> toReturn = new HashMap<>();
         for (SName name : book.getInternalBook().getNames()) {
-            //check to create pivot filter choices....
+            //check to create pivot filter choices.... TODO - is this a redundant comment, aren't the filters being sorted anyway?
 
             if (name.getName().endsWith("Choice") && name.getRefersToCellRegion() != null) {
                 // ok I assume choice is a single cell
@@ -1544,7 +1534,7 @@ public class ZKAzquoBookUtils {
                                 String[] choices = query.split(",");
                                 Collections.addAll(choiceOptions, choices);
                             } else {
-                                choiceOptions = getDropdownListForQuery(loggedInUser, query);
+                                choiceOptions = AzquoBookUtils.getDropdownListForQuery(loggedInUser, query);
                             }
                         } catch (Exception e) {
                             choiceOptions.add(e.getMessage());
@@ -1600,7 +1590,7 @@ public class ZKAzquoBookUtils {
                         vSheet.getCell(0, targetCol + optionNo).setStringValue(optionVal);
                         String newQuery = query.substring(0, contentPos) + optionVal + query.substring(contentPos + catEnd + CONTENTS.length() + 1);
                         try {
-                            List<String> optionList = getDropdownListForQuery(loggedInUser, newQuery);
+                            List<String> optionList = AzquoBookUtils.getDropdownListForQuery(loggedInUser, newQuery);
                             if (optionList.size() > maxSize) maxSize = optionList.size();
                             int rowOffset = 1;
                             for (String option : optionList) {
@@ -1657,32 +1647,11 @@ public class ZKAzquoBookUtils {
                     queryCell.clearFormulaResultCache();
                 }
                 if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR)){
-                    try {
-                        String queryString = queryCell.getStringValue();
-                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                .resolveQuery(loggedInUser.getDataAccessToken(), queryString, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        queryCell.setStringValue(queryCell.getStringValue() +  " - Error executing query : " + getErrorFromServerSideException(e));
-                    }
+                    queryCell.setStringValue(AzquoBookUtils.resolveQuery(loggedInUser, queryCell.getStringValue()));
                 }
             }
         }
     }
-
-    public static String getErrorFromServerSideException(Exception e){
-        Throwable t = e;
-        int check = 0;
-        while (t.getCause() != null && check < 20){
-            t = t.getCause();
-            check++;
-        }
-        String exceptionError = t.getMessage();
-        if (exceptionError != null && exceptionError.contains("error:"))// legacy, should be removed at some point?
-            exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
-        return exceptionError;
-    }
-
 
 
     private static List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap) {
@@ -1814,7 +1783,7 @@ public class ZKAzquoBookUtils {
         //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
         for (String filter : filters) {
             filter = filter.trim();
-            List<String> optionsList = getDropdownListForQuery(loggedInUser, "`" + filter + "` children sorted");
+            List<String> optionsList = AzquoBookUtils.getDropdownListForQuery(loggedInUser, "`" + filter + "` children sorted");
             if (optionsList != null && optionsList.size() > 1) {
                 String selected = multiList(loggedInUser, "az_" + filter, "`" + filter + "` children sorted");//leave out any with single choices
                 int rowOffset = filterCount % headingRows;
@@ -1845,8 +1814,8 @@ public class ZKAzquoBookUtils {
         try {
             List<String> languages = new ArrayList<>();
             languages.add(loggedInUser.getUser().getEmail());
-            List<String> chosenOptions = getDropdownListForQuery(loggedInUser, "`" + filterName + "` children", languages);
-            List<String> allOptions = getDropdownListForQuery(loggedInUser, sourceSet);
+            List<String> chosenOptions = AzquoBookUtils.getDropdownListForQuery(loggedInUser, "`" + filterName + "` children", languages);
+            List<String> allOptions = AzquoBookUtils.getDropdownListForQuery(loggedInUser, sourceSet);
             if (allOptions.size() < 2) return null;
             if (chosenOptions.size() == 0 || chosenOptions.size() == allOptions.size()) return "[all]";
             if (chosenOptions.size() < 6) {
@@ -1883,35 +1852,6 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query) {
-        return getDropdownListForQuery(loggedInUser, query, loggedInUser.getLanguages());
-    }
-
-
-    private static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
-        //hack to discover a database name
-        int arrowsPos = query.indexOf(">>");
-        try{
-            if (arrowsPos > 0) {
-                Database origDatabase = loggedInUser.getDatabase();
-                DatabaseServer origDatabaseServer = loggedInUser.getDatabaseServer();
-                LoginService.switchDatabase(loggedInUser, query.substring(0, arrowsPos));
-                List<String> toReturn = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query.substring(arrowsPos + 2), languages);
-                loggedInUser.setDatabaseWithServer(origDatabaseServer, origDatabase);
-                return toReturn;
-
-            }
-            return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, languages);
-        } catch (Exception e){
-            e.printStackTrace();
-            List<String> error = new ArrayList<>();
-            error.add("Error : " + e.getMessage());
-            return error;
-        }
-
-    }
 
     private static String getCellString(Sheet sheet, int r, int c) {//this is the same routine as in ImportService, so one is redundant, but I'm not sure which (WFC)
         Range range = Ranges.range(sheet, r, c);

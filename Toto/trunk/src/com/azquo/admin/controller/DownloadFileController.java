@@ -15,7 +15,7 @@ import java.io.*;
 /**
  * Created by edward on 25/05/16.
  *
- * to download uploaded files
+ * To download uploaded files,
  */
 @Controller
 @RequestMapping("/DownloadFile")

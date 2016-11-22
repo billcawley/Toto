@@ -295,8 +295,9 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static void deleteUserById(int userId, LoggedInUser loggedInUser) {
+    public static void deleteUserById(int userId) {
         User user = UserDAO.findById(userId);
+        UserDAO.removeById(user);
     }
 
     public static User getUserById(int userId, LoggedInUser loggedInUser) {

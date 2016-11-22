@@ -55,5 +55,4 @@ public class SpreadsheetStatusController {
         }
         return "session lost";
     }
-
 }

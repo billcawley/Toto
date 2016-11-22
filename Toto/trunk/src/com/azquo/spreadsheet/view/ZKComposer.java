@@ -31,9 +31,7 @@ import com.azquo.memorydb.TreeNode;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URLEncoder;
-import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.Calendar;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -670,7 +668,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                 // this logic is repeated from add validation, dedupe?
                 for (String filter : filters) {
-                    List<String> optionsList = ZKAzquoBookUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
+                    List<String> optionsList = AzquoBookUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
                     if (optionsList != null && optionsList.size() > 1) {
                         int rowOffset = filterCount % headingRows;
                         int colOffset = filterCount / headingRows;

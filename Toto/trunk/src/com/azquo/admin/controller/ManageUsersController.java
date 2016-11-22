@@ -55,7 +55,7 @@ public class ManageUsersController {
         } else {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             if (deleteId != null && NumberUtils.isDigits(deleteId)){
-                AdminService.deleteUserById(Integer.parseInt(deleteId), loggedInUser);
+                AdminService.deleteUserById(Integer.parseInt(deleteId));
             }
             if (editId != null && NumberUtils.isDigits(editId)){
                 User toEdit = AdminService.getUserById(Integer.parseInt(editId), loggedInUser);

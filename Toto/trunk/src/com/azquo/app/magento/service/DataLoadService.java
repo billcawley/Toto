@@ -2,7 +2,6 @@ package com.azquo.app.magento.service;
 
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT

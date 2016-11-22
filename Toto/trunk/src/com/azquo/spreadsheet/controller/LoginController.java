@@ -51,10 +51,8 @@ public class LoginController {
                     AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
                     AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
                 }
-
                 request.getSession().removeAttribute(LOGGED_IN_USER_SESSION);
             }
-
         }
         if (connectionid != null && connectionid.length() > 0) { // nasty hack to support connection id from the plugin
             if (request.getServletContext().getAttribute(connectionid) != null) { // then pick up the temp logged in conneciton

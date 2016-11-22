@@ -1,15 +1,8 @@
 package com.azquo.spreadsheet.controller;
 
-import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.admin.database.DatabaseServerDAO;
-import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.user.UserChoiceDAO;
-import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
-import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -18,7 +11,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -136,7 +128,6 @@ public class RemoteController {
         try {
             System.out.println("json sent " + json);
             JsonParameters jsonParameters = jacksonMapper.readValue(json, JsonParameters.class);
-            Database db = null;
             try {
                 LoggedInUser loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), jsonParameters.database, jsonParameters.logon, jsonParameters.password, false);
                 if (loggedInUser == null) {
@@ -155,11 +146,9 @@ public class RemoteController {
                     onlineReport = OnlineReportDAO.findForNameAndBusinessId(jsonParameters.reportName, loggedInUser.getUser().getBusinessId());
                     onlineReport.setDatabase(jsonParameters.database);
                 }
-
                 if (onlineReport == null) {
                     return "incorrect report name"; // probably need to add json
                 }
-
                 if (jsonParameters.choices != null) {
                     for (String key : jsonParameters.choices.keySet()) {
                         SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), key, jsonParameters.choices.get(key));
@@ -256,13 +245,12 @@ public class RemoteController {
         }
     }
 
-    boolean inSet(String toTest, String[] set){
+    private boolean inSet(String toTest, String[] set){
         for (String element:set ){
             if (element.trim().equalsIgnoreCase(toTest)){
                 return true;
             }
         }
         return false;
-
     }
 }
