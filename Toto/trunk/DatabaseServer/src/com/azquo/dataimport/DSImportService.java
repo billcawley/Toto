@@ -347,7 +347,9 @@ public class DSImportService {
                 }
                 colNo++;
             }
-            nextLine = lineIterator.next();
+            if (lastfilled){
+                nextLine = lineIterator.next();
+            }
         }
     }
 
