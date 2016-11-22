@@ -41,6 +41,7 @@ class DataRegionHeadingService {
             List<List<DataRegionHeading>> row = new ArrayList<>(sourceRow.size());
             nameLists.add(row);
             for (String sourceCell : sourceRow) {
+                sourceCell = sourceCell.trim();
                 if (sourceCell == null || sourceCell.length() == 0) {
                     row.add(null);
                 } else {
