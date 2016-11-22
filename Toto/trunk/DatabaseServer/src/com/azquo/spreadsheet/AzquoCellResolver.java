@@ -56,7 +56,7 @@ public class AzquoCellResolver {
         MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
         boolean hasData = false;
         for (DataRegionHeading heading : rowHeadings) {
-            if (heading != null && (heading.getName() != null || heading.getAttribute() != null)) {
+            if (heading != null && (heading.getName() != null || heading.getAttribute() != null || heading.getFunction()!=null)) {
                 hasData = true;
                 break;
             }
@@ -64,7 +64,7 @@ public class AzquoCellResolver {
         if (hasData) {
             hasData = false;
             for (DataRegionHeading heading : columnHeadings) {
-                if (heading != null && (heading.getName() != null || heading.getAttribute() != null)) {
+                if (heading != null && (heading.getName() != null || heading.getAttribute() != null || heading.getFunction()!=null)) {
                     hasData = true;
                     break;
                 }
