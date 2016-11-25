@@ -377,6 +377,12 @@ class HeadingReader {
                     throw new Exception("error: cannot find peer " + peer + " for " + peersSource.name.getDefaultDisplayName() + (contextHeading != null ? "(context source)" : ""));
                 }
             }
+            //as from Nov 16 all context headings are assumed to be peer headings
+            heading.peerNames.add(heading.name);
+            for (MutableImportHeading cHeading:heading.contextHeadings){
+                heading.peerNames.add(cHeading.name);
+
+            }
         }
     }
 
