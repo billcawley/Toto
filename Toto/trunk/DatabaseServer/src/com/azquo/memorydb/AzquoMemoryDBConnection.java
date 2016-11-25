@@ -116,7 +116,7 @@ public class AzquoMemoryDBConnection {
         Provenance latest = azquoMemoryDB.getMostRecentProvenance();
         if (latest != null && latest.getUser().equals(user)) {
             long elapsed = new Date().getTime() - latest.getTimeStamp().getTime();
-            if (latest.getMethod().equals(method) && latest.getContext().equals(context) && elapsed < 600000) {// ten minutes
+            if (latest.getMethod().equals(method) && latest.getContext().equals(context) && elapsed < 30000) {// thirty seconds
                 this.provenance = latest;
                 return;
             }
