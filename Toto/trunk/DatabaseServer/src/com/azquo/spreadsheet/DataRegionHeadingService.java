@@ -367,9 +367,15 @@ class DataRegionHeadingService {
         List<List<DataRegionHeading>> lastHeadingRow = null;
         for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) { // not using a vanilla for loop as we want to skip forward to allow folding of rows with one cell on the right into the list above
             List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
-            if (lastHeadingRow != null) {
+            boolean hasTitles = false;
+            for (int i = 0; i < headingDefinitionRow.size(); i++) {
+                if (headingDefinitionRow.get(i) != null) {
+                    hasTitles = true;
+                }
+            }
+            if (lastHeadingRow != null && hasTitles) {
                 //copy down titles
-                for (int i = 0; i < headingDefinitionRow.size(); i++) {
+               for (int i = 0; i < headingDefinitionRow.size(); i++) {
                     if (headingDefinitionRow.get(i) == null && lastHeadingRow.get(i) != null) {
                         headingDefinitionRow.set(i, lastHeadingRow.get(i));
                     }
@@ -415,7 +421,9 @@ class DataRegionHeadingService {
                 }
 
             }
-            lastHeadingRow = headingDefinitionRow;
+            if (hasTitles){
+                lastHeadingRow = headingDefinitionRow;
+            }
         }
         if (permutedLists.size() == 1) { // it was just one row to permute, return it as is rather than combining the permuted results together which might result in a bit of garbage due to array copying
             return permutedLists.get(0);
