@@ -22,7 +22,9 @@ import org.zkoss.zss.model.SName;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +58,8 @@ public class OnlineController {
     public static final String CELL_SELECT = "CELL_SELECT";
     public static final String LOCKED = "LOCKED";
     public static final String LOCKED_RESULT = "LOCK_RESULT";
+
+    private static final SimpleDateFormat logDf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 
     @RequestMapping(headers = "content-type=multipart/*")
@@ -242,7 +246,7 @@ public class OnlineController {
                                     }
                                     newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                     System.out.println();
-                                    System.out.println("Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
+                                    System.out.println(logDf.format(new Date()) + " Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
                                     System.out.println();
                                     oldHeapMarker = newHeapMarker;
                                     session.setAttribute(finalReportId, book);

@@ -1,17 +1,18 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.view.AzquoBookUtils;
-import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.view.ExcelJsonRequest;
+import com.azquo.spreadsheet.view.*;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Controller;
@@ -57,7 +58,9 @@ public class ExcelController {
             , @RequestParam(value = "dropDownListForQuery", required = false) String dropDownListForQuery
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "json", required = false) String json
+            , @RequestParam(value = "jsonSave", required = false) String jsonSave
             , @RequestParam(value = "checkSession", required = false) String checkSession
+            , @RequestParam(value = "provenanceJson", required = false) String provenanceJson
     ) throws Exception {
         if (logoff != null && logoff.length() > 0) {
             return "removed from map with key : " + (excelConnections.remove(logoff) != null);
@@ -71,9 +74,9 @@ public class ExcelController {
             if (loggedInUser.getDatabase() == null) {
                 return "error: invalid database " + database;
             }
-            String session = AdminService.shaHash("" + loggedInUser.hashCode()); // good as any I think
+            String session = Integer.toHexString(loggedInUser.hashCode()); // good as any I think
             excelConnections.put(session, loggedInUser);
-            if (json == null && userChoices == null && dropDownListForQuery == null
+            if (json == null && jsonSave == null && userChoices == null && dropDownListForQuery == null
                     && resolveQuery == null && choiceName == null && choiceValue == null && checkSession == null){ // a bit messy, sort later
                 return session;
             }
@@ -143,12 +146,72 @@ public class ExcelController {
                 }
                 userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
             }
-
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), excelJsonRequest.region, 0, excelJsonRequest.rowHeadings, excelJsonRequest.columnHeadings,
                     excelJsonRequest.context, userRegionOptions, true);
             loggedInUser.setSentCells(excelJsonRequest.reportId, excelJsonRequest.region, cellsAndHeadingsForDisplay);
-            return jacksonMapper.writeValueAsString(cellsAndHeadingsForDisplay);
+            return jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(cellsAndHeadingsForDisplay));
         }
+        if (jsonSave != null && !jsonSave.isEmpty()) {
+            // example?
+            // todo : ad hoc . . .
+            ExcelJsonSaveRequest excelJsonSaveRequest = jacksonMapper.readValue(jsonSave, ExcelJsonSaveRequest.class);
+            String result = null;
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(excelJsonSaveRequest.reportId, excelJsonSaveRequest.region);
+            if (cellsAndHeadingsForDisplay != null){
+                int itemsChanged = 0;
+                // ok now I need to look at the data sent by the excel and see if I need to change the cells and headings.
+                // CellFOrDisplay doens't detect changes so here I need to guess whether a change has happened or not to lessen checks on the server
+                if (!excelJsonSaveRequest.data.isEmpty()){
+                    if (excelJsonSaveRequest.data.size() != cellsAndHeadingsForDisplay.getData().size()){
+                        return "data region sizes between Excel and teh server don't match for " + excelJsonSaveRequest.region;
+                    }
+                    if (excelJsonSaveRequest.data.get(0).size() != cellsAndHeadingsForDisplay.getData().get(0).size()){
+                        return "data region sizes between Excel and teh server don't match for " + excelJsonSaveRequest.region;
+                    }
+                }
+                int rowIndex = 0;
+                for (List<String> row : excelJsonSaveRequest.data){
+                    int colIndex = 0;
+                    for (String valueFromExcel : row){
+                        CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowIndex).get(colIndex);
+                        try{
+                            double doubleValue = Double.parseDouble(valueFromExcel.replace(",",""));
+                            // then it IS a double
+                            if (cellForDisplay.getDoubleValue() != doubleValue){
+                                itemsChanged++;
+                                // fragments similar to ZK code
+                                cellForDisplay.setNewDoubleValue(doubleValue);
+                                String numericValue = doubleValue + "";
+                                if (numericValue.endsWith(".0")) {
+                                    numericValue = numericValue.substring(0, numericValue.length() - 2);
+                                }
+                                cellForDisplay.setNewStringValue(numericValue);
+                            }
+                        } catch (Exception e){
+                            if (!cellForDisplay.getStringValue().equals(valueFromExcel)){
+                                itemsChanged++;
+                                cellForDisplay.setNewDoubleValue(0);
+                                cellForDisplay.setNewStringValue(valueFromExcel);
+                            }
+                        }
+                        colIndex++;
+                    }
+                    rowIndex++;
+                }
+                if (itemsChanged > 0){
+                    OnlineReport report = OnlineReportDAO.findById(excelJsonSaveRequest.reportId);
+                    result = SpreadsheetService.saveData(loggedInUser, excelJsonSaveRequest.region, excelJsonSaveRequest.reportId, report.getReportName());
+                    if ("true".equals(result)){
+                        return itemsChanged + " cells saved.";
+                    } else {
+                        return result;
+                    }
+                } else {
+                    return "No changed detected.";
+                }
+            }
+        }
+
         if (userChoices != null){
             return jacksonMapper.writeValueAsString(AzquoBookUtils.getUserChoicesMap(loggedInUser));
         }
@@ -161,6 +224,12 @@ public class ExcelController {
         if (choiceName != null && choiceValue != null){
             loggedInUser.userLog("Choice select : " + choiceName + "," + choiceValue);
             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, choiceValue);
+        }
+        if (provenanceJson != null){
+            ProvenanceJsonRequest provenanceJsonRequest = jacksonMapper.readValue(provenanceJson, ProvenanceJsonRequest.class);
+            TypedPair<Integer, String> fullProvenance = AzquoBookUtils.getFullProvenanceStringForCell(loggedInUser, provenanceJsonRequest.reportId
+                    , provenanceJsonRequest.region, provenanceJsonRequest.row, provenanceJsonRequest.col);
+            return ZKComposer.trimString(fullProvenance.getSecond());
         }
         return "no action taken";
     }

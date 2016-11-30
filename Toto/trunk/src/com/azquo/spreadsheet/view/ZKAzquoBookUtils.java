@@ -463,7 +463,7 @@ public class ZKAzquoBookUtils {
                                     SCell sCell = sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn());
                                     sCell.setStringValue(userChoice);
                                     if (date!=null){
-                                        sCell.setValue(excelTime(Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant())));
+                                        sCell.setDateValue(Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant()));
                                     }
                                     context += choiceName + " = " + userChoice + ";";
                                 }
@@ -723,12 +723,13 @@ public class ZKAzquoBookUtils {
         }
     }
 
-    private static double excelTime(Date date){
+    //SCell.setdate should make this redundant
+/*    private static double excelTime(Date date){
         TimeZone tz = TimeZone.getDefault();
         boolean inDs = tz.inDaylightTime(date);
        return(date.getTime() + (inDs ? 1000 * 60 * 60 : 0)) / (1000 * 3600 * 24) + 25569;//convert date to days relative to 1970
 
-    }
+    }*/
 
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd/MM/yy");
@@ -1059,7 +1060,8 @@ public class ZKAzquoBookUtils {
                                         }
                                     }
                                     if (date!=null){
-                                        cell.setValue(excelTime(date));
+                                        cell.setDateValue(date);
+//                                        cell.setValue(excelTime(date));
                                     }else{
                                         cell.setValue(heading);
                                     }
@@ -1375,7 +1377,8 @@ public class ZKAzquoBookUtils {
                                         date = df.parse(cellValue.getStringValue());
                                     }
                                     if (date != null) {
-                                          cell.setValue(excelTime(date));//convert date to days relative to 1970
+                                        cell.setDateValue(date);
+                                          //cell.setValue(excelTime(date));//convert date to days relative to 1970
                                         hasValue = true;
                                     }
                                 } catch (Exception ignored) {

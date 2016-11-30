@@ -1,12 +1,15 @@
 package com.azquo.spreadsheet.view;
 
+import com.azquo.TypedPair;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserChoiceDAO;
+import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
+import com.azquo.spreadsheet.SpreadsheetService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -86,4 +89,83 @@ public class AzquoBookUtils {
             exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
         return exceptionError;
     }
+
+    public static TypedPair<Integer, String> getFullProvenanceStringForCell(LoggedInUser loggedInUser, int reportId, String region, int regionRow, int regionColumn) throws Exception {
+        List<TreeNode> treeNodes = SpreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
+        if (!treeNodes.isEmpty()) {
+            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
+            StringBuilder colRowContext = new StringBuilder();
+            colRowContext.append("COLUMN");
+            for (List<String> colHeadingsRow : sentCells.getColumnHeadings()) {
+                colRowContext.append("\t" + colHeadingsRow.get(regionColumn));
+            }
+            colRowContext.append("\n\tROW ");
+            for (String rowItem : sentCells.getRowHeadings().get(regionRow)) {
+                colRowContext.append("\t" + rowItem);
+            }
+            colRowContext.append("\n\tCONTEXT ");
+            for (List<String> contextRow : sentCells.getContextSource()) {
+                for (String context : contextRow) {
+                    colRowContext.append("\t" + context);
+                }
+            }
+            colRowContext.append("\n\n");
+            StringBuilder toShow = new StringBuilder();
+            for (TreeNode TreeNode : treeNodes) {
+                resolveTreeNode(0, toShow, TreeNode);
+            }
+            // that int was what was in the code before however much it makes sense (or not!)
+            return new TypedPair<>(getLastValueInt(treeNodes.get(0)), toShow.toString());
+        }
+        return null;
+    }
+
+    private static int getLastValueInt(com.azquo.memorydb.TreeNode treeNode) {
+        if (treeNode.getHeading() != null && !treeNode.getChildren().isEmpty()) { // then assume we have items too!
+            return getLastValueInt(treeNode.getChildren().get(treeNode.getChildren().size() - 1));
+        }
+        return treeNode.getValueId();
+    }
+
+
+    private static void resolveTreeNode(int tab, StringBuilder stringBuilder, com.azquo.memorydb.TreeNode treeNode) {
+        for (int i = 0; i < tab; i++) {
+            stringBuilder.append("\t");
+        }
+        boolean needsValue = true;
+        if (treeNode.getName() != null) {
+            stringBuilder.append(treeNode.getName());
+            String value = treeNode.getValue();
+            if (treeNode.getChildren().size()==1){
+                needsValue = false;
+            }
+            if (needsValue && value != null) {
+                stringBuilder.append("\t");
+
+                stringBuilder.append(treeNode.getValue());
+                if (treeNode.getValueHistory() != null){
+                    for (String historyItem : treeNode.getValueHistory()){
+                        stringBuilder.append("\n");
+                        for (int i = 0; i < tab; i++) {
+                            stringBuilder.append("\t");
+                        }
+                        stringBuilder.append("\t\tHistory\t" + historyItem); // out one further
+                    }
+                }
+            }
+            stringBuilder.append("\n");
+        }
+        if (treeNode.getHeading() != null) { // then assume we have items too!
+            stringBuilder.append(treeNode.getHeading());
+            //stringBuilder.append("\n");
+            if (tab==0 || needsValue){
+                tab++;
+            }
+            for (TreeNode treeNode1 : treeNode.getChildren()) {
+                resolveTreeNode(tab, stringBuilder, treeNode1);
+            }
+        }
+    }
+
+
 }

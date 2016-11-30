@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.net.URLEncoder;
 import java.util.List;
 
@@ -76,13 +77,15 @@ public class ExcelInterfaceController {
                 }
                 // db and report should be sorted by now
                 if (onlineReport != null) {
-                    // sort the session id, prefix it on the file name and then download it to the user
-                    String sessionHash =  AdminService.shaHash("" + loggedInUser.hashCode());
-                    ExcelController.excelConnections.put(sessionHash, loggedInUser); // could be repeatedly putting, do we care?
+                    // sort the session id, add it to the file name
+//                    String sessionId =  java.util.Base64.getEncoder().encodeToString(BigInteger.valueOf(loggedInUser.hashCode()).toByteArray()); // chop it down to size
+                    String sessionId =  Integer.toHexString(loggedInUser.hashCode());
+                    ExcelController.excelConnections.put(sessionId, loggedInUser); // could be repeatedly putting, do we care?
                     String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilenameForDisk();
                     response.setContentType("application/vnd.ms-excel"); // Set up mime type
                     String extension = onlineReport.getFilenameForDisk().substring(onlineReport.getFilenameForDisk().lastIndexOf("."));
-                    response.addHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode(sessionHash + "-" + onlineReport.getId() + "-" + onlineReport.getReportName() + extension));
+                    // todo, encode the report id? Do we care?
+                    response.addHeader("Content-Disposition", "attachment; filename=" + onlineReport.getReportName() + "-" + sessionId + "-" + onlineReport.getId() + extension); // doenbs't need url encoding??
                     OutputStream out = response.getOutputStream();
                     FileInputStream in = new FileInputStream(bookPath);
                     byte[] buffer = new byte[4096];

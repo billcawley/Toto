@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.view;
 
+import com.azquo.TypedPair;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.*;
@@ -814,41 +815,17 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
             try {
-                List<TreeNode> treeNodes = SpreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
-                if (!treeNodes.isEmpty()) {
-                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
-                    StringBuilder colRowContext = new StringBuilder();
-                    colRowContext.append("COLUMN");
-                    for (List<String> colHeadingsRow : sentCells.getColumnHeadings()) {
-                        colRowContext.append("\t" + colHeadingsRow.get(regionColumn));
-                    }
-                    colRowContext.append("\n\tROW ");
-                    for (String rowItem : sentCells.getRowHeadings().get(regionRow)) {
-                        colRowContext.append("\t" + rowItem);
-                    }
-                    colRowContext.append("\n\tCONTEXT ");
-                    for (List<String> contextRow : sentCells.getContextSource()) {
-                        for (String context : contextRow) {
-                            colRowContext.append("\t" + context);
-                        }
-                    }
-                    colRowContext.append("\n\n");
-                    Label provenanceLabel = new Label();
-                    provenanceLabel.setMultiline(true);
-                    provenanceLabel.setValue(colRowContext.toString());
-                    provenancePopup.appendChild(provenanceLabel);
-                    StringBuilder toShow = new StringBuilder();
-                    for (TreeNode TreeNode : treeNodes) {
-                        resolveTreeNode(0, toShow, TreeNode);
-                    }
-                    String stringToShow = toShow.toString();
-                    final String fullProvenance = stringToShow;
-
+                TypedPair<Integer, String> fullProvenance = AzquoBookUtils.getFullProvenanceStringForCell(loggedInUser, reportId, region, regionRow, regionColumn);
+                String stringToShow = fullProvenance.getSecond(); // the former will be mangled
+                if (stringToShow != null) {
+                    Label provenanceLabel;
                     stringToShow = stringToShow.replace("\t", "....");
                     int spreadPos = stringToShow.indexOf("in spreadsheet"); // this kind of thing needs to be re coded.
                     int nextBlock;
+                    // ok there is something dodgy here - the valueId (fullProvenance.getFirst()) was the same every time,
+                    // hence how I can package it up with the string and not alter the logic but I'm not sure this makes any sense!
+
                     while (spreadPos >= 0) {
-                        int valueId = getLastValueInt(treeNodes.get(0)); // should be a root of 1 in this case. In fact that applies above?
                         int endLine = stringToShow.indexOf("\n");
                         if (endLine == -1) endLine = stringToShow.length();
                         nextBlock = stringToShow.indexOf("in spreadsheet", endLine);
@@ -860,7 +837,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                         final String provLine = stringToShow.substring(0, endLine);
                         final Toolbarbutton provButton = new Toolbarbutton(provLine);
                         provButton.addEventListener("onClick",
-                                event -> showProvenance(provLine, valueId));
+                                event -> showProvenance(provLine, fullProvenance.getFirst()));
                         provenancePopup.appendChild(provButton);
                         provenanceLabel = new Label();
                         provenanceLabel.setMultiline(true);
@@ -891,7 +868,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         }
                                         if (sName.getName().equalsIgnoreCase("Data")) {
                                             // here we parse out the string into cells. It could be passed as arrays but I'm not sure how much help that is
-                                            final String[] split = fullProvenance.split("\n");
+                                            final String[] split = fullProvenance.getSecond().split("\n");
                                             int yOffset = 0;
                                             for (String line : split){
                                                 int xOffset = 0;
@@ -1150,57 +1127,11 @@ public class ZKComposer extends SelectorComposer<Component> {
         return found;
     }
 
-    private String trimString(String stringToShow) {
+    public static String trimString(String stringToShow) {
         if (stringToShow.length() > 200) {
             stringToShow = stringToShow.substring(0, 200) + " . . .\n";
         }
         return stringToShow;
-    }
-
-    private static void resolveTreeNode(int tab, StringBuilder stringBuilder, com.azquo.memorydb.TreeNode treeNode) {
-        for (int i = 0; i < tab; i++) {
-            stringBuilder.append("\t");
-        }
-        boolean needsValue = true;
-        if (treeNode.getName() != null) {
-            stringBuilder.append(treeNode.getName());
-            String value = treeNode.getValue();
-            if (treeNode.getChildren().size()==1){
-                needsValue = false;
-            }
-            if (needsValue && value != null) {
-                stringBuilder.append("\t");
-
-                stringBuilder.append(treeNode.getValue());
-                if (treeNode.getValueHistory() != null){
-                    for (String historyItem : treeNode.getValueHistory()){
-                        stringBuilder.append("\n");
-                        for (int i = 0; i < tab; i++) {
-                            stringBuilder.append("\t");
-                        }
-                        stringBuilder.append("\t\tHistory\t" + historyItem); // out one further
-                    }
-                }
-            }
-            stringBuilder.append("\n");
-        }
-        if (treeNode.getHeading() != null) { // then assume we have items too!
-            stringBuilder.append(treeNode.getHeading());
-            //stringBuilder.append("\n");
-            if (tab==0 || needsValue){
-                tab++;
-            }
-            for (TreeNode treeNode1 : treeNode.getChildren()) {
-                resolveTreeNode(tab, stringBuilder, treeNode1);
-            }
-        }
-    }
-
-    private static int getLastValueInt(com.azquo.memorydb.TreeNode treeNode) {
-        if (treeNode.getHeading() != null && !treeNode.getChildren().isEmpty()) { // then assume we have items too!
-            return getLastValueInt(treeNode.getChildren().get(treeNode.getChildren().size() - 1));
-        }
-        return treeNode.getValueId();
     }
 
     private void addHighlight(Popup highlightPopup, final int days) {
