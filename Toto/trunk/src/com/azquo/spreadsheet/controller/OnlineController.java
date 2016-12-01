@@ -76,6 +76,9 @@ public class OnlineController {
             , @RequestParam(value = "execute", required = false) String execute
 
     ) {
+        if (!"1".equals(reportId) && "true".equals(request.getSession().getAttribute("excelToggle"))){
+            return "redirect:/api/ExcelInterface?" + request.getQueryString();
+        }
         try {
             //long startTime = System.currentTimeMillis();
             try {

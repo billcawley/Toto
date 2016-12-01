@@ -85,7 +85,7 @@ public class ExcelInterfaceController {
                     response.setContentType("application/vnd.ms-excel"); // Set up mime type
                     String extension = onlineReport.getFilenameForDisk().substring(onlineReport.getFilenameForDisk().lastIndexOf("."));
                     // todo, encode the report id? Do we care?
-                    response.addHeader("Content-Disposition", "attachment; filename=" + onlineReport.getReportName() + "-" + sessionId + "-" + onlineReport.getId() + extension); // doenbs't need url encoding??
+                    response.addHeader("Content-Disposition", "attachment; filename=\"" + onlineReport.getReportName() + "-" + sessionId + "-" + onlineReport.getId() + extension + "\""); // doenbs't need url encoding??
                     OutputStream out = response.getOutputStream();
                     FileInputStream in = new FileInputStream(bookPath);
                     byte[] buffer = new byte[4096];

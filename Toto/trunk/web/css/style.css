@@ -125,6 +125,8 @@ header.public .nav ul li ul li{display:block; float:none; }
 header.public .nav ul li ul li a{line-height:40px; display:block; text-align:left; padding:0px 10px; border:0px; border-bottom:rgba(0,0,0,0.15) solid 1px; border-top:rgba(255,255,255,0.25) solid 1px; }
 header.public .nav ul li ul li a:hover{background:#F58030;}
 
+.tickspanpublic{display:block; line-height:70px; padding:0px 30px;  border-left:rgba(0,0,0,0.15) solid 1px; border-right:rgba(255,255,255,0.25) solid 1px;}
+.tickspan{display:block; line-height:70px; padding:0px 30px;  border-left:#000 solid 1px; border-right:#333 solid 1px; color:#FFF;}
 
 main{background:#FFF; margin:20px; padding:20px 10px; box-shadow:rgba(0,0,0,0.25) 0px 2px 3px; border-radius:10px; text-align:left;}
 
@@ -242,3 +244,5 @@ table.edit td label{min-width:100px;}
 #namedetails .namedetailsinner .clear{display:block; clear:both; width:100%;}
 
 #namedetails .namedetailsinner .namedetailssubmit{padding-top:20px; text-align:center; font-weight:bold;}
+
+

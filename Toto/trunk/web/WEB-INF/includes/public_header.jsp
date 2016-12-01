@@ -31,6 +31,23 @@
 			}
 		}
 
+		function pingExcelInterfaceFlag(flag){
+			$.get(
+					"/api/Excel?toggle=" + flag,
+					{paramOne : 1, paramX : 'abc'},
+					function(data) {
+						//alert('page content: ' + data);
+					}
+			);
+		}
+
+		function openReport(paramString){
+			if (document.getElementById("excelinterface").checked){
+				window.open("/api/ExcelInterface" + paramString)
+			} else {
+				window.open("/api/Online" + paramString)
+			}
+		}
 	</script>
 </head>
 
@@ -65,6 +82,7 @@
 				<span id="lockedResult"><c:if test="${not empty lockedResult}"><textarea class="public" style="height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0">${lockedResult}</textarea></c:if></span>
 			<nav class="nav">
 				<ul>
+					<li><span class="tickspanpublic">Excel<input name="excel" type="checkbox" id="excelinterface" <c:if test="${sessionScope.excelToggle}"> checked</c:if> onchange="pingExcelInterfaceFlag(this.checked)"></span></li>
 					<c:if test="${templateMode == true}">
 						<li ><a href="#" onclick="postAjax('SaveTemplate'); return false;">Save Template</a></li>
 					</c:if>

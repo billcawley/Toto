@@ -15,12 +15,15 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.view.*;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.HttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
@@ -46,7 +49,8 @@ public class ExcelController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(@RequestParam(value = "logon", required = false, defaultValue = "") String logon
+    public String handleRequest(HttpServletRequest request, @RequestParam(value = "logon", required = false, defaultValue = "") String logon
+            , @RequestParam(value = "toggle", required = false, defaultValue = "") String toggle
             , @RequestParam(value = "logoff", required = false, defaultValue = "") String logoff
             , @RequestParam(value = "password", required = false, defaultValue = "") String password
             , @RequestParam(value = "sessionid", required = false, defaultValue = "") String sessionid
@@ -62,6 +66,10 @@ public class ExcelController {
             , @RequestParam(value = "checkSession", required = false) String checkSession
             , @RequestParam(value = "provenanceJson", required = false) String provenanceJson
     ) throws Exception {
+        if (toggle != null){
+            request.getSession().setAttribute("excelToggle", toggle);
+            return "";
+        }
         if (logoff != null && logoff.length() > 0) {
             return "removed from map with key : " + (excelConnections.remove(logoff) != null);
         }
@@ -174,24 +182,26 @@ public class ExcelController {
                     int colIndex = 0;
                     for (String valueFromExcel : row){
                         CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowIndex).get(colIndex);
-                        try{
-                            double doubleValue = Double.parseDouble(valueFromExcel.replace(",",""));
-                            // then it IS a double
-                            if (cellForDisplay.getDoubleValue() != doubleValue){
-                                itemsChanged++;
-                                // fragments similar to ZK code
-                                cellForDisplay.setNewDoubleValue(doubleValue);
-                                String numericValue = doubleValue + "";
-                                if (numericValue.endsWith(".0")) {
-                                    numericValue = numericValue.substring(0, numericValue.length() - 2);
+                        if (!cellForDisplay.isLocked()){ // no point saving if locked!
+                            try{
+                                double doubleValue = Double.parseDouble(valueFromExcel.replace(",",""));
+                                // then it IS a double
+                                if (cellForDisplay.getDoubleValue() != doubleValue){
+                                    itemsChanged++;
+                                    // fragments similar to ZK code
+                                    cellForDisplay.setNewDoubleValue(doubleValue);
+                                    String numericValue = doubleValue + "";
+                                    if (numericValue.endsWith(".0")) {
+                                        numericValue = numericValue.substring(0, numericValue.length() - 2);
+                                    }
+                                    cellForDisplay.setNewStringValue(numericValue);
                                 }
-                                cellForDisplay.setNewStringValue(numericValue);
-                            }
-                        } catch (Exception e){
-                            if (!cellForDisplay.getStringValue().equals(valueFromExcel)){
-                                itemsChanged++;
-                                cellForDisplay.setNewDoubleValue(0);
-                                cellForDisplay.setNewStringValue(valueFromExcel);
+                            } catch (Exception e){
+                                if (!cellForDisplay.getStringValue().equals(valueFromExcel)){
+                                    itemsChanged++;
+                                    cellForDisplay.setNewDoubleValue(0);
+                                    cellForDisplay.setNewStringValue(valueFromExcel);
+                                }
                             }
                         }
                         colIndex++;
@@ -222,6 +232,7 @@ public class ExcelController {
             return AzquoBookUtils.resolveQuery(loggedInUser, resolveQuery);
         }
         if (choiceName != null && choiceValue != null){
+            choiceValue = choiceValue.trim();
             loggedInUser.userLog("Choice select : " + choiceName + "," + choiceValue);
             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, choiceValue);
         }
