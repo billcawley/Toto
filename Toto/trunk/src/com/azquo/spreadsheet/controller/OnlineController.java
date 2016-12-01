@@ -114,7 +114,7 @@ public class OnlineController {
                             }
                         }
                 }
-                String result = "error: user has no home report";
+                String result = "error: user has no permission for this report";
                 // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
                 // I wonder if this should be a different controller
                 if (opcode.equals("upload")) {
