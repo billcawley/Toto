@@ -267,7 +267,7 @@ public final class ImportService {
         String reportName = null;
         SName reportRange = book.getInternalBook().getNameByName("az_ReportName");
         if (reportRange != null) {
-            reportName = ZKAzquoBookUtils.getSnameCell(reportRange).getStringValue();
+            reportName = ZKAzquoBookUtils.getSnameCell(reportRange).getStringValue().trim();
         }
         if (reportName != null) {
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
