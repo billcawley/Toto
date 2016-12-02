@@ -626,7 +626,7 @@ public class DSDataLoadService {
                     String value = attributeRow.get("value");
                     String addressId = attributeRow.get("entity_id");
                     Name customer = addressMap.get(addressId);
-                    if (attId.equals(countryNameId)) {
+                    if (attId.equals(countryNameId) && !value.isEmpty()) { // apparently country can be blank!
                         Name country = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, value, allCountriesName, true, emailLanguage);
                         country.addChildWillBePersisted(customer);
                     } else {
