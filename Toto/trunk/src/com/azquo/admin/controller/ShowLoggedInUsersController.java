@@ -35,7 +35,7 @@ public class ShowLoggedInUsersController {
                 LoggedInUser user = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 if (user != null && !user.getUser().getEmail().equalsIgnoreCase("nic@azquo.com")){ // don't show the server monitoring logins
                     Date lastAccessed = new Date(session.getLastAccessedTime());
-                    list.append("Last accesed :  " + lastAccessed + " " +  user.getUser().getEmail() + "<br/>");
+                    list.append("Last accessed :  " + lastAccessed + " " +  user.getUser().getEmail() + "<br/>");
                 }
             }
             return list.toString();

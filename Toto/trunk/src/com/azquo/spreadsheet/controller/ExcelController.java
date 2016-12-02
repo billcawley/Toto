@@ -50,7 +50,7 @@ public class ExcelController {
     @RequestMapping
     @ResponseBody
     public String handleRequest(HttpServletRequest request, @RequestParam(value = "logon", required = false, defaultValue = "") String logon
-            , @RequestParam(value = "toggle", required = false, defaultValue = "") String toggle
+            , @RequestParam(value = "toggle", required = false) String toggle
             , @RequestParam(value = "logoff", required = false, defaultValue = "") String logoff
             , @RequestParam(value = "password", required = false, defaultValue = "") String password
             , @RequestParam(value = "sessionid", required = false, defaultValue = "") String sessionid

@@ -7,7 +7,6 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -73,8 +72,9 @@ public class ManageUsersController {
                     }
                     if (email == null || email.isEmpty()){
                         error.append("Email required<br/>");
+                    } else {
+                        email = email.trim();
                     }
-                    email = email.trim();
                     if (toEdit == null && UserDAO.findByEmail(email) != null){
                         error.append("User Exists<br/>");
                     }
