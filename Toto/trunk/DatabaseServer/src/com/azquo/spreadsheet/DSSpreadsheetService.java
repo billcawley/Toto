@@ -270,6 +270,7 @@ public class DSSpreadsheetService {
             for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
                 int columnCounter = 0;
                 for (CellForDisplay cell : row) {
+                    // todo. sprt provenance for comments
                     if (!cell.isLocked() && cell.isChanged()) {
                         //logger.info(orig + "|" + edited + "|"); // we no longer know the original value unless we jam it in AzquoCell
                         // note, if there are many cells being edited this becomes inefficient as headings are being repeatedly looked up

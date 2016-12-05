@@ -11,4 +11,5 @@ public class ExcelJsonSaveRequest {
     public int reportId;
     public String region;
     public List<List<String>> data;
+    public List<List<String>> comments; // will hardly be used but it should have the same dimensions as the data
 }

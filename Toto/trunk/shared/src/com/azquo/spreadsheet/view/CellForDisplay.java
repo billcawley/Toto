@@ -27,6 +27,8 @@ public class CellForDisplay implements Serializable {
     // to auto select a cell from provenance or drilldown
     private boolean selected;
 
+    private String comment; // a bit of an odd one, this is never sent from the server but rather back to the server to assign a comment in provenance.
+
     public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted, int unsortedRow, int unsortedCol, boolean ignored, boolean selected) {
         this.locked = locked;
         this.stringValue = stringValue;
@@ -39,6 +41,7 @@ public class CellForDisplay implements Serializable {
         this.unsortedCol = unsortedCol;
         this.ignored = ignored;
         this.selected = selected;
+        comment = null;
     }
 
     public boolean isLocked() {
@@ -119,6 +122,12 @@ public class CellForDisplay implements Serializable {
 
     public void setSelected(boolean selected) {
         this.selected = selected;
+    }
+
+    // provisionally logic states that you can add a comment to an existing figure
+    public void setComment(String comment) {
+        changed = true;
+        this.comment = comment;
     }
 
     @Override
