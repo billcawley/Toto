@@ -30,9 +30,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="junit:junit:4.9" level="project" />
     <orderEntry type="library" name="net.sourceforge.javacsv:javacsv:2.0" level="project" />
-    <orderEntry type="library" name="org.apache.xmlgraphics:fop:1.1" level="project" />
     <orderEntry type="library" name="org.apache.directory.studio:org.apache.commons.lang:2.6" level="project" />
-    <orderEntry type="library" name="apache-avalon:avalon-framework:4.1.5" level="project" />
     <orderEntry type="library" name="org.apache.commons:commons-email:1.3.2" level="project" />
     <orderEntry type="library" name="commons-fileupload:commons-fileupload:1.3" level="project" />
     <orderEntry type="library" name="net.lingala.zip4j:zip4j:1.3.2" level="project" />
@@ -45,7 +43,6 @@
     <orderEntry type="library" name="org.springframework:spring-test:4.1.6.RELEASE" level="project" />
     <orderEntry type="library" name="org.springframework.security:spring-security-web:4.0.0.RELEASE" level="project" />
     <orderEntry type="library" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.5.2" level="project" />
-    <orderEntry type="library" name="javax.servlet:com.springsource.javax.servlet.jsp.jstl:1.2.0" level="project" />
     <orderEntry type="module" module-name="shared" />
     <orderEntry type="library" name="org.apache.servicemix.bundles:org.apache.servicemix.bundles.spring-context-support:4.1.6.RELEASE_1" level="project" />
     <orderEntry type="library" name="org.apache.pdfbox:pdfbox:1.8.10" level="project" />
@@ -53,5 +50,7 @@
     <orderEntry type="library" name="com.jcraft:jsch:0.1.50" level="project" />
     <orderEntry type="library" name="org.apache.httpcomponents:httpclient:4.5.1" level="project" />
     <orderEntry type="library" name="org.mariadb.jdbc:mariadb-java-client:1.4.3" level="project" />
+    <orderEntry type="library" name="org.apache.xmlgraphics:fop:2.0" level="project" />
+    <orderEntry type="library" name="com.springsource.javax.servlet.jsp.jstl-1.2.0" level="project" />
   </component>
 </module>

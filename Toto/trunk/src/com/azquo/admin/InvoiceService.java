@@ -53,7 +53,7 @@ public class InvoiceService {
         emailAttachment.setDescription("AzquoInvoice" + dateFormat.format(invoiceDetails.getInvoiceDate()));
         emailAttachment.setName("AzquoInvoice" + dateFormat.format(invoiceDetails.getInvoiceDate()) + ".pdf");
 
-        FopFactory fopFactory = FopFactory.newInstance();
+        FopFactory fopFactory = FopFactory.newInstance(new File(".").toURI()); // now has to be passed a parameter, this fobs it off . .
         TransformerFactory tFactory = TransformerFactory.newInstance();
 //        response.setContentType("application/pdf");
         String invoiceAddress = invoiceDetails.getInvoiceAddress();
