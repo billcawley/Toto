@@ -260,7 +260,7 @@ class ImportFileUtilities {
             String stringValue = "";
             try {
                 stringValue = cellData.getFormatText();// I assume means formatted text
-                if (r > 0 && dataFormat.toLowerCase().contains("mm-")) {//fix a ZK bug
+                if (r > 0 && dataFormat.toLowerCase().contains("mm-") && (stringValue.length()==8 || stringValue.length()==6)) {//fix a ZK bug
                     stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
                 }
             } catch (Exception ignored) {
