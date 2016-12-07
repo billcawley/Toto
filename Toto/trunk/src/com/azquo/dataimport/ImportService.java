@@ -17,14 +17,12 @@ import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
 import com.csvreader.CsvWriter;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
-import org.zkoss.zss.api.Range;
-import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
-import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -310,10 +308,12 @@ public final class ImportService {
         String tempPath = temp.getPath();
         temp.deleteOnExit();
         //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
-        CsvWriter csvW = new CsvWriter(new FileWriter(tempPath), '\t');
+        FileOutputStream fos = new FileOutputStream(tempPath);
+        CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
         csvW.setUseTextQualifier(false);
         ImportFileUtilities.convertRangeToCSV(sheet, csvW, null, null, transpose);
         csvW.close();
+        fos.close();
         return readPreparedFile(loggedInUser, tempPath, sheetName, attributeNames, persistAfter, true);
     }
 
