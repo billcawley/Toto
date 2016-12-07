@@ -373,6 +373,7 @@ class DataRegionHeadingService {
                     hasTitles = true;
                 }
             }
+            boolean permuting= false;
             if (lastHeadingRow != null && hasTitles) {
                 //copy down titles
                for (int i = 0; i < headingDefinitionRow.size(); i++) {
@@ -412,6 +413,7 @@ class DataRegionHeadingService {
                 permutedLists.add(permuted);
             } else {
                 List<List<DataRegionHeading>> permuted = MultidimensionalListUtils.get2DPermutationOfLists(headingDefinitionRow);
+                if (headingDefinitionRow.size() > 1) permuting = true;
                 permutedLists.add(permuted);
                 if (lastHeadingDefinitionCellIndex == 0) {
                     int spaceNeeded = permuted.size() - 1;
@@ -423,6 +425,9 @@ class DataRegionHeadingService {
             }
             if (hasTitles){
                 lastHeadingRow = headingDefinitionRow;
+            }
+            if (permuting){
+                lastHeadingRow = null;
             }
         }
         if (permutedLists.size() == 1) { // it was just one row to permute, return it as is rather than combining the permuted results together which might result in a bit of garbage due to array copying
