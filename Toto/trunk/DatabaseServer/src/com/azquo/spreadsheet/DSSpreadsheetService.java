@@ -92,7 +92,20 @@ public class DSSpreadsheetService {
                         sourceCell.setLocked(true); // and lock the cell!
                     }
                 }
-                displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored, sourceCell.isSelected()));
+                // I can only add a comment here if it is a single value or single name
+                Provenance p = null;
+                if (sourceCell.getListOfValuesOrNamesAndAttributeName() != null){ // can it be? It seems so
+                    if (sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues().size() == 1){
+                        p = sourceCell.getListOfValuesOrNamesAndAttributeName().getValues().get(0).getProvenance();
+                    } else if (sourceCell.getListOfValuesOrNamesAndAttributeName().getNames() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getNames().size() == 1){
+                        p = sourceCell.getListOfValuesOrNamesAndAttributeName().getNames().get(0).getProvenance();
+                    }
+                }
+                String comment = null;
+                if (p != null && p.getMethod() != null && p.getMethod().contains("comment :")){ // got to stop these kinds of string literals
+                    comment = p.getMethod().substring(p.getMethod().indexOf("comment :") + "comment :".length()).trim();
+                }
+                displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored, sourceCell.isSelected(), comment));
                 if (regionOptions.lockRequest && lockCheckResult.size() == 0) { // if we're going to lock gather all relevant values, stop gathering if we found data already locked
                     if (sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null
                             && !sourceCell.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {
@@ -282,6 +295,10 @@ public class DSSpreadsheetService {
                             // this save logic is the same as before but getting necessary info from the AzquoCell
                             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
                             if (valuesForCell != null) {
+                                Provenance originalProvenance = azquoMemoryDBConnection.getProvenance();
+                                if (cell.getComment() != null && !cell.getComment().isEmpty()){
+                                    azquoMemoryDBConnection.setProvenance(user, "in spreadsheet, comment : " + cell.getComment(), reportName, context);
+                                }
                                 logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                                 // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
                                 // first align text and numbers where appropriate
@@ -407,6 +424,10 @@ public class DSSpreadsheetService {
                                             toChange.setAttributeWillBePersisted(attribute, cell.getNewStringValue());
                                         }
                                     }
+                                }
+                                // switch provenance back if it was overridden due to a comment
+                                if (originalProvenance != null){
+                                    azquoMemoryDBConnection.setProvenance(originalProvenance);
                                 }
                             }
                         }

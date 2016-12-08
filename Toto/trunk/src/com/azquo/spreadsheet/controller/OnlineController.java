@@ -199,6 +199,7 @@ public class OnlineController {
 
                             model.put("images", images);
                             model.addAttribute("pdfMerges", pdfMerges);
+                            model.addAttribute("databaseName", loggedInUser.getDatabase().getName());
                             return "zsshowsheet";// show the sheet
                         }
                         // ok now I need to set the sheet loading but on a new thread

@@ -16,6 +16,7 @@ public class CellsAndHeadingsForExcel implements Serializable{
     private final List<List<String>> columnHeadings;
     private final List<List<String>> rowHeadings;
     private final List<List<String>> data;
+    private final List<List<String>> comments;
     private final RegionOptions options; // hybrid between DB settings and from the spreadsheet, leave it here for the mo
     private final String lockResult;
 
@@ -23,13 +24,22 @@ public class CellsAndHeadingsForExcel implements Serializable{
         this.columnHeadings = source.getColumnHeadings();
         this.rowHeadings = source.getRowHeadings();
         data = new ArrayList<>();
+        List<List<String>> tempComments = new ArrayList<>();
+        boolean comments = false;
         for (List<CellForDisplay> row : source.getData()){
             List<String> dataRow = new ArrayList<>();
             data.add(dataRow);
+            List<String> commentRow = new ArrayList<>();
+            tempComments.add(commentRow);
             for (CellForDisplay cell : row){
                 dataRow.add(cell.getStringValue()); // should be fine
+                if (cell.getComment() != null){
+                    comments = true;
+                }
+                commentRow.add(cell.getComment());
             }
         }
+        this.comments = comments ? tempComments : null; // maybe check those variable names . . .
         this.options = source.getOptions();
         this.lockResult = source.getLockResult();
     }
@@ -52,5 +62,9 @@ public class CellsAndHeadingsForExcel implements Serializable{
 
     public String getLockResult() {
         return lockResult;
+    }
+
+    public List<List<String>> getComments() {
+        return comments;
     }
 }

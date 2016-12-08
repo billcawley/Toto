@@ -49,9 +49,8 @@
     }
 
     function inspectDatabase(){
-        // deliberately leaving the database blank for the mo, it's in ${databaseChosen}
-        
-    	$.inspectOverlay("Inspect").tab("/api/Jstree?op=new", "Inspect");
+        // can be passed database
+    	$.inspectOverlay("Inspect").tab("/api/Jstree?op=new", "${databaseName}");
     	return false;
        // window.open("/api/Jstree?op=new", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
     }

@@ -19,7 +19,7 @@ import java.util.Set;
  *
  */
 public class DataRegionHeading {
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE}
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT} // exact meaning get only values that match exactly the names passed. Generally would only be one value
     /*
     COUNT               Value function      The number of values rather than the sum
     AVERAGE             Value function      The average value

@@ -27,9 +27,9 @@ public class CellForDisplay implements Serializable {
     // to auto select a cell from provenance or drilldown
     private boolean selected;
 
-    private String comment; // a bit of an odd one, this is never sent from the server but rather back to the server to assign a comment in provenance.
+    private String comment; // being sent both ways now. It's in the provenance also but nice to put in here
 
-    public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted, int unsortedRow, int unsortedCol, boolean ignored, boolean selected) {
+    public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted, int unsortedRow, int unsortedCol, boolean ignored, boolean selected, String comment) {
         this.locked = locked;
         this.stringValue = stringValue;
         this.doubleValue = doubleValue;
@@ -41,7 +41,7 @@ public class CellForDisplay implements Serializable {
         this.unsortedCol = unsortedCol;
         this.ignored = ignored;
         this.selected = selected;
-        comment = null;
+        this.comment = comment;
     }
 
     public boolean isLocked() {
@@ -128,6 +128,10 @@ public class CellForDisplay implements Serializable {
     public void setComment(String comment) {
         changed = true;
         this.comment = comment;
+    }
+
+    public String getComment() {
+        return comment;
     }
 
     @Override

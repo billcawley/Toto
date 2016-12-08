@@ -214,6 +214,7 @@ public class ExcelController {
                     }
                     if (itemsChanged > 0) {
                         OnlineReport report = OnlineReportDAO.findById(excelJsonSaveRequest.reportId);
+                        loggedInUser.setContext(excelJsonSaveRequest.context); // in this case context for provenance
                         result = SpreadsheetService.saveData(loggedInUser, excelJsonSaveRequest.region, excelJsonSaveRequest.reportId, report.getReportName());
                         if ("true".equals(result)) {
                             return itemsChanged + " cells saved.";

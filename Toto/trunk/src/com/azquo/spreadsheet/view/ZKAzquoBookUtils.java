@@ -897,7 +897,7 @@ public class ZKAzquoBookUtils {
             for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
                 List<CellForDisplay> oneRow = new ArrayList<>();
                 for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
-                    oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true, false)); // make these ignored. Edd note : I'm not particularly happy about this, sent data should be sent data, this is just made up . . .
+                    oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true, false, null)); // make these ignored. Edd note : I'm not particularly happy about this, sent data should be sent data, this is just made up . . .
                 }
                 dataRegionCells.add(oneRow);
             }

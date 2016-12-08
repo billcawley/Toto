@@ -114,14 +114,20 @@ public class AzquoMemoryDBConnection {
 
     public void setProvenance(final String user, final String method, final String name, final String context) throws Exception {
         Provenance latest = azquoMemoryDB.getMostRecentProvenance();
+        // not sure how latest and method cen get set as null but best to be careful with it
         if (latest != null && latest.getUser().equals(user)) {
             long elapsed = new Date().getTime() - latest.getTimeStamp().getTime();
-            if (latest.getMethod().equals(method) && latest.getContext().equals(context) && elapsed < 30000) {// thirty seconds
+            if (latest.getMethod() != null && latest.getMethod().equals(method) &&
+                    latest.getContext() != null && latest.getContext().equals(context) && elapsed < 30000) {// thirty seconds
                 this.provenance = latest;
                 return;
             }
         }
         this.provenance = new Provenance(getAzquoMemoryDB(), user, method, name, context);
+    }
+
+    public void setProvenance(final Provenance p) throws Exception {
+        this.provenance = p;
     }
 
     public long getDBLastModifiedTimeStamp() {

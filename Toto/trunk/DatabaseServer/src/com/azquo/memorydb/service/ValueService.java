@@ -142,7 +142,7 @@ public final class ValueService {
 
     private static AtomicInteger findForNamesCount = new AtomicInteger(0);
 
-    public static List<Value> findForNames(final Set<Name> names) {
+    public static List<Value> findForNames(final Collection<Name> names) {
         findForNamesCount.incrementAndGet();
         final List<Value> values = new ArrayList<>();
         // first get the shortest value list
@@ -182,6 +182,8 @@ public final class ValueService {
     private static AtomicLong part2NanoCallTime1 = new AtomicLong(0);
     private static AtomicLong part3NanoCallTime1 = new AtomicLong(0);
     private static AtomicInteger numberOfTimesCalled1 = new AtomicInteger(0);
+
+    // aside from a recursive call this is used in one place and is crucial to
 
     private static AtomicInteger findForNamesIncludeChildrenCount = new AtomicInteger(0);
 
@@ -383,7 +385,14 @@ public final class ValueService {
             // no reverse polish converted formula, just sum
             if (calcString == null) {
                 // I'll not debug in here for the moment. We should know names and function by now
-                return ValueCalculationService.resolveValues(findForNamesIncludeChildren(names, nameComboValueCache), valuesHook, function, locked);
+                if (function == DataRegionHeading.FUNCTION.EXACT){ // match only the values that correspond to the names exactly
+                    final List<Value> forNames = findForNames(names);
+                    // need to check we don't have values with extra names
+                    forNames.removeIf(value -> value.getNames().size() > names.size()); // new syntax! Dunno about efficiency but this will be very rarely used
+                    return ValueCalculationService.resolveValues(forNames, valuesHook, function, locked);
+                } else {
+                    return ValueCalculationService.resolveValues(findForNamesIncludeChildren(names, nameComboValueCache), valuesHook, function, locked);
+                }
             } else {
                 if (outerLoopNames.isEmpty()) { // will be most of the time, put the first in the outer loop
                     outerLoopNames.add(calcnames.remove(0));// as mentioned above in the case of normal use take the first and move it to the outside loop. Yes it will just be added straight back on but otherwise we have code duplication below in an else or a function with many parameters passed
