@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
+import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.model.Book;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
@@ -81,6 +83,18 @@ public class ExcelController {
                 }
                 if (loggedInUser.getDatabase() == null) {
                     return "error: invalid database " + database;
+                }
+                if (loggedInUser.getUser().getReportId() != 0){
+                    // populate the book as in the OnlineController but just do it server side then chuck it, the point is to sort the permissions
+                    OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
+                    if (or != null){ // then load it just here on the report server
+                        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilenameForDisk();
+                        final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                        book.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
+                        book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
+                        book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+                        ZKAzquoBookUtils.populateBook(book, 0);
+                    }
                 }
                 String session = Integer.toHexString(loggedInUser.hashCode()); // good as any I think
                 excelConnections.put(session, loggedInUser);

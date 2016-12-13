@@ -199,7 +199,6 @@ public class ZKComposer extends SelectorComposer<Component> {
             selectionName = "az_" + selectionName.trim();
             queryResultRegion = new CellRegion(event.getRow(), event.getColumn());
         } else {
-
             SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ZKAzquoBookUtils.ALLOWABLE_REPORTS);
             if (allowableReports != null) {
                 String cellValue = "";
@@ -213,7 +212,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                     try {
                         for (int row1 = allowedRegion.getRow(); row1 < allowedRegion.getRow() + allowedRegion.getRowCount(); row1++) {
                             if (allowedSheet.getInternalSheet().getCell(row1, allowedRegion.getColumn()).getStringValue().equals(cellValue)) {// deal with security in the online controller
-
                                 Clients.evalJavaScript("window.open(\"/api/Online?permissionid=" + URLEncoder.encode(cellValue) + "\")");
                             }
                         }
