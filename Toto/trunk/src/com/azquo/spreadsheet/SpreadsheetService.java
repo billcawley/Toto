@@ -203,7 +203,7 @@ public class SpreadsheetService {
         if (inSpreadPos < 0) return null;
         int withPos = provline.indexOf(" with ", inSpreadPos);
         if (withPos < 0) withPos = provline.indexOf(".");//no parameters
-        if (withPos < 0) return null;
+        if (withPos < 0) withPos = provline.length();//still no parameters!
         String reportName = provline.substring(inSpreadPos + 14, withPos).trim().replace("`", "");//strip any spurious `
         String paramString = provline.substring(withPos + 6);
         int equalsPos = paramString.indexOf(" = ");
