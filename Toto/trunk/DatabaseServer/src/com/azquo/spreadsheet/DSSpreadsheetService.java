@@ -177,14 +177,15 @@ public class DSSpreadsheetService {
             for (CellForDisplay cellForDisplay : row) {
                 if (!firstCol) sb.append("\t");
                 else firstCol = false;
+                // A manual 0 will put a new string value in, a formulae one won't. Hence manual 0 should add a value and formulae 0 should not
+                // todo - what about rules from Excel (as opposed to ZK, old logic)? This might just jam 0 in regardless
                 // use string if we have it,otherwise double if it's not 0 or explicitly changed (0 allowed if manually entered). Otherwise blank.
-                if (cellForDisplay.getNewStringValue() != null) {
-                    String val = cellForDisplay.getNewStringValue().length() > 0 ? cellForDisplay.getNewStringValue() : cellForDisplay.getNewDoubleValue() != 0 ? cellForDisplay.getNewDoubleValue() + "" : "";
-                    //for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
-                    if (cellForDisplay.getNewStringValue().length() > 0) {
-                        blankLine = false;
-                    }
-                    sb.append(val);
+                // this WAS only checking when there was a new string value being added - tripped up by formual calculations having new doubles but not new strings
+                String val = (cellForDisplay.getNewStringValue() != null && cellForDisplay.getNewStringValue().length() > 0) ? cellForDisplay.getNewStringValue() : cellForDisplay.getNewDoubleValue() != 0 ? cellForDisplay.getNewDoubleValue() + "" : "";
+                //for the moment we're passsing on cells that have not been entered as blanks which are ignored in the importer - this does not leave space for deleting values or attributes
+                if (val.length() > 0) {
+                    blankLine = false;
+                    sb.append(val); // no point appending it if it's not there!
                 }
             }
             if (!blankLine) {

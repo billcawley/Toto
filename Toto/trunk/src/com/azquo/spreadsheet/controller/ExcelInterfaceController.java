@@ -1,6 +1,5 @@
 package com.azquo.spreadsheet.controller;
 
-import com.azquo.admin.AdminService;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -17,8 +16,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.OutputStream;
-import java.math.BigInteger;
-import java.net.URLEncoder;
 import java.util.List;
 
 /**
@@ -31,8 +28,6 @@ import java.util.List;
 @Controller
 @RequestMapping("/ExcelInterface")
 public class ExcelInterfaceController {
-    private final Runtime runtime = Runtime.getRuntime();
-    private final int mb = 1024 * 1024;
 
     @RequestMapping
     public void handleRequest(HttpServletRequest request, HttpServletResponse response
@@ -40,10 +35,13 @@ public class ExcelInterfaceController {
             , @RequestParam(value = "databaseid", required = false) String databaseId
             , @RequestParam(value = "permissionid", required = false) String permissionId
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
-
+            , @RequestParam(value = "sessionid", required = false, defaultValue = "") String sessionid
     ) {
         try {
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+            if (loggedInUser == null){
+                loggedInUser = ExcelController.excelConnections.get(sessionid);
+            }
             if (loggedInUser != null) {
                 OnlineReport onlineReport = null;
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && reportId != null && reportId.length() > 0 && !reportId.equals("1")) { // admin, we allow a report and possibly db to be set
@@ -70,7 +68,6 @@ public class ExcelInterfaceController {
                     if (loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase()) != null) { // then we have a permission as set by a report
                         onlineReport = OnlineReportDAO.findForNameAndBusinessId(permissionId, loggedInUser.getUser().getBusinessId());
                         if (onlineReport != null) {
-                            reportId = onlineReport.getId() + ""; // hack for permissions
                             LoginService.switchDatabase(loggedInUser, loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase()).getSecond());
                         }
                     }

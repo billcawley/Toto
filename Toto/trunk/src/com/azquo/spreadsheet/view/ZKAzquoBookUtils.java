@@ -901,6 +901,7 @@ public class ZKAzquoBookUtils {
                 }
                 dataRegionCells.add(oneRow);
             }
+            // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(region, colHeadings, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
             loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
             return;
@@ -1689,6 +1690,7 @@ public class ZKAzquoBookUtils {
                     CellRegion chosenRegion = chosen.getRefersToCellRegion();
                     if (chosenRegion != null) {
                         List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
+                        // todo - clarify how this can ever be false?? we know there's a region for this name so
                         boolean dataRegionDropdown = !getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                             String query = choiceCell.getStringValue();

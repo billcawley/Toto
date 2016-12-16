@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static javax.swing.UIManager.get;
 import static javax.xml.bind.DatatypeConverter.parseBase64Binary;
 
 /**
@@ -45,7 +46,7 @@ public class ExcelController {
 
     static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    static public Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
+    static Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
 
     @RequestMapping
     @ResponseBody
@@ -168,10 +169,22 @@ public class ExcelController {
                     }
                     userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                 }
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), excelJsonRequest.region, 0, excelJsonRequest.rowHeadings, excelJsonRequest.columnHeadings,
-                        excelJsonRequest.context, userRegionOptions, true);
-                loggedInUser.setSentCells(excelJsonRequest.reportId, excelJsonRequest.region, cellsAndHeadingsForDisplay);
-                return jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(cellsAndHeadingsForDisplay));
+                if (excelJsonRequest.rowHeadings == null || excelJsonRequest.rowHeadings.isEmpty()){ // no row headings is an import region - assign an empty sent cells. Todo - could this be factored?
+                    List<List<String>> colHeadings = excelJsonRequest.columnHeadings;
+                    // ok change from the logic used in ZK. In ZK we had to prepare a blank set of data cells to be modified
+                    // as the user changed them but it's difficult to prepare them here as we don't know the data region size and luckily it's not necessary
+                    // as the data is sent in a block from Excel. It might have changed size in the mean time (as in someone changed the data region size and now the headings don't match) but I'm nto that bothered by this for the mo
+                    // put an empty data set here as the reference is final, fill it out below with the data sent size from the user
+                    // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings, parsed into an array in Excel
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(excelJsonRequest.region, colHeadings, null, new ArrayList<>(), null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);
+                    loggedInUser.setSentCells(excelJsonRequest.reportId, excelJsonRequest.region, cellsAndHeadingsForDisplay);
+                    return "Empty space set to ad hoc data : " + excelJsonRequest.region;
+                } else {
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), excelJsonRequest.region, 0, excelJsonRequest.rowHeadings, excelJsonRequest.columnHeadings,
+                            excelJsonRequest.context, userRegionOptions, true);
+                    loggedInUser.setSentCells(excelJsonRequest.reportId, excelJsonRequest.region, cellsAndHeadingsForDisplay);
+                    return jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(cellsAndHeadingsForDisplay));
+                }
             }
             if (jsonSave != null && !jsonSave.isEmpty()) {
                 // example?
@@ -179,23 +192,42 @@ public class ExcelController {
                 ExcelJsonSaveRequest excelJsonSaveRequest = jacksonMapper.readValue(jsonSave, ExcelJsonSaveRequest.class);
                 String result = null;
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(excelJsonSaveRequest.reportId, excelJsonSaveRequest.region);
+                boolean adHoc = false;
                 if (cellsAndHeadingsForDisplay != null) {
+                    final List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
+                    if (cellsAndHeadingsForDisplay.getRowHeadingsSource() == null && sentData.isEmpty()){ // as mentioned above, this means ad-hoc so populate the sent data with blank cells ready to be modified.
+                        adHoc = true;
+                        for (int rowNo = 0; rowNo < excelJsonSaveRequest.data.size(); rowNo++) {
+                            List<CellForDisplay> oneRow = new ArrayList<>();
+                            for (int colNo = 0; colNo < excelJsonSaveRequest.data.get(0).size(); colNo++) {
+                                oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true, false, null)); // make these ignored. Edd note : I'm not particularly happy about this, sent data should be sent data, this is just made up . . .
+                            }
+                            sentData.add(oneRow);
+                        }
+                    }
                     int itemsChanged = 0;
                     // ok now I need to look at the data sent by the excel and see if I need to change the cells and headings.
                     // CellFOrDisplay doens't detect changes so here I need to guess whether a change has happened or not to lessen checks on the server
+
+                    // todo : problem. If the data region is bigger than the sent cells then in ZK this is a moot point, changes outside the data region are ignored.
+                    // here they are not, the contents of teh data region are sent back including for example empty space in ad hoc stuff and this trips it up.
+                    // ignore changes outside the area? Not sure . . .
+
                     if (!excelJsonSaveRequest.data.isEmpty()) {
-                        if (excelJsonSaveRequest.data.size() != cellsAndHeadingsForDisplay.getData().size()) {
-                            return "data region sizes between Excel and teh server don't match for " + excelJsonSaveRequest.region;
+                        if (excelJsonSaveRequest.data.size() != sentData.size()) {
+                            return "data region sizes between Excel and the server don't match for " + excelJsonSaveRequest.region;
                         }
-                        if (excelJsonSaveRequest.data.get(0).size() != cellsAndHeadingsForDisplay.getData().get(0).size()) {
-                            return "data region sizes between Excel and teh server don't match for " + excelJsonSaveRequest.region;
+                        if (excelJsonSaveRequest.data.get(0).size() != sentData.get(0).size()) {
+                            System.out.println("first : " + excelJsonSaveRequest.data.get(0).size());
+                            System.out.println("second : " + sentData.get(0).size());
+                            return "data region sizes between Excel and the server don't match for " + excelJsonSaveRequest.region;
                         }
                     }
                     int rowIndex = 0;
                     for (List<String> row : excelJsonSaveRequest.data) {
                         int colIndex = 0;
                         for (String valueFromExcel : row) {
-                            CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowIndex).get(colIndex);
+                            CellForDisplay cellForDisplay = sentData.get(rowIndex).get(colIndex);
                             String comment = excelJsonSaveRequest.comments.get(rowIndex).get(colIndex);
                             if (!cellForDisplay.isLocked()) { // no point saving if locked!
                                 if (comment != null && !comment.isEmpty()){
@@ -225,6 +257,10 @@ public class ExcelController {
                             colIndex++;
                         }
                         rowIndex++;
+                    }
+                    // then reset the sent cells, they should be blanked after each save if it's an adhoc region. Need to think clearly about how things like this work.
+                    if (adHoc){
+                        loggedInUser.setSentCells(excelJsonSaveRequest.reportId, cellsAndHeadingsForDisplay.getRegion(), new CellsAndHeadingsForDisplay(cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getColumnHeadings(), null, new ArrayList<>(), null, null, null, 0, cellsAndHeadingsForDisplay.getOptions(), null));
                     }
                     if (itemsChanged > 0) {
                         OnlineReport report = OnlineReportDAO.findById(excelJsonSaveRequest.reportId);
