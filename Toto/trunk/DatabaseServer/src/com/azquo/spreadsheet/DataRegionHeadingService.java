@@ -413,7 +413,9 @@ class DataRegionHeadingService {
                 permutedLists.add(permuted);
             } else {
                 List<List<DataRegionHeading>> permuted = MultidimensionalListUtils.get2DPermutationOfLists(headingDefinitionRow);
-                if (headingDefinitionRow.size() > 1) permuting = true;
+                if (permuted.size() > headingDefinitionRow.get(headingDefinitionRow.size()-1).size()) {
+                    permuting = true;
+                }
                 permutedLists.add(permuted);
                 if (lastHeadingDefinitionCellIndex == 0) {
                     int spaceNeeded = permuted.size() - 1;
