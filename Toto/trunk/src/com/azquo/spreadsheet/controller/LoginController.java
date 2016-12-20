@@ -45,12 +45,13 @@ public class LoginController {
                 if (!SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                     LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                    String title = "Logout from the server from outside the office " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
-                    AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
-                    AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
-                    AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
-                    AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
-                    AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, title);
+                    String title = "Logout from " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
+                    String userAgent = request.getHeader("User-Agent");
+                    AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, userAgent);
+                    AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
+                    AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, userAgent);
+                    AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
+                    AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                 }
                 request.getSession().removeAttribute(LOGGED_IN_USER_SESSION);
             }
@@ -74,12 +75,13 @@ public class LoginController {
                     // same checks as magento controller
                     if (!"nic@azquo.com".equalsIgnoreCase(userEmail) && !SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                        String title = "Login to the server from outside the office " + userEmail + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
-                        AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
-                        AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
-                        AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
-                        AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
-                        AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, title);
+                        String title = "Login to the server " + userEmail + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
+                        String userAgent = request.getHeader("User-Agent");
+                        AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, userAgent);
+                        AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
+                        AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, userAgent);
+                        AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
+                        AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                     }
 
                     request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
