@@ -90,7 +90,7 @@ class DataRegionHeadingService {
                             Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
                             if (!names.isEmpty()) {// it should be just one
                                 List<DataRegionHeading> hierarchyList = new ArrayList<>();
-                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null); // I assume this will be only one!
+                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null, 0); // I assume this will be only one!
                                 resolveHierarchyForHeading(azquoMemoryDBConnection, offsetHeadings.get(0), hierarchyList, function, suffix, new ArrayList<>(), level);
                                 if (namesQueryLimit > 0 && hierarchyList.size() > namesQueryLimit) {
                                     throw new Exception("While creating headings " + sourceCell + " resulted in " + hierarchyList.size() + " names, more than the specified limit of " + namesQueryLimit);
@@ -116,13 +116,32 @@ class DataRegionHeadingService {
                                 // I'm going to jam sorted in the description, hopefully won't be a problem
                                 if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
                                     // will the new write permissions cause an overhead?
-                                    headings.add(new DataRegionHeading(pName, NameQueryParser.isAllowed(pName, azquoMemoryDBConnection.getWritePermissions()), function, suffix, sorted ? "sorted" : null, null, null));
+                                    headings.add(new DataRegionHeading(pName, NameQueryParser.isAllowed(pName, azquoMemoryDBConnection.getWritePermissions()), function, suffix, sorted ? "sorted" : null, null, null, 0));
                                 } else { // don't bother checking permissions, write permissions to true
-                                    headings.add(new DataRegionHeading(pName, true, function, suffix, sorted ? "sorted" : null, null, null));
+                                    headings.add(new DataRegionHeading(pName, true, function, suffix, sorted ? "sorted" : null, null, null, 0));
                                 }
                             }
                             row.clear();
                             row.add(headings);
+                            // just adding this back in now! Second parameter needs to go in valueFunctionSet
+                        } else if (function == DataRegionHeading.FUNCTION.VALUEPARENTCOUNT) {
+                            // todo - this function parameter parsing needs to be factored and be aware of commas in names
+                            String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
+                            String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();
+                            final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames);
+                            final Collection<Name> selectionSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames);
+                            row.add(dataRegionHeadingsFromNames(mainSet, azquoMemoryDBConnection, function, suffix, null,selectionSet, 0));
+                        } else if (function == DataRegionHeading.FUNCTION.PERCENTILE) {
+                            // todo - this function parameter parsing needs to be factored and be aware of commas in names
+                            String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
+                            String percentileParam = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();
+                            double percentileDouble = 0;
+                            try{
+                                percentileDouble = Double.parseDouble(percentileParam);
+                            } catch (NumberFormatException ignored){ // maybe add an error later?
+                            }
+                            final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames);
+                            row.add(dataRegionHeadingsFromNames(mainSet, azquoMemoryDBConnection, function, suffix, null,null, percentileDouble));
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             Collection<Name> names;
                             try {
@@ -137,8 +156,7 @@ class DataRegionHeadingService {
                             if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
                             }
-                            row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null));
-
+                            row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null, 0));
                         }
                     }
                 }
@@ -153,7 +171,7 @@ class DataRegionHeadingService {
         if (offsetHeadings.size() < levelLimit) {// then get the children
             List<DataRegionHeading> offsetHeadingsCopy = new ArrayList<>(offsetHeadings);
             offsetHeadingsCopy.add(heading);
-            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), azquoMemoryDBConnection, function, suffix, offsetHeadingsCopy, null)) {
+            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), azquoMemoryDBConnection, function, suffix, offsetHeadingsCopy, null, 0)) {
                 resolveHierarchyForHeading(azquoMemoryDBConnection, child, target, function, suffix, offsetHeadingsCopy, levelLimit);
             }
         }
@@ -561,17 +579,17 @@ class DataRegionHeadingService {
         return contextHeadings;
     }
 
-    private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
+    private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
             for (Name name : names) {
                 // will the new write permissions cause an overhead?
-                dataRegionHeadings.add(new DataRegionHeading(name, NameQueryParser.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, suffix, null, offsetHeadings, valueFunctionSet));
+                dataRegionHeadings.add(new DataRegionHeading(name, NameQueryParser.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, suffix, null, offsetHeadings, valueFunctionSet, doubleParameter));
             }
         } else { // don't bother checking permissions, write permissions to true
             for (Name name : names) {
-                dataRegionHeadings.add(new DataRegionHeading(name, true, function, suffix, null, offsetHeadings, valueFunctionSet));
+                dataRegionHeadings.add(new DataRegionHeading(name, true, function, suffix, null, offsetHeadings, valueFunctionSet, doubleParameter));
             }
         }
         //System.out.println("time for dataRegionHeadingsFromNames " + (System.currentTimeMillis() - startTime));

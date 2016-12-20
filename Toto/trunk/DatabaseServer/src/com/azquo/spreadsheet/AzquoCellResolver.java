@@ -8,6 +8,7 @@ import com.azquo.memorydb.service.MutableBoolean;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.ValueService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
+import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 
 import java.util.*;
 
@@ -141,6 +142,7 @@ public class AzquoCellResolver {
                 doubleValue = namesToCount.size();
                 stringValue = doubleValue + "";
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
+                //todo - this parsing needs to happen in the DateRegionHeadingService and needs to be robust to commas in names!
                 String[] twoSets = nameFunctionHeading.getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
                 Set<Name> leftSet = HashObjSets.newMutableSet();
                 Set<Name> rightSet = HashObjSets.newMutableSet();
@@ -234,10 +236,14 @@ public class AzquoCellResolver {
             } else {
                 // ok new logic here, we need to know if we're going to use attributes or values
                 DataRegionHeading.FUNCTION function = null;
-                Set<Name> valueFunctionSet = null;
+                Collection<Name> valueFunctionSet = null;
+                double functionDoubleParameter = 0;
                 for (DataRegionHeading heading : headingsForThisCell) {
                     if (heading.getFunction() != null) { // should NOT be a name function, that should have been caught before
                         function = heading.getFunction();
+                        if (function == DataRegionHeading.FUNCTION.PERCENTILE){ // hacky, any way around that?
+                            functionDoubleParameter = heading.getDoubleParameter();
+                        }
                         valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
                         if (debugInfo != null) {
                             debugInfo.append("\nFunction\n\n");
@@ -285,6 +291,35 @@ public class AzquoCellResolver {
                             } else {
                                 doubleValue = findOverlap(allValueParents, valueFunctionSet);
                             }
+                        }
+                        if (function == DataRegionHeading.FUNCTION.PERCENTILE) {
+                            /*
+Calculation is
+
+Sort values into order,  work out between which two the percentile sits, and value is on a straight line between the two
+
+e.g.   values are 1,2,3,6,7    Percentile 0.4   is between 2 (25%) and 3 (50%)   value = 2 + (3-2) * (0.4 - 0.35) / (0.5 - 0.25) = 2.2
+
+lands on a number return that
+
+between 2 and 3 so 1 in the amount between, times that by the difference between the percentile required and the percentile of the lower one  and divide by the gap percentage
+
+But can use a library?
+                             */
+                            double[] forPercentile = new double[valuesHook.values.size()];
+                            int count = 0;
+                            for (Value v : valuesHook.values){
+                                double d = 0;
+                                try{
+                                    d = Double.parseDouble(v.getText());
+                                } catch (NumberFormatException ignored){}
+                                forPercentile[count] = d;
+                                count++;
+                            }
+                            Arrays.sort(forPercentile);
+                            Percentile p = new Percentile();
+                            p.setData(forPercentile);
+                            doubleValue = p.evaluate(functionDoubleParameter * 100); // I think this function expects out of 100. We'll see . . .
                         }
                         //if there's only one value, treat it as text (it may be text, or may include £,$,%)
                         if (valuesHook.values.size() == 1 && !locked.isTrue) {

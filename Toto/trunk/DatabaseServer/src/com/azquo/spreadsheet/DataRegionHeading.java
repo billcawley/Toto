@@ -2,6 +2,7 @@ package com.azquo.spreadsheet;
 
 import com.azquo.memorydb.core.Name;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -19,7 +20,7 @@ import java.util.Set;
  *
  */
 public class DataRegionHeading {
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT} // exact meaning get only values that match exactly the names passed. Generally would only be one value
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, PERCENTILE, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT} // exact meaning get only values that match exactly the names passed. Generally would only be one value
     /*
     COUNT               Value function      The number of values rather than the sum
     AVERAGE             Value function      The average value
@@ -41,16 +42,17 @@ public class DataRegionHeading {
     private final boolean writeAllowed;
     private final FUNCTION function;
     private final SUFFIX suffix;
-    // either the name (normally) or the function as written in the case of name count path count etc.
+    // either the name (normally) or the function as written in the case of name count path count etc. Useful for debugging and for storing queries that cna only be resolved later e.g. with [ROWHEADING]
     private final String description;
     private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
-    private final Set<Name> valueFunctionSet;
+    private final Collection<Name> valueFunctionSet; // just used for valueparentcount
+    private final double doubleParameter; // initially used for percentile, could be others. I think this needs to be rearranged at some point but for the moment make percentile work.
 
     DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, Set<Name> valueFunctionSet) {
-        this(name, writeAllowed,function,suffix, description, null, valueFunctionSet);
+        this(name, writeAllowed,function,suffix, description, null, valueFunctionSet, 0);
     }
 
-    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Set<Name> valueFunctionSet) {
+    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
@@ -59,6 +61,7 @@ public class DataRegionHeading {
         this.description = description;
         this.offsetHeadings = offsetHeadings;
         this.valueFunctionSet = valueFunctionSet;
+        this.doubleParameter = doubleParameter;
      }
 
     // no functions with attributes for the moment
@@ -71,6 +74,7 @@ public class DataRegionHeading {
         this.description = null;
         this.offsetHeadings = null;
         this.valueFunctionSet = null;
+        this.doubleParameter = 0;
     }
 
     public Name getName() {
@@ -117,7 +121,7 @@ public class DataRegionHeading {
         return offsetHeadings;
     }
 
-    Set<Name> getValueFunctionSet() {
+    Collection<Name> getValueFunctionSet() {
         return valueFunctionSet;
     }
 
@@ -127,5 +131,9 @@ public class DataRegionHeading {
     // useful to be called outside if an instance
     static boolean isNameFunction(FUNCTION function){
         return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT || function == FUNCTION.SET || function == FUNCTION.FIRST || function == FUNCTION.LAST);
+    }
+
+    public double getDoubleParameter() {
+        return doubleParameter;
     }
 }
