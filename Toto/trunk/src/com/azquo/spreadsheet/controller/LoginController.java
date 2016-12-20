@@ -50,6 +50,7 @@ public class LoginController {
                     AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
                     AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
                     AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
+                    AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, title);
                 }
                 request.getSession().removeAttribute(LOGGED_IN_USER_SESSION);
             }
@@ -78,6 +79,7 @@ public class LoginController {
                         AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
                         AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
                         AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, title);
+                        AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, title);
                     }
 
                     request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);

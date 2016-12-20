@@ -135,9 +135,17 @@ class DataRegionHeadingService {
                             // todo - this function parameter parsing needs to be factored and be aware of commas in names
                             String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
                             String percentileParam = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();
+                            boolean divideBy100 = false;
+                            if (percentileParam.contains("%")){
+                                percentileParam = percentileParam.replace("%","").trim();
+                                divideBy100 = true;
+                            }
                             double percentileDouble = 0;
                             try{
                                 percentileDouble = Double.parseDouble(percentileParam);
+                                if (divideBy100){
+                                    percentileDouble /= 100;
+                                }
                             } catch (NumberFormatException ignored){ // maybe add an error later?
                             }
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames);
