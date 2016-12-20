@@ -317,7 +317,7 @@ But can use a library?
                                 count++;
                             }
                             Arrays.sort(forPercentile);
-                            Percentile p = new Percentile();
+                            Percentile p = new Percentile().withEstimationType(Percentile.EstimationType.R_7); // Excel type!
                             p.setData(forPercentile);
                             doubleValue = p.evaluate(functionDoubleParameter * 100); // I think this function expects out of 100. We'll see . . .
                         }
