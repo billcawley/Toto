@@ -56,6 +56,7 @@ public class ExcelController {
             , @RequestParam(value = "password", required = false, defaultValue = "") String password
             , @RequestParam(value = "sessionid", required = false, defaultValue = "") String sessionid
             , @RequestParam(value = "name", required = false, defaultValue = "") String name
+            , @RequestParam(value = "reportNameCheck", required = false) String reportNameCheck
             , @RequestParam(value = "userChoices", required = false) String userChoices
             , @RequestParam(value = "choiceName", required = false) String choiceName
             , @RequestParam(value = "choiceValue", required = false) String choiceValue
@@ -118,6 +119,13 @@ public class ExcelController {
             }
             if (database != null && !database.equals("listall") && !database.equals(loggedInUser.getDatabase().getName())) {
                 LoginService.switchDatabase(loggedInUser, database);
+            }
+            if (reportNameCheck != null) { // try to identify the sheet, this just finds the id no need for security at the moment
+                final OnlineReport forNameAndBusinessId = OnlineReportDAO.findForNameAndBusinessId(reportNameCheck, loggedInUser.getUser().getBusinessId());
+                if (forNameAndBusinessId != null){
+                    return "" + forNameAndBusinessId.getId();
+                }
+                return "";
             }
             if (name != null && name.length() > 0) {
                 List<String> names = SpreadsheetService.nameAutoComplete(loggedInUser, name);

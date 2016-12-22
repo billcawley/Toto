@@ -133,7 +133,7 @@ public class DataRegionHeading {
         return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT || function == FUNCTION.SET || function == FUNCTION.FIRST || function == FUNCTION.LAST);
     }
 
-    public double getDoubleParameter() {
+    double getDoubleParameter() {
         return doubleParameter;
     }
 }
