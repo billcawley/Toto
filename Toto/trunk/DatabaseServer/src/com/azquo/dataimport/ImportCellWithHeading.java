@@ -2,6 +2,8 @@ package com.azquo.dataimport;
 
 import com.azquo.memorydb.core.Name;
 
+import java.util.Set;
+
 /**
  * Extracted from DSImportService by edward on 09/09/16.
  * <p>
@@ -13,6 +15,7 @@ class ImportCellWithHeading {
     private final ImmutableImportHeading immutableImportHeading;
     private String lineValue;// prefix  line to try to avoid confusion
     private Name lineName;
+    private Set<Name> splitNames;
 
     ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value, Name name) {
         this.immutableImportHeading = immutableImportHeading;
@@ -40,4 +43,13 @@ class ImportCellWithHeading {
     void setLineName(Name lineName) {
         this.lineName = lineName;
     }
+
+    Set<Name> getSplitNames() {
+        return splitNames;
+    }
+
+    void setSplitNames(Set<Name> splitNames) {
+        this.splitNames = splitNames;
+    }
+
 }

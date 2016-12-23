@@ -32,6 +32,7 @@ class ImmutableImportHeading {
     final boolean lineNameRequired;
     final String exclusive;
     final boolean existing;
+    final String splitChar;
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -50,5 +51,6 @@ class ImmutableImportHeading {
         this.lineNameRequired = mutableImportHeading.lineNameRequired;
         this.exclusive = mutableImportHeading.exclusive;
         this.existing = mutableImportHeading.existing;
+        this.splitChar = mutableImportHeading.splitChar;
     }
 }
