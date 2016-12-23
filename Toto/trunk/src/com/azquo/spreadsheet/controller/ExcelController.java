@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.TypedPair;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -12,6 +14,7 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.view.*;
+import com.azquo.util.AzquoMailer;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Controller;
@@ -83,8 +86,15 @@ public class ExcelController {
                 if (loggedInUser == null) {
                     return "error: user " + logon + " with this password does not exist";
                 }
-                if (loggedInUser.getDatabase() == null) {
-                    return "error: invalid database " + database;
+                if (!"nic@azquo.com".equalsIgnoreCase(logon) && !SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
+                    Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+                    String title = "Excel login  " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
+                    String userAgent = request.getHeader("User-Agent");
+                    AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, userAgent);
+                    AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
+                    AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, userAgent);
+                    AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
+                    AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                 }
                 if (loggedInUser.getUser().getReportId() != 0){
                     // populate the book as in the OnlineController but just do it server side then chuck it, the point is to sort the permissions

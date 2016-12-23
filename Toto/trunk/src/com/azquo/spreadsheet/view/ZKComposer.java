@@ -27,7 +27,6 @@ import org.zkoss.zssex.ui.widget.ChartsWidget;
 import org.zkoss.zssex.ui.widget.Ghost;
 import org.zkoss.zssex.ui.widget.WidgetCtrl;
 import org.zkoss.zul.*;
-import com.azquo.memorydb.TreeNode;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -612,30 +611,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (month.contains("dec")) return "12";
         return "00";
      }
-
-    private String fudgeDate(String chosen){
-        chosen = chosen.replace("/","-").replace(" ","-");
-        try{
-            int firstDash = chosen.indexOf("-");
-            if (firstDash < 0 ) return chosen;
-            int secondDash = chosen.indexOf("-", firstDash + 1);
-            if (secondDash < 0) return chosen;
-            String day = chosen.substring(0, firstDash);
-            if (day.length() == 1) day = "0" + day;
-            String month = chosen.substring(firstDash + 1, secondDash);
-            if (month.length()==1) month = "0" + month;
-            if (month.length() > 2 ){
-                month = convertMonthString(month.toLowerCase());
-
-            }
-            String year = chosen.substring(secondDash + 1);
-            if (year.length()==2) year = "20" + year;
-            return year + "-" + month + "-" + day;
-        }catch(Exception e){
-            return chosen;
-        }
-    }
-
 
     // Commented, why?
     @Listen("onSheetSelect = #myzss")
