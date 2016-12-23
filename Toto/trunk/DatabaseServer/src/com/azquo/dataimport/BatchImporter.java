@@ -390,8 +390,9 @@ public class BatchImporter implements Callable<Void> {
             cellWithHeading.setSplitNames(new HashSet<>());
             if (cellWithHeading.getImmutableImportHeading().splitChar ==null) {
 
-                cellWithHeading.getSplitNames().add(includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeadingLineValue
+                cellWithHeading.setLineName(includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeadingLineValue
                         , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading(), attributeNames)));
+                cellWithHeading.getSplitNames().add(cellWithHeading.getLineName());
             }else{
                 //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
                 String[]splitStrings = cellWithHeadingLineValue.split(cellWithHeading.getImmutableImportHeading().splitChar);
