@@ -513,6 +513,9 @@ public class ZKAzquoBookUtils {
                 }
                 if (name.getName().toLowerCase().startsWith(AZDATAREGION)) { // then we have a data region to deal with here
                     String region = name.getName().substring(AZDATAREGION.length()); // might well be an empty string
+                    if (sheet.getBook().getInternalBook().getNameByName(AZROWHEADINGS + region) == null){ // if no row headings then this is an ad hoc region, save possible by default
+                        showSave = true;
+                    }
                     SName optionsRegion = sheet.getBook().getInternalBook().getNameByName(AZOPTIONS + region);
                     String optionsSource = "";
                     if (optionsRegion != null) {
