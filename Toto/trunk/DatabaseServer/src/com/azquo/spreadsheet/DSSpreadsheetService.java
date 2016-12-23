@@ -155,7 +155,7 @@ public class DSSpreadsheetService {
         String fileName = "temp_" + user;
         File temp = File.createTempFile(fileName + ".csv", "csv");
         String tempPath = temp.getPath();
-        BufferedWriter bw = new BufferedWriter(new FileWriter(temp));
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(temp),"UTF-8"));
         StringBuffer sb = new StringBuffer();
         List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(0);
         boolean firstCol = true;
