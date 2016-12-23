@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static javax.swing.UIManager.get;
 import static javax.xml.bind.DatatypeConverter.parseBase64Binary;
 
 /**
@@ -51,7 +50,7 @@ public class ExcelController {
 
     static Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
 
-    @RequestMapping
+    @RequestMapping(produces = "text/json;charset=UTF-8")
     @ResponseBody
     public String handleRequest(HttpServletRequest request, @RequestParam(value = "logon", required = false, defaultValue = "") String logon
             , @RequestParam(value = "toggle", required = false) String toggle
