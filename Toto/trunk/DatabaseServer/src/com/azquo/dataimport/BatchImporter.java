@@ -386,12 +386,29 @@ public class BatchImporter implements Callable<Void> {
         if (cellWithHeadingLineValue.contains(",") && !cellWithHeadingLineValue.contains(StringLiterals.QUOTE + "")) {//beware of treating commas in cells as set delimiters....
             cellWithHeadingLineValue = StringLiterals.QUOTE + cellWithHeadingLineValue + StringLiterals.QUOTE;
         }
-        if (cellWithHeading.getLineName() == null) { // then create it, this will take care of the parents ("child of") while creating
-            cellWithHeading.setLineName(includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeadingLineValue
-                    , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading(), attributeNames)));
+        if (cellWithHeading.getSplitNames() == null) { // then create it, this will take care of the parents ("child of") while creating
+            cellWithHeading.setSplitNames(new HashSet<>());
+            if (cellWithHeading.getImmutableImportHeading().splitChar ==null) {
+
+                cellWithHeading.getSplitNames().add(includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeadingLineValue
+                        , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading(), attributeNames)));
+            }else{
+                //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
+                String[]splitStrings = cellWithHeadingLineValue.split(cellWithHeading.getImmutableImportHeading().splitChar);
+                for (String splitString:splitStrings){
+                    cellWithHeading.getSplitNames().add(includeInParents(azquoMemoryDBConnection, namesFoundCache, splitString.trim()
+                            , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading(), attributeNames)));
+
+                }
+
+
+            }
+
         } else { // it existed (created below as a child name), sort parents if necessary
-            for (Name parent : cellWithHeading.getImmutableImportHeading().parentNames) { // apparently there can be multiple child ofs, put the name for the line in the appropriate sets, pretty vanilla based off the parents set up
-                parent.addChildWillBePersisted(cellWithHeading.getLineName());
+            for (Name child:cellWithHeading.getSplitNames()) {
+                for (Name parent : cellWithHeading.getImmutableImportHeading().parentNames) { // apparently there can be multiple child ofs, put the name for the line in the appropriate sets, pretty vanilla based off the parents set up
+                    parent.addChildWillBePersisted(child);
+                }
             }
         }
         // ok that's "child of" (as in for names) done
@@ -406,7 +423,10 @@ public class BatchImporter implements Callable<Void> {
             if (childCell.getLineName() == null) {
                 childCell.setLineName(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childCell.getLineValue(), cellWithHeading.getLineName()
                         , cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(childCell.getImmutableImportHeading(), attributeNames)));
-            } else { // the child name exists already, check exclusive to remove the child from some parents if necessary - this replaces the old "remove from" functionality
+            }
+            for (Name parent:cellWithHeading.getSplitNames()) {
+                //the 'parent' above is the current cell, not its parent
+                // check exclusive to remove the child from some other parents if necessary - this replaces the old "remove from" functionality
                 /*
                 Exclusive merits explanation. Let us assume cellWithHeading's heading is "Category" (a heading which may have no Name though its cells will)
                 which is "child of" "All Categories" (a Name in the database) and "parent of" "Product", another heading. Cells in the "Product" column have Names, childCell.getLineName().
@@ -441,10 +461,10 @@ public class BatchImporter implements Callable<Void> {
                         }
                     }
                 }
-            }
-            // having hopefully sorted a new name or exclusive add the child
-            if (needsAdding) {
-                cellWithHeading.getLineName().addChildWillBePersisted(childCell.getLineName());
+                // having hopefully sorted a new name or exclusive add the child
+                if (needsAdding) {
+                    parent.addChildWillBePersisted(childCell.getLineName());
+                }
             }
         }
     }
