@@ -24,6 +24,7 @@ import org.zkoss.zss.jsp.JsonUpdateBridge;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
+import org.zkoss.zss.model.SSheet;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zul.Filedownload;
 
@@ -247,6 +248,14 @@ public class ZKSpreadsheetCommandController {
                         }
                         ZKAzquoBookUtils.populateBook(newBook, 0, true, null, false);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+                        if (ss.getSelectedSheet().isHidden()){
+                            for (SSheet s : ss.getSBook().getSheets()){
+                                if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE){
+                                    ss.setSelectedSheet(s.getSheetName());
+                                    break;
+                                }
+                            }
+                        }
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
                         if (reloadAfterSave){
                             Clients.evalJavaScript("alert(\"Save successful\")");

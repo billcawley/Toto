@@ -8,7 +8,6 @@ import com.azquo.admin.onlinereport.ReportScheduleDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
-import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,7 +29,7 @@ import java.util.List;
 @RequestMapping("/ManageReportSchedules")
 public class ManageReportSchedulesController {
 
-    private static final Logger logger = Logger.getLogger(ManageReportsController.class);
+//    private static final Logger logger = Logger.getLogger(ManageReportsController.class);
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
     )

@@ -311,7 +311,7 @@ public final class ImportService {
         FileOutputStream fos = new FileOutputStream(tempPath);
         CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
         csvW.setUseTextQualifier(false);
-        ImportFileUtilities.convertRangeToCSV(sheet, csvW, null, null, transpose);
+        ImportFileUtilities.convertRangeToCSV(sheet, csvW, transpose);
         csvW.close();
         fos.close();
         return readPreparedFile(loggedInUser, tempPath, sheetName, attributeNames, persistAfter, true);

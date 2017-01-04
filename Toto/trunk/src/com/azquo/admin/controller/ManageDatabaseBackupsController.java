@@ -8,7 +8,6 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.util.CommandLineCalls;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,7 +30,7 @@ import java.util.List;
 @RequestMapping("/ManageDatabaseBackups")
 public class ManageDatabaseBackupsController {
 
-    private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
+//    private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
 
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests

@@ -4,7 +4,6 @@ import com.azquo.admin.AdminService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.controller.LoginController;
-import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +22,7 @@ import javax.servlet.http.HttpServletRequest;
 @RequestMapping("/NewBusiness")
 public class NewBusinessController {
 
-    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
+    //private static final Logger logger = Logger.getLogger(ManageUsersController.class);
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request

@@ -84,7 +84,7 @@ public class InvoiceService {
         nf.setMinimumFractionDigits(2);
         int termsInt = invoiceDetails.getPaymentTerms();
         LocalDate dateDue = invoiceDetails.getInvoiceDate().plusDays(termsInt);
-        DateTimeFormatter monthDisplay = DateTimeFormatter.ofPattern("MMMMM");
+        //DateTimeFormatter monthDisplay = DateTimeFormatter.ofPattern("MMMMM");
         //invoiceFOP = invoiceFOP.replace("INVOICEMONTH",monthDisplay.format(i.getDate()), true);
         String invoiceTitle = "Monthly fee for developmennt of RaceAdvisor App";
         invoiceFOP = invoiceFOP.replace("INVOICETITLE", StringEscapeUtils.escapeXml(invoiceTitle));
@@ -165,7 +165,7 @@ public class InvoiceService {
         text = text.replace("ADDRESS" + line, ""); // blank other lines . . .
         line++;
         text = text.replace("ADDRESS" + line, ""); // blank other lines . . .
-        line++;
+        //line++;
 
         text = text.replace("PAYMENTTERMS", termsInt + " Days");
 

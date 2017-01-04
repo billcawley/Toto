@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.ThreadPools;
+import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
@@ -35,25 +36,63 @@ class AzquoCellService {
 
     static final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
 
-    private static List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
-        final List<Integer> sortedValues = new ArrayList<>(sortTotals.size());
-        List<Map.Entry<Integer, Double>> list = new ArrayList<>(sortTotals.entrySet());
-        // sort list based on
-        Collections.sort(list, (o1, o2) -> sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue()));
-        for (Map.Entry<Integer, Double> aList : list) {
-            sortedValues.add(aList.getKey());
+    private static List<Integer> sortOnMultipleValues(Map<Integer, List<TypedPair<Double, String>>> sortListsMap, final boolean sortRowsUp) {
+        boolean doubleSort = true;
+        // ok I can't see a way around this, I'm going to have to check all doubles for a null and if I find one abandon the doublesort
+        for (List<TypedPair<Double, String>> check : sortListsMap.values()){
+            for (TypedPair<Double, String> value : check){
+                if (value.getFirst() == null){
+                    doubleSort = false;
+                    break;
+                }
+            }
+            if (!doubleSort){
+                break;
+            }
+        }
+
+        final boolean finalDoubleSort = doubleSort;
+        final List<Integer> sortedValues = new ArrayList<>(sortListsMap.size());
+        List<Map.Entry<Integer, List<TypedPair<Double, String>>>> list = new ArrayList<>(sortListsMap.entrySet());
+        // sort list based on the list of values in each entry
+        list.sort((o1, o2) -> {
+            int result = 0;
+            if (o1.getValue().size() != o2.getValue().size()) { // the really should match! I'll call it neutral for the moment
+                return 0;
+            }
+            if (finalDoubleSort) {
+                int index = 0;
+                for (TypedPair<Double, String> value : o1.getValue()) {
+                    result = value.getFirst().compareTo(o2.getValue().get(index).getFirst());
+                    if (result != 0) { // we found a difference
+                        break;
+                    }
+                    index++;
+                }
+            } else {
+                int index = 0;
+                for (TypedPair<Double, String> value : o1.getValue()) {
+                    result = value.getSecond().compareTo(o2.getValue().get(index).getSecond());
+                    if (result != 0) { // we found a difference
+                        break;
+                    }
+                    index++;
+                }
+            }
+            return sortRowsUp ? result : -result;
+        });
+        for (Map.Entry<Integer, List<TypedPair<Double, String>>> entry : list) {
+            sortedValues.add(entry.getKey());
         }
         return sortedValues;
     }
 
-    // same thing for strings, I prefer stronger typing
-    private static List<Integer> sortStringValues(Map<Integer, String> sortTotals, final boolean sortRowsUp) {
+    private static List<Integer> sortDoubleValues(Map<Integer, Double> sortTotals, final boolean sortRowsUp) {
         final List<Integer> sortedValues = new ArrayList<>(sortTotals.size());
-        List<Map.Entry<Integer, String>> list = new ArrayList<>(sortTotals.entrySet());
-        // sort list based on string now
-        Collections.sort(list, (o1, o2) -> sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue()));
-
-        for (Map.Entry<Integer, String> aList : list) {
+        List<Map.Entry<Integer, Double>> list = new ArrayList<>(sortTotals.entrySet());
+        // sort list based on
+        list.sort((o1, o2) -> sortRowsUp ? o1.getValue().compareTo(o2.getValue()) : -o1.getValue().compareTo(o2.getValue()));
+        for (Map.Entry<Integer, Double> aList : list) {
             sortedValues.add(aList.getKey());
         }
         return sortedValues;
@@ -221,6 +260,8 @@ class AzquoCellService {
 
     // note, one could derive column and row headings from the source data's headings but passing them is easier if they are to hand which the should be
     // also deals with highlighting
+    // I've tried to make parameter names useful but they can be a bit confusing as we have for example a column index to sort on but the values will be row values or totals for that row
+
 
     private static List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
             , RegionOptions regionOptions, List<String> languages, boolean permute) throws Exception {
@@ -228,9 +269,18 @@ class AzquoCellService {
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
         }
-        Integer sortOnColIndex = findPosition(columnHeadings, regionOptions.sortColumn, languages);
-        Integer sortOnRowIndex = findPosition(rowHeadings, regionOptions.sortRow, languages); // not used at the mo
-        // new logic states that sorting on row or col totals only happens if a sort row or col hasn't been passed and there are more rows or cols than max rows or cols
+        // need to be able to sort on multiple columns now - find the indexes here. Order is important I assume!
+        List<Integer> sortOnColIndexes = new ArrayList<>();
+        if (regionOptions.sortColumn != null){
+            for (String sc : regionOptions.sortColumn.split(",")){
+                int sortColIndex = findPosition(columnHeadings, sc, languages);
+                if (sortColIndex != -1){
+                    sortOnColIndexes.add(sortColIndex);
+                }
+            }
+        }
+        Integer sortOnRowIndex = findPosition(rowHeadings, regionOptions.sortRow, languages); // not used much I don't think but we'll allow a simple numeric left/right sort, possibly on totals
+        // sorting on row or col totals only happens if a sort row or col hasn't been passed and there are more rows or cols than max rows or cols
         int totalRows = sourceData.size();
         int totalCols = sourceData.get(0).size();
 
@@ -238,9 +288,10 @@ class AzquoCellService {
         boolean sortOnRowTotals = false;
         int maxRows = regionOptions.rowLimit;
         boolean sortColAsc = regionOptions.sortColumnAsc;
+        // bit of a hack - max rows can be negative, whether negative or positive changes sort order in the case of totals
         if (maxRows != 0) {
             if (Math.abs(maxRows) < totalRows) {
-                if (sortOnColIndex == -1) { // only cause total sorting if a column hasn't been passed
+                if (sortOnColIndexes.isEmpty()) { // only cause total sorting if column(s) to sort on have not been specified
                     sortOnRowTotals = true;
                     sortColAsc = maxRows < 0;
                 }
@@ -261,85 +312,85 @@ class AzquoCellService {
         }
         maxRows = Math.abs(maxRows);
         maxCols = Math.abs(maxCols);
-
-        if (sortOnColIndex != -1 || sortOnRowIndex != -1 || sortOnColTotals || sortOnRowTotals) { // then there's sorting to do
-            // was a null check on sortRow and sortCol but it can't be null, it will be negative if none found
-            final Map<Integer, Double> sortRowTotals = HashIntDoubleMaps.newMutableMap(sourceData.size());
-            final Map<Integer, String> sortRowStrings = HashIntObjMaps.newMutableMap(sourceData.size());
-            final Map<Integer, Double> sortColumnTotals = HashIntDoubleMaps.newMutableMap(totalCols);
-
+        if (!sortOnColIndexes.isEmpty() || sortOnRowIndex != -1 || sortOnColTotals || sortOnRowTotals) { // then there's sorting to do
+            // for up/down sorting we now support mor than one column, it might bee a mix of strings and doubles, hence lists of typed pairs
+            final Map<Integer, List<TypedPair<Double,String>>> sortRowValuesMap = HashIntObjMaps.newMutableMap(sourceData.size());
+            // for left/right sorting, only supports numbers and one row to sort on or the column totals
+            final Map<Integer, Double> sortColumnDoubles = HashIntDoubleMaps.newMutableMap(totalCols);
+            // blank the map to stop npes later
             for (int colNo = 0; colNo < totalCols; colNo++) {
-                sortColumnTotals.put(colNo, 0.00);
+                sortColumnDoubles.put(colNo, 0.00);
             }
-            boolean rowNumbers = true;
             int rowNo = 0;
             // populate the maps that will be sorted
             for (List<AzquoCell> rowCells : sourceData) {
-                double sortRowTotal = 0.0;//note that, if there is a 'sortCol' then only that column is added to the total. This row total or value is used when sorting by a column.
+                List<TypedPair<Double, String>> sortRowValues = new ArrayList<>();// what, in order, are the relevant sort values for this row? Can be numbers of strings . .
+                double sortRowTotal = 0.0;
                 int colNo = 0;
-                sortRowStrings.put(rowNo, "");
+                // initial pass through the row
                 for (AzquoCell cell : rowCells) {
-                    // ok these bits are for sorting. Could put a check on whether a number was actually the result but not so bothered
-                    // info for an up/down string sort
-                    if (sortOnColIndex == colNo) {// the point here is that sorting on a single column can be non numeric so we support that by jamming the string value in here
-                        sortRowStrings.put(rowNo, cell.getStringValue());
-                        if (cell.getStringValue().length() > 0 && !NumberUtils.isNumber(cell.getStringValue())) {
-                            rowNumbers = false;
-                        }
-                    }
-                    // info for an up/down number sort, possibly on total values of each row
-                    if ((sortOnRowTotals && !DataRegionHeadingService.headingsHaveAttributes(cell.getColumnHeadings())) || sortOnColIndex == colNo) { // while running through the cells either add the lot for rowtotals or just the column we care about
+                    // info for an up/down row total sort
+                    if (sortOnRowTotals && !DataRegionHeadingService.headingsHaveAttributes(cell.getColumnHeadings())) { // gather the row total if required
                         sortRowTotal += cell.getDoubleValue();
                     }
-                    // info for a left/rigt number sort possibly on column totals (left/right string sort not supported)
+                    // info for a left/rigt number sort either on column totals or a specific row
                     if ((sortOnColTotals && !DataRegionHeadingService.headingsHaveAttributes(cell.getRowHeadings())) || sortOnRowIndex == rowNo) {
-                        sortColumnTotals.put(colNo, sortColumnTotals.get(colNo) + cell.getDoubleValue());
+                        sortColumnDoubles.put(colNo, sortColumnDoubles.get(colNo) + cell.getDoubleValue());
                     }
                     colNo++;
                 }
-                sortRowTotals.put(rowNo++, sortRowTotal);
+                if (sortOnRowTotals){ // a simple sort on one number
+                    sortRowValues.add(new TypedPair<>(sortRowTotal, null));
+                } else { // ok here we go, need to support multiple sort columns
+                    // try to make number sorting work where possible by saying that blank is 0
+                    for (Integer index : sortOnColIndexes){
+                        AzquoCell cell = null;
+                        if (index < rowCells.size()){
+                            cell = rowCells.get(index);
+                        }
+                        if (cell == null){ // blank, be flexible to the sorting later
+                            sortRowValues.add(new TypedPair<>(0d, ""));
+                        } else {
+                            if (cell.getStringValue().length() > 0 && NumberUtils.isNumber(cell.getStringValue())){ // following old logic to detect if we can call it a number
+                                sortRowValues.add(new TypedPair<>(cell.getDoubleValue(), cell.getStringValue()));
+                            } else { // null the double, can't sort numerically
+                                sortRowValues.add(new TypedPair<>(null, cell.getStringValue()));
+                            }
+                        }
+                    }
+                }
+                sortRowValuesMap.put(rowNo, sortRowValues);
+                rowNo++;
             }
             List<Integer> sortedRows = new ArrayList<>();
-            if (sortOnColIndex != -1 || sortOnRowTotals) { // then we need to sort the rows
+            if (!sortOnColIndexes.isEmpty() || sortOnRowTotals) { // then we need to sort the rows
                 if (permute) {
                     // essentially sub sorting the last sections, will need tweaking if we want the higher levels sorted too
                     int totalHeading = rowHeadings.get(0).size() - 2;
                     int lastId = rowHeadings.get(0).get(totalHeading).getName().getId();
                     int topRow = 0;
-                    for (int row = 0; row < sortRowTotals.size(); row++) {
+                    for (int row = 0; row < sortRowValuesMap.size(); row++) {
                         int thisId = rowHeadings.get(row).get(totalHeading).getName().getId();
                         if (thisId != lastId) {
-                            if (rowNumbers) {
-                                Map<Integer, Double> subTotals = new HashMap<>();
-                                for (int sectionRow = topRow; sectionRow < row - 1; sectionRow++) {
-                                    subTotals.put(sectionRow, sortRowTotals.get(sectionRow));
-                                }
-                                sortedRows.addAll(sortDoubleValues(subTotals, sortColAsc));
-                            } else {
-                                Map<Integer, String> subTotalStrings = new HashMap<>();
-                                for (int sectionRow = topRow; sectionRow < row - 1; sectionRow++) {
-                                    subTotalStrings.put(sectionRow - topRow, sortRowStrings.get(sectionRow));
-                                }
-                                sortedRows.addAll(sortStringValues(subTotalStrings, sortColAsc));
+                            Map<Integer, List<TypedPair<Double,String>>> subTotalSortRowValues = new HashMap<>();
+                            for (int sectionRow = topRow; sectionRow < row - 1; sectionRow++) {
+                                subTotalSortRowValues.put(sectionRow - topRow, sortRowValuesMap.get(sectionRow));
                             }
+                            sortedRows.addAll(sortOnMultipleValues(subTotalSortRowValues, sortColAsc));
                             sortedRows.add(row - 1);
                             topRow = row;
                             lastId = thisId;
                         }
                     }
-                    sortedRows.add(sortRowTotals.size() - 1);
+                    sortedRows.add(sortRowValuesMap.size() - 1);
                 } else {
-                    if (rowNumbers) {
-                        sortedRows = sortDoubleValues(sortRowTotals, sortColAsc);
-                    } else {
-                        sortedRows = sortStringValues(sortRowStrings, sortColAsc);
-                    }
+                    sortedRows = sortOnMultipleValues(sortRowValuesMap, sortColAsc);
                 }
             }
 
             List<Integer> sortedCols = null;
             if (sortOnRowIndex != -1 || sortOnColTotals) { // then we need to sort the cols
-                sortedCols = sortDoubleValues(sortColumnTotals, regionOptions.sortRowAsc);
+                sortedCols = sortDoubleValues(sortColumnDoubles, regionOptions.sortRowAsc);
             }
             // OK pasting and changing what was in format data region, it's only called by this
             // zero passed or set above means don't limit, this feels a little hacky but we need a less than condition on the for loop. Both for limiting and we need this type of loop as the index looks up on the sort

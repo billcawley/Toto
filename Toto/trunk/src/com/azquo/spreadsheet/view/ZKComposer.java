@@ -173,6 +173,14 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
         }
+        if (myzss.getSelectedSheet().isHidden()){
+            for (SSheet s : myzss.getSBook().getSheets()){
+                if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE){
+                    myzss.setSelectedSheet(s.getSheetName());
+                    break;
+                }
+            }
+        }
     }
 
     private static String MULTI = "Multi";
@@ -328,6 +336,14 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                             }
                             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+                            if (myzss.getSelectedSheet().isHidden()){
+                                for (SSheet s : myzss.getSBook().getSheets()){
+                                    if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE){
+                                        myzss.setSelectedSheet(s.getSheetName());
+                                        break;
+                                    }
+                                }
+                            }
                             // check to see if we need to set the selected values in a cell - or in the main cell?
                             if (queryResultRegion2 != null) {
                                 String resultDescription = ZKAzquoBookUtils.multiList(loggedInUser, selectionName2, selectionList2);
@@ -456,6 +472,15 @@ public class ZKComposer extends SelectorComposer<Component> {
                     Clients.evalJavaScript("document.getElementById(\"lockedResult\").innerHTML='';");
                 }
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+                if (myzss.getSelectedSheet().isHidden()){
+                    for (SSheet s : myzss.getSBook().getSheets()){
+                        if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE){
+                            myzss.setSelectedSheet(s.getSheetName());
+                            break;
+                        }
+                    }
+                }
+
                 // ok there is a danger right here : on some sheets the spreadsheet gets kind of frozen or rather the cells don't calculate until something like a scroll happens. Not a problem when not full screen either
                 // really something to send to ZK? Could be a apin to prepare. TODO.
             } catch (Exception e) {
@@ -1151,6 +1176,15 @@ public class ZKComposer extends SelectorComposer<Component> {
                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
             }
             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
+            if (myzss.getSelectedSheet().isHidden()){
+                for (SSheet s : myzss.getSBook().getSheets()){
+                    if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE){
+                        myzss.setSelectedSheet(s.getSheetName());
+                        break;
+                    }
+                }
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }

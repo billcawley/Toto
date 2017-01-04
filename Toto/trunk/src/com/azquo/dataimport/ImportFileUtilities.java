@@ -7,13 +7,11 @@ import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
-import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SRow;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -193,12 +191,7 @@ class ImportFileUtilities {
         }
     }
 
-    static void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW, CellRegion range, Map<String, String> newNames, boolean transpose) throws Exception {
-
-        /*  NewNames here is a very short list which will convert 'next...' into the next available number for that variable, the value being held as the attribute 'next' on that name - e.g. for invoices
-        *   the code is now defunct, but was present at SVN version 1161
-        *
-        * */
+    static void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW, boolean transpose) throws Exception {
         int rows = sheet.getLastRow();
         int maxCol = 0;
         for (int row = 0; row <= sheet.getLastRow(); row++) {
@@ -208,12 +201,12 @@ class ImportFileUtilities {
         }
         int startRow = 0;
         int startCol = 0;
-        if (range != null) {
+/*        if (range != null) {
             startRow = range.getRow();
             startCol = range.getColumn();
             rows = startRow + range.getRowCount() - 1;
             maxCol = startCol + range.getColumnCount() - 1;
-        }
+        }*/
 
         if (!transpose) {
             for (int r = startRow; r <= rows; r++) {
@@ -222,7 +215,7 @@ class ImportFileUtilities {
                     //System.out.println("Excel row " + r);
                     //int colCount = 0;
                     for (int c = startCol; c <= maxCol; c++) {
-                        writeCell(sheet, r, c, csvW, newNames);
+                        writeCell(sheet, r, c, csvW);
                     }
                     csvW.endRecord();
                 }
@@ -230,21 +223,16 @@ class ImportFileUtilities {
         } else {
             for (int c = startCol; c <= maxCol; c++) {
                 for (int r = startRow; r <= rows; r++) {
-                    writeCell(sheet, r, c, csvW, newNames);
+                    writeCell(sheet, r, c, csvW);
                 }
                 csvW.endRecord();
             }
         }
     }
 
-    private static void writeCell(Sheet sheet, int r, int c, CsvWriter csvW, Map<String, String> newNames) throws Exception {
+    private static void writeCell(Sheet sheet, int r, int c, CsvWriter csvW) throws Exception {
         final TypedPair<Double, String> cellValue = getCellValue(sheet, r, c);
-        if (newNames != null && newNames.get(cellValue.getSecond()) != null) {
-            csvW.write(newNames.get(cellValue.getSecond()));
-        } else {
-            csvW.write(cellValue.getSecond().replace("\n", "\\\\n").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
-        }
-
+        csvW.write(cellValue.getSecond().replace("\n", "\\\\n").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
     }
 
     // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO

@@ -29,7 +29,7 @@ public class ShowLoggedInUsersController {
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             StringBuilder list = new StringBuilder();
             List<HttpSession> listSessionByDate = new ArrayList<>(SessionListener.sessions);
-            Collections.sort(listSessionByDate, Comparator.comparing(HttpSession::getLastAccessedTime)); // I think that will sort it!
+            listSessionByDate.sort(Comparator.comparing(HttpSession::getLastAccessedTime)); // I think that will sort it!
             Collections.reverse(listSessionByDate); // most recent first
             for (HttpSession session : listSessionByDate){
                 LoggedInUser user = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);

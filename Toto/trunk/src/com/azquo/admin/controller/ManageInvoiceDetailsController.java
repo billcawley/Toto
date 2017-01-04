@@ -6,7 +6,6 @@ import com.azquo.admin.business.InvoiceDetailsDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.fop.apps.FOPException;
-import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.ServletRequestUtils;
@@ -30,7 +29,7 @@ import java.util.List;
 @RequestMapping("/ManageInvoiceDetails")
 public class ManageInvoiceDetailsController {
 
-    private static final Logger logger = Logger.getLogger(ManageReportsController.class);
+//    private static final Logger logger = Logger.getLogger(ManageReportsController.class);
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request

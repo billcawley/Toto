@@ -6,7 +6,6 @@ import com.azquo.admin.user.UserDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,9 +27,8 @@ import java.util.List;
 @Controller
 @RequestMapping("/ManageUsers")
 public class ManageUsersController {
-    // TODO : break up into separate functions
 
-    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
+//    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request

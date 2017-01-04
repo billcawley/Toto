@@ -131,17 +131,14 @@ public class NameQueryParser {
                /* sometimes excel formulae generate dependent sets that do not exist (e.g. `2012 Transactions`
             in that case it is better to return a null rather than an exception as temporary names may still be set incorrectly
              */
-            if (setFormula.contains(StringLiterals.AS)){
+            if (setFormula.contains(StringLiterals.AS)) {
                 //clear the 'as' set and exit gracefully
-                Name targetName =   NameService.findNameAndAttribute(azquoMemoryDBConnection, nameStrings.get(nameStrings.size()-1), attributeNames);
-                if (targetName != null){
-                    targetName.setChildrenWillBePersisted(new ArrayList());
-                    return new ArrayList();
+                Name targetName = NameService.findNameAndAttribute(azquoMemoryDBConnection, nameStrings.get(nameStrings.size() - 1), attributeNames);
+                if (targetName != null) {
+                    targetName.setChildrenWillBePersisted(new ArrayList<>());
+                    return new ArrayList<>();
                 }
-
-
             }
-
             throw e;
         }
         setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "");
@@ -347,7 +344,7 @@ public class NameQueryParser {
             if (namesFound.list == null || !namesFound.mutable) { // then force to a mutable list, don't see that we have a choice
                 namesFound = new NameSetList(null, new ArrayList<>(namesFound.getAsCollection()), true);
             }
-            Collections.sort(namesFound.list, NameService.defaultLanguageCaseInsensitiveNameComparator);
+            namesFound.list.sort(NameService.defaultLanguageCaseInsensitiveNameComparator);
         }
         // do from/to/count at the end. It was above for no good reason I can see
         if (fromString == null) fromString = "";
