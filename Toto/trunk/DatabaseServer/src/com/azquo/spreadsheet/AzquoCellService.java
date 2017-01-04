@@ -186,7 +186,11 @@ class AzquoCellService {
             return -1;
         }
         try {
-            return Integer.parseInt(toFind);
+
+            int col = Integer.parseInt(toFind);
+            if (col > 0){
+                return col - 1;
+            }
         } catch (Exception e) {
             //so it isn't a number!
         }
