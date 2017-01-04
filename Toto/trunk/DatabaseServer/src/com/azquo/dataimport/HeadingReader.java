@@ -241,9 +241,11 @@ class HeadingReader {
                 break;
             case COMPOSITION:// combine more than one column
                 heading.compositionPattern = result;
+                break;
 
             case SPLIT:
                 heading.splitChar = result.trim();
+                break;
             case COMMENT: // ignore
                 break;
             case DEFAULT: // if there's no value on the line a default
