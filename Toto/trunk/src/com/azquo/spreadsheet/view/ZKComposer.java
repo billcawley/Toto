@@ -402,7 +402,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
                     String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                     loggedInUser.userLog("Choice select : " + choice + "," + chosen);
-                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
+                    SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen.trim());
                     // I'm not sure exactly why blankDependantChoices was commented, commenting the other two redundant lines
                     //List<String> changedChoice = new ArrayList<>();
                     //changedChoice.add(choice);
