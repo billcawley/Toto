@@ -173,9 +173,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
         }
-        if (myzss.getSelectedSheet().isHidden()){
-            for (SSheet s : myzss.getSBook().getSheets()){
-                if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE){
+        if (myzss.getSelectedSheet().isHidden()) {
+            for (SSheet s : myzss.getSBook().getSheets()) {
+                if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE) {
                     myzss.setSelectedSheet(s.getSheetName());
                     break;
                 }
@@ -195,9 +195,9 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellClick(CellMouseEvent event) {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        String selectionName = pivotItem(event, ZKAzquoBookUtils.AZPIVOTFILTERS, ZKAzquoBookUtils.AZPIVOTHEADINGS,3);//OLD STYLE
-        if (selectionName == null){
-            selectionName = pivotItem(event, ZKAzquoBookUtils.AZCONTEXTFILTERS, ZKAzquoBookUtils.AZCONTEXTHEADINGS,3);
+        String selectionName = pivotItem(event, ZKAzquoBookUtils.AZPIVOTFILTERS, ZKAzquoBookUtils.AZPIVOTHEADINGS, 3);//OLD STYLE
+        if (selectionName == null) {
+            selectionName = pivotItem(event, ZKAzquoBookUtils.AZCONTEXTFILTERS, ZKAzquoBookUtils.AZCONTEXTHEADINGS, 3);
         }
         String selectionList = null;
         CellRegion queryResultRegion = null;
@@ -238,7 +238,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     queryResultRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), selectionName + RESULT);
                     final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
                     if (filterQueryCell != null) {
-                          selectionList = ZKAzquoBookUtils.getSnameCell(filterQueryCell).getStringValue();
+                        selectionList = ZKAzquoBookUtils.getSnameCell(filterQueryCell).getStringValue();
                     }
                     break;
                 }
@@ -336,9 +336,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                             }
                             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
-                            if (myzss.getSelectedSheet().isHidden()){
-                                for (SSheet s : myzss.getSBook().getSheets()){
-                                    if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE){
+                            if (myzss.getSelectedSheet().isHidden()) {
+                                for (SSheet s : myzss.getSBook().getSheets()) {
+                                    if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE) {
                                         myzss.setSelectedSheet(s.getSheetName());
                                         break;
                                     }
@@ -465,16 +465,16 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (ZKAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                 }
-                if (newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) != null){
+                if (newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) != null) {
                     String message = (String) newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT);
-                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").innerHTML='<textarea class=\"public\" style=\"height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0\">" + StringEscapeUtils.escapeJavaScript(message)  + "</textarea>';");
+                    Clients.evalJavaScript("document.getElementById(\"lockedResult\").innerHTML='<textarea class=\"public\" style=\"height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0\">" + StringEscapeUtils.escapeJavaScript(message) + "</textarea>';");
                 } else {
                     Clients.evalJavaScript("document.getElementById(\"lockedResult\").innerHTML='';");
                 }
                 myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
-                if (myzss.getSelectedSheet().isHidden()){
-                    for (SSheet s : myzss.getSBook().getSheets()){
-                        if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE){
+                if (myzss.getSelectedSheet().isHidden()) {
+                    for (SSheet s : myzss.getSBook().getSheets()) {
+                        if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE) {
                             myzss.setSelectedSheet(s.getSheetName());
                             break;
                         }
@@ -621,7 +621,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         return null;
     }
 
-    private String convertMonthString(String month){
+    private String convertMonthString(String month) {
         if (month.contains("jan")) return "01";
         if (month.contains("feb")) return "02";
         if (month.contains("mar")) return "03";
@@ -635,7 +635,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (month.contains("nov")) return "11";
         if (month.contains("dec")) return "12";
         return "00";
-     }
+    }
 
     // Commented, why?
     @Listen("onSheetSelect = #myzss")
@@ -656,7 +656,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     private String pivotItem(CellMouseEvent event, String filterName, String choicesName, int choiceWidth) {
         SName contextFilters = event.getSheet().getBook().getInternalBook().getNameByName(filterName);//obsolete
-       if (contextFilters != null) {
+        if (contextFilters != null) {
             String[] filters = ZKAzquoBookUtils.getSnameCell(contextFilters).getStringValue().split(",");
             CellRegion contextChoices = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), choicesName);
             if (contextChoices != null) {
@@ -686,9 +686,9 @@ public class ZKComposer extends SelectorComposer<Component> {
             if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZROWHEADINGS)) {
                 //surely there must be a better way of getting the first cell off a region!
                 String firstItem = "";
-                try{
+                try {
                     firstItem = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn()).getStringValue();
-                }catch(Exception e){
+                } catch (Exception e) {
                     //there's an error in the formula - certainly not a permute!
                 }
                 if (firstItem.toLowerCase().startsWith("permute(")) {
@@ -718,7 +718,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 String firstItem = "";
                 try {
                     firstItem = sCell.getStringValue();
-                }catch(Exception e){
+                } catch (Exception e) {
                     //no need - firstItem = ""
                 }
                 if (firstItem.toLowerCase().startsWith("permute(")) {
@@ -727,10 +727,10 @@ public class ZKComposer extends SelectorComposer<Component> {
                     CellRegion displayColHeadings = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), displayColHeadingsString);
                     if (displayColHeadings != null) {
                         int hrow = displayColHeadings.getRow();
-                        int hcol = displayColHeadings.getColumn()-1;
+                        int hcol = displayColHeadings.getColumn() - 1;
                         for (String colHeading : colHeadings) {
                             if (hrow++ == event.getRow() && hcol == event.getColumn()) {
-                                if (colHeading.contains(" sorted")){
+                                if (colHeading.contains(" sorted")) {
                                     colHeading = colHeading.substring(0, colHeading.indexOf(" sorted")).trim();
                                 }
                                 return colHeading.replace("`", "");
@@ -868,10 +868,10 @@ public class ZKComposer extends SelectorComposer<Component> {
                                             // here we parse out the string into cells. It could be passed as arrays but I'm not sure how much help that is
                                             final String[] split = fullProvenance.getSecond().split("\n");
                                             int yOffset = 0;
-                                            for (String line : split){
+                                            for (String line : split) {
                                                 int xOffset = 0;
                                                 String[] cells = line.split("\t");
-                                                for(String cell : cells){
+                                                for (String cell : cells) {
                                                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(cell);
                                                     xOffset++;
                                                 }
@@ -975,10 +975,10 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         // here we parse out the string into cells. It could be passed as arrays but I'm not sure how much help that is
                                         final String[] split = debugString.split("\n");
                                         int yOffset = 0;
-                                        for (String line : split){
+                                        for (String line : split) {
                                             int xOffset = 0;
                                             String[] cells = line.split("\t");
-                                            for(String cell : cells){
+                                            for (String cell : cells) {
                                                 sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(cell);
                                                 xOffset++;
                                             }
@@ -1094,7 +1094,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     or = OnlineReportDAO.findForDatabaseIdAndName(0, reportName);
                 }
             } else if (loggedInUser.getPermissionsFromReport() != null) {
-                if (loggedInUser.getPermissionsFromReport().get(reportName.toLowerCase()) != null){
+                if (loggedInUser.getPermissionsFromReport().get(reportName.toLowerCase()) != null) {
                     permissionId = reportName;
                 }
             }
@@ -1176,9 +1176,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
             }
             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
-            if (myzss.getSelectedSheet().isHidden()){
-                for (SSheet s : myzss.getSBook().getSheets()){
-                    if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE){
+            if (myzss.getSelectedSheet().isHidden()) {
+                for (SSheet s : myzss.getSBook().getSheets()) {
+                    if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE) {
                         myzss.setSelectedSheet(s.getSheetName());
                         break;
                     }

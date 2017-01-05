@@ -20,16 +20,15 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 12/05/15.
- *
+ * <p>
  * On the new client/server model the old LoggedInConnection will not do. We want an object representing a logged in user against the session
  * which holds no database classes. It will have a fair bit of stuff that was in logged in connection but no DB classes
- *
+ * <p>
  * TODO - serializable? Bit of a pain to go all the way down.
  */
 public class LoggedInUser {
@@ -38,7 +37,6 @@ public class LoggedInUser {
 
     private final String sessionId; // it's used to match to a log server side
     private final User user;
-
 
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
 
@@ -79,7 +77,6 @@ public class LoggedInUser {
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         this.database = database;
         this.databaseServer = databaseServer;
-
         this.readPermissions = readPermissions;
         this.writePermissions = writePermissions;
         this.imageStoreName = imageStoreName;
@@ -87,19 +84,18 @@ public class LoggedInUser {
         lastJSTreeNodeId = new AtomicInteger();
         jsTreeLookupMap = new ConcurrentHashMap<>();
         // make log files dir if required
-            File test = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + userLogsPath);
-            if (!test.exists()){
-                test.mkdirs();
-            }
+        File test = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + userLogsPath);
+        if (!test.exists()) {
+            test.mkdirs();
+        }
     }
 
-    public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId){
+    public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId) {
         return jsTreeLookupMap.get(jsTreeNodeId);
     }
 
     // ok we need to keep a session map of jstree ids which are created incrementally against the actual name ids, passing the nodes here seems fine
-    public LoggedInUser(LoggedInUser originalUser){
-
+    public LoggedInUser(LoggedInUser originalUser) {
         this.sessionId = originalUser.sessionId;
         this.user = originalUser.user;
         sentCellsMaps = new HashMap<>();
@@ -116,7 +112,7 @@ public class LoggedInUser {
         this.businessDirectory = originalUser.businessDirectory;
     }
 
-    public void assignIdForJsTreeNode(JsonChildren.Node node){
+    public void assignIdForJsTreeNode(JsonChildren.Node node) {
         node.id = lastJSTreeNodeId.incrementAndGet();
         jsTreeLookupMap.put(node.id, node);
     }
@@ -133,8 +129,8 @@ public class LoggedInUser {
 
     public List<CellsAndHeadingsForDisplay> getSentForReport(final int reportId) {
         List<CellsAndHeadingsForDisplay> toReturn = new ArrayList<>();
-        for (String key : sentCellsMaps.keySet()){
-            if (key.startsWith(reportId + "-")){
+        for (String key : sentCellsMaps.keySet()) {
+            if (key.startsWith(reportId + "-")) {
                 toReturn.add(sentCellsMaps.get(key));
             }
         }
@@ -149,14 +145,13 @@ public class LoggedInUser {
         }
     }
 
-
     // todo a version that includes the email and one that doesn't
     public List<String> getLanguages() {
         return languages;
     }
 
     public void setLanguages(List<String> languages) {
-        if (languages != null){ // should not be!
+        if (languages != null) { // should not be!
             languages.add(0, user.getEmail()); // make it first
         }
         this.languages = languages;
@@ -166,7 +161,7 @@ public class LoggedInUser {
         return user;
     }
 
-    public String getDatabaseType(){
+    public String getDatabaseType() {
         return database.getDatabaseType();
     }
 
@@ -179,9 +174,13 @@ public class LoggedInUser {
         this.database = database;
     }
 
-    public String getImageStoreName() { return imageStoreName; };
+    public String getImageStoreName() {
+        return imageStoreName;
+    }
 
-    public void setImageStoreName(String imageStoreName) {this.imageStoreName = imageStoreName; }
+    public void setImageStoreName(String imageStoreName) {
+        this.imageStoreName = imageStoreName;
+    }
 
     public String getContext() {
         return context;
@@ -195,8 +194,8 @@ public class LoggedInUser {
         return databaseServer;
     }
 
-    public DatabaseAccessToken getDataAccessToken(){
-        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), database.getPersistenceName(), readPermissions,writePermissions,languages);
+    public DatabaseAccessToken getDataAccessToken() {
+        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), database.getPersistenceName(), readPermissions, writePermissions, languages);
     }
 
     public String getBusinessDirectory() {
@@ -210,8 +209,9 @@ public class LoggedInUser {
     public void setPermissionsFromReport(Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport) {
         this.permissionsFromReport = permissionsFromReport;
     }
+
     // just pop it open and closed, should be a little cleaner
-    public void userLog(String message){
+    public void userLog(String message) {
         try {
             Files.write(Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + userLogsPath + user.getEmail() + "-" + df.format(new Date()) + ".log"),
                     (df2.format(new Date()) + "\t" + message + "\n").getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);

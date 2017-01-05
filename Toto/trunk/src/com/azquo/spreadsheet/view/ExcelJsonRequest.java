@@ -2,7 +2,6 @@ package com.azquo.spreadsheet.view;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Created by edward on 15/11/16.

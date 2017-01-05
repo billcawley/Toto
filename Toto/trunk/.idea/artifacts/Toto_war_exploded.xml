@@ -19,7 +19,6 @@
           <element id="library" level="project" name="zsjsp" />
           <element id="library" level="project" name="org.springframework:spring-jdbc:4.1.6.RELEASE" />
           <element id="library" level="project" name="org.springframework:spring-test:4.1.6.RELEASE" />
-          <element id="library" level="project" name="org.apache.velocity:velocity:1.7" />
           <element id="library" level="project" name="org.springframework.security:spring-security-config:4.0.0.RELEASE" />
           <element id="library" level="project" name="org.springframework:spring-webmvc:4.1.6.RELEASE" />
           <element id="library" level="project" name="org.springframework.security:spring-security-web:4.0.0.RELEASE" />

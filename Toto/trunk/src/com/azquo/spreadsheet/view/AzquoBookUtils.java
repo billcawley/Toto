@@ -18,17 +18,16 @@ import java.util.Map;
 
 /**
  * Created by edward on 17/11/16.
- *
+ * <p>
  * I can't remember if I'm recreating a class which existed before but if so this has a different purpose, it contains functionality that will]
  * be used by both ZK and the Excel interface.
  */
 public class AzquoBookUtils {
 
-
     static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
         //hack to discover a database name
         int arrowsPos = query.indexOf(">>");
-        try{
+        try {
             if (arrowsPos > 0) {
                 Database origDatabase = loggedInUser.getDatabase();
                 DatabaseServer origDatabaseServer = loggedInUser.getDatabaseServer();
@@ -37,17 +36,15 @@ public class AzquoBookUtils {
                         .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query.substring(arrowsPos + 2), languages);
                 loggedInUser.setDatabaseWithServer(origDatabaseServer, origDatabase);
                 return toReturn;
-
             }
             return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                     .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, languages);
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             List<String> error = new ArrayList<>();
             error.add("Error : " + e.getMessage());
             return error;
         }
-
     }
 
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query) {
@@ -65,22 +62,21 @@ public class AzquoBookUtils {
         return userChoices;
     }
 
-    public static String resolveQuery(LoggedInUser loggedInUser, String query){
+    public static String resolveQuery(LoggedInUser loggedInUser, String query) {
         try {
             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                     .resolveQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
             return query;
         } catch (Exception e) {
             e.printStackTrace();
-            return query +  " - Error executing query : " + getErrorFromServerSideException(e);
+            return query + " - Error executing query : " + getErrorFromServerSideException(e);
         }
-
     }
 
-    public static String getErrorFromServerSideException(Exception e){
+    public static String getErrorFromServerSideException(Exception e) {
         Throwable t = e;
         int check = 0;
-        while (t.getCause() != null && check < 20){
+        while (t.getCause() != null && check < 20) {
             t = t.getCause();
             check++;
         }
@@ -127,7 +123,6 @@ public class AzquoBookUtils {
         return treeNode.getValueId();
     }
 
-
     private static void resolveTreeNode(int tab, StringBuilder stringBuilder, com.azquo.memorydb.TreeNode treeNode) {
         for (int i = 0; i < tab; i++) {
             stringBuilder.append("\t");
@@ -136,15 +131,15 @@ public class AzquoBookUtils {
         if (treeNode.getName() != null) {
             stringBuilder.append(treeNode.getName());
             String value = treeNode.getValue();
-            if (treeNode.getChildren().size()==1){
+            if (treeNode.getChildren().size() == 1) {
                 needsValue = false;
             }
             if (needsValue && value != null) {
                 stringBuilder.append("\t");
 
                 stringBuilder.append(treeNode.getValue());
-                if (treeNode.getValueHistory() != null){
-                    for (String historyItem : treeNode.getValueHistory()){
+                if (treeNode.getValueHistory() != null) {
+                    for (String historyItem : treeNode.getValueHistory()) {
                         stringBuilder.append("\n");
                         for (int i = 0; i < tab; i++) {
                             stringBuilder.append("\t");
@@ -158,7 +153,7 @@ public class AzquoBookUtils {
         if (treeNode.getHeading() != null) { // then assume we have items too!
             stringBuilder.append(treeNode.getHeading());
             //stringBuilder.append("\n");
-            if (tab==0 || needsValue){
+            if (tab == 0 || needsValue) {
                 tab++;
             }
             for (TreeNode treeNode1 : treeNode.getChildren()) {
@@ -166,6 +161,4 @@ public class AzquoBookUtils {
             }
         }
     }
-
-
 }

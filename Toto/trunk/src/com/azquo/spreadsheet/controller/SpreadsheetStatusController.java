@@ -2,7 +2,6 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;

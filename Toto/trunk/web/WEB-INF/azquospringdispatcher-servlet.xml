@@ -17,20 +17,10 @@
     <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
         <property name="prefix" value="/WEB-INF/pages/"/>
         <property name="suffix" value=".jsp"/>
-        <property name="order" value="2" />
-    </bean>
-    <bean id="velocityConfig" class="org.springframework.web.servlet.view.velocity.VelocityConfigurer">
-        <property name="resourceLoaderPath" value="/WEB-INF/velocity/"/>
-    </bean>
-
-    <bean id="viewResolver" class="org.springframework.web.servlet.view.velocity.VelocityViewResolver">
-        <property name="cache" value="true"/>
-        <property name="prefix" value=""/>
-        <property name="suffix" value=".vm"/>
         <property name="order" value="1" />
     </bean>
     <mvc:annotation-driven/>
-    <!-- pasted from stack overflow to stop cahcing in the browser. I don't think we want this for anything delivered by this servlet -->
+    <!-- pasted from stack overflow to stop caching in the browser. I don't think we want this for anything delivered by this servlet -->
     <mvc:interceptors>
         <bean id="webContentInterceptor"
               class="org.springframework.web.servlet.mvc.WebContentInterceptor">

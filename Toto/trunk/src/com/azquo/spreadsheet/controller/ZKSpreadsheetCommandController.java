@@ -38,7 +38,7 @@ import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 05/03/15
  * .
  * Adapted from a ZK example - so buttons in the jsp can interact with the ZK sheet object
@@ -75,7 +75,7 @@ public class ZKSpreadsheetCommandController {
                         Ranges.range(ss.getSelectedSheet()).setFreezePanel(ss.getSelection().getRow(), ss.getSelection().getColumn());
                     }
                     if ("UNFREEZE".equals(action)) {
-                        Ranges.range(ss.getSelectedSheet()).setFreezePanel(0,0);
+                        Ranges.range(ss.getSelectedSheet()).setFreezePanel(0, 0);
                     }
                     if ("XLS".equals(action)) {
                         Exporter exporter = Exporters.getExporter();
@@ -95,7 +95,7 @@ public class ZKSpreadsheetCommandController {
                     }
 
                     if ("SaveTemplate".equals(action)) { // similar to above but we're overwriting the report
-                        if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isMaster()){
+                        if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isMaster()) {
                             Exporter exporter = Exporters.getExporter();
                             Book book = ss.getBook();
                             int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
@@ -193,9 +193,9 @@ public class ZKSpreadsheetCommandController {
                                     UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);
                                     noSave = userRegionOptions.getNoSave();
                                 }
-                                if (!noSave){
+                                if (!noSave) {
                                     final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
-                                    if (!result.equals("true")){
+                                    if (!result.equals("true")) {
                                         Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
                                         saveOk = false;
                                     }
@@ -205,18 +205,18 @@ public class ZKSpreadsheetCommandController {
                             if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZREPEATSCOPE)) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
                                 String region = name.getName().substring(ZKAzquoBookUtils.AZREPEATSCOPE.length());
                                 final SName repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZREPEATREGION + region);
-                                if (repeatRegion != null){
+                                if (repeatRegion != null) {
                                     int regionRows = repeatRegion.getRefersToCellRegion().getRowCount();
                                     int regionCols = repeatRegion.getRefersToCellRegion().getColumnCount();
                                     // integer division is fine will give the number of complete region rows and cols ( rounds down)
                                     int repeatRows = name.getRefersToCellRegion().getRowCount() / regionRows;
                                     int repeatCols = name.getRefersToCellRegion().getColumnCount() / regionCols;
-                                    for (int row = 0; row < repeatRows; row++){
-                                        for (int col = 0; col < repeatCols; col++){
+                                    for (int row = 0; row < repeatRows; row++) {
+                                        for (int col = 0; col < repeatCols; col++) {
                                             //region + "-" + repeatRow + "-" + repeatColumn
-                                            if (loggedInUser.getSentCells(reportId, region.toLowerCase() + "-" + row + "-" + col) != null){ // the last ones on the repeat scope might be blank
+                                            if (loggedInUser.getSentCells(reportId, region.toLowerCase() + "-" + row + "-" + col) != null) { // the last ones on the repeat scope might be blank
                                                 final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
-                                                if (!result.equals("true")){
+                                                if (!result.equals("true")) {
                                                     Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
                                                     saveOk = false;
                                                 }
@@ -225,13 +225,13 @@ public class ZKSpreadsheetCommandController {
                                     }
                                 }
                             }
-                            if (!saveOk){
+                            if (!saveOk) {
                                 break; // stop looping through the names if a save failed
                             }
                         }
                         // new thing, look for followon, guess we need an instance of ZK azquobook utils
                         // need to show readout like executing todo. On that topic could the executing loading screen say "running command?" or something similar?
-                        if (saveOk){
+                        if (saveOk) {
                             loggedInUser.userLog("Save : " + onlineReport.getReportName());
                             ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                             // unlock here makes sense think, if duff save probably leave locked
@@ -248,16 +248,16 @@ public class ZKSpreadsheetCommandController {
                         }
                         ZKAzquoBookUtils.populateBook(newBook, 0, true, null, false);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
-                        if (ss.getSelectedSheet().isHidden()){
-                            for (SSheet s : ss.getSBook().getSheets()){
-                                if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE){
+                        if (ss.getSelectedSheet().isHidden()) {
+                            for (SSheet s : ss.getSBook().getSheets()) {
+                                if (s.getSheetVisible() == SSheet.SheetVisible.VISIBLE) {
                                     ss.setSelectedSheet(s.getSheetName());
                                     break;
                                 }
                             }
                         }
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
-                        if (reloadAfterSave){
+                        if (reloadAfterSave) {
                             Clients.evalJavaScript("alert(\"Save successful\")");
                         }
                     }
@@ -363,9 +363,9 @@ public class ZKSpreadsheetCommandController {
     private String renderBook(Book book) throws IOException {
         Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
         if (validationSheet != null) {
-            try{
+            try {
                 book.getInternalBook().deleteSheet(validationSheet.getInternalSheet());
-            } catch (Exception ignored){
+            } catch (Exception ignored) {
                 // todo - bring this up with ZK?
             }
         }

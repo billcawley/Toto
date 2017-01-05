@@ -59,7 +59,6 @@ public class ZKAzquoBookUtils {
     private static final String AZREPORTNAME = "az_reportname";
 
 
-
     private static final String CONTENTS = "contents(";
     /*
     CONTENTS is used to handle dependent ranges within the data region.   Thus one column in the data region may ask for a category, and the next a subcategory, which should be determined by the category
@@ -117,7 +116,7 @@ public class ZKAzquoBookUtils {
             for (SName sName : namesForSheet) {
                 if (sName.getName().equalsIgnoreCase(EXECUTERESULTS)) {
                     final SCell cell = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
-                    setValue(cell,loops.toString());
+                    setValue(cell, loops.toString());
                 }
             }
         }
@@ -181,7 +180,7 @@ public class ZKAzquoBookUtils {
                         }
                         // here we try to get an outcome to return
                         SName outcomeName = book.getInternalBook().getNameByName(OUTCOME); // I assume only one
-                        if (outcomeName != null){
+                        if (outcomeName != null) {
                             final CellRegion refersToCellRegion = outcomeName.getRefersToCellRegion();
                             SCell outcomeCell = book.getInternalBook().getSheetByName(outcomeName.getRefersToSheetName()).getCell(refersToCellRegion.getRow(), refersToCellRegion.getColumn());
                             // ok now I think I need to be careful of the cell type
@@ -195,17 +194,17 @@ public class ZKAzquoBookUtils {
                 } else if (trimmedLine.toLowerCase().startsWith("repeat until outcome")) { // new conditional logic
                     // similar to the for each - gather sub commands
                     String condition = trimmedLine.substring("repeat until outcome".length()).trim();
-                    if (condition.contains(" ")){
+                    if (condition.contains(" ")) {
                         String operator = condition.substring(0, condition.indexOf(" "));
                         String constant = condition.substring(condition.indexOf(" ") + 1);
                         double constantDouble = 0;
-                        if (constant.startsWith("`") && constant.endsWith("`")){
+                        if (constant.startsWith("`") && constant.endsWith("`")) {
                             constant = constant.replace("`", "");
                         } else { // try for a number
-                            try{
+                            try {
                                 constantDouble = Double.parseDouble(constant.replace(",", "")); // zap the commas to try to parse
                                 constant = null; // null the string if we have a parsed number
-                            } catch (Exception ignored){
+                            } catch (Exception ignored) {
                             }
                         }
                         int onwardLineNo = lineNo + 1;
@@ -223,19 +222,19 @@ public class ZKAzquoBookUtils {
                             do {
                                 counter++;
                                 final TypedPair<String, Double> stringDoubleTypedPair = executeCommands(loggedInUser, subCommands, loopsLog, count);
-                                if (stringDoubleTypedPair != null){
+                                if (stringDoubleTypedPair != null) {
                                     // ok I'm going to assume type matching - if the types don't match then forget the comparison
-                                    if ((stringDoubleTypedPair.getFirst() != null && constant != null)){ // string, equals not equals comparison
-                                        if (operator.equals("=")){
+                                    if ((stringDoubleTypedPair.getFirst() != null && constant != null)) { // string, equals not equals comparison
+                                        if (operator.equals("=")) {
                                             stop = stringDoubleTypedPair.getFirst().equalsIgnoreCase(constant);
-                                        } else if (operator.equals("!=")){
+                                        } else if (operator.equals("!=")) {
                                             stop = !stringDoubleTypedPair.getFirst().equalsIgnoreCase(constant);
                                         } else { // error for dodgy operator??
                                             loopsLog.append("Unknown operator for repeat until outcome string : " + operator);
                                         }
-                                    } else if (stringDoubleTypedPair.getFirst() == null && constant == null){ // assume numbers are set
+                                    } else if (stringDoubleTypedPair.getFirst() == null && constant == null) { // assume numbers are set
                                         // '=', '>'. '<'. '<=' '>=' '!='
-                                        switch (operator){
+                                        switch (operator) {
                                             case "=":
                                                 stop = stringDoubleTypedPair.getSecond() == constantDouble;
                                                 break;
@@ -264,7 +263,7 @@ public class ZKAzquoBookUtils {
                                 } else {
                                     loopsLog.append("Null return on execute for repeat until outcome : " + trimmedLine);
                                 }
-                            } while(!stop && counter < limit);
+                            } while (!stop && counter < limit);
                         }
                     } else {
                         loopsLog.append("badly formed repeat until outcome : " + trimmedLine);
@@ -357,7 +356,7 @@ public class ZKAzquoBookUtils {
             }
             for (int row = 0; row <= maxRow; row++) {
                 for (int col = 0; col <= maxCol; col++) {
-                    Range selection =  Ranges.range(sheet, row,col);
+                    Range selection = Ranges.range(sheet, row, col);
                     CellStyle oldStyle = selection.getCellStyle();
                     EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
                     newStyle.setLocked(false);
@@ -375,7 +374,7 @@ public class ZKAzquoBookUtils {
                 if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
                     CellRegion allowable = sName.getRefersToCellRegion();
                     // need to detect 2nd AND 3rd column here - 2nd = db, if 3rd then last is db 2nd report and 1st name (key)
-                    if (allowable.getLastColumn() - allowable.getColumn() == 2){ // name, report, database
+                    if (allowable.getLastColumn() - allowable.getColumn() == 2) { // name, report, database
                         for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
                             if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                                 String name = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
@@ -383,7 +382,7 @@ public class ZKAzquoBookUtils {
                                 final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                                 final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 2).getStringValue();
                                 Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
-                                if (database == null){
+                                if (database == null) {
                                     database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
                                 }
                                 if (report != null) {
@@ -391,17 +390,17 @@ public class ZKAzquoBookUtils {
                                 }
                             }
                         }
-                    } else if (allowable.getLastColumn() - allowable.getColumn() == 1){ // report, database
+                    } else if (allowable.getLastColumn() - allowable.getColumn() == 1) { // report, database
                         for (int row = allowable.getRow(); row <= allowable.getLastRow(); row++) {
                             if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                                 final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
                                 final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                                 final String databaseName = sheet.getInternalSheet().getCell(row, allowable.getColumn() + 1).getStringValue();
                                 Database database = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
-                                if (database == null){
+                                if (database == null) {
                                     database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
                                 }
-                                if (report != null){
+                                if (report != null) {
                                     permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, database));
                                 }
                             }
@@ -411,7 +410,7 @@ public class ZKAzquoBookUtils {
                             if (!sheet.getInternalSheet().getCell(row, allowable.getColumn()).isNull()) {
                                 final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
                                 final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-                                if (report != null){
+                                if (report != null) {
                                     permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId())));
                                 }
                             }
@@ -454,14 +453,14 @@ public class ZKAzquoBookUtils {
                                     }
                                     if ((userChoice == null || !validOptions.contains(userChoice)) && !validOptions.isEmpty()) { // just set the first for the mo.
                                         //check that userChoice is not a valid date...
-                                        if (date==null || !validOptions.contains(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))){
+                                        if (date == null || !validOptions.contains(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))) {
                                             userChoice = validOptions.get(0);
                                         }
                                     }
                                 }
                                 if (userChoice != null) {
                                     SCell sCell = sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn());
-                                    setValue(sCell,userChoice);
+                                    setValue(sCell, userChoice);
                                     context += choiceName + " = " + userChoice + ";";
                                 }
                             }
@@ -510,7 +509,7 @@ public class ZKAzquoBookUtils {
                 }
                 if (name.getName().toLowerCase().startsWith(AZDATAREGION)) { // then we have a data region to deal with here
                     String region = name.getName().substring(AZDATAREGION.length()); // might well be an empty string
-                    if (sheet.getBook().getInternalBook().getNameByName(AZROWHEADINGS + region) == null){ // if no row headings then this is an ad hoc region, save possible by default
+                    if (sheet.getBook().getInternalBook().getNameByName(AZROWHEADINGS + region) == null) { // if no row headings then this is an ad hoc region, save possible by default
                         showSave = true;
                     }
                     SName optionsRegion = sheet.getBook().getInternalBook().getNameByName(AZOPTIONS + region);
@@ -544,7 +543,7 @@ public class ZKAzquoBookUtils {
                             fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode); // in this case execute mode is telling the logs to be quiet
                         } catch (Exception e) {
                             String eMessage = "Unknown database " + databaseName + " for region " + region;
-                            setValue(sheet.getInternalSheet().getCell(0, 0),eMessage);
+                            setValue(sheet.getInternalSheet().getCell(0, 0), eMessage);
                         }
                         loggedInUser.setDatabaseWithServer(origServer, origDatabase);
                     } else {
@@ -555,18 +554,18 @@ public class ZKAzquoBookUtils {
             // after loading deal with lock stuff
             final List<CellsAndHeadingsForDisplay> sentForReport = loggedInUser.getSentForReport(reportId);
             StringBuilder lockWarnings = new StringBuilder();
-            for (CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay : sentForReport){
-                if (cellsAndHeadingsForDisplay.getLockResult() != null){
-                    if (lockWarnings.length() == 0){
+            for (CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay : sentForReport) {
+                if (cellsAndHeadingsForDisplay.getLockResult() != null) {
+                    if (lockWarnings.length() == 0) {
                         lockWarnings.append("Data on this sheet is locked\n");
                     }
                     lockWarnings.append("by " + cellsAndHeadingsForDisplay.getLockResult());
                 }
             }
-            if (lockWarnings.length() > 0){
+            if (lockWarnings.length() > 0) {
                 sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, interpretWarnings(lockWarnings.toString()));
                 // any locks applied need to be let go
-                if (sheet.getBook().getInternalBook().getAttribute(OnlineController.LOCKED) == Boolean.TRUE){ // I think that's allowed, it was locked then unlock and switch the flag
+                if (sheet.getBook().getInternalBook().getAttribute(OnlineController.LOCKED) == Boolean.TRUE) { // I think that's allowed, it was locked then unlock and switch the flag
                     try {
                         SpreadsheetService.unlockData(loggedInUser);
                     } catch (Exception e) {
@@ -630,7 +629,7 @@ public class ZKAzquoBookUtils {
                                             } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
                                                 if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
                                                     if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB
-                                                        setValue(sCell,cellForDisplay.getStringValue());
+                                                        setValue(sCell, cellForDisplay.getStringValue());
                                                     } else { // the formula overrode the DB, get the value ready of saving if the user wants that
                                                         cellForDisplay.setNewStringValue(sCell.getStringValue());
                                                         showSave = true;
@@ -739,7 +738,7 @@ public class ZKAzquoBookUtils {
 
     public static LocalDate isADate(String maybeDate) {
         if (maybeDate == null) return null;
-          LocalDate date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, dateTimeFormatter);
+        LocalDate date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, dateTimeFormatter);
         if (date != null) return date;
         date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, ukdf4);
         if (date != null) return date;
@@ -751,23 +750,23 @@ public class ZKAzquoBookUtils {
     }
 
 
-    private static String interpretWarnings(String lockWarnings){
+    private static String interpretWarnings(String lockWarnings) {
         //makes the warning more 'user-friendly'
-        int pos=0;
-        while (lockWarnings.indexOf("by ", pos) > 0){
+        int pos = 0;
+        while (lockWarnings.indexOf("by ", pos) > 0) {
             int startName = lockWarnings.indexOf("by ", pos);
             int endName = lockWarnings.indexOf(",", startName);
             String user = lockWarnings.substring(startName + 3, endName);
             String userName;
             try {
                 userName = UserDAO.findByEmail(user.trim()).getName();
-            }catch(Exception e){
+            } catch (Exception e) {
                 userName = user;
             }
-            lockWarnings = lockWarnings.substring(0, startName + 3) + userName + lockWarnings.substring(endName).replaceFirst("T"," at ");
+            lockWarnings = lockWarnings.substring(0, startName + 3) + userName + lockWarnings.substring(endName).replaceFirst("T", " at ");
             pos = startName + 3 + userName.length();
-         }
-        return lockWarnings.substring(0,lockWarnings.lastIndexOf(":"));//this should be on every line, but usually there'll only be one line
+        }
+        return lockWarnings.substring(0, lockWarnings.lastIndexOf(":"));//this should be on every line, but usually there'll only be one line
     }
 
     // like rangeToStringLists in azquobook
@@ -830,7 +829,7 @@ public class ZKAzquoBookUtils {
         SName repeatItem = sheet.getBook().getInternalBook().getNameByName(AZREPEATITEM + region);
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
-        if (userRegionOptions.getUserLocked()){ // then put the flag on the book, remember to take it off (and unlock!) if there was an error
+        if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
             sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
         }
 
@@ -924,12 +923,12 @@ public class ZKAzquoBookUtils {
                         try {
                             //List<String> possibleOptions = getDropdownListForQuery(loggedInUser, "`" + filter + "` children");
                             // the names selected off the pivot filter are jammed into a name with "az_" before the filter name
-                              List<String> choiceOptions = AzquoBookUtils.getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
+                            List<String> choiceOptions = AzquoBookUtils.getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
                             // This means if it's not empty and not full ignore the filter. Works as the permute function, which needs to be used with pivots,
                             // will constrain by this set, if created, falling back on the set it's passed if not. Means what's in the permute will be a subset of the filters
                             // does this mean a double check? That it's constrained by selection here in context and again by the permute? I suppose no harm.
                             //if (possibleOptions.size() != choiceOptions.size() && choiceOptions.size() > 0) {
-                            if (choiceOptions.size()==0){
+                            if (choiceOptions.size() == 0) {
                                 //THis should create the required bits server side . . .
                                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                                         .getFilterListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "` children", "az_" + filter, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
@@ -987,31 +986,31 @@ public class ZKAzquoBookUtils {
                         colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
                         int topRow = 0;
                         CellRegion displayColumnHeadings = getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
-                        if (displayColumnHeadings!=null){
+                        if (displayColumnHeadings != null) {
                             topRow = displayColumnHeadings.getRow();
                         }
-                         int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
+                        int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
                         Range copySource = Ranges.range(sheet, topRow, insertCol - 1, maxRow, insertCol - 1);
                         int repeatCount = getRepeatCount(loggedInUser, cellsAndHeadingsForDisplay.getColHeadingsSource());
-                        if (repeatCount> 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
+                        if (repeatCount > 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
                             int copyCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / repeatCount;
                             cloneCols = colsToAdd;
-                            if (repeatCount > displayDataRegion.getColumnCount()){
+                            if (repeatCount > displayDataRegion.getColumnCount()) {
                                 colsToAdd = repeatCount - displayDataRegion.getColumnCount();
                                 Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col
                                 CellOperationUtil.insertColumn(insertRange);
                                 // will this paste the lot?
                                 CellOperationUtil.paste(copySource, insertRange);
-                                insertCol+=colsToAdd;
+                                insertCol += colsToAdd;
                                 colsToAdd = repeatCount * (copyCount - 1);
                                 cloneCols = colsToAdd;
 
 
                             }
-                           insertCol++;
-                            copySource = Ranges.range(sheet,topRow, displayDataRegion.getColumn(),maxRow,insertCol - 1);
+                            insertCol++;
+                            copySource = Ranges.range(sheet, topRow, displayDataRegion.getColumn(), maxRow, insertCol - 1);
                         }
-                         Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col, except for permuted headings
+                        Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col, except for permuted headings
                         CellOperationUtil.insertColumn(insertRange);
                         // will this paste the lot?
                         CellOperationUtil.paste(copySource, insertRange);
@@ -1113,19 +1112,19 @@ public class ZKAzquoBookUtils {
                                         CellOperationUtil.applyBackColor(selection, lineFormat.getCellStyle().getBackColor().getHtmlColor());
                                         CellOperationUtil.applyFontColor(selection, lineFormat.getCellStyle().getFont().getColor().getHtmlColor());
                                         Range formatRange = Ranges.range(sheet.getBook().getSheet(lineFormat.getSheet().getSheetName()), lineFormat.getRowIndex(), lineFormat.getColumnIndex());
-                                        CellOperationUtil.pasteSpecial(formatRange,headingRange, Range.PasteType.FORMATS, Range.PasteOperation.NONE,false,false);
+                                        CellOperationUtil.pasteSpecial(formatRange, headingRange, Range.PasteType.FORMATS, Range.PasteOperation.NONE, false, false);
                                         int blankout = sameValues;
                                         if (blankout > 0) {
                                             Range blanks = Ranges.range(sheet, row - 1, rowHeadingsColumn, row - 1, rowHeadingsColumn + blankout - 1);
                                             CellOperationUtil.applyFontColor(blanks, sheet.getInternalSheet().getCell(row - 1, rowHeadingsColumn).getCellStyle().getBackColor().getHtmlColor());
                                         }
-                                        SCell first = sheet.getInternalSheet().getCell(row,rowHeadingsColumn);
+                                        SCell first = sheet.getInternalSheet().getCell(row, rowHeadingsColumn);
                                         //the last line of the pivot table shows the set name of the first set, which is not very useful!
-                                        try{
-                                            if (first.getStringValue().startsWith("az_")){
+                                        try {
+                                            if (first.getStringValue().startsWith("az_")) {
                                                 first.setStringValue("TOTAL");
                                             }
-                                        }catch (Exception ignored){
+                                        } catch (Exception ignored) {
                                         }
                                     }
                                     if (row > displayRowHeadings.getRow()) {
@@ -1151,12 +1150,12 @@ public class ZKAzquoBookUtils {
                                 int hcol = rowHeadingsColumn;
                                 for (String rowHeading : rowHeadings) {
                                     rowHeading = rowHeading.replace("`", "").trim();
-                                    if (rowHeading.contains(" sorted")){ // maybe factor the string literal? Need to make it work for the mo
+                                    if (rowHeading.contains(" sorted")) { // maybe factor the string literal? Need to make it work for the mo
                                         rowHeading = rowHeading.substring(0, rowHeading.indexOf(" sorted")).trim();
                                     }
                                     String colHeading = multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
-                                    if (colHeading==null || colHeading.equals("[all]")) colHeading = rowHeading;
-                                    setValue(sheet.getInternalSheet().getCell(hrow, hcol++),colHeading);
+                                    if (colHeading == null || colHeading.equals("[all]")) colHeading = rowHeading;
+                                    setValue(sheet.getInternalSheet().getCell(hrow, hcol++), colHeading);
                                 }
 
                             }
@@ -1176,25 +1175,25 @@ public class ZKAzquoBookUtils {
                                 }
                                 int col = displayColumnHeadings.getColumn();
                                 for (String heading : colHeading) {
-                                    if (heading.equals(lastHeading)){
+                                    if (heading.equals(lastHeading)) {
                                         heading = "";
-                                    }else{
+                                    } else {
                                         lastHeading = heading;
                                     }
 
                                     SCell sCell = sheet.getInternalSheet().getCell(row, col);
                                     if (sCell.getType() != SCell.CellType.STRING && sCell.getType() != SCell.CellType.NUMBER) {
-                                        setValue(sCell,"");
-                                    }else{//new behaviour - if there's a filled in heading, this can be used to detect the sort.
-                                        try{
-                                            if (sCell.getStringValue().length() > 0){
+                                        setValue(sCell, "");
+                                    } else {//new behaviour - if there's a filled in heading, this can be used to detect the sort.
+                                        try {
+                                            if (sCell.getStringValue().length() > 0) {
                                                 heading = sCell.getStringValue();
                                             }
-                                        }catch(Exception e){//to catch the rare cases where someone has hardcoded a year into the headings
-                                            if (sCell.getNumberValue() > 0){
+                                        } catch (Exception e) {//to catch the rare cases where someone has hardcoded a year into the headings
+                                            if (sCell.getNumberValue() > 0) {
                                                 heading = sCell.getNumberValue() + "";
-                                                if (heading.length() > 5 && heading.endsWith(".0")){
-                                                    heading = heading.substring(0,heading.length()-2);
+                                                if (heading.length() > 5 && heading.endsWith(".0")) {
+                                                    heading = heading.substring(0, heading.length() - 2);
                                                 }
                                             }
                                         }
@@ -1260,11 +1259,11 @@ public class ZKAzquoBookUtils {
                         // yes the first will simply be copying over itself
                         for (String item : repeatListItems) {
                             Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight - 1, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth - 1);
-                            if (repeatRow > 0 || repeatColumn > 0){
+                            if (repeatRow > 0 || repeatColumn > 0) {
                                 CellOperationUtil.paste(copySource, insertRange);
                             }
                             // and set the item
-                            setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset),item);
+                            setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset), item);
                             repeatColumn++;
                             if (repeatColumn == repeatColumns) { // zap if back to the first column
                                 repeatColumn = 0;
@@ -1356,7 +1355,7 @@ public class ZKAzquoBookUtils {
                             if (cell.getCellStyle().getFont().getName().equalsIgnoreCase("Code EAN13")) { // then a special case, need to use barcode encoding
                                 cell.setValue(SpreadsheetService.prepareEAN13Barcode(cellValue.getStringValue()));// guess we'll see how that goes!
                             } else {
-                                setValue(cell,cellValue.getStringValue());
+                                setValue(cell, cellValue.getStringValue());
                             }
                         }
                         // see if this works for highlighting
@@ -1364,8 +1363,8 @@ public class ZKAzquoBookUtils {
                             CellOperationUtil.applyFontColor(Ranges.range(sheet, row, col), "#FF0000");
                         }
                         // commented for the moment, requires the overall unlock per sheet followed by the protect later
-                        if (cellValue.isLocked()){
-                            Range selection =  Ranges.range(sheet, row, col);
+                        if (cellValue.isLocked()) {
+                            Range selection = Ranges.range(sheet, row, col);
                             CellStyle oldStyle = selection.getCellStyle();
                             EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
                             newStyle.setLocked(true);
@@ -1381,26 +1380,26 @@ public class ZKAzquoBookUtils {
     }
 
 
-    private static int getRepeatCount(LoggedInUser loggedInUser,List<List<String>> colHeadingsSource){
+    private static int getRepeatCount(LoggedInUser loggedInUser, List<List<String>> colHeadingsSource) {
         int colHeadingRow = colHeadingsSource.size();
-        String lastColHeading = colHeadingsSource.get(colHeadingRow-1).get(0);
+        String lastColHeading = colHeadingsSource.get(colHeadingRow - 1).get(0);
         boolean repeating = false;
         int repeatCount = 1;
-        if (!lastColHeading.startsWith(".")){
-            if (lastColHeading.toLowerCase().startsWith("permute")){
-                  return 1;//permutes are unpredictable unless followed by a set
-             }
-            repeatCount = AzquoBookUtils.getDropdownListForQuery(loggedInUser,lastColHeading).size();
+        if (!lastColHeading.startsWith(".")) {
+            if (lastColHeading.toLowerCase().startsWith("permute")) {
+                return 1;//permutes are unpredictable unless followed by a set
+            }
+            repeatCount = AzquoBookUtils.getDropdownListForQuery(loggedInUser, lastColHeading).size();
         }
         colHeadingRow--;
         //if the last line is a set, is one of the lines above also a set - if so this is a permutation
-        while (!repeating && colHeadingRow-- > 0){
+        while (!repeating && colHeadingRow-- > 0) {
             String colHeading = colHeadingsSource.get(colHeadingRow).get(0);
-            if (colHeading.toLowerCase().startsWith("permute(") || AzquoBookUtils.getDropdownListForQuery(loggedInUser, colHeading).size() > 0){
+            if (colHeading.toLowerCase().startsWith("permute(") || AzquoBookUtils.getDropdownListForQuery(loggedInUser, colHeading).size() > 0) {
                 return repeatCount;
             }
         }
-        if (!repeating){
+        if (!repeating) {
             return 1;
         }
         return repeatCount;
@@ -1487,7 +1486,7 @@ public class ZKAzquoBookUtils {
                     choiceCell.clearFormulaResultCache();
                 }
                 //System.out.println("Choice cell : " + choiceCell);
-                if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)){
+                if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                     String query = choiceCell.getStringValue();
                     if (!query.toLowerCase().contains("contents(")) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
                         if (query.toLowerCase().contains("default")) {
@@ -1553,17 +1552,17 @@ public class ZKAzquoBookUtils {
                     //create an array of the options....
                     while (vSheet.getCell(optionNo + 1, validationSourceColumn).getStringValue().length() > 0) {
                         String optionVal = vSheet.getCell(optionNo + 1, validationSourceColumn).getStringValue();
-                        setValue(vSheet.getCell(0, targetCol + optionNo),optionVal);
+                        setValue(vSheet.getCell(0, targetCol + optionNo), optionVal);
                         String newQuery = query.substring(0, contentPos) + optionVal + query.substring(contentPos + catEnd + CONTENTS.length() + 1);
                         try {
                             List<String> optionList = AzquoBookUtils.getDropdownListForQuery(loggedInUser, newQuery);
                             if (optionList.size() > maxSize) maxSize = optionList.size();
                             int rowOffset = 1;
                             for (String option : optionList) {
-                                setValue(vSheet.getCell(rowOffset++, targetCol + optionNo),option);
+                                setValue(vSheet.getCell(rowOffset++, targetCol + optionNo), option);
                             }
                         } catch (Exception e) {
-                            setValue(vSheet.getCell(1, validationSourceColumn),e.getMessage());
+                            setValue(vSheet.getCell(1, validationSourceColumn), e.getMessage());
                             return;
                         }
                         optionNo++;
@@ -1573,7 +1572,7 @@ public class ZKAzquoBookUtils {
                     for (int col = 0; col < optionNo; col++) {
                         for (int row = 1; row < maxSize + 1; row++) {
                             if (vSheet.getCell(row, targetCol + col).getStringValue().length() == 0) {
-                                setValue(vSheet.getCell(row, targetCol + col)," ");
+                                setValue(vSheet.getCell(row, targetCol + col), " ");
                             }
                         }
                     }
@@ -1612,8 +1611,8 @@ public class ZKAzquoBookUtils {
                     queryCell.getFormulaResultType();
                     queryCell.clearFormulaResultCache();
                 }
-                if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR)){
-                    setValue(queryCell,AzquoBookUtils.resolveQuery(loggedInUser, queryCell.getStringValue()));
+                if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR)) {
+                    setValue(queryCell, AzquoBookUtils.resolveQuery(loggedInUser, queryCell.getStringValue()));
                 }
             }
         }
@@ -1631,7 +1630,7 @@ public class ZKAzquoBookUtils {
         List<SName> dependentRanges = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) {
             String rangeName = name.getName().toLowerCase();
-            if (rangeName.toLowerCase().startsWith(AZPIVOTFILTERS) || rangeName.toLowerCase().startsWith(AZCONTEXTFILTERS) ) {//the correct version should be 'az_ContextFilters'
+            if (rangeName.toLowerCase().startsWith(AZPIVOTFILTERS) || rangeName.toLowerCase().startsWith(AZCONTEXTFILTERS)) {//the correct version should be 'az_ContextFilters'
                 String[] filters = getSnameCell(name).getStringValue().split(",");
                 SName contextChoices = book.getInternalBook().getNameByName(AZCONTEXTHEADINGS);
                 if (contextChoices == null) {
@@ -1639,8 +1638,8 @@ public class ZKAzquoBookUtils {
                     contextChoices = book.getInternalBook().getNameByName(AZPIVOTHEADINGS);
                 }
                 if (contextChoices != null) {
-                    showChoices(loggedInUser,book,contextChoices,filters,3);
-                 }
+                    showChoices(loggedInUser, book, contextChoices, filters, 3);
+                }
             }
             if (name.getName().toLowerCase().endsWith("choice")) {
                 String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
@@ -1659,20 +1658,20 @@ public class ZKAzquoBookUtils {
                             int contentPos = query.toLowerCase().indexOf(CONTENTS);
                             if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
                                 if (contentPos < 0) {//not a dependent range
-                                    setValue(validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded),name.getName());
+                                    setValue(validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded), name.getName());
                                     int row = 0;
                                     // yes, this can null pointer but if it does something is seriously wrong
                                     for (String choiceOption : choiceOptions) {
                                         row++;// like starting at 1
                                         SCell vCell = validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded);
                                         vCell.setCellStyle(sheet.getInternalSheet().getCell(chosenRegion.getRow(), chosenRegion.getColumn()).getCellStyle());
-                                        try{
+                                        try {
                                             Date date = df.parse(choiceOption);
                                             vCell.setDateValue(date);
 
 
-                                        }catch(Exception e){
-                                            setValue(vCell,choiceOption);
+                                        } catch (Exception e) {
+                                            setValue(vCell, choiceOption);
                                         }
                                     }
                                     if (row > 0) { // if choice options is empty this will not work
@@ -1710,7 +1709,7 @@ public class ZKAzquoBookUtils {
                     if (multi != null) {
                         SCell resultCell = getSnameCell(multi);
                         // all multi list is is a fancy way of saying to the user what is selected, e.g. all, various, all but or a list of those selected. The actual selection box is created in the composer, onclick
-                        setValue(resultCell,multiList(loggedInUser, choiceName + "Multi", choiceCell.getStringValue()));
+                        setValue(resultCell, multiList(loggedInUser, choiceName + "Multi", choiceCell.getStringValue()));
                     }
                 }
             }
@@ -1740,7 +1739,7 @@ public class ZKAzquoBookUtils {
     }
 
 
-    private static void showChoices(LoggedInUser loggedInUser, Book book, SName contextChoices, String[] filters, int headingWidth){
+    private static void showChoices(LoggedInUser loggedInUser, Book book, SName contextChoices, String[] filters, int headingWidth) {
         Sheet cSheet = book.getSheet(contextChoices.getRefersToSheetName());
         CellRegion chRange = contextChoices.getRefersToCellRegion();
         int headingRow = chRange.getRow();
@@ -1764,9 +1763,9 @@ public class ZKAzquoBookUtils {
                     //Ranges.range(pSheet, chosenRow, chosenCol + 1).setNameName(filter + "Chosen");
 
                 }
-                setValue(cSheet.getInternalSheet().getCell(chosenRow, chosenCol),filter);
-                if (headingWidth > 1){
-                    setValue(cSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1),selected);
+                setValue(cSheet.getInternalSheet().getCell(chosenRow, chosenCol), filter);
+                if (headingWidth > 1) {
+                    setValue(cSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1), selected);
                 }
                 filterCount++;
             }
@@ -1777,7 +1776,7 @@ public class ZKAzquoBookUtils {
     public static void setValue(SCell sCell, String sValue) {
         //when setting Excel cell values we need to check  - in order - for times, dates and numbers in general
         sCell.setStringValue(sValue);
-        if (sCell.getCellStyle().getDataFormat().equals("@")){
+        if (sCell.getCellStyle().getDataFormat().equals("@")) {
             //if the cell is formatted as text, then don't try numbers
             return;
         }
@@ -1794,12 +1793,12 @@ public class ZKAzquoBookUtils {
         }
         String format = sCell.getCellStyle().getDataFormat();
         if (format.toLowerCase().contains("m")) {//allow users to format their own dates.  All dates on file as values are yyyy-MM-dd
-             LocalDate date = isADate(sValue);
-             if (date != null) {
-                 sCell.setDateValue(Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant()));
-                 return;
-             }
-         }
+            LocalDate date = isADate(sValue);
+            if (date != null) {
+                sCell.setDateValue(Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant()));
+                return;
+            }
+        }
         if (NumberUtils.isNumber(sValue)) {
             sCell.setValue(Double.parseDouble(sValue));
         }

@@ -46,7 +46,7 @@ import static javax.xml.bind.DatatypeConverter.parseBase64Binary;
 @RequestMapping("/Excel")
 public class ExcelController {
 
-    static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     static Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
 

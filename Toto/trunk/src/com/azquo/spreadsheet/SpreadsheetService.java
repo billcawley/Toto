@@ -169,7 +169,7 @@ public class SpreadsheetService {
     }
 
     public static String saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName) throws Exception {
-        return saveData(loggedInUser,region,reportId,reportName,true); // default to persist server side
+        return saveData(loggedInUser, region, reportId, reportName, true); // default to persist server side
     }
 
     public static String saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName, boolean persist) throws Exception {
@@ -179,10 +179,10 @@ public class SpreadsheetService {
             //if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
             final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
-            if (result.equals("true")){ // then reset the cells and headings object to reflect the changed state
-                for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()){
-                    for (CellForDisplay cell : row){
-                        if (cell.isChanged()){
+            if (result.equals("true")) { // then reset the cells and headings object to reflect the changed state
+                for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
+                    for (CellForDisplay cell : row) {
+                        if (cell.isChanged()) {
                             cell.setNewValuesToCurrentAfterSaving();
                         }
                     }
@@ -329,7 +329,7 @@ public class SpreadsheetService {
                 }
                 // similar to normal loading
                 Business b = BusinessDAO.findById(user.getBusinessId());
-                if (b == null){
+                if (b == null) {
                     throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
                 }
                 String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
@@ -429,5 +429,4 @@ public class SpreadsheetService {
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).nameAutoComplete(databaseAccessToken, name, 100);
     }
-
 }

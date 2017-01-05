@@ -25,7 +25,6 @@ public class DownloadController {
     @RequestMapping
     public void handleRequest(HttpServletRequest request
             , HttpServletResponse response
-            , @RequestParam(value = "pdf", required = false, defaultValue = "false") boolean pdf
             , @RequestParam(value = "image", required = false) String image
     ) throws Exception {
         // deliver a pre prepared image. Are these names unique? Could images move between spreadsheets unintentionally?

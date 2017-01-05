@@ -57,11 +57,11 @@ public class RemoteController {
 
         @JsonCreator
         public JsonParameters(@JsonProperty("logon") String logon
-                ,@JsonProperty("password")  String password
-                ,@JsonProperty("database")  String database
-                ,@JsonProperty("reportName")  String reportName
-                ,@JsonProperty("regions") String regions
-                ,@JsonProperty("choices")  Map<String, String> choices) {
+                , @JsonProperty("password") String password
+                , @JsonProperty("database") String database
+                , @JsonProperty("reportName") String reportName
+                , @JsonProperty("regions") String regions
+                , @JsonProperty("choices") Map<String, String> choices) {
             this.logon = logon;
             this.password = password;
             this.database = database;
@@ -76,6 +76,7 @@ public class RemoteController {
         public final int rows;
         public final int columns;
         public final List<List<String>> data;
+
         private JsonRegion(String name, int rows, int columns, List<List<String>> data) {
             this.name = name;
             this.rows = rows;
@@ -88,7 +89,8 @@ public class RemoteController {
         public final String name;
         public final String value;
         public final List<String> options;
-        private JsonChoice(String name, String value, List<String> options){
+
+        private JsonChoice(String name, String value, List<String> options) {
             this.name = name;
             this.value = value;
             this.options = options;
@@ -102,6 +104,7 @@ public class RemoteController {
         public final String reportName;
         public final List<JsonChoice> choices;
         public final List<JsonRegion> regions;
+
         public JsonReturn(String error, String database, String reportName, List<JsonChoice> choices, List<JsonRegion> regions) {
             this.error = error;
             this.database = database;
@@ -133,10 +136,10 @@ public class RemoteController {
                 if (loggedInUser == null) {
                     return "incorrect login details"; // probably need to add json
                 }
-                if (jsonParameters.choices!=null){
-                    for (String key:jsonParameters.choices.keySet()){
+                if (jsonParameters.choices != null) {
+                    for (String key : jsonParameters.choices.keySet()) {
                         //remove 'chosen' from key
-                        SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(),key.substring(0,key.length()-6),jsonParameters.choices.get(key));
+                        SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), key.substring(0, key.length() - 6), jsonParameters.choices.get(key));
                     }
                 }
                 // database switching should be done by being logged in
@@ -174,14 +177,14 @@ public class RemoteController {
                     List<JsonChoice> jsonChoices = new ArrayList<>();
                     final List<SName> names = book.getInternalBook().getNames();
                     String[] regions = null;
-                    if (jsonParameters.regions!=null&& jsonParameters.regions.length() > 0){
+                    if (jsonParameters.regions != null && jsonParameters.regions.length() > 0) {
                         regions = jsonParameters.regions.split(",");
                     }
-                    for (SName name : names){
+                    for (SName name : names) {
                         final SSheet internalSheet = book.getSheet(name.getRefersToSheetName()).getInternalSheet();
                         final CellRegion refersToCellRegion = name.getRefersToCellRegion();
-                        if ((regions==null && name.getName().toLowerCase().startsWith("az_dataregion"))
-                                  ||(regions!=null && inSet(name.getName(), regions))){
+                        if ((regions == null && name.getName().toLowerCase().startsWith("az_dataregion"))
+                                || (regions != null && inSet(name.getName(), regions))) {
                             List<List<String>> data = new ArrayList<>();
                             for (int i = refersToCellRegion.getRow(); i <= refersToCellRegion.getLastRow(); i++) {
                                 List<String> row = new ArrayList<>();
@@ -205,7 +208,7 @@ public class RemoteController {
                                 data.add(row);
                             }
                             jsonRegions.add(new JsonRegion(name.getName(), (refersToCellRegion.getLastRow() - refersToCellRegion.getRow()) + 1, (refersToCellRegion.getLastColumn() - refersToCellRegion.getColumn()) + 1, data));
-                        }else {
+                        } else {
                             if (name.getName().toLowerCase().endsWith("chosen")) {
                                 String value = internalSheet.getCell(refersToCellRegion.getRow(), refersToCellRegion.getColumn()).getStringValue();
                                 List<String> options = new ArrayList<>();
@@ -224,7 +227,6 @@ public class RemoteController {
                                     }
                                 }
                                 jsonChoices.add(new JsonChoice(name.getName(), value, options));
-
                             }
                         }
                     }
@@ -245,9 +247,9 @@ public class RemoteController {
         }
     }
 
-    private boolean inSet(String toTest, String[] set){
-        for (String element:set ){
-            if (element.trim().equalsIgnoreCase(toTest)){
+    private boolean inSet(String toTest, String[] set) {
+        for (String element : set) {
+            if (element.trim().equalsIgnoreCase(toTest)) {
                 return true;
             }
         }
