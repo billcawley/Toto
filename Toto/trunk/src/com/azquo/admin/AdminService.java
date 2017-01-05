@@ -369,6 +369,14 @@ this may now not work at all, perhaps delete?
         }
     }
 
+    public static void checkDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
+        Database db = DatabaseDAO.findById(databaseId);
+        if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
+            RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).checkDatabase(db.getPersistenceName());
+        }
+    }
+
     public static void unloadDatabase(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = DatabaseDAO.findById(databaseId);
         if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())

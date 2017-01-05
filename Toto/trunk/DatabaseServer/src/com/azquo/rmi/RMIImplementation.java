@@ -44,6 +44,15 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
+    public void checkDatabase(String persistenceName) throws RemoteException {
+        try {
+            DSAdminService.checkDatabase(persistenceName);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);// I think this is reasonable for the mo?
+        }
+    }
+
+    @Override
     public void dropDatabase(String persistenceName) throws RemoteException {
         try {
             DSAdminService.dropDatabase(persistenceName);

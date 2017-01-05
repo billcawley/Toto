@@ -84,6 +84,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "databaseType", required = false) String databaseType
             , @RequestParam(value = "databaseServerId", required = false) String databaseServerId
             , @RequestParam(value = "emptyId", required = false) String emptyId
+            , @RequestParam(value = "checkId", required = false) String checkId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "unloadId", required = false) String unloadId
                                 // todo - address whether we're still using such parameters and associated functions
@@ -111,6 +112,9 @@ public class ManageDatabasesController {
                 }
                 if (emptyId != null && NumberUtils.isNumber(emptyId)) {
                     AdminService.emptyDatabaseById(loggedInUser, Integer.parseInt(emptyId));
+                }
+                if (checkId != null && NumberUtils.isNumber(checkId)) {
+                    AdminService.checkDatabaseById(loggedInUser, Integer.parseInt(checkId));
                 }
                 if (deleteId != null && NumberUtils.isNumber(deleteId)) {
                     AdminService.removeDatabaseById(loggedInUser, Integer.parseInt(deleteId));

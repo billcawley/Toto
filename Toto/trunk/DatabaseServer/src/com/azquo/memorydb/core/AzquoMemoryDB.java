@@ -186,6 +186,15 @@ public final class AzquoMemoryDB {
         return nameByIdMap.values();
     }
 
+    // these two for database integrity check
+    public Collection<Integer> getAllNameIds() {
+        return Collections.unmodifiableCollection(nameByIdMap.keySet());
+    }
+
+    public Collection<Integer> getAllValueIds() {
+        return Collections.unmodifiableCollection(valueByIdMap.keySet());
+    }
+
     public Value getValueById(final int id) {
         return valueByIdMap.get(id);
     }

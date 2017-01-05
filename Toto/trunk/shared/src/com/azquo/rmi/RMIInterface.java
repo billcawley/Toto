@@ -27,6 +27,8 @@ public interface RMIInterface extends Remote {
 
     void emptyDatabase(String persistenceName) throws RemoteException;
 
+    void checkDatabase(String persistenceName) throws RemoteException;
+
     void dropDatabase(String persistenceName) throws RemoteException;
 
     void createDatabase(String persistenceName) throws RemoteException;
