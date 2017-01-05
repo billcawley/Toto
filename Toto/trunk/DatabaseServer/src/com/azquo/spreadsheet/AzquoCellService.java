@@ -226,7 +226,7 @@ class AzquoCellService {
         }
         try {
 
-            int col = Integer.parseInt(toFind);
+            int col = Integer.parseInt(toFind.trim());
             if (col > 0){
                 return col - 1;
             }
@@ -272,7 +272,7 @@ class AzquoCellService {
         // need to be able to sort on multiple columns now - find the indexes here. Order is important I assume!
         List<Integer> sortOnColIndexes = new ArrayList<>();
         if (regionOptions.sortColumn != null){
-            for (String sc : regionOptions.sortColumn.split(",")){
+            for (String sc : regionOptions.sortColumn.split("&")){
                 int sortColIndex = findPosition(columnHeadings, sc, languages);
                 if (sortColIndex != -1){
                     sortOnColIndexes.add(sortColIndex);
