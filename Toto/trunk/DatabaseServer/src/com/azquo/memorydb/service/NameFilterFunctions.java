@@ -102,7 +102,7 @@ class NameFilterFunctions {
         return toReturn; // its appropriate member collection should have been modified via namesToFilter above, return it
     }
 
-    static NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String countBackString, final String compareWithString, List<Name> referencedNames) throws Exception {
+    static NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String offsetString, final String compareWithString, List<Name> referencedNames) throws Exception {
         if (nameSetList.list == null) {
             return nameSetList; // don't bother trying to constrain a non list
         }
@@ -110,7 +110,7 @@ class NameFilterFunctions {
         int to = -10000;
         int from = 1;
         int count = NameQueryParser.parseInt(countString, -1);
-        int offset = NameQueryParser.parseInt(countBackString, 0);
+        int offset =  NameQueryParser.parseInt(offsetString, 0);
         int compareWith = NameQueryParser.parseInt(compareWithString, 0);
         int space = 1; //spacing between 'compare with' fields
         //first look for integers and encoded names...
@@ -158,21 +158,21 @@ class NameFilterFunctions {
             to = nameSetList.list.size() + to;
         }
         int added = 0;
-        for (int i = offset; i < nameSetList.list.size() + offset; i++) {
-            if (position == from || (i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(fromString))) {
+        for (int i =  - offset; i < nameSetList.list.size() - offset; i++) {
+            if (position == from || (i >= 0 && i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(fromString))) {
                 inSet = true;
             }
-            if (inSet) {
-                toReturn.add(nameSetList.list.get(i - offset));
+            if (inSet && i + offset < nameSetList.list.size()) {
+                toReturn.add(nameSetList.list.get(i + offset));
                 if (compareWith != 0) {
-                    toReturn.add(nameSetList.list.get(i - offset + compareWith));
+                    toReturn.add(nameSetList.list.get(i + offset + compareWith));
                     for (int j = 0; j < space; j++) {
                         toReturn.add(null);
                     }
                 }
                 added++;
             }
-            if (position == to || (i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(toString)) || added == count) {
+            if (position == to || (i >= 0 && i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(toString)) || added == count) {
                 inSet = false;
             }
             position++;

@@ -14,6 +14,7 @@ public class StringLiterals {
     public static final String LEVEL = "level";
     public static final String PARENTS = "parents";
     public static final String FROM = "from";
+    public static final String OFFSET = "offset";
     public static final String TO = "to";
     public static final String AND = "and";
     public static final String COUNT = "count";
@@ -29,7 +30,6 @@ public class StringLiterals {
     public static final String EDIT = "edit";
     public static final String NEW = "new";
     public static final String DELETE = "delete";
-    public static final String COUNTBACK = "countback";
     public static final String COMPAREWITH = "comparewith";
     public static final String AS = "as";
     public static final char ASSYMBOL = '@';

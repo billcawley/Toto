@@ -273,12 +273,12 @@ public class NameQueryParser {
         //System.out.println("interpret set term . . ." + setTerm);
         final String levelString = StringUtils.getInstruction(setTerm, StringLiterals.LEVEL);
         String fromString = StringUtils.getInstruction(setTerm, StringLiterals.FROM);
+        String offsetString = StringUtils.getInstruction(setTerm, StringLiterals.OFFSET);
         String parentsString = StringUtils.getInstruction(setTerm, StringLiterals.PARENTS);
         String childrenString = StringUtils.getInstruction(setTerm, StringLiterals.CHILDREN);
         final String sorted = StringUtils.getInstruction(setTerm, StringLiterals.SORTED);
         String toString = StringUtils.getInstruction(setTerm, StringLiterals.TO);
         String countString = StringUtils.getInstruction(setTerm, StringLiterals.COUNT);
-        final String countbackString = StringUtils.getInstruction(setTerm, StringLiterals.COUNTBACK);
         final String compareWithString = StringUtils.getInstruction(setTerm, StringLiterals.COMPAREWITH);
         String selectString = StringUtils.getInstruction(setTerm, StringLiterals.SELECT);
 
@@ -348,11 +348,12 @@ public class NameQueryParser {
         }
         // do from/to/count at the end. It was above for no good reason I can see
         if (fromString == null) fromString = "";
+        if (offsetString == null) offsetString = "";
         if (toString == null) toString = "";
         if (countString == null) countString = "";
         if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
             if (namesFound.list != null) { // yeah I know some say this is not best practice but hey ho
-                namesFound = NameFilterFunctions.constrainNameListFromToCount(namesFound, fromString, toString, countString, countbackString, compareWithString, referencedNames);
+                namesFound = NameFilterFunctions.constrainNameListFromToCount(namesFound, fromString, toString, countString, offsetString, compareWithString, referencedNames);
             } else {
                 System.out.println("can't from/to/count a non-list, " + setTerm);
             }
