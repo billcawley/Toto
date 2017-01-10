@@ -814,7 +814,10 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
             try {
                 TypedPair<Integer, String> fullProvenance = AzquoBookUtils.getFullProvenanceStringForCell(loggedInUser, reportId, region, regionRow, regionColumn);
-                String stringToShow = fullProvenance.getSecond(); // the former will be mangled
+                String stringToShow = null;
+                if (fullProvenance != null) {
+                    stringToShow = fullProvenance.getSecond(); // the former will be mangled
+                }
                 if (stringToShow != null) {
                     Label provenanceLabel;
                     stringToShow = stringToShow.replace("\t", "....");
@@ -908,31 +911,22 @@ public class ZKComposer extends SelectorComposer<Component> {
                             if (drillDownString.length() > 0) {
                                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
                                 final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(regionRow);
-                                final List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // last one is the bottom row of col headings
+                                List<String> colHeadings = new ArrayList<>();
+                                for (int rowNo = 0; rowNo< cellsAndHeadingsForDisplay.getColumnHeadings().size();rowNo++){
+                                    colHeadings.add(cellsAndHeadingsForDisplay.getColumnHeadings().get(rowNo).get(regionColumn)); // last one is the bottom row of col headings
+                                }
                                 //String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
                                 String colHeading = colHeadings.get(regionColumn);
-                                String filler = "";
-                                while (drillDownString.toLowerCase().contains("[rowheading")) {
-                                    for (int colNo = 0; colNo < rowHeadings.size(); colNo++) {
-                                        String rh = "[rowheading" + filler + "]";
-                                        if (drillDownString.toLowerCase().contains(rh)) {
-                                            int start = drillDownString.toLowerCase().indexOf(rh);
-                                            drillDownString = drillDownString.substring(0, start) + rowHeadings.get(colNo) + drillDownString.substring(start + rh.length());
-                                        }
-                                        filler = (colNo + 2) + "";
-                                    }
+                                 int stopLoop = 4;
+                                for (int colNo = 0; colNo < rowHeadings.size(); colNo++){
+                                    drillDownString = replaceAll(drillDownString,"[rowheading" + (colNo + 1), rowHeadings.get(colNo));
                                 }
-                                filler = "";
-                                while (drillDownString.toLowerCase().contains("[columnheading")) {
-                                    for (int rowNo = 0; rowNo < colHeadings.size(); rowNo++) {
-                                        String ch = "[columnheading" + filler + "]";
-                                        if (drillDownString.toLowerCase().contains(ch)) {
-                                            int start = drillDownString.toLowerCase().indexOf(ch);
-                                            drillDownString = drillDownString.substring(0, start) + colHeading + drillDownString.substring(start + ch.length());
-                                        }
-                                        filler = (rowNo + 2) + "";
-                                    }
+                                drillDownString = replaceAll(drillDownString,"[rowheading]", rowHeadings.get(rowHeadings.size()-1));
+                                for (int rowNo = 0; rowNo < colHeadings.size();rowNo++){
+                                    drillDownString = replaceAll(drillDownString,"[columnheading" + (rowNo + 1), colHeadings.get(rowNo));
                                 }
+                                drillDownString = replaceAll(drillDownString,"[columnheading]", colHeadings.get(colHeadings.size()-1));
+
                                 final String stringToPass = drillDownString;
                                 Menuitem ddItem = new Menuitem("Drill Down" + qualifier);
                                 editPopup.appendChild(ddItem);
@@ -1078,6 +1072,15 @@ public class ZKComposer extends SelectorComposer<Component> {
                 editPopup.open(mouseX - 140, mouseY);
             }
         }
+    }
+
+    public static String replaceAll(String original, String toFind, String replacement) {
+        int foundPos = original.toLowerCase().indexOf(toFind);
+        while (foundPos >= 0) {
+            original = original.substring(0, foundPos) + replacement + original.substring(foundPos + toFind.length());
+            foundPos = original.toLowerCase().indexOf(toFind);
+        }
+        return original;
     }
 
     private void showProvenance(String provline, int valueId) {
