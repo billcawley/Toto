@@ -11,11 +11,11 @@ import com.azquo.memorydb.service.ProvenanceService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
 import com.azquo.spreadsheet.UserChoiceService;
-import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
-import com.azquo.spreadsheet.jsonentities.JsonChildren;
-import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.view.FilterTriple;
-import com.azquo.spreadsheet.view.RegionOptions;
+import com.azquo.spreadsheet.transport.json.JsonChildStructure;
+import com.azquo.spreadsheet.transport.json.JsonChildren;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.transport.FilterTriple;
+import com.azquo.spreadsheet.transport.RegionOptions;
 
 import java.rmi.RemoteException;
 import java.text.NumberFormat;

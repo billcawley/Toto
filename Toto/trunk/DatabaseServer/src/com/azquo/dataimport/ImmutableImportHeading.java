@@ -11,7 +11,7 @@ import java.util.Set;
  * <p>
  * See MutableImportHeading, does not have a few "interim" fields that that has, notable is removal of the context info, it has no reason to care how its peers were constructed.
  * I see no reason for getters here. Class members only, saves a load of space. Note added later : getters and setters may make the code clearer though this could be done by better names also I think
- * From a purely pragmatic point of view this class is not necessary but I'm very keen to make sure that heading info is fixed before data loading - possible errors resulting from modifying the mutable
+ * From a purely pragmatic point of transport this class is not necessary but I'm very keen to make sure that heading info is fixed before data loading - possible errors resulting from modifying the mutable
  * headings could be a real pain, this will stop that.
  */
 class ImmutableImportHeading {

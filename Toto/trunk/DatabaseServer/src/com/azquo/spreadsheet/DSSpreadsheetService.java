@@ -8,9 +8,9 @@ import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.service.*;
-import com.azquo.spreadsheet.view.CellForDisplay;
-import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.view.RegionOptions;
+import com.azquo.spreadsheet.transport.CellForDisplay;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.transport.RegionOptions;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 

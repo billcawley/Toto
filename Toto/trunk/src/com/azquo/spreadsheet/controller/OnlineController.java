@@ -6,7 +6,9 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.*;
-import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
+import com.azquo.spreadsheet.zk.ReportExecutor;
+import com.azquo.spreadsheet.zk.ReportRenderer;
+import com.azquo.spreadsheet.zk.BookUtils;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -45,9 +47,7 @@ import java.util.Map;
 public class OnlineController {
     private final Runtime runtime = Runtime.getRuntime();
     private final int mb = 1024 * 1024;
-    // note : I'm now thinking dao objects are acceptable in controllers if moving the call to the service would just be a proxy
-
-    // TODO : break up into separate functions?
+    // break up into separate functions? I'm not sure it's that important while the class is under 500 lines. I suppose one could move uploading for example.
 
     private static final Logger logger = Logger.getLogger(OnlineController.class);
 
@@ -61,9 +61,9 @@ public class OnlineController {
     public static final String LOCKED = "LOCKED";
     public static final String LOCKED_RESULT = "LOCK_RESULT";
 
-    public static final String EXECUTE = "EXECUTE";
-    public static final String TEMPLATE = "TEMPLATE";
-    public static final String UPLOAD = "UPLOAD";
+    private static final String EXECUTE = "EXECUTE";
+    private static final String TEMPLATE = "TEMPLATE";
+    private static final String UPLOAD = "UPLOAD";
 
 
     private static final SimpleDateFormat logDf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -234,9 +234,9 @@ public class OnlineController {
                                     // annoying, factor?
                                     for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
                                         Sheet sheet = book.getSheetAt(sheetNumber);
-                                        List<SName> namesForSheet = ZKAzquoBookUtils.getNamesForSheet(sheet);
+                                        List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
                                         for (SName sName : namesForSheet) {
-                                            if (sName.getName().equalsIgnoreCase(ZKAzquoBookUtils.EXECUTE)) {
+                                            if (sName.getName().equalsIgnoreCase(ReportRenderer.EXECUTE)) {
                                                 executeName = true;
                                             }
                                         }
@@ -244,11 +244,11 @@ public class OnlineController {
                                     // todo, lock check here like execute
                                     session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
                                     if (executeMode) {
-                                        ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.EXECUTE); // standard, there's the option to execute the contents of a different names
+                                        ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
                                         session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                     } else {
                                         loggedInUser.userLog("Load report : " + finalOnlineReport.getReportName());
-                                        session.setAttribute(finalReportId + SAVE_FLAG, ZKAzquoBookUtils.populateBook(book, valueId));
+                                        session.setAttribute(finalReportId + SAVE_FLAG, ReportRenderer.populateBook(book, valueId));
                                     }
                                 } else {
                                     finalLoggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose

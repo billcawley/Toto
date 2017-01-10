@@ -1,7 +1,7 @@
 package com.azquo.admin.user;
 
 import com.azquo.admin.StandardEntity;
-import com.azquo.spreadsheet.view.RegionOptions;
+import com.azquo.spreadsheet.transport.RegionOptions;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT

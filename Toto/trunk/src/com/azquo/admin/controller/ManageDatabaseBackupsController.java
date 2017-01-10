@@ -91,7 +91,7 @@ public class ManageDatabaseBackupsController {
                         newBackup = newBackup.replace("..", "");
                         newBackup = newBackup.replace("/", "");
                         newBackup = newBackup.replace("\\", "");
-                        // todo, make this more secure from a unix point of view?? Also parameters for packet size or whatever. Might be set in my.cnf
+                        // todo, make this more secure from a unix point of transport?? Also parameters for packet size or whatever. Might be set in my.cnf
                         String dump = "mysqldump  --user='toto' --password='ark'  " + databaseById.getPersistenceName() + " > " + finalDir.getPath() + "/" + newBackup;
                         // for some reason need to use the command array, dunno why
                         String[] cmdarray = {"/bin/sh","-c", dump};

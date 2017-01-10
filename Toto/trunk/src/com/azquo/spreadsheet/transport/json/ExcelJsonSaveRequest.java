@@ -1,4 +1,4 @@
-package com.azquo.spreadsheet.view;
+package com.azquo.spreadsheet.transport.json;
 
 import java.util.List;
 

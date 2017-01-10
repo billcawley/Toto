@@ -2,11 +2,11 @@ package com.azquo.rmi;
 
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
-import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
-import com.azquo.spreadsheet.jsonentities.JsonChildren;
-import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.view.FilterTriple;
-import com.azquo.spreadsheet.view.RegionOptions;
+import com.azquo.spreadsheet.transport.json.JsonChildStructure;
+import com.azquo.spreadsheet.transport.json.JsonChildren;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.transport.FilterTriple;
+import com.azquo.spreadsheet.transport.RegionOptions;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;

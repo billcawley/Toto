@@ -10,10 +10,17 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
+import com.azquo.spreadsheet.CommonBookUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.view.*;
+import com.azquo.spreadsheet.transport.json.CellsAndHeadingsForExcel;
+import com.azquo.spreadsheet.transport.json.ExcelJsonRequest;
+import com.azquo.spreadsheet.transport.json.ExcelJsonSaveRequest;
+import com.azquo.spreadsheet.transport.json.ProvenanceJsonRequest;
+import com.azquo.spreadsheet.transport.*;
+import com.azquo.spreadsheet.zk.ReportRenderer;
+import com.azquo.spreadsheet.zk.ZKComposer;
 import com.azquo.util.AzquoMailer;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +47,8 @@ import static javax.xml.bind.DatatypeConverter.parseBase64Binary;
  * Created by edward on 04/08/16.
  * <p>
  * We are reinstating some Excel functionality to assist in building reports. Initially the basics for logon and a few others.
+ *
+ * Might need to be broken up later - maybe an Excel package as there's a zk package?
  */
 
 @Controller
@@ -104,7 +113,7 @@ public class ExcelController {
                         book.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
                         book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
                         book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
-                        ZKAzquoBookUtils.populateBook(book, 0);
+                        ReportRenderer.populateBook(book, 0);
                     }
                 }
                 String session = Integer.toHexString(loggedInUser.hashCode()); // good as any I think
@@ -295,13 +304,13 @@ public class ExcelController {
             }
 
             if (userChoices != null) {
-                return jacksonMapper.writeValueAsString(AzquoBookUtils.getUserChoicesMap(loggedInUser));
+                return jacksonMapper.writeValueAsString(CommonBookUtils.getUserChoicesMap(loggedInUser));
             }
             if (dropDownListForQuery != null) {
-                return jacksonMapper.writeValueAsString(AzquoBookUtils.getDropdownListForQuery(loggedInUser, dropDownListForQuery));
+                return jacksonMapper.writeValueAsString(CommonBookUtils.getDropdownListForQuery(loggedInUser, dropDownListForQuery));
             }
             if (resolveQuery != null) {
-                return AzquoBookUtils.resolveQuery(loggedInUser, resolveQuery);
+                return CommonBookUtils.resolveQuery(loggedInUser, resolveQuery);
             }
             if (choiceName != null && choiceValue != null) {
                 choiceValue = choiceValue.trim();
@@ -310,7 +319,7 @@ public class ExcelController {
             }
             if (provenanceJson != null) {
                 ProvenanceJsonRequest provenanceJsonRequest = jacksonMapper.readValue(provenanceJson, ProvenanceJsonRequest.class);
-                TypedPair<Integer, String> fullProvenance = AzquoBookUtils.getFullProvenanceStringForCell(loggedInUser, provenanceJsonRequest.reportId
+                TypedPair<Integer, String> fullProvenance = CommonBookUtils.getFullProvenanceStringForCell(loggedInUser, provenanceJsonRequest.reportId
                         , provenanceJsonRequest.region, provenanceJsonRequest.row, provenanceJsonRequest.col);
                 return ZKComposer.trimString(fullProvenance.getSecond());
             }
@@ -365,7 +374,7 @@ public class ExcelController {
             languages.remove(loggedInUser.getUser().getEmail());
             return ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false);
         } catch (Exception e) {
-            return AzquoBookUtils.getErrorFromServerSideException(e);
+            return CommonBookUtils.getErrorFromServerSideException(e);
         }
     }
 }

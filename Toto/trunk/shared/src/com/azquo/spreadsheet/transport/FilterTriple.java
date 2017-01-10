@@ -1,4 +1,4 @@
-package com.azquo.spreadsheet.view;
+package com.azquo.spreadsheet.transport;
 
 import java.io.Serializable;
 
@@ -8,7 +8,7 @@ import java.io.Serializable;
  * Used for the filter selection boxes. Maybe create a generic triple? No need right now.
  */
 public class FilterTriple implements Serializable {
-    final int nameId;
+    public final int nameId;
     public final String name;
     public final Boolean selected;
 

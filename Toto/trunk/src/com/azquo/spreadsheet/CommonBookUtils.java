@@ -1,4 +1,4 @@
-package com.azquo.spreadsheet.view;
+package com.azquo.spreadsheet;
 
 import com.azquo.TypedPair;
 import com.azquo.admin.database.Database;
@@ -7,9 +7,7 @@ import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
-import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
-import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,12 +17,11 @@ import java.util.Map;
 /**
  * Created by edward on 17/11/16.
  * <p>
- * I can't remember if I'm recreating a class which existed before but if so this has a different purpose, it contains functionality that will]
- * be used by both ZK and the Excel interface.
+ * Contains functionality that will be used by both ZK and the Excel interface.
  */
-public class AzquoBookUtils {
+public class CommonBookUtils {
 
-    static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
+    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
         //hack to discover a database name
         int arrowsPos = query.indexOf(">>");
         try {

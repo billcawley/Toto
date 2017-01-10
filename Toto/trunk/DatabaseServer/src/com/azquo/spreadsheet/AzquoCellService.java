@@ -7,7 +7,7 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.ValueCalculationService;
 import com.azquo.memorydb.service.ValueService;
-import com.azquo.spreadsheet.view.RegionOptions;
+import com.azquo.spreadsheet.transport.RegionOptions;
 import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;

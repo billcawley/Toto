@@ -6,7 +6,7 @@ import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
+import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -167,7 +167,7 @@ public class RemoteController {
                     book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                     book.getInternalBook().setAttribute(REPORT_ID, onlineReport.getId());
-                    ZKAzquoBookUtils.populateBook(book, 0);
+                    ReportRenderer.populateBook(book, 0);
                     newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                     System.out.println();
                     System.out.println("Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);

@@ -1,4 +1,4 @@
-package com.azquo.spreadsheet.view;
+package com.azquo.spreadsheet.zk;
 
 import com.azquo.TypedPair;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -7,6 +7,9 @@ import com.azquo.admin.user.*;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
+import com.azquo.spreadsheet.transport.CellForDisplay;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.transport.FilterTriple;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.zkoss.chart.ChartsEvent;
 import org.zkoss.util.media.AMedia;
@@ -195,9 +198,9 @@ public class ZKComposer extends SelectorComposer<Component> {
     public void onCellClick(CellMouseEvent event) {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        String selectionName = pivotItem(event, ZKAzquoBookUtils.AZPIVOTFILTERS, ZKAzquoBookUtils.AZPIVOTHEADINGS, 3);//OLD STYLE
+        String selectionName = pivotItem(event, ReportRenderer.AZPIVOTFILTERS, ReportRenderer.AZPIVOTHEADINGS, 3);//OLD STYLE
         if (selectionName == null) {
-            selectionName = pivotItem(event, ZKAzquoBookUtils.AZCONTEXTFILTERS, ZKAzquoBookUtils.AZCONTEXTHEADINGS, 3);
+            selectionName = pivotItem(event, ReportRenderer.AZCONTEXTFILTERS, ReportRenderer.AZCONTEXTHEADINGS, 3);
         }
         String selectionList = null;
         CellRegion queryResultRegion = null;
@@ -206,7 +209,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             selectionName = "az_" + selectionName.trim();
             queryResultRegion = new CellRegion(event.getRow(), event.getColumn());
         } else {
-            SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ZKAzquoBookUtils.ALLOWABLE_REPORTS);
+            SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS);
             if (allowableReports != null) {
                 String cellValue = "";
                 final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());// we care about the contents of the left most cell
@@ -235,10 +238,10 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (SName name : names) {
                 if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
                     selectionName = name.getName();
-                    queryResultRegion = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), selectionName + RESULT);
+                    queryResultRegion = BookUtils.getCellRegionForSheetAndName(event.getSheet(), selectionName + RESULT);
                     final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
                     if (filterQueryCell != null) {
-                        selectionList = ZKAzquoBookUtils.getSnameCell(filterQueryCell).getStringValue();
+                        selectionList = BookUtils.getSnameCell(filterQueryCell).getStringValue();
                     }
                     break;
                 }
@@ -331,7 +334,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
                                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                             }
-                            if (ZKAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
+                            if (ReportRenderer.populateBook(newBook, 0)) { // check if formulae made saveable data
                                 // direct calls to the HTML are perhaps not ideal. Could be replaced with calls to expected functions?
                                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                             }
@@ -346,7 +349,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                             }
                             // check to see if we need to set the selected values in a cell - or in the main cell?
                             if (queryResultRegion2 != null) {
-                                String resultDescription = ZKAzquoBookUtils.multiList(loggedInUser, selectionName2, selectionList2);
+                                String resultDescription = ReportRenderer.multiList(loggedInUser, selectionName2, selectionList2);
                                 final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(queryResultRegion2.getRow(), queryResultRegion2.getColumn());
                                 cell.setStringValue(resultDescription);
                             }
@@ -397,8 +400,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         for (SName name : names) {
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// would have been a one cell name
                 //and it cannot be in an existing data region
-                if (ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ZKAzquoBookUtils.AZREPEATSCOPE).size() == 0
-                        && ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), "az_dataregion").size() == 0) {
+                if (BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE).size() == 0
+                        && BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), "az_dataregion").size() == 0) {
 
                     String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                     loggedInUser.userLog("Choice select : " + choice + "," + chosen);
@@ -417,10 +420,10 @@ public class ZKComposer extends SelectorComposer<Component> {
                 String region = name.getName().substring("az_DisplayColumnHeadings".length());
                 UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
-                    SName optionsRegion = event.getSheet().getBook().getInternalBook().getNameByName(ZKAzquoBookUtils.AZOPTIONS + region);
+                    SName optionsRegion = event.getSheet().getBook().getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
                     String source = null;
                     if (optionsRegion != null) {
-                        source = ZKAzquoBookUtils.getSnameCell(optionsRegion).getStringValue();
+                        source = BookUtils.getSnameCell(optionsRegion).getStringValue();
                     }
                     userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
                 }
@@ -462,7 +465,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                 }
                 newBook.getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, null); // zap the locked result, it will be checked below and we only want it there if  populate book put it there
-                if (ZKAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
+                if (ReportRenderer.populateBook(newBook, 0)) { // check if formulae made saveable data
                     Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
                 }
                 if (newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) != null) {
@@ -537,8 +540,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         //System.out.println("after cell change : " + row + " col " + col + " chosen");
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
-        List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet());
-        List<SName> repeatRegionNames = ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ZKAzquoBookUtils.AZREPEATSCOPE);
+        List<SName> names = BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet());
+        List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE);
         if (names == null && repeatRegionNames == null) return;
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
@@ -590,8 +593,8 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     // work out what the local region and row and column is for a given cell in a repeat score
     private RegionRowCol getRegionRowColForRepeatRegion(Book book, int row, int col, SName repeatScopeName) {
-        String repeatRegionName = repeatScopeName.getName().substring(ZKAzquoBookUtils.AZREPEATSCOPE.length());
-        SName repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZREPEATREGION + repeatRegionName);
+        String repeatRegionName = repeatScopeName.getName().substring(ReportRenderer.AZREPEATSCOPE.length());
+        SName repeatRegion = book.getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + repeatRegionName);
         SName repeatDataRegion = book.getInternalBook().getNameByName("az_DataRegion" + repeatRegionName); // todo string literals ergh!
         // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
         if (repeatRegion != null && repeatDataRegion != null) { // ergh, got to try and find the right sent cell!
@@ -621,21 +624,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         return null;
     }
 
-    private String convertMonthString(String month) {
-        if (month.contains("jan")) return "01";
-        if (month.contains("feb")) return "02";
-        if (month.contains("mar")) return "03";
-        if (month.contains("apr")) return "04";
-        if (month.contains("may")) return "05";
-        if (month.contains("jun")) return "06";
-        if (month.contains("jul")) return "07";
-        if (month.contains("aug")) return "08";
-        if (month.contains("sep")) return "09";
-        if (month.contains("oct")) return "10";
-        if (month.contains("nov")) return "11";
-        if (month.contains("dec")) return "12";
-        return "00";
-    }
 
     // Commented, why?
     @Listen("onSheetSelect = #myzss")
@@ -657,8 +645,8 @@ public class ZKComposer extends SelectorComposer<Component> {
     private String pivotItem(CellMouseEvent event, String filterName, String choicesName, int choiceWidth) {
         SName contextFilters = event.getSheet().getBook().getInternalBook().getNameByName(filterName);//obsolete
         if (contextFilters != null) {
-            String[] filters = ZKAzquoBookUtils.getSnameCell(contextFilters).getStringValue().split(",");
-            CellRegion contextChoices = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), choicesName);
+            String[] filters = BookUtils.getSnameCell(contextFilters).getStringValue().split(",");
+            CellRegion contextChoices = BookUtils.getCellRegionForSheetAndName(event.getSheet(), choicesName);
             if (contextChoices != null) {
                 int headingRow = contextChoices.getRow();
                 int headingCol = contextChoices.getColumn();
@@ -667,7 +655,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                 // this logic is repeated from add validation, dedupe?
                 for (String filter : filters) {
-                    List<String> optionsList = AzquoBookUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
+                    List<String> optionsList = CommonBookUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
                     if (optionsList != null && optionsList.size() > 1) {
                         int rowOffset = filterCount % headingRows;
                         int colOffset = filterCount / headingRows;
@@ -683,7 +671,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
         //look in the row headings.
         for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZROWHEADINGS)) {
+            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
                 //surely there must be a better way of getting the first cell off a region!
                 String firstItem = "";
                 try {
@@ -694,7 +682,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (firstItem.toLowerCase().startsWith("permute(")) {
                     String[] rowHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
                     String displayRowHeadingsString = "az_Display" + name.getName().substring(3);
-                    CellRegion displayRowHeadings = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), displayRowHeadingsString);
+                    CellRegion displayRowHeadings = BookUtils.getCellRegionForSheetAndName(event.getSheet(), displayRowHeadingsString);
                     if (displayRowHeadings != null) {
                         int hrow = displayRowHeadings.getRow() - 1;
                         int hcol = displayRowHeadings.getColumn();
@@ -712,7 +700,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
         //...and the column headings
         for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZCOLUMNHEADINGS)) {
+            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
                 //surely there must be a better way of getting the first cell off a region!
                 SCell sCell = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn());
                 String firstItem = "";
@@ -724,7 +712,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 if (firstItem.toLowerCase().startsWith("permute(")) {
                     String[] colHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
                     String displayColHeadingsString = "az_Display" + name.getName().substring(3);
-                    CellRegion displayColHeadings = ZKAzquoBookUtils.getCellRegionForSheetAndName(event.getSheet(), displayColHeadingsString);
+                    CellRegion displayColHeadings = BookUtils.getCellRegionForSheetAndName(event.getSheet(), displayColHeadingsString);
                     if (displayColHeadings != null) {
                         int hrow = displayColHeadings.getRow();
                         int hcol = displayColHeadings.getColumn() - 1;
@@ -791,7 +779,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             int regionRow = 0;
             int regionColumn = 0;
             // adding support for repeat regions. There's an additional check for row headings in a normal data region but I think this is redundant in repeat regions
-            List<SName> repeatRegionNames = ZKAzquoBookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), ZKAzquoBookUtils.AZREPEATSCOPE);
+            List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE);
             if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
                 RegionRowCol regionRowColForRepeatRegion = getRegionRowColForRepeatRegion(myzss.getBook(), cellRow, cellCol, repeatRegionNames.get(0));
                 if (regionRowColForRepeatRegion != null) {
@@ -800,7 +788,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     regionColumn = regionRowColForRepeatRegion.col;
                 }
             } else { // standard
-                List<SName> names = ZKAzquoBookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());
+                List<SName> names = BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());
                 for (SName name : names) {
                     SName rowHeadingsName = myzss.getSelectedSheet().getBook().getInternalBook().getNameByName("az_rowheadings" + name.getName().substring(13));
                     if (rowHeadingsName != null) {
@@ -813,7 +801,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
             try {
-                TypedPair<Integer, String> fullProvenance = AzquoBookUtils.getFullProvenanceStringForCell(loggedInUser, reportId, region, regionRow, regionColumn);
+                TypedPair<Integer, String> fullProvenance = CommonBookUtils.getFullProvenanceStringForCell(loggedInUser, reportId, region, regionRow, regionColumn);
                 String stringToShow = null;
                 if (fullProvenance != null) {
                     stringToShow = fullProvenance.getSecond(); // the former will be mangled
@@ -861,7 +849,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 Book book1 = Importers.getImporter().imports(Sessions.getCurrent().getWebApp().getResourceAsStream("/WEB-INF/DebugAudit.xlsx"), "Report name");
                                 for (int sheetNumber = 0; sheetNumber < book1.getNumberOfSheets(); sheetNumber++) {
                                     Sheet sheet = book1.getSheetAt(sheetNumber);
-                                    List<SName> namesForSheet = ZKAzquoBookUtils.getNamesForSheet(sheet);
+                                    List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
                                     for (SName sName : namesForSheet) {
                                         if (sName.getName().equalsIgnoreCase("Title")) {
                                             final SCell cell = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
@@ -907,7 +895,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                     for (SName sName : myzss.getBook().getInternalBook().getNames()) {
                         if (sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())) {
                             String qualifier = sName.getName().substring(("az_drilldown" + region).length()).replace("_", " ");
-                            String drillDownString = ZKAzquoBookUtils.getSnameCell(sName).getStringValue();
+                            String drillDownString = BookUtils.getSnameCell(sName).getStringValue();
                             if (drillDownString.length() > 0) {
                                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
                                 final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(regionRow);
@@ -957,7 +945,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                             Book book1 = Importers.getImporter().imports(Sessions.getCurrent().getWebApp().getResourceAsStream("/WEB-INF/DebugAudit.xlsx"), "Report name");
                             for (int sheetNumber = 0; sheetNumber < book1.getNumberOfSheets(); sheetNumber++) {
                                 Sheet sheet = book1.getSheetAt(sheetNumber);
-                                List<SName> namesForSheet = ZKAzquoBookUtils.getNamesForSheet(sheet);
+                                List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
                                 for (SName sName : namesForSheet) {
                                     if (sName.getName().equalsIgnoreCase("Title")) {
                                         final SCell cell = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
@@ -1173,7 +1161,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                 newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
             }
-            if (ZKAzquoBookUtils.populateBook(newBook, 0)) { // check if formulae made saveable data
+            if (ReportRenderer.populateBook(newBook, 0)) { // check if formulae made saveable data
                 Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
             }
             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)

@@ -1,4 +1,4 @@
-package com.azquo.spreadsheet.view;
+package com.azquo.spreadsheet.zk;
 
 /*
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -17,8 +17,8 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.jsp.BookProvider;
 
-public class ZKAzquoBookProvider implements BookProvider {
+public class BookProviderForJSP implements BookProvider {
     public Book loadBook(ServletContext servletContext, HttpServletRequest request, HttpServletResponse res) {
-        return (Book) request.getAttribute(OnlineController.BOOK); // screw it keep it really simple. Remove from session?
+        return (Book) request.getAttribute(OnlineController.BOOK); // Keep it really simple. Remove from session?
     }
 }

@@ -4,7 +4,7 @@ import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
-import com.azquo.spreadsheet.jsonentities.JsonChildren;
+import com.azquo.spreadsheet.transport.json.JsonChildren;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;

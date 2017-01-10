@@ -6,7 +6,9 @@ import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
+import com.azquo.spreadsheet.zk.ReportExecutor;
+import com.azquo.spreadsheet.zk.ReportRenderer;
+import com.azquo.spreadsheet.zk.BookUtils;
 import org.apache.pdfbox.util.PDFMergerUtility;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -118,7 +120,7 @@ public class ZKSpreadsheetCommandController {
                     if (action != null && action.startsWith("PDFMerge")) {
                         Book book = ss.getBook();
                         // Look for the relevant name in the sheet
-                        CellRegion pdfRules = ZKAzquoBookUtils.getCellRegionForSheetAndName(ss.getSelectedSheet(), "az_PDF" + action.substring("PDFMerge".length()).replace(" ", "_")); // just reverse what I did for the UI
+                        CellRegion pdfRules = BookUtils.getCellRegionForSheetAndName(ss.getSelectedSheet(), "az_PDF" + action.substring("PDFMerge".length()).replace(" ", "_")); // just reverse what I did for the UI
                         List<String> choices = new ArrayList<>();
                         if (pdfRules != null) {
                             final String stringValue = ss.getSelectedSheet().getInternalSheet().getCell(pdfRules.getRow(), pdfRules.getColumn()).getStringValue();
@@ -181,15 +183,15 @@ public class ZKSpreadsheetCommandController {
                         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
                         boolean saveOk = true;
                         for (SName name : book.getInternalBook().getNames()) {
-                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
-                                String region = name.getName().substring(ZKAzquoBookUtils.AZDATAREGION.length());
+                            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
+                                String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
                                 // todo - factor this chunk?
                                 // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
-                                SName optionsRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZOPTIONS + region);
+                                SName optionsRegion = book.getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
                                 String optionsSource = "";
                                 boolean noSave = false;
                                 if (optionsRegion != null) {
-                                    optionsSource = ZKAzquoBookUtils.getSnameCell(optionsRegion).getStringValue();
+                                    optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
                                     UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);
                                     noSave = userRegionOptions.getNoSave();
                                 }
@@ -202,9 +204,9 @@ public class ZKSpreadsheetCommandController {
                                 }
                             }
                             // deal with repeats, annoying!
-                            if (name.getName().toLowerCase().startsWith(ZKAzquoBookUtils.AZREPEATSCOPE)) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
-                                String region = name.getName().substring(ZKAzquoBookUtils.AZREPEATSCOPE.length());
-                                final SName repeatRegion = book.getInternalBook().getNameByName(ZKAzquoBookUtils.AZREPEATREGION + region);
+                            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZREPEATSCOPE)) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
+                                String region = name.getName().substring(ReportRenderer.AZREPEATSCOPE.length());
+                                final SName repeatRegion = book.getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + region);
                                 if (repeatRegion != null) {
                                     int regionRows = repeatRegion.getRefersToCellRegion().getRowCount();
                                     int regionCols = repeatRegion.getRefersToCellRegion().getColumnCount();
@@ -233,7 +235,7 @@ public class ZKSpreadsheetCommandController {
                         // need to show readout like executing todo. On that topic could the executing loading screen say "running command?" or something similar?
                         if (saveOk) {
                             loggedInUser.userLog("Save : " + onlineReport.getReportName());
-                            ZKAzquoBookUtils.runExecuteCommandForBook(book, ZKAzquoBookUtils.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
+                            ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
                             // unlock here makes sense think, if duff save probably leave locked
                             SpreadsheetService.unlockData(loggedInUser);
                             reloadAfterSave = true;
@@ -246,7 +248,7 @@ public class ZKSpreadsheetCommandController {
                         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                         }
-                        ZKAzquoBookUtils.populateBook(newBook, 0, true, null, false);
+                        ReportRenderer.populateBook(newBook, 0, true,false);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
                         if (ss.getSelectedSheet().isHidden()) {
                             for (SSheet s : ss.getSBook().getSheets()) {
@@ -302,7 +304,7 @@ public class ZKSpreadsheetCommandController {
         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
         }
-        ZKAzquoBookUtils.populateBook(newBook, 0);
+        ReportRenderer.populateBook(newBook, 0);
         // here should be the list we're after
         final List<String> choiceList = getChoiceList(newBook, choices.get(selectedChoices.size()));
         if (choiceList.isEmpty()) { // ok if no options on the choice list we want then I guess render this one and return
@@ -317,7 +319,7 @@ public class ZKSpreadsheetCommandController {
                     for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                         newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                     }
-                    ZKAzquoBookUtils.populateBook(newBook, 0);
+                    ReportRenderer.populateBook(newBook, 0);
                     // and render to PDF
                     toReturn.add(renderBook(newBook));
                 }
@@ -333,7 +335,7 @@ public class ZKSpreadsheetCommandController {
 
     private List<String> getChoiceList(Book book, String choice) {
         List<String> toReturn = new ArrayList<>();
-        Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
+        Sheet validationSheet = book.getSheet(ReportRenderer.VALIDATION_SHEET);
         if (validationSheet != null) {
             int col = 0;
             SCell cell = validationSheet.getInternalSheet().getCell(0, col);
@@ -361,7 +363,7 @@ public class ZKSpreadsheetCommandController {
     }
 
     private String renderBook(Book book) throws IOException {
-        Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
+        Sheet validationSheet = book.getSheet(ReportRenderer.VALIDATION_SHEET);
         if (validationSheet != null) {
             try {
                 book.getInternalBook().deleteSheet(validationSheet.getInternalSheet());

@@ -8,8 +8,8 @@ import com.azquo.admin.user.User;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.spreadsheet.jsonentities.JsonChildren;
-import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.transport.json.JsonChildren;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 
 import java.io.File;
 import java.io.IOException;

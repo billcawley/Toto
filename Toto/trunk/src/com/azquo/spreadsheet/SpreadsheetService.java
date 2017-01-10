@@ -13,9 +13,9 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
-import com.azquo.spreadsheet.view.CellForDisplay;
-import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
+import com.azquo.spreadsheet.transport.CellForDisplay;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -32,10 +32,10 @@ import java.util.*;
 /*
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  *
- * Class split now database/report server
- *
  * it seems that trying to configure the properties in spring is a problem
  * this works but I'm a bit fed up of something that should be simple, go to a simple classpath read??
+ *
+ * Holding miscellaneous functions at the mo, need to work out what goes where.
 */
 
 public class SpreadsheetService {
@@ -220,6 +220,45 @@ public class SpreadsheetService {
         return reportName;
     }
 
+    public final static String FIRST_PLACEHOLDER = "||FIRST||";
+    public final static String LAST_PLACEHOLDER = "||LAST||";
+
+    // currently unused, will be by a report scheduler if we ever make one
+    public static void setChoicesForReportParameters(Map<String, String> userChoices, String reportParameters) {
+        /* right, we need to deal with setting the choices according to report parameters
+        category = `Men's suits`, month = last
+        currently allowing first or last, if first or last required as names add quotes
+        I could rip off the parsing from string utils though it seems rather verbose, really what I want is tokenizing based on , but NOT in the quoted areas
+        */
+
+        if (reportParameters != null) { // report parameters are used for scheduled reports
+            boolean inQuotes = false;
+            int ruleStart = 0;
+            int currentIndex = 0;
+            for (char c : reportParameters.toCharArray()) {
+                if (c == '`') { // can't use Name.Quote, it's on the DB server hmmmmm . . .
+                    inQuotes = !inQuotes;
+                } else if (c == ',' && !inQuotes) { // try to parse out the rule
+                    String pair = reportParameters.substring(ruleStart, currentIndex).trim();
+                    if (pair.indexOf("=") > 0) {
+                        final String[] split = pair.split("=");
+                        String value = split[1].trim();
+                        if (value.equalsIgnoreCase("first")) {
+                            value = FIRST_PLACEHOLDER;
+                        } else if (value.startsWith("last")) {
+                            value = LAST_PLACEHOLDER;
+                        } else if (value.startsWith("`")) { // then zap the quotes
+                            value = value.replace('`', ' ').trim();
+                        }
+                        userChoices.put(split[0].toLowerCase().trim(), value);
+                    }
+                    ruleStart = currentIndex + 1;
+                }
+                currentIndex++;
+            }
+        }
+    }
+
     // adapted from some VB and description at http://grandzebu.net/informatique/codbar-en/ean13.htm
     // requires a 12 digits string and returns a string to use with EAN13.TTF
     // currently will return blank if the string can't be made, maybe it should exception
@@ -346,7 +385,7 @@ public class SpreadsheetService {
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());
-                ZKAzquoBookUtils.populateBook(book, 0);
+                ReportRenderer.populateBook(book, 0);
                 // so, can I have my PDF or XLS? Very similar to other the download code in the spreadsheet command controller
                 if ("PDF".equals(reportSchedule.getType())) {
                     Exporter exporter = Exporters.getExporter("pdf");

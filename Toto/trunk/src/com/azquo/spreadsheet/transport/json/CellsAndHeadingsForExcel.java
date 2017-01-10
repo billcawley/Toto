@@ -1,4 +1,8 @@
-package com.azquo.spreadsheet.view;
+package com.azquo.spreadsheet.transport.json;
+
+import com.azquo.spreadsheet.transport.CellForDisplay;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.transport.RegionOptions;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -10,6 +14,8 @@ import java.util.List;
  * A stripped down version of CellsAndHeadingsForDisplay but for Excel.
  *
  * I decided that the Excel code should not replicate CellForDisplay etc. In time there may be a better abstraction.
+ *
+ * Will be turned into json to send to Excel.
  */
 public class CellsAndHeadingsForExcel implements Serializable{
 

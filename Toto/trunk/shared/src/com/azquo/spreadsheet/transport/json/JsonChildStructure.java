@@ -1,4 +1,4 @@
-package com.azquo.spreadsheet.jsonentities;
+package com.azquo.spreadsheet.transport.json;
 
 import java.io.Serializable;
 import java.util.Map;

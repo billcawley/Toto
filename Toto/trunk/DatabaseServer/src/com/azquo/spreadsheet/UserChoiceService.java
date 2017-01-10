@@ -6,7 +6,7 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
-import com.azquo.spreadsheet.view.FilterTriple;
+import com.azquo.spreadsheet.transport.FilterTriple;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.util.*;

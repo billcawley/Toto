@@ -11,9 +11,10 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.controller.OnlineController;
-import com.azquo.spreadsheet.view.CellForDisplay;
-import com.azquo.spreadsheet.view.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.view.ZKAzquoBookUtils;
+import com.azquo.spreadsheet.transport.CellForDisplay;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.zk.ReportRenderer;
+import com.azquo.spreadsheet.zk.BookUtils;
 import com.csvreader.CsvWriter;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
@@ -265,7 +266,7 @@ public final class ImportService {
         String reportName = null;
         SName reportRange = book.getInternalBook().getNameByName("az_ReportName");
         if (reportRange != null) {
-            reportName = ZKAzquoBookUtils.getSnameCell(reportRange).getStringValue().trim();
+            reportName = BookUtils.getSnameCell(reportRange).getStringValue().trim();
         }
         if (reportName != null) {
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
@@ -283,7 +284,7 @@ public final class ImportService {
             reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, tempPath);
             reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
             reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
-            ZKAzquoBookUtils.populateBook(reportBook, 0);
+            ReportRenderer.populateBook(reportBook, 0);
             return fillDataRangesFromCopy(loggedInUser, book, or);
         }
         if (loggedInUser.getDatabase() == null) {
@@ -373,9 +374,9 @@ public final class ImportService {
             String regionName = getRegionName(name);
             if (regionName != null) {
                 CellRegion sourceRegion = sName.getRefersToCellRegion();
-                if (name.toLowerCase().contains(ZKAzquoBookUtils.AZREPEATSCOPE)) { // then deal with the multiple data regions sent due to this
+                if (name.toLowerCase().contains(ReportRenderer.AZREPEATSCOPE)) { // then deal with the multiple data regions sent due to this
                     // need to gather associated names for calculations, the region and the data region, code copied and changewd from getRegionRowColForRepeatRegion, it needs to work well for a batch of cells not just one
-                    SName repeatRegion = sourceBook.getInternalBook().getNameByName(ZKAzquoBookUtils.AZREPEATREGION + regionName);
+                    SName repeatRegion = sourceBook.getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + regionName);
                     SName repeatDataRegion = sourceBook.getInternalBook().getNameByName("az_DataRegion" + regionName); // todo string literals ergh!
                     // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
                     if (repeatRegion != null && repeatDataRegion != null) {
@@ -469,7 +470,7 @@ public final class ImportService {
         for (SName sName : book.getInternalBook().getNames()) {
             String rangeName = sName.getName().toLowerCase();
             if (rangeName.endsWith("chosen")) {
-                choices.put(rangeName.substring(0, rangeName.length() - 6), ZKAzquoBookUtils.getSnameCell(sName).getStringValue());
+                choices.put(rangeName.substring(0, rangeName.length() - 6), BookUtils.getSnameCell(sName).getStringValue());
             }
         }
         return choices;

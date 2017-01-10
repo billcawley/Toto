@@ -326,8 +326,8 @@
     <zssjsp:spreadsheet
             id="myzss"  src="/home/edward/Downloads/TEST.xlsx" width="100%"
             height="800px" maxrows="200" maxcolumns="40" showSheetbar="true" showToolbar="true" showFormulabar="true" showContextMenu="true"/>    <!--    zssjsp:spreadsheet id="myzss"
-                            bookProvider="com.azquo.spreadsheet.view.ZKAzquoBookProvider"
-                            apply="com.azquo.spreadsheet.view.ZKComposer"
+                            bookProvider="ZKAzquoBookProvider"
+                            apply="ZKComposer"
                             width="1850px" height="900px"
                             maxrows="1000" maxcolumns="80"
                             showToolbar="true" showFormulabar="true" showContextMenu="true"/>-->

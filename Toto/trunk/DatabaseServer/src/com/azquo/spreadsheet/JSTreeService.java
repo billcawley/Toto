@@ -9,8 +9,8 @@ import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ProvenanceService;
-import com.azquo.spreadsheet.jsonentities.JsonChildStructure;
-import com.azquo.spreadsheet.jsonentities.JsonChildren;
+import com.azquo.spreadsheet.transport.json.JsonChildStructure;
+import com.azquo.spreadsheet.transport.json.JsonChildren;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.util.*;
