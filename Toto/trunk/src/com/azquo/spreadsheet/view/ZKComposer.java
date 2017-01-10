@@ -917,11 +917,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 }
                                 //String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
                                 for (int colNo = 0; colNo < rowHeadings.size(); colNo++){
-                                    drillDownString = replaceAll(drillDownString,"[rowheading" + (colNo + 1), rowHeadings.get(colNo));
+                                    drillDownString = replaceAll(drillDownString,"[rowheading" + (colNo + 1) + "]", rowHeadings.get(colNo));
                                 }
                                 drillDownString = replaceAll(drillDownString,"[rowheading]", rowHeadings.get(rowHeadings.size()-1));
                                 for (int rowNo = 0; rowNo < colHeadings.size();rowNo++){
-                                    drillDownString = replaceAll(drillDownString,"[columnheading" + (rowNo + 1), colHeadings.get(rowNo));
+                                    drillDownString = replaceAll(drillDownString,"[columnheading" + (rowNo + 1) + "]", colHeadings.get(rowNo));
                                 }
                                 drillDownString = replaceAll(drillDownString,"[columnheading]", colHeadings.get(colHeadings.size()-1));
 
