@@ -916,8 +916,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                                     colHeadings.add(cellsAndHeadingsForDisplay.getColumnHeadings().get(rowNo).get(regionColumn)); // last one is the bottom row of col headings
                                 }
                                 //String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
-                                String colHeading = colHeadings.get(regionColumn);
-                                 int stopLoop = 4;
                                 for (int colNo = 0; colNo < rowHeadings.size(); colNo++){
                                     drillDownString = replaceAll(drillDownString,"[rowheading" + (colNo + 1), rowHeadings.get(colNo));
                                 }
