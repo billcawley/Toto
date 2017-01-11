@@ -310,7 +310,7 @@ class HeadingReader {
                             // Context only really works with name in the heading otherwise how would the context differ over different headings, hence make the main heading name if it's not there
                             mutableImportHeading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, false);
                             if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()) {
-                                throw new Exception("error: context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName());
+                                throw new Exception("context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName());
                             }
                             resolvePeers(mutableImportHeading, contextHeading, headings);
                         }
@@ -322,14 +322,14 @@ class HeadingReader {
                     // so if it's Customer,Address1 we need to find customer.
                     mutableImportHeading.indexForAttribute = findMutableHeadingIndex(mutableImportHeading.heading, headings);
                     if (mutableImportHeading.indexForAttribute < 0) {
-                        throw new Exception("error: cannot find column " + mutableImportHeading.attribute + " for attribute of " + mutableImportHeading.heading);
+                        throw new Exception("cannot find column " + mutableImportHeading.attribute + " for attribute of " + mutableImportHeading.heading);
                     }
                 }
                 // Resolve parent of. Parent of in the context of columns in this upload not the Azquo Name sense.
                 if (mutableImportHeading.parentOfClause != null) {
                     mutableImportHeading.indexForChild = findMutableHeadingIndex(mutableImportHeading.parentOfClause, headings);
                     if (mutableImportHeading.indexForChild < 0) {
-                        throw new Exception("error: cannot find column " + mutableImportHeading.parentOfClause + " for child of " + mutableImportHeading.heading);
+                        throw new Exception("cannot find column " + mutableImportHeading.parentOfClause + " for child of " + mutableImportHeading.heading);
                     }
                 }
                 // Mark column indexes where the line cells will be resolved to names
@@ -379,7 +379,7 @@ class HeadingReader {
                     }
                 }
                 if (!found) {
-                    throw new Exception("error: cannot find peer " + peer + " for " + peersSource.name.getDefaultDisplayName() + (contextHeading != null ? "(context source)" : ""));
+                    throw new Exception("Cannot find peer " + peer + " for " + peersSource.name.getDefaultDisplayName() + (contextHeading != null ? "(context source)" : ""));
                 }
             }
             //as from Nov 16 all context headings are assumed to be peer headings

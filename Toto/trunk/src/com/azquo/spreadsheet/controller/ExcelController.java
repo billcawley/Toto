@@ -92,7 +92,7 @@ public class ExcelController {
             if (logon != null && logon.length() > 0) {
                 loggedInUser = LoginService.loginLoggedInUser("", database, logon, password, false);
                 if (loggedInUser == null) {
-                    return "error: user " + logon + " with this password does not exist";
+                    return "User " + logon + " with this password does not exist";
                 }
                 if (!"nic@azquo.com".equalsIgnoreCase(logon) && !SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());

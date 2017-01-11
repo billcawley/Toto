@@ -494,7 +494,7 @@ class AzquoCellService {
         }
         int maxRegionSize = 2000000;//random!  set by WFC 29/6/15
         if (totalRows * totalCols > maxRegionSize) {
-            throw new Exception("error: data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
+            throw new Exception("Data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }
         ExecutorService executor = ThreadPools.getMainThreadPool();
         int progressBarStep = (totalCols * totalRows) / 50 + 1;

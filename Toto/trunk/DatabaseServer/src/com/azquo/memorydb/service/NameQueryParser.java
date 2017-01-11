@@ -298,7 +298,7 @@ public class NameQueryParser {
         }
         final Name name = getNameFromListAndMarker(nameString, referencedNames);
         if (name == null) {
-            throw new Exception("error:  not understood: " + nameString);
+            throw new Exception(" not understood: " + nameString);
         }
         if (childrenString == null && fromString == null && toString == null && countString == null) {
             List<Name> singleName = new ArrayList<>();
@@ -376,7 +376,7 @@ public class NameQueryParser {
                 toAdd = NameService.findNameAndAttribute(azquoMemoryDBConnection, nameString.substring(3), attributeNames);
             }
             if (toAdd == null) {
-                throw new Exception("error: cannot resolve reference to a name " + nameString);
+                throw new Exception("Cannot resolve reference to a name " + nameString);
             }
             referencedNames.add(toAdd);
         }
@@ -396,10 +396,10 @@ public class NameQueryParser {
                 int nameNumber = Integer.parseInt(nameMarker.substring(1).trim());
                 return nameList.get(nameNumber);
             } catch (Exception e) {
-                throw new Exception("error: " + nameMarker + " is not a valid name");
+                throw new Exception(nameMarker + " is not a valid name");
             }
         } else {
-            throw new Exception("error: " + nameMarker + " is not a valid name");
+            throw new Exception(nameMarker + " is not a valid name");
         }
     }
 

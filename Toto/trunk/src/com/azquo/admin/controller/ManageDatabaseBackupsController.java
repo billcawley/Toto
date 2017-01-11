@@ -140,9 +140,6 @@ public class ManageDatabaseBackupsController {
             }
             if (error.length() > 0) {
                 String exceptionError = error.toString();
-                //trim off the javaspeak
-                if (exceptionError.contains("error:"))
-                    exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
                 model.put("error", exceptionError);
             }
             model.put("developer", loggedInUser.getUser().isDeveloper());

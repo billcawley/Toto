@@ -77,10 +77,7 @@ public class CommonReportUtils {
             t = t.getCause();
             check++;
         }
-        String exceptionError = t.getMessage();
-        if (exceptionError != null && exceptionError.contains("error:"))// legacy, should be removed at some point?
-            exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
-        return exceptionError;
+        return t.getMessage();
     }
 
     public static TypedPair<Integer, String> getFullProvenanceStringForCell(LoggedInUser loggedInUser, int reportId, String region, int regionRow, int regionColumn) throws Exception {

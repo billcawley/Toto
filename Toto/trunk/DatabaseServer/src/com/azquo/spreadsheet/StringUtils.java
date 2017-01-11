@@ -261,7 +261,7 @@ I should be ok for StringTokenizer at this point
                 stack = stack.substring(1);
             }
             if ((thisOp == ')' && lastOffStack != '(') || (thisOp != ')' && lastOffStack == '(')) {
-                return "error: mismatched brackets in " + calc;
+                return "Mismatched brackets in " + calc;
             }
             if (thisOp != ')') {
                 stack = thisOp + stack;

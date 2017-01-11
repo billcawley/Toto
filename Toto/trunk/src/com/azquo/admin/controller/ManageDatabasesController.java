@@ -152,9 +152,6 @@ public class ManageDatabasesController {
             }
             if (error.length() > 0) {
                 String exceptionError = error.toString();
-                //trim off the javaspeak
-                if (exceptionError.contains("error:"))
-                    exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
                 model.put("error", exceptionError);
             }
             model.put("databases", displayDataBases);
@@ -216,9 +213,6 @@ public class ManageDatabasesController {
                     } catch (Exception e){ // now the import has it's on exception catching
                         String exceptionError = e.getMessage();
                         e.printStackTrace();
-                        //trim off the javaspeak
-                        if (exceptionError != null && exceptionError.contains("error:"))
-                            exceptionError = exceptionError.substring(exceptionError.indexOf("error:"));
                         model.put("error", exceptionError);
                     }
                 }

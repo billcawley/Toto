@@ -164,7 +164,7 @@ this may now not work at all, perhaps delete?
             final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail(), databaseId, userId);
             UserDAO.store(user);
         } else {
-            throw new Exception("error: you do not have permission to create a user");
+            throw new Exception("You do not have permission to create a user");
         }
     }
 

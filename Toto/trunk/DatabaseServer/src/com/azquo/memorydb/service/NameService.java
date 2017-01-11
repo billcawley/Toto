@@ -82,7 +82,7 @@ public final class NameService {
         getNameByAttributeCount.incrementAndGet();
         // attribute value null? Can it happen?
         if (attributeValue.length() > 0 && attributeValue.charAt(0) == StringLiterals.NAMEMARKER) {
-            throw new Exception("error: getNameByAttribute should no longer have name marker passed to it!");
+            throw new Exception("getNameByAttribute should no longer have name marker passed to it!");
         }
         return azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, attributeValue.replace(StringLiterals.QUOTE, ' ').trim(), parent);
     }
