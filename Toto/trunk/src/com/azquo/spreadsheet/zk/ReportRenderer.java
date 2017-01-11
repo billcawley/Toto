@@ -648,7 +648,7 @@ public class ReportRenderer {
                             int col = displayRowHeadings.getColumn();
                             int startCol = col;
                             for (String heading : rowHeading) {
-                                if (heading != null && (sheet.getInternalSheet().getCell(row, col).getType() != SCell.CellType.STRING || sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
+                                if (heading != null && !heading.equals(".") && (sheet.getInternalSheet().getCell(row, col).getType() != SCell.CellType.STRING || sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                                     SCell cell = sheet.getInternalSheet().getCell(row, col);
                                     cell.setValue(heading);
                                     if (lineNo > 0 && lastRowHeadings.get(col - startCol) != null && lastRowHeadings.get(col - startCol).equals(heading)) {
@@ -774,7 +774,7 @@ public class ReportRenderer {
                                 }
                                 int col = displayColumnHeadings.getColumn();
                                 for (String heading : colHeading) {
-                                    if (heading.equals(lastHeading)) {
+                                    if (heading.equals(lastHeading) || heading.equals(".")) {
                                         heading = "";
                                     } else {
                                         lastHeading = heading;
