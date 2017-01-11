@@ -5,24 +5,17 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.spreadsheet.CommonBookUtils;
+import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
-import org.zkoss.zss.api.CellOperationUtil;
-import org.zkoss.zss.api.Range;
-import org.zkoss.zss.api.Ranges;
+import com.azquo.spreadsheet.controller.OnlineController;
+import com.azquo.spreadsheet.transport.CellForDisplay;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
-import org.zkoss.zss.api.model.Validation;
-import org.zkoss.zss.model.CellRegion;
-import org.zkoss.zss.model.SCell;
-import org.zkoss.zss.model.SName;
-import org.zkoss.zss.model.SSheet;
+import org.zkoss.zss.model.*;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -102,140 +95,113 @@ public class ReportService {
                     queryCell.clearFormulaResultCache();
                 }
                 if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR)) {
-                    BookUtils.setValue(queryCell, CommonBookUtils.resolveQuery(loggedInUser, queryCell.getStringValue()));
+                    BookUtils.setValue(queryCell, CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue()));
                 }
             }
         }
     }
 
-    static List<SName> addValidation(LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap) {
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-        if (book.getSheet(ReportRenderer.VALIDATION_SHEET) == null) {
-            book.getInternalBook().createSheet(ReportRenderer.VALIDATION_SHEET);
-        }
-        Sheet validationSheet = book.getSheet(ReportRenderer.VALIDATION_SHEET);
-        validationSheet.getInternalSheet().setSheetVisible(SSheet.SheetVisible.HIDDEN);
-        int numberOfValidationsAdded = 0;
-        List<SName> dependentRanges = new ArrayList<>();
-        for (SName name : book.getInternalBook().getNames()) {
-            String rangeName = name.getName().toLowerCase();
-            if (rangeName.toLowerCase().startsWith(ReportRenderer.AZPIVOTFILTERS) || rangeName.toLowerCase().startsWith(ReportRenderer.AZCONTEXTFILTERS)) {//the correct version should be 'az_ContextFilters'
-                String[] filters = BookUtils.getSnameCell(name).getStringValue().split(",");
-                SName contextChoices = book.getInternalBook().getNameByName(ReportRenderer.AZCONTEXTHEADINGS);
-                if (contextChoices == null) {
-                    //original name...
-                    contextChoices = book.getInternalBook().getNameByName(ReportRenderer.AZPIVOTHEADINGS);
-                }
-                if (contextChoices != null) {
-                    showChoices(loggedInUser, book, contextChoices, filters, 3);
+    private static final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+
+    // make ZK resolve formulae and the, assuming not fast save check for formulae changing data. Finally snap the charts.
+    static boolean resolveFormulaeAndSnapCharts(LoggedInUser loggedInUser, int reportId, Book book, Sheet sheet, boolean skipSaveCheck, boolean useSavedValuesOnFormulae){
+        boolean showSave = false;
+        // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
+        // can't do this in the fill region as formulae need to be dealt with outside
+        final Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator();// only rows with values in them
+        while (rowIterator.hasNext()) {
+            Iterator<SCell> cellIterator = sheet.getInternalSheet().getCellIterator(rowIterator.next().getIndex());
+            while (cellIterator.hasNext()) {
+                SCell cell = cellIterator.next();
+                if (cell.getType() == SCell.CellType.FORMULA) {
+                    //System.out.println("doing the cell thing on " + cell);
+                    cell.getFormulaResultType();
+                    cell.clearFormulaResultCache();
                 }
             }
-            if (name.getName().toLowerCase().endsWith("choice")) {
-                String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
-                SCell choiceCell = BookUtils.getSnameCell(name);
-                System.out.println("debug:  trying to find the region " + choiceName + "chosen");
-                SName chosen = book.getInternalBook().getNameByName(choiceName + "chosen"); // as ever I do wonder about these string literals
-                if (name.getRefersToCellRegion() != null && chosen != null) {
-                    Sheet sheet = book.getSheet(chosen.getRefersToSheetName());
-                    CellRegion chosenRegion = chosen.getRefersToCellRegion();
-                    if (chosenRegion != null) {
-                        List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
-                        // todo - clarify how this can ever be false?? we know there's a region for this name so
-                        boolean dataRegionDropdown = !BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
-                        if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
-                            String query = choiceCell.getStringValue();
-                            int contentPos = query.toLowerCase().indexOf(ReportRenderer.CONTENTS);
-                            if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
-                                if (contentPos < 0) {//not a dependent range
-                                    BookUtils.setValue(validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded), name.getName());
-                                    int row = 0;
-                                    // yes, this can null pointer but if it does something is seriously wrong
-                                    for (String choiceOption : choiceOptions) {
-                                        row++;// like starting at 1
-                                        SCell vCell = validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded);
-                                        vCell.setCellStyle(sheet.getInternalSheet().getCell(chosenRegion.getRow(), chosenRegion.getColumn()).getCellStyle());
-                                        try {
-                                            Date date = df.parse(choiceOption);
-                                            vCell.setDateValue(date);
-
-
-                                        } catch (Exception e) {
-                                            BookUtils.setValue(vCell, choiceOption);
-                                        }
+        }
+            /* Now formulae should have been calculated check if anything might need to be saved
+            I'd avoided doing this but now I am it's useful for restoring values and checking for overlapping data regions.
+            so similar loop to above - also we want to check for the logic of using the loaded values
+            */
+            // by a negative as we want to imply that the default is to check the save
+        if (!skipSaveCheck) {
+            List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
+            for (SName name : namesForSheet) {
+                if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
+                    String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+                    CellRegion displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, ReportRenderer.AZDATAREGION + region);
+                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
+                    if (displayDataRegion != null && sentCells != null) {
+                        int startRow = displayDataRegion.getRow();
+                        int endRow = displayDataRegion.getLastRow();
+                        int startCol = displayDataRegion.getColumn();
+                        int endCol = displayDataRegion.getLastColumn();
+                        for (int row = startRow; row <= endRow; row++) {
+                            for (int col = startCol; col <= endCol; col++) {
+                                SCell sCell = sheet.getInternalSheet().getCell(row, col);
+                                if (sentCells.getData() != null && sentCells.getData().size() > row - name.getRefersToCellRegion().getRow() // as ever check ranges of the data region vs actual data sent.
+                                        && sentCells.getData().get(row - name.getRefersToCellRegion().getRow()).size() > col - name.getRefersToCellRegion().getColumn()) {
+                                    CellForDisplay cellForDisplay = sentCells.getData().get(row - startRow).get(col - startCol);
+                                    if (cellForDisplay.getSelected()) {
+                                        book.getInternalBook().setAttribute(OnlineController.CELL_SELECT, row + "," + col);
                                     }
-                                    if (row > 0) { // if choice options is empty this will not work
-                                        Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
-                                        //validationValues.createName("az_Validation" + numberOfValidationsAdded);
-                                        for (int rowNo = chosenRegion.getRow(); rowNo < chosenRegion.getRow() + chosenRegion.getRowCount(); rowNo++) {
-                                            for (int colNo = chosenRegion.getColumn(); colNo < chosenRegion.getColumn() + chosenRegion.getColumnCount(); colNo++) {
-                                                Range chosenRange = Ranges.range(sheet, rowNo, colNo, rowNo, colNo);
-                                                //chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "\"az_Validation" + numberOfValidationsAdded +"\"", null,
-                                                chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true, "=" + validationValues.asString(), null,
-                                                        //true, "title", "msg",
-                                                        true, "", "",
-                                                        false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
-
+                                    if (sCell.getType() == SCell.CellType.FORMULA) {
+                                        if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
+                                            if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                                if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB, only if not ignored
+                                                    sCell.setNumberValue(cellForDisplay.getDoubleValue());
+                                                } else { // the formula overrode the DB, get the value ready of saving if the user wants that
+                                                    cellForDisplay.setNewDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                    showSave = true;
+                                                }
+                                            }
+                                            if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
+                                                cellForDisplay.setNewStringValue(df.format(sCell.getDateValue()));//set a string value as our date for saving purposes
+                                            }
+                                        } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
+                                            if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
+                                                if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB
+                                                    BookUtils.setValue(sCell, cellForDisplay.getStringValue());
+                                                } else { // the formula overrode the DB, get the value ready of saving if the user wants that
+                                                    cellForDisplay.setNewStringValue(sCell.getStringValue());
+                                                    showSave = true;
+                                                }
                                             }
                                         }
-                                        numberOfValidationsAdded++;
                                     } else {
-                                        System.out.println("no choices for : " + choiceCell.getStringValue());
+                                        // we now want to compare in the case of non formulae changes - a value from one data region importing into another,
+                                        // the other typically being of the "ad hoc" no row headings type
+                                        // notably this will hit a lot of cells (all the rest)
+                                        String cellString = BookUtils.getCellString(sheet, row, col);
+                                        if (sCell.getType() == SCell.CellType.NUMBER) {
+                                            if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                                cellForDisplay.setNewStringValue(cellString);//to cover dates as well as numbers -EFC, I don't really understand but I'm moving this inside the conditional
+                                                cellForDisplay.setNewDoubleValue(sCell.getNumberValue()); // should flag as changed
+                                                showSave = true;
+                                            }
+                                        } else if (sCell.getType() == SCell.CellType.STRING) {
+                                            if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
+                                                cellForDisplay.setNewStringValue(sCell.getStringValue());
+                                                showSave = true;
+                                            }
+                                        }
                                     }
-                                } else {
-                                    dependentRanges.add(name);
                                 }
-                            /*Unlike above where the setting of the choice has already been done we need to set the
-                            existing choices here, hence why user choices is required for this. The check for userChoices not being null
-                             is that it might be null when re adding the validation sheet when switching between sheets which can happen.
-                             Under these circumstances I assume we won't need to re-do the filter adding. I guess need to test.
-                             */
                             }
-                        }// do anything in the case of excel error?
-
-                    }
-                } else {
-                    SName multi = book.getInternalBook().getNameByName(choiceName + "multi"); // as ever I do wonder about these string literals
-                    if (multi != null) {
-                        SCell resultCell = BookUtils.getSnameCell(multi);
-                        // all multi list is is a fancy way of saying to the user what is selected, e.g. all, various, all but or a list of those selected. The actual selection box is created in the composer, onclick
-                        BookUtils.setValue(resultCell, ReportRenderer.multiList(loggedInUser, choiceName + "Multi", choiceCell.getStringValue()));
+                        }
                     }
                 }
             }
         }
-        return dependentRanges;
-    }
-
-    private static void showChoices(LoggedInUser loggedInUser, Book book, SName contextChoices, String[] filters, int headingWidth) {
-        Sheet cSheet = book.getSheet(contextChoices.getRefersToSheetName());
-        CellRegion chRange = contextChoices.getRefersToCellRegion();
-        int headingRow = chRange.getRow();
-        int headingCol = chRange.getColumn();
-        int headingRows = chRange.getRowCount();
-        int filterCount = 0;
-        //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
-        for (String filter : filters) {
-            filter = filter.trim();
-            List<String> optionsList = CommonBookUtils.getDropdownListForQuery(loggedInUser, "`" + filter + "` children sorted");
-            if (optionsList != null && optionsList.size() > 1) {
-                String selected = ReportRenderer.multiList(loggedInUser, "az_" + filter, "`" + filter + "` children sorted");//leave out any with single choices
-                int rowOffset = filterCount % headingRows;
-                int colOffset = filterCount / headingRows;
-                int chosenRow = headingRow + rowOffset;
-                int chosenCol = headingCol + headingWidth * colOffset;
-                if (filterCount > 0) {
-                    Range copySource = Ranges.range(cSheet, headingRow, headingCol, headingRow, headingCol + 1);
-                    Range copyTarget = Ranges.range(cSheet, chosenRow, chosenCol, chosenRow, chosenCol + 1);
-                    CellOperationUtil.paste(copySource, copyTarget);
-                    //Ranges.range(pSheet, chosenRow, chosenCol + 1).setNameName(filter + "Chosen");
-
-                }
-                BookUtils.setValue(cSheet.getInternalSheet().getCell(chosenRow, chosenCol), filter);
-                if (headingWidth > 1) {
-                    BookUtils.setValue(cSheet.getInternalSheet().getCell(chosenRow, chosenCol + 1), selected);
-                }
-                filterCount++;
-            }
+        for (SChart chart : sheet.getInternalSheet().getCharts()) {
+            ViewAnchor oldAnchor = chart.getAnchor();
+            int row = oldAnchor.getRowIndex();
+            int col = oldAnchor.getColumnIndex();
+            int width = oldAnchor.getWidth();
+            int height = oldAnchor.getHeight();
+            chart.setAnchor(new ViewAnchor(row, col, 0, 0, width, height));
         }
+        return showSave;
     }
 }

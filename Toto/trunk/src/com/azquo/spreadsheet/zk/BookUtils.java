@@ -12,8 +12,6 @@ import org.zkoss.zss.model.SSheet;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -142,7 +140,7 @@ public class BookUtils {
         }
         String format = sCell.getCellStyle().getDataFormat();
         if (format.toLowerCase().contains("m")) {//allow users to format their own dates.  All dates on file as values are yyyy-MM-dd
-            LocalDate date = isADate(sValue);
+            LocalDate date = ReportUtils.isADate(sValue);
             if (date != null) {
                 sCell.setDateValue(Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant()));
                 return;
@@ -151,33 +149,6 @@ public class BookUtils {
         if (NumberUtils.isNumber(sValue)) {
             sCell.setValue(Double.parseDouble(sValue));
         }
-    }
-
-    private static LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
-        try {
-            return LocalDate.parse(maybeDate, dateTimeFormatter);
-        } catch (DateTimeParseException e) {
-            return null;
-        }
-    }
-
-    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd/MM/yy");
-    private static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd MMM yyyy");
-    private static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DateTimeFormatter ukdf5 = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-
-    static LocalDate isADate(String maybeDate) {
-        if (maybeDate == null) return null;
-        LocalDate date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, dateTimeFormatter);
-        if (date != null) return date;
-        date = tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, ukdf4);
-        if (date != null) return date;
-        date = tryDate(maybeDate.length() > 11 ? maybeDate.substring(0, 11) : maybeDate, ukdf3);
-        if (date != null) return date;
-        date = tryDate(maybeDate.length() > 8 ? maybeDate.substring(0, 8) : maybeDate, ukdf2);
-        if (date != null) return date;
-        return tryDate(maybeDate.length() > 10 ? maybeDate.substring(0, 10) : maybeDate, ukdf5);
     }
 
     static int getMaxCol(Sheet sheet) {

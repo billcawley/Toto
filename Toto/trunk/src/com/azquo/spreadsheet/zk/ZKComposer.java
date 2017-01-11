@@ -349,7 +349,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                             }
                             // check to see if we need to set the selected values in a cell - or in the main cell?
                             if (queryResultRegion2 != null) {
-                                String resultDescription = ReportRenderer.multiList(loggedInUser, selectionName2, selectionList2);
+                                String resultDescription = ReportChoicesService.multiList(loggedInUser, selectionName2, selectionList2);
                                 final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(queryResultRegion2.getRow(), queryResultRegion2.getColumn());
                                 cell.setStringValue(resultDescription);
                             }
@@ -655,7 +655,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
                 // this logic is repeated from add validation, dedupe?
                 for (String filter : filters) {
-                    List<String> optionsList = CommonBookUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
+                    List<String> optionsList = CommonReportUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
                     if (optionsList != null && optionsList.size() > 1) {
                         int rowOffset = filterCount % headingRows;
                         int colOffset = filterCount / headingRows;
@@ -801,7 +801,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
             try {
-                TypedPair<Integer, String> fullProvenance = CommonBookUtils.getFullProvenanceStringForCell(loggedInUser, reportId, region, regionRow, regionColumn);
+                TypedPair<Integer, String> fullProvenance = CommonReportUtils.getFullProvenanceStringForCell(loggedInUser, reportId, region, regionRow, regionColumn);
                 String stringToShow = null;
                 if (fullProvenance != null) {
                     stringToShow = fullProvenance.getSecond(); // the former will be mangled
@@ -1072,7 +1072,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     private void showProvenance(String provline, int valueId) {
         final Book book = myzss.getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        String reportName = SpreadsheetService.setChoices(loggedInUser, provline);
+        String reportName = ReportChoicesService.setChoices(loggedInUser, provline);
         OnlineReport or = null;
         String permissionId = null;
         if (reportName != null) {

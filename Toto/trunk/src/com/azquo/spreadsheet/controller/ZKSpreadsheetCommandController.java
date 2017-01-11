@@ -6,6 +6,7 @@ import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.zk.ReportChoicesService;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.spreadsheet.zk.BookUtils;
@@ -335,7 +336,7 @@ public class ZKSpreadsheetCommandController {
 
     private List<String> getChoiceList(Book book, String choice) {
         List<String> toReturn = new ArrayList<>();
-        Sheet validationSheet = book.getSheet(ReportRenderer.VALIDATION_SHEET);
+        Sheet validationSheet = book.getSheet(ReportChoicesService.VALIDATION_SHEET);
         if (validationSheet != null) {
             int col = 0;
             SCell cell = validationSheet.getInternalSheet().getCell(0, col);
@@ -363,7 +364,7 @@ public class ZKSpreadsheetCommandController {
     }
 
     private String renderBook(Book book) throws IOException {
-        Sheet validationSheet = book.getSheet(ReportRenderer.VALIDATION_SHEET);
+        Sheet validationSheet = book.getSheet(ReportChoicesService.VALIDATION_SHEET);
         if (validationSheet != null) {
             try {
                 book.getInternalBook().deleteSheet(validationSheet.getInternalSheet());

@@ -198,28 +198,6 @@ public class SpreadsheetService {
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).unlockData(loggedInUser.getDataAccessToken());
     }
 
-    public static String setChoices(LoggedInUser loggedInUser, String provline) {
-        int inSpreadPos = provline.toLowerCase().indexOf("in spreadsheet");
-        if (inSpreadPos < 0) return null;
-        int withPos = provline.indexOf(" with ", inSpreadPos);
-        if (withPos < 0) withPos = provline.indexOf(".");//no parameters
-        if (withPos < 0) withPos = provline.length();//still no parameters!
-        String reportName = provline.substring(inSpreadPos + 14, withPos).trim().replace("`", "");//strip any spurious `
-        String paramString = provline.substring(withPos + 6);
-        int equalsPos = paramString.indexOf(" = ");
-        while (equalsPos > 0) {
-            int endParam = paramString.indexOf(";");
-            if (endParam < 0) endParam = paramString.length();
-            String paramName = paramString.substring(0, equalsPos).trim();
-            String paramValue = paramString.substring(equalsPos + 3, endParam).trim();
-            setUserChoice(loggedInUser.getUser().getId(), paramName, paramValue);
-            paramString = paramString.substring(endParam);
-            if (paramString.length() > 0) paramString = paramString.substring(1);//remove the semicolon
-            equalsPos = paramString.indexOf(" = ");
-        }
-        return reportName;
-    }
-
     public final static String FIRST_PLACEHOLDER = "||FIRST||";
     public final static String LAST_PLACEHOLDER = "||LAST||";
 

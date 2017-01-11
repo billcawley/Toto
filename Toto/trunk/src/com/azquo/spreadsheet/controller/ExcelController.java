@@ -10,7 +10,7 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
-import com.azquo.spreadsheet.CommonBookUtils;
+import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -304,13 +304,13 @@ public class ExcelController {
             }
 
             if (userChoices != null) {
-                return jacksonMapper.writeValueAsString(CommonBookUtils.getUserChoicesMap(loggedInUser));
+                return jacksonMapper.writeValueAsString(CommonReportUtils.getUserChoicesMap(loggedInUser));
             }
             if (dropDownListForQuery != null) {
-                return jacksonMapper.writeValueAsString(CommonBookUtils.getDropdownListForQuery(loggedInUser, dropDownListForQuery));
+                return jacksonMapper.writeValueAsString(CommonReportUtils.getDropdownListForQuery(loggedInUser, dropDownListForQuery));
             }
             if (resolveQuery != null) {
-                return CommonBookUtils.resolveQuery(loggedInUser, resolveQuery);
+                return CommonReportUtils.resolveQuery(loggedInUser, resolveQuery);
             }
             if (choiceName != null && choiceValue != null) {
                 choiceValue = choiceValue.trim();
@@ -319,7 +319,7 @@ public class ExcelController {
             }
             if (provenanceJson != null) {
                 ProvenanceJsonRequest provenanceJsonRequest = jacksonMapper.readValue(provenanceJson, ProvenanceJsonRequest.class);
-                TypedPair<Integer, String> fullProvenance = CommonBookUtils.getFullProvenanceStringForCell(loggedInUser, provenanceJsonRequest.reportId
+                TypedPair<Integer, String> fullProvenance = CommonReportUtils.getFullProvenanceStringForCell(loggedInUser, provenanceJsonRequest.reportId
                         , provenanceJsonRequest.region, provenanceJsonRequest.row, provenanceJsonRequest.col);
                 return ZKComposer.trimString(fullProvenance.getSecond());
             }
@@ -374,7 +374,7 @@ public class ExcelController {
             languages.remove(loggedInUser.getUser().getEmail());
             return ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false);
         } catch (Exception e) {
-            return CommonBookUtils.getErrorFromServerSideException(e);
+            return CommonReportUtils.getErrorFromServerSideException(e);
         }
     }
 }

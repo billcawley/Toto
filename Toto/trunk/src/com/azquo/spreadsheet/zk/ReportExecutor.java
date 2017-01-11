@@ -5,7 +5,7 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
-import com.azquo.spreadsheet.CommonBookUtils;
+import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
@@ -104,7 +104,7 @@ public class ReportExecutor {
                         String choiceName = trimmedLine.substring("for each".length(), trimmedLine.indexOf(" in ")).trim();
                         String choiceQuery = trimmedLine.substring(trimmedLine.indexOf(" in ") + " in ".length()).trim();
                         loopsLog.append(choiceName).append(" : ").append(choiceQuery).append("\r\n");
-                        final List<String> dropdownListForQuery = CommonBookUtils.getDropdownListForQuery(loggedInUser, choiceQuery);
+                        final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery);
                         for (String choiceValue : dropdownListForQuery) { // run the for :)
                             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);

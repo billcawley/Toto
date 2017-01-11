@@ -19,7 +19,7 @@ import java.util.Map;
  * <p>
  * Contains functionality that will be used by both ZK and the Excel interface.
  */
-public class CommonBookUtils {
+public class CommonReportUtils {
 
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
         //hack to discover a database name
