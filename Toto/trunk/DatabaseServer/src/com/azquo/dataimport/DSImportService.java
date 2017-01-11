@@ -302,7 +302,7 @@ public class DSImportService {
                     throw new Exception("Invalid headers on import file - is this a report that required az_ReportName?");
                 }
                 // option to stack the clauses vertically
-                buildHeadersFromVerticallyListedClauses(headers, lineIteratorAndBatchSize.lineIterator);
+                buildHeadersFromVerticallyListedClauses(azquoMemoryDBConnection, headers, lineIteratorAndBatchSize.lineIterator);
             }
             if (isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
@@ -329,28 +329,60 @@ public class DSImportService {
     }
 
     // the idea is that a header could be followed by successive clauses on cells below and this might be easier to read
-    private static void buildHeadersFromVerticallyListedClauses(String[] headers, Iterator<String[]> lineIterator) {
+    private static void buildHeadersFromVerticallyListedClauses(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, Iterator<String[]> lineIterator) {
         String[] nextLine = lineIterator.next();
         int headingCount = 1;
         boolean lastfilled = true;
         while (lineIterator.hasNext() && lastfilled && headingCount++ < 10) {
             int colNo = 0;
             lastfilled = false;
+            // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
             for (String heading : nextLine) {
-                if (heading.length() > 2 && colNo < headers.length) { //ignore "--", can be used to give space below the headers
+                if (heading.length() > 0 && !heading.equals("--") && colNo < headers.length) { //ignore "--", can be used to give space below the headers
                     if (heading.startsWith(".")) {
                         headers[colNo] += heading;
                     } else {
-                        headers[colNo] += ";" + heading;
+                        if (headers[colNo].length() == 0) {
+                            headers[colNo] = heading;
+                        } else {
+                            if (findReservedWord(heading)){
+                                 headers[colNo] += ";" + heading;
+                            } else {
+                                headers[colNo] = heading + "|" + headers[colNo];
+                            }
+                        }
                     }
                     lastfilled = true;
                 }
                 colNo++;
             }
-            if (lastfilled){
+            if (lastfilled) {
                 nextLine = lineIterator.next();
             }
         }
+    }
+
+    private static boolean findReservedWord(String heading){
+        heading = heading.toLowerCase();
+        if (heading.startsWith(HeadingReader.CHILDOF)) return true;
+        if (heading.startsWith(HeadingReader.PARENTOF)) return true;
+        if (heading.startsWith(HeadingReader.ATTRIBUTE)) return true;
+        if (heading.startsWith(HeadingReader.LANGUAGE)) return true;
+        if (heading.startsWith(HeadingReader.PEERS)) return true;
+        if (heading.startsWith(HeadingReader.LOCAL)) return true;
+        if (heading.startsWith(HeadingReader.COMPOSITION)) return true;
+        if (heading.startsWith(HeadingReader.DEFAULT)) return true;
+        if (heading.startsWith(HeadingReader.NONZERO)) return true;
+        if (heading.startsWith(HeadingReader.DATELANG)) return true;
+        if (heading.startsWith(HeadingReader.ONLY)) return true;
+        if (heading.startsWith(HeadingReader.EXCLUSIVE)) return true;
+        if (heading.startsWith(HeadingReader.COMMENT)) return true;
+        if (heading.startsWith(HeadingReader.EXISTING)) return true;
+        if (heading.startsWith(HeadingReader.LINEHEADING)) return true;
+        if (heading.startsWith(HeadingReader.LINEDATA)) return true;
+        if (heading.startsWith(HeadingReader.SPLIT)) return true;
+        return false;
+
     }
 
     private static void checkTranspose(Name importInterpreter, HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize) {
