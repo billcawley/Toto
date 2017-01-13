@@ -32,8 +32,8 @@ public class ReportRenderer {
     public static final String AZOPTIONS = "az_options";
     public static final String AZREPEATREGION = "az_repeatregion";
     public static final String AZREPEATSCOPE = "az_repeatscope";
-    private static final String AZREPEATITEM = "az_repeatitem";
-    private static final String AZREPEATLIST = "az_repeatlist";
+    static final String AZREPEATITEM = "az_repeatitem";
+    static final String AZREPEATLIST = "az_repeatlist";
     private static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
     private static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
     static final String AZCOLUMNHEADINGS = "az_columnheadings";
@@ -46,15 +46,6 @@ public class ReportRenderer {
     static final String AZREPORTNAME = "az_reportname";
     public static final String EXECUTE = "az_Execute";
     public static final String FOLLOWON = "az_Followon";
-
-    /*
-    CONTENTS is used to handle dependent ranges within the data region.   Thus one column in the data region may ask for a category, and the next a subcategory, which should be determined by the category
-    For single cell 'chosen' ranges there is no problem - the choice for the subcategory may be defined as an Excel formula.
-    For multicell ranges, use 'CONTENTS(rangechosen) to specify the subcategory....
-
-    Not to do with pivot tables, initially for the expenses sheet, let us say that the first column is to select a project and then the second to select something based off that, you'd use contents. Not used that often.
-     */
-    static final String CONTENTS = "contents(";
 
     public static boolean populateBook(Book book, int valueId) {
         return populateBook(book, valueId, false, false);
@@ -78,11 +69,11 @@ public class ReportRenderer {
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
             // check we're not hitting a validation sheet we added!
-            if (sheet.getSheetName().endsWith(ReportChoicesService.VALIDATION_SHEET)){
+            if (sheet.getSheetName().endsWith(ChoicesService.VALIDATION_SHEET)) {
                 continue;
             }
             // options and validation now sorted per sheet
-            ReportService.checkForPermissionsInSheet(loggedInUser,sheet);
+            ReportService.checkForPermissionsInSheet(loggedInUser, sheet);
             /* with the protect sheet command below commented this is currently pointless. I think ZK had some misbehavior while locked so leave this for the moment.
             int maxRow = sheet.getLastRow();
             int maxCol = 0;
@@ -105,7 +96,7 @@ public class ReportRenderer {
             // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
             List<CellRegion> regionsToWatchForMerge = new ArrayList<>();
             // it will return the properly resolved choice options map as well as flagging the regions to merge by adding to the list
-            Map<String, List<String>> choiceOptionsMap = ReportChoicesService.resolveAndSetChoiceOptions(loggedInUser,sheet,regionsToWatchForMerge);
+            Map<String, List<String>> choiceOptionsMap = ChoicesService.resolveAndSetChoiceOptions(loggedInUser, sheet, regionsToWatchForMerge);
             ReportService.resolveQueries(sheet, loggedInUser); // after all options sorted should be ok
             // ok the plan here is remove merges that might be adversely affected by regions expanding then put them back in after the regions are expanded.
             List<CellRegion> mergesToTemporarilyRemove = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
@@ -162,14 +153,14 @@ public class ReportRenderer {
                         DatabaseServer origServer = loggedInUser.getDatabaseServer();
                         try {
                             LoginService.switchDatabase(loggedInUser, databaseName);
-                            fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode); // in this case execute mode is telling the logs to be quiet
+                            populateRegionSet(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode); // in this case execute mode is telling the logs to be quiet
                         } catch (Exception e) {
                             String eMessage = "Unknown database " + databaseName + " for region " + region;
                             BookUtils.setValue(sheet.getInternalSheet().getCell(0, 0), eMessage);
                         }
                         loggedInUser.setDatabaseWithServer(origServer, origDatabase);
                     } else {
-                        fillRegion(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode);
+                        populateRegionSet(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode);
                     }
                 }
             }
@@ -218,7 +209,7 @@ public class ReportRenderer {
             );*/
             // all data for that sheet should be populated
             // returns true if data changed by formulae
-            if (ReportService.resolveFormulaeAndSnapCharts(loggedInUser,reportId,book,sheet,fastLoad,useSavedValuesOnFormulae)){
+            if (ReportService.resolveFormulaeAndSnapCharts(loggedInUser, reportId, book, sheet, fastLoad, useSavedValuesOnFormulae)) {
                 showSave = true;
             }
             // now remerge
@@ -226,9 +217,9 @@ public class ReportRenderer {
                 // the boolean meant JUST horizontally, I don't know why. Hence false.
                 CellOperationUtil.merge(Ranges.range(sheet, merge.getRow(), merge.getColumn(), merge.getLastRow(), merge.getLastColumn()), false);
             }
-            List<SName> dependentRanges = ReportChoicesService.addValidation(sheet.getSheetName(), loggedInUser, book, choiceOptionsMap);
+            List<SName> dependentRanges = ChoicesService.addValidation(sheet.getSheetName(), loggedInUser, book, choiceOptionsMap);
             if (dependentRanges.size() > 0) {
-                ReportChoicesService.resolveDependentChoiceOptions(sheet.getSheetName(), dependentRanges, book, loggedInUser);
+                ChoicesService.resolveDependentChoiceOptions(sheet.getSheetName(), dependentRanges, book, loggedInUser);
             }
         }
         //
@@ -244,76 +235,15 @@ public class ReportRenderer {
         return showSave;
     }
 
-    private static void fillRegion(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet) {
-        // ok need to deal with the repeat region things
-        // the region to be repeated, will contain headings and an item which changes for each repetition
-        SName repeatRegion = sheet.getBook().getInternalBook().getNameByName(AZREPEATREGION + region);
-        // the target space we can repeat into. Can expand down but not across
-        SName repeatScope = sheet.getBook().getInternalBook().getNameByName(AZREPEATSCOPE + region);
-        // the list of items we can repeat over
-        SName repeatList = sheet.getBook().getInternalBook().getNameByName(AZREPEATLIST + region);
-        // the cell we'll put the items in the list in
-        SName repeatItem = sheet.getBook().getInternalBook().getNameByName(AZREPEATITEM + region);
-
+    private static void populateRegionSet(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet) {
         if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
             sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
-        }
-        // probably will be required later so declare out here
-        int repeatRegionWidth = 0;
-        int repeatScopeWidth = 0;
-        int repeatRegionHeight = 0;
-        int repeatScopeHeight = 0;
-        int repeatColumns = 0;
-        int repeatItemRowOffset = 0;
-        int repeatItemColumnOffset = 0;
-        List<String> repeatListItems = null;
-        if (repeatRegion != null && repeatScope != null && repeatList != null && repeatItem != null) { // then the repeat thing
-            repeatRegionWidth = repeatRegion.getRefersToCellRegion().getColumnCount();
-            repeatScopeWidth = repeatScope.getRefersToCellRegion().getColumnCount();
-            repeatRegionHeight = repeatRegion.getRefersToCellRegion().getRowCount();
-            repeatScopeHeight = repeatScope.getRefersToCellRegion().getRowCount();
-            repeatColumns = repeatScopeWidth / repeatRegionWidth;
-            // we'll need the relative location of the item to populate it in each instance
-            repeatItemRowOffset = repeatItem.getRefersToCellRegion().getRow() - repeatRegion.getRefersToCellRegion().getRow();
-            repeatItemColumnOffset = repeatItem.getRefersToCellRegion().getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
-
-            String repeatListText = BookUtils.getSnameCell(repeatList).getStringValue();
-            repeatListItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText);
-            // so the expansion within each region will be dealt with by fill region internally but out here I need to ensure that there's enough space for the regions unexpanded
-            int repeatRowsRequired = repeatListItems.size() / repeatColumns;
-            if (repeatListItems.size() % repeatColumns > 0) {
-                repeatRowsRequired++;
-            }
-            int rowsRequired = repeatRowsRequired * repeatRegionHeight;
-            if (rowsRequired > repeatScopeHeight) {
-                // slight copy paste from below, todo factor?
-                int maxCol = BookUtils.getMaxCol(sheet);
-                int rowsToAdd = rowsRequired - repeatScopeHeight;
-                int insertRow = repeatScope.getRefersToCellRegion().getRow() + repeatScope.getRefersToCellRegion().getRowCount() - 1; // last row, inserting here shifts the row down - should it be called last row? -1 on the row count as rows are inclusive. Rows 3-4 is not 1 row it's 2!
-//                int insertRow = repeatScope.getRefersToCellRegion().getLastRow(); // last row (different API call, was using the firt row plus the row count - 1, a simple mistake?)
-                Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
-                Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - rows to add - 1 as rows are inclusive
-                CellOperationUtil.insertRow(insertRange);
-                CellOperationUtil.paste(copySource, insertRange);
-                int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
-                if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
-                    insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
-                }
-                // and do hidden
-                boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
-                if (hidden) {
-                    for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
-                        sheet.getInternalSheet().getRow(row).setHidden(true);
-                    }
-                }
-            }
-            // so the space should be prepared for multi
         }
         SName columnHeadingsDescription = sheet.getBook().getInternalBook().getNameByName(AZCOLUMNHEADINGS + region);
         SName rowHeadingsDescription = sheet.getBook().getInternalBook().getNameByName(AZROWHEADINGS + region);
         SName contextDescription = sheet.getBook().getInternalBook().getNameByName(AZCONTEXT + region);
         String errorMessage = null;
-        // make a blank area for data to be populated from, an upload in the sheet so to speak
+        // make a blank area for data to be populated from, an upload in the sheet so to speak (ad hoc)
         if (columnHeadingsDescription != null && rowHeadingsDescription == null) {
             List<List<String>> colHeadings = BookUtils.nameToStringLists(columnHeadingsDescription);
             List<List<CellForDisplay>> dataRegionCells = new ArrayList<>();
@@ -330,7 +260,6 @@ public class ReportRenderer {
             loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
             return;
         }
-
         if (columnHeadingsDescription != null) {
             try {
                 List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription);
@@ -380,338 +309,34 @@ public class ReportRenderer {
                 CellRegion displayRowHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYROWHEADINGS + region);
                 CellRegion displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
 
-                int rowsToAdd;
                 int colsToAdd;
+                int maxRow = sheet.getLastRow();
                 if (displayDataRegion != null) {
-                    // add rows
                     int maxCol = BookUtils.getMaxCol(sheet);
-                    if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
-                        rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
-                        int insertRow = displayDataRegion.getRow() + displayDataRegion.getRowCount() - 1; // last but one row
-                        Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
-                        Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
-                        CellOperationUtil.insertRow(insertRange);
-                        CellOperationUtil.paste(copySource, insertRange);
-                        int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
-                        if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
-                            insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
-                        }
-                        boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
-                        if (hidden) {
-                            for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
-                                sheet.getInternalSheet().getRow(row).setHidden(true);
-                            }
-                        }
-                    }
-                    // add columns
-                    int maxRow = sheet.getLastRow();
-                    int cloneCols = 0;
-                    if (displayDataRegion.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayDataRegion.getColumnCount() > 2) { // then we need to expand
-                        colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
-                        int topRow = 0;
-                        CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
-                        if (displayColumnHeadings != null) {
-                            topRow = displayColumnHeadings.getRow();
-                        }
-                        int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
-                        Range copySource = Ranges.range(sheet, topRow, insertCol - 1, maxRow, insertCol - 1);
-                        int repeatCount = ReportUtils.getRepeatCount(loggedInUser, cellsAndHeadingsForDisplay.getColHeadingsSource());
-                        if (repeatCount > 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
-                            int copyCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / repeatCount;
-                            cloneCols = colsToAdd;
-                            if (repeatCount > displayDataRegion.getColumnCount()) {
-                                colsToAdd = repeatCount - displayDataRegion.getColumnCount();
-                                Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col
-                                CellOperationUtil.insertColumn(insertRange);
-                                // will this paste the lot?
-                                CellOperationUtil.paste(copySource, insertRange);
-                                insertCol += colsToAdd;
-                                colsToAdd = repeatCount * (copyCount - 1);
-                                cloneCols = colsToAdd;
-                            }
-                            insertCol++;
-                            copySource = Ranges.range(sheet, topRow, displayDataRegion.getColumn(), maxRow, insertCol - 1);
-                        }
-                        Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col, except for permuted headings
-                        CellOperationUtil.insertColumn(insertRange);
-                        // will this paste the lot?
-                        CellOperationUtil.paste(copySource, insertRange);
-                        int originalWidth = sheet.getInternalSheet().getColumn(insertCol - 1).getWidth();
-                        if (originalWidth != sheet.getInternalSheet().getColumn(insertCol).getWidth()) { // height may not match on insert
-                            insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
-                        }
-                        boolean hidden = sheet.getInternalSheet().getColumn(insertCol - 1).isHidden();
-                        if (hidden) {
-                            for (int col = insertRange.getColumn(); col <= insertRange.getLastColumn(); col++) {
-                                sheet.getInternalSheet().getColumn(col).setHidden(true);
-                            }
-                        }
-                    }
+                    // todo - find out what the hell cloneCols is!
+                    int cloneCols = expandRowAndColumnHeadings(loggedInUser,sheet,region,displayDataRegion,cellsAndHeadingsForDisplay,maxCol);
                     // these re loadings are because the region may have changed
+                    // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
-                    int row;
                     // ok there should be the right space for the headings
                     if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
-                        int rowHeadingsColumn = displayRowHeadings.getColumn();
-                        boolean isHierarchy = ReportUtils.isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
                         int rowHeadingCols = cellsAndHeadingsForDisplay.getRowHeadings().get(0).size();
                         colsToAdd = rowHeadingCols - displayRowHeadings.getColumnCount();
                         if (colsToAdd > 0) {
                             int insertCol = displayRowHeadings.getColumn() + displayRowHeadings.getColumnCount() - 1;
                             Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); //
                             CellOperationUtil.insert(insertRange.toColumnRange(), Range.InsertShift.RIGHT, Range.InsertCopyOrigin.FORMAT_LEFT_ABOVE);
-                            displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
+                            displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, ReportRenderer.AZDATAREGION + region);
                         }
-                        row = displayRowHeadings.getRow();
-                        int lineNo = 0;
-                        // why -1?
-                        int lastTotalRow = row - 1;
-                        int totalRow = -1;
-                        List<String> lastRowHeadings = new ArrayList<>(cellsAndHeadingsForDisplay.getRowHeadings().size());
-                        for (List<String> rowHeading : cellsAndHeadingsForDisplay.getRowHeadings()) {
-                            int col = displayRowHeadings.getColumn();
-                            int startCol = col;
-                            for (String heading : rowHeading) {
-                                if (heading != null && !heading.equals(".") && (sheet.getInternalSheet().getCell(row, col).getType() != SCell.CellType.STRING || sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
-                                    SCell cell = sheet.getInternalSheet().getCell(row, col);
-                                    cell.setValue(heading);
-                                    if (lineNo > 0 && lastRowHeadings.get(col - startCol) != null && lastRowHeadings.get(col - startCol).equals(heading)) {
-                                        //disguise the heading by making foreground colour = background colour
-                                        Range selection = Ranges.range(sheet, row, col, row, col);
-                                        CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row, col).getCellStyle().getBackColor().getHtmlColor());
-                                    }
-                                }
-                                col++;
-                            }
-                            lineNo++;
-                            if (isHierarchy && lineNo > 1) {
-                                int sameValues = 0;
-                                for (sameValues = 0; sameValues < lastRowHeadings.size(); sameValues++) {
-                                    if (!rowHeading.get(sameValues).equals(lastRowHeadings.get(sameValues))) {
-                                        break;
-                                    }
-                                }
-                                //format the row headings for hierarchy.  Each total level has a different format.   clear visible names in all but on eheading
-                                if (sameValues < rowHeading.size() - 1) {
-                                    int totalCount = rowHeading.size() - sameValues - 1;
-                                    //this is a total line
-                                    int selStart = displayRowHeadings.getColumn();
-                                    int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1 + cloneCols;
-                                    SCell lineFormat = BookUtils.getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + totalCount + region));
-                                    Range selection = Ranges.range(sheet, row - 1, selStart, row - 1, selEnd);
-                                    Range headingRange = Ranges.range(sheet, row - 1, selStart, row - 1, selStart + displayRowHeadings.getColumnCount() - 1);
-                                    if (lineFormat == null) {
-                                        CellOperationUtil.applyFontBoldweight(selection, Font.Boldweight.BOLD);
-                                    } else {
-                                        if (totalCount == 1 && totalRow == -1) {
-                                            totalRow = lineFormat.getRowIndex();
-                                        }
-                                        if (totalCount == 1 && totalRow > displayRowHeadings.getRow()) {
-                                            //copy the total row and the line above to the current position, then copy the line above into the intermediate rows
-                                            int dataStart = displayDataRegion.getColumn();
-                                            int copyRows = row - lastTotalRow - 2;
-                                            if (copyRows > 2) {
-                                                copyRows = 2;
-                                            }
-
-                                            Range copySource = Ranges.range(sheet, totalRow - 2, dataStart, totalRow, selEnd);
-                                            Range destination = Ranges.range(sheet, row - copyRows - 1, dataStart, row - 1, selEnd);
-                                            int tempStart = selEnd + 10;
-                                            Range tempPos = Ranges.range(sheet, totalRow - 2, tempStart, totalRow, tempStart + selEnd - selStart);
-                                            if (copyRows == 1) {
-                                                //delete the middle line
-                                                CellOperationUtil.delete(Ranges.range(sheet, totalRow - 1, tempStart, totalRow - 1, tempStart + selEnd - selStart), Range.DeleteShift.UP);
-                                                tempPos = Ranges.range(sheet, totalRow - 2, tempStart, totalRow - 1, tempStart + selEnd - selStart);
-                                            }
-                                            CellOperationUtil.paste(copySource, tempPos);
-                                            CellOperationUtil.cut(tempPos, destination);
-                                            if (row - lastTotalRow > 4) {
-                                                //zap cells above, and fill in cells below
-                                                CellOperationUtil.delete(Ranges.range(sheet, lastTotalRow + 1, dataStart, row - 4, selEnd), Range.DeleteShift.UP);
-                                                CellOperationUtil.insert(Ranges.range(sheet, lastTotalRow + 2, dataStart, row - 3, selEnd), Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE);
-                                                CellOperationUtil.paste(Ranges.range(sheet, lastTotalRow + 1, dataStart, lastTotalRow + 1, selEnd), Ranges.range(sheet, lastTotalRow + 2, dataStart, row - 3, selEnd));
-                                            }
-                                        }
-                                        CellOperationUtil.applyBackColor(selection, lineFormat.getCellStyle().getBackColor().getHtmlColor());
-                                        CellOperationUtil.applyFontColor(selection, lineFormat.getCellStyle().getFont().getColor().getHtmlColor());
-                                        Range formatRange = Ranges.range(sheet.getBook().getSheet(lineFormat.getSheet().getSheetName()), lineFormat.getRowIndex(), lineFormat.getColumnIndex());
-                                        CellOperationUtil.pasteSpecial(formatRange, headingRange, Range.PasteType.FORMATS, Range.PasteOperation.NONE, false, false);
-                                        if (sameValues > 0) {
-                                            Range blanks = Ranges.range(sheet, row - 1, rowHeadingsColumn, row - 1, rowHeadingsColumn + sameValues - 1);
-                                            CellOperationUtil.applyFontColor(blanks, sheet.getInternalSheet().getCell(row - 1, rowHeadingsColumn).getCellStyle().getBackColor().getHtmlColor());
-                                        }
-                                        SCell first = sheet.getInternalSheet().getCell(row, rowHeadingsColumn);
-                                        //the last line of the pivot table shows the set name of the first set, which is not very useful!
-                                        try {
-                                            if (first.getStringValue().startsWith("az_")) {
-                                                first.setStringValue("TOTAL");
-                                            }
-                                        } catch (Exception ignored) {
-                                        }
-                                    }
-                                    if (row > displayRowHeadings.getRow()) {
-                                        Ranges.range(sheet, row - 1, selStart + sameValues + 1, row - 1, selStart + displayRowHeadings.getColumnCount() - 1).clearContents();
-                                    }
-                                    lastTotalRow = row - 1;
-                                }
-                                if (sameValues > 0) {
-                                    Range selection = Ranges.range(sheet, row, rowHeadingsColumn, row, rowHeadingsColumn + sameValues - 1);
-                                    //CellOperationUtil.clearStyles(selection);
-                                    CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row, rowHeadingsColumn).getCellStyle().getBackColor().getHtmlColor());
-                                }
-                            }
-                            lastRowHeadings = rowHeading;
-                            row++;
-                        }
-                        if (isHierarchy) {
-                            //paste in row headings
-                            String rowHeadingsString = cellsAndHeadingsForDisplay.getRowHeadingsSource().get(0).get(0);
-                            if (rowHeadingsString.toLowerCase().startsWith("permute(")) {
-                                String[] rowHeadings = rowHeadingsString.substring("permute(".length(), rowHeadingsString.length() - 1).split(",");
-                                int hrow = displayRowHeadings.getRow() - 1;
-                                int hcol = rowHeadingsColumn;
-                                for (String rowHeading : rowHeadings) {
-                                    rowHeading = rowHeading.replace("`", "").trim();
-                                    if (rowHeading.contains(" sorted")) { // maybe factor the string literal? Need to make it work for the mo
-                                        rowHeading = rowHeading.substring(0, rowHeading.indexOf(" sorted")).trim();
-                                    }
-                                    String colHeading = ReportChoicesService.multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
-                                    if (colHeading == null || colHeading.equals("[all]")) colHeading = rowHeading;
-                                    BookUtils.setValue(sheet.getInternalSheet().getCell(hrow, hcol++), colHeading);
-                                }
-
-                            }
-                        }
+                        RegionFillerService.fillRowHeadings(loggedInUser, sheet, region, displayRowHeadings, displayDataRegion, cellsAndHeadingsForDisplay, cloneCols);
                     }
-                    //← → ↑ ↓ ↔ ↕ ah I can just paste it here, thanks IntelliJ :)
                     CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
                     if (displayColumnHeadings != null) {
-                        row = displayColumnHeadings.getRow();
-                        int ignoreRow = cellsAndHeadingsForDisplay.getColumnHeadings().size() - displayColumnHeadings.getRowCount();
-                        for (List<String> colHeading : cellsAndHeadingsForDisplay.getColumnHeadings()) {
-                            String lastHeading = "";
-                            if (--ignoreRow < 0) {
-                                boolean columnSort = false;
-                                if (row - displayColumnHeadings.getRow() == displayColumnHeadings.getRowCount() - 1 && userRegionOptions.getSortable()) { // meaning last row of headings and sortable
-                                    columnSort = true;
-                                }
-                                int col = displayColumnHeadings.getColumn();
-                                for (String heading : colHeading) {
-                                    if (heading.equals(lastHeading) || heading.equals(".")) {
-                                        heading = "";
-                                    } else {
-                                        lastHeading = heading;
-                                    }
-
-                                    SCell sCell = sheet.getInternalSheet().getCell(row, col);
-                                    if (sCell.getType() != SCell.CellType.STRING && sCell.getType() != SCell.CellType.NUMBER) {
-                                        BookUtils.setValue(sCell, "");
-                                    } else {//new behaviour - if there's a filled in heading, this can be used to detect the sort.
-                                        try {
-                                            if (sCell.getStringValue().length() > 0) {
-                                                heading = sCell.getStringValue();
-                                            }
-                                        } catch (Exception e) {//to catch the rare cases where someone has hardcoded a year into the headings
-                                            if (sCell.getNumberValue() > 0) {
-                                                heading = sCell.getNumberValue() + "";
-                                                if (heading.length() > 5 && heading.endsWith(".0")) {
-                                                    heading = heading.substring(0, heading.length() - 2);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (columnSort && !heading.equals(".")) { // don't sort "." headings they are probably derived in the spreadsheet
-                                        String sortArrow = " ↕";
-                                        if (heading.equals(userRegionOptions.getSortColumn())) {
-                                            sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
-                                        }
-                                        if (!sCell.getStringValue().contains(sortArrow)) {
-                                            if (sCell.getType() == SCell.CellType.STRING && sCell.getStringValue().isEmpty()) {
-                                                sCell.setValue(heading + sortArrow);
-                                            } else {
-                                                sCell.setValue(sCell.getValue() + sortArrow);
-                                            }
-                                        }
-                                        String value = sCell.getStringValue();
-                                        value = value.substring(0, value.length() - 2);
-                                        Range chosenRange = Ranges.range(sheet, row, col, row, col);
-                                        // todo, investigate how commas would fit in in a heading name
-                                        // think I'll just zap em for the mo.
-                                        value = value.replace(",", "");
-                                        chosenRange.setValidation(Validation.ValidationType.LIST, false, Validation.OperatorType.EQUAL, true,
-                                                value + " ↕," + value + " ↑," + value + " ↓", null,
-                                                true, "Select Sorting", "",
-                                                true, Validation.AlertStyle.WARNING, "Sort Column", "This is a sortable column, its value should not be manually altered.");
-                                    } else {
-                                        if (heading != null && (!sCell.getType().equals(SCell.CellType.NUMBER) && (sCell.isNull() || sCell.getStringValue().length() == 0))) { // vanilla, overwrite if not
-                                            sCell.setValue(heading);
-                                        }
-                                    }
-                                    col++;
-                                }
-                                row++;
-                            }
-                        }
-                        // for the moment don't allow user column sorting (row heading sorting). Shouldn't be too difficult to add
-/*                if (sortable != null && sortable.equalsIgnoreCase("all")) { // criteria from azquobook to make row heading sortable
-                }*/
+                        RegionFillerService.fillColumnHeadings(sheet,userRegionOptions,displayColumnHeadings,cellsAndHeadingsForDisplay);
                     }
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
-                    if (repeatListItems != null) { // then we need to prepare the repeated regions. Row and col headings have been made so copy paste them where required
-                        int rootRow = repeatRegion.getRefersToCellRegion().getRow();
-                        int rootCol = repeatRegion.getRefersToCellRegion().getColumn();
-                        int repeatColumn = 0;
-                        int repeatRow = 0;
-
-                        // work out where the data region is relative to the repeat region, we wait until now as it may have been expanded
-                        int repeatDataRowOffset = 0;
-                        int repeatDataColumnOffset = 0;
-                        int repeatDataLastRowOffset = 0;
-                        int repeatDataLastColumnOffset = 0;
-
-                        repeatDataRowOffset = displayDataRegion.getRow() - repeatRegion.getRefersToCellRegion().getRow();
-                        repeatDataColumnOffset = displayDataRegion.getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
-                        repeatDataLastRowOffset = displayDataRegion.getLastRow() - repeatRegion.getRefersToCellRegion().getRow();
-                        repeatDataLastColumnOffset = displayDataRegion.getLastColumn() - repeatRegion.getRefersToCellRegion().getColumn();
-
-                        Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
-                        // yes the first will simply be copying over itself
-                        for (String item : repeatListItems) {
-                            Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight - 1, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth - 1);
-                            if (repeatRow > 0 || repeatColumn > 0) {
-                                CellOperationUtil.paste(copySource, insertRange);
-                            }
-                            // and set the item
-                            BookUtils.setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset), item);
-                            repeatColumn++;
-                            if (repeatColumn == repeatColumns) { // zap if back to the first column
-                                repeatColumn = 0;
-                                repeatRow++;
-                            }
-                        }
-                        // reset tracking among the repeat regions
-                        repeatColumn = 0;
-                        repeatRow = 0;
-                        // and now do the data, separate loop otherwise I'll be copy/pasting data
-                        for (String item : repeatListItems) {
-                            contextList.add(Collections.singletonList(item)); // item added to the context
-                            // yes this is little inefficient as the headings are being resolved each time but that's just how it is for the moment
-                            cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, BookUtils.nameToStringLists(columnHeadingsDescription),
-                                    contextList, userRegionOptions, quiet);
-                            displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
-                                    , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
-                            loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!
-                            dataFill(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
-                            contextList.remove(contextList.size() - 1); // item removed from the context
-                            repeatColumn++;
-                            if (repeatColumn == repeatColumns) { // zap if back to the first column
-                                repeatColumn = 0;
-                                repeatRow++;
-                            }
-                        }
-                    } else {
-                        dataFill(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
-                    }
+                    // now factored off to the filler class that deals with repeat if applicable
+                    RegionFillerService.fillData(loggedInUser,reportId,sheet,region,userRegionOptions,cellsAndHeadingsForDisplay,displayDataRegion,rowHeadingList,columnHeadingsDescription,contextList,maxCol,valueId, quiet);
                 }
             } catch (RemoteException re) {
                 // is printing the stack trace going to jam the logs unnecessarily?
@@ -754,45 +379,71 @@ public class ReportRenderer {
         }
     }
 
-    // factored off to enable multiple regions
-
-    private static void dataFill(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion) {
-        int row = displayDataRegion.getRow();
-        List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
-        if (cellsAndHeadingsForDisplay.getData() != null) {
-            for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
-                int col = displayDataRegion.getColumn();
-                int localCol = 0;
-                for (CellForDisplay cellValue : rowCellValues) {
-                    if (!cellValue.getStringValue().isEmpty() && !bottomColHeadings.get(localCol).equals(".")) { // then something to set. Note : if col heading ON THE DB SIDE is . then don't populate
-                        // the notable thing ehre is that ZK uses the object type to work out data type
-                        SCell cell = sheet.getInternalSheet().getCell(row, col);
-                        // logic I didn't initially implement : don't overwrite if there's a formulae in there
-                        if (cell.getType() != SCell.CellType.FORMULA) {
-                            if (cell.getCellStyle().getFont().getName().equalsIgnoreCase("Code EAN13")) { // then a special case, need to use barcode encoding
-                                cell.setValue(SpreadsheetService.prepareEAN13Barcode(cellValue.getStringValue()));// guess we'll see how that goes!
-                            } else {
-                                BookUtils.setValue(cell, cellValue.getStringValue());
-                            }
-                        }
-                        // see if this works for highlighting
-                        if (cellValue.isHighlighted()) {
-                            CellOperationUtil.applyFontColor(Ranges.range(sheet, row, col), "#FF0000");
-                        }
-                        // commented for the moment, requires the overall unlock per sheet followed by the protect later
-                        if (cellValue.isLocked()) {
-                            Range selection = Ranges.range(sheet, row, col);
-                            CellStyle oldStyle = selection.getCellStyle();
-                            EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
-                            newStyle.setLocked(true);
-                            selection.setCellStyle(newStyle);
-                        }
-                    }
-                    col++;
-                    localCol++;
+    // work out what clonecols is for!
+    private static int expandRowAndColumnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol){
+        // add rows
+        if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
+            int rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
+            int insertRow = displayDataRegion.getRow() + displayDataRegion.getRowCount() - 1; // last but one row
+            Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
+            Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+            CellOperationUtil.insertRow(insertRange);
+            CellOperationUtil.paste(copySource, insertRange);
+            int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
+            if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
+                insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
+            }
+            boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
+            if (hidden) {
+                for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
+                    sheet.getInternalSheet().getRow(row).setHidden(true);
                 }
-                row++;
             }
         }
+        // add columns
+        int maxRow = sheet.getLastRow();
+        int cloneCols = 0;
+        if (displayDataRegion.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayDataRegion.getColumnCount() > 2) { // then we need to expand
+            int colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
+            int topRow = 0;
+            CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
+            if (displayColumnHeadings != null) {
+                topRow = displayColumnHeadings.getRow();
+            }
+            int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
+            Range copySource = Ranges.range(sheet, topRow, insertCol - 1, maxRow, insertCol - 1);
+            int repeatCount = ReportUtils.getRepeatCount(loggedInUser, cellsAndHeadingsForDisplay.getColHeadingsSource());
+            if (repeatCount > 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
+                int copyCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / repeatCount;
+                cloneCols = colsToAdd;
+                if (repeatCount > displayDataRegion.getColumnCount()) {
+                    colsToAdd = repeatCount - displayDataRegion.getColumnCount();
+                    Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col
+                    CellOperationUtil.insertColumn(insertRange);
+                    // will this paste the lot?
+                    CellOperationUtil.paste(copySource, insertRange);
+                    insertCol += colsToAdd;
+                    colsToAdd = repeatCount * (copyCount - 1);
+                    cloneCols = colsToAdd;
+                }
+                insertCol++;
+                copySource = Ranges.range(sheet, topRow, displayDataRegion.getColumn(), maxRow, insertCol - 1);
+            }
+            Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col, except for permuted headings
+            CellOperationUtil.insertColumn(insertRange);
+            // will this paste the lot?
+            CellOperationUtil.paste(copySource, insertRange);
+            int originalWidth = sheet.getInternalSheet().getColumn(insertCol - 1).getWidth();
+            if (originalWidth != sheet.getInternalSheet().getColumn(insertCol).getWidth()) { // height may not match on insert
+                insertRange.setColumnWidth(originalWidth); // hopefully set the lot in one go??
+            }
+            boolean hidden = sheet.getInternalSheet().getColumn(insertCol - 1).isHidden();
+            if (hidden) {
+                for (int col = insertRange.getColumn(); col <= insertRange.getLastColumn(); col++) {
+                    sheet.getInternalSheet().getColumn(col).setHidden(true);
+                }
+            }
+        }
+        return cloneCols;
     }
 }

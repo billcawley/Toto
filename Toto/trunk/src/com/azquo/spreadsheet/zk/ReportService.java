@@ -10,7 +10,11 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import org.zkoss.zss.api.CellOperationUtil;
+import org.zkoss.zss.api.Range;
+import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.Font;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
@@ -24,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Will handle higher level functions required to build a report e.g. checking for permissions in names, resolving choices etc.
  * In contrast to BookUtils which should be lower level.
  */
-public class ReportService {
+class ReportService {
     // should functions like this be in another class? It's not really stateless or that low level
     static final String ALLOWABLE_REPORTS = "az_AllowableReports";
     static void checkForPermissionsInSheet(LoggedInUser loggedInUser, Sheet sheet){

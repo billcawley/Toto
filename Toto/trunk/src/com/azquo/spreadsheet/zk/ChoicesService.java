@@ -24,7 +24,16 @@ import java.util.*;
  *
  * Bigger state changing functions related to the choice srtopdown and multi selects.
  */
-public class ReportChoicesService {
+public class ChoicesService {
+
+    /*
+    CONTENTS is used to handle dependent ranges within the data region.   Thus one column in the data region may ask for a category, and the next a subcategory, which should be determined by the category
+    For single cell 'chosen' ranges there is no problem - the choice for the subcategory may be defined as an Excel formula.
+    For multicell ranges, use 'CONTENTS(rangechosen) to specify the subcategory....
+
+    Not to do with pivot tables, initially for the expenses sheet, let us say that the first column is to select a project and then the second to select something based off that, you'd use contents. Not used that often.
+     */
+    static final String CONTENTS = "contents(";
 
     public static final String VALIDATION_SHEET = "VALIDATION_SHEET";
 
@@ -73,12 +82,12 @@ public class ReportChoicesService {
                         boolean dataRegionDropdown = !BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                             String query = choiceCell.getStringValue();
-                            int contentPos = query.toLowerCase().indexOf(ReportRenderer.CONTENTS);
+                            int contentPos = query.toLowerCase().indexOf(CONTENTS);
                             if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
                                 if (contentPos < 0) {//not a dependent range
                                     BookUtils.setValue(validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded), name.getName());
                                     int row = 0;
-                                    // yes, this can null pointer but if it does something is seriously wrong
+                                    // changing comment - I don't think this can NPE - IntelliJ just can't see the logic that either this isn't null or contentPos < 0, this is in a contentPos < 0 condition. Could rejig the logic?
                                     for (String choiceOption : choiceOptions) {
                                         row++;// like starting at 1
                                         SCell vCell = validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded);
@@ -294,10 +303,10 @@ public class ReportChoicesService {
             String dependentName = name.getName().substring(0, name.getName().length() - 6);//remove 'choice'
             SCell choiceCell = BookUtils.getSnameCell(name);
             String query = choiceCell.getStringValue();
-            int contentPos = query.toLowerCase().indexOf(ReportRenderer.CONTENTS);
-            int catEnd = query.substring(contentPos + ReportRenderer.CONTENTS.length()).indexOf(")");
+            int contentPos = query.toLowerCase().indexOf(CONTENTS);
+            int catEnd = query.substring(contentPos + CONTENTS.length()).indexOf(")");
             if (catEnd > 0) {
-                String choiceSourceString = query.substring(contentPos + ReportRenderer.CONTENTS.length()).substring(0, catEnd - 6).toLowerCase();//assuming that the expression concludes ...Chosen)
+                String choiceSourceString = query.substring(contentPos + CONTENTS.length()).substring(0, catEnd - 6).toLowerCase();//assuming that the expression concludes ...Chosen)
                 SName choiceSource = book.getInternalBook().getNameByName(choiceSourceString + "Chosen");
                 SName choiceList = book.getInternalBook().getNameByName(dependentName + "List");//TODO - NEEDS AN ERROR IF THESE RANGES ARE NOT FOUND
                 int validationSourceColumn = 0;
@@ -318,7 +327,7 @@ public class ReportChoicesService {
                     while (vSheet.getCell(optionNo + 1, validationSourceColumn).getStringValue().length() > 0) {
                         String optionVal = vSheet.getCell(optionNo + 1, validationSourceColumn).getStringValue();
                         BookUtils.setValue(vSheet.getCell(0, targetCol + optionNo), optionVal);
-                        String newQuery = query.substring(0, contentPos) + optionVal + query.substring(contentPos + catEnd + ReportRenderer.CONTENTS.length() + 1);
+                        String newQuery = query.substring(0, contentPos) + optionVal + query.substring(contentPos + catEnd + CONTENTS.length() + 1);
                         try {
                             List<String> optionList = CommonReportUtils.getDropdownListForQuery(loggedInUser, newQuery);
                             if (optionList.size() > maxSize) maxSize = optionList.size();
@@ -365,7 +374,7 @@ public class ReportChoicesService {
         }
     }
 
-    public static String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
+    static String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
         try {
             List<String> languages = new ArrayList<>();
             languages.add(loggedInUser.getUser().getEmail());
@@ -404,7 +413,7 @@ public class ReportChoicesService {
         }
     }
 
-    public static String setChoices(LoggedInUser loggedInUser, String provline) {
+    static String setChoices(LoggedInUser loggedInUser, String provline) {
         int inSpreadPos = provline.toLowerCase().indexOf("in spreadsheet");
         if (inSpreadPos < 0) return null;
         int withPos = provline.indexOf(" with ", inSpreadPos);

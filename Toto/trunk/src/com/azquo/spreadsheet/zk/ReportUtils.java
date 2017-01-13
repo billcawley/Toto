@@ -14,7 +14,7 @@ import java.util.List;
  *
  * Smaller generally stateless functions for reports that are not specific to the ZK APIs (thos would be in BookUtils)
  */
-public class ReportUtils {
+class ReportUtils {
 
     private static LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
         try {
@@ -62,6 +62,7 @@ public class ReportUtils {
         return lockWarnings.substring(0, lockWarnings.lastIndexOf(":"));//this should be on every line, but usually there'll only be one line
     }
 
+    // not to do with the repeat regions, perhaps could change the name
     static int getRepeatCount(LoggedInUser loggedInUser, List<List<String>> colHeadingsSource) {
         int colHeadingRow = colHeadingsSource.size();
         String lastColHeading = colHeadingsSource.get(colHeadingRow - 1).get(0);

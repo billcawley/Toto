@@ -349,7 +349,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                             }
                             // check to see if we need to set the selected values in a cell - or in the main cell?
                             if (queryResultRegion2 != null) {
-                                String resultDescription = ReportChoicesService.multiList(loggedInUser, selectionName2, selectionList2);
+                                String resultDescription = ChoicesService.multiList(loggedInUser, selectionName2, selectionList2);
                                 final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(queryResultRegion2.getRow(), queryResultRegion2.getColumn());
                                 cell.setStringValue(resultDescription);
                             }
@@ -1072,7 +1072,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     private void showProvenance(String provline, int valueId) {
         final Book book = myzss.getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        String reportName = ReportChoicesService.setChoices(loggedInUser, provline);
+        String reportName = ChoicesService.setChoices(loggedInUser, provline);
         OnlineReport or = null;
         String permissionId = null;
         if (reportName != null) {

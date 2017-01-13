@@ -44,10 +44,8 @@ public class ReportExecutor {
                 }
             }
         }
-        if (executeCommand == null || executeCommand.isEmpty()) { // just return the book for the moment, no executing
-            // how to error message there was no execute? Exception? todo. Also why populate the book at all, what's the point?
+        if (executeCommand == null || executeCommand.isEmpty()) { // just return false for the moment, no executing
             return false;
-            //return populateBook(book, 0);
         }
         List<String> commands = new ArrayList<>();
         StringTokenizer st = new StringTokenizer(executeCommand, "\n");
