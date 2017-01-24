@@ -258,9 +258,13 @@ class ImportFileUtilities {
                 try {
                     double d = cellData.getDoubleValue();
                     returnNumber = d;
-                    stringValue = d + "";
-                    if (stringValue.endsWith(".0")) {
-                        stringValue = stringValue.substring(0, stringValue.length() - 2);
+                    String newStringValue = d + "";
+                    if (!newStringValue.contains("E")) {
+                        if (newStringValue.endsWith(".0")) {
+                            stringValue = newStringValue.substring(0, newStringValue.length() - 2);
+                        }else{
+                            stringValue = newStringValue;
+                        }
                     }
                 } catch (Exception ignored) {
                 }
