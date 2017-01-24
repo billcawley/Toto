@@ -117,7 +117,7 @@ public class AzquoMemoryDBConnection {
         // not sure how latest and method cen get set as null but best to be careful with it
         if (latest != null && latest.getUser().equals(user)) {
             long elapsed = new Date().getTime() - latest.getTimeStamp().getTime();
-            if (latest.getMethod() != null && latest.getMethod().equals(method) &&
+            if (latest.getMethod() != null && latest.getMethod().equals(method) && latest.getName() != null && latest.getName().equals(name) &&
                     latest.getContext() != null && latest.getContext().equals(context) && elapsed < 30000) {// thirty seconds
                 this.provenance = latest;
                 return;
