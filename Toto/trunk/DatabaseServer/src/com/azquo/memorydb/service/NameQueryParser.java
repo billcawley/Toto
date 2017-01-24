@@ -121,6 +121,11 @@ public class NameQueryParser {
         if (setFormula.toLowerCase().startsWith("edit:")) {
             return NameEditFunctions.handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(), languages);
         }
+        boolean sorted = false;
+        if (setFormula.toLowerCase().endsWith(" "+StringLiterals.SORTED)){
+            sorted = true;
+            setFormula = setFormula.substring(0,setFormula.length() - StringLiterals.SORTED.length() - 1);
+        }
 
         setFormula = StringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames;
@@ -148,7 +153,7 @@ public class NameQueryParser {
         logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
         // could we get rid of stack count and just use the ArrayList's size?
-        int stackCount = 0;
+         int stackCount = 0;
         //int stringCount = 0;
         // now to act on the formulae which has been converted to Reverse Polish, hence stack based parsing and no brackets etc.
         // NOTE THAT THE SHUNTING YARD ALGORITHM HERE LEAVES FUNCTIONS AT THE START (e.g. Attributeset)
@@ -211,6 +216,13 @@ public class NameQueryParser {
                 }
                 pos = nextTerm;
             }
+        }
+        if (sorted){
+            if (nameStack.get(0) == null || !nameStack.get(0).mutable) { // then force to a mutable list, don't see that we have a choice
+                nameStack.set(0,new NameSetList(null, new ArrayList<>(nameStack.get(0).getAsCollection()), true));
+            }
+            nameStack.get(0).list.sort(NameService.defaultLanguageCaseInsensitiveNameComparator);
+
         }
 
         if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
