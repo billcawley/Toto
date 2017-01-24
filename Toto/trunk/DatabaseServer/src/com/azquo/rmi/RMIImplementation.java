@@ -11,6 +11,7 @@ import com.azquo.memorydb.service.ProvenanceService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
 import com.azquo.spreadsheet.UserChoiceService;
+import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.transport.json.JsonChildStructure;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
@@ -244,7 +245,7 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public List<TreeNode> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
+    public ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
         try {
             return ProvenanceService.getDataRegionProvenance(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, maxSize);
         } catch (Exception e) {

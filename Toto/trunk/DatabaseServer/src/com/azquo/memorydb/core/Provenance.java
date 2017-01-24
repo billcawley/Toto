@@ -1,5 +1,7 @@
 package com.azquo.memorydb.core;
 
+import com.azquo.memorydb.Constants;
+import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.log4j.Logger;
@@ -29,7 +31,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
     private final String user;
     private final Date timeStamp; // should I be using local date time or another class?
     private final String method;
-    private final String name;
+    private final String name; // name of the report or upload file? A bit vague!
     private final String context;
     // won't have this call the package local constructor below, does not factor in the same way now
     // this is the practical use constructor, calling it adds it to the memory db. I used to pass the date, that made no sense, set it in here.
@@ -130,5 +132,9 @@ public final class Provenance extends AzquoMemoryDBEntity {
     @Override
     protected void setNeedsPersisting() {
         getAzquoMemoryDB().setJsonEntityNeedsPersisting(PERSIST_TABLE, this);
+    }
+
+    public ProvenanceForDisplay getProvenanceForDisplay(){
+        return new ProvenanceForDisplay(method != null && method.toLowerCase().startsWith(Constants.IN_SPREADSHEET), user,method,name,context, timeStamp);
     }
 }

@@ -10,11 +10,11 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
@@ -131,7 +131,7 @@ public class SpreadsheetService {
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
-    public static List<TreeNode> getTreeNode(LoggedInUser loggedInUser, int reportId, String region, int rowInt, int colInt, int maxSize) throws Exception {
+    public static ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(LoggedInUser loggedInUser, int reportId, String region, int rowInt, int colInt, int maxSize) throws Exception {
         final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
@@ -139,11 +139,11 @@ public class SpreadsheetService {
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).formatDataRegionProvenanceForOutput(databaseAccessToken, cellsAndHeadingsForDisplay.getRowHeadingsSource()
+            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getProvenanceDetailsForDisplay(databaseAccessToken, cellsAndHeadingsForDisplay.getRowHeadingsSource()
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                     , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(), maxSize);
         }
-        return new ArrayList<>(); // maybe "not found"?
+        return new ProvenanceDetailsForDisplay(null,null); // maybe "not found"?
     }
 
     // some code duplication with above, a way to factor?

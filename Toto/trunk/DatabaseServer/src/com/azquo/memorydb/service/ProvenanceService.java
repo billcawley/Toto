@@ -1,5 +1,6 @@
 package com.azquo.memorydb.service;
 
+import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
@@ -12,6 +13,8 @@ import com.azquo.spreadsheet.AzquoCell;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.DataRegionHeading;
 import com.azquo.spreadsheet.ListOfValuesOrNamesAndAttributeName;
+import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
+import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
 
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -60,35 +63,34 @@ public class ProvenanceService {
         }
     }
 
-    // ok this should NOT return tree nodes, they should just be for JSTree, ergh! Need to discuss with WFC before modifying this, need a clear new target.
-
-    public static List<TreeNode> getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+    // This will be changed to return a new object - ProvenanceDetailsForDisplay
+    public static ProvenanceDetailsForDisplay getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         AzquoCell azquoCell = DSSpreadsheetService.getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, databaseAccessToken.getLanguages());
         if (azquoCell != null) {
             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-            //Set<Name> specialForProvenance = new HashSet<Name>();
-            // todo, deal with name functions properly, will need to check through the DataRegionHeadings
+            // todo, deal with name functions properly, will need to check through the DataRegionHeadings (as in don't just assume it's name count, could be something else)
             if (valuesForCell == null) {
                 return nameCountProvenance(azquoCell);
             }
             if (valuesForCell.getValues() != null) {
-                return nodify(azquoMemoryDBConnection, valuesForCell.getValues(), maxSize);
+                return valuesProvenance(valuesForCell.getValues(), maxSize);
             }
-            // todo - in case of now row headings ( import style data) this may NPE
+            // todo - in case of no row headings (import style data) this may NPE
             if (azquoCell.getRowHeadings().get(0).getAttribute() != null || azquoCell.getColumnHeadings().get(0).getAttribute() != null) {
                 if (azquoCell.getRowHeadings().get(0).getAttribute() != null) { // then col name, row attribute
-                    return nodify(azquoCell.getColumnHeadings().get(0).getName(), azquoCell.getRowHeadings().get(0).getAttribute());
+                    return attributeProvenance(azquoCell.getColumnHeadings().get(0).getName(), azquoCell.getRowHeadings().get(0).getAttribute());
                 } else { // the other way around
-                    return nodify(azquoCell.getRowHeadings().get(0).getName(), azquoCell.getColumnHeadings().get(0).getAttribute());
+                    return attributeProvenance(azquoCell.getRowHeadings().get(0).getName(), azquoCell.getColumnHeadings().get(0).getAttribute());
                 }
             }
         }
-        return Collections.emptyList(); //just empty ok? null? Unsure
+        return new ProvenanceDetailsForDisplay(null,null); //just empty ok? null? Unsure
     }
 
-    private static List<TreeNode> nameCountProvenance(AzquoCell azquoCell) {
+    // might need to rewrite this and/or check variable names
+    private static ProvenanceDetailsForDisplay nameCountProvenance(AzquoCell azquoCell) {
         String provString = "";
         Set<Name> cellNames = new HashSet<>();
         Name nameCountHeading = null;
@@ -111,15 +113,24 @@ public class ProvenanceService {
                 cellNames.add(colHeading.getName());
             }
         }
-        List<TreeNode> toReturn = new ArrayList<>();
         if (nameCountHeading != null) {
             provString = "total" + provString;
         }
         Name cellName = cellNames.iterator().next();
         provString += " * " + cellName.getDefaultDisplayName() + ")";
-        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
+
         Provenance p = cellName.getProvenance();
-        TreeNode node = new TreeNode();
+        final ProvenanceForDisplay provenanceForDisplay = p.getProvenanceForDisplay();
+        List<String> names = new ArrayList<>();
+        if (azquoCell.getListOfValuesOrNamesAndAttributeName().getNames() != null){
+            for (Name n : azquoCell.getListOfValuesOrNamesAndAttributeName().getNames()){
+                // this is a point, should it be in a language?
+                names.add(n.getDefaultDisplayName());
+            }
+        }
+        provenanceForDisplay.setNames(names);
+
+/*        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
         node.setValue(azquoCell.getDoubleValue() + "");
         node.setName(provString);
         String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
@@ -128,67 +139,72 @@ public class ProvenanceService {
             method += " " + p.getName();
         }
         if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
-        node.setHeading(source + " " + method);
-        toReturn.add(node);
-        return toReturn;
+        node.setHeading(source + " " + method);*/
+        return new ProvenanceDetailsForDisplay(provString,Collections.singletonList(provenanceForDisplay));
     }
 
-    // As I understand this function is showing names attached to the values in this cell that are not in the requesting spread sheet's row/column/context
-    // for provenance?
-    public static List<TreeNode> nodify(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, int maxSize) {
-        List<TreeNode> toReturn = new ArrayList<>();
+    // logic will be changed for new object ProvenanceDetailsForDisplay
+    // TODO - as mentioned, value history!
+    private static ProvenanceDetailsForDisplay valuesProvenance(List<Value> values, int maxSize) {
+        List<ProvenanceForDisplay> provenanceForDisplays = new ArrayList<>();
         if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
-            sortValues(values);
+            values.sort((o1, o2) -> (o2.getProvenance().getTimeStamp()).compareTo(o1.getProvenance().getTimeStamp()));
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
-            Date provdate = values.get(0).getProvenance().getTimeStamp();
-            Set<Value> oneUpdate = new HashSet<>();
-            Provenance p = null;
+            List<Value> oneUpdate = new ArrayList<>();
+            Provenance p = values.get(0).getProvenance();
             for (Value value : values) {
-                if (value.getProvenance().getTimeStamp() == provdate) {
+                if (value.getProvenance() == p) {// no need to check timestamps, just does the provenance match
                     oneUpdate.add(value);
-                    p = value.getProvenance();
                 } else {
-                    toReturn.add(ProvenanceService.getTreeNode(azquoMemoryDBConnection, oneUpdate, p, maxSize));
-                    oneUpdate = new HashSet<>();
+                    ProvenanceForDisplay provenanceForDisplay = p.getProvenanceForDisplay();
+                    if (oneUpdate.size() > maxSize){
+                        oneUpdate = oneUpdate.subList(0, maxSize);
+                    }
+                    provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(oneUpdate)); // todo - value history . . .
+                    provenanceForDisplays.add(provenanceForDisplay);
+                    oneUpdate = new ArrayList<>();
                     oneUpdate.add(value);
                     p = value.getProvenance();
-                    provdate = value.getProvenance().getTimeStamp();
                 }
             }
-            toReturn.add(ProvenanceService.getTreeNode(azquoMemoryDBConnection, oneUpdate, p, maxSize));
+            ProvenanceForDisplay provenanceForDisplay = p.getProvenanceForDisplay();
+            if (oneUpdate.size() > maxSize){
+                oneUpdate = oneUpdate.subList(0, maxSize);
+            }
+            provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(oneUpdate)); // todo - value history . . .
+            provenanceForDisplays.add(provenanceForDisplay);
+        }
+        return new ProvenanceDetailsForDisplay(null, provenanceForDisplays);
+    }
+
+    // first string is the value, then the names . . .
+    private static List<TypedPair<Integer, List<String>>> getIdValuesWithIdsAndNames(List<Value> values){
+        List<TypedPair<Integer, List<String>>> toReturn = new ArrayList<>();
+        for (Value v : values){
+            List<String> valueAndNames = new ArrayList<>();
+            valueAndNames.add(v.getText());
+            // don't order names yet, think about that later
+            for (Name n : v.getNames()){
+                valueAndNames.add(n.getDefaultDisplayName());
+            }
+            toReturn.add(new TypedPair<>(v.getId(), valueAndNames));
         }
         return toReturn;
     }
 
-    // by time. For database inspect. I no longer allow null timestamp so this is simplified
-    private static void sortValues(List<Value> values) {
-        Collections.sort(values, (o1, o2) -> (o2.getProvenance().getTimeStamp()).compareTo(o1.getProvenance().getTimeStamp()));
-    }
 
     private static DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
 
-    // another not very helpfully named function, might be able to be rewritten after we zap Azquo Book (the Aspose based functionality)
-    private static List<TreeNode> nodify(Name name, String attribute) {
+    private static ProvenanceDetailsForDisplay attributeProvenance(Name name, String attribute) {
         attribute = attribute.substring(1).replace("`", "");
-        List<TreeNode> toReturn = new ArrayList<>();
-        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
-        Provenance p = name.getProvenance();
-        TreeNode node = new TreeNode();
-        node.setValue(name.getAttribute(attribute));
-        node.setName(name.getDefaultDisplayName() + "." + attribute);
-        String source = df.format(p.getTimeStamp()) + " by " + p.getUser();
-        String method = p.getMethod();
-        if (p.getName() != null) {
-            method += " " + p.getName();
-        }
-        if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
-        node.setHeading(source + " " + method);
-        toReturn.add(node);
-        return toReturn;
+        String description = name.getDefaultDisplayName() + "." + attribute;
+        ProvenanceForDisplay provenanceForDisplay = name.getProvenance().getProvenanceForDisplay();
+        provenanceForDisplay.setNames(Collections.singletonList(name.getDefaultDisplayName()));
+        return new ProvenanceDetailsForDisplay(description, Collections.singletonList(provenanceForDisplay));
     }
 
 
-    /* nodify the values. It finds the name which represents the most values and displays
+    /* valuesProvenance the values. It finds the name which represents the most values and displays
     them under them then the name that best represents the rest etc etc until all values have been displayed
     For inspecting databases
       */
@@ -347,4 +363,30 @@ public class ProvenanceService {
         // is other formatting required?
         return nf.format(dValue);
     }
+
+    public static List<TreeNode> nodify(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, int maxSize) {
+        List<TreeNode> toReturn = new ArrayList<>();
+        if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
+            values.sort((o1, o2) -> (o2.getProvenance().getTimeStamp()).compareTo(o1.getProvenance().getTimeStamp()));
+            //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
+            Date provdate = values.get(0).getProvenance().getTimeStamp();
+            Set<Value> oneUpdate = new HashSet<>();
+            Provenance p = null;
+            for (Value value : values) {
+                if (value.getProvenance().getTimeStamp() == provdate) {
+                    oneUpdate.add(value);
+                    p = value.getProvenance();
+                } else {
+                    toReturn.add(ProvenanceService.getTreeNode(azquoMemoryDBConnection, oneUpdate, p, maxSize));
+                    oneUpdate = new HashSet<>();
+                    oneUpdate.add(value);
+                    p = value.getProvenance();
+                    provdate = value.getProvenance().getTimeStamp();
+                }
+            }
+            toReturn.add(ProvenanceService.getTreeNode(azquoMemoryDBConnection, oneUpdate, p, maxSize));
+        }
+        return toReturn;
+    }
+
 }

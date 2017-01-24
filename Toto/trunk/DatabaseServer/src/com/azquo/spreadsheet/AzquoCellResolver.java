@@ -317,9 +317,14 @@ But can use a library?
                                 count++;
                             }
                             Arrays.sort(forPercentile);
-                            Percentile p = new Percentile().withEstimationType(Percentile.EstimationType.R_7); // Excel type!
-                            p.setData(forPercentile);
-                            doubleValue = p.evaluate(functionDoubleParameter * 100); // I think this function expects out of 100. We'll see . . .
+                            // java doesn't like end case 0, deal with it here
+                            if (functionDoubleParameter == 0){
+                                doubleValue = forPercentile[0];
+                            } else {
+                                Percentile p = new Percentile().withEstimationType(Percentile.EstimationType.R_7); // Excel type!
+                                p.setData(forPercentile);
+                                doubleValue = p.evaluate(functionDoubleParameter * 100); // I think this function expects out of 100. We'll see . . .
+                            }
                         }
                         //if there's only one value, treat it as text (it may be text, or may include £,$,%)
                         if (valuesHook.values.size() == 1 && !locked.isTrue) {

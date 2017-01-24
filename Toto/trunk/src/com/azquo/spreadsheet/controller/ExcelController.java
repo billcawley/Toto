@@ -20,7 +20,7 @@ import com.azquo.spreadsheet.transport.json.ExcelJsonSaveRequest;
 import com.azquo.spreadsheet.transport.json.ProvenanceJsonRequest;
 import com.azquo.spreadsheet.transport.*;
 import com.azquo.spreadsheet.zk.ReportRenderer;
-import com.azquo.spreadsheet.zk.ZKComposer;
+import com.azquo.spreadsheet.zk.ReportUIUtils;
 import com.azquo.util.AzquoMailer;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -319,9 +319,39 @@ public class ExcelController {
             }
             if (provenanceJson != null) {
                 ProvenanceJsonRequest provenanceJsonRequest = jacksonMapper.readValue(provenanceJson, ProvenanceJsonRequest.class);
-                TypedPair<Integer, String> fullProvenance = CommonReportUtils.getFullProvenanceStringForCell(loggedInUser, provenanceJsonRequest.reportId
-                        , provenanceJsonRequest.region, provenanceJsonRequest.row, provenanceJsonRequest.col);
-                return ZKComposer.trimString(fullProvenance.getSecond());
+                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, provenanceJsonRequest.reportId, provenanceJsonRequest.region, provenanceJsonRequest.row, provenanceJsonRequest.col, 1000);
+                // todo - push the formatting to Excel! Just want it to work for the moment . . .
+                StringBuilder toSend = new StringBuilder();
+                int count = 0;
+                int limit = 20;
+                for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()){
+                    toSend.append(provenanceForDisplay.toString() + "\n");
+                    count++;
+                    if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()){
+                        for (String n : provenanceForDisplay.getNames()){
+                            toSend.append("\t" + n);
+                        }
+                        toSend.append("\n");
+                        count++;
+                    }
+                    if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()){
+                        for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()){
+                            if (value.getSecond() != null && !value.getSecond().isEmpty()){
+                                for (String valueOrName : value.getSecond()) {
+                                    toSend.append("\t" + valueOrName);
+                                }
+                                count++;
+                                if (++count > limit){
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (count > limit){
+                        break;
+                    }
+                }
+                return ReportUIUtils.trimString(toSend.toString());
             }
         } catch (RemoteException re) {
             // is printing the stack trace going to jam the logs unnecessarily?

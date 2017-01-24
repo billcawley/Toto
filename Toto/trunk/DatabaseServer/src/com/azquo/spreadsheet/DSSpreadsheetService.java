@@ -220,7 +220,7 @@ public class DSSpreadsheetService {
             azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId()); // todo - is this the palce to unlock? It's probably fair
             boolean modifiedInTheMeanTime = azquoMemoryDBConnection.getDBLastModifiedTimeStamp() != cellsAndHeadingsForDisplay.getTimeStamp(); // if true we need to check if someone else changed the data
             // ad hoc saves regardless of changes in the mean time. Perhaps not the best plan . . .
-            azquoMemoryDBConnection.setProvenance(user, "in spreadsheet", reportName, context);
+            azquoMemoryDBConnection.setProvenance(user, Constants.IN_SPREADSHEET, reportName, context);
             if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
                 importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
                 if (persist) {
@@ -298,7 +298,7 @@ public class DSSpreadsheetService {
                             if (valuesForCell != null) {
                                 Provenance originalProvenance = azquoMemoryDBConnection.getProvenance();
                                 if (cell.getComment() != null && !cell.getComment().isEmpty()){
-                                    azquoMemoryDBConnection.setProvenance(user, "in spreadsheet, comment : " + cell.getComment(), reportName, context);
+                                    azquoMemoryDBConnection.setProvenance(user, Constants.IN_SPREADSHEET + ", comment : " + cell.getComment(), reportName, context);
                                 }
                                 logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                                 // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate

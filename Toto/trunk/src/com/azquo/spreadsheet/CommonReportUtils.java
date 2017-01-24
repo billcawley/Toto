@@ -8,6 +8,7 @@ import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -80,9 +81,9 @@ public class CommonReportUtils {
         return t.getMessage();
     }
 
-    public static TypedPair<Integer, String> getFullProvenanceStringForCell(LoggedInUser loggedInUser, int reportId, String region, int regionRow, int regionColumn) throws Exception {
-        List<TreeNode> treeNodes = SpreadsheetService.getTreeNode(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
-        if (!treeNodes.isEmpty()) {
+/*    public static TypedPair<Integer, String> getFullProvenanceStringForCell(LoggedInUser loggedInUser, int reportId, String region, int regionRow, int regionColumn) throws Exception {
+        final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
+        if (provenanceDetailsForDisplay.getProcenanceForDisplayList() != null) {
             final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
             StringBuilder colRowContext = new StringBuilder();
             colRowContext.append("COLUMN");
@@ -154,5 +155,5 @@ public class CommonReportUtils {
                 resolveTreeNode(tab, stringBuilder, treeNode1);
             }
         }
-    }
+    } */
 }

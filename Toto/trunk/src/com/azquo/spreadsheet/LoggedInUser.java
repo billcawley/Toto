@@ -50,6 +50,7 @@ public class LoggedInUser {
     private String readPermissions;
     private String writePermissions;
     private String imageStoreName;
+    // context is not the same as context per region and in fact this needs to be like sent cells in that it needs to be per report and perhaps stored as pairs? Or a map. Choices for report TODO
     private String context;
 
     private final String businessDirectory;
@@ -73,7 +74,7 @@ public class LoggedInUser {
         this.businessDirectory = businessDirectory;
         sentCellsMaps = new HashMap<>();
         languages = new ArrayList<>(2);
-        languages.add(user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
+        languages.add(user.getEmail());
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         this.database = database;
         this.databaseServer = databaseServer;

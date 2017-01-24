@@ -2,6 +2,7 @@ package com.azquo.rmi;
 
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
+import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.transport.json.JsonChildStructure;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
@@ -58,7 +59,7 @@ public interface RMIInterface extends Remote {
 
     void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 
-    List<TreeNode> formatDataRegionProvenanceForOutput(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+    ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException;
 
     String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource

@@ -4,12 +4,11 @@ import com.azquo.TypedPair;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.*;
+import com.azquo.memorydb.Constants;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
-import com.azquo.spreadsheet.transport.CellForDisplay;
-import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.transport.FilterTriple;
+import com.azquo.spreadsheet.transport.*;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.zkoss.chart.ChartsEvent;
 import org.zkoss.util.media.AMedia;
@@ -62,19 +61,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         editPopup.setId("editPopup");
         editPopup.setStyle("background-color:#ffffff");
         editPopup.setStyle("border: 5px solid #F58030");
-        /*
-        Menuitem item1 = new Menuitem("Audit");
-        item1.setId("provenance");
-        Menuitem item2 = new Menuitem("Region Spec");
-        Menuitem item3 = new Menuitem("highlight options");
-        item2.setId("regionSpec");
-        item3.setId("highlightOptions");
-//        Menuitem item3 = new Menuitem("Region Options");
-//        item3.setId("regionOptions");
-        editPopup.appendChild(item1);
-        editPopup.appendChild(item2);
-        editPopup.appendChild(item3);
-*/
         provenancePopup = new Popup();
         provenancePopup.setId("provenancePopup");
         provenancePopup.setDraggable("true");
@@ -97,14 +83,12 @@ public class ZKComposer extends SelectorComposer<Component> {
         highlightPopup.setStyle("background-color:#ffffff");
         highlightPopup.setStyle("border: 5px solid #F58030");
         highlightPopup.setId("highlightPopup");
-        //item2.setPopup(instructionsPopup);
-        //item3.setPopup(highlightPopup);
-        // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
         filterPopup = new Popup();
         filterPopup.setId("filterPopup");
         filterPopup.setStyle("background-color:#ffffff");
         filterPopup.setStyle("border: 5px solid #F58030");
 
+        // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
         if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(editPopup);
             myzss.getFirstChild().appendChild(provenancePopup);
@@ -191,16 +175,16 @@ public class ZKComposer extends SelectorComposer<Component> {
     private static String RESULT = "Result";
 
     /* Bit of an odd one this : on a cell click "wake" the log between the client and report server back up as there may be activity shortly
-    In addition I now want to now deal with the new filter things - this was by a cell area a la WASPS but now we'll do it by a popup
+    In addition I now want to now deal with the filter multi choice pop ups
      */
 
     @Listen("onCellClick = #myzss")
     public void onCellClick(CellMouseEvent event) {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        String selectionName = pivotItem(event, ReportRenderer.AZPIVOTFILTERS, ReportRenderer.AZPIVOTHEADINGS, 3);//OLD STYLE
+        String selectionName = ReportUIUtils.pivotItem(event, ReportRenderer.AZPIVOTFILTERS, ReportRenderer.AZPIVOTHEADINGS, 3);//OLD STYLE
         if (selectionName == null) {
-            selectionName = pivotItem(event, ReportRenderer.AZCONTEXTFILTERS, ReportRenderer.AZCONTEXTHEADINGS, 3);
+            selectionName = ReportUIUtils.pivotItem(event, ReportRenderer.AZCONTEXTFILTERS, ReportRenderer.AZCONTEXTHEADINGS, 3);
         }
         String selectionList = null;
         CellRegion queryResultRegion = null;
@@ -230,11 +214,8 @@ public class ZKComposer extends SelectorComposer<Component> {
                     }
                 }
             }
-
             // check to see if it's a non-pivot multi
-
-
-            List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
+            List<SName> names = ReportUIUtils.getNamedRegionForRowAndColumnSelectedSheet(myzss, event.getRow(), event.getColumn());
             for (SName name : names) {
                 if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
                     selectionName = name.getName();
@@ -382,20 +363,9 @@ public class ZKComposer extends SelectorComposer<Component> {
         String chosen = (String) event.getEditingValue();
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
-        //need to check whether this is a date.  If so then save as a date
-        /* Edd comment, this buggy
-        SCell sCell = event.getSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());
-        String cellFormat = sCell.getCellStyle().getDataFormat();
-        if (cellFormat.toLowerCase().contains("mm")|| cellFormat.toLowerCase().contains("yy")){
-            //format the result as a date
-            //fudge the result for the present
-
-               chosen = fudgeDate(chosen); //1970-01-01-00:00:00
-
-        }*/
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-        List<SName> names = getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn());
+        List<SName> names = ReportUIUtils.getNamedRegionForRowAndColumnSelectedSheet(myzss, event.getRow(), event.getColumn());
         boolean reload = false;
         for (SName name : names) {
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// would have been a one cell name
@@ -493,12 +463,12 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
     // used directly below, I need a list of the following
-    private class RegionRowCol {
+    static class RegionRowCol {
         public final String region;
         public final int row;
         public final int col;
 
-        private RegionRowCol(String region, int row, int col) {
+        RegionRowCol(String region, int row, int col) {
             this.region = region;
             this.row = row;
             this.col = col;
@@ -548,7 +518,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         // regions may overlap - update all EXCEPT where there are repeat regions, in which case just do that as repeat regions will have overlap by their nature
         List<RegionRowCol> regionRowColsToSave = new ArrayList<>(); // a list to save - list due to the possibility of overlapping data regions
         if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
-            final RegionRowCol regionRowColForRepeatRegion = getRegionRowColForRepeatRegion(book, row, col, repeatRegionNames.get(0));
+            final RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(book, row, col, repeatRegionNames.get(0));
             if (regionRowColForRepeatRegion != null) {
                 regionRowColsToSave.add(regionRowColForRepeatRegion);
             }
@@ -591,145 +561,12 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    // work out what the local region and row and column is for a given cell in a repeat score
-    private RegionRowCol getRegionRowColForRepeatRegion(Book book, int row, int col, SName repeatScopeName) {
-        String repeatRegionName = repeatScopeName.getName().substring(ReportRenderer.AZREPEATSCOPE.length());
-        SName repeatRegion = book.getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + repeatRegionName);
-        SName repeatDataRegion = book.getInternalBook().getNameByName("az_DataRegion" + repeatRegionName); // todo string literals ergh!
-        // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
-        if (repeatRegion != null && repeatDataRegion != null) { // ergh, got to try and find the right sent cell!
-            // local row ancd col starts off local to the repeat scope then the region and finally the data region in the repeated region
-            int localRow = row - repeatScopeName.getRefersToCellRegion().getRow();
-            int localCol = col - repeatScopeName.getRefersToCellRegion().getColumn();
-            // NOT row and col in a cell cense, row and coll in a repeated region sense
-            int repeatRow = 0;
-            int repeatCol = 0;
-            // ok so keep chopping the row and col in repeat scope until we have the row and col in the repeat region but we know WHICH repeat region we're in
-            while (localRow - repeatRegion.getRefersToCellRegion().getRowCount() > 0) {
-                repeatRow++;
-                localRow -= repeatRegion.getRefersToCellRegion().getRowCount();
-            }
-            while (localCol - repeatRegion.getRefersToCellRegion().getColumnCount() > 0) {
-                repeatCol++;
-                localCol -= repeatRegion.getRefersToCellRegion().getColumnCount();
-            }
-            // so now we should know the row and col local to the particular repeat region we're in and which repeat region we're in. Try to get the sent cells!
-            int dataRowStartInRepeatRegion = repeatDataRegion.getRefersToCellRegion().getRow() - repeatScopeName.getRefersToCellRegion().getRow();
-            int dataColStartInRepeatRegion = repeatDataRegion.getRefersToCellRegion().getColumn() - repeatScopeName.getRefersToCellRegion().getColumn();
-            // take into account the offset from the top left of the repeated region and the data region in it
-            localRow -= dataRowStartInRepeatRegion;
-            localCol -= dataColStartInRepeatRegion;
-            return new RegionRowCol(repeatRegionName + "-" + repeatRow + "-" + repeatCol, localRow, localCol);
-        }
-        return null;
-    }
-
-
-    // Commented, why?
-    @Listen("onSheetSelect = #myzss")
-    public void onSheetSelect(SheetSelectEvent sheetSelectEvent) {
-        // now here's the thing, I need to re add the validation as it gets zapped for some reason
-        //ZKAzquoBookUtils zkAzquoBookUtils = new ZKAzquoBookUtils(spreadsheetService, userChoiceDAO, userRegionOptionsDAO, rmiClient);
-        // Book book = sheetSelectEvent.getSheet().getBook();
-        // final Map<String, List<String>> choiceOptions = zkAzquoBookUtils.resolveChoiceOptions(sheetSelectEvent.getSheet().getBook(), (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER));
-        // zkAzquoBookUtils.addValidation(sheetSelectEvent.getSheet().getBook(), choiceOptions, null);
-    }
-
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         provenanceForRowAndColumn(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
     }
 
-
-    private String pivotItem(CellMouseEvent event, String filterName, String choicesName, int choiceWidth) {
-        SName contextFilters = event.getSheet().getBook().getInternalBook().getNameByName(filterName);//obsolete
-        if (contextFilters != null) {
-            String[] filters = BookUtils.getSnameCell(contextFilters).getStringValue().split(",");
-            CellRegion contextChoices = BookUtils.getCellRegionForSheetAndName(event.getSheet(), choicesName);
-            if (contextChoices != null) {
-                int headingRow = contextChoices.getRow();
-                int headingCol = contextChoices.getColumn();
-                int headingRows = contextChoices.getRowCount();
-                int filterCount = 0;
-                //on the top of pivot tables, the options are shown as pair groups separated by a space, sometimes on two rows, also separated by a space
-                // this logic is repeated from add validation, dedupe?
-                for (String filter : filters) {
-                    List<String> optionsList = CommonReportUtils.getDropdownListForQuery((LoggedInUser) event.getSheet().getBook().getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER), "`" + filter + "` children");
-                    if (optionsList != null && optionsList.size() > 1) {
-                        int rowOffset = filterCount % headingRows;
-                        int colOffset = filterCount / headingRows;
-                        int chosenRow = headingRow + rowOffset;
-                        int chosenCol = headingCol + choiceWidth * colOffset + 1;
-                        if (chosenRow == event.getRow() && chosenCol == event.getColumn()) {
-                            return filter.trim();
-                        }
-                        filterCount++;
-                    }
-                }
-            }
-        }
-        //look in the row headings.
-        for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
-                //surely there must be a better way of getting the first cell off a region!
-                String firstItem = "";
-                try {
-                    firstItem = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn()).getStringValue();
-                } catch (Exception e) {
-                    //there's an error in the formula - certainly not a permute!
-                }
-                if (firstItem.toLowerCase().startsWith("permute(")) {
-                    String[] rowHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
-                    String displayRowHeadingsString = "az_Display" + name.getName().substring(3);
-                    CellRegion displayRowHeadings = BookUtils.getCellRegionForSheetAndName(event.getSheet(), displayRowHeadingsString);
-                    if (displayRowHeadings != null) {
-                        int hrow = displayRowHeadings.getRow() - 1;
-                        int hcol = displayRowHeadings.getColumn();
-                        for (String rowHeading : rowHeadings) {
-                            if (hrow == event.getRow() && hcol++ == event.getColumn()) {
-                                if (rowHeading.contains(" sorted")) { // maybe factor the string literal? Need to make it work for the mo
-                                    rowHeading = rowHeading.substring(0, rowHeading.indexOf(" sorted")).trim();
-                                }
-                                return rowHeading.replace("`", "");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        //...and the column headings
-        for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
-                //surely there must be a better way of getting the first cell off a region!
-                SCell sCell = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn());
-                String firstItem = "";
-                try {
-                    firstItem = sCell.getStringValue();
-                } catch (Exception e) {
-                    //no need - firstItem = ""
-                }
-                if (firstItem.toLowerCase().startsWith("permute(")) {
-                    String[] colHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
-                    String displayColHeadingsString = "az_Display" + name.getName().substring(3);
-                    CellRegion displayColHeadings = BookUtils.getCellRegionForSheetAndName(event.getSheet(), displayColHeadingsString);
-                    if (displayColHeadings != null) {
-                        int hrow = displayColHeadings.getRow();
-                        int hcol = displayColHeadings.getColumn() - 1;
-                        for (String colHeading : colHeadings) {
-                            if (hrow++ == event.getRow() && hcol == event.getColumn()) {
-                                if (colHeading.contains(" sorted")) {
-                                    colHeading = colHeading.substring(0, colHeading.indexOf(" sorted")).trim();
-                                }
-                                return colHeading.replace("`", "");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    }
 
     private void provenanceForRowAndColumn(int cellRow, int cellCol, int mouseX, int mouseY) {
         provenanceForRowAndColumn(cellRow, cellCol, mouseX, mouseY, null);
@@ -739,6 +576,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         provenanceForRowAndColumn(cellRow, cellCol, 0, 0, ref);
     }
 
+    // 17/01/17 : this function is over 300 lines and must be broken up really . . .
     private void provenanceForRowAndColumn(int cellRow, int cellCol, int mouseX, int mouseY, Component ref) {
         while (editPopup.getChildren().size() > 0) { // clear it out
             editPopup.removeChild(editPopup.getLastChild());
@@ -759,7 +597,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             String formula = sCell.getFormulaValue();
             Label provenanceLabel = new Label();
             provenanceLabel.setMultiline(true);
-            provenanceLabel.setValue(trimString("Spreadsheet formula: =" + formula));
+            provenanceLabel.setValue(ReportUIUtils.trimString("Spreadsheet formula: =" + formula));
             provenancePopup.appendChild(provenanceLabel);
             Menuitem auditItem = new Menuitem("Audit");
             editPopup.appendChild(auditItem);
@@ -781,7 +619,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             // adding support for repeat regions. There's an additional check for row headings in a normal data region but I think this is redundant in repeat regions
             List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE);
             if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
-                RegionRowCol regionRowColForRepeatRegion = getRegionRowColForRepeatRegion(myzss.getBook(), cellRow, cellCol, repeatRegionNames.get(0));
+                RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(myzss.getBook(), cellRow, cellCol, repeatRegionNames.get(0));
                 if (regionRowColForRepeatRegion != null) {
                     region = regionRowColForRepeatRegion.region;
                     regionRow = regionRowColForRepeatRegion.row;
@@ -801,45 +639,74 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
             try {
-                TypedPair<Integer, String> fullProvenance = CommonReportUtils.getFullProvenanceStringForCell(loggedInUser, reportId, region, regionRow, regionColumn);
-                String stringToShow = null;
-                if (fullProvenance != null) {
-                    stringToShow = fullProvenance.getSecond(); // the former will be mangled
-                }
-                if (stringToShow != null) {
+                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
+                if (provenanceDetailsForDisplay.getProcenanceForDisplayList() != null && !provenanceDetailsForDisplay.getProcenanceForDisplayList().isEmpty()) {
                     Label provenanceLabel;
-                    stringToShow = stringToShow.replace("\t", "....");
-                    int spreadPos = stringToShow.indexOf("in spreadsheet"); // this kind of thing needs to be re coded.
-                    int nextBlock;
-                    // ok there is something dodgy here - the valueId (fullProvenance.getFirst()) was the same every time,
-                    // hence how I can package it up with the string and not alter the logic but I'm not sure this makes any sense!
-
-                    while (spreadPos >= 0) {
-                        int endLine = stringToShow.indexOf("\n");
-                        if (endLine == -1) endLine = stringToShow.length();
-                        nextBlock = stringToShow.indexOf("in spreadsheet", endLine);
-                        if (nextBlock < 0) {
-                            nextBlock = stringToShow.length();
-                        } else {
-                            nextBlock = stringToShow.lastIndexOf("\n", nextBlock) + 1;
-                        }
-                        final String provLine = stringToShow.substring(0, endLine);
-                        final Toolbarbutton provButton = new Toolbarbutton(provLine);
-                        provButton.addEventListener("onClick",
-                                event -> showProvenance(provLine, fullProvenance.getFirst()));
-                        provenancePopup.appendChild(provButton);
+                    if (provenanceDetailsForDisplay.getFunction() != null){
                         provenanceLabel = new Label();
                         provenanceLabel.setMultiline(true);
-                        provenanceLabel.setValue(trimString(stringToShow.substring(endLine, nextBlock)));
+                        provenanceLabel.setValue(provenanceDetailsForDisplay.getFunction() + "\n");
                         provenancePopup.appendChild(provenanceLabel);
-                        stringToShow = stringToShow.substring(nextBlock);
-                        spreadPos = stringToShow.indexOf("in spreadsheet");
                     }
-                    provenanceLabel = new Label();
-                    provenanceLabel.setMultiline(true);
-                    provenanceLabel.setValue(trimString(stringToShow));
-                    provenancePopup.appendChild(provenanceLabel);
-
+                    int count = 0;
+                    for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()){
+                        boolean breakLoop = false;
+                        provenanceLabel = new Label();
+                        provenanceLabel.setMultiline(true);
+                        provenanceLabel.setValue(provenanceForDisplay.toString() + "\n");
+                        provenancePopup.appendChild(provenanceLabel);
+                        if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()){
+                            StringBuilder names  = new StringBuilder();
+                            for (String name : provenanceForDisplay.getNames()){
+                                names.append("\t" + name);
+                            }
+                            provenanceLabel = new Label();
+                            provenanceLabel.setMultiline(true);
+                            provenanceLabel.setValue(names.toString() + "\n");
+                            provenancePopup.appendChild(provenanceLabel);
+                        }
+                        if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()){
+                            for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()){
+                                if (value.getSecond() != null && !value.getSecond().isEmpty()){
+                                    Iterator<String> it = value.getSecond().iterator();
+                                    if (provenanceForDisplay.isInSpreadsheet() && value.getFirst() != null && value.getFirst() > 0){
+                                        final Toolbarbutton provButton = new Toolbarbutton("\t" + it.next());
+                                        provButton.addEventListener("onClick",
+                                                event -> showProvenance(provenanceForDisplay.getName(), provenanceForDisplay.getContext(), value.getFirst()));
+                                        provenancePopup.appendChild(provButton);
+                                    } else {
+                                        provenanceLabel = new Label();
+                                        provenanceLabel.setMultiline(true);
+                                        provenanceLabel.setValue("\t" + it.next());
+                                        provenancePopup.appendChild(provenanceLabel);
+                                    }
+                                    StringBuilder names = new StringBuilder();
+                                    while (it.hasNext()){
+                                        if (names.length() > 0){
+                                            names.append(", ");
+                                        }
+                                        names.append(it.next());
+                                    }
+                                    provenanceLabel = new Label();
+                                    provenanceLabel.setMultiline(true);
+                                    provenanceLabel.setValue("\t\t" + names.toString() + "\n");
+                                    provenancePopup.appendChild(provenanceLabel);
+                                    count++;
+                                    if (count > 20){
+                                        provenanceLabel = new Label();
+                                        provenanceLabel.setMultiline(true);
+                                        provenanceLabel.setValue("\t\t.......\n");
+                                        provenancePopup.appendChild(provenanceLabel);
+                                        breakLoop = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if (breakLoop){
+                            break;
+                        }
+                    }
                     Toolbarbutton button = new Toolbarbutton("Download Full Audit");
                     // todo - factor with very similar code to downloiad debug info
                     button.addEventListener("onClick",
@@ -856,17 +723,30 @@ public class ZKComposer extends SelectorComposer<Component> {
                                             cell.setStringValue("Audit " + or.getReportName());
                                         }
                                         if (sName.getName().equalsIgnoreCase("Data")) {
-                                            // here we parse out the string into cells. It could be passed as arrays but I'm not sure how much help that is
-                                            final String[] split = fullProvenance.getSecond().split("\n");
                                             int yOffset = 0;
-                                            for (String line : split) {
+                                            for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()){
                                                 int xOffset = 0;
-                                                String[] cells = line.split("\t");
-                                                for (String cell : cells) {
-                                                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(cell);
-                                                    xOffset++;
-                                                }
+                                                boolean breakLoop = false;
+                                                sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(provenanceForDisplay.toString());
                                                 yOffset++;
+                                                if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()){
+                                                    for (String name : provenanceForDisplay.getNames()){
+                                                        xOffset++;
+                                                        sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(name);
+                                                    }
+                                                    yOffset++;
+                                                }
+                                                if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()){
+                                                    for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()){
+                                                        if (value.getSecond() != null && !value.getSecond().isEmpty()){
+                                                            for (String valueOrName : value.getSecond()) {
+                                                                xOffset++;
+                                                                sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(valueOrName);
+                                                            }
+                                                            yOffset++;
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -905,19 +785,29 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 }
                                 //String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
                                 for (int colNo = 0; colNo < rowHeadings.size(); colNo++){
-                                    drillDownString = replaceAll(drillDownString,"[rowheading" + (colNo + 1) + "]", rowHeadings.get(colNo));
+                                    drillDownString = ReportUIUtils.replaceAll(drillDownString,"[rowheading" + (colNo + 1) + "]", rowHeadings.get(colNo));
                                 }
-                                drillDownString = replaceAll(drillDownString,"[rowheading]", rowHeadings.get(rowHeadings.size()-1));
+                                drillDownString = ReportUIUtils.replaceAll(drillDownString,"[rowheading]", rowHeadings.get(rowHeadings.size()-1));
                                 for (int rowNo = 0; rowNo < colHeadings.size();rowNo++){
-                                    drillDownString = replaceAll(drillDownString,"[columnheading" + (rowNo + 1) + "]", colHeadings.get(rowNo));
+                                    drillDownString = ReportUIUtils.replaceAll(drillDownString,"[columnheading" + (rowNo + 1) + "]", colHeadings.get(rowNo));
                                 }
-                                drillDownString = replaceAll(drillDownString,"[columnheading]", colHeadings.get(colHeadings.size()-1));
+                                drillDownString = ReportUIUtils.replaceAll(drillDownString,"[columnheading]", colHeadings.get(colHeadings.size()-1));
 
-                                final String stringToPass = drillDownString;
                                 Menuitem ddItem = new Menuitem("Drill Down" + qualifier);
                                 editPopup.appendChild(ddItem);
+                                // right, showProvenance has been simplified a little, I need to parse out the report name here
+                                String reportName = "";
+                                if (drillDownString.contains(Constants.IN_SPREADSHEET)){
+                                    drillDownString = drillDownString.substring(drillDownString.indexOf(Constants.IN_SPREADSHEET) + Constants.IN_SPREADSHEET.length()).trim();
+                                    if (drillDownString.contains(" with ")){
+                                        reportName = drillDownString.substring(0, drillDownString.indexOf(" with "));
+                                        drillDownString = drillDownString.substring(drillDownString.indexOf(" with ") + 6);
+                                    }
+                                }
+                                final String freportName = reportName;
+                                final String context = drillDownString; // by now it should be context
                                 ddItem.addEventListener("onClick",
-                                        event -> showProvenance(stringToPass, 0));
+                                        event -> showProvenance(freportName, context, 0));
                                 // now need to find the headings - is this easy?
                             }
                         }
@@ -936,7 +826,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 debugPopup.appendChild(debugLabel);
                 debugLabel = new Label();
                 debugLabel.setMultiline(true);
-                debugLabel.setValue(trimString(debugString));
+                debugLabel.setValue(ReportUIUtils.trimString(debugString));
                 debugPopup.appendChild(debugLabel);
                 Toolbarbutton button = new Toolbarbutton("Download Full Debug");
                 button.addEventListener("onClick",
@@ -1060,19 +950,10 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
     }
 
-    public static String replaceAll(String original, String toFind, String replacement) {
-        int foundPos = original.toLowerCase().indexOf(toFind);
-        while (foundPos >= 0) {
-            original = original.substring(0, foundPos) + replacement + original.substring(foundPos + toFind.length());
-            foundPos = original.toLowerCase().indexOf(toFind);
-        }
-        return original;
-    }
-
-    private void showProvenance(String provline, int valueId) {
+    private void showProvenance(String reportName, String context, int valueId) {
         final Book book = myzss.getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        String reportName = ChoicesService.setChoices(loggedInUser, provline);
+        ChoicesService.setChoices(loggedInUser, context);
         OnlineReport or = null;
         String permissionId = null;
         if (reportName != null) {
@@ -1097,28 +978,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         } else {
             Clients.evalJavaScript("alert(\"the report '" + reportName + "` is no longer available\")");
         }
-    }
-
-    private List<SName> getNamedRegionForRowAndColumnSelectedSheet(int row, int col) {
-        // now how to get the name?? Guess run through them. Feel there should be a better way.
-        final Book book = myzss.getBook();
-        List<SName> found = new ArrayList<>();
-        for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think
-            if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
-                    && name.getRefersToCellRegion() != null
-                    && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
-                    && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
-                found.add(name);
-            }
-        }
-        return found;
-    }
-
-    public static String trimString(String stringToShow) {
-        if (stringToShow.length() > 200) {
-            stringToShow = stringToShow.substring(0, 200) + " . . .\n";
-        }
-        return stringToShow;
     }
 
     private void addHighlight(Popup highlightPopup, final int days) {
