@@ -37,21 +37,26 @@ class AzquoCellService {
     static final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
 
     private static List<Integer> sortOnMultipleValues(Map<Integer, List<TypedPair<Double, String>>> sortListsMap, final boolean sortRowsUp) {
-        boolean doubleSort = true;
+        int sortCount =sortListsMap.get(0).size();
+        List<Boolean>doubleSort = new ArrayList();
+        for (int i = 0;i<sortCount;i++) doubleSort.add(true);
         // ok I can't see a way around this, I'm going to have to check all doubles for a null and if I find one abandon the doublesort
+        int doubleSorts = sortCount;
         for (List<TypedPair<Double, String>> check : sortListsMap.values()){
-            for (TypedPair<Double, String> value : check){
+            for (int i=0;i < sortCount;i++){
+                TypedPair<Double, String> value = check.get(i);
                 if (value.getFirst() == null){
-                    doubleSort = false;
-                    break;
+                    if (doubleSort.get(i)){
+                        doubleSort.set(i,false);
+                        if (--doubleSorts==0){
+                            break;
+                        }
+
+                    }
                 }
-            }
-            if (!doubleSort){
-                break;
             }
         }
 
-        final boolean finalDoubleSort = doubleSort;
         final List<Integer> sortedValues = new ArrayList<>(sortListsMap.size());
         List<Map.Entry<Integer, List<TypedPair<Double, String>>>> list = new ArrayList<>(sortListsMap.entrySet());
         // sort list based on the list of values in each entry
@@ -60,24 +65,16 @@ class AzquoCellService {
             if (o1.getValue().size() != o2.getValue().size()) { // the really should match! I'll call it neutral for the moment
                 return 0;
             }
-            if (finalDoubleSort) {
-                int index = 0;
-                for (TypedPair<Double, String> value : o1.getValue()) {
-                    result = value.getFirst().compareTo(o2.getValue().get(index).getFirst());
-                    if (result != 0) { // we found a difference
-                        break;
-                    }
-                    index++;
+            for (int index = 0;index < sortCount;index++){
+                if (doubleSort.get(index)){
+                    result = o1.getValue().get(index).getFirst().compareTo(o2.getValue().get(index).getFirst());
+                }else{
+                    result = o1.getValue().get(index).getSecond().compareTo(o2.getValue().get(index).getSecond());
                 }
-            } else {
-                int index = 0;
-                for (TypedPair<Double, String> value : o1.getValue()) {
-                    result = value.getSecond().compareTo(o2.getValue().get(index).getSecond());
-                    if (result != 0) { // we found a difference
-                        break;
-                    }
-                    index++;
+                if (result != 0) { // we found a difference
+                    break;
                 }
+
             }
             return sortRowsUp ? result : -result;
         });
@@ -351,11 +348,17 @@ class AzquoCellService {
                         if (cell == null){ // blank, be flexible to the sorting later
                             sortRowValues.add(new TypedPair<>(0d, ""));
                         } else {
-                            if (cell.getStringValue().length() > 0 && NumberUtils.isNumber(cell.getStringValue())){ // following old logic to detect if we can call it a number
-                                sortRowValues.add(new TypedPair<>(cell.getDoubleValue(), cell.getStringValue()));
-                            } else { // null the double, can't sort numerically
-                                sortRowValues.add(new TypedPair<>(null, cell.getStringValue()));
+                            Double d = null;
+                            try {
+                                d = Double.parseDouble(cell.getStringValue());
+                            }catch(Exception e){
+                                try {
+                                    d = Double.parseDouble(cell.getStringValue().replace(":", "."));//to cater for times (e.g. 9:00)
+                                }catch (Exception e2){
+                                    //not a number - ignore
+                                }
                             }
+                            sortRowValues.add(new TypedPair<>(d, cell.getStringValue()));
                         }
                     }
                 }
