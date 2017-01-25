@@ -218,7 +218,7 @@ public class NameQueryParser {
             }
         }
         if (sorted){
-            if (nameStack.get(0) == null || !nameStack.get(0).mutable) { // then force to a mutable list, don't see that we have a choice
+            if (nameStack.get(0) == null || nameStack.get(0).list == null || !nameStack.get(0).mutable) { // then force to a mutable list, don't see that we have a choice
                 nameStack.set(0,new NameSetList(null, new ArrayList<>(nameStack.get(0).getAsCollection()), true));
             }
             nameStack.get(0).list.sort(NameService.defaultLanguageCaseInsensitiveNameComparator);
