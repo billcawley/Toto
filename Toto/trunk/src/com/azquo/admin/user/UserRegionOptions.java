@@ -15,6 +15,7 @@ public class UserRegionOptions extends StandardEntity {
     private final int reportId;
     private final String region;
     private int hideRows;
+    private int hideRowValues;
     private int hideCols;
     private boolean sortable;
     // if set these will default to a total descending sort
@@ -34,7 +35,7 @@ public class UserRegionOptions extends StandardEntity {
     private boolean ignoreHeadingErrors;
 
 
-    UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideCols, boolean sortable
+    UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideRowValues, int hideCols, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
             , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, boolean ignoreHeadingErrors) {
         this.id = id;
@@ -42,6 +43,7 @@ public class UserRegionOptions extends StandardEntity {
         this.reportId = reportId;
         this.region = region;
         this.hideRows = hideRows;
+        this.hideRowValues = hideRowValues;
         this.hideCols = hideCols;
         this.sortable = sortable;
         this.rowLimit = rowLimit;
@@ -69,16 +71,15 @@ public class UserRegionOptions extends StandardEntity {
         this.region = region;
         String SPREADSHEETHIDEROWS = "hiderows";
         String SPREADSHEETHIDECOLS = "hidecols";
-        hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS, spreadsheetSource));
+        String SPREADSHEETHIDEROWS2 = "hiderowvalues";
+        hideRowValues = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS2, spreadsheetSource));
+        if (hideRowValues == 0){
+            hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS, spreadsheetSource));
+        }else{
+            hideRows = hideRowValues;
+        }
+
         hideCols = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDECOLS, spreadsheetSource));
-        if (hideRows == 0) {
-            String SPREADSHEETHIDEROWS2 = "hiderowvalues";
-            hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS2, spreadsheetSource));
-        }
-        // todo : find out why this is so! (legacy logic)
-        if (hideRows == 0) {
-            hideRows = -1;//we are going to ignore the row headings returned on the first call, but use this flag to get them on the second.
-        }
         if (spreadsheetSource != null) {
             spreadsheetSource = spreadsheetSource.toLowerCase();
             this.sortable = spreadsheetSource.contains("sortable"); // the get option thing is no good for just an "exists with no value" check, this is the same
@@ -175,6 +176,14 @@ public class UserRegionOptions extends StandardEntity {
         this.hideRows = hideRows;
     }
 
+    public int getHideRowValues() {
+        return hideRowValues;
+    }
+
+    public void setHideRowValues(int hideRowValues) {
+        this.hideRowValues = hideRowValues;
+    }
+
     public boolean getSortable() {
         return sortable;
     }
@@ -249,7 +258,7 @@ public class UserRegionOptions extends StandardEntity {
 
     // As mentioned in RegionOptions,
     public RegionOptions getRegionOptionsForTransport() {
-        return new RegionOptions(hideRows, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, ignoreHeadingErrors);
+        return new RegionOptions(hideRows, hideRowValues,hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, ignoreHeadingErrors);
     }
 
     public String getRowLanguage() {
@@ -299,6 +308,7 @@ public class UserRegionOptions extends StandardEntity {
                 ", reportId=" + reportId +
                 ", region='" + region + '\'' +
                 ", hideRows=" + hideRows +
+                ", hideRowValues=" + hideRowValues +
                 ", hideCols=" + hideCols +
                 ", sortable=" + sortable +
                 ", rowLimit=" + rowLimit +
