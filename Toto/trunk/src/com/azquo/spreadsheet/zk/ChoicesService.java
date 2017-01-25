@@ -39,9 +39,10 @@ public class ChoicesService {
 
     // now adds one validation sheet per sheet so to speak
     static List<SName> addValidation(String sheetName, LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap) {
-        if (choiceOptionsMap.isEmpty()){
-            return Collections.emptyList();
-        }
+        //if (choiceOptionsMap.isEmpty()){
+        // there may still be 'pivotheadings'
+        //    return Collections.emptyList();
+        //}
         // trim the sheet name as it can't be longer than 31 chars when appended to VALIDATION_SHEET
         if (sheetName.length() > 10){
             sheetName = sheetName.substring(0,10);
