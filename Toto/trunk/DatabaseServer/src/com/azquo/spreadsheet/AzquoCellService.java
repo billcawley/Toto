@@ -426,7 +426,7 @@ class AzquoCellService {
                 for (int j = 0; j < regionOptions.hideRows; j++) {
                     List<AzquoCell> rowToCheck = toReturn.get(rowNo + j); // size - 1 for the last index
                     for (AzquoCell cellToCheck : rowToCheck) {
-                        if (cellToCheck.getStringValue() != null && cellToCheck.getStringValue().length() > 0) {
+                        if ((regionOptions.hideRowValues == 0 || !hasAttribute(cellToCheck)) && cellToCheck.getStringValue() != null && cellToCheck.getStringValue().length() > 0) {
                             rowsBlank = false;
                             break;
                         }
@@ -478,6 +478,19 @@ class AzquoCellService {
         }
         return toReturn;
     }
+
+    private static boolean hasAttribute(AzquoCell cell){
+        for(DataRegionHeading heading:cell.getColumnHeadings()){
+            if (heading.getAttribute()!= null) return true;
+        }
+        for (DataRegionHeading heading:cell.getRowHeadings()) {
+            if (heading.getAttribute() != null) return true;
+
+        }
+        return false;
+
+    }
+
 
     private static List<List<AzquoCell>> getAzquoCellsForRowsColumnsAndContext(AzquoMemoryDBConnection connection, List<List<DataRegionHeading>> headingsForEachRow
             , final List<List<DataRegionHeading>> headingsForEachColumn
