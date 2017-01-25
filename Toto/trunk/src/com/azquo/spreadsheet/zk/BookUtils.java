@@ -41,16 +41,18 @@ public class BookUtils {
                 }
                 // I assume non null cell has a non null string value, this may not be true. Also will I get another type of exception?
                 try {
-                    if (cell != null) {
-                        if (cell.getType() == SCell.CellType.NUMBER) {
+                    if (cell != null && !cell.getType().equals(SCell.CellType.BLANK)) {
+                        try{
                             String numberGuess = cell.getNumberValue() + "";
                             if (numberGuess.endsWith(".0")) {
                                 numberGuess = numberGuess.substring(0, numberGuess.length() - 2);
                             }
                             row.add(numberGuess);
-                        } else {
+                        }catch(Exception e){
                             row.add(cell.getStringValue());
                         }
+                    }else{
+                        row.add("");
                     }
                 } catch (Exception ignored) {
                 }
