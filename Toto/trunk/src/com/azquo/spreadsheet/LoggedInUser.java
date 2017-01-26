@@ -66,7 +66,7 @@ public class LoggedInUser {
     private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
 
     private static final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-    private static final SimpleDateFormat df2 = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+    private static final SimpleDateFormat df2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); // 24 hour
 
     protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions, String imageStoreName, String businessDirectory) {
         this.sessionId = sessionId;

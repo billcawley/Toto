@@ -25,9 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Extracted from DSSpreadsheetService by edward on 28/10/16.
- *
+ * <p>
  * Core functions that create arrays of AzquoCells to be packaged by DSSpreadsheetService and sent to the front end.
- *
+ * <p>
  * A little over my 500 line limit but I'll leave it for the moment.
  */
 class AzquoCellService {
@@ -37,21 +37,20 @@ class AzquoCellService {
     static final int COL_HEADINGS_NAME_QUERY_LIMIT = 500;
 
     private static List<Integer> sortOnMultipleValues(Map<Integer, List<TypedPair<Double, String>>> sortListsMap, final boolean sortRowsUp) {
-        int sortCount =sortListsMap.get(0).size();
-        List<Boolean>doubleSort = new ArrayList();
-        for (int i = 0;i<sortCount;i++) doubleSort.add(true);
+        int sortCount = sortListsMap.get(0).size();
+        List<Boolean> doubleSort = new ArrayList<>();
+        for (int i = 0; i < sortCount; i++) doubleSort.add(true);
         // ok I can't see a way around this, I'm going to have to check all doubles for a null and if I find one abandon the doublesort
         int doubleSorts = sortCount;
-        for (List<TypedPair<Double, String>> check : sortListsMap.values()){
-            for (int i=0;i < sortCount;i++){
+        for (List<TypedPair<Double, String>> check : sortListsMap.values()) {
+            for (int i = 0; i < sortCount; i++) {
                 TypedPair<Double, String> value = check.get(i);
-                if (value.getFirst() == null){
-                    if (doubleSort.get(i)){
-                        doubleSort.set(i,false);
-                        if (--doubleSorts==0){
+                if (value.getFirst() == null) {
+                    if (doubleSort.get(i)) {
+                        doubleSort.set(i, false);
+                        if (--doubleSorts == 0) {
                             break;
                         }
-
                     }
                 }
             }
@@ -65,10 +64,10 @@ class AzquoCellService {
             if (o1.getValue().size() != o2.getValue().size()) { // the really should match! I'll call it neutral for the moment
                 return 0;
             }
-            for (int index = 0;index < sortCount;index++){
-                if (doubleSort.get(index)){
+            for (int index = 0; index < sortCount; index++) {
+                if (doubleSort.get(index)) {
                     result = o1.getValue().get(index).getFirst().compareTo(o2.getValue().get(index).getFirst());
-                }else{
+                } else {
                     result = o1.getValue().get(index).getSecond().compareTo(o2.getValue().get(index).getSecond());
                 }
                 if (result != 0) { // we found a difference
@@ -97,7 +96,7 @@ class AzquoCellService {
 
     static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, List<String> languages, int valueId, boolean quiet) throws Exception {
-        if (!quiet){
+        if (!quiet) {
             azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
         }
         long track = System.currentTimeMillis();
@@ -224,7 +223,7 @@ class AzquoCellService {
         try {
 
             int col = Integer.parseInt(toFind.trim());
-            if (col > 0){
+            if (col > 0) {
                 return col - 1;
             }
         } catch (Exception e) {
@@ -268,10 +267,10 @@ class AzquoCellService {
         }
         // need to be able to sort on multiple columns now - find the indexes here. Order is important I assume!
         List<Integer> sortOnColIndexes = new ArrayList<>();
-        if (regionOptions.sortColumn != null){
-            for (String sc : regionOptions.sortColumn.split("&")){
+        if (regionOptions.sortColumn != null) {
+            for (String sc : regionOptions.sortColumn.split("&")) {
                 int sortColIndex = findPosition(columnHeadings, sc, languages);
-                if (sortColIndex != -1){
+                if (sortColIndex != -1) {
                     sortOnColIndexes.add(sortColIndex);
                 }
             }
@@ -311,7 +310,7 @@ class AzquoCellService {
         maxCols = Math.abs(maxCols);
         if (!sortOnColIndexes.isEmpty() || sortOnRowIndex != -1 || sortOnColTotals || sortOnRowTotals) { // then there's sorting to do
             // for up/down sorting we now support mor than one column, it might bee a mix of strings and doubles, hence lists of typed pairs
-            final Map<Integer, List<TypedPair<Double,String>>> sortRowValuesMap = HashIntObjMaps.newMutableMap(sourceData.size());
+            final Map<Integer, List<TypedPair<Double, String>>> sortRowValuesMap = HashIntObjMaps.newMutableMap(sourceData.size());
             // for left/right sorting, only supports numbers and one row to sort on or the column totals
             final Map<Integer, Double> sortColumnDoubles = HashIntDoubleMaps.newMutableMap(totalCols);
             // blank the map to stop npes later
@@ -336,25 +335,25 @@ class AzquoCellService {
                     }
                     colNo++;
                 }
-                if (sortOnRowTotals){ // a simple sort on one number
+                if (sortOnRowTotals) { // a simple sort on one number
                     sortRowValues.add(new TypedPair<>(sortRowTotal, null));
                 } else { // ok here we go, need to support multiple sort columns
                     // try to make number sorting work where possible by saying that blank is 0
-                    for (Integer index : sortOnColIndexes){
+                    for (Integer index : sortOnColIndexes) {
                         AzquoCell cell = null;
-                        if (index < rowCells.size()){
+                        if (index < rowCells.size()) {
                             cell = rowCells.get(index);
                         }
-                        if (cell == null){ // blank, be flexible to the sorting later
+                        if (cell == null) { // blank, be flexible to the sorting later
                             sortRowValues.add(new TypedPair<>(0d, ""));
                         } else {
                             Double d = null;
                             try {
                                 d = Double.parseDouble(cell.getStringValue());
-                            }catch(Exception e){
+                            } catch (Exception e) {
                                 try {
                                     d = Double.parseDouble(cell.getStringValue().replace(":", "."));//to cater for times (e.g. 9:00)
-                                }catch (Exception e2){
+                                } catch (Exception e2) {
                                     //not a number - ignore
                                 }
                             }
@@ -375,7 +374,7 @@ class AzquoCellService {
                     for (int row = 0; row < sortRowValuesMap.size(); row++) {
                         int thisId = rowHeadings.get(row).get(totalHeading).getName().getId();
                         if (thisId != lastId) {
-                            Map<Integer, List<TypedPair<Double,String>>> subTotalSortRowValues = new HashMap<>();
+                            Map<Integer, List<TypedPair<Double, String>>> subTotalSortRowValues = new HashMap<>();
                             for (int sectionRow = topRow; sectionRow < row - 1; sectionRow++) {
                                 subTotalSortRowValues.put(sectionRow - topRow, sortRowValuesMap.get(sectionRow));
                             }
@@ -504,7 +503,7 @@ class AzquoCellService {
             toReturn.add(null);// null the rows, basically adding spaces to the return list
         }*/
         List<List<AzquoCell>> toReturn = new ArrayList<>(totalRows);
-        if (!quiet){
+        if (!quiet) {
             connection.addToUserLog("Size = " + totalRows + " * " + totalCols);
             connection.addToUserLog("1%--------25%---------50%---------75%--------100%");
         }
@@ -581,7 +580,7 @@ class AzquoCellService {
         System.out.println("Heap cost to make on multi thread : " + (newHeapMarker - oldHeapMarker) / mb);
         System.out.println();
         //oldHeapMarker = newHeapMarker;
-        if (!quiet){
+        if (!quiet) {
             connection.addToUserLog(" time : " + (System.currentTimeMillis() - track) + "ms");
         }
         return toReturn;
