@@ -420,7 +420,7 @@ class ZKContextMenu {
                     if (drillDownString.contains(Constants.IN_SPREADSHEET)){
                         drillDownString = drillDownString.substring(drillDownString.indexOf(Constants.IN_SPREADSHEET) + Constants.IN_SPREADSHEET.length()).trim();
                         if (drillDownString.contains(" with ")){
-                            reportName = drillDownString.substring(0, drillDownString.indexOf(" with "));
+                            reportName = drillDownString.substring(0, drillDownString.indexOf(" with ")).replace("`","");
                             drillDownString = drillDownString.substring(drillDownString.indexOf(" with ") + 6);
                         }
                     }
