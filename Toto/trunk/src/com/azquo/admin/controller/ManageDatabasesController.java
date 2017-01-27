@@ -27,11 +27,11 @@ import java.util.List;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 24/04/15.
- *
+ * <p>
  * New HTML admin, upload files and manage databases
- *
+ * <p>
  * CRUD type stuff though databases will be created/deleted etc. server side.
  */
 @Controller
@@ -54,26 +54,35 @@ public class ManageDatabasesController {
             return loaded;
         }
 
-        public int getId(){
+        public int getId() {
             return database.getId();
         }
-        public int getBusinessId(){
+
+        public int getBusinessId() {
             return database.getBusinessId();
         }
-        public String getName(){
+
+        public String getName() {
             return database.getName();
         }
-        public String getPersistenceName(){
+
+        public String getPersistenceName() {
             return database.getPersistenceName();
         }
-        public String getDatabaseType() { return database.getDatabaseType(); }
-        public int getNameCount(){
+
+        public String getDatabaseType() {
+            return database.getDatabaseType();
+        }
+
+        public int getNameCount() {
             return database.getNameCount();
         }
-        public int getValueCount(){
+
+        public int getValueCount() {
             return database.getValueCount();
         }
-        public String getUrlEncodedName(){
+
+        public String getUrlEncodedName() {
             return database.getUrlEncodedName();
         }
     }
@@ -97,14 +106,14 @@ public class ManageDatabasesController {
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             StringBuilder error = new StringBuilder();
-            if (request.getSession().getAttribute("importResult") != null){
+            if (request.getSession().getAttribute("importResult") != null) {
                 error.append(request.getSession().getAttribute("importResult"));
                 request.getSession().removeAttribute("importResult");
             }
             try {
                 final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
                 if (createDatabase != null && !createDatabase.isEmpty() && (allServers.size() == 1 || (databaseServerId != null && !databaseServerId.isEmpty()))) {
-                    if (allServers.size() == 1){
+                    if (allServers.size() == 1) {
                         AdminService.createDatabase(createDatabase, databaseType, loggedInUser, allServers.get(0));
                     } else {
                         AdminService.createDatabase(createDatabase, databaseType, loggedInUser, DatabaseServerDAO.findById(Integer.parseInt(databaseServerId)));
@@ -136,11 +145,11 @@ public class ManageDatabasesController {
             List<Database> databaseList = AdminService.getDatabaseListForBusiness(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
             try {
-                for (Database database : databaseList){
+                for (Database database : databaseList) {
                     boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database);
                     displayDataBases.add(new DisplayDataBase(isLoaded, database));
                     if (isLoaded && (AdminService.getNameCount(loggedInUser, database) != database.getNameCount()
-                            || AdminService.getValueCount(loggedInUser, database) != database.getValueCount())){ // then update the counts
+                            || AdminService.getValueCount(loggedInUser, database) != database.getValueCount())) { // then update the counts
                         database.setNameCount(AdminService.getNameCount(loggedInUser, database));
                         database.setValueCount(AdminService.getValueCount(loggedInUser, database));
                         DatabaseDAO.store(database);
@@ -156,7 +165,7 @@ public class ManageDatabasesController {
             }
             model.put("databases", displayDataBases);
             final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
-            if (allServers.size() > 1){
+            if (allServers.size() > 1) {
                 model.put("databaseServers", allServers);
             } else {
                 model.put("serverList", false);
@@ -175,20 +184,20 @@ public class ManageDatabasesController {
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
 
-    ){
-        if (database  != null){
+    ) {
+        if (database != null) {
             request.getSession().setAttribute("lastSelected", database);
         }
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             if (database != null && uploadFile != null) {
-                if (database.isEmpty()){
+                if (database.isEmpty()) {
                     model.put("error", "Please select a database");
-                } else if (uploadFile.isEmpty()){
+                } else if (uploadFile.isEmpty()) {
                     model.put("error", "Please select a file to upload");
                 } else {
-                    try{
+                    try {
                         HttpSession session = request.getSession();
                         // todo - security hole here, a developer could hack a file onto a different db . . .
                         LoginService.switchDatabase(loggedInUser, database); // could be blank now
@@ -210,7 +219,7 @@ public class ManageDatabasesController {
                             }
                         }).start();
                         return "importrunning";
-                    } catch (Exception e){ // now the import has it's on exception catching
+                    } catch (Exception e) { // now the import has it's on exception catching
                         String exceptionError = e.getMessage();
                         e.printStackTrace();
                         model.put("error", exceptionError);
@@ -220,11 +229,11 @@ public class ManageDatabasesController {
             List<Database> databaseList = AdminService.getDatabaseListForBusiness(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
             try {
-                for (Database database1 : databaseList){
+                for (Database database1 : databaseList) {
                     boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database1);
                     displayDataBases.add(new DisplayDataBase(isLoaded, database1));
                     if (isLoaded && (AdminService.getNameCount(loggedInUser, database1) != database1.getNameCount()
-                            || AdminService.getValueCount(loggedInUser, database1) != database1.getValueCount())){ // then update the counts
+                            || AdminService.getValueCount(loggedInUser, database1) != database1.getValueCount())) { // then update the counts
                         database1.setNameCount(AdminService.getNameCount(loggedInUser, database1));
                         database1.setValueCount(AdminService.getValueCount(loggedInUser, database1));
                         DatabaseDAO.store(database1);
@@ -235,7 +244,7 @@ public class ManageDatabasesController {
             }
             model.put("databases", displayDataBases);
             final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
-            if (allServers.size() > 1){
+            if (allServers.size() > 1) {
                 model.put("databaseServers", allServers);
             } else {
                 model.put("serverList", false);

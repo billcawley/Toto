@@ -12,11 +12,11 @@ import java.util.Map;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 07/01/14.
  * record of uploaded files
  */
-public final class UploadRecordDAO  {
+public final class UploadRecordDAO {
 
     private static final String TABLENAME = "upload_record";
 
@@ -67,7 +67,7 @@ public final class UploadRecordDAO  {
         }
     }
 
-    private static final UploadRecordRowMapper uploadRowMapper =  new UploadRecordRowMapper();
+    private static final UploadRecordRowMapper uploadRowMapper = new UploadRecordRowMapper();
 
     public static List<UploadRecord> findForBusinessId(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -95,16 +95,15 @@ public final class UploadRecordDAO  {
         StandardDAO.getJdbcTemplate().update("DELETE FROM " + StandardDAO.MASTER_DB + ".`" + TABLENAME + "` where " + DATABASEID + " = :" + DATABASEID, namedParams);
     }
 
-    public static UploadRecord findById(int id){
+    public static UploadRecord findById(int id) {
         return StandardDAO.findById(id, TABLENAME, uploadRowMapper);
     }
 
-    public static void removeById(UploadRecord uploadRecord){
+    public static void removeById(UploadRecord uploadRecord) {
         StandardDAO.removeById(uploadRecord, TABLENAME);
     }
 
-    public static void store(UploadRecord uploadRecord){
+    public static void store(UploadRecord uploadRecord) {
         StandardDAO.store(uploadRecord, TABLENAME, getColumnNameValueMap(uploadRecord));
     }
-
 }

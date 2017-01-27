@@ -13,13 +13,12 @@ import java.util.Map;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by bill on 01/04/14.
- *
+ * <p>
  * Recording which databases are being accessed, not actually being used since the report/DB server split, need to get rid of it or start using it again. Todo
- *
  */
-public final class OpenDatabaseDAO  {
+public final class OpenDatabaseDAO {
 
     private static final String TABLENAME = "open_database";
 
@@ -74,15 +73,15 @@ public final class OpenDatabaseDAO  {
         return StandardDAO.findListWithWhereSQLAndParameters("where " + DATABASEID + "` = :" + DATABASEID, TABLENAME, openDatabaseRowMapper, namedParams);
     }
 
-    public static OpenDatabase findById(int id){
+    public static OpenDatabase findById(int id) {
         return StandardDAO.findById(id, TABLENAME, openDatabaseRowMapper);
     }
 
-    public static void removeById(OpenDatabase openDatabase){
+    public static void removeById(OpenDatabase openDatabase) {
         StandardDAO.removeById(openDatabase, TABLENAME);
     }
 
-    public static void store(OpenDatabase openDatabase){
+    public static void store(OpenDatabase openDatabase) {
         StandardDAO.store(openDatabase, TABLENAME, getColumnNameValueMap(openDatabase));
     }
 }

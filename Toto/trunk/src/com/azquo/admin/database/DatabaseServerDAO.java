@@ -11,14 +11,14 @@ import java.util.Map;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 05/08/15
  * <p/>
  * the find all and find by id from the superclass should be sufficient. There should be no need for java to modify these records.
  */
 public class DatabaseServerDAO {
 
-    private static final String TABLENAME= "database_server";
+    private static final String TABLENAME = "database_server";
 
     // column names except ID which is in the superclass
 
@@ -52,19 +52,19 @@ public class DatabaseServerDAO {
 
     private static DatabaseServerRowMapper databaseServerRowMapper = new DatabaseServerRowMapper();
 
-    public static DatabaseServer findById(int id){
+    public static DatabaseServer findById(int id) {
         return StandardDAO.findById(id, TABLENAME, databaseServerRowMapper);
     }
 
-    public static void removeById(DatabaseServer databaseServer){
+    public static void removeById(DatabaseServer databaseServer) {
         StandardDAO.removeById(databaseServer, TABLENAME);
     }
 
-    public static void store(DatabaseServer databaseServer){
+    public static void store(DatabaseServer databaseServer) {
         StandardDAO.store(databaseServer, TABLENAME, getColumnNameValueMap(databaseServer));
     }
 
-    public static List<DatabaseServer> findAll(){
-        return StandardDAO.findAll(TABLENAME,databaseServerRowMapper);
+    public static List<DatabaseServer> findAll() {
+        return StandardDAO.findAll(TABLENAME, databaseServerRowMapper);
     }
 }

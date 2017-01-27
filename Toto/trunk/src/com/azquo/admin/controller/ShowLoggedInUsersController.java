@@ -13,7 +13,7 @@ import java.util.*;
 
 /**
  * Created by edward on 02/11/16.
- *
+ * <p>
  * Just an internal run down of live sessions on the server so we know if it's ok to deploy.
  */
 @Controller
@@ -31,11 +31,11 @@ public class ShowLoggedInUsersController {
             List<HttpSession> listSessionByDate = new ArrayList<>(SessionListener.sessions);
             listSessionByDate.sort(Comparator.comparing(HttpSession::getLastAccessedTime)); // I think that will sort it!
             Collections.reverse(listSessionByDate); // most recent first
-            for (HttpSession session : listSessionByDate){
+            for (HttpSession session : listSessionByDate) {
                 LoggedInUser user = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-                if (user != null && !user.getUser().getEmail().equalsIgnoreCase("nic@azquo.com")){ // don't show the server monitoring logins
+                if (user != null && !user.getUser().getEmail().equalsIgnoreCase("nic@azquo.com")) { // don't show the server monitoring logins
                     Date lastAccessed = new Date(session.getLastAccessedTime());
-                    list.append("Last accessed :  " + lastAccessed + " " +  user.getUser().getEmail() + "<br/>");
+                    list.append("Last accessed :  " + lastAccessed + " " + user.getUser().getEmail() + "<br/>");
                 }
             }
             return list.toString();

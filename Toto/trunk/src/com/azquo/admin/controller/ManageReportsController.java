@@ -7,7 +7,6 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
-import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,9 +28,9 @@ import java.util.List;
 @RequestMapping("/ManageReports")
 public class ManageReportsController {
 
-    private static final Logger logger = Logger.getLogger(ManageReportsController.class);
+    //private static final Logger logger = Logger.getLogger(ManageReportsController.class);
 
-    public class DatabaseSelected{
+    public class DatabaseSelected {
         private final boolean selected;
         private final Database database;
 
@@ -51,7 +50,6 @@ public class ManageReportsController {
 
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request,
-
                                 @RequestParam(value = "editId", required = false) String editId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "databaseIdList", required = false) String[] databaseIdList // I think this is correct?
@@ -88,8 +86,10 @@ public class ManageReportsController {
                     List<DatabaseSelected> databasesSelected = new ArrayList<>();
 
                     final List<Database> forUser = AdminService.getDatabaseListForBusiness(loggedInUser);
-                    for (Database database : forUser) {
-                        databasesSelected.add(new DatabaseSelected(databaseIdsForReportId.contains(database.getId()), database));
+                    if (forUser != null){
+                        for (Database database : forUser) {
+                            databasesSelected.add(new DatabaseSelected(databaseIdsForReportId.contains(database.getId()), database));
+                        }
                     }
                     model.put("databasesSelected", databasesSelected);
                     model.put("name", theReport.getReportName());

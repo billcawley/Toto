@@ -2,7 +2,7 @@ package com.azquo.admin;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 07/01/14.
  * the objects relating to the master db extend this
  * currently just defines id but I think that's fine, will still be useful for abstraction

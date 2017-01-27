@@ -66,5 +66,4 @@ public class CopyDatabaseController {
             return "redirect:/api/Login";
         }
     }
-
 }

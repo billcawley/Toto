@@ -6,17 +6,15 @@ import java.util.Date;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 18/02/14.
  * have made immutable which simplifies the code
- *
+ * <p>
  * Recording which databases are being accessed, not actually being used since the report/DB server split, need to get rid of it or start using it again. Todo
- *
  */
 final class OpenDatabase extends StandardEntity {
     // name user time db, email user when logged in
 
-    private final int id;
     private final int databaseId;
     private final Date open;
     private final Date close;

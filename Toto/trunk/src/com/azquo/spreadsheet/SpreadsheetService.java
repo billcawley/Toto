@@ -18,7 +18,6 @@ import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.log4j.Logger;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
@@ -40,7 +39,7 @@ import java.util.*;
 
 public class SpreadsheetService {
 
-    private static final Logger logger = Logger.getLogger(SpreadsheetService.class);
+//    private static final Logger logger = Logger.getLogger(SpreadsheetService.class);
 
     private static final Properties azquoProperties = new Properties();
 
@@ -418,10 +417,9 @@ public class SpreadsheetService {
             }
         }
         // now send
-        AzquoMailer azquoMailer = new AzquoMailer();
         for (String email : filesToSendForEachEmail.keySet()) {
             // might need to tweak subject, body and file names
-            azquoMailer.sendEMail(email, email, "Azquo Reports", "Attached", filesToSendForEachEmail.get(email), null);
+            AzquoMailer.sendEMail(email, email, "Azquo Reports", "Attached", filesToSendForEachEmail.get(email), null);
         }
     }
 

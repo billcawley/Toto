@@ -72,5 +72,4 @@ public final class BusinessDAO {
     public static void store(Business business){
         StandardDAO.store(business, TABLENAME, getColumnNameValueMap(business));
     }
-
 }

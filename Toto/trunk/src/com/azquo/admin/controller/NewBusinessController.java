@@ -13,7 +13,7 @@ import javax.servlet.http.HttpServletRequest;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 09/07/15.
  * <p/>
  * A simple page to create a new business. Currently for internal use, it has not been beautified.
@@ -47,25 +47,25 @@ public class NewBusinessController {
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-            if (submit != null){
+            if (submit != null) {
                 // ok check to see if data was submitted
                 StringBuilder error = new StringBuilder();
-                if (businessName == null || businessName.isEmpty()){
+                if (businessName == null || businessName.isEmpty()) {
                     error.append("Business name required<br/>");
                 }
-                if (emailUsername == null || emailUsername.isEmpty()){
+                if (emailUsername == null || emailUsername.isEmpty()) {
                     error.append("Email/Username required<br/>");
                 }
-                if (password == null || password.isEmpty()){
+                if (password == null || password.isEmpty()) {
                     error.append("password required<br/>");
-                } else if (!password.equals(confirmPassword)){
+                } else if (!password.equals(confirmPassword)) {
                     error.append("password and confirm do not match<br/>");
                 }
-                if (error.length() == 0){
-                    AdminService.registerBusiness(emailUsername,businessName,password,businessName,address1,address2,address3,address4,postcode,telephone,website);
-                    loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(),null, emailUsername, password, false);
+                if (error.length() == 0) {
+                    AdminService.registerBusiness(emailUsername, businessName, password, businessName, address1, address2, address3, address4, postcode, telephone, website);
+                    loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), null, emailUsername, password, false);
                     if (loggedInUser != null) {
-                        request.getSession().setAttribute( LoginController.LOGGED_IN_USER_SESSION, loggedInUser);
+                        request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, loggedInUser);
                     }
 
                     return "redirect:/api/Online?reportid=1";

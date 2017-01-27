@@ -19,22 +19,20 @@ import java.util.List;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by edward on 21/09/15.
- *
+ * <p>
  * Report Schedule CRUD.
- *
  */
 @Controller
 @RequestMapping("/ManageReportSchedules")
 public class ManageReportSchedulesController {
 
-//    private static final Logger logger = Logger.getLogger(ManageReportsController.class);
+    //    private static final Logger logger = Logger.getLogger(ManageReportsController.class);
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
-    )
-    {
-        if (request.getParameter("testsend") != null){
+    ) {
+        if (request.getParameter("testsend") != null) {
             try {
                 SpreadsheetService.runScheduledReports();
             } catch (Exception e) {
@@ -46,15 +44,16 @@ public class ManageReportSchedulesController {
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-            if (request.getParameter("new") != null){
+            final List<Database> databaseListForBusiness = AdminService.getDatabaseListForBusiness(loggedInUser);
+            if (request.getParameter("new") != null && databaseListForBusiness != null) {
                 // note, this will fail with no reports or databases
-                ReportSchedule reportSchedule = new ReportSchedule(0,"DAILY", "", LocalDateTime.now().plusYears(30)
-                        , AdminService.getDatabaseListForBusiness(loggedInUser).get(0).getId(), AdminService.getReportList(loggedInUser).get(0).getId(),"","","");
+                ReportSchedule reportSchedule = new ReportSchedule(0, "DAILY", "", LocalDateTime.now().plusYears(30)
+                        , databaseListForBusiness.get(0).getId(), AdminService.getReportList(loggedInUser).get(0).getId(), "", "", "");
                 ReportScheduleDAO.store(reportSchedule);
             }
             final List<ReportSchedule> reportSchedules = AdminService.getReportScheduleList(loggedInUser);
             StringBuilder error = new StringBuilder();
-            if (request.getParameter("submit") != null){
+            if (request.getParameter("submit") != null) {
                 for (ReportSchedule reportSchedule : reportSchedules) {
                     boolean store = false;
                     String period = request.getParameter("period" + reportSchedule.getId());
@@ -68,8 +67,8 @@ public class ManageReportSchedulesController {
                         store = true;
                     }
                     String nextDue = request.getParameter("nextDue" + reportSchedule.getId());
-                    try{
-                        if (!reportSchedule.getNextDueFormatted().equals(nextDue)){
+                    try {
+                        if (!reportSchedule.getNextDueFormatted().equals(nextDue)) {
                             reportSchedule.setNextDue(LocalDateTime.parse(nextDue, ReportSchedule.dateFormatter));
                             store = true;
                         }
@@ -78,9 +77,9 @@ public class ManageReportSchedulesController {
                     }
                     String databaseId = request.getParameter("databaseId" + reportSchedule.getId());
                     if (databaseId != null && !databaseId.equals(reportSchedule.getDatabaseId() + "")) {
-                        try{
+                        try {
                             Database database = AdminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
-                            if (database != null){
+                            if (database != null) {
                                 reportSchedule.setDatabaseId(Integer.parseInt(databaseId));
                                 store = true;
                             }
@@ -90,9 +89,9 @@ public class ManageReportSchedulesController {
                     }
                     String reportId = request.getParameter("reportId" + reportSchedule.getId());
                     if (reportId != null && !reportId.equals(reportSchedule.getReportId() + "")) {
-                        try{
+                        try {
                             OnlineReport onlineReport = AdminService.getReportById(Integer.parseInt(reportId), loggedInUser);
-                            if (onlineReport != null){
+                            if (onlineReport != null) {
                                 reportSchedule.setReportId(Integer.parseInt(reportId));
                                 store = true;
                             }
@@ -115,17 +114,17 @@ public class ManageReportSchedulesController {
                         reportSchedule.setEmailSubject(emailSubject);
                         store = true;
                     }
-                   if (store) {
-                       ReportScheduleDAO.store(reportSchedule);
+                    if (store) {
+                        ReportScheduleDAO.store(reportSchedule);
                     }
                 }
             }
             model.put("reportSchedules", reportSchedules);
-            if (error.length() > 0){
+            if (error.length() > 0) {
                 model.put("error", error.toString());
             }
             model.put("reports", AdminService.getReportList(loggedInUser));
-            model.put("databases", AdminService.getDatabaseListForBusiness(loggedInUser));
+            model.put("databases", databaseListForBusiness);
             return "managereportschedules";
         }
     }

@@ -6,10 +6,9 @@ import java.util.Date;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 09/01/14
  * An entry for each uploaded file
- * Going to make immutable
  */
 public final class UploadRecord extends StandardEntity {
 

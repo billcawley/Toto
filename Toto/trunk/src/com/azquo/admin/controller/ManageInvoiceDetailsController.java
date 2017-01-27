@@ -20,9 +20,8 @@ import java.util.List;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by edward on 07/01/16. Not relevant to core Azquo functionality, we just needed a way of managing our invoices.
- *
  */
 
 @Controller
@@ -44,13 +43,13 @@ public class ManageInvoiceDetailsController {
                 ) {
             return "redirect:/api/Login";
         } else {
-            if (request.getParameter("new") != null){
+            if (request.getParameter("new") != null) {
                 InvoiceDetails invoiceDetails = new InvoiceDetails(0, "", "", 0, 0, 0, "", LocalDate.now(), "", "", "", false, "");
                 InvoiceDetailsDAO.store(invoiceDetails);
             }
             List<InvoiceDetails> invoiceDetailsList = InvoiceDetailsDAO.findAll();
             StringBuilder error = new StringBuilder();
-            if (request.getParameter("submit") != null){
+            if (request.getParameter("submit") != null) {
                 for (InvoiceDetails invoiceDetails : invoiceDetailsList) {
                     boolean store = false;
                     String customerReference = request.getParameter("customerreference" + invoiceDetails.getId());
@@ -84,8 +83,8 @@ public class ManageInvoiceDetailsController {
                         store = true;
                     }
                     String invoiceDate = request.getParameter("invoicedate" + invoiceDetails.getId());
-                    try{
-                        if (!invoiceDetails.getInvoiceDateFormatted().equals(invoiceDate)){
+                    try {
+                        if (!invoiceDetails.getInvoiceDateFormatted().equals(invoiceDate)) {
                             invoiceDetails.setInvoiceDate(LocalDate.parse(invoiceDate, InvoiceDetails.dateFormatter));
                             store = true;
                         }
@@ -100,7 +99,7 @@ public class ManageInvoiceDetailsController {
                     }
 
                     String invoiceNo = request.getParameter("invoiceno" + invoiceDetails.getId());
-                    if (invoiceNo!= null && !invoiceNo.equals(invoiceDetails.getInvoiceNo())) {
+                    if (invoiceNo != null && !invoiceNo.equals(invoiceDetails.getInvoiceNo())) {
                         invoiceDetails.setInvoiceNo(invoiceNo);
                         store = true;
                     }
@@ -127,21 +126,21 @@ public class ManageInvoiceDetailsController {
                     if (store) {
                         InvoiceDetailsDAO.store(invoiceDetails);
                     }
-                    if (sendnow){
+                    if (sendnow) {
                         InvoiceService.sendInvoiceEmail(invoiceDetails);
                     }
                 }
             }
-                int deleteId = ServletRequestUtils.getIntParameter(request, "deleteId", 0);
-            if (deleteId != 0){
+            int deleteId = ServletRequestUtils.getIntParameter(request, "deleteId", 0);
+            if (deleteId != 0) {
                 InvoiceDetails invoiceDetails = InvoiceDetailsDAO.findById(deleteId);
-                if (invoiceDetails != null){
+                if (invoiceDetails != null) {
                     InvoiceDetailsDAO.removeById(invoiceDetails);
                     invoiceDetailsList = InvoiceDetailsDAO.findAll(); // and refresh the list!
                 }
             }
             model.put("invoiceDetailsList", invoiceDetailsList);
-            if (error.length() > 0){
+            if (error.length() > 0) {
                 model.put("error", error.toString());
             }
             model.put("startInvoicesAt", InvoiceDetailsDAO.findMaxId() + 1);

@@ -342,7 +342,7 @@ public class ChoicesService {
                         }
                         optionNo++;
                     }
-                    String lookupRange = validationSheet.getSheetName() + "!" + BookUtils.rangeToText(0, targetCol) + ":" + BookUtils.rangeToText(maxSize, targetCol + optionNo - 1);
+                    String lookupRange = "\"" + validationSheet.getSheetName() + "!" + BookUtils.rangeToText(0, targetCol) + ":" + BookUtils.rangeToText(maxSize, targetCol + optionNo - 1) + "\"";
                     //fill in blanks - they may come through as '0'
                     for (int col = 0; col < optionNo; col++) {
                         for (int row = 1; row < maxSize + 1; row++) {

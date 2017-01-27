@@ -4,11 +4,11 @@ import com.azquo.admin.StandardEntity;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 05/08/15.
- *
+ * <p>
  * Only edited in the database, can make immutable
- *
+ * <p>
  * The Server being the server the database is physically hosted on (if that was not obvious)
  */
 public final class DatabaseServer extends StandardEntity {

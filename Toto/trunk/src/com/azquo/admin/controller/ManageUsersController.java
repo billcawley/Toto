@@ -19,9 +19,9 @@ import java.util.List;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 24/04/15.
- *
+ * <p>
  * User CRUD.
  */
 @Controller
@@ -51,45 +51,45 @@ public class ManageUsersController {
             return "redirect:/api/Login";
         } else {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            if (deleteId != null && NumberUtils.isDigits(deleteId)){
+            if (deleteId != null && NumberUtils.isDigits(deleteId)) {
                 AdminService.deleteUserById(Integer.parseInt(deleteId));
             }
-            if (editId != null && NumberUtils.isDigits(editId)){
+            if (editId != null && NumberUtils.isDigits(editId)) {
                 User toEdit = AdminService.getUserById(Integer.parseInt(editId), loggedInUser);
                 // ok check to see if data was submitted
                 StringBuilder error = new StringBuilder();
-                if (submit != null){
-                    if (endDate == null || endDate.isEmpty()){
+                if (submit != null) {
+                    if (endDate == null || endDate.isEmpty()) {
                         error.append("End date required (yyyy-MM-dd)<br/>");
                     } else {
-                        try{
+                        try {
                             formatter.parse(endDate);
                         } catch (DateTimeParseException e) {
                             error.append("End date format not yyyy-MM-dd<br/>");
                         }
                     }
-                    if (email == null || email.isEmpty()){
+                    if (email == null || email.isEmpty()) {
                         error.append("Email required<br/>");
                     } else {
                         email = email.trim();
                     }
-                    if (toEdit == null && UserDAO.findByEmail(email) != null){
+                    if (toEdit == null && UserDAO.findByEmail(email) != null) {
                         error.append("User Exists<br/>");
                     }
-                    if (name == null || name.isEmpty()){
+                    if (name == null || name.isEmpty()) {
                         error.append("Name required<br/>");
                     }
-                    if (toEdit == null && (password == null || password.isEmpty())){
+                    if (toEdit == null && (password == null || password.isEmpty())) {
                         error.append("Password required<br/>");
                     }
-                    if (error.length() == 0){
+                    if (error.length() == 0) {
                         assert endDate != null;
                         // then store, it might be new
-                        if (toEdit == null){
+                        if (toEdit == null) {
                             // Have to use  a LocalDate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
                             AdminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser
-                                    ,databaseId != null && NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0
-                                    ,reportId != null && NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0);
+                                    , databaseId != null && NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0
+                                    , reportId != null && NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0);
                         } else {
                             toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());
                             toEdit.setEmail(email);
@@ -97,7 +97,7 @@ public class ManageUsersController {
                             toEdit.setStatus(status);
                             toEdit.setDatabaseId(databaseId != null && NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0);
                             toEdit.setReportId(reportId != null && NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0);
-                            if (password != null && !password.isEmpty()){
+                            if (password != null && !password.isEmpty()) {
                                 final String salt = AdminService.shaHash(System.currentTimeMillis() + "salt");
                                 toEdit.setSalt(salt);
                                 toEdit.setPassword(AdminService.encrypt(password, salt));
@@ -115,7 +115,7 @@ public class ManageUsersController {
                     model.put("name", name);
                     model.put("status", status);
                 } else {
-                    if (toEdit != null){
+                    if (toEdit != null) {
                         model.put("id", toEdit.getId());
                         model.put("endDate", formatter.format(toEdit.getEndDate()));
                         model.put("email", toEdit.getEmail());
@@ -132,7 +132,7 @@ public class ManageUsersController {
             }
             final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);
             model.put("users", userListForBusiness);
-            if (userListForBusiness.size() > 1){
+            if (userListForBusiness != null && userListForBusiness.size() > 1) {
                 model.put("showDownload", true);
             }
             return "manageusers";

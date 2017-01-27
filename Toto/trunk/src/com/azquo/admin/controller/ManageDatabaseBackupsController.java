@@ -97,7 +97,6 @@ public class ManageDatabaseBackupsController {
                         String[] cmdarray = {"/bin/sh","-c", dump};
                         CommandLineCalls.runCommand(null, cmdarray, true, null);
                     }
-
                     if (deleteBackup != null && !deleteBackup.isEmpty()){
                         deleteBackup = deleteBackup.replace(" ", "");
                         deleteBackup = deleteBackup.replace("..", "");
@@ -108,7 +107,6 @@ public class ManageDatabaseBackupsController {
                             throw new Exception("unable to delete : " + toDelete.getPath());
                         }
                     }
-
                     if (restoreBackup != null && !restoreBackup.isEmpty()){
                         restoreBackup = restoreBackup.replace(" ", "");
                         restoreBackup = restoreBackup.replace("..", "");

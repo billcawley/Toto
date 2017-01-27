@@ -18,9 +18,9 @@ import java.util.Set;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by bill on 05/08/15.
- *
+ * <p>
  * Used by JSTree, inspect database.
  */
 
@@ -32,20 +32,19 @@ public class ShowdataController {
     @RequestMapping
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
             , @RequestParam(value = "chosen", required = false) String chosen
-    ) throws Exception
-    {
+    ) throws Exception {
         // I assume secure until we move to proper spring security
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             // ok we'll put the id parsing bits in here now, much better
             String[] namesString = chosen.split(",");
-            if (namesString[0].startsWith("jstreeids:")){
+            if (namesString[0].startsWith("jstreeids:")) {
                 Set<Integer> nameIds = new HashSet<>();
                 namesString[0] = namesString[0].substring("jstreeids:".length());
-                for(String jstreeId : namesString){
-                    if (NumberUtils.isNumber(jstreeId)){
+                for (String jstreeId : namesString) {
+                    if (NumberUtils.isNumber(jstreeId)) {
                         JsonChildren.Node node = loggedInUser.getFromJsTreeLookupMap(Integer.parseInt(jstreeId));
-                        if (node != null){
+                        if (node != null) {
                             nameIds.add(node.nameId);
                         }
                     } else {

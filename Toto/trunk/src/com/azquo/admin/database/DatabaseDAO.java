@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 07/01/14.
  * Details on each database
  */
@@ -86,15 +86,15 @@ public final class DatabaseDAO {
         return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` =:" + BUSINESSID + " and `" + NAME + "` = :" + NAME, DATABASE, databaseRowMapper, namedParams);
     }
 
-    public static Database findById(int id){
+    public static Database findById(int id) {
         return StandardDAO.findById(id, DATABASE, databaseRowMapper);
     }
 
-    public static void removeById(Database database){
+    public static void removeById(Database database) {
         StandardDAO.removeById(database, DATABASE);
     }
 
-    public static void store(Database database){
+    public static void store(Database database) {
         StandardDAO.store(database, DATABASE, getColumnNameValueMap(database));
     }
 }

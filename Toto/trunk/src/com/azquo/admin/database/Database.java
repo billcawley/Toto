@@ -4,11 +4,10 @@ import com.azquo.admin.StandardEntity;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.time.LocalDateTime;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by Cawley on 08/01/14.
  * <p/>
  * Representing information on the report server about an Azquo memory database.
@@ -33,7 +32,7 @@ public final class Database extends StandardEntity {
             , int nameCount
             , int valueCount
             , int databaseServerId
-                    ) {
+    ) {
         this.id = id;
         this.businessId = businessId;
         this.userId = userId;
@@ -66,7 +65,7 @@ public final class Database extends StandardEntity {
     }
 
     public String getUrlEncodedName() {
-        if (name != null){
+        if (name != null) {
             try {
                 URLEncoder.encode(name, "UTF-8");
             } catch (UnsupportedEncodingException e) {
