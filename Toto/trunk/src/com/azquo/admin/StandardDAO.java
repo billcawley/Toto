@@ -18,14 +18,13 @@ import java.util.Map;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created 07/01/14 by edd
  * to factor off common bits on vanilla DAO stuff - the nature of the factoring may change a little if I go to static DAOs
- *
+ * <p>
  * Similar to JdbcTemplateUtils I'm doing a "dirty" assignment of the JdbcTemplate to a static field to avoid instances later of stateless objects
- *
+ * <p>
  * See comments in JdbcTemplateUtils, we're not using dependency injection or unit tests etc so I'm going static to simplify the code
- *
  */
 public class StandardDAO {
 
@@ -47,7 +46,7 @@ public class StandardDAO {
         }
         System.out.println("host : " + thost);
 
-        if (jdbcTemplate == null){
+        if (jdbcTemplate == null) {
             throw new Exception("Ack!, null data source passed to StandardDAO, Azquo report server won't function!");
         }
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
@@ -69,7 +68,7 @@ public class StandardDAO {
         jdbcTemplate.update(updateSql, namedParams);
     }
 
-     private static <T extends StandardEntity> void insert(final T entity, final String tableName, final Map<String, Object> columnNameValueMap) throws DataAccessException {
+    private static <T extends StandardEntity> void insert(final T entity, final String tableName, final Map<String, Object> columnNameValueMap) throws DataAccessException {
         String columnsCommaList = "";
         String valuesCommaList = "";
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
@@ -128,8 +127,8 @@ public class StandardDAO {
         if (limit > SELECTLIMIT) {
             throw new InvalidDataAccessApiUsageException("Error, limit in SQL select greater than : " + SELECTLIMIT);
         }
-            final String SQL_SELECT_ALL = "Select `" + MASTER_DB + "`.`" + tableName + "`.* from `" + MASTER_DB + "`.`" + tableName + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
-            return jdbcTemplate.query(SQL_SELECT_ALL, namedParams, rowMapper);
+        final String SQL_SELECT_ALL = "Select `" + MASTER_DB + "`.`" + tableName + "`.* from `" + MASTER_DB + "`.`" + tableName + "`" + (whereCondition != null ? whereCondition : "") + " LIMIT " + from + "," + limit;
+        return jdbcTemplate.query(SQL_SELECT_ALL, namedParams, rowMapper);
     }
 
     public static <T extends StandardEntity> T findOneWithWhereSQLAndParameters(final String whereCondition, final String tableName, final RowMapper<T> rowMapper, final MapSqlParameterSource namedParams) throws DataAccessException {
@@ -161,7 +160,7 @@ public class StandardDAO {
         return toReturn != null ? toReturn : 0; // otherwise we'll get a null pointer boxing to int!
     }
 
-    public static NamedParameterJdbcTemplate getJdbcTemplate(){
+    public static NamedParameterJdbcTemplate getJdbcTemplate() {
         return jdbcTemplate;
     }
 }

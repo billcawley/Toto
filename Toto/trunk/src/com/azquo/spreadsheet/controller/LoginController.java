@@ -15,14 +15,13 @@ import javax.servlet.http.HttpServletRequest;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 31/10/13
  * Time: 19:45
- *
+ * <p>
  * Basic login form and support for a magento server side call to pass a session to the user that clicked the plugin
- *
  */
 @Controller
 @RequestMapping("/Login")
@@ -40,8 +39,8 @@ public class LoginController {
             , @RequestParam(value = "logoff", required = false) String logoff
             , @RequestParam(value = "connectionid", required = false) String connectionid // only for the magento plugin
     ) throws Exception {
-        if ("true".equals(logoff)){
-            if (request.getSession().getAttribute(LOGGED_IN_USER_SESSION) != null){
+        if ("true".equals(logoff)) {
+            if (request.getSession().getAttribute(LOGGED_IN_USER_SESSION) != null) {
                 if (!SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                     LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
@@ -58,7 +57,7 @@ public class LoginController {
         }
         if (connectionid != null && connectionid.length() > 0) { // nasty hack to support connection id from the plugin
             if (request.getServletContext().getAttribute(connectionid) != null) { // then pick up the temp logged in conneciton
-                LoggedInUser loggedInUser = (LoggedInUser)request.getServletContext().getAttribute(connectionid);
+                LoggedInUser loggedInUser = (LoggedInUser) request.getServletContext().getAttribute(connectionid);
                 request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
                 if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
@@ -83,7 +82,6 @@ public class LoginController {
                         AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
                         AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                     }
-
                     request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                         return "redirect:/api/ManageReports";

@@ -11,21 +11,20 @@ import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by bill on 15/04/14.
- *
  */
 public class OnlineReportDAO {
     // the default table name for this data.
     private static String TABLENAME = "online_report";
 
     // column names except ID which is in the superclass
-    private static final String  DATECREATED = "date_created";
+    private static final String DATECREATED = "date_created";
 
     private static final String BUSINESSID = "business_id";
     private static final String USERID = "user_id";
     private static final String REPORTNAME = "report_name";
-//    private static final String DATABASETYPE = "database_type";
+    //    private static final String DATABASETYPE = "database_type";
 //    private static final String REPORTCATEGORY = "report_category";
 //    private static final String USERSTATUS = "user_status";
     private static final String FILENAME = "filename";
@@ -34,7 +33,7 @@ public class OnlineReportDAO {
     public static Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(StandardDAO.ID, onlineReport.getId());
-        toReturn.put(DATECREATED,  Date.from(onlineReport.getDateCreated().atZone(ZoneId.systemDefault()).toInstant()));
+        toReturn.put(DATECREATED, Date.from(onlineReport.getDateCreated().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(BUSINESSID, onlineReport.getBusinessId());
         toReturn.put(USERID, onlineReport.getUserId());
         toReturn.put(REPORTNAME, onlineReport.getReportName());
@@ -55,7 +54,7 @@ public class OnlineReportDAO {
                         , rs.getString(REPORTNAME)
                         , rs.getString(FILENAME)
                         , rs.getString(EXPLANATION)
-                        );
+                );
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -71,7 +70,7 @@ public class OnlineReportDAO {
         namedParams.addValue(DatabaseReportLinkDAO.DATABASE_ID, databaseId);
         namedParams.addValue(REPORTNAME, reportName);
         return StandardDAO.findOneWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + StandardDAO.ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
-                +  "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
+                + "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
                 + " and `" + REPORTNAME + "` = :" + REPORTNAME, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
@@ -108,19 +107,19 @@ public class OnlineReportDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DatabaseReportLinkDAO.DATABASE_ID, databaseId);
         return StandardDAO.findListWithWhereSQLAndParameters(", `" + StandardDAO.MASTER_DB + "`.`" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "` WHERE " + StandardDAO.ID + " = `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.REPORT_ID
-                +  "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
+                + "` AND `" + DatabaseReportLinkDAO.DATABASE_REPORT_LINK + "`.`" + DatabaseReportLinkDAO.DATABASE_ID + "` = :" + DatabaseReportLinkDAO.DATABASE_ID
                 + " order by " + REPORTNAME, TABLENAME, onlineReportRowMapper, namedParams);
     }
 
-    public static OnlineReport findById(int id){
+    public static OnlineReport findById(int id) {
         return StandardDAO.findById(id, TABLENAME, onlineReportRowMapper);
     }
 
-    public static void removeById(OnlineReport onlineReport){
+    public static void removeById(OnlineReport onlineReport) {
         StandardDAO.removeById(onlineReport, TABLENAME);
     }
 
-    public static void store(OnlineReport onlineReport){
+    public static void store(OnlineReport onlineReport) {
         StandardDAO.store(onlineReport, TABLENAME, getColumnNameValueMap(onlineReport));
     }
 }

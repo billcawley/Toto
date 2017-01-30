@@ -47,7 +47,7 @@ import static javax.xml.bind.DatatypeConverter.parseBase64Binary;
  * Created by edward on 04/08/16.
  * <p>
  * We are reinstating some Excel functionality to assist in building reports. Initially the basics for logon and a few others.
- *
+ * <p>
  * Might need to be broken up later - maybe an Excel package as there's a zk package?
  */
 
@@ -104,10 +104,10 @@ public class ExcelController {
                     AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
                     AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                 }
-                if (loggedInUser.getUser().getReportId() != 0){
+                if (loggedInUser.getUser().getReportId() != 0) {
                     // populate the book as in the OnlineController but just do it server side then chuck it, the point is to sort the permissions
                     OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
-                    if (or != null){ // then load it just here on the report server
+                    if (or != null) { // then load it just here on the report server
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilenameForDisk();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                         book.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
@@ -140,7 +140,7 @@ public class ExcelController {
             }
             if (reportNameCheck != null) { // try to identify the sheet, this just finds the id no need for security at the moment
                 final OnlineReport forNameAndBusinessId = OnlineReportDAO.findForNameAndBusinessId(reportNameCheck, loggedInUser.getUser().getBusinessId());
-                if (forNameAndBusinessId != null){
+                if (forNameAndBusinessId != null) {
                     return "" + forNameAndBusinessId.getId();
                 }
                 return "";
@@ -195,7 +195,7 @@ public class ExcelController {
                     }
                     userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                 }
-                if (excelJsonRequest.rowHeadings == null || excelJsonRequest.rowHeadings.isEmpty()){ // no row headings is an import region - assign an empty sent cells. Todo - could this be factored?
+                if (excelJsonRequest.rowHeadings == null || excelJsonRequest.rowHeadings.isEmpty()) { // no row headings is an import region - assign an empty sent cells. Todo - could this be factored?
                     List<List<String>> colHeadings = excelJsonRequest.columnHeadings;
                     // ok change from the logic used in ZK. In ZK we had to prepare a blank set of data cells to be modified
                     // as the user changed them but it's difficult to prepare them here as we don't know the data region size and luckily it's not necessary
@@ -221,7 +221,7 @@ public class ExcelController {
                 boolean adHoc = false;
                 if (cellsAndHeadingsForDisplay != null) {
                     final List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
-                    if (cellsAndHeadingsForDisplay.getRowHeadingsSource() == null && sentData.isEmpty()){ // as mentioned above, this means ad-hoc so populate the sent data with blank cells ready to be modified.
+                    if (cellsAndHeadingsForDisplay.getRowHeadingsSource() == null && sentData.isEmpty()) { // as mentioned above, this means ad-hoc so populate the sent data with blank cells ready to be modified.
                         adHoc = true;
                         for (int rowNo = 0; rowNo < excelJsonSaveRequest.data.size(); rowNo++) {
                             List<CellForDisplay> oneRow = new ArrayList<>();
@@ -256,7 +256,7 @@ public class ExcelController {
                             CellForDisplay cellForDisplay = sentData.get(rowIndex).get(colIndex);
                             String comment = excelJsonSaveRequest.comments.get(rowIndex).get(colIndex);
                             if (!cellForDisplay.isLocked()) { // no point saving if locked!
-                                if (comment != null && !comment.isEmpty()){
+                                if (comment != null && !comment.isEmpty()) {
                                     cellForDisplay.setComment(comment);
                                 }
                                 try {
@@ -285,7 +285,7 @@ public class ExcelController {
                         rowIndex++;
                     }
                     // then reset the sent cells, they should be blanked after each save if it's an adhoc region. Need to think clearly about how things like this work.
-                    if (adHoc){
+                    if (adHoc) {
                         loggedInUser.setSentCells(excelJsonSaveRequest.reportId, cellsAndHeadingsForDisplay.getRegion(), new CellsAndHeadingsForDisplay(cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getColumnHeadings(), null, new ArrayList<>(), null, null, null, 0, cellsAndHeadingsForDisplay.getOptions(), null));
                     }
                     if (itemsChanged > 0) {
@@ -324,30 +324,30 @@ public class ExcelController {
                 StringBuilder toSend = new StringBuilder();
                 int count = 0;
                 int limit = 20;
-                for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()){
+                for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()) {
                     toSend.append(provenanceForDisplay.toString() + "\n");
                     count++;
-                    if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()){
-                        for (String n : provenanceForDisplay.getNames()){
+                    if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()) {
+                        for (String n : provenanceForDisplay.getNames()) {
                             toSend.append("\t" + n);
                         }
                         toSend.append("\n");
                         count++;
                     }
-                    if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()){
-                        for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()){
-                            if (value.getSecond() != null && !value.getSecond().isEmpty()){
+                    if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()) {
+                        for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()) {
+                            if (value.getSecond() != null && !value.getSecond().isEmpty()) {
                                 for (String valueOrName : value.getSecond()) {
                                     toSend.append("\t" + valueOrName);
                                 }
                                 count++;
-                                if (++count > limit){
+                                if (++count > limit) {
                                     break;
                                 }
                             }
                         }
                     }
-                    if (count > limit){
+                    if (count > limit) {
                         break;
                     }
                 }
@@ -363,8 +363,14 @@ public class ExcelController {
                 errorMessage = re.getMessage();
                 re.printStackTrace();
             }
+            if (errorMessage == null){
+                errorMessage = "Unknown server side error, check logs.";
+            }
         } catch (Exception e) {
             errorMessage = e.getMessage();
+            if (errorMessage == null){
+                errorMessage = "Unknown server side error, check logs.";
+            }
             e.printStackTrace();
         }
         if (errorMessage != null) {

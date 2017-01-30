@@ -36,7 +36,7 @@ import java.util.Map;
 /**
  * Created by edward on 29/03/16.
  * <p>
- * FOr API style access, I'm going to copy the online controller and modify
+ * For API style access, I'm going to copy the online controller and modify
  */
 @Controller
 @RequestMapping("/Remote")
@@ -44,9 +44,7 @@ public class RemoteController {
     private final Runtime runtime = Runtime.getRuntime();
     private final int mb = 1024 * 1024;
     // note : I'm now thinking dao objects are acceptable in controllers if moving the call to the service would just be a proxy
-
-    /* Parameters are sent as Json . . . posted via https should be secure enough for the moment
-         */
+    /* Parameters are sent as Json . . . posted via https should be secure enough for the moment */
     private static class JsonParameters {
         public final String logon;
         public final String password;
@@ -160,7 +158,6 @@ public class RemoteController {
                 // no region options at the moment
                 try {
                     long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-                    long newHeapMarker = oldHeapMarker;
                     String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilenameForDisk();
                     final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                     book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
@@ -168,11 +165,10 @@ public class RemoteController {
                     // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                     book.getInternalBook().setAttribute(REPORT_ID, onlineReport.getId());
                     ReportRenderer.populateBook(book, 0);
-                    newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+                    long newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                     System.out.println();
                     System.out.println("Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
                     System.out.println();
-                    oldHeapMarker = newHeapMarker;
                     List<JsonRegion> jsonRegions = new ArrayList<>();
                     List<JsonChoice> jsonChoices = new ArrayList<>();
                     final List<SName> names = book.getInternalBook().getNames();

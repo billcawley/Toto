@@ -11,9 +11,9 @@ import java.util.Map;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by bill on 22/04/14.
- *
+ * <p>
  * Only supports a subset of the objects parameters. Might need to rethink this at some point.
  */
 public final class UserRegionOptionsDAO {
@@ -57,23 +57,23 @@ public final class UserRegionOptionsDAO {
                         , rs.getInt(USERID)
                         , rs.getInt(REPORTID)
                         , rs.getString(REGION)
-                        ,0
-                        ,0
-                        ,0
-                        ,false
-                        ,0
-                        ,0
+                        , 0
+                        , 0
+                        , 0
+                        , false
+                        , 0
+                        , 0
                         , rs.getString(SORT_ROW)
                         , rs.getBoolean(SORT_ROW_ASC)
                         , rs.getString(SORT_COLUMN)
                         , rs.getBoolean(SORT_COLUMN_ASC)
                         , rs.getInt(HIGHLIGHT_DAYS)
-                        ,false
-                        ,null
-                        ,"" // todo - actually load this from the database!
-                        ,""
-                        ,false
-                        ,false
+                        , false
+                        , null
+                        , "" // todo - actually load this from the database!
+                        , ""
+                        , false
+                        , false
                 );
             } catch (Exception e) {
                 e.printStackTrace();
@@ -92,16 +92,15 @@ public final class UserRegionOptionsDAO {
         return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + REPORTID + "` = :" + REPORTID + " AND `" + REGION + "` = :" + REGION, TABLENAME, userRegionOptionsRowMapper, namedParams);
     }
 
-    public static UserRegionOptions findById(int id){
+    public static UserRegionOptions findById(int id) {
         return StandardDAO.findById(id, TABLENAME, userRegionOptionsRowMapper);
     }
 
-    public static void removeById(UserRegionOptions userRegionOptions){
+    public static void removeById(UserRegionOptions userRegionOptions) {
         StandardDAO.removeById(userRegionOptions, TABLENAME);
     }
 
-    public static void store(UserRegionOptions userRegionOptions){
+    public static void store(UserRegionOptions userRegionOptions) {
         StandardDAO.store(userRegionOptions, TABLENAME, getColumnNameValueMap(userRegionOptions));
     }
-
 }

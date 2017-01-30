@@ -25,11 +25,10 @@ import java.util.Date;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by bill on 28/10/14
  * <p/>
  * Created to handle requests from the plugin. Want to zap the connection ID, depends on what the plugin allows
- *
  */
 
 @Controller
@@ -42,7 +41,7 @@ public class MagentoController {
 
     @RequestMapping(headers = "content-type=multipart/*")
     @ResponseBody
-    public String handleRequest(HttpServletRequest request,HttpServletResponse response
+    public String handleRequest(HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "db", required = false, defaultValue = "") String db
             , @RequestParam(value = "op", required = false, defaultValue = "") String op
             , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
@@ -55,7 +54,7 @@ public class MagentoController {
             if (op == null) op = "";// can this happen with the annotation above?
             System.out.println("==================== db sent  : " + db + " op= " + op);
             //for testing only
-            LoggedInUser loggedInUser = LoginService.loginLoggedInUser("",db, logon, password, false);
+            LoggedInUser loggedInUser = LoginService.loginLoggedInUser("", db, logon, password, false);
             if (loggedInUser == null) {
                 return "error: user " + logon + " with this password does not exist";
             }
@@ -72,7 +71,7 @@ public class MagentoController {
             }
             if (op.equals("restart")) {
                 Database existingDb = loggedInUser.getDatabase();
-                if (existingDb != null){
+                if (existingDb != null) {
                     // an insecure call . . .
                     AdminService.emptyDatabase(DatabaseServerDAO.findById(existingDb.getDatabaseServerId()), loggedInUser.getDatabase());
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
@@ -95,7 +94,7 @@ public class MagentoController {
                 if (data != null) {
                     long start = System.currentTimeMillis();
                     // now copying all files, will make it easier for the client/server split. No passing of input streams just the file name
-                    String tempDir = "/temp/" +loggedInUser.getDatabase().getPersistenceName()+ "-" + df.format(new Date());
+                    String tempDir = "/temp/" + loggedInUser.getDatabase().getPersistenceName() + "-" + df.format(new Date());
                     File moved = new File(SpreadsheetService.getHomeDir() + tempDir);
                     data.transferTo(moved);
                     DataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr(), loggedInUser.getUser().getName());
@@ -112,7 +111,7 @@ public class MagentoController {
                     String tempConnectionId = System.currentTimeMillis() + "";
                     request.getServletContext().setAttribute(tempConnectionId, loggedInUser);
                     return tempConnectionId;
-                } else { 
+                } else {
                     return "error: no data posted";
                 }
             }
@@ -130,7 +129,7 @@ public class MagentoController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(HttpServletRequest request,HttpServletResponse response
+    public String handleRequest(HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "db", required = false, defaultValue = "") String db
             , @RequestParam(value = "op", required = false, defaultValue = "") String op
             , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
@@ -140,11 +139,11 @@ public class MagentoController {
         return handleRequest(request, response, db, op, logon, password, null);
     }
 
-    private String findRequiredTables(LoggedInUser loggedInUser, String remoteAddress) throws Exception{
-        if (loggedInUser.getDatabase() == null){
+    private String findRequiredTables(LoggedInUser loggedInUser, String remoteAddress) throws Exception {
+        if (loggedInUser.getDatabase() == null) {
             return "error: no database selected";
         }
-        if (DataLoadService.magentoDBNeedsSettingUp(loggedInUser.getDataAccessToken())){
+        if (DataLoadService.magentoDBNeedsSettingUp(loggedInUser.getDataAccessToken())) {
             String magentoSetupFile = SpreadsheetService.getHomeDir() + "/databases/ecommerce/setup/ecommerce setup.xlsx";
             String fileName = "magentosetup.xlsx";
             ImportService.importTheFile(loggedInUser, fileName, magentoSetupFile, Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), false);

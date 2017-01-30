@@ -73,9 +73,9 @@ public class UserRegionOptions extends StandardEntity {
         String SPREADSHEETHIDECOLS = "hidecols";
         String SPREADSHEETHIDEROWS2 = "hiderowvalues";
         hideRowValues = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS2, spreadsheetSource));
-        if (hideRowValues == 0){
+        if (hideRowValues == 0) {
             hideRows = asNumber(getOptionFromSpreadsheetOptions(SPREADSHEETHIDEROWS, spreadsheetSource));
-        }else{
+        } else {
             hideRows = hideRowValues;
         }
 
@@ -258,7 +258,7 @@ public class UserRegionOptions extends StandardEntity {
 
     // As mentioned in RegionOptions,
     public RegionOptions getRegionOptionsForTransport() {
-        return new RegionOptions(hideRows, hideRowValues,hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, ignoreHeadingErrors);
+        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, ignoreHeadingErrors);
     }
 
     public String getRowLanguage() {

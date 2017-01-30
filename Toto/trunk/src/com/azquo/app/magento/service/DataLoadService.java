@@ -5,9 +5,9 @@ import com.azquo.rmi.RMIClient;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 07/08/14.
- *
+ * <p>
  * This loading class now proxies through to the relevant database to run there.
  */
 public final class DataLoadService {
@@ -16,7 +16,7 @@ public final class DataLoadService {
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).findLastUpdate(databaseAccessToken, remoteAddress);
     }
 
-    public static boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception{
+    public static boolean magentoDBNeedsSettingUp(DatabaseAccessToken databaseAccessToken) throws Exception {
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).magentoDBNeedsSettingUp(databaseAccessToken);
     }
 

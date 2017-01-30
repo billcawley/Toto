@@ -15,9 +15,8 @@ import java.util.Map;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by edward on 21/09/15.
- *
  */
 public class ReportScheduleDAO {
 
@@ -35,9 +34,9 @@ public class ReportScheduleDAO {
     public static Map<String, Object> getColumnNameValueMap(final ReportSchedule reportSchedule) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(StandardDAO.ID, reportSchedule.getId());
-        toReturn.put(PERIOD,  reportSchedule.getPeriod());
-        toReturn.put(RECIPIENTS,  reportSchedule.getRecipients());
-        toReturn.put(NEXTDUE,  Date.from(reportSchedule.getNextDue().atZone(ZoneId.systemDefault()).toInstant()));
+        toReturn.put(PERIOD, reportSchedule.getPeriod());
+        toReturn.put(RECIPIENTS, reportSchedule.getRecipients());
+        toReturn.put(NEXTDUE, Date.from(reportSchedule.getNextDue().atZone(ZoneId.systemDefault()).toInstant()));
         toReturn.put(DATABASEID, reportSchedule.getDatabaseId());
         toReturn.put(REPORTID, reportSchedule.getReportId());
         toReturn.put(TYPE, reportSchedule.getType());
@@ -81,15 +80,15 @@ public class ReportScheduleDAO {
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + NEXTDUE + " <= :" + NEXTDUE, TABLENAME, reportScheduleRowMapper, namedParams);
     }
 
-    public static ReportSchedule findById(int id){
+    public static ReportSchedule findById(int id) {
         return StandardDAO.findById(id, TABLENAME, reportScheduleRowMapper);
     }
 
-    public static void removeById(ReportSchedule reportSchedule){
+    public static void removeById(ReportSchedule reportSchedule) {
         StandardDAO.removeById(reportSchedule, TABLENAME);
     }
 
-    public static void store(ReportSchedule reportSchedule){
+    public static void store(ReportSchedule reportSchedule) {
         StandardDAO.store(reportSchedule, TABLENAME, getColumnNameValueMap(reportSchedule));
     }
 }

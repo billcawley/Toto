@@ -15,11 +15,11 @@ import java.io.File;
 
 /**
  * Created by edward on 26/01/17.
- *
+ * <p>
  * Just some small static functions factored off the big old ZKcomposer
  */
 class ZKComposerUtils {
-    static void reloadBook(Spreadsheet myzss, Book book){
+    static void reloadBook(Spreadsheet myzss, Book book) {
         try {
             // new book from same source
             final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");

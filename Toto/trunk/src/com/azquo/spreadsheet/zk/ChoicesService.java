@@ -22,8 +22,8 @@ import java.util.*;
 
 /**
  * Created by edward on 10/01/17.
- *
- * Bigger state changing functions related to the choice srtopdown and multi selects.
+ * <p>
+ * Bigger state changing functions related to the choice dropdown and multi selects.
  */
 public class ChoicesService {
 
@@ -34,19 +34,16 @@ public class ChoicesService {
 
     Not to do with pivot tables, initially for the expenses sheet, let us say that the first column is to select a project and then the second to select something based off that, you'd use contents. Not used that often.
      */
-    static final String CONTENTS = "contents(";
+    private static final String CONTENTS = "contents(";
 
     public static final String VALIDATION_SHEET = "VALIDATION_SHEET";
 
-    // now adds one validation sheet per sheet so to speak
+    // now adds one validation sheet per sheet so to speak - validation in Excel terms, putting validation on a cell adds a dropdown to it
     static List<SName> addValidation(String sheetName, LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap) {
-        //if (choiceOptionsMap.isEmpty()){
-        // there may still be 'pivotheadings'
-        //    return Collections.emptyList();
-        //}
         // trim the sheet name as it can't be longer than 31 chars when appended to VALIDATION_SHEET
-        if (sheetName.length() > 10){
-            sheetName = sheetName.substring(0,10);
+        // should I be replacing spaces commas etc?
+        if (sheetName.length() > 10) {
+            sheetName = sheetName.substring(0, 10);
         }
         String validationSheetName = sheetName + VALIDATION_SHEET;
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
@@ -59,6 +56,7 @@ public class ChoicesService {
         List<SName> dependentRanges = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) {
             String rangeName = name.getName().toLowerCase();
+            // are pivot headings being used at all now? Shall I zap? TODO
             if (rangeName.toLowerCase().startsWith(ReportRenderer.AZPIVOTFILTERS) || rangeName.toLowerCase().startsWith(ReportRenderer.AZCONTEXTFILTERS)) {//the correct version should be 'az_ContextFilters'
                 String[] filters = BookUtils.getSnameCell(name).getStringValue().split(",");
                 SName contextChoices = book.getInternalBook().getNameByName(ReportRenderer.AZCONTEXTHEADINGS);
@@ -97,8 +95,6 @@ public class ChoicesService {
                                         try {
                                             Date date = df.parse(choiceOption);
                                             vCell.setDateValue(date);
-
-
                                         } catch (Exception e) {
                                             BookUtils.setValue(vCell, choiceOption);
                                         }
@@ -114,7 +110,6 @@ public class ChoicesService {
                                                         //true, "title", "msg",
                                                         true, "", "",
                                                         false, Validation.AlertStyle.WARNING, "alert title", "alert msg");
-
                                             }
                                         }
                                         numberOfValidationsAdded++;
@@ -124,11 +119,6 @@ public class ChoicesService {
                                 } else {
                                     dependentRanges.add(name);
                                 }
-                            /*Unlike above where the setting of the choice has already been done we need to set the
-                            existing choices here, hence why user choices is required for this. The check for userChoices not being null
-                             is that it might be null when re adding the validation sheet when switching between sheets which can happen.
-                             Under these circumstances I assume we won't need to re-do the filter adding. I guess need to test.
-                             */
                             }
                         }// do anything in the case of excel error?
 
@@ -146,6 +136,7 @@ public class ChoicesService {
         return dependentRanges;
     }
 
+    // shows choices on a pivot but need to be clearer on exactly what this is
     private static void showChoices(LoggedInUser loggedInUser, Book book, SName contextChoices, String[] filters, int headingWidth) {
         Sheet cSheet = book.getSheet(contextChoices.getRefersToSheetName());
         CellRegion chRange = contextChoices.getRefersToCellRegion();
@@ -180,7 +171,7 @@ public class ChoicesService {
     }
 
     // choices can be a real pain, I effectively need to keep resolving them until they don't change due to choices being based on choices (dependencies in excel)
-    static Map<String, List<String>> resolveAndSetChoiceOptions(LoggedInUser loggedInUser, Sheet sheet, List<CellRegion> regionsToWatchForMerge){
+    static Map<String, List<String>> resolveAndSetChoiceOptions(LoggedInUser loggedInUser, Sheet sheet, List<CellRegion> regionsToWatchForMerge) {
         int attempts = 0;
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         boolean resolveChoices = true;
@@ -249,14 +240,13 @@ public class ChoicesService {
     }
 
     /* This did return a map with the query as the key but I'm going to change this to the name, it will save unnecessary query look ups later.
-     This adds one caveat : the options match the choice name at the time the function ran - if the query in the choice cell updates this needs to be run again
+     This adds one caveat : the options match the choice name at the time the function ran - if the query in the choice cell updates this needs to be run again - resolveAndSetChoiceOptions checks for this
        */
 
     private static Map<String, List<String>> resolveChoiceOptions(List<SName> names, LoggedInUser loggedInUser) {
         Map<String, List<String>> toReturn = new HashMap<>();
         for (SName name : names) {
             //check to create pivot filter choices.... TODO - is this a redundant comment, aren't the filters being sorted anyway?
-
             if (name.getName().endsWith("Choice") && name.getRefersToCellRegion() != null) {
                 // ok I assume choice is a single cell
                 List<String> choiceOptions = new ArrayList<>(); // was null, see no help in that
@@ -295,9 +285,14 @@ public class ChoicesService {
         return toReturn;
     }
 
+    /*
+    Related to Contents( which is a dropdown dependant on other dropdowns - it makes the dropdown a composite I think
+     e.g. `All Projects` children * `Contents(az_ClientChosen)
+     */
+
     static void resolveDependentChoiceOptions(String sheetName, List<SName> dependentRanges, Book book, LoggedInUser loggedInUser) {
-        if (sheetName.length() > 10){
-            sheetName = sheetName.substring(0,10);
+        if (sheetName.length() > 10) {
+            sheetName = sheetName.substring(0, 10);
         }
         Sheet validationSheet = book.getSheet(sheetName + VALIDATION_SHEET);
         SSheet vSheet = validationSheet.getInternalSheet();

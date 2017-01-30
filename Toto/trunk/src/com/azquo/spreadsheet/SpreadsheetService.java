@@ -142,7 +142,7 @@ public class SpreadsheetService {
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                     , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(), maxSize);
         }
-        return new ProvenanceDetailsForDisplay(null,null); // maybe "not found"?
+        return new ProvenanceDetailsForDisplay(null, null); // maybe "not found"?
     }
 
     // some code duplication with above, a way to factor?

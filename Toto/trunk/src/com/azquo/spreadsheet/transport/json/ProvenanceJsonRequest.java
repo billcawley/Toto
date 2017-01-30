@@ -4,7 +4,6 @@ import java.io.Serializable;
 
 /**
  * Created by edward on 30/11/16.
- *
  */
 public class ProvenanceJsonRequest implements Serializable {
     public int reportId;

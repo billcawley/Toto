@@ -34,11 +34,11 @@ import java.util.List;
 
 /**
  * Created by edward on 26/01/17.
- *
+ * <p>
  * Code to deal with the context menu, might be a fair bit going on here.
- *
+ * <p>
  * Use of the ZK API to alter the user interface might be a little hacky, might be sensetive to changes to their API or implementation
- *
+ * <p>
  * THis class is a little bigger than I'd like. Could break code off for provenance stuff?
  */
 class ZKContextMenu {
@@ -55,7 +55,7 @@ class ZKContextMenu {
     private final Popup highlightPopup;
     private final Popup instructionsPopup;
 
-    ZKContextMenu(Spreadsheet myzss){
+    ZKContextMenu(Spreadsheet myzss) {
         this.myzss = myzss;
         editPopup = new Menupopup();
         // todo - check ZK to see if there's a better way to do this
@@ -175,18 +175,18 @@ class ZKContextMenu {
                 final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
                 if (provenanceDetailsForDisplay.getProcenanceForDisplayList() != null && !provenanceDetailsForDisplay.getProcenanceForDisplayList().isEmpty()) {
                     buildContextMenuProvenance(provenanceDetailsForDisplay);
-                    buildContextMenuProvenanceDownload(provenanceDetailsForDisplay,reportId);
+                    buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
                     Menuitem auditItem = new Menuitem("Audit");
                     editPopup.appendChild(auditItem);
                     auditItem.setPopup(provenancePopup);
 //                            auditItem.addEventListener("onClick",
 //                                    event -> System.out.println("audit menu item clicked"));
-                    buildContextMenuDrillDownIfApplicable(region,regionRow,regionColumn);
+                    buildContextMenuDrillDownIfApplicable(region, regionRow, regionColumn);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            buildContextMenuDebug(region,regionRow,regionColumn);
+            buildContextMenuDebug(region, regionRow, regionColumn);
             buildContextMenuInstructions(region);
 
             popupChild = highlightPopup.getFirstChild();
@@ -261,24 +261,24 @@ class ZKContextMenu {
         }
     }
 
-    private void buildContextMenuProvenance(ProvenanceDetailsForDisplay provenanceDetailsForDisplay){
+    private void buildContextMenuProvenance(ProvenanceDetailsForDisplay provenanceDetailsForDisplay) {
         Label provenanceLabel;
-        if (provenanceDetailsForDisplay.getFunction() != null){
+        if (provenanceDetailsForDisplay.getFunction() != null) {
             provenanceLabel = new Label();
             provenanceLabel.setMultiline(true);
             provenanceLabel.setValue(provenanceDetailsForDisplay.getFunction() + "\n");
             provenancePopup.appendChild(provenanceLabel);
         }
         int count = 0;
-        for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()){
+        for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()) {
             boolean breakLoop = false;
             provenanceLabel = new Label();
             provenanceLabel.setMultiline(true);
             provenanceLabel.setValue(provenanceForDisplay.toString() + "\n");
             provenancePopup.appendChild(provenanceLabel);
-            if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()){
-                StringBuilder names  = new StringBuilder();
-                for (String name : provenanceForDisplay.getNames()){
+            if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()) {
+                StringBuilder names = new StringBuilder();
+                for (String name : provenanceForDisplay.getNames()) {
                     names.append("\t").append(name);
                 }
                 provenanceLabel = new Label();
@@ -286,11 +286,11 @@ class ZKContextMenu {
                 provenanceLabel.setValue(names.toString() + "\n");
                 provenancePopup.appendChild(provenanceLabel);
             }
-            if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()){
-                for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()){
-                    if (value.getSecond() != null && !value.getSecond().isEmpty()){
+            if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()) {
+                for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()) {
+                    if (value.getSecond() != null && !value.getSecond().isEmpty()) {
                         Iterator<String> it = value.getSecond().iterator();
-                        if (provenanceForDisplay.isInSpreadsheet() && value.getFirst() != null && value.getFirst() > 0){
+                        if (provenanceForDisplay.isInSpreadsheet() && value.getFirst() != null && value.getFirst() > 0) {
                             final Toolbarbutton provButton = new Toolbarbutton("\t" + it.next());
                             provButton.addEventListener("onClick",
                                     event -> ZKComposerUtils.openDrillDown(loggedInUser, provenanceForDisplay.getName(), provenanceForDisplay.getContext(), value.getFirst()));
@@ -302,8 +302,8 @@ class ZKContextMenu {
                             provenancePopup.appendChild(provenanceLabel);
                         }
                         StringBuilder names = new StringBuilder();
-                        while (it.hasNext()){
-                            if (names.length() > 0){
+                        while (it.hasNext()) {
+                            if (names.length() > 0) {
                                 names.append(", ");
                             }
                             names.append(it.next());
@@ -313,7 +313,7 @@ class ZKContextMenu {
                         provenanceLabel.setValue("\t\t" + names.toString() + "\n");
                         provenancePopup.appendChild(provenanceLabel);
                         count++;
-                        if (count > 20){
+                        if (count > 20) {
                             provenanceLabel = new Label();
                             provenanceLabel.setMultiline(true);
                             provenanceLabel.setValue("\t\t.......\n");
@@ -324,13 +324,13 @@ class ZKContextMenu {
                     }
                 }
             }
-            if (breakLoop){
+            if (breakLoop) {
                 break;
             }
         }
     }
 
-    private void buildContextMenuProvenanceDownload(ProvenanceDetailsForDisplay provenanceDetailsForDisplay, int reportId){
+    private void buildContextMenuProvenanceDownload(ProvenanceDetailsForDisplay provenanceDetailsForDisplay, int reportId) {
         Toolbarbutton button = new Toolbarbutton("Download Full Audit");
         // todo - factor with very similar code to downloiad debug info
         button.addEventListener("onClick",
@@ -348,20 +348,20 @@ class ZKContextMenu {
                             }
                             if (sName.getName().equalsIgnoreCase("Data")) {
                                 int yOffset = 0;
-                                for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()){
+                                for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()) {
                                     int xOffset = 0;
                                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(provenanceForDisplay.toString());
                                     yOffset++;
-                                    if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()){
-                                        for (String name : provenanceForDisplay.getNames()){
+                                    if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()) {
+                                        for (String name : provenanceForDisplay.getNames()) {
                                             xOffset++;
                                             sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(name);
                                         }
                                         yOffset++;
                                     }
-                                    if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()){
-                                        for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()){
-                                            if (value.getSecond() != null && !value.getSecond().isEmpty()){
+                                    if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()) {
+                                        for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()) {
+                                            if (value.getSecond() != null && !value.getSecond().isEmpty()) {
                                                 for (String valueOrName : value.getSecond()) {
                                                     xOffset++;
                                                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(valueOrName);
@@ -391,7 +391,7 @@ class ZKContextMenu {
         provenancePopup.appendChild(button);
     }
 
-    private void buildContextMenuDrillDownIfApplicable(String region, int regionRow, int regionColumn){
+    private void buildContextMenuDrillDownIfApplicable(String region, int regionRow, int regionColumn) {
         for (SName sName : myzss.getBook().getInternalBook().getNames()) {
             if (sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())) {
                 String qualifier = sName.getName().substring(("az_drilldown" + region).length()).replace("_", " ");
@@ -400,26 +400,26 @@ class ZKContextMenu {
                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
                     final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(regionRow);
                     List<String> colHeadings = new ArrayList<>();
-                    for (int rowNo = 0; rowNo< cellsAndHeadingsForDisplay.getColumnHeadings().size();rowNo++){
+                    for (int rowNo = 0; rowNo < cellsAndHeadingsForDisplay.getColumnHeadings().size(); rowNo++) {
                         colHeadings.add(cellsAndHeadingsForDisplay.getColumnHeadings().get(rowNo).get(regionColumn)); // last one is the bottom row of col headings
                     }
                     //String rowHeading = rowHeadings.get(rowHeadings.size() - 1); // the right of the row headings for that cell
-                    for (int colNo = 0; colNo < rowHeadings.size(); colNo++){
-                        drillDownString = ReportUIUtils.replaceAll(drillDownString,"[rowheading" + (colNo + 1) + "]", rowHeadings.get(colNo));
+                    for (int colNo = 0; colNo < rowHeadings.size(); colNo++) {
+                        drillDownString = ReportUIUtils.replaceAll(drillDownString, "[rowheading" + (colNo + 1) + "]", rowHeadings.get(colNo));
                     }
-                    drillDownString = ReportUIUtils.replaceAll(drillDownString,"[rowheading]", rowHeadings.get(rowHeadings.size()-1));
-                    for (int rowNo = 0; rowNo < colHeadings.size();rowNo++){
-                        drillDownString = ReportUIUtils.replaceAll(drillDownString,"[columnheading" + (rowNo + 1) + "]", colHeadings.get(rowNo));
+                    drillDownString = ReportUIUtils.replaceAll(drillDownString, "[rowheading]", rowHeadings.get(rowHeadings.size() - 1));
+                    for (int rowNo = 0; rowNo < colHeadings.size(); rowNo++) {
+                        drillDownString = ReportUIUtils.replaceAll(drillDownString, "[columnheading" + (rowNo + 1) + "]", colHeadings.get(rowNo));
                     }
-                    drillDownString = ReportUIUtils.replaceAll(drillDownString,"[columnheading]", colHeadings.get(colHeadings.size()-1));
+                    drillDownString = ReportUIUtils.replaceAll(drillDownString, "[columnheading]", colHeadings.get(colHeadings.size() - 1));
 
                     Menuitem ddItem = new Menuitem("Drill Down" + qualifier);
                     editPopup.appendChild(ddItem);
                     // right, showProvenance has been simplified a little, I need to parse out the report name here
                     String reportName = "";
-                    if (drillDownString.contains(Constants.IN_SPREADSHEET)){
+                    if (drillDownString.contains(Constants.IN_SPREADSHEET)) {
                         drillDownString = drillDownString.substring(drillDownString.indexOf(Constants.IN_SPREADSHEET) + Constants.IN_SPREADSHEET.length()).trim();
-                        if (drillDownString.contains(" with ")){
+                        if (drillDownString.contains(" with ")) {
                             reportName = drillDownString.substring(0, drillDownString.indexOf(" with ")).replace("`","");
                             drillDownString = drillDownString.substring(drillDownString.indexOf(" with ") + 6);
                         }
@@ -434,7 +434,7 @@ class ZKContextMenu {
         }
     }
 
-    private void buildContextMenuDebug(String region, int regionRow, int regionColumn){
+    private void buildContextMenuDebug(String region, int regionRow, int regionColumn) {
         // ok, adding new debug info here, it doesn't require values in the cell unlike provenance
         try {
             String debugString = SpreadsheetService.getDebugForCell(loggedInUser, reportId, region, regionRow, regionColumn);
@@ -499,7 +499,7 @@ class ZKContextMenu {
         }
     }
 
-    private void buildContextMenuInstructions(String region){
+    private void buildContextMenuInstructions(String region) {
         final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
         if (sentCells != null && sentCells.getData().size() > 0) {
             StringBuilder instructionsText = new StringBuilder();

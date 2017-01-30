@@ -10,9 +10,8 @@ import java.time.LocalDateTime;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Representing a user who can log in
- *
  */
 public final class User extends StandardEntity {
 

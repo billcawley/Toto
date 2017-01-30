@@ -53,23 +53,22 @@ public final class ImportService {
             fileName = fileName.substring(0, fileName.length() - 4);
             List<File> files = ImportFileUtilities.unZip(tempFile);
             // should be sorting by xls first then size ascending
-            Collections.sort(files, (f1, f2) -> {
-                        if ((f1.getName().endsWith(".xls") || f1.getName().endsWith(".xlsx")) && (!f2.getName().endsWith(".xls") && !f2.getName().endsWith(".xlsx"))) { // one is xls, the otehr is not
-                            return -1;
-                        }
-                        if ((f2.getName().endsWith(".xls") || f2.getName().endsWith(".xlsx")) && (!f1.getName().endsWith(".xls") && !f1.getName().endsWith(".xlsx"))) { // otehr way round
-                            return 1;
-                        }
-                        // fall back to file size among the same types
-                        if (f1.length() < f2.length()) {
-                            return -1;
-                        }
-                        if (f1.length() > f2.length()) {
-                            return 1;
-                        }
-                        return 0;
-                    }
-            );
+            files.sort((f1, f2) -> {
+                if ((f1.getName().endsWith(".xls") || f1.getName().endsWith(".xlsx")) && (!f2.getName().endsWith(".xls") && !f2.getName().endsWith(".xlsx"))) { // one is xls, the otehr is not
+                    return -1;
+                }
+                if ((f2.getName().endsWith(".xls") || f2.getName().endsWith(".xlsx")) && (!f1.getName().endsWith(".xls") && !f1.getName().endsWith(".xlsx"))) { // otehr way round
+                    return 1;
+                }
+                // fall back to file size among the same types
+                if (f1.length() < f2.length()) {
+                    return -1;
+                }
+                if (f1.length() > f2.length()) {
+                    return 1;
+                }
+                return 0;
+            });
             // todo - sort the files, small to large xls and xlsx as a group first
             StringBuilder sb = new StringBuilder();
             Iterator<File> fileIterator = files.iterator();
@@ -227,22 +226,18 @@ public final class ImportService {
         }
     }
 
-    private static String uploadReport(LoggedInUser loggedInUser, String filePath, String fileName, String reportName, String reportType) throws Exception {
+    private static String uploadReport(LoggedInUser loggedInUser, String filePath, String fileName, String reportName) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
-        int databaseId = 0;
-        String pathName = reportType;
-        if (pathName.length() == 0) {
-            databaseId = loggedInUser.getDatabase().getId();
-            pathName = loggedInUser.getBusinessDirectory();
-        }
+        int databaseId = loggedInUser.getDatabase().getId();
+        String pathName = loggedInUser.getBusinessDirectory();
         OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
         if (or != null) {
             // zap the old one first
-            try{
+            try {
                 String oldPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + or.getFilenameForDisk();
                 File old = new File(oldPath);
                 old.delete();
-            } catch (Exception e){
+            } catch (Exception e) {
                 System.out.println("problem deleting old report");
                 e.printStackTrace();
             }
@@ -270,7 +265,7 @@ public final class ImportService {
         }
         if (reportName != null) {
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
-                return uploadReport(loggedInUser, tempPath, fileName, reportName, "");
+                return uploadReport(loggedInUser, tempPath, fileName, reportName);
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
             OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
@@ -346,7 +341,6 @@ public final class ImportService {
             ImportFileUtilities.copyFileToDatabaseServer(sourceFile.getInputStream(), destinationPath);
         }
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-
         String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
         if (imageList != null) {//check if it's already in the list
             String[] images = imageList.split(",");

@@ -12,12 +12,12 @@ import java.util.Map;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by bill on 22/04/14.
- *
+ * <p>
  * Modified by edd to remove report specifity, this was per report and included standard options such as sorting etc. Now it does not and options are shared across reports.
  */
-public final class UserChoiceDAO  {
+public final class UserChoiceDAO {
 
     // the default table name for this data.
     private static final String TABLENAME = "user_choice";
@@ -72,16 +72,15 @@ public final class UserChoiceDAO  {
         return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID, TABLENAME, userChoiceRowMapper, namedParams);
     }
 
-    public static UserChoice findById(int id){
+    public static UserChoice findById(int id) {
         return StandardDAO.findById(id, TABLENAME, userChoiceRowMapper);
     }
 
-    public static void removeById(UserChoice userChoice){
+    public static void removeById(UserChoice userChoice) {
         StandardDAO.removeById(userChoice, TABLENAME);
     }
 
-    public static void store(UserChoice userChoice){
+    public static void store(UserChoice userChoice) {
         StandardDAO.store(userChoice, TABLENAME, getColumnNameValueMap(userChoice));
     }
-
 }

@@ -17,7 +17,7 @@ import java.util.zip.ZipInputStream;
 
 /**
  * Created by edward on 11/11/16.
- *
+ * <p>
  * Factoring off a few functions from ImportService.
  */
 class ImportFileUtilities {
@@ -248,7 +248,7 @@ class ImportFileUtilities {
             String stringValue = "";
             try {
                 stringValue = cellData.getFormatText();// I assume means formatted text
-                if (r > 0 && dataFormat.toLowerCase().contains("mm-") && (stringValue.length()==8 || stringValue.length()==6)) {//fix a ZK bug
+                if (r > 0 && dataFormat.toLowerCase().contains("mm-") && (stringValue.length() == 8 || stringValue.length() == 6)) {//fix a ZK bug
                     stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
                 }
             } catch (Exception ignored) {
@@ -262,7 +262,7 @@ class ImportFileUtilities {
                     if (!newStringValue.contains("E")) {
                         if (newStringValue.endsWith(".0")) {
                             stringValue = newStringValue.substring(0, newStringValue.length() - 2);
-                        }else{
+                        } else {
                             stringValue = newStringValue;
                         }
                     }

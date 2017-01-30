@@ -314,7 +314,7 @@ public class ReportRenderer {
                 if (displayDataRegion != null) {
                     int maxCol = BookUtils.getMaxCol(sheet);
                     // todo - find out what the hell cloneCols is!
-                    int cloneCols = expandRowAndColumnHeadings(loggedInUser,sheet,region,displayDataRegion,cellsAndHeadingsForDisplay,maxCol);
+                    int cloneCols = expandRowAndColumnHeadings(loggedInUser, sheet, region, displayDataRegion, cellsAndHeadingsForDisplay, maxCol);
                     // these re loadings are because the region may have changed
                     // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
@@ -332,11 +332,11 @@ public class ReportRenderer {
                     }
                     CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
                     if (displayColumnHeadings != null) {
-                        RegionFillerService.fillColumnHeadings(sheet,userRegionOptions,displayColumnHeadings,cellsAndHeadingsForDisplay);
+                        RegionFillerService.fillColumnHeadings(sheet, userRegionOptions, displayColumnHeadings, cellsAndHeadingsForDisplay);
                     }
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                     // now factored off to the filler class that deals with repeat if applicable
-                    RegionFillerService.fillData(loggedInUser,reportId,sheet,region,userRegionOptions,cellsAndHeadingsForDisplay,displayDataRegion,rowHeadingList,columnHeadingsDescription,contextList,maxCol,valueId, quiet);
+                    RegionFillerService.fillData(loggedInUser, reportId, sheet, region, userRegionOptions, cellsAndHeadingsForDisplay, displayDataRegion, rowHeadingList, columnHeadingsDescription, contextList, maxCol, valueId, quiet);
                 }
             } catch (RemoteException re) {
                 // is printing the stack trace going to jam the logs unnecessarily?
@@ -380,7 +380,7 @@ public class ReportRenderer {
     }
 
     // work out what clonecols is for!
-    private static int expandRowAndColumnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol){
+    private static int expandRowAndColumnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol) {
         // add rows
         if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
             int rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());

@@ -20,14 +20,14 @@ import java.util.List;
 
 /**
  * Created by edward on 12/01/17.
- *
+ * <p>
  * Break off fill code from the old Azquo Book Utils to put in here
  */
 
 class RegionFillerService {
     // as it says. Need to consider the factoring here given the number of parameters passed
     static void fillRowHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayRowHeadings
-            , CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int cloneCols){
+            , CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int cloneCols) {
         int rowHeadingsColumn = displayRowHeadings.getColumn();
         boolean isHierarchy = ReportUtils.isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
         int row = displayRowHeadings.getRow();
@@ -154,7 +154,7 @@ class RegionFillerService {
 
     //← → ↑ ↓ ↔ ↕ ah I can just paste it here, thanks IntelliJ :)
     static void fillColumnHeadings(Sheet sheet, UserRegionOptions userRegionOptions, CellRegion displayColumnHeadings
-            , CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay){
+            , CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) {
         int row = displayColumnHeadings.getRow();
         // ignore row is for when the number of rows making up the column headings form the server is greater than the number of rows it's going to fit in
         // in which case use the bottom rows of the column headings
@@ -230,7 +230,7 @@ class RegionFillerService {
 
     // a lot of objets passed. Mainly to deal with the repeat scope stuff
     static void fillData(LoggedInUser loggedInUser, int reportId, Sheet sheet, String region, UserRegionOptions userRegionOptions, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion
-                                , List<List<String>> rowHeadingList, SName columnHeadingsDescription, List<List<String>> contextList, int maxCol, int valueId, boolean quiet) throws  Exception{
+            , List<List<String>> rowHeadingList, SName columnHeadingsDescription, List<List<String>> contextList, int maxCol, int valueId, boolean quiet) throws Exception {
         // the repeat code used to be split, having examined it this doesn't really make sense, it can all be dealt with in a block after
         // note - this means the repeatRegion may have been expanded but I think this makes sense - before if it wasn't big enough it would break
         // won't be properly tested until we need it again

@@ -155,14 +155,11 @@ public class JstreeController {
             } catch (Exception e) {
                 result = e.getMessage();
             }
-
             if (result == null) {
                 result = "\"no action taken\"";
             }
-
             // seems to be the logic from before, if children/new then don't do the function. Not sure why . . .
             if (op == null) op = "";
-
             if (!op.equals("children") && !op.equals("create_node")) {
                 model.addAttribute("content", jsonFunction + "({\"response\":" + result + "})");
             } else {

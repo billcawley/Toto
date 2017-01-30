@@ -61,29 +61,29 @@ public class AzquoMailer {
             String fromaddress = "";
             String fromname = "";
             int port = 587; // could set from properties?
-                    for (String key : azquoProperties.stringPropertyNames()) {
-                        if (key.startsWith(MAILPREFIX)) {
-                            switch (key) {
-                                case MAILSERVER:
-                                    email.setHostName(azquoProperties.getProperty(key));
-                                    break;
-                                case MAILUSER:
-                                    user = azquoProperties.getProperty(key);
-                                    break;
-                                case MAILPASSWORD:
-                                    password = azquoProperties.getProperty(key);
-                                    break;
-                                case MAILFROMADDRESS:
-                                    fromaddress = azquoProperties.getProperty(key);
-                                    break;
-                                case MAILFROMNAME:
-                                    fromname = azquoProperties.getProperty(key);
-                                    break;
-                                default:
-                                    System.setProperty(key, azquoProperties.getProperty(key)); // push extras through
-                            }
-                        }
+            for (String key : azquoProperties.stringPropertyNames()) {
+                if (key.startsWith(MAILPREFIX)) {
+                    switch (key) {
+                        case MAILSERVER:
+                            email.setHostName(azquoProperties.getProperty(key));
+                            break;
+                        case MAILUSER:
+                            user = azquoProperties.getProperty(key);
+                            break;
+                        case MAILPASSWORD:
+                            password = azquoProperties.getProperty(key);
+                            break;
+                        case MAILFROMADDRESS:
+                            fromaddress = azquoProperties.getProperty(key);
+                            break;
+                        case MAILFROMNAME:
+                            fromname = azquoProperties.getProperty(key);
+                            break;
+                        default:
+                            System.setProperty(key, azquoProperties.getProperty(key)); // push extras through
                     }
+                }
+            }
             email.setAuthenticator(new DefaultAuthenticator(user, password));
             email.setStartTLSEnabled(true);
             email.setSmtpPort(port);

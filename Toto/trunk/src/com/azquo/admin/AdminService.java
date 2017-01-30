@@ -27,7 +27,7 @@ import java.util.*;
  * Used for admin functions. Register, validate etc
  * pretty simple with calls to the vanilla admin dao classes
  * <p/>
- *
+ * <p>
  * Note - most calls deal with security internally (isAdministrator) but not all, this really should be consistent
  */
 public class AdminService {
@@ -64,7 +64,7 @@ public class AdminService {
         }
         BusinessDAO.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0,0);// Admin with
+        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0, 0);// Admin with
         UserDAO.store(user);
         /*
         azquoMailer.sendEMail(user.getEmail()
@@ -157,8 +157,8 @@ this may now not work at all, perhaps delete?
             , final String status
             , final String password
             , final LoggedInUser loggedInUser
-    , int databaseId
-    , int userId) throws Exception {
+            , int databaseId
+            , int userId) throws Exception {
         if (loggedInUser.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
             final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail(), databaseId, userId);
@@ -207,7 +207,7 @@ this may now not work at all, perhaps delete?
         if (loggedInUser.getUser().isAdministrator()) {
             return DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         }
-        if (loggedInUser.getUser().isDeveloper()){
+        if (loggedInUser.getUser().isDeveloper()) {
             return DatabaseDAO.findForUserId(loggedInUser.getUser().getId());
         }
         return null;
@@ -227,13 +227,13 @@ this may now not work at all, perhaps delete?
         List<OnlineReport> reportList = new ArrayList<>();
         List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         for (Database database : databases) {
-            if (loggedInUser.getUser().isAdministrator()){// admin gets all
+            if (loggedInUser.getUser().isAdministrator()) {// admin gets all
                 List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
                 for (OnlineReport report : reports) {
                     report.setDatabase(database.getName());
                 }
                 reportList.addAll(reports);
-            } else if (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()){ // develope constrained to their own reports
+            } else if (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()) { // develope constrained to their own reports
                 List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
                 for (OnlineReport report : reports) {
                     report.setDatabase(database.getName());
@@ -243,7 +243,7 @@ this may now not work at all, perhaps delete?
         }
         // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {
-            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0,0, "", "No reports found", "", "");
+            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, 0, "", "No reports found", "", "");
             reportList.add(notFound);
         }
         return reportList;
@@ -255,7 +255,6 @@ this may now not work at all, perhaps delete?
         for (Database database : databases) {
             List<ReportSchedule> reportSchedules = ReportScheduleDAO.findForDatabaseId(database.getId());
             toReturn.addAll(reportSchedules);
-
         }
         return toReturn;
     }
@@ -265,7 +264,7 @@ this may now not work at all, perhaps delete?
             List<UploadRecord> uploadRecords = UploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<>();
             for (UploadRecord uploadRecord : uploadRecords) {
-                if (loggedInUser.getUser().isAdministrator() || uploadRecord.getUserId() == loggedInUser.getUser().getId()){ // admin is all, developer is just theirs
+                if (loggedInUser.getUser().isAdministrator() || uploadRecord.getUserId() == loggedInUser.getUser().getId()) { // admin is all, developer is just theirs
                     String dbName = "";
                     if (uploadRecord.getDatabaseId() > 0) {
                         Database database = DatabaseDAO.findById(uploadRecord.getDatabaseId());
@@ -281,9 +280,9 @@ this may now not work at all, perhaps delete?
                         }
                     }
                     boolean downloadable = false;
-                    if (uploadRecord.getTempPath() != null && !uploadRecord.getTempPath().isEmpty()){
+                    if (uploadRecord.getTempPath() != null && !uploadRecord.getTempPath().isEmpty()) {
                         File test = new File(uploadRecord.getTempPath());
-                        if (test.exists() && test.isFile()){
+                        if (test.exists() && test.isFile()) {
                             downloadable = true;
                         }
                     }
@@ -349,8 +348,8 @@ this may now not work at all, perhaps delete?
             // before unlinking get the reports to see if they need zapping
             final List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(db.getId());
             DatabaseReportLinkDAO.unLinkDatabase(databaseId);
-            for (OnlineReport or : reports){
-                if (DatabaseReportLinkDAO.getDatabaseIdsForReportId(or.getId()).isEmpty()){ // then this report no longer has any databases
+            for (OnlineReport or : reports) {
+                if (DatabaseReportLinkDAO.getDatabaseIdsForReportId(or.getId()).isEmpty()) { // then this report no longer has any databases
                     removeReportById(loggedInUser, or.getId());
                 }
             }

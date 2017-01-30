@@ -14,7 +14,7 @@ import java.util.Map;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 07/01/14.
  * Users as in those who login
  */
@@ -96,16 +96,15 @@ public class UserDAO {
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " and " + CREATEDBY + " = :" + CREATEDBY, TABLENAME, userRowMapper, namedParams);
     }
 
-    public static User findById(int id){
+    public static User findById(int id) {
         return StandardDAO.findById(id, TABLENAME, userRowMapper);
     }
 
-    public static void removeById(User user){
+    public static void removeById(User user) {
         StandardDAO.removeById(user, TABLENAME);
     }
 
-    public static void store(User user){
+    public static void store(User user) {
         StandardDAO.store(user, TABLENAME, getColumnNameValueMap(user));
     }
-
 }

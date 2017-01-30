@@ -43,7 +43,7 @@ import java.util.*;
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  * <p>
  * Created by cawley on 05/03/15
- * .
+ *
  * Adapted from a ZK example - so buttons in the jsp can interact with the ZK sheet object
  */
 @Controller
@@ -249,7 +249,7 @@ public class ZKSpreadsheetCommandController {
                         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                         }
-                        ReportRenderer.populateBook(newBook, 0, true,false);
+                        ReportRenderer.populateBook(newBook, 0, true, false);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
                         if (ss.getSelectedSheet().isHidden()) {
                             for (SSheet s : ss.getSBook().getSheets()) {

@@ -113,7 +113,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
         }
         if (selectionList != null) {
-            showMultiSelectionList(loggedInUser,book,selectionName,selectionList,event.getPageX(), event.getPageY());
+            showMultiSelectionList(loggedInUser, book, selectionName, selectionList, event.getPageX(), event.getPageY());
         } else { // if not a multi check for a clickable report name
             SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS);
             if (allowableReports != null) {
@@ -329,7 +329,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
 
     // When someone clicks on a chart point find the cell it is populated from and show the provenance if available
-    public void setChartClickProxies(){
+    public void setChartClickProxies() {
         Map<String, SChart> usefulChartObjects = new HashMap<>();
         final List<SSheet> sheets = myzss.getSBook().getSheets();
         for (SSheet sSheet : sheets) {
@@ -375,8 +375,8 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
     // as it says, show the multi selection list used by pivots and multi selections
-    private void showMultiSelectionList(LoggedInUser loggedInUser, Book book,final String selectionName,final String selectionList,
-                                        int pageX, int pageY){
+    private void showMultiSelectionList(LoggedInUser loggedInUser, Book book, final String selectionName, final String selectionList,
+                                        int pageX, int pageY) {
         while (filterPopup.getChildren().size() > 0) { // clear it out
             filterPopup.removeChild(filterPopup.getLastChild());
         }

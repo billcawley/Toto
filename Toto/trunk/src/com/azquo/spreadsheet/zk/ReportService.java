@@ -24,14 +24,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by edward on 09/01/17.
- *
+ * <p>
  * Will handle higher level functions required to build a report e.g. checking for permissions in names, resolving choices etc.
  * In contrast to BookUtils which should be lower level.
  */
 class ReportService {
     // should functions like this be in another class? It's not really stateless or that low level
     static final String ALLOWABLE_REPORTS = "az_AllowableReports";
-    static void checkForPermissionsInSheet(LoggedInUser loggedInUser, Sheet sheet){
+
+    static void checkForPermissionsInSheet(LoggedInUser loggedInUser, Sheet sheet) {
         //have a look for "az_AllowableReports", it's read only, getting it here seems as reasonable as anything
         Map<String, TypedPair<OnlineReport, Database>> permissionsFromReports = loggedInUser.getPermissionsFromReport() != null ? loggedInUser.getPermissionsFromReport() : new ConcurrentHashMap<>(); // cumulative permissions. Might as well make concurrent
         // a repeat call to this function - could be moved outside but I'm not too bothered about it at the moment
@@ -108,7 +109,7 @@ class ReportService {
     private static final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
     // make ZK resolve formulae and the, assuming not fast save check for formulae changing data. Finally snap the charts.
-    static boolean resolveFormulaeAndSnapCharts(LoggedInUser loggedInUser, int reportId, Book book, Sheet sheet, boolean skipSaveCheck, boolean useSavedValuesOnFormulae){
+    static boolean resolveFormulaeAndSnapCharts(LoggedInUser loggedInUser, int reportId, Book book, Sheet sheet, boolean skipSaveCheck, boolean useSavedValuesOnFormulae) {
         boolean showSave = false;
         // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
         // can't do this in the fill region as formulae need to be dealt with outside
@@ -128,7 +129,7 @@ class ReportService {
             I'd avoided doing this but now I am it's useful for restoring values and checking for overlapping data regions.
             so similar loop to above - also we want to check for the logic of using the loaded values
             */
-            // by a negative as we want to imply that the default is to check the save
+        // by a negative as we want to imply that the default is to check the save
         if (!skipSaveCheck) {
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
             for (SName name : namesForSheet) {

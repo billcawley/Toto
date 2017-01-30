@@ -6,9 +6,9 @@ import java.time.LocalDateTime;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by bill on 15/04/14.
- *
+ * <p>
  * All reports are online now, we used to have Excel ones.
  */
 public class OnlineReport extends StandardEntity {
@@ -29,7 +29,7 @@ public class OnlineReport extends StandardEntity {
             , String reportName
             , String filename
             , String explanation
-            ) {
+    ) {
         this.id = id;
         this.dateCreated = dateCreated;
         this.businessId = businessId;
@@ -85,7 +85,7 @@ public class OnlineReport extends StandardEntity {
     }
 
     public String getFilenameForDisk() {
-        if (dateCreated.isAfter(LocalDateTime.of(2016, 10, 13, 0, 0))){ // then use the new convention - this date should be when the code was deployed. Bit of a hack - remove later? Does it matter?
+        if (dateCreated.isAfter(LocalDateTime.of(2016, 10, 13, 0, 0))) { // then use the new convention - this date should be when the code was deployed. Bit of a hack - remove later? Does it matter?
             return id + "-" + filename;
         }
         return filename;

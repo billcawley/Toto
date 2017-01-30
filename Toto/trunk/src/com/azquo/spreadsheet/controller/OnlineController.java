@@ -36,7 +36,7 @@ import java.util.Map;
  * Created by bill on 22/04/14.
  * <p>
  * EFC : Aiming to reduce parameters as much as possible
- *
+ * <p>
  * The main report online report viewing controller, deals with upload/save/execute and a more graceful loading of reports showing a loading screen online as opposed to simply
  * blocking the response until done.
  * <p>
@@ -65,9 +65,7 @@ public class OnlineController {
     private static final String TEMPLATE = "TEMPLATE";
     private static final String UPLOAD = "UPLOAD";
 
-
     private static final SimpleDateFormat logDf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
 
     @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(ModelMap model, HttpServletRequest request
@@ -221,7 +219,6 @@ public class OnlineController {
                             // so in here the new thread we set up the loading as it was originally before
                             try {
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-                                long newHeapMarker = oldHeapMarker;
                                 String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + finalLoggedInUser.getBusinessDirectory() + "/onlinereports/" + finalOnlineReport.getFilenameForDisk();
                                 final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                                 book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
@@ -253,11 +250,10 @@ public class OnlineController {
                                 } else {
                                     finalLoggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
                                 }
-                                newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
+                                long newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 System.out.println();
                                 System.out.println(logDf.format(new Date()) + " Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
                                 System.out.println();
-                                oldHeapMarker = newHeapMarker;
                                 session.setAttribute(finalReportId, book);
                             } catch (Exception e) { // changed to overall exception handling
                                 e.printStackTrace(); // Could be when importing the book, just log it

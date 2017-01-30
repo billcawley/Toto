@@ -20,9 +20,9 @@ import java.util.List;
 
 /**
  * Created by edward on 18/11/16.
- *
+ * <p>
  * The way to download an Excel file that will talk to Azquo!
- *
+ * <p>
  * Stripped down top of online controller - factor?
  */
 @Controller
@@ -39,7 +39,7 @@ public class ExcelInterfaceController {
     ) {
         try {
             LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-            if (loggedInUser == null){
+            if (loggedInUser == null) {
                 loggedInUser = ExcelController.excelConnections.get(sessionid);
             }
             if (loggedInUser != null) {
@@ -76,7 +76,7 @@ public class ExcelInterfaceController {
                 if (onlineReport != null) {
                     // sort the session id, add it to the file name
 //                    String sessionId =  java.util.Base64.getEncoder().encodeToString(BigInteger.valueOf(loggedInUser.hashCode()).toByteArray()); // chop it down to size
-                    String sessionId =  Integer.toHexString(loggedInUser.hashCode());
+                    String sessionId = Integer.toHexString(loggedInUser.hashCode());
                     ExcelController.excelConnections.put(sessionId, loggedInUser); // could be repeatedly putting, do we care?
                     String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilenameForDisk();
                     response.setContentType("application/vnd.ms-excel"); // Set up mime type
@@ -87,7 +87,7 @@ public class ExcelInterfaceController {
                     FileInputStream in = new FileInputStream(bookPath);
                     byte[] buffer = new byte[4096];
                     int length;
-                    while ((length = in.read(buffer)) > 0){
+                    while ((length = in.read(buffer)) > 0) {
                         out.write(buffer, 0, length);
                     }
                     in.close();

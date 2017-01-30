@@ -5,12 +5,12 @@ import java.util.List;
 
 /**
  * Created by edward on 15/11/16.
- *
+ * <p>
  * We're now trying Excel integration again, this time by using a plugin written in C#
- *
- *             //{"rowHeadings":[["Opening balance"],["Inputs"],["Withdrawals"],["Interest"],["Closing balance"]],"columnHeadings":[["`All Months` children"]],"context":[[""]]}
+ * <p>
+ * //{"rowHeadings":[["Opening balance"],["Inputs"],["Withdrawals"],["Interest"],["Closing balance"]],"columnHeadings":[["`All Months` children"]],"context":[[""]]}
  */
-public class ExcelJsonRequest implements Serializable{
+public class ExcelJsonRequest implements Serializable {
     public int reportId;
     public String region;
     public String optionsSource;

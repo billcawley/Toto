@@ -6,6 +6,7 @@ import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.admin.user.*;
 import org.apache.log4j.Logger;
+
 import java.util.*;
 
 /**
@@ -79,7 +80,7 @@ public class LoginService {
                 }
             }
         }
-        if (database == null){ // now we have a DB against the user we could perhaps remove the defaults to a single one above? Perhaps different for admin or developer
+        if (database == null) { // now we have a DB against the user we could perhaps remove the defaults to a single one above? Perhaps different for admin or developer
             database = DatabaseDAO.findById(user.getDatabaseId());
         }
 

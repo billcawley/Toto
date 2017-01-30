@@ -49,7 +49,6 @@ public class CreateExcelForDownloadController {
     @RequestMapping
     public void handleRequest(final HttpServletRequest request, HttpServletResponse response) throws Exception {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-
         if (loggedInUser != null && (loggedInUser.getUser().isMaster() || loggedInUser.getUser().isAdministrator())) {
             if ("DOWNLOADUSERS".equals(request.getParameter("action"))) { // then limited users editing for a master user
                 Book book = Importers.getImporter().imports(servletContext.getResourceAsStream("/WEB-INF/" + USERSFILENAME), "Report name");
@@ -60,7 +59,7 @@ public class CreateExcelForDownloadController {
                     int row = 1;
                     SName listRegion = book.getInternalBook().getNameByName("az_ListStart");
                     SName business = book.getInternalBook().getNameByName("az_Business");
-                    if (listRegion!=null){
+                    if (listRegion != null) {
                         row = listRegion.getRefersToCellRegion().getRow();
                     }
                     Business businessById = null;
@@ -80,7 +79,7 @@ public class CreateExcelForDownloadController {
                             row++;
                         }
                     }
-                    if (business!=null && businessById!=null){
+                    if (business != null && businessById != null) {
                         book.getSheetAt(0).getInternalSheet().getCell(business.getRefersToCellRegion().getRow(), business.getRefersToCellRegion().getColumn()).setStringValue(businessById.getBusinessName());
                     }
                 }
@@ -97,7 +96,7 @@ public class CreateExcelForDownloadController {
                 if (schedulesSheet != null) {
                     int row = 1;
                     SName listRegion = book.getInternalBook().getNameByName("data");
-                    if (listRegion!=null){
+                    if (listRegion != null) {
                         row = listRegion.getRefersToCellRegion().getRow();
                     }
                     for (ReportSchedule reportSchedule : reportSchedules) {
@@ -116,7 +115,6 @@ public class CreateExcelForDownloadController {
                         }
                     }
                 }
-
                 response.setContentType("application/vnd.ms-excel"); // Set up mime type
                 response.addHeader("Content-Disposition", "attachment; filename=" + REPORTSCHEDULESFILENAME);
                 OutputStream out = response.getOutputStream();
@@ -126,6 +124,5 @@ public class CreateExcelForDownloadController {
         } else {
             response.sendRedirect("/api/Login");
         }
-
-     }
+    }
 }

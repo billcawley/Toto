@@ -10,14 +10,14 @@ import java.util.List;
 
 /**
  * Created by edward on 24/11/16.
- *
+ * <p>
  * A stripped down version of CellsAndHeadingsForDisplay but for Excel.
- *
+ * <p>
  * I decided that the Excel code should not replicate CellForDisplay etc. In time there may be a better abstraction.
- *
+ * <p>
  * Will be turned into json to send to Excel.
  */
-public class CellsAndHeadingsForExcel implements Serializable{
+public class CellsAndHeadingsForExcel implements Serializable {
 
     private final List<List<String>> columnHeadings;
     private final List<List<String>> rowHeadings;
@@ -32,14 +32,14 @@ public class CellsAndHeadingsForExcel implements Serializable{
         data = new ArrayList<>();
         List<List<String>> tempComments = new ArrayList<>();
         boolean comments = false;
-        for (List<CellForDisplay> row : source.getData()){
+        for (List<CellForDisplay> row : source.getData()) {
             List<String> dataRow = new ArrayList<>();
             data.add(dataRow);
             List<String> commentRow = new ArrayList<>();
             tempComments.add(commentRow);
-            for (CellForDisplay cell : row){
+            for (CellForDisplay cell : row) {
                 dataRow.add(cell.getStringValue()); // should be fine
-                if (cell.getComment() != null){
+                if (cell.getComment() != null) {
                     comments = true;
                 }
                 commentRow.add(cell.getComment());

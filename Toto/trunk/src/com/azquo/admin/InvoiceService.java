@@ -24,7 +24,7 @@ import java.util.StringTokenizer;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by edward on 11/01/16.
  * Code moved from the old JSP, probably should be tidied in time. Hacky code for invoices not part of standard Azquo functionality.
  */
@@ -34,7 +34,7 @@ public class InvoiceService {
         // note : I'm not allowing currency to be overridden
         double currencyValue = invoiceDetails.getUnitCost() * invoiceDetails.getQuantity();
         double vat = currencyValue * 0.2;
-        if (invoiceDetails.getNoVat()){
+        if (invoiceDetails.getNoVat()) {
             vat = 0;
         }
         double total = currencyValue + vat;
@@ -63,7 +63,7 @@ public class InvoiceService {
         File temp = File.createTempFile(emailAttachment.getName(), "pdf");
         emailAttachment.setPath(temp.getPath()); // I think this will do it?
         FileOutputStream fos = new FileOutputStream(temp);
-        Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF,  fos);
+        Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF, fos);
         Transformer transformer = tFactory.newTransformer();
         StringBuilder template = new StringBuilder();
         String inputLine;
@@ -177,7 +177,7 @@ public class InvoiceService {
 
         transformer.transform(src, res);
         fos.close();
-        if (AzquoMailer.sendEMail(invoiceDetails.getSendTo(), invoiceDetails.getSendTo(), "Azquo Invoice " + invoiceDetails.getInvoiceNo(), "Please find attached", null, Collections.singletonList(emailAttachment))){
+        if (AzquoMailer.sendEMail(invoiceDetails.getSendTo(), invoiceDetails.getSendTo(), "Azquo Invoice " + invoiceDetails.getInvoiceNo(), "Please find attached", null, Collections.singletonList(emailAttachment))) {
             InvoiceSent invoiceSent = new InvoiceSent(0,
                     invoiceDetails.getCustomerReference(),
                     invoiceDetails.getServiceDescription(),

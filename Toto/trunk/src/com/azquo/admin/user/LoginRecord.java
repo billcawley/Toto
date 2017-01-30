@@ -6,7 +6,7 @@ import java.util.Date;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 18/02/14.
  * have made immutable which simplifies the code
  */
