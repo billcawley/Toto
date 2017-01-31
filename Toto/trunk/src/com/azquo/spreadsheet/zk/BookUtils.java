@@ -1,8 +1,13 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.TypedPair;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.spreadsheet.LoggedInUser;
 import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
+import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.CellRegion;
@@ -12,9 +17,8 @@ import org.zkoss.zss.model.SSheet;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by edward on 09/01/17.
@@ -209,5 +213,11 @@ public class BookUtils {
             return cellFormat;
         }
         return "";
+    }
+
+    // duff names can casue all sorts of problems, best to zap them
+    static void removeNamesWithNoRegion(Book book){
+        // I hope removeif will work on the names list . . .
+        book.getInternalBook().getNames().removeIf(name -> name.getRefersToCellRegion() == null);
     }
 }
