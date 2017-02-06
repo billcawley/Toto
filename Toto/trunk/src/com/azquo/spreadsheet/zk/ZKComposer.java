@@ -136,6 +136,25 @@ public class ZKComposer extends SelectorComposer<Component> {
                     }
                 }
             }
+            // and now check for the cell being a save button
+            SName saveName = myzss.getBook().getInternalBook().getNameByName(ReportRenderer.AZSAVE);
+            if (saveName != null && saveName.getRefersToSheetName().equals(myzss.getSelectedSheetName())
+                    && event.getRow() >= saveName.getRefersToCellRegion().getRow()
+                    && event.getRow() <= saveName.getRefersToCellRegion().getLastRow()
+                    && event.getColumn() >= saveName.getRefersToCellRegion().getColumn()
+                    && event.getColumn() <= saveName.getRefersToCellRegion().getLastColumn()
+                    ) {
+                try{
+                    if (ReportService.save(myzss, loggedInUser)){
+                        ZKComposerUtils.reloadBook(myzss, book);
+                        // think this wil;l do it
+                        Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
+                        Clients.evalJavaScript("alert(\"Save successful\")");
+                    }
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
         }
         // reset the log refresh, things might be about to happen
         Clients.evalJavaScript("window.skipSetting = 0;window.skipMarker = 0;");

@@ -314,7 +314,7 @@ public class ExcelController {
             }
             if (choiceName != null && choiceValue != null) {
                 choiceValue = choiceValue.trim();
-                loggedInUser.userLog("Choice select : " + choiceName + "," + choiceValue);
+                loggedInUser.userLog("Excel Choice select : " + choiceName + "," + choiceValue);
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName, choiceValue);
             }
             if (provenanceJson != null) {

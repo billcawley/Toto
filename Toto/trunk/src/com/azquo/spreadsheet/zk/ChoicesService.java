@@ -78,12 +78,11 @@ public class ChoicesService {
                     CellRegion chosenRegion = chosen.getRefersToCellRegion();
                     if (chosenRegion != null) {
                         List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
-                        // todo - clarify how this can ever be false?? we know there's a region for this name so
                         boolean dataRegionDropdown = !BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                             String query = choiceCell.getStringValue();
                             int contentPos = query.toLowerCase().indexOf(CONTENTS);
-                            if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// the second bit is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
+                            if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// dataregiondropdown is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
                                 if (contentPos < 0) {//not a dependent range
                                     BookUtils.setValue(validationSheet.getInternalSheet().getCell(0, numberOfValidationsAdded), name.getName());
                                     int row = 0;
@@ -121,7 +120,6 @@ public class ChoicesService {
                                 }
                             }
                         }// do anything in the case of excel error?
-
                     }
                 } else {
                     SName multi = book.getInternalBook().getNameByName(choiceName + "multi"); // as ever I do wonder about these string literals
@@ -133,6 +131,7 @@ public class ChoicesService {
                 }
             }
         }
+        // should this be being dealt with in here?
         return dependentRanges;
     }
 
@@ -261,7 +260,7 @@ public class ChoicesService {
                 //System.out.println("Choice cell : " + choiceCell);
                 if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                     String query = choiceCell.getStringValue();
-                    if (!query.toLowerCase().contains("contents(")) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
+                    if (!query.toLowerCase().contains(CONTENTS)) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
                         if (query.toLowerCase().contains("default")) {
                             query = query.substring(0, query.toLowerCase().indexOf("default"));
                         }
@@ -288,6 +287,8 @@ public class ChoicesService {
     /*
     Related to Contents( which is a dropdown dependant on other dropdowns - it makes the dropdown a composite I think
      e.g. `All Projects` children * `Contents(az_ClientChosen)
+
+     Combine into addvalidation?
      */
 
     static void resolveDependentChoiceOptions(String sheetName, List<SName> dependentRanges, Book book, LoggedInUser loggedInUser) {

@@ -217,7 +217,11 @@ public class BookUtils {
 
     // duff names can casue all sorts of problems, best to zap them
     static void removeNamesWithNoRegion(Book book){
-        // I hope removeif will work on the names list . . .
-        book.getInternalBook().getNames().removeIf(name -> name.getRefersToCellRegion() == null);
+        for (SName name : book.getInternalBook().getNames()){
+            if (name.getRefersToCellRegion() == null){
+                // how to remove the name?
+                book.getInternalBook().deleteName(name);
+            }
+        }
     }
 }

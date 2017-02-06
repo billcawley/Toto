@@ -2,14 +2,13 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.zk.ChoicesService;
-import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.spreadsheet.zk.BookUtils;
+import com.azquo.spreadsheet.zk.ReportService;
 import org.apache.pdfbox.util.PDFMergerUtility;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,7 +25,6 @@ import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.jsp.JsonUpdateBridge;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
-import org.zkoss.zss.model.SName;
 import org.zkoss.zss.model.SSheet;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zul.Filedownload;
@@ -178,69 +176,7 @@ public class ZKSpreadsheetCommandController {
                     boolean reloadAfterSave = false;
 
                     if ("Save".equals(action)) {
-                        // todo - provenance?
-                        final Book book = ss.getBook();
-                        int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-                        OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
-                        boolean saveOk = true;
-                        for (SName name : book.getInternalBook().getNames()) {
-                            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
-                                String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
-                                // todo - factor this chunk?
-                                // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
-                                SName optionsRegion = book.getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
-                                String optionsSource = "";
-                                boolean noSave = false;
-                                if (optionsRegion != null) {
-                                    optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
-                                    UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);
-                                    noSave = userRegionOptions.getNoSave();
-                                }
-                                if (!noSave) {
-                                    final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
-                                    if (!result.equals("true")) {
-                                        Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
-                                        saveOk = false;
-                                    }
-                                }
-                            }
-                            // deal with repeats, annoying!
-                            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZREPEATSCOPE)) { // then try to find the "sub" regions. todo, lower/upper case? Consistency . . .
-                                String region = name.getName().substring(ReportRenderer.AZREPEATSCOPE.length());
-                                final SName repeatRegion = book.getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + region);
-                                if (repeatRegion != null) {
-                                    int regionRows = repeatRegion.getRefersToCellRegion().getRowCount();
-                                    int regionCols = repeatRegion.getRefersToCellRegion().getColumnCount();
-                                    // integer division is fine will give the number of complete region rows and cols ( rounds down)
-                                    int repeatRows = name.getRefersToCellRegion().getRowCount() / regionRows;
-                                    int repeatCols = name.getRefersToCellRegion().getColumnCount() / regionCols;
-                                    for (int row = 0; row < repeatRows; row++) {
-                                        for (int col = 0; col < repeatCols; col++) {
-                                            //region + "-" + repeatRow + "-" + repeatColumn
-                                            if (loggedInUser.getSentCells(reportId, region.toLowerCase() + "-" + row + "-" + col) != null) { // the last ones on the repeat scope might be blank
-                                                final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
-                                                if (!result.equals("true")) {
-                                                    Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
-                                                    saveOk = false;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (!saveOk) {
-                                break; // stop looping through the names if a save failed
-                            }
-                        }
-                        // new thing, look for followon, guess we need an instance of ZK azquobook utils
-                        // need to show readout like executing todo. On that topic could the executing loading screen say "running command?" or something similar?
-                        if (saveOk) {
-                            loggedInUser.userLog("Save : " + onlineReport.getReportName());
-                            ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
-                            // unlock here makes sense think, if duff save probably leave locked
-                            SpreadsheetService.unlockData(loggedInUser);
-                            reloadAfterSave = true;
-                        }
+                        reloadAfterSave = ReportService.save(ss,loggedInUser);
                     }
 
                     if ("RestoreSavedValues".equals(action) || reloadAfterSave) {

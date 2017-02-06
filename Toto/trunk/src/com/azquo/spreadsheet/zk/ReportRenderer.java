@@ -46,6 +46,7 @@ public class ReportRenderer {
     static final String AZREPORTNAME = "az_reportname";
     public static final String EXECUTE = "az_Execute";
     public static final String FOLLOWON = "az_Followon";
+    public static final String AZSAVE = "az_save";
 
     public static boolean populateBook(Book book, int valueId) {
         return populateBook(book, valueId, false, false);
@@ -67,6 +68,7 @@ public class ReportRenderer {
         }
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         //String context = "";
+        // why a sheet loop at the outside, why not just run all the names? Need to have a think . . .
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
             // check we're not hitting a validation sheet we added!
