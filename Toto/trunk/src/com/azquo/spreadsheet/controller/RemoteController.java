@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -19,6 +20,7 @@ import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.api.model.Validation;
 import org.zkoss.zss.model.CellRegion;
@@ -27,6 +29,7 @@ import org.zkoss.zss.model.SName;
 import org.zkoss.zss.model.SSheet;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -123,9 +126,10 @@ public class RemoteController {
 
     @RequestMapping
     @ResponseBody
-    public String handleRequest(HttpServletRequest request
+    public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "json", required = false) String json
     ) {
+        String result = "no action taken";
         try {
             System.out.println("json sent " + json);
             JsonParameters jsonParameters = jacksonMapper.readValue(json, JsonParameters.class);
@@ -134,6 +138,7 @@ public class RemoteController {
                 if (loggedInUser == null) {
                     return "incorrect login details"; // probably need to add json
                 }
+
                 if (jsonParameters.choices != null) {
                     for (String key : jsonParameters.choices.keySet()) {
                         //remove 'chosen' from key
@@ -141,11 +146,17 @@ public class RemoteController {
                     }
                 }
                 // database switching should be done by being logged in
+
                 OnlineReport onlineReport = null;
-                if (jsonParameters.reportName != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-                    //report id is assumed to be integer - sent from the website
-                    onlineReport = OnlineReportDAO.findForNameAndBusinessId(jsonParameters.reportName, loggedInUser.getUser().getBusinessId());
-                    onlineReport.setDatabase(jsonParameters.database);
+                if (jsonParameters.reportName.length()==0){
+                    onlineReport = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
+                    onlineReport.setDatabase(loggedInUser.getDatabase().getName());
+                }else {
+                    if (jsonParameters.reportName != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+                        //report id is assumed to be integer - sent from the website
+                        onlineReport = OnlineReportDAO.findForNameAndBusinessId(jsonParameters.reportName, loggedInUser.getUser().getBusinessId());
+                        onlineReport.setDatabase(jsonParameters.database);
+                    }
                 }
                 if (onlineReport == null) {
                     return "incorrect report name"; // probably need to add json
@@ -172,41 +183,22 @@ public class RemoteController {
                     List<JsonRegion> jsonRegions = new ArrayList<>();
                     List<JsonChoice> jsonChoices = new ArrayList<>();
                     final List<SName> names = book.getInternalBook().getNames();
-                    String[] regions = null;
-                    if (jsonParameters.regions != null && jsonParameters.regions.length() > 0) {
-                        regions = jsonParameters.regions.split(",");
-                    }
-                    for (SName name : names) {
-                        final SSheet internalSheet = book.getSheet(name.getRefersToSheetName()).getInternalSheet();
+                         for (SName name : names) {
+                        final Sheet sheet = book.getSheet(name.getRefersToSheetName());
                         final CellRegion refersToCellRegion = name.getRefersToCellRegion();
-                        if ((regions == null && name.getName().toLowerCase().startsWith("az_dataregion"))
-                                || (regions != null && inSet(name.getName(), regions))) {
+                        if (name.getName().toLowerCase().startsWith("az_web")) {
                             List<List<String>> data = new ArrayList<>();
                             for (int i = refersToCellRegion.getRow(); i <= refersToCellRegion.getLastRow(); i++) {
                                 List<String> row = new ArrayList<>();
                                 for (int j = refersToCellRegion.getColumn(); j <= refersToCellRegion.getLastColumn(); j++) {
-                                    final SCell cell = internalSheet.getCell(i, j);
-                                    if (cell.getType().equals(SCell.CellType.FORMULA)) {
-                                        System.out.println();
-                                        if (cell.getFormulaResultType().equals(SCell.CellType.NUMBER)) {
-                                            row.add(cell.getNumberValue() + "");
-                                        } else if (cell.getFormulaResultType().equals(SCell.CellType.ERROR)) {
-                                            row.add("FORMULA ERROR");
-                                        } else {
-                                            row.add(cell.getStringValue());
-                                        }
-                                    } else if (cell.getType().equals(SCell.CellType.NUMBER)) {
-                                        row.add(cell.getNumberValue() + "");
-                                    } else {
-                                        row.add(cell.getStringValue());
-                                    }
+                                    row.add(getCellValue(sheet,i,j));
                                 }
                                 data.add(row);
                             }
                             jsonRegions.add(new JsonRegion(name.getName(), (refersToCellRegion.getLastRow() - refersToCellRegion.getRow()) + 1, (refersToCellRegion.getLastColumn() - refersToCellRegion.getColumn()) + 1, data));
                         } else {
                             if (name.getName().toLowerCase().endsWith("chosen")) {
-                                String value = internalSheet.getCell(refersToCellRegion.getRow(), refersToCellRegion.getColumn()).getStringValue();
+                                String value = getCellValue( sheet,refersToCellRegion.getRow(), refersToCellRegion.getColumn());
                                 List<String> options = new ArrayList<>();
                                 Range range = Ranges.range(book.getSheet(name.getRefersToSheetName()), refersToCellRegion.getRow(), refersToCellRegion.getColumn(), refersToCellRegion.getRow(), refersToCellRegion.getColumn());
                                 List<Validation> validations = range.getValidations();
@@ -218,7 +210,7 @@ public class RemoteController {
                                     String localListRange = listRangeString.substring(endSheetName + 1);
                                     Range listRange = Ranges.range(listSheet, localListRange);
                                     for (int row = 0; row < listRange.getRowCount(); row++) {
-                                        options.add(listSheet.getInternalSheet().getCell(listRange.getRow() + row, listRange.getColumn()).getStringValue());
+                                        options.add(getCellValue(listSheet,listRange.getRow() + row, listRange.getColumn()));
 
                                     }
                                 }
@@ -226,22 +218,67 @@ public class RemoteController {
                             }
                         }
                     }
-                    return jacksonMapper.writeValueAsString(new JsonReturn("ok", loggedInUser.getDatabase().getName(), onlineReport.getReportName(), jsonChoices, jsonRegions));
-                } catch (Exception e) { // changed to overall exception handling
+                    result =  jacksonMapper.writeValueAsString(new JsonReturn("ok", loggedInUser.getDatabase().getName(), onlineReport.getReportName(), jsonChoices, jsonRegions));
+             } catch (Exception e) { // changed to overall exception handling
                     e.printStackTrace(); // Could be when importing the book, just log it
-                    return e.getMessage(); // put it here to puck up instead of the report
+                    result =e.getMessage(); // put it here to puck up instead of the report
                 }
             } catch (Exception e) {
                 logger.error("online controller error", e);
+                result = e.getMessage();
             }
-            return "utf8page";
         } catch (NullPointerException npe) {
-            return "null pointer, json passed?";
+            result =  "null pointer, json passed?";
         } catch (Exception e) {
             e.printStackTrace();
-            return e.getMessage();
+            result  = e.getMessage();
         }
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Content-type", "application/json");
+        return result;
+
     }
+
+    static String getCellValue(Sheet sheet, int r, int c) {
+        //this is a copy of the same function in ReportUtilities - but unavailable in this class
+        String returnString = null;
+        Range range = Ranges.range(sheet, r, c);
+        CellData cellData = range.getCellData();
+        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
+        //if (colCount++ > 0) bw.write('\t');
+        if (cellData != null) {
+            String stringValue = "";
+            try {
+                stringValue = cellData.getFormatText();// I assume means formatted text
+                if (r > 0 && dataFormat.toLowerCase().contains("mm-") && (stringValue.length() == 8 || stringValue.length() == 6)) {//fix a ZK bug
+                    stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
+                }
+            } catch (Exception ignored) {
+            }
+            if (!dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
+                //if it's a number, remove all formatting
+                try {
+                    double d = cellData.getDoubleValue();
+                    String newStringValue = d + "";
+                    if (!newStringValue.contains("E")) {
+                        if (newStringValue.endsWith(".0")) {
+                            stringValue = newStringValue.substring(0, newStringValue.length() - 2);
+                        } else {
+                            stringValue = newStringValue;
+                        }
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            if (stringValue.contains("\"\"") && stringValue.startsWith("\"") && stringValue.endsWith("\"")) {
+                //remove spuriouse quote marks
+                stringValue = stringValue.substring(1, stringValue.length() - 1).replace("\"\"", "\"");
+            }
+            returnString = stringValue;
+        }
+        return  returnString;
+    }
+
 
     private boolean inSet(String toTest, String[] set) {
         for (String element : set) {
