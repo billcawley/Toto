@@ -156,7 +156,11 @@ public class BookUtils {
             }
         }
         if (NumberUtils.isNumber(sValue)) {
-            sCell.setValue(Double.parseDouble(sValue));
+            try {
+                sCell.setValue(Double.parseDouble(sValue));
+            }catch(Exception e){
+                //isNumber seems to allow 100000L   so ignore the exception - it's not a number
+            }
         }
     }
 
