@@ -93,7 +93,7 @@ public class ExcelController {
             if (logon != null && logon.length() > 0) {
                 loggedInUser = LoginService.loginLoggedInUser("", database, logon, password, false);
                 if (loggedInUser == null) {
-                    return "User " + logon + " with this password does not exist";
+                    return "error: User " + logon + " with this password does not exist";
                 }
                 if (!"nic@azquo.com".equalsIgnoreCase(logon) && !SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
@@ -309,12 +309,7 @@ public class ExcelController {
                     if (itemsChanged > 0) {
                         OnlineReport report = OnlineReportDAO.findById(excelJsonSaveRequest.reportId);
                         loggedInUser.setContext(excelJsonSaveRequest.context); // in this case context for provenance
-                        result = SpreadsheetService.saveData(loggedInUser, excelJsonSaveRequest.region, excelJsonSaveRequest.reportId, report.getReportName());
-                        if ("true".equals(result)) {
-                            return itemsChanged + " cells saved.";
-                        } else {
-                            return result;
-                        }
+                        return SpreadsheetService.saveData(loggedInUser, excelJsonSaveRequest.region, excelJsonSaveRequest.reportId, report.getReportName());
                     } else {
                         return "No changed detected.";
                     }
