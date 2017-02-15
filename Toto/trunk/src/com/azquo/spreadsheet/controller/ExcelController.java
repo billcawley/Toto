@@ -319,7 +319,7 @@ public class ExcelController {
                         loggedInUser.setContext(excelJsonSaveRequest.context); // in this case context for provenance
                         return SpreadsheetService.saveData(loggedInUser, excelJsonSaveRequest.region, excelJsonSaveRequest.reportId, report.getReportName());
                     } else {
-                        return "No changed detected.";
+                        return "true 0";
                     }
                 }
             }
