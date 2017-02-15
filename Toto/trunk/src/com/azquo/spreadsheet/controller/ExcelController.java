@@ -253,11 +253,19 @@ public class ExcelController {
                     // ok now I need to look at the data sent by the excel and see if I need to change the cells and headings.
                     // CellFOrDisplay doens't detect changes so here I need to guess whether a change has happened or not to lessen checks on the server
 
-                    // todo : problem. If the data region is bigger than the sent cells then in ZK this is a moot point, changes outside the data region are ignored.
-                    // here they are not, the contents of teh data region are sent back including for example empty space in ad hoc stuff and this trips it up.
-                    // ignore changes outside the area? Not sure . . .
-
                     if (!excelJsonSaveRequest.data.isEmpty()) {
+                        // ignore changes outside the area - trim down to the sent data size
+                        if (excelJsonSaveRequest.data.size() > sentData.size()){
+                            excelJsonSaveRequest.data = excelJsonSaveRequest.data.subList(0, sentData.size());
+                        }
+                        if (excelJsonSaveRequest.data.get(0).size() > sentData.get(0).size()) {
+                            for (List<String> row : excelJsonSaveRequest.data){
+                                while (row.size() > sentData.get(0).size()){
+                                    row.remove(row.size() - 1);
+                                }
+                            }
+                        }
+
                         if (excelJsonSaveRequest.data.size() != sentData.size()) {
                             return "data region sizes between Excel and the server don't match for " + excelJsonSaveRequest.region;
                         }
