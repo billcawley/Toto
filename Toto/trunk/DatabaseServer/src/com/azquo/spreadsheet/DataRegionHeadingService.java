@@ -50,8 +50,14 @@ class DataRegionHeadingService {
                         // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
                         // do NOT use singleton list as nice as the code looks! The list may be modified later . . .
                         List<DataRegionHeading> single = new ArrayList<>();
-                        single.add(new DataRegionHeading(sourceCell, true));// we say that an attribute heading defaults to writable, it will defer to the name
-                        row.add(single);
+                        Collection<Name> attributeSet = null;
+                        try {
+                            attributeSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, sourceCell.substring(1));
+                        }catch(Exception e){
+                            //not a recognisable set
+                        }
+                        single.add(new DataRegionHeading(sourceCell, true, attributeSet));// we say that an attribute heading defaults to writable, it will defer to the name
+                               row.add(single);
                     } else {
                         DataRegionHeading.FUNCTION function = null;// that's the value or sum of values
                         // now allow functions

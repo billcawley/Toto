@@ -138,7 +138,7 @@ class AzquoCellService {
         if (rowHeadings.size() == 0) {
             //create a single row heading
             rowHeadings.add(new ArrayList<>());
-            rowHeadings.get(0).add(new DataRegionHeading(null, false));
+            rowHeadings.get(0).add(new DataRegionHeading(null, false, null));
         }
         List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings, columnHeadings, contextHeadings, languages, valueId, quiet);
         time = (System.currentTimeMillis() - track);

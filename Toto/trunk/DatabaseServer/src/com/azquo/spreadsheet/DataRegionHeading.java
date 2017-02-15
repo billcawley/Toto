@@ -47,6 +47,7 @@ public class DataRegionHeading {
     private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
     private final Collection<Name> valueFunctionSet; // just used for valueparentcount
     private final double doubleParameter; // initially used for percentile, could be others. I think this needs to be rearranged at some point but for the moment make percentile work.
+    private final Collection<Name> attributeSet;
 
     DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, Set<Name> valueFunctionSet) {
         this(name, writeAllowed,function,suffix, description, null, valueFunctionSet, 0);
@@ -62,10 +63,11 @@ public class DataRegionHeading {
         this.offsetHeadings = offsetHeadings;
         this.valueFunctionSet = valueFunctionSet;
         this.doubleParameter = doubleParameter;
+        this.attributeSet = null;
      }
 
     // no functions with attributes for the moment
-    DataRegionHeading(String attribute, boolean writeAllowed) {
+    DataRegionHeading(String attribute, boolean writeAllowed, Collection<Name> attributeSet) {
         this.name = null;
         this.attribute = attribute;
         this.writeAllowed = writeAllowed;
@@ -75,6 +77,8 @@ public class DataRegionHeading {
         this.offsetHeadings = null;
         this.valueFunctionSet = null;
         this.doubleParameter = 0;
+        this.attributeSet = attributeSet;
+
     }
 
     public Name getName() {
@@ -84,6 +88,8 @@ public class DataRegionHeading {
     public String getAttribute() {
         return attribute;
     }
+
+    public Collection<Name> getAttributeSet() {return attributeSet; }
 
     boolean isWriteAllowed() {
         return writeAllowed;
@@ -136,4 +142,6 @@ public class DataRegionHeading {
     double getDoubleParameter() {
         return doubleParameter;
     }
+
+
 }
