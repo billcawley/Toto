@@ -222,9 +222,13 @@ public class BookUtils {
     // duff names can casue all sorts of problems, best to zap them
     static void removeNamesWithNoRegion(Book book){
         for (SName name : book.getInternalBook().getNames()){
-            if (name.getRefersToCellRegion() == null){
+            if (name.getRefersToCellRegion() == null && name.getRefersToFormula()==null){
                 // how to remove the name?
-                book.getInternalBook().deleteName(name);
+               try{
+                   book.getInternalBook().deleteName(name);
+               }catch(Exception e){
+                   //maybe we cannot delete in this way
+               }
             }
         }
     }
