@@ -5,6 +5,7 @@ import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
@@ -176,7 +177,24 @@ public class ExcelController {
                 // example from C# in excel!
                 //{"rowHeadings":[["Opening balance"],["Inputs"],["Withdrawals"],["Interest"],["Closing balance"]],"columnHeadings":[["`All Months` children"]],"context":[[""]]}
                 ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json, ExcelJsonRequest.class);
-                // value id??
+                // set the DB if it's not set and the report is only allowed on one database
+                if (loggedInUser.getDatabase() == null){
+                    if (loggedInUser.getUser().isAdministrator()){
+                        List<Integer> databaseIdsForReportId = DatabaseReportLinkDAO.getDatabaseIdsForReportId(excelJsonRequest.reportId);
+                        if (databaseIdsForReportId.size() == 1){
+                            LoginService.switchDatabase(loggedInUser, DatabaseDAO.findById(databaseIdsForReportId.iterator().next())); // fragile?
+                        }
+                    } else {
+                        OnlineReport or = OnlineReportDAO.findById(excelJsonRequest.reportId);
+                        TypedPair<OnlineReport, Database> onlineReportDatabaseTypedPair = loggedInUser.getPermissionsFromReport().get(or.getReportName().toLowerCase());
+                        if (onlineReportDatabaseTypedPair != null){
+                            LoginService.switchDatabase(loggedInUser, onlineReportDatabaseTypedPair.getSecond());
+                        }
+                    }
+                }
+                if (loggedInUser.getDatabase() == null){ // still null
+                    return "error: unable to set database for report id " + excelJsonRequest.reportId;
+                }
                 // ok this will have to be moved
                 String optionsSource = excelJsonRequest.optionsSource != null ? excelJsonRequest.optionsSource : "";
 
