@@ -178,7 +178,7 @@ public class SpreadsheetService {
             //if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
             final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
-            if (result.equals("true")) { // then reset the cells and headings object to reflect the changed state
+            if (result.startsWith("true")) { // then reset the cells and headings object to reflect the changed state
                 for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
                     for (CellForDisplay cell : row) {
                         if (cell.isChanged()) {

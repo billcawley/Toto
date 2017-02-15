@@ -11,6 +11,7 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.controller.OnlineController;
+import com.azquo.spreadsheet.controller.RemoteController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.zk.ReportRenderer;
@@ -361,7 +362,7 @@ public final class ImportService {
 
     private static String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
         String errorMessage = "";
-        int nonBlankItems = 0;
+        int saveCount = 0;
         Sheet sourceSheet = sourceBook.getSheetAt(0);
         for (SName sName : sourceBook.getInternalBook().getNames()) {
             String name = sName.getName();
@@ -402,7 +403,6 @@ public final class ImportService {
                                     } else { // I think defaulting to zero is correct here?
                                         data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(0.0);
                                     }
-                                    if (cellValue.getSecond().length() > 0) nonBlankItems++;
                                 }
                             }
                         }
@@ -413,9 +413,12 @@ public final class ImportService {
                     if (cellsAndHeadingsForDisplay != null) {
                         //needs to be able to handle repeat regions here....
                         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                        if (data.size() == sourceRegion.getRowCount() && data.get(0).size() == sourceRegion.getColumnCount()) {//ignore region sizes which do not match (e.g. on transaction entries showing past entries)
-                            for (int row = 0; row < sourceRegion.getRowCount(); row++) {
-                                for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
+                        //NOTE - the import sheet may contain blank lines at the bottom and/or blank columns at the right where the original data region exceeds the size of the data found (row/column headings are sets).  This is acceptable
+                        // TODO - WE SHOULD CHECK THAT THE HEADINGS MATCH
+                        if (data.size() <= sourceRegion.getRowCount() && data.get(0).size() <= sourceRegion.getColumnCount()) {//ignore region sizes which do not match (e.g. on transaction entries showing past entries)
+                            //work on the original data size, not the uploaded size with the blank lines
+                            for (int row = 0; row < data.size(); row++) {
+                                for (int col = 0; col < data.get(0).size(); col++) {
                                     // note that this function might return a null double but no null string. Perhaps could be mroe consistent? THis area is a bit hacky . . .
                                     final TypedPair<Double, String> cellValue = ImportFileUtilities.getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
                                     data.get(row).get(col).setNewStringValue(cellValue.getSecond());
@@ -425,17 +428,21 @@ public final class ImportService {
                                     } else { // I think defaulting to zero is correct here?
                                         data.get(row).get(col).setNewDoubleValue(0.0);
                                     }
-                                    if (cellValue.getSecond().length() > 0) {
-                                        nonBlankItems++;
-                                    }
                                 }
                             }
                         }
                     }
                     try {
                         final String result = SpreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
-                        if (!result.equals("true")) {// unlikely to fail here I think but catch it anyway . . .
+                        if (!result.startsWith("true")) {// unlikely to fail here I think but catch it anyway . . .
+
                             errorMessage += "- in region " + regionName + " -" + result;
+                        }else{
+                            try{
+                                saveCount += Integer.parseInt(result.substring(5));  //count follows the word 'true'
+                            }catch(Exception e){
+
+                            }
                         }
                     } catch (Exception e) {
                         errorMessage += "- in region " + regionName + " -" + e.getMessage();
@@ -443,7 +450,7 @@ public final class ImportService {
                 }
             }
         }
-        return errorMessage + " - " + nonBlankItems + " data items transferred successfully";
+        return errorMessage + " - " + saveCount + " data items amended successfully";
     }
 
     private static String getRegionName(String name) {
@@ -464,7 +471,8 @@ public final class ImportService {
         for (SName sName : book.getInternalBook().getNames()) {
             String rangeName = sName.getName().toLowerCase();
             if (rangeName.endsWith("chosen")) {
-                choices.put(rangeName.substring(0, rangeName.length() - 6), BookUtils.getSnameCell(sName).getStringValue());
+                //there is probably a more elegant solution than this....
+                choices.put(rangeName.substring(0, rangeName.length() - 6), ImportFileUtilities.getCellValue(book.getSheet(sName.getRefersToSheetName()),sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getSecond());
             }
         }
         return choices;
