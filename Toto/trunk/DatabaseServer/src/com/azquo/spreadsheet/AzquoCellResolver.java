@@ -392,14 +392,32 @@ But can use a library?
         if (names.size() != 1) {
             locked.isTrue = true;
         }
+        Collection<Name> attributeSet = null;
+        for (DataRegionHeading heading:headings){
+            if (heading.getAttributeSet() != null){
+                attributeSet = heading.getAttributeSet();
+                break;
+            }
+        }
         Set<String> attributes = DataRegionHeadingService.attributesFromDataRegionHeadings(headings);
         String stringResult = null;
         double numericResult = 0;
         int count = 0;
         String attValue = null;
+        //code for multiple attributes by EFC  - WFC doesn't understand it!
         for (Name n : names) { // go through each name
-            for (String attribute : attributes) { // and for each name the
-                attValue = n.getAttribute(attribute.replace("`", "").toUpperCase());
+            for (String attribute : attributes) {
+                if (attributeSet!=null){
+                    for (Name possibleParent:attributeSet){
+                        if (possibleParent.getChildren().contains(n)){
+                            attValue = possibleParent.getDefaultDisplayName();
+                            break;
+                        }
+                    }
+                }
+                if (attValue== null){
+                    attValue = n.getAttribute(attribute.replace("`", "").toUpperCase());
+                }
                 if (attValue != null) {
                     count++;
                     if (!locked.isTrue && n.getAttribute(attribute, false, new HashSet<>()) == null) { // the attribute is not against the name itself (it's from the parent or structure)
