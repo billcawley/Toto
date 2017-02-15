@@ -292,7 +292,6 @@ public class DSSpreadsheetService {
                                 , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
                                 , cell.getUnsortedRow(), cell.getUnsortedCol(), databaseAccessToken.getLanguages());
                         if (azquoCell != null && !azquoCell.isLocked()) {
-                            numberOfValuesModified++;
                             // this save logic is the same as before but getting necessary info from the AzquoCell
                             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
                             if (valuesForCell != null) {
@@ -390,9 +389,11 @@ public class DSSpreadsheetService {
                                             final Value theValue = valuesForCell.getValues().get(0);
                                             if (cell.getNewStringValue() != null && cell.getNewStringValue().length() > 0) {
                                                 //sometimes non-existent original values are stored as '0'
-                                                ValueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getNewStringValue());
-                                                numberOfValuesModified++;
-                                            } else {
+                                                if ( !cell.getNewStringValue().equals(theValue.getText())){
+                                                    ValueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getNewStringValue());
+                                                    numberOfValuesModified++;
+                                                }
+                                              } else {
                                                 theValue.delete();
                                                 numberOfValuesModified++;
                                             }
@@ -409,20 +410,25 @@ public class DSSpreadsheetService {
                                             && valuesForCell.getAttributeNames() != null && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
                                         Name toChange = valuesForCell.getNames().get(0);
                                         String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(StringLiterals.QUOTE + "", "");//remove the initial '.' and any `
-                                        Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
-                                        if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDBIndex().attributeExistsInDB(attribute)) {
+                                        String oldAttVal = toChange.getAttribute(attribute);
+                                        if (!oldAttVal.equals(cell.getNewStringValue())) {
+                                            Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
+
+                                            if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDBIndex().attributeExistsInDB(attribute)) {
                                     /* right : when populating attribute based data findParentAttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
                                     returned is not in fact attributes but the name of an intermediate set in the hierarchy - suppose you want the category of a product the structure is
                                     all categories -> category -> product and .all categories is the column heading and the products are row headings then you'll get the category for the product as the cell value
                                      So attSet following that example is "All Categories", category is a (possibly) new name that's a child of all categories and then we need to add the product
                                      , named toChange at the moment to that category.
                                     */
-                                            //logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getNewStringValue() + " within " + attribute);
-                                            Name category = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getNewStringValue(), attSet, true);
-                                            category.addChildWillBePersisted(toChange);
-                                        } else {// simple attribute set
-                                            //logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
-                                            toChange.setAttributeWillBePersisted(attribute, cell.getNewStringValue());
+                                                //logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getNewStringValue() + " within " + attribute);
+                                                Name category = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getNewStringValue(), attSet, true);
+                                                category.addChildWillBePersisted(toChange);
+                                            } else {// simple attribute set
+                                                //logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
+                                                toChange.setAttributeWillBePersisted(attribute, cell.getNewStringValue());
+                                            }
+                                            numberOfValuesModified++;
                                         }
                                     }
                                 }
@@ -446,7 +452,7 @@ public class DSSpreadsheetService {
         // clear the caches after, if we do before then some will be recreated as part of saving.
         // Is this a bit overkill given that it should clear as it goes? I suppose there's the query and count caches, plus parents of the changed names
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
-        return "true";
+        return "true " + numberOfValuesModified ;
     }
 
     private static boolean compareCells(String a1, String a2) {
