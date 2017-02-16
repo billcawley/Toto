@@ -236,7 +236,7 @@ public class ReportService {
                 }
                 if (!noSave) {
                     final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
-                    if (!result.equals("true")) {
+                    if (!result.startsWith("true")) {
                         Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
                         saveOk = false;
                     }
@@ -257,7 +257,7 @@ public class ReportService {
                             //region + "-" + repeatRow + "-" + repeatColumn
                             if (loggedInUser.getSentCells(reportId, region.toLowerCase() + "-" + row + "-" + col) != null) { // the last ones on the repeat scope might be blank
                                 final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
-                                if (!result.equals("true")) {
+                                if (!result.startsWith("true")) {
                                     Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
                                     saveOk = false;
                                 }
