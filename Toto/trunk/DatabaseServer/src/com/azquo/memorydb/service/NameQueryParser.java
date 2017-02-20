@@ -37,7 +37,8 @@ public class NameQueryParser {
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            final NameSetList nameSetList = interpretSetTerm(nameName, formulaStrings, referencedNames, attributeStrings);
+            NameSetList  nameSetList = null;
+            nameSetList = interpretSetTerm(nameSetList, nameName, formulaStrings, referencedNames, attributeStrings);
             Set<Name> nameSet = nameSetList.set != null ? nameSetList.set : HashObjSets.newMutableSet(nameSetList.list); // just wrap if it's a list, should be fine. This object return type is for the query parser really
             toReturn.add(nameSet);
         }
@@ -199,7 +200,7 @@ public class NameQueryParser {
                 if (op == StringLiterals.NAMEMARKER) { // then a straight name children from to etc. Resolve in interpretSetTerm
                     stackCount++;
                     // now returns a custom little object that hods a list a set and whether it's immutable
-                    nameStack.add(interpretSetTerm(setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings));
+                    nameStack.add(interpretSetTerm(null,setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings));
                 } else if (stackCount-- < 2) {
                     throw new Exception("not understood:  " + formulaCopy);
                 } else if (op == '*') { // * meaning intersection here . . .
@@ -213,6 +214,17 @@ public class NameQueryParser {
                 } else if (op == StringLiterals.ASSYMBOL) {
                     resetDefs = true;
                     NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount);
+                }
+                if (op!=StringLiterals.NAMEMARKER && nextTerm > setFormula.length() && pos < nextTerm - 3){
+                    //there's still more stuff to understand!  Having created a set, we may now wish to operate on that set
+                    int childrenPos = setFormula.substring(pos).indexOf("children");
+                    if (childrenPos > 0) {
+
+                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1, pos + childrenPos), formulaStrings, referencedNames, attributeStrings));
+                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(childrenPos + pos), formulaStrings, referencedNames, attributeStrings));
+                    }else{
+                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1), formulaStrings, referencedNames, attributeStrings));
+                    }
                 }
                 pos = nextTerm;
             }
@@ -280,12 +292,13 @@ public class NameQueryParser {
 
     private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
 
-    private static NameSetList interpretSetTerm(String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
+    private static NameSetList interpretSetTerm(NameSetList namesFound, String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
         interpretSetTermCount.incrementAndGet();
         //System.out.println("interpret set term . . ." + setTerm);
         final String levelString = StringUtils.getInstruction(setTerm, StringLiterals.LEVEL);
         String fromString = StringUtils.getInstruction(setTerm, StringLiterals.FROM);
         String offsetString = StringUtils.getInstruction(setTerm, StringLiterals.OFFSET);
+        String backstepString = StringUtils.getInstruction(setTerm, StringLiterals.BACKSTEP);
         String parentsString = StringUtils.getInstruction(setTerm, StringLiterals.PARENTS);
         String childrenString = StringUtils.getInstruction(setTerm, StringLiterals.CHILDREN);
         final String sorted = StringUtils.getInstruction(setTerm, StringLiterals.SORTED);
@@ -302,22 +315,28 @@ public class NameQueryParser {
         if (levelString != null) {
             childrenString = "true";
         }
-        NameSetList namesFound; // default for a single name?
-        // used to be ; at the end of a name
-        String nameString = setTerm;
-        if (setTerm.indexOf(' ') > 0) {
-            nameString = setTerm.substring(0, setTerm.indexOf(' ')).trim();
-        }
-        final Name name = getNameFromListAndMarker(nameString, referencedNames);
-        if (name == null) {
-            throw new Exception(" not understood: " + nameString);
-        }
-        if (childrenString == null && fromString == null && toString == null && countString == null) {
-            List<Name> singleName = new ArrayList<>();
-            singleName.add(name);
-            namesFound = new NameSetList(null, singleName, true);// mutable single item list
-        } else {
-            namesFound = NameService.findChildrenAtLevel(name, levelString); // reassign names from the find children clause
+        if (namesFound==null || namesFound.list.size() == 1) {
+            Name name;
+
+            if (namesFound == null) {
+                String nameString = setTerm;
+                if (setTerm.indexOf(' ') > 0) {
+                    nameString = setTerm.substring(0, setTerm.indexOf(' ')).trim();
+                }
+                name = getNameFromListAndMarker(nameString, referencedNames);
+                if (name == null) {
+                    throw new Exception(" not understood: " + nameString);
+                }
+            }else{
+                name = namesFound.list.get(0);
+            }
+            if (childrenString == null && fromString == null && toString == null && countString == null) {
+                List<Name> singleName = new ArrayList<>();
+                singleName.add(name);
+                namesFound = new NameSetList(null, singleName, true);// mutable single item list
+            } else {
+                namesFound = NameService.findChildrenAtLevel(name, levelString); // reassign names from the find children clause
+            }
         }
         if (whereString != null) {
             // will only work if it's a list internally
@@ -361,6 +380,7 @@ public class NameQueryParser {
         // do from/to/count at the end. It was above for no good reason I can see
         if (fromString == null) fromString = "";
         if (offsetString == null) offsetString = "";
+        if (backstepString != null) offsetString = "-" + backstepString;
         if (toString == null) toString = "";
         if (countString == null) countString = "";
         if (fromString.length() > 0 || toString.length() > 0 || countString.length() > 0) {
