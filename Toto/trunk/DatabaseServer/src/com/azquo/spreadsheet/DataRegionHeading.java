@@ -20,7 +20,7 @@ import java.util.Set;
  *
  */
 public class DataRegionHeading {
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, PERCENTILE, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT} // exact meaning get only values that match exactly the names passed. Generally would only be one value
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, PERCENTILE, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT}
     /*
     COUNT               Value function      The number of values rather than the sum
     AVERAGE             Value function      The average value
@@ -31,7 +31,7 @@ public class DataRegionHeading {
     NAMECOUNT           Name function       The number of elements of the set
     PATHCOUNT           Name function       The number of paths between the sets (e.g. the number of mailings sent to a specified group of customers)
     PERMUTE             Heading function    The system will find all the combinations of the immediate children of the list to be permuted, selected on the basis of sharing common descendants
-
+    EXACT               Value function      exact meaning get only values that match exactly the names passed. Generally would only be one value
      */
     enum SUFFIX {UNLOCKED, LOCKED, SPLIT}
     /*
