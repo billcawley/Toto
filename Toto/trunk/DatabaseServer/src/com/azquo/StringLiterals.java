@@ -15,6 +15,7 @@ public class StringLiterals {
     public static final String PARENTS = "parents";
     public static final String FROM = "from";
     public static final String OFFSET = "offset";
+    public static final String BACKSTEP = "backstep";
     public static final String TO = "to";
     public static final String AND = "and";
     public static final String COUNT = "count";
