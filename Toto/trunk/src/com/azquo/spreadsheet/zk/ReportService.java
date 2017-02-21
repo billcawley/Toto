@@ -117,15 +117,17 @@ public class ReportService {
         boolean showSave = false;
         // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
         // can't do this in the fill region as formulae need to be dealt with outside
-        final Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator();// only rows with values in them
-        while (rowIterator.hasNext()) {
-            Iterator<SCell> cellIterator = sheet.getInternalSheet().getCellIterator(rowIterator.next().getIndex());
-            while (cellIterator.hasNext()) {
-                SCell cell = cellIterator.next();
-                if (cell.getType() == SCell.CellType.FORMULA) {
-                    //System.out.println("doing the cell thing on " + cell);
-                    cell.getFormulaResultType();
-                    cell.clearFormulaResultCache();
+        for (int formulaeResolveTries = 0; formulaeResolveTries < 3; formulaeResolveTries++){
+            final Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator();// only rows with values in them
+            while (rowIterator.hasNext()) {
+                Iterator<SCell> cellIterator = sheet.getInternalSheet().getCellIterator(rowIterator.next().getIndex());
+                while (cellIterator.hasNext()) {
+                    SCell cell = cellIterator.next();
+                    if (cell.getType() == SCell.CellType.FORMULA) {
+                        //System.out.println("doing the cell thing on " + cell);
+                        cell.getFormulaResultType();
+                        cell.clearFormulaResultCache();
+                    }
                 }
             }
         }
