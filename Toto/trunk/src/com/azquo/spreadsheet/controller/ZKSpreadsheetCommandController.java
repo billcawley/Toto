@@ -195,6 +195,7 @@ public class ZKSpreadsheetCommandController {
                                 }
                             }
                         }
+                        Ranges.range(ss.getSelectedSheet()).notifyChange(); // try to update the lot - sometimes it seems it does not!
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
                         if (saveMessage.length() > 0) {
                             Clients.evalJavaScript("alert(\"" + saveMessage + "\")");

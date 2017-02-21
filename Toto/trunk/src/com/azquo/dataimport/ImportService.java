@@ -445,6 +445,7 @@ public final class ImportService {
                             }
                         }
                     } catch (Exception e) {
+                        e.printStackTrace();
                         errorMessage += "- in region " + regionName + " -" + e.getMessage();
                     }
                 }

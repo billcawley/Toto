@@ -7,6 +7,7 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.model.SSheet;
 import org.zkoss.zss.ui.Spreadsheet;
@@ -45,6 +46,7 @@ class ZKComposerUtils {
                     }
                 }
             }
+            Ranges.range(myzss.getSelectedSheet()).notifyChange(); // try to update the lot - sometimes it seems it does not!
             // ok there is a danger right here : on some sheets the spreadsheet gets kind of frozen or rather the cells don't calculate until something like a scroll happens. Not a problem when not full screen either
             // really something to send to ZK? Could be a a pain to prepare. TODO.
         } catch (Exception e) {
