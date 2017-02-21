@@ -173,13 +173,13 @@ public class ZKSpreadsheetCommandController {
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".pdf", "pdf", "application/pdf", file, true));
                     }
 
-                    boolean reloadAfterSave = false;
+                    String saveMessage = "";
 
                     if ("Save".equals(action)) {
-                        reloadAfterSave = ReportService.save(ss,loggedInUser);
+                        saveMessage = ReportService.save(ss,loggedInUser);
                     }
 
-                    if ("RestoreSavedValues".equals(action) || reloadAfterSave) {
+                    if ("RestoreSavedValues".equals(action) || saveMessage.startsWith("Success")) {
                         final Book book = ss.getBook();
                         final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
                         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
@@ -196,8 +196,8 @@ public class ZKSpreadsheetCommandController {
                             }
                         }
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
-                        if (reloadAfterSave) {
-                            Clients.evalJavaScript("alert(\"Save successful\")");
+                        if (saveMessage.length() > 0) {
+                            Clients.evalJavaScript("alert(\"" + saveMessage + "\")");
                         }
                     }
 

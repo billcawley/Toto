@@ -215,12 +215,14 @@ public class ReportService {
     }
 
     // factored off from the command controller
-    public static boolean save(Spreadsheet ss, LoggedInUser loggedInUser) throws Exception{
+    public static String save(Spreadsheet ss, LoggedInUser loggedInUser) throws Exception{
         // todo - provenance?
         final Book book = ss.getBook();
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         boolean saveOk = true;
+        String error = null;
+        int savedItems = 0;
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
@@ -238,7 +240,13 @@ public class ReportService {
                     final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
                     if (!result.startsWith("true")) {
                         Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
-                        saveOk = false;
+                        error = result;
+                    }else{
+                        try{
+                            savedItems += Integer.parseInt(result.substring(5));
+                        } catch(Exception e){
+
+                        }
                     }
                 }
             }
@@ -260,26 +268,33 @@ public class ReportService {
                                 if (!result.startsWith("true")) {
                                     Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
                                     saveOk = false;
+                                }else{
+                                    try{
+                                        savedItems += Integer.parseInt(result.substring(5));
+                                    } catch(Exception e){
+
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-            if (!saveOk) {
+            if (error != null) {
                 break; // stop looping through the names if a save failed
             }
         }
         // new thing, look for followon, guess we need an instance of ZK azquobook utils
         // need to show readout like executing todo. On that topic could the executing loading screen say "running command?" or something similar?
-        if (saveOk) {
+        if (error == null) {
+            error = "Success: " + savedItems + " values saved";
             loggedInUser.userLog("Save : " + onlineReport.getReportName());
             ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
             // unlock here makes sense think, if duff save probably leave locked
             SpreadsheetService.unlockData(loggedInUser);
-            return true;
+            return error;
         } else {
-            return false;
+            return error;
         }
     }
 }

@@ -146,11 +146,12 @@ public class ZKComposer extends SelectorComposer<Component> {
                     && event.getColumn() <= saveName.getRefersToCellRegion().getLastColumn()
                     ) {
                 try{
-                    if (ReportService.save(myzss, loggedInUser)){
+                    String saveResult = ReportService.save(myzss, loggedInUser);
+                    if (saveResult.startsWith("Success")){
                         ZKComposerUtils.reloadBook(myzss, book);
                         // think this wil;l do it
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
-                        Clients.evalJavaScript("alert(\"Save successful\")");
+                        Clients.evalJavaScript("alert(\""+saveResult + "\")");
                     }
                 } catch (Exception e){
                     e.printStackTrace();
