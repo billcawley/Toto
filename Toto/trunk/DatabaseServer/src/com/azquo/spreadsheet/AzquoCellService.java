@@ -45,7 +45,10 @@ class AzquoCellService {
         for (List<TypedPair<Double, String>> check : sortListsMap.values()) {
             for (int i = 0; i < sortCount; i++) {
                 TypedPair<Double, String> value = check.get(i);
-                if (value.getFirst() == null) {
+                // hack for gaps, make them 0, lets see how it goes (of course one non blank will mean string sorting which is correct)
+                if ("".equals(value.getSecond()) && value.getFirst() == null){
+                    check.set(i, new TypedPair<>(0.0,null));
+                } else if (value.getFirst() == null) {
                     if (doubleSort.get(i)) {
                         doubleSort.set(i, false);
                         if (--doubleSorts == 0) {
@@ -214,14 +217,13 @@ class AzquoCellService {
         return shared;
     }
 
-    // for looking up a heading given a string. Used to find the col/row index to sort on (as in I want to sort on "Colour", ok what's the column number?)
+    // have removed non number support
 
     private static int findPosition(List<List<DataRegionHeading>> headings, String toFind, List<String> languages) {
         if (toFind == null || toFind.length() == 0) {
             return -1;
         }
         try {
-
             int col = Integer.parseInt(toFind.trim());
             if (col > 0) {
                 return col - 1;
@@ -229,7 +231,7 @@ class AzquoCellService {
         } catch (Exception e) {
             //so it isn't a number!
         }
-        toFind = toFind.replace(" ", "").replace("`", "").toLowerCase();
+/*        toFind = toFind.replace(" ", "").replace("`", "").toLowerCase();
         int count = 0;
         for (List<DataRegionHeading> heading : headings) {
             DataRegionHeading dataRegionHeading = heading.get(heading.size() - 1);
@@ -250,7 +252,7 @@ class AzquoCellService {
                 }
             }
             count++;
-        }
+        }*/
         return -1;
     }
 

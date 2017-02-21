@@ -411,7 +411,7 @@ public class DSSpreadsheetService {
                                         Name toChange = valuesForCell.getNames().get(0);
                                         String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(StringLiterals.QUOTE + "", "");//remove the initial '.' and any `
                                         String oldAttVal = toChange.getAttribute(attribute);
-                                        if (!oldAttVal.equals(cell.getNewStringValue())) { // NPE here - get on that!
+                                        if (oldAttVal == null || !oldAttVal.equals(cell.getNewStringValue())) {
                                             Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
 
                                             if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDBIndex().attributeExistsInDB(attribute)) {

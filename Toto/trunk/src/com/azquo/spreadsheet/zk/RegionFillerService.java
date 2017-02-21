@@ -193,7 +193,7 @@ class RegionFillerService {
                     }
                     if (columnSort && !heading.equals(".")) { // don't sort "." headings they are probably derived in the spreadsheet
                         String sortArrow = " ↕";
-                        if (heading.equals(userRegionOptions.getSortColumn())) {
+                        if ((((col - displayColumnHeadings.getColumn()) + 1) + "").equals(userRegionOptions.getSortColumn())) {
                             sortArrow = userRegionOptions.getSortColumnAsc() ? " ↑" : " ↓";
                         }
                         if (!sCell.getStringValue().contains(sortArrow)) {

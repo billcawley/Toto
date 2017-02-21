@@ -206,19 +206,18 @@ public class ZKComposer extends SelectorComposer<Component> {
                     int localRow = cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1;//assume the bottom row
                     int localCol = event.getColumn() - name.getRefersToCellRegion().getColumn();
                     if (cellsAndHeadingsForDisplay.getColumnHeadings().get(localRow) != null) {
-                        String originalHeading = cellsAndHeadingsForDisplay.getColumnHeadings().get(localRow).get(localCol);
-                        if (originalHeading != null) {
+                        if (cellsAndHeadingsForDisplay.getColumnHeadings().get(localRow).get(localCol) != null) {
                             //← → ↑ ↓ ↔ ↕
                             //new behaviour, store the column number rather than the name. - WFC
-                            originalHeading = localCol + "";
+                            // EFC - this is a bit of hack, the sort cols are incremented and decremented later to make them human readable and left as a string to allow 1&2&3 multiple column sorting.
                             if (chosen.endsWith("↑")) {
-                                userRegionOptions.setSortColumn(originalHeading);
+                                userRegionOptions.setSortColumn((localCol + 1) + "");
                                 userRegionOptions.setSortColumnAsc(true);
                                 UserRegionOptionsDAO.store(userRegionOptions);
                                 reload = true;
                             }
                             if (chosen.endsWith("↓")) {
-                                userRegionOptions.setSortColumn(originalHeading);
+                                userRegionOptions.setSortColumn((localCol + 1) + "");
                                 userRegionOptions.setSortColumnAsc(false);
                                 UserRegionOptionsDAO.store(userRegionOptions);
                                 reload = true;
