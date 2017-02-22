@@ -482,10 +482,11 @@ class AzquoCellService {
 
     private static boolean hasAttribute(AzquoCell cell){
         for(DataRegionHeading heading:cell.getColumnHeadings()){
-            if (heading.getAttribute()!= null) return true;
+
+            if (heading != null && heading.getAttribute()!= null) return true;
         }
         for (DataRegionHeading heading:cell.getRowHeadings()) {
-            if (heading.getAttribute() != null) return true;
+            if (heading != null && heading.getAttribute() != null) return true;
 
         }
         return false;
