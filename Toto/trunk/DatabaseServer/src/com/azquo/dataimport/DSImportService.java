@@ -323,7 +323,7 @@ public class DSImportService {
             }
         }
         // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
-        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, attributeNames, headers, importInterpreterLookup, fileNameForReplace);
+        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, new ArrayList<String>(attributeNames), headers, importInterpreterLookup, fileNameForReplace);//attribute names may have additions when language is in the context
         lineIteratorAndBatchSize.headings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, attributeNames);
         return lineIteratorAndBatchSize;
     }

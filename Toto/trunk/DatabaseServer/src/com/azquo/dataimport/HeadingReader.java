@@ -68,7 +68,11 @@ class HeadingReader {
                     // if the heading ends with | the context heading will be blank, ignore it. A way to clear context if you just put a single | at the end of a heading
                     if (contextHeadingString.length() > 0) {
                         // context headings may not use many features but using the standard heading objects and interpreter is fine
-                        contextHeadings.add(interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames));
+                        MutableImportHeading contextHeading = interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames);
+                        if (contextHeading.attribute != null){
+                            attributeNames.add(contextHeading.attribute);//not sure when this should be removed.  It must apply until the context is changed THIS IS AN ADDITIONAL LANGUAGE USED TO UNDERSTAND THE HEADERS - NOT THE DATA!
+                        }
+                        contextHeadings.add(contextHeading);
                     }
                     header = header.substring(0, dividerPos);
                     dividerPos = header.lastIndexOf(headingDivider);
@@ -308,7 +312,9 @@ class HeadingReader {
                         }
                         if (!contextHeading.peers.isEmpty()) { // then try to resolve the peers! Generally context headings will feature one with peers but it's not 100%
                             // Context only really works with name in the heading otherwise how would the context differ over different headings, hence make the main heading name if it's not there
-                            mutableImportHeading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, false);
+                            if (mutableImportHeading.name==null){
+                                mutableImportHeading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, false);
+                            }
                             if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()) {
                                 throw new Exception("context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName());
                             }
