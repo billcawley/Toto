@@ -120,7 +120,7 @@ public class ValueCalculationService {
                         for (Name currentName : seekList) { // so for each of the names I need to see if they are in any of them are in the children of the use level names and if so switch to that use level name
                             boolean found = false;
                             for (Name useLevelName : useLevelNames) {
-                                if (useLevelName.findAllChildren().contains(currentName)) {
+                                if (useLevelName.equals(currentName) || useLevelName.findAllChildren().contains(currentName)) {
                                     found = true;
                                     newSeekList.add(useLevelName);
                                     changed = true;
