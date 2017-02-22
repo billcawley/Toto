@@ -176,11 +176,11 @@ public class AzquoMemoryDBIndex {
             } else { // if there were more than one found taking into account parent criteria simply return the first
                 return possibles.iterator().next();
             }
-            System.out.println("Attribute name : " + attributeNames);
+/*            System.out.println("Attribute name : " + attributeNames);
             System.out.println("Attribute value : " + attributeValue);
             for (Name possible : possibles){
                 System.out.println("id : " + possible.getId() + " atts : " + possible.getAttributes());
-            }
+            }*/
             throw new Exception("Found more than one name for " + attributeValue);
         }
         return null;
