@@ -222,6 +222,12 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 UserRegionOptionsDAO.store(userRegionOptions);
                                 reload = true;
                             }
+                            if (chosen.endsWith("↕")) {
+                                userRegionOptions.setSortColumn("");
+                                userRegionOptions.setSortColumnAsc(false);
+                                UserRegionOptionsDAO.store(userRegionOptions);
+                                reload = true;
+                            }
                         }
                     }
                 }
