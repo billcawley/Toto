@@ -57,7 +57,7 @@ public class DSSpreadsheetService {
                 , regionOptions, databaseAccessToken.getLanguages(), valueId, quiet);
         if (data.size() == 0) {
             //when contextSource = null there is an error on attempting to save
-            return new CellsAndHeadingsForDisplay(regionName, colHeadingsSource, null, new ArrayList<>(), rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
+            return new CellsAndHeadingsForDisplay(regionName, colHeadingsSource, null, null, null, new ArrayList<>(), rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
         }
         List<List<CellForDisplay>> displayData = new ArrayList<>(data.size());
         // todo, think about race conditions here
@@ -130,8 +130,35 @@ public class DSSpreadsheetService {
             }
             lockCheckResultString = sb.toString();
         }
-        return new CellsAndHeadingsForDisplay(regionName, DataRegionHeadingService.convertDataRegionHeadingsToStrings(DataRegionHeadingService.getColumnHeadingsAsArray(data), databaseAccessToken.getLanguages())
-                , DataRegionHeadingService.convertDataRegionHeadingsToStrings(DataRegionHeadingService.getRowHeadingsAsArray(data), databaseAccessToken.getLanguages()), displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, lockCheckResultString);
+        Set<Integer> zeroSavedColumnIndexes = null;
+        Set<Integer> zeroSavedRowIndexes = null;
+        List<List<DataRegionHeading>> columnHeadingsAsArray = DataRegionHeadingService.getColumnHeadingsAsArray(data);
+        List<List<DataRegionHeading>> rowHeadingsAsArray = DataRegionHeadingService.getRowHeadingsAsArray(data);
+        // ok need to work out from the arrays if there is the save zeroes flag on any headings. The arrays are oriented as shown so rows will have a large outer array and columns a large inner array
+        int index = 0;
+        final String STOREZEROES = "STOREZEROES";
+        for (DataRegionHeading dataRegionHeading : columnHeadingsAsArray.get(columnHeadingsAsArray.size() - 1)){
+            if (dataRegionHeading != null && dataRegionHeading.getName() != null && dataRegionHeading.getName().getAttribute(STOREZEROES, false, null) != null){
+                if (zeroSavedColumnIndexes == null){
+                    zeroSavedColumnIndexes = new HashSet<>();// standard implementation should be fine
+                }
+                zeroSavedColumnIndexes.add(index);
+            }
+            index++;
+        }
+        index = 0;
+        for (List<DataRegionHeading> dataRegionHeadings : columnHeadingsAsArray){
+            DataRegionHeading dataRegionHeading = dataRegionHeadings.get(dataRegionHeadings.size() - 1);
+            if (dataRegionHeading != null && dataRegionHeading.getName() != null && dataRegionHeading.getName().getAttribute(STOREZEROES, false, null) != null){
+                if (zeroSavedRowIndexes == null){
+                    zeroSavedRowIndexes = new HashSet<>();// standard implementation should be fine
+                }
+                zeroSavedRowIndexes.add(index);
+            }
+            index++;
+        }
+        return new CellsAndHeadingsForDisplay(regionName, DataRegionHeadingService.convertDataRegionHeadingsToStrings(columnHeadingsAsArray, databaseAccessToken.getLanguages())
+                , DataRegionHeadingService.convertDataRegionHeadingsToStrings(rowHeadingsAsArray, databaseAccessToken.getLanguages()), zeroSavedColumnIndexes, zeroSavedRowIndexes, displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, lockCheckResultString);
     }
 
 

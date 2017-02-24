@@ -159,7 +159,10 @@ public class ReportService {
                                     }
                                     if (sCell.getType() == SCell.CellType.FORMULA) {
                                         if (sCell.getFormulaResultType() == SCell.CellType.NUMBER) { // then check it's value against the DB one . . .
-                                            if (sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
+                                            // zerosaved means that if the heading  name has the relevant attribute
+                                            if ((sCell.getNumberValue() == 0 && (sentCells.getZeroSavedRowIndexes() != null && sentCells.getZeroSavedRowIndexes().contains(row - startRow))
+                                                    || (sentCells.getZeroSavedColumnIndexes() != null && sentCells.getZeroSavedColumnIndexes().contains(col - startCol)))
+                                                    || sCell.getNumberValue() != cellForDisplay.getDoubleValue()) {
                                                 if (useSavedValuesOnFormulae && !cellForDisplay.getIgnored()) { // override formula from DB, only if not ignored
                                                     sCell.setNumberValue(cellForDisplay.getDoubleValue());
                                                 } else { // the formula overrode the DB, get the value ready of saving if the user wants that

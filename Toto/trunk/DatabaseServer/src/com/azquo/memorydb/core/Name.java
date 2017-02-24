@@ -4,7 +4,6 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
-import org.springframework.expression.spel.ast.StringLiteral;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;

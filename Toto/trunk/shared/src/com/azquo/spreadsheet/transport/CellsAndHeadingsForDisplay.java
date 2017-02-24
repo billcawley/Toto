@@ -2,6 +2,7 @@ package com.azquo.spreadsheet.transport;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -19,6 +20,10 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     private final String region; // convenient
     private final List<List<String>> columnHeadings;
     private final List<List<String>> rowHeadings;
+    // ok, on loading the report renderer on the report server data regions can overwrite each other or create data to be saved based on formulae. Typically used when executing.
+    // these two flag rows or columns where a zero result should be saved if there's currently no value for that cell in the DB. Normally 0 is the same as nothing so I don't bother saving.
+    private final Set<Integer> zeroSavedColumnIndexes;
+    private final Set<Integer> zeroSavedRowIndexes;
     private final List<List<CellForDisplay>> data;
     private final List<List<String>> rowHeadingsSource;
     private final List<List<String>> colHeadingsSource;
@@ -27,11 +32,13 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     private final RegionOptions options;
     private final String lockResult;
 
-    public CellsAndHeadingsForDisplay(String region, List<List<String>> columnHeadings, List<List<String>> rowHeadings, List<List<CellForDisplay>> data
+    public CellsAndHeadingsForDisplay(String region, List<List<String>> columnHeadings, List<List<String>> rowHeadings, Set<Integer> zeroSavedColumnIndexes, Set<Integer> zeroSavedRowIndexes, List<List<CellForDisplay>> data
             , List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, long timeStamp, RegionOptions options, String lockResult) {
         this.region = region;
         this.columnHeadings = columnHeadings;
         this.rowHeadings = rowHeadings;
+        this.zeroSavedColumnIndexes = zeroSavedColumnIndexes;
+        this.zeroSavedRowIndexes = zeroSavedRowIndexes;
         this.data = data;
         this.rowHeadingsSource = rowHeadingsSource;
         this.colHeadingsSource = colHeadingsSource;
@@ -51,6 +58,14 @@ public class CellsAndHeadingsForDisplay implements Serializable {
 
     public List<List<String>> getRowHeadings() {
         return rowHeadings;
+    }
+
+    public Set<Integer> getZeroSavedColumnIndexes() {
+        return zeroSavedColumnIndexes;
+    }
+
+    public Set<Integer> getZeroSavedRowIndexes() {
+        return zeroSavedRowIndexes;
     }
 
     public List<List<CellForDisplay>> getData() {

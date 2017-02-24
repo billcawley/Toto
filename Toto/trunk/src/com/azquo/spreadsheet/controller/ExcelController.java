@@ -220,7 +220,7 @@ public class ExcelController {
                     // as the data is sent in a block from Excel. It might have changed size in the mean time (as in someone changed the data region size and now the headings don't match) but I'm nto that bothered by this for the mo
                     // put an empty data set here as the reference is final, fill it out below with the data sent size from the user
                     // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings, parsed into an array in Excel
-                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(excelJsonRequest.region, colHeadings, null, new ArrayList<>(), null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(excelJsonRequest.region, colHeadings, null, null, null, new ArrayList<>(), null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);
                     loggedInUser.setSentCells(excelJsonRequest.reportId, excelJsonRequest.region, cellsAndHeadingsForDisplay);
                     return "Empty space set to ad hoc data : " + excelJsonRequest.region;
                 } else {
@@ -312,7 +312,7 @@ public class ExcelController {
                     }
                     // then reset the sent cells, they should be blanked after each save if it's an adhoc region. Need to think clearly about how things like this work.
                     if (adHoc) {
-                        loggedInUser.setSentCells(excelJsonSaveRequest.reportId, cellsAndHeadingsForDisplay.getRegion(), new CellsAndHeadingsForDisplay(cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getColumnHeadings(), null, new ArrayList<>(), null, null, null, 0, cellsAndHeadingsForDisplay.getOptions(), null));
+                        loggedInUser.setSentCells(excelJsonSaveRequest.reportId, cellsAndHeadingsForDisplay.getRegion(), new CellsAndHeadingsForDisplay(cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getColumnHeadings(), null, null, null, new ArrayList<>(), null, null, null, 0, cellsAndHeadingsForDisplay.getOptions(), null));
                     }
                     if (itemsChanged > 0) {
                         OnlineReport report = OnlineReportDAO.findById(excelJsonSaveRequest.reportId);
