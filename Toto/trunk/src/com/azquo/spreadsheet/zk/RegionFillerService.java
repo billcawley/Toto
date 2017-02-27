@@ -230,7 +230,7 @@ class RegionFillerService {
 
     // a lot of objets passed. Mainly to deal with the repeat scope stuff
     static void fillData(LoggedInUser loggedInUser, int reportId, Sheet sheet, String region, UserRegionOptions userRegionOptions, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion
-            , List<List<String>> rowHeadingList, SName columnHeadingsDescription, List<List<String>> contextList, int maxCol, int valueId, boolean quiet) throws Exception {
+            , SName rowHeadingDescription, SName columnHeadingsDescription, SName contextDescription, int maxCol, int valueId, boolean quiet) throws Exception {
         // the repeat code used to be split, having examined it this doesn't really make sense, it can all be dealt with in a block after
         // note - this means the repeatRegion may have been expanded but I think this makes sense - before if it wasn't big enough it would break
         // won't be properly tested until we need it again
@@ -312,9 +312,17 @@ class RegionFillerService {
             repeatRow = 0;
             // and now do the data, separate loop otherwise I'll be copy/pasting data
             for (String item : repeatListItems) {
-                contextList.add(Collections.singletonList(item)); // item added to the context
+                //REPEAT REGION METHODOLOGY CHANGED BY WFC 27 Feb 17
+                //now looks for row and col headings potentially within the repeat region
+                //contextList.add(Collections.singletonList(item)); // item added to the context
+                int colOffset = repeatRegionWidth * repeatColumn;
+                int rowOffset = repeatRegionHeight * repeatRow;
+                List<List<String>> rowHeadingList = BookUtils.nameToStringLists(rowHeadingDescription, repeatRegion, rowOffset, colOffset);
+                List<List<String>>contextList = BookUtils.nameToStringLists(contextDescription, repeatRegion, rowOffset, colOffset);
+                List<List<String>>columnHeadingList = BookUtils.nameToStringLists(columnHeadingsDescription, repeatRegion, rowOffset, colOffset);
+
                 // yes this is little inefficient as the headings are being resolved each time but that's just how it is for the moment
-                cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, BookUtils.nameToStringLists(columnHeadingsDescription),
+                cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, columnHeadingList,
                         contextList, userRegionOptions, quiet);
                 displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
                         , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);

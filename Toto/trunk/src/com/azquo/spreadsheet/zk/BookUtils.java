@@ -26,16 +26,31 @@ import java.util.concurrent.ConcurrentHashMap;
  * Low level ZK manipulation functions.
  */
 public class BookUtils {
+
     static List<List<String>> nameToStringLists(SName sName) {
+          return nameToStringLists(sName, null, 0,0);
+    }
+
+    static List<List<String>> nameToStringLists(SName sName, SName repeatRegion, int rowOffset, int colOffset) {
         List<List<String>> toReturn = new ArrayList<>();
         if (sName == null) return toReturn;
+        if (repeatRegion!=null){
+            //if sName is outside the repeat region, do not add on the row col offsets
+            if (sName.getRefersToCellRegion().getRow() < repeatRegion.getRefersToCellRegion().getRow()
+                    || sName.getRefersToCellRegion().getRow() >= repeatRegion.getRefersToCellRegion().getRow() + repeatRegion.getRefersToCellRegion().getRowCount()
+                    || sName.getRefersToCellRegion().getColumn() < repeatRegion.getRefersToCellRegion().getColumn()
+                    || sName.getRefersToCellRegion().getColumn() >= repeatRegion.getRefersToCellRegion().getColumn() + repeatRegion.getRefersToCellRegion().getColumnCount()){
+                rowOffset = 0;
+                colOffset = 0;
+            }
+        }
         CellRegion region = sName.getRefersToCellRegion();
         if (region == null) return toReturn;
         SSheet sheet = sName.getBook().getSheetByName(sName.getRefersToSheetName());
-        for (int rowIndex = region.getRow(); rowIndex <= region.getLastRow(); rowIndex++) {
+        for (int rowIndex = region.getRow() + rowOffset; rowIndex <= region.getLastRow() + rowOffset; rowIndex++) {
             List<String> row = new ArrayList<>();
             toReturn.add(row);
-            for (int colIndex = region.getColumn(); colIndex <= region.getLastColumn(); colIndex++) {
+            for (int colIndex = region.getColumn() + colOffset; colIndex <= region.getLastColumn() + colOffset; colIndex++) {
                 SCell cell = sheet.getCell(rowIndex, colIndex);
                 // being paraniod?
                 if (cell != null && cell.getType() == SCell.CellType.FORMULA) {

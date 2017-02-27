@@ -339,7 +339,7 @@ public class ReportRenderer {
                     }
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                     // now factored off to the filler class that deals with repeat if applicable
-                    RegionFillerService.fillData(loggedInUser, reportId, sheet, region, userRegionOptions, cellsAndHeadingsForDisplay, displayDataRegion, rowHeadingList, columnHeadingsDescription, contextList, maxCol, valueId, quiet);
+                    RegionFillerService.fillData(loggedInUser, reportId, sheet, region, userRegionOptions, cellsAndHeadingsForDisplay, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxCol, valueId, quiet);
                 }
             } catch (RemoteException re) {
                 // is printing the stack trace going to jam the logs unnecessarily?
