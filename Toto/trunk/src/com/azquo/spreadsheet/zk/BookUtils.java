@@ -34,6 +34,8 @@ public class BookUtils {
     static List<List<String>> nameToStringLists(SName sName, SName repeatRegion, int rowOffset, int colOffset) {
         List<List<String>> toReturn = new ArrayList<>();
         if (sName == null) return toReturn;
+        // EFC note - this only applies in the case of repeat regions as called in teh report filler service, really this check should be out there
+        // the catch is that row headings might be in the region
         if (repeatRegion!=null){
             //if sName is outside the repeat region, do not add on the row col offsets
             if (sName.getRefersToCellRegion().getRow() < repeatRegion.getRefersToCellRegion().getRow()

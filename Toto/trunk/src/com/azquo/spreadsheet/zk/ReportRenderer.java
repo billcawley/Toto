@@ -319,7 +319,7 @@ public class ReportRenderer {
                     // todo - find out what the hell cloneCols is!
                     int cloneCols = expandRowAndColumnHeadings(loggedInUser, sheet, region, displayDataRegion, cellsAndHeadingsForDisplay, maxCol);
                     // these re loadings are because the region may have changed
-                    // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't
+                    // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't - this isn't a biggy it's just to do with name references which now I think about it probably don't need reloading but it's worth checking and being consistent
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                     // ok there should be the right space for the headings
                     if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
@@ -339,6 +339,8 @@ public class ReportRenderer {
                     }
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                     // now factored off to the filler class that deals with repeat if applicable
+                    // todo was just sending the column heading description and row headings and context as list
+                    // todo A, why was there that discrepancy and B why does the new repeat code now need the row and context description - we already have the data . . .
                     RegionFillerService.fillData(loggedInUser, reportId, sheet, region, userRegionOptions, cellsAndHeadingsForDisplay, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxCol, valueId, quiet);
                 }
             } catch (RemoteException re) {
@@ -415,18 +417,19 @@ public class ReportRenderer {
             }
             int insertCol = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1; // I think this is correct, just after the second column?
             Range copySource = Ranges.range(sheet, topRow, insertCol - 1, maxRow, insertCol - 1);
-            int repeatCount = ReportUtils.getRepeatCount(loggedInUser, cellsAndHeadingsForDisplay.getColHeadingsSource());
-            if (repeatCount > 1 && repeatCount < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
-                int copyCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / repeatCount;
+            // most of the time columnsFormattingPatternWidth will be the same as the column headings size but if it's not it might be used
+            int columnsFormattingPatternWidth = ReportUtils.guessColumnsFormattingPatternWidth(loggedInUser, cellsAndHeadingsForDisplay.getColHeadingsSource());
+            if (columnsFormattingPatternWidth > 1 && columnsFormattingPatternWidth < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
+                int copyCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / columnsFormattingPatternWidth;
                 cloneCols = colsToAdd;
-                if (repeatCount > displayDataRegion.getColumnCount()) {
-                    colsToAdd = repeatCount - displayDataRegion.getColumnCount();
+                if (columnsFormattingPatternWidth > displayDataRegion.getColumnCount()) {
+                    colsToAdd = columnsFormattingPatternWidth - displayDataRegion.getColumnCount();
                     Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col
                     CellOperationUtil.insertColumn(insertRange);
                     // will this paste the lot?
                     CellOperationUtil.paste(copySource, insertRange);
                     insertCol += colsToAdd;
-                    colsToAdd = repeatCount * (copyCount - 1);
+                    colsToAdd = columnsFormattingPatternWidth * (copyCount - 1);
                     cloneCols = colsToAdd;
                 }
                 insertCol++;

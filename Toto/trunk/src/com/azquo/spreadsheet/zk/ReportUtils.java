@@ -62,8 +62,11 @@ class ReportUtils {
         return lockWarnings.substring(0, lockWarnings.lastIndexOf(":"));//this should be on every line, but usually there'll only be one line
     }
 
-    // not to do with the repeat regions, perhaps could change the name
-    static int getRepeatCount(LoggedInUser loggedInUser, List<List<String>> colHeadingsSource) {
+    // col heading source as in the definition, the AQL
+    // It's trying to give a clue for formatting expanding
+    // the size of the thing on the bottom column heading row that's repeated e.g. "sales, costs of sales, profit" - get its size unless it's permute
+    // so if costs was a red column it would continue to be red as teh columns expanded
+    static int guessColumnsFormattingPatternWidth(LoggedInUser loggedInUser, List<List<String>> colHeadingsSource) {
         int colHeadingRow = colHeadingsSource.size();
         String lastColHeading = colHeadingsSource.get(colHeadingRow - 1).get(0);
         int repeatCount = 1;
@@ -71,15 +74,8 @@ class ReportUtils {
             if (lastColHeading.toLowerCase().startsWith("permute")) {
                 return 1;//permutes are unpredictable unless followed by a set
             }
+            // so what we're saying is how big is the set at the bottom of the col definitions?
             repeatCount = CommonReportUtils.getDropdownListForQuery(loggedInUser, lastColHeading).size();
-        }
-        colHeadingRow--;
-        //if the last line is a set, is one of the lines above also a set - if so this is a permutation
-        while (colHeadingRow-- > 0) {
-            String colHeading = colHeadingsSource.get(colHeadingRow).get(0);
-            if (colHeading.toLowerCase().startsWith("permute(") || CommonReportUtils.getDropdownListForQuery(loggedInUser, colHeading).size() > 0) {
-                return repeatCount;
-            }
         }
         return repeatCount;
     }
