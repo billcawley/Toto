@@ -26,8 +26,9 @@ import java.util.List;
 
 class RegionFillerService {
     // as it says. Need to consider the factoring here given the number of parameters passed
+    // this had clonecols which was added to "selection" to make it wider, this made no sense and has been removed
     static void fillRowHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayRowHeadings
-            , CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int cloneCols) {
+            , CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) {
         int rowHeadingsColumn = displayRowHeadings.getColumn();
         boolean isHierarchy = ReportUtils.isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
         int row = displayRowHeadings.getRow();
@@ -64,7 +65,7 @@ class RegionFillerService {
                     int totalCount = rowHeading.size() - sameValues - 1;
                     //this is a total line
                     int selStart = displayRowHeadings.getColumn();
-                    int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1 + cloneCols;
+                    int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1;
                     SCell lineFormat = BookUtils.getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + totalCount + region));
                     Range selection = Ranges.range(sheet, row - 1, selStart, row - 1, selEnd);
                     Range headingRange = Ranges.range(sheet, row - 1, selStart, row - 1, selStart + displayRowHeadings.getColumnCount() - 1);
@@ -228,10 +229,11 @@ class RegionFillerService {
                 }*/
     }
 
-    // a lot of objets passed. Mainly to deal with the repeat scope stuff
-    static void fillData(LoggedInUser loggedInUser, int reportId, Sheet sheet, String region, UserRegionOptions userRegionOptions, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion
-            , SName rowHeadingDescription, SName columnHeadingsDescription, SName contextDescription, int maxCol, int valueId, boolean quiet) throws Exception {
-        // the repeat code used to be split, having examined it this doesn't really make sense, it can all be dealt with in a block after
+
+    // now dedicated to just repeat regions - if the regions aren't there it will NPE, I think this is correct
+    static void fillDataForRepeatRegions(LoggedInUser loggedInUser, int reportId, Sheet sheet, String region, UserRegionOptions userRegionOptions
+            , CellRegion displayRowHeadings, CellRegion displayColumnHeadings, CellRegion displayDataRegion, SName rowHeadingDescription
+            , SName columnHeadingsDescription, SName contextDescription, int maxCol, int valueId, boolean quiet) throws Exception {
         // note - this means the repeatRegion may have been expanded but I think this makes sense - before if it wasn't big enough it would break
         // won't be properly tested until we need it again
         // the region to be repeated, will contain headings and an item which changes for each repetition
@@ -243,105 +245,132 @@ class RegionFillerService {
         // the cell we'll put the items in the list in
         SName repeatItem = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM + region);
 
-        if (repeatRegion != null && repeatScope != null && repeatList != null && repeatItem != null) { // then the repeat thing
-            int repeatRegionWidth = repeatRegion.getRefersToCellRegion().getColumnCount();
-            int repeatScopeWidth = repeatScope.getRefersToCellRegion().getColumnCount();
-            int repeatRegionHeight = repeatRegion.getRefersToCellRegion().getRowCount();
-            int repeatScopeHeight = repeatScope.getRefersToCellRegion().getRowCount();
-            int repeatColumns = repeatScopeWidth / repeatRegionWidth;
-            // we'll need the relative location of the item to populate it in each instance
-            int rootRow = repeatRegion.getRefersToCellRegion().getRow();
-            int rootCol = repeatRegion.getRefersToCellRegion().getColumn();
-            int repeatItemRowOffset = repeatItem.getRefersToCellRegion().getRow() - repeatRegion.getRefersToCellRegion().getRow();
-            int repeatItemColumnOffset = repeatItem.getRefersToCellRegion().getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+        int repeatRegionWidth = repeatRegion.getRefersToCellRegion().getColumnCount();
+        int repeatScopeWidth = repeatScope.getRefersToCellRegion().getColumnCount();
+        int repeatRegionHeight = repeatRegion.getRefersToCellRegion().getRowCount();
+        int repeatScopeHeight = repeatScope.getRefersToCellRegion().getRowCount();
+        int repeatColumns = repeatScopeWidth / repeatRegionWidth;
+        // we'll need the relative location of the item to populate it in each instance
+        int rootRow = repeatRegion.getRefersToCellRegion().getRow();
+        int rootCol = repeatRegion.getRefersToCellRegion().getColumn();
+        int repeatItemRowOffset = repeatItem.getRefersToCellRegion().getRow() - repeatRegion.getRefersToCellRegion().getRow();
+        int repeatItemColumnOffset = repeatItem.getRefersToCellRegion().getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
 
-            String repeatListText = BookUtils.getSnameCell(repeatList).getStringValue();
-            List<String> repeatListItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText);
-            // so the expansion within each region will be dealt with by fill region internally but out here I need to ensure that there's enough space for the regions unexpanded
-            int repeatRowsRequired = repeatListItems.size() / repeatColumns;
-            if (repeatListItems.size() % repeatColumns > 0) {
-                repeatRowsRequired++;
-            }
-            int rowsRequired = repeatRowsRequired * repeatRegionHeight;
-            if (rowsRequired > repeatScopeHeight) {
-                // slight copy paste from above, todo factor?
-                int rowsToAdd = rowsRequired - repeatScopeHeight;
-                int insertRow = repeatScope.getRefersToCellRegion().getRow() + repeatScope.getRefersToCellRegion().getRowCount() - 1; // last row, inserting here shifts the row down - should it be called last row? -1 on the row count as rows are inclusive. Rows 3-4 is not 1 row it's 2!
+        String repeatListText = BookUtils.getSnameCell(repeatList).getStringValue();
+        List<String> repeatListItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText);
+        // so the expansion within each region will be dealt with by fill region internally but out here I need to ensure that there's enough space for the regions unexpanded
+        int repeatRowsRequired = repeatListItems.size() / repeatColumns;
+        if (repeatListItems.size() % repeatColumns > 0) {
+            repeatRowsRequired++;
+        }
+        int rowsRequired = repeatRowsRequired * repeatRegionHeight;
+        if (rowsRequired > repeatScopeHeight) {
+            // slight copy paste from above, todo factor?
+            int rowsToAdd = rowsRequired - repeatScopeHeight;
+            int insertRow = repeatScope.getRefersToCellRegion().getRow() + repeatScope.getRefersToCellRegion().getRowCount() - 1; // last row, inserting here shifts the row down - should it be called last row? -1 on the row count as rows are inclusive. Rows 3-4 is not 1 row it's 2!
 //                int insertRow = repeatScope.getRefersToCellRegion().getLastRow(); // last row (different API call, was using the firt row plus the row count - 1, a simple mistake?)
-                Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
-                Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - rows to add - 1 as rows are inclusive
-                CellOperationUtil.insertRow(insertRange);
+            Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
+            Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - rows to add - 1 as rows are inclusive
+            CellOperationUtil.insertRow(insertRange);
+            CellOperationUtil.paste(copySource, insertRange);
+            int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
+            if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
+                insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
+            }
+            // and do hidden
+            boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
+            if (hidden) {
+                for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
+                    sheet.getInternalSheet().getRow(row).setHidden(true);
+                }
+            }
+        }
+        // so the space should be prepared for multi - now straight into
+        int repeatColumn = 0;
+        int repeatRow = 0;
+        // work out where the data region is relative to the repeat region, we wait until now as it may have been expanded
+        int repeatDataRowOffset = displayDataRegion.getRow() - repeatRegion.getRefersToCellRegion().getRow();
+        int repeatDataColumnOffset = displayDataRegion.getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+        int repeatDataLastRowOffset = displayDataRegion.getLastRow() - repeatRegion.getRefersToCellRegion().getRow();
+        int repeatDataLastColumnOffset = displayDataRegion.getLastColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+
+        int repeatRowHeadingsRowOffset = 0;
+        int repeatRowHeadingsColumnOffset = 0;
+        int repeatRowHeadingsLastRowOffset = 0;
+        int repeatRowHeadingsLastColumnOffset = 0;
+        int repeatColumnHeadingsRowOffset = 0;
+        int repeatColumnHeadingsColumnOffset = 0;
+        int repeatColumnHeadingsLastRowOffset = 0;
+        int repeatColumnHeadingsLastColumnOffset = 0;
+
+        if (displayRowHeadings != null){
+            repeatRowHeadingsRowOffset = displayRowHeadings.getRow() - repeatRegion.getRefersToCellRegion().getRow();
+            repeatRowHeadingsColumnOffset = displayRowHeadings.getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+            repeatRowHeadingsLastRowOffset = displayRowHeadings.getLastRow() - repeatRegion.getRefersToCellRegion().getRow();
+            repeatRowHeadingsLastColumnOffset = displayRowHeadings.getLastColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+        }
+        if (displayColumnHeadings != null){
+            repeatColumnHeadingsRowOffset = displayColumnHeadings.getRow() - repeatRegion.getRefersToCellRegion().getRow();
+            repeatColumnHeadingsColumnOffset = displayColumnHeadings.getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+            repeatColumnHeadingsLastRowOffset = displayColumnHeadings.getLastRow() - repeatRegion.getRefersToCellRegion().getRow();
+            repeatColumnHeadingsLastColumnOffset = displayColumnHeadings.getLastColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+        }
+
+        Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
+        // prepare the sapce for the data, it may have things like formulae
+        for (String item : repeatListItems) {
+            Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight - 1, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth - 1);
+            if (repeatRow > 0 || repeatColumn > 0) { // no need to paste over the first
                 CellOperationUtil.paste(copySource, insertRange);
-                int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
-                if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
-                    insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
-                }
-                // and do hidden
-                boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
-                if (hidden) {
-                    for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
-                        sheet.getInternalSheet().getRow(row).setHidden(true);
-                    }
-                }
             }
-            // so the space should be prepared for multi - now straight into
-            int repeatColumn = 0;
-            int repeatRow = 0;
-            // work out where the data region is relative to the repeat region, we wait until now as it may have been expanded
-            int repeatDataRowOffset = displayDataRegion.getRow() - repeatRegion.getRefersToCellRegion().getRow();
-            int repeatDataColumnOffset = displayDataRegion.getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
-            int repeatDataLastRowOffset = displayDataRegion.getLastRow() - repeatRegion.getRefersToCellRegion().getRow();
-            int repeatDataLastColumnOffset = displayDataRegion.getLastColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+            // and set the item
+            BookUtils.setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset), item);
+            repeatColumn++;
+            if (repeatColumn == repeatColumns) { // zap if back to the first column
+                repeatColumn = 0;
+                repeatRow++;
+            }
+        }
+        // reset tracking among the repeat regions
+        repeatColumn = 0;
+        repeatRow = 0;
+        // and now do the data, separate loop otherwise I'll be copy/pasting data from the first area
+        for (String item : repeatListItems) {
+            //REPEAT REGION METHODOLOGY CHANGED BY WFC 27 Feb 17
+            //now looks for row and col headings potentially within the repeat region
+            //contextList.add(Collections.singletonList(item)); // item added to the context
+            int colOffset = repeatRegionWidth * repeatColumn;
+            int rowOffset = repeatRegionHeight * repeatRow;
+            List<List<String>> rowHeadingList = BookUtils.nameToStringLists(rowHeadingDescription, repeatRegion, rowOffset, colOffset);
+            List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription, repeatRegion, rowOffset, colOffset);
+            List<List<String>> columnHeadingList = BookUtils.nameToStringLists(columnHeadingsDescription, repeatRegion, rowOffset, colOffset);
+            displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
+                    , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
 
-            Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
-            for (String item : repeatListItems) {
-                Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight - 1, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth - 1);
-                if (repeatRow > 0 || repeatColumn > 0) { // no need to paste over the first
-                    CellOperationUtil.paste(copySource, insertRange);
-                }
-                // and set the item
-                BookUtils.setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset), item);
-                repeatColumn++;
-                if (repeatColumn == repeatColumns) { // zap if back to the first column
-                    repeatColumn = 0;
-                    repeatRow++;
-                }
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, columnHeadingList,
+                    contextList, userRegionOptions, quiet);
+            // so I now need to do the row and column headings also
+            if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
+                displayRowHeadings = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatRowHeadingsRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatRowHeadingsColumnOffset
+                        , rootRow + (repeatRegionHeight * repeatRow) + repeatRowHeadingsLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatRowHeadingsLastColumnOffset);
+                RegionFillerService.fillRowHeadings(loggedInUser, sheet, region, displayRowHeadings, displayDataRegion, cellsAndHeadingsForDisplay);
             }
-            // reset tracking among the repeat regions
-            repeatColumn = 0;
-            repeatRow = 0;
-            // and now do the data, separate loop otherwise I'll be copy/pasting data
-            for (String item : repeatListItems) {
-                //REPEAT REGION METHODOLOGY CHANGED BY WFC 27 Feb 17
-                //now looks for row and col headings potentially within the repeat region
-                //contextList.add(Collections.singletonList(item)); // item added to the context
-                int colOffset = repeatRegionWidth * repeatColumn;
-                int rowOffset = repeatRegionHeight * repeatRow;
-                List<List<String>> rowHeadingList = BookUtils.nameToStringLists(rowHeadingDescription, repeatRegion, rowOffset, colOffset);
-                List<List<String>>contextList = BookUtils.nameToStringLists(contextDescription, repeatRegion, rowOffset, colOffset);
-                List<List<String>>columnHeadingList = BookUtils.nameToStringLists(columnHeadingsDescription, repeatRegion, rowOffset, colOffset);
-
-                // yes this is little inefficient as the headings are being resolved each time but that's just how it is for the moment
-                cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, columnHeadingList,
-                        contextList, userRegionOptions, quiet);
-                displayDataRegion = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatDataRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataColumnOffset
-                        , rootRow + (repeatRegionHeight * repeatRow) + repeatDataLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatDataLastColumnOffset);
-                loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!
-                RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
-                contextList.remove(contextList.size() - 1); // item removed from the context
-                repeatColumn++;
-                if (repeatColumn == repeatColumns) { // zap if back to the first column
-                    repeatColumn = 0;
-                    repeatRow++;
-                }
+            if (displayColumnHeadings != null) {
+                displayColumnHeadings = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatColumnHeadingsRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatColumnHeadingsColumnOffset
+                        , rootRow + (repeatRegionHeight * repeatRow) + repeatColumnHeadingsLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatColumnHeadingsLastColumnOffset);
+                RegionFillerService.fillColumnHeadings(sheet, userRegionOptions, displayColumnHeadings, cellsAndHeadingsForDisplay);
             }
-        } else {
-            fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
+            loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!
+            RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
+            repeatColumn++;
+            if (repeatColumn == repeatColumns) { // zap if back to the first column
+                repeatColumn = 0;
+                repeatRow++;
+            }
         }
     }
 
-    // lower level, ignores repeat regions
-    private static void fillData(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion) {
+    static void fillData(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion) {
         int row = displayDataRegion.getRow();
         List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
         if (cellsAndHeadingsForDisplay.getData() != null) {

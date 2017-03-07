@@ -310,38 +310,42 @@ public class ReportRenderer {
                 // now, put the headings into the sheet!
                 // might be factored into fill range in a bit
                 CellRegion displayRowHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYROWHEADINGS + region);
+                CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
                 CellRegion displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
 
                 int colsToAdd;
                 int maxRow = sheet.getLastRow();
                 if (displayDataRegion != null) {
                     int maxCol = BookUtils.getMaxCol(sheet);
-                    // todo - find out what the hell cloneCols is!
-                    int cloneCols = expandRowAndColumnHeadings(loggedInUser, sheet, region, displayDataRegion, cellsAndHeadingsForDisplay, maxCol);
+                    expandDataRegionBasedOnHeadings(loggedInUser, sheet, region, displayDataRegion, cellsAndHeadingsForDisplay, maxCol);
                     // these re loadings are because the region may have changed
                     // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't - this isn't a biggy it's just to do with name references which now I think about it probably don't need reloading but it's worth checking and being consistent
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
-                    // ok there should be the right space for the headings
-                    if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
-                        int rowHeadingCols = cellsAndHeadingsForDisplay.getRowHeadings().get(0).size();
-                        colsToAdd = rowHeadingCols - displayRowHeadings.getColumnCount();
-                        if (colsToAdd > 0) {
-                            int insertCol = displayRowHeadings.getColumn() + displayRowHeadings.getColumnCount() - 1;
-                            Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); //
-                            CellOperationUtil.insert(insertRange.toColumnRange(), Range.InsertShift.RIGHT, Range.InsertCopyOrigin.FORMAT_LEFT_ABOVE);
-                            displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, ReportRenderer.AZDATAREGION + region);
+                    // so it's NOT a repeat region. Fill the headings and populate the data!
+                    if (sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + region) == null
+                            || sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATSCOPE + region) == null
+                            || sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATLIST + region) == null
+                            || sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM + region) == null){
+                        // ok there should be the right space for the headings
+                        if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
+                            int rowHeadingCols = cellsAndHeadingsForDisplay.getRowHeadings().get(0).size();
+                            colsToAdd = rowHeadingCols - displayRowHeadings.getColumnCount();
+                            if (colsToAdd > 0) {
+                                int insertCol = displayRowHeadings.getColumn() + displayRowHeadings.getColumnCount() - 1;
+                                Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); //
+                                CellOperationUtil.insert(insertRange.toColumnRange(), Range.InsertShift.RIGHT, Range.InsertCopyOrigin.FORMAT_LEFT_ABOVE);
+                                displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, ReportRenderer.AZDATAREGION + region);
+                            }
+                            RegionFillerService.fillRowHeadings(loggedInUser, sheet, region, displayRowHeadings, displayDataRegion, cellsAndHeadingsForDisplay);
                         }
-                        RegionFillerService.fillRowHeadings(loggedInUser, sheet, region, displayRowHeadings, displayDataRegion, cellsAndHeadingsForDisplay, cloneCols);
+                        if (displayColumnHeadings != null) {
+                            RegionFillerService.fillColumnHeadings(sheet, userRegionOptions, displayColumnHeadings, cellsAndHeadingsForDisplay);
+                        }
+                        RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
+                    } else {
+                        // the more complex function that deals with repeat regions - it now notably does the headings
+                        RegionFillerService.fillDataForRepeatRegions(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxCol, valueId, quiet);
                     }
-                    CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
-                    if (displayColumnHeadings != null) {
-                        RegionFillerService.fillColumnHeadings(sheet, userRegionOptions, displayColumnHeadings, cellsAndHeadingsForDisplay);
-                    }
-                    displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
-                    // now factored off to the filler class that deals with repeat if applicable
-                    // todo was just sending the column heading description and row headings and context as list
-                    // todo A, why was there that discrepancy and B why does the new repeat code now need the row and context description - we already have the data . . .
-                    RegionFillerService.fillData(loggedInUser, reportId, sheet, region, userRegionOptions, cellsAndHeadingsForDisplay, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxCol, valueId, quiet);
                 }
             } catch (RemoteException re) {
                 // is printing the stack trace going to jam the logs unnecessarily?
@@ -384,8 +388,7 @@ public class ReportRenderer {
         }
     }
 
-    // work out what clonecols is for!
-    private static int expandRowAndColumnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol) {
+    private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol) {
         // add rows
         if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
             int rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
@@ -407,7 +410,6 @@ public class ReportRenderer {
         }
         // add columns
         int maxRow = sheet.getLastRow();
-        int cloneCols = 0;
         if (displayDataRegion.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayDataRegion.getColumnCount() > 2) { // then we need to expand
             int colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
             int topRow = 0;
@@ -421,7 +423,6 @@ public class ReportRenderer {
             int columnsFormattingPatternWidth = ReportUtils.guessColumnsFormattingPatternWidth(loggedInUser, cellsAndHeadingsForDisplay.getColHeadingsSource());
             if (columnsFormattingPatternWidth > 1 && columnsFormattingPatternWidth < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size()) {//the column headings have been expanded because the top left element is a set.  Check for secondary expansion, then copy the whole region
                 int copyCount = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() / columnsFormattingPatternWidth;
-                cloneCols = colsToAdd;
                 if (columnsFormattingPatternWidth > displayDataRegion.getColumnCount()) {
                     colsToAdd = columnsFormattingPatternWidth - displayDataRegion.getColumnCount();
                     Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col
@@ -430,7 +431,6 @@ public class ReportRenderer {
                     CellOperationUtil.paste(copySource, insertRange);
                     insertCol += colsToAdd;
                     colsToAdd = columnsFormattingPatternWidth * (copyCount - 1);
-                    cloneCols = colsToAdd;
                 }
                 insertCol++;
                 copySource = Ranges.range(sheet, topRow, displayDataRegion.getColumn(), maxRow, insertCol - 1);
@@ -450,6 +450,5 @@ public class ReportRenderer {
                 }
             }
         }
-        return cloneCols;
     }
 }
