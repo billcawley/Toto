@@ -248,7 +248,11 @@ class ImportFileUtilities {
             String stringValue = "";
             try {
                 stringValue = cellData.getFormatText();// I assume means formatted text
-                if (r > 0 && dataFormat.toLowerCase().contains("mm-") && (stringValue.length() == 8 || stringValue.length() == 6)) {//fix a ZK bug
+                if (dataFormat.equals("h:mm") && stringValue.length()==4) {
+                    //ZK BUG - reads "hh:mm" as "h:mm"
+                    stringValue = "0"+stringValue;
+                }
+                if (r > 0 && dataFormat.toLowerCase().contains("mm-") && (stringValue.length() == 8 || stringValue.length() == 6)) {//another ZK bug
                     stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
                 }
             } catch (Exception ignored) {
