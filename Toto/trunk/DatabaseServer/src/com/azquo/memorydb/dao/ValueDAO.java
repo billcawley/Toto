@@ -39,9 +39,10 @@ public class ValueDAO {
 
         @Override
         public Value mapRow(final ResultSet rs, final int row) throws SQLException {
-            Blob namesBlob = rs.getBlob(NAMES);
+/*            Blob namesBlob = rs.getBlob(NAMES);
             byte[] namesBytes = namesBlob.getBytes(1, (int) namesBlob.length()); // from 1, seems non standard!
-            namesBlob.free(); // apparently a good idea
+            namesBlob.free(); // apparently a good idea*/
+            byte[] namesBytes = rs.getBytes(NAMES);
             try {
                 return new Value(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(TEXT), namesBytes);
             } catch (Exception e) {

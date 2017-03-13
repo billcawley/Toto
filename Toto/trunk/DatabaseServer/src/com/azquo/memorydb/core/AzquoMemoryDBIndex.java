@@ -1,8 +1,10 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.StringLiterals;
+import com.azquo.TypedPair;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
+import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -25,7 +27,7 @@ public class AzquoMemoryDBIndex {
 
     // immutable in a superficial sense?
 
-    private final Map<String, Map<String, List<Name>>> nameByAttributeMap; // a map of maps of lists of names. Fun! Moved back to lists to save memory, the lists are unlikely to be big (implemented by CopyOnWriteArray)
+    private final Map<String, Map<String, Collection<Name>>> nameByAttributeMap; // a map of maps of lists of names. Fun! Moved back to lists to save memory, the lists are unlikely to be big (implemented by CopyOnWriteArray)
 
     AzquoMemoryDBIndex() {
         nameByAttributeMap = new ConcurrentHashMap<>();
@@ -45,9 +47,9 @@ public class AzquoMemoryDBIndex {
 
     private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
         getNamesForAttributeCount.incrementAndGet();
-        Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
+        Map<String, Collection<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
         if (map != null) { // that attribute is there
-            List<Name> names = map.get(attributeValue.toLowerCase().trim());
+            Collection<Name> names = map.get(attributeValue.toLowerCase().trim());
             if (names != null) { // were there any entries for that value?
                 return HashObjSets.newMutableSet(names); // I've seen this modified outside, I guess no harm in that
             }
@@ -118,7 +120,7 @@ public class AzquoMemoryDBIndex {
 
     public List<Name> findDuplicateNames(String attributeName, Set<String> exceptions) {
         List<Name> found = new ArrayList<>();
-        Map<String, List<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
+        Map<String, Collection<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
         if (map == null) return null;
         int dupCount = 0;
         int testCount = 0;
@@ -127,7 +129,7 @@ public class AzquoMemoryDBIndex {
                 System.out.println("testing for duplicates - count " + testCount + " dups found " + dupCount);
             }
             if (map.get(string).size() > 1) {
-                List<Name> names = map.get(string);
+                Collection<Name> names = map.get(string);
                 boolean nameadded = false;
                 for (Name name : names) {
                     for (String attribute : name.getAttributeKeys()) {
@@ -252,9 +254,9 @@ public class AzquoMemoryDBIndex {
 
     public List<Name> findTopNames(String language) {
         findTopNamesCount.incrementAndGet();
-        Map<String, List<Name>> thisMap = nameByAttributeMap.get(language);
+        Map<String, Collection<Name>> thisMap = nameByAttributeMap.get(language);
         final List<Name> toReturn = new ArrayList<>();
-        for (List<Name> names : thisMap.values()) {
+        for (Collection<Name> names : thisMap.values()) {
             for (Name name : names) {
                 if (!name.hasParents()) { // top parent full stop
                     toReturn.add(name);
@@ -279,7 +281,7 @@ public class AzquoMemoryDBIndex {
     // only used when looking up for "DEFINITION", inline?
 
     public Collection<Name> namesForAttribute(String attribute) {
-        Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(attribute);
+        Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.get(attribute);
         if (namesForThisAttribute == null) return null;
         Collection<Name> toReturn = new HashSet<>();
         for (String key : namesForThisAttribute.keySet()) {
@@ -303,10 +305,22 @@ public class AzquoMemoryDBIndex {
             lcAttributeValue = lcAttributeValue.replace(StringLiterals.QUOTE, '\'').intern();
         }
         // moved to computeIfAbsent, saved a fair few lines of code
-        Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.computeIfAbsent(ucAttributeName, s -> new ConcurrentHashMap<>());
+        Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.computeIfAbsent(ucAttributeName, s -> new ConcurrentHashMap<>());
         // Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
         // cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
-        List<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
+        // ok, these got bigger than expected, big bottleneck. Using compute should be able to safely switch over at 512 entries
+        //Collection<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
+        Collection<Name> names = namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
+            if (v == null){
+                return new CopyOnWriteArrayList<>();
+            }
+            if (v.size() == 512){
+                Collection<Name> asSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
+                asSet.addAll(v);
+                return asSet;
+            }
+            return v;
+        });
         names.add(name); // thread safe, internally locked but of course just for this particular attribute and value heh.
         // Could maybe get a little speed by adding a special case for the first name (as in singleton)?
     }
@@ -319,12 +333,15 @@ public class AzquoMemoryDBIndex {
         removeAttributeFromNameInAttributeNameMapCount.incrementAndGet();
         String ucAttributeName = attributeName.toUpperCase().trim();
         String lcAttributeValue = attributeValue.toLowerCase().trim();
-        final Map<String, List<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
+        final Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
         if (namesForThisAttribute != null) {// the map we care about
-            final List<Name> namesForThatAttributeAndAttributeValue = namesForThisAttribute.get(lcAttributeValue);
-            if (namesForThatAttributeAndAttributeValue != null) {
-                namesForThatAttributeAndAttributeValue.remove(name); // if it's there which it should be zap it from the list . . .
-            }
+            // putting this modification in compute to be sure it won't get tripped up finding a collection that was switched in the mean time by the 512 setAttribute switch above
+            namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
+                if (v != null){
+                    v.remove(name);
+                }
+                return v;
+            });
         }
     }
 
@@ -361,5 +378,52 @@ public class AzquoMemoryDBIndex {
 //        clearSetAndCountCacheForStringCount.set(0);
         setAttributeForNameInAttributeNameMapCount.set(0);
         removeAttributeFromNameInAttributeNameMapCount.set(0);
+    }
+
+    void printIndexStats(){
+        NumberFormat nf = NumberFormat.getInstance();
+
+        List<TypedPair<String, Map<String, Collection<Name>>>> topAttributes = new ArrayList<>();
+        for (String attName : nameByAttributeMap.keySet()){
+            topAttributes.add(new TypedPair<>(attName, nameByAttributeMap.get(attName)));
+        }
+        topAttributes.sort((o1, o2) -> (Integer.compare(o2.getSecond().size(), o1.getSecond().size())));
+        System.out.println("Attribute Name                          Number of values");
+        for (TypedPair<String, Map<String, Collection<Name>>> attEntry : topAttributes){
+            System.out.print(attEntry.getFirst());
+            if (attEntry.getFirst().length() < 40){
+                for (int i = 0; i < 40 - attEntry.getFirst().length(); i++){
+                    System.out.print(" ");
+                }
+            }
+            System.out.println(nf.format(attEntry.getSecond().size()));
+        }
+        // now try to work out how many entries for each attribute have
+        Map<Integer, AtomicInteger> counts = new HashMap<>();
+        for (Map<String, Collection<Name>> index : nameByAttributeMap.values()) {
+            for (Collection<Name> namesForAttValue : index.values()) {
+                int size = namesForAttValue.size();
+                if (size > 512) {
+                    size = 512;
+                }
+                counts.computeIfAbsent(size, i -> new AtomicInteger()).incrementAndGet(); // essentially count the number of indexes of any given size
+            }
+        }
+            List<Integer> sizes = new ArrayList<>(counts.keySet());
+            Collections.sort(sizes);
+            System.out.println("index size          number of indexes with that size");
+            for (Integer size : sizes){
+                String ssize = nf.format(size);
+                if (size == 512){
+                    ssize = ">=512";
+                }
+                System.out.print(ssize);
+                if (ssize.length() < 20){
+                    for (int i = 0; i < 20 - ssize.length(); i++){
+                        System.out.print(" ");
+                    }
+                }
+                System.out.println(counts.get(size));
+            }
     }
 }

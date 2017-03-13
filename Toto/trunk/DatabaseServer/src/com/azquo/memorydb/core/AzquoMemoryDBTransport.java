@@ -283,9 +283,10 @@ class AzquoMemoryDBTransport {
             long newUsed = (runtime.totalMemory() - runtime.freeMemory()) / mb;
             NumberFormat nf = NumberFormat.getInstance();
             System.out.println("Guess at DB size " + nf.format(newUsed - usedMB) + "MB");
-            System.out.println("--- MEMORY USED :  " + nf.format(runtime.totalMemory() - runtime.freeMemory() / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
+            System.out.println("--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb));
         }
         logInSessionLogAndSystem("Total load time for " + persistenceName + " " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
+        //azquoMemoryDB.getIndex().printIndexStats();
         //AzquoMemoryDB.printAllCountStats();
     }
 

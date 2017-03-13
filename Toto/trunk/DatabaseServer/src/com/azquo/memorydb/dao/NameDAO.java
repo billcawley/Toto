@@ -38,12 +38,11 @@ public class NameDAO {
 
         @Override
         public Name mapRow(final ResultSet rs, final int row) throws SQLException {
-            Blob childrenBlob = rs.getBlob(CHILDREN);
-            byte[] childrenBytes = childrenBlob.getBytes(1, (int) childrenBlob.length());
-            childrenBlob.free(); // apparently a good idea
-            // todo - address this, ergh!
+            // todo - address this, ergh! in future perhaps say what the problem is, I don't know . . .
             try {
-                return new Name(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(ATTRIBUTES), childrenBytes, rs.getInt(NOPARENTS), rs.getInt(NOVALUES));
+                byte[] atttest = rs.getBytes(ATTRIBUTES);
+                String atttest2 = rs.getString(ATTRIBUTES);
+                return new Name(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(ATTRIBUTES), rs.getBytes(CHILDREN), rs.getInt(NOPARENTS), rs.getInt(NOVALUES));
             } catch (Exception e) {
                 e.printStackTrace();
             }

@@ -97,6 +97,7 @@ class NameEditFunctions {
             Map<String, Set<Name>> nameMap = new HashMap<>();
             for (Name name : names) {
                 String nameString = name.getDefaultDisplayName();
+                // todo - pretty sure we should not be using putifabsent
                 nameMap.putIfAbsent(nameString, new HashSet<>());
                 nameMap.get(nameString).add(name);
             }
