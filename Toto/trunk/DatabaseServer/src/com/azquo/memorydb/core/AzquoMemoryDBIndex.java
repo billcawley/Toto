@@ -41,11 +41,12 @@ public class AzquoMemoryDBIndex {
     }
 
     // fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
+    // now used outside this class but I see no harm in that
     // Is wrapping in a hashSet such a big deal?
 
     private static AtomicInteger getNamesForAttributeCount = new AtomicInteger(0);
 
-    private Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
+    public Set<Name> getNamesForAttribute(final String attributeName, final String attributeValue) {
         getNamesForAttributeCount.incrementAndGet();
         Map<String, Collection<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
         if (map != null) { // that attribute is there
@@ -196,12 +197,6 @@ public class AzquoMemoryDBIndex {
     }
 
     private static AtomicInteger getNamesWithAttributeStartingCount = new AtomicInteger(0);
-
-    public Set<Name> getNamesWithAttributeEqual(final String attributeName, final String attributeValue) {
-        getNamesWithAttributeContainingCount.incrementAndGet();
-        return getNamesByAttributeValueWildcards(attributeName, attributeValue, false, false);
-    }
-
 
     public Set<Name> getNamesWithAttributeStarting(final String attributeName, final String attributeValue) {
         getNamesWithAttributeContainingCount.incrementAndGet();

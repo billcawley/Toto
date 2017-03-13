@@ -59,23 +59,10 @@ public final class NameService {
 
     private static AtomicInteger findContainingNameCount = new AtomicInteger(0);
 
-
-
-    static public ArrayList<Name> getNamesWithAttributeEqual(final AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute, final String searchString) {
-        findContainingNameCount.incrementAndGet();
-        ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeEqual(attribute, searchString));
-        if (namesList.size() == 0 && attribute.length() > 0) {
-            namesList = getNamesWithAttributeEqual(azquoMemoryDBConnection, "", searchString);//try all the attributes
-        }
-        Collections.sort(namesList, defaultLanguageCaseInsensitiveNameComparator);
-        return namesList;
-    }
-
-
     static public ArrayList<Name> getNamesWithAttributeContaining(final AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute, final String searchString) {
         findContainingNameCount.incrementAndGet();
-
-        ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeEqual(attribute, searchString));
+        // new condition
+        ArrayList<Name> namesList = new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, searchString));
         if (namesList.size() == 0){
             namesList =  new ArrayList<>(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesWithAttributeContaining(attribute, searchString));
         }
