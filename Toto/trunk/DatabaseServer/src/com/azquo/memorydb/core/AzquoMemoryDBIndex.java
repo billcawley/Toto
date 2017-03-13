@@ -195,6 +195,12 @@ public class AzquoMemoryDBIndex {
 
     private static AtomicInteger getNamesWithAttributeStartingCount = new AtomicInteger(0);
 
+    public Set<Name> getNamesWithAttributeEqual(final String attributeName, final String attributeValue) {
+        getNamesWithAttributeContainingCount.incrementAndGet();
+        return getNamesByAttributeValueWildcards(attributeName, attributeValue, false, false);
+    }
+
+
     public Set<Name> getNamesWithAttributeStarting(final String attributeName, final String attributeValue) {
         getNamesWithAttributeContainingCount.incrementAndGet();
         if (attributeValue.charAt(0) == '*') {
