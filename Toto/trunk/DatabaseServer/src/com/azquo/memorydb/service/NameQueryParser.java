@@ -136,7 +136,6 @@ public class NameQueryParser {
             if (setFormula.toLowerCase().equals("!00 children")) return new ArrayList<>();
                /* sometimes excel formulae generate dependent sets that do not exist (e.g. `2012 Transactions`
             in that case it is better to return a null rather than an exception as temporary names may still be set incorrectly
-             */
             if (setFormula.contains(StringLiterals.AS)) {
                 //clear the 'as' set and exit gracefully
                 Name targetName = NameService.findNameAndAttribute(azquoMemoryDBConnection, nameStrings.get(nameStrings.size() - 1), attributeNames);
@@ -144,7 +143,7 @@ public class NameQueryParser {
                     targetName.setChildrenWillBePersisted(new ArrayList<>());
                     return new ArrayList<>();
                 }
-            }
+            }*/
             throw e;
         }
         setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "");
