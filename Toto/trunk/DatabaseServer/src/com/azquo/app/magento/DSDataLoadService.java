@@ -404,7 +404,7 @@ public class DSDataLoadService {
                             existingOption.removeFromChildrenWillBePersisted(magentoName);
                         }
                         //note - this is NOT a product id, so don't use the product id to find it!
-                        Name magentoOptionName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, resolvedValue, magentoProductCategory, true, null);
+                        Name magentoOptionName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, resolvedValue, magentoProductCategory, true, skuLanguage);
                         if (!magentoName.findAllParents().contains(magentoOptionName)) {
                             magentoOptionName.addChildWillBePersisted(magentoName);
                             if (allProducts.getChildren().contains(magentoName)) {
