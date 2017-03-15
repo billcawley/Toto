@@ -361,6 +361,7 @@ class ZKContextMenu {
                                     }
                                     if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()) {
                                         for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()) {
+                                            xOffset = 0;
                                             if (value.getSecond() != null && !value.getSecond().isEmpty()) {
                                                 for (String valueOrName : value.getSecond()) {
                                                     xOffset++;

@@ -122,7 +122,7 @@ public class ProvenanceService {
         Provenance p = cellName.getProvenance();
         final ProvenanceForDisplay provenanceForDisplay = p.getProvenanceForDisplay();
         List<String> names = new ArrayList<>();
-        if (azquoCell.getListOfValuesOrNamesAndAttributeName().getNames() != null){
+        if (azquoCell.getListOfValuesOrNamesAndAttributeName() != null && azquoCell.getListOfValuesOrNamesAndAttributeName().getNames() != null){
             for (Name n : azquoCell.getListOfValuesOrNamesAndAttributeName().getNames()){
                 // this is a point, should it be in a language?
                 names.add(n.getDefaultDisplayName());
