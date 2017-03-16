@@ -245,6 +245,13 @@ this may now not work at all, perhaps delete?
         if (reportList.size() == 0) {
             OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, 0, "", "No reports found", "", "");
             reportList.add(notFound);
+        } else {
+            for (OnlineReport or : reportList){
+                if (or.getUserId() != 0 && or.getUserId() != loggedInUser.getUser().getId()){
+                    User otherUser = UserDAO.findById(or.getUserId());
+                    or.setReportName(or.getReportName() + " uploaded by " + (otherUser != null ? otherUser.getName() : "?")); // I'm assuming the report isn't saved after - just for
+                }
+            }
         }
         return reportList;
     }
