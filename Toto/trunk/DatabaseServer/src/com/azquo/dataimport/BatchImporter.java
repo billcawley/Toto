@@ -30,16 +30,16 @@ public class BatchImporter implements Callable<Void> {
 
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
     // just to give a little feedback on the number imported
-    private final AtomicInteger valueTracker;
+    private final AtomicInteger valuesModifiedCounter;
     private int lineNo;
     private final List<List<ImportCellWithHeading>> dataToLoad;
     private final Map<String, Name> namesFoundCache;
     private final List<String> attributeNames;
     private final Set<Integer> linesRejected;
 
-    BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection, AtomicInteger valueTracker, List<List<ImportCellWithHeading>> dataToLoad, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo, Set<Integer> linesRejected) {
+    BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection, AtomicInteger valuesModifiedCounter, List<List<ImportCellWithHeading>> dataToLoad, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo, Set<Integer> linesRejected) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
-        this.valueTracker = valueTracker;
+        this.valuesModifiedCounter = valuesModifiedCounter;
         this.dataToLoad = dataToLoad;
         this.namesFoundCache = namesFoundCache;
         this.attributeNames = attributeNames;
@@ -60,7 +60,7 @@ public class BatchImporter implements Callable<Void> {
                 if (checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames)) {
                     try {
                         // valueTracker simply the number of values imported
-                        valueTracker.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo, linesRejected));
+                        valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo, linesRejected));
                     } catch (Exception e) {
                         azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
                         throw e;
@@ -77,7 +77,7 @@ public class BatchImporter implements Callable<Void> {
             lineNo++;
         }
         azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(lineNo) + " imported.", true);
-        azquoMemoryDBConnection.addToUserLogNoException("Values Imported : " + DecimalFormat.getInstance().format(valueTracker), true);
+        azquoMemoryDBConnection.addToUserLogNoException("Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
         return null;
     }
 
@@ -314,9 +314,10 @@ public class BatchImporter implements Callable<Void> {
                 // now we have the set of names for that name with peers get the value from that headingNo it's a header for
                 String value = cell.getLineValue();
                 if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
-                    valueCount++;
-                    // finally store our value and names for it
-                    ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue);
+                    // finally store our value and names for it - only increnemt the value count if something actually changed in the DB
+                    if (ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue)){
+                        valueCount++;
+                    }
                 }
             }
             // ok that's the peer/value stuff done I think, now onto attributes

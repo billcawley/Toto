@@ -56,12 +56,12 @@ public class DSImportService {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an XLSX import, a different thing from a data entry area.
         azquoMemoryDBConnection.setProvenance(user, "imported", fileName, "");
-        return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, attributeNames, persistAfter, isSpreadsheet);
+        return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, attributeNames, persistAfter, isSpreadsheet, new AtomicInteger());
     }
 
     // Other entry point into the class functionality, called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
-
-    public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
+    // I wonder if the valuesModifiedCounter is a bit hacky, will maybe revisit this later
+    public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
         // of course this doesn't currently stop the opposite, a persist being started while an import is going on.
         azquoMemoryDBConnection.lockTest();
@@ -70,7 +70,7 @@ public class DSImportService {
         if (fileName.toLowerCase().startsWith("sets")) { // typically from a sheet with that name in a book
             toReturn = setsImport(azquoMemoryDBConnection, filePath, fileName, attributeNames);
         } else {
-            toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileName, attributeNames, isSpreadsheet);
+            toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileName, attributeNames, isSpreadsheet, valuesModifiedCounter);
         }
         if (persistAfter) { // get back to the user straight away. Should not be a problem, multiple persists would be queued. The only issue is of changes while persisting, need to check this in the memory db.
             new Thread(azquoMemoryDBConnection::persist).start();
@@ -118,7 +118,7 @@ public class DSImportService {
     The key is to set up info in names so a file can be uploaded from a client "as is". Function a little longer than I'd like.
     */
 
-    private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, List<String> attributeNames, boolean isSpreadsheet) throws Exception {
+    private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, List<String> attributeNames, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         try {
             long track = System.currentTimeMillis();
             // A fair amount is going on in here checking various upload options and parsing the headers. It delivers the
@@ -127,7 +127,6 @@ public class DSImportService {
             if (headingsWithIteratorAndBatchSize == null) {
                 return "First line blank"; //most likely cause of it being null
             }
-            AtomicInteger valueTracker = new AtomicInteger(0);
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
             ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
             List<Future> futureBatches = new ArrayList<>();
@@ -157,14 +156,14 @@ public class DSImportService {
                     linesBatched.add(importCellsWithHeading);
                     // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
                     if (linesBatched.size() == headingsWithIteratorAndBatchSize.batchSize) {
-                        futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, lineNo - headingsWithIteratorAndBatchSize.batchSize, linesRejected)));// line no should be the start
+                        futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valuesModifiedCounter, linesBatched, namesFoundCache, attributeNames, lineNo - headingsWithIteratorAndBatchSize.batchSize, linesRejected)));// line no should be the start
                         linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
                     }
                 }
             }
             // load leftovers
             int loadLine = lineNo - linesBatched.size(); // NOT batch size! A problem here isn't a functional problem but it makes logging incorrect.
-            futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valueTracker, linesBatched, namesFoundCache, attributeNames, loadLine, linesRejected)));
+            futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valuesModifiedCounter, linesBatched, namesFoundCache, attributeNames, loadLine, linesRejected)));
             // check all work is done and memory is in sync
             for (Future<?> futureBatch : futureBatches) {
                 futureBatch.get(1, TimeUnit.HOURS);

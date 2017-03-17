@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 /*
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  *
@@ -177,7 +178,7 @@ public class DSSpreadsheetService {
     }
 
     // create a file to import from a populated region in the spreadsheet
-    private static void importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
+    private static int importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
         //write the column headings and data to a temporary file, then import it
         String fileName = "temp_" + user;
         File temp = File.createTempFile(fileName + ".csv", "csv");
@@ -222,10 +223,12 @@ public class DSSpreadsheetService {
         }
         bw.flush();
         bw.close();
-        DSImportService.readPreparedFile(azquoMemoryDBConnection, tempPath, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true, true);
+        AtomicInteger valuesModifiedCounter = new AtomicInteger();
+        DSImportService.readPreparedFile(azquoMemoryDBConnection, tempPath, "csv", Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true, true, valuesModifiedCounter);
         if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
         }
+        return valuesModifiedCounter.get();
     }
 
     public static void persistDatabase(DatabaseAccessToken databaseAccessToken) throws Exception {
@@ -249,11 +252,12 @@ public class DSSpreadsheetService {
             // ad hoc saves regardless of changes in the mean time. Perhaps not the best plan . . .
             azquoMemoryDBConnection.setProvenance(user, Constants.IN_SPREADSHEET, reportName, context);
             if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
-                importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
+                // todo - cen we get the number of values modified???
+                numberOfValuesModified = importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
                 if (persist) {
                     azquoMemoryDBConnection.persist();
                 }
-                return "true";
+                return "true " + numberOfValuesModified;
             }
             // check we're not getting cellsAndHeadingsForDisplay.getTimeStamp() = 0 here, it should only happen due tio ad hoc which should have returned by now . . .
             boolean changed = false;

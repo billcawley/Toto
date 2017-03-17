@@ -55,10 +55,12 @@ public final class ValueService {
     }*/
 
     // this is passed a string for the value, not sure if that is the best practice, need to think on it.
+    // used to return a string that was never used! Now a boolean indicating if data was changed
 
     private static AtomicInteger storeValueWithProvenanceAndNamesCount = new AtomicInteger(0);
 
-    public static String storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
+    public static boolean storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
+        boolean dataChanged = false;
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
         // ok there's an issue of numbers with "," in them, in that case I should remove on the way in
         if (valueString.contains(",")) {
@@ -69,7 +71,6 @@ public final class ValueService {
             }
         }
         //long marker = System.currentTimeMillis();
-        String toReturn = "";
         final List<Value> existingValues = findForNames(names);
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
@@ -83,6 +84,7 @@ public final class ValueService {
                     Double newValue = Double.parseDouble(valueString);
                     valueString = (existingDouble + newValue) + "";
                     existingValue.setText(valueString);
+                    dataChanged = true;
                 } catch (Exception e) {
                     // use the latest value
                 }
@@ -91,12 +93,10 @@ public final class ValueService {
             //marker = System.currentTimeMillis();
             // won't be true for the same file as it will be caught above but from different files it could well happen
             if (StringUtils.compareStringValues(existingValue.getText(), valueString)) {
-                toReturn += "  that value already exists, skipping";
                 alreadyInDatabase = true;
             } else {
                 existingValue.delete();
                 // provenance table : person, time, method, name
-                toReturn += "  deleting old value entered on put old timestamp here, need provenance table";
             }
             //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames3", marker - System.currentTimeMillis());
             //marker = System.currentTimeMillis();
@@ -104,18 +104,19 @@ public final class ValueService {
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames4", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
         if (!alreadyInDatabase) {
+            dataChanged = true;
             // create
             Value value = createValue(azquoMemoryDBConnection, azquoMemoryDBConnection.getProvenance(), valueString);
-            toReturn += "  stored";
             // and link to names
             value.setNamesWillBePersisted(names);
         }
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames5", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
-        return toReturn;
+        return dataChanged;
     }
 
     // called when altering values in a spreadsheet
+    // should somehow be factored with function above?
     private static AtomicInteger overWriteExistingValueCount = new AtomicInteger(0);
 
     public static boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, String newValueString) throws Exception {
