@@ -187,7 +187,10 @@ public class DSImportService {
             toReturn.append(" imported. Dataimport took ")// I'm not sure I agree with intellij warning about non chained
                     .append((System.currentTimeMillis() - track) / 1000)
                     .append(" second(s) for ")
-                    .append(lineNo - 1).append(" lines<br/>\n");
+                    .append(lineNo - 1)
+                    .append(" lines")
+                    .append(", " + valuesModifiedCounter + " values adjusted<br/>\n");
+
             // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
             if (!linesRejected.isEmpty()) {
                 toReturn.append("Line numbers rejected : <br/>\n");
