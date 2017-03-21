@@ -289,13 +289,13 @@ public final class ImportService {
         StringBuilder toReturn = new StringBuilder();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            toReturn.append(readSheet(loggedInUser, sheet, tempPath, attributeNames, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
+            toReturn.append(readSheet(loggedInUser, fileName, sheet, tempPath, attributeNames, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
             toReturn.append("\n");
         }
         return toReturn.toString();
     }
 
-    private static String readSheet(LoggedInUser loggedInUser, Sheet sheet, final String tempFileName, List<String> attributeNames, boolean persistAfter) throws Exception {
+    private static String readSheet(LoggedInUser loggedInUser, String fileName, Sheet sheet, final String tempFileName, List<String> attributeNames, boolean persistAfter) throws Exception {
         boolean transpose = false;
         String sheetName = sheet.getInternalSheet().getSheetName();
         if (sheetName.toLowerCase().contains("transpose")) {
@@ -311,7 +311,7 @@ public final class ImportService {
         ImportFileUtilities.convertRangeToCSV(sheet, csvW, transpose);
         csvW.close();
         fos.close();
-        return readPreparedFile(loggedInUser, tempPath, sheetName, attributeNames, persistAfter, true);
+        return readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName , attributeNames, persistAfter, true);
     }
 
     private static String LOCALIP = "127.0.0.1";

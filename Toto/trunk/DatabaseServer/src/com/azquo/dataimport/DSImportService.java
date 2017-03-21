@@ -56,8 +56,11 @@ public class DSImportService {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an XLSX import, a different thing from a data entry area.
         azquoMemoryDBConnection.setProvenance(user, "imported", fileName, "");
+        if (fileName.contains(":")){
+            fileName = fileName.substring(fileName.indexOf(":") + 1);//remove the workbook name.  sent only for the provenance.
+        }
         return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, attributeNames, persistAfter, isSpreadsheet, new AtomicInteger());
-    }
+   }
 
     // Other entry point into the class functionality, called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     // I wonder if the valuesModifiedCounter is a bit hacky, will maybe revisit this later
