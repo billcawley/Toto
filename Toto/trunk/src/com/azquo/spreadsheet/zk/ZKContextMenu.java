@@ -358,6 +358,7 @@ class ZKContextMenu {
                                             sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(name);
                                         }
                                         yOffset++;
+                                        xOffset = 0;
                                     }
                                     if (provenanceForDisplay.getValuesWithIdsAndNames() != null && !provenanceForDisplay.getValuesWithIdsAndNames().isEmpty()) {
                                         for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()) {
@@ -368,6 +369,8 @@ class ZKContextMenu {
                                                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(valueOrName);
                                                 }
                                                 yOffset++;
+                                                xOffset = 0;
+
                                             }
                                         }
                                     }
