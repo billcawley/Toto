@@ -217,7 +217,7 @@ table.edit td label{min-width:100px;}
 
 /*--------------------------- Edit attribute -----------------------------*/
 
-#namedetails{background:rgba(255,255,255,0.95); z-index:20; margin:0px; padding:30px; position:absolute; left:0px; top:0px; bottom:0px; right:0px;}
+#namedetails{background:rgba(255,255,255,0.95); z-index:20; margin:0px; padding:30px; position:fixed; left:0px; top:0px; bottom:0px; right:0px;}
 
 #namedetails .namedetailsinner{background:#FFF; margin:0px; border:#ECECEC solid 5px; box-shadow:rgba(0,0,0,0.25) 0px 2px 3px; position:relative; padding:10px;}
 #namedetails .namedetailsinner .closebutton{width:30px; height:30px; background:#FFF; box-shadow:rgba(0,0,0,0.25) 0px 2px 3px; border-radius:50%; position:absolute; top:-15px; right:-15px;  text-align:center; line-height:34px; font-size:25px;}
