@@ -93,7 +93,7 @@ class DataRegionHeadingService {
                         } else if (sourceCell.toLowerCase().contains(StringLiterals.HIERARCHY)) { // kind of a special case, supports a name not an expression
                             String name = sourceCell.substring(0, sourceCell.toLowerCase().indexOf(StringLiterals.HIERARCHY)).replace("`", "").trim();
                             int level = Integer.parseInt(sourceCell.substring(sourceCell.toLowerCase().indexOf(StringLiterals.HIERARCHY) + StringLiterals.HIERARCHY.length()).trim()); // fragile?
-                            Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, name, attributeNames); // should return one
+                            Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, name, attributeNames, true); // should return one
                             if (!names.isEmpty()) {// it should be just one
                                 List<DataRegionHeading> hierarchyList = new ArrayList<>();
                                 List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null, 0); // I assume this will be only one!
@@ -134,8 +134,9 @@ class DataRegionHeadingService {
                             // todo - this function parameter parsing needs to be factored and be aware of commas in names
                             String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
                             String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();
-                            final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames);
-                            final Collection<Name> selectionSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames);
+                            // maybe these two could have a "true" on returnReadOnlyCollection . . . todo
+                            final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
+                            final Collection<Name> selectionSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, false);
                             row.add(dataRegionHeadingsFromNames(mainSet, azquoMemoryDBConnection, function, suffix, null,selectionSet, 0));
                         } else if (function == DataRegionHeading.FUNCTION.PERCENTILE) {
                             // todo - this function parameter parsing needs to be factored and be aware of commas in names
@@ -154,12 +155,15 @@ class DataRegionHeadingService {
                                 }
                             } catch (NumberFormatException ignored){ // maybe add an error later?
                             }
-                            final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames);
+                            // maybe could have a "true" on returnReadOnlyCollection . . . todo
+                            final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
                             row.add(dataRegionHeadingsFromNames(mainSet, azquoMemoryDBConnection, function, suffix, null,null, percentileDouble));
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             Collection<Name> names;
                             try {
-                                names = NameQueryParser.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames);
+                                // ok due to optimiseation for the jewel hut this is the first place I'm going to tell the query parser that a read only returned collection is fine
+                                // this should provide a decent speed increase since inside the query parser there was an addAll jamming things up
+                                names = NameQueryParser.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames, true);
                             } catch (Exception e) {
                                 if (ignoreHeadingErrors) { // the ignore is only for vanilla queries, functions probably should error regardless
                                     names = new ArrayList<>();

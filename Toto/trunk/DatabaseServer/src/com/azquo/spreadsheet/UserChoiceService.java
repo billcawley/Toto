@@ -142,7 +142,7 @@ public class UserChoiceService {
             query = query.substring(0, query.indexOf("showparents"));
             forceFirstLevel = true;
         }
-        return getUniqueNameStrings(getUniqueNames(NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel));
+        return getUniqueNameStrings(getUniqueNames(NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, false), forceFirstLevel));
     }
 
     public static List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws Exception {
@@ -158,7 +158,7 @@ public class UserChoiceService {
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name filterSet = NameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
         if (filterSet.getChildren() == null || filterSet.getChildren().size() == 0) {
-            Collection<Name> possibleNames = NameQueryParser.parseQuery(connectionFromAccessToken, query, languages);
+            Collection<Name> possibleNames = NameQueryParser.parseQuery(connectionFromAccessToken, query, languages, true);
             for (Name possibleName : possibleNames) {
                 filterSet.addChildWillBePersisted(possibleName);
             }
@@ -174,11 +174,11 @@ public class UserChoiceService {
             }
         }
         //final Collection<Name> names = NameService.parseQuery(connectionFromAccessToken, query, languages);
-        return getFilterPairsFromUniqueNames(getUniqueNames(NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages), forceFirstLevel), filterSet);
+        return getFilterPairsFromUniqueNames(getUniqueNames(NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, false), forceFirstLevel), filterSet);
     }
 
     // it doesn't return anything, for things like setting up "as" criteria
     public static void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
-        NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages);
+        NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, true);
     }
 }

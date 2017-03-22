@@ -3,12 +3,14 @@ package com.azquo.spreadsheet.zk;
 import com.azquo.TypedPair;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
+import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
@@ -126,7 +128,19 @@ public class ReportExecutor {
                             for (SName name : book.getInternalBook().getNames()) {
                                 if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
                                     String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
-                                    SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName(), false); // to not persist right now
+                                    // possibly the nosave check could be factored, in report service around line 230
+                                    // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
+                                    SName optionsRegion = book.getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
+                                    String optionsSource = "";
+                                    boolean noSave = false;
+                                    if (optionsRegion != null) {
+                                        optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
+                                        UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), onlineReport.getId(), region, optionsSource);
+                                        noSave = userRegionOptions.getNoSave();
+                                    }
+                                    if (!noSave) {
+                                        SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName(), false); // to not persist right now
+                                    }
                                 }
                             }
                         }

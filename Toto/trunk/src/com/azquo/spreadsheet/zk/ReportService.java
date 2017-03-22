@@ -231,7 +231,7 @@ public class ReportService {
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
-                // todo - factor this chunk?
+                // todo - factor this chunk? - about to put it in the execute code
                 // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
                 SName optionsRegion = book.getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
                 String optionsSource = "";

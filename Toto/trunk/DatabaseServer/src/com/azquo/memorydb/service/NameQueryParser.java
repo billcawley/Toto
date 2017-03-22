@@ -52,23 +52,25 @@ public class NameQueryParser {
         parseQueryCount.incrementAndGet();
         List<String> langs = new ArrayList<>();
         langs.add(Constants.DEFAULT_DISPLAY_NAME);
-        return parseQuery(azquoMemoryDBConnection, setFormula, langs, new ArrayList<>());
+        return parseQuery(azquoMemoryDBConnection, setFormula, langs, null, false);
     }
 
     private static AtomicInteger parseQuery2Count = new AtomicInteger(0);
 
-    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames) throws Exception {
+    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, boolean returnReadOnlyCollection) throws Exception {
         parseQuery2Count.incrementAndGet();
-        return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null);
+        return parseQuery(azquoMemoryDBConnection, setFormula, attributeNames, null, returnReadOnlyCollection);
     }
 
     /* todo : sort exceptions?
     todo - cache option in here
     now uses NameSetList to move connections of names around and only copy them as necessary. Has made the logic a little more complex
-    in places but performance should be better and garbage generation reduced */
+    in places but performance should be better and garbage generation reduced
+    todo - check logic regarding toReturn makes sense.
+    */
     private static AtomicInteger parseQuery3Count = new AtomicInteger(0);
 
-    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn) throws Exception {
+    public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> attributeNames, Collection<Name> toReturn, boolean returnReadOnlyCollection) throws Exception {
         parseQuery3Count.incrementAndGet();
         long track = System.currentTimeMillis();
         String formulaCopy = setFormula;
@@ -85,6 +87,9 @@ public class NameQueryParser {
         * */
         if (toReturn == null) {
             toReturn = new ArrayList<>(); // default to this collection type
+        } else {
+            // if a colleciton to return was passed we can't return a read only colleciton, we'll be adding to what was passed
+            returnReadOnlyCollection = false;
         }
         if (setFormula.length() == 0) {
             return toReturn;
@@ -236,19 +241,26 @@ public class NameQueryParser {
 
         }
 
+        long heapIncreaseBeforeCopyToArray = ((runtime.totalMemory() - runtime.freeMemory()) / mb) - startUsed;
+
         if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
             for (Name possible : nameStack.get(0).getAsCollection()) {
                 if (possible == null || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())) {
                     toReturn.add(possible);
                 }
             }
-        } else { // is the add all inefficient?
-            toReturn.addAll(nameStack.get(0).getAsCollection());
+        } else { // add all can be inefficient as it does a .toArray but the big saving here can be if I can get a hint that the collection won't be modified, then I can just return what's on the namestack
+            // note the first entry on the name stack might actually be mutable anyway and hence we could just return it IF a toReturn collection wasn't passed
+            if (returnReadOnlyCollection){
+                toReturn = nameStack.get(0).getAsCollection();
+            } else {
+                toReturn.addAll(nameStack.get(0).getAsCollection());
+            }
         }
         long time = (System.currentTimeMillis() - track);
         long heapIncrease = ((runtime.totalMemory() - runtime.freeMemory()) / mb) - startUsed;
         if (heapIncrease > 50) {
-            System.out.println("Parse query : " + formulaCopy + " heap increase : " + heapIncrease + "MB ###########");
+            System.out.println("Parse query : " + formulaCopy + " heap increase : " + heapIncrease + "MB. Before copying to array : " + heapIncreaseBeforeCopyToArray + " ###########");
         }
         if (time > 50) {
             System.out.println("Parse query : " + formulaCopy + " took : " + time + "ms");
@@ -276,7 +288,7 @@ public class NameQueryParser {
                                 defName = userSpecificSet; // switch the new one in, it will be used as normal
                             }
                         }
-                        Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition, attributeNames);
+                        Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition, attributeNames, true); // can be read only
                         if (defSet != null) {
                             defName.setChildrenWillBePersisted(defSet);
                         }

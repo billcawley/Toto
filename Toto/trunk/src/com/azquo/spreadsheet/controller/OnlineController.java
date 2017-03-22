@@ -260,8 +260,8 @@ public class OnlineController {
                                 session.setAttribute(finalReportId + "error", e.getMessage()); // put it here to puck up instead of the report
                                 // todo - put an error book here? That could hold the results of an exception . . .
                             }
+                            session.removeAttribute(finalReportId + "loading");
                         }).start();
-                        session.removeAttribute(reportId + "loading");
                     }
                     model.addAttribute("reportid", reportId); // why not? should block on refreshes then
                     return "zsloading";

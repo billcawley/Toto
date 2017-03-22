@@ -138,7 +138,7 @@ public class AzquoCellResolver {
             locked.isTrue = true; // they cant edit the results from complex functions
             if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
                 Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
-                NameQueryParser.parseQuery(connection, cellQuery, languages, namesToCount);
+                NameQueryParser.parseQuery(connection, cellQuery, languages, namesToCount, false);
                 doubleValue = namesToCount.size();
                 stringValue = doubleValue + "";
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
@@ -146,8 +146,8 @@ public class AzquoCellResolver {
                 String[] twoSets = nameFunctionHeading.getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
                 Set<Name> leftSet = HashObjSets.newMutableSet();
                 Set<Name> rightSet = HashObjSets.newMutableSet();
-                NameQueryParser.parseQuery(connection, twoSets[0], languages, leftSet);
-                NameQueryParser.parseQuery(connection, twoSets[1], languages, rightSet);
+                NameQueryParser.parseQuery(connection, twoSets[0], languages, leftSet, false);
+                NameQueryParser.parseQuery(connection, twoSets[1], languages, rightSet, false);
                 // ok I have the two sets, I got rid of total name count (which featured caching), I'm going to do the nuts and bolts here, need to think a little
                 Set<Name> alreadyTested = HashObjSets.newMutableSet();
                 // ok this should be like the inside of totalSetIntersectionCount but dealing with left set as the first parameter not a name.
@@ -168,7 +168,7 @@ public class AzquoCellResolver {
                 doubleValue = count;
                 stringValue = count + "";
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.SET) {
-                final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages);
+                final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages, true);
                 doubleValue = 0;
                 StringBuilder sb = new StringBuilder();
                 boolean first = true;
@@ -181,11 +181,11 @@ public class AzquoCellResolver {
                 }
                 stringValue = sb.toString();
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.FIRST) { // we may have to pass a hint about ordering to the query parser, let's see how it goes without it
-                final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages);
+                final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages, true);
                 doubleValue = 0;
                 stringValue = set.isEmpty() ? "" : set.iterator().next().getDefaultDisplayName();
             } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.LAST) {
-                final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages);
+                final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages, true);
                 doubleValue = 0;
                 stringValue = "";
                 for (Name name : set) { //a bit of a lazy way of doing things but it should be fine, plus with only a collection interface not sure of how to get the last!

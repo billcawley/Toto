@@ -24,7 +24,7 @@ class NameEditFunctions {
             return findDuplicateNames(azquoMemoryDBConnection, setFormula);
         }
         if (setFormula.startsWith("zap ")) {
-            Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages); // defaulting to list here
+            Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages, true); // defaulting to list here
             if (names != null) {
                 for (Name name : names) name.delete();
                 azquoMemoryDBConnection.persist();

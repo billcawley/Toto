@@ -95,12 +95,14 @@ public class ProvenanceService {
         Set<Name> cellNames = new HashSet<>();
         Name nameCountHeading = null;
         for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()) {
-            if (rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
-                provString += "namecount(" + rowHeading.getDescription();
-                nameCountHeading = rowHeading.getName();
-            }
-            if (rowHeading.getName() != null) {
-                cellNames.add(rowHeading.getName());
+            if (rowHeading != null){ // apparently it can be . . . is this a concern? Well NPE is no good, could error maggage on the else if this is a problem
+                if (rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
+                    provString += "namecount(" + rowHeading.getDescription();
+                    nameCountHeading = rowHeading.getName();
+                }
+                if (rowHeading.getName() != null) {
+                    cellNames.add(rowHeading.getName());
+                }
             }
         }
         for (DataRegionHeading colHeading : azquoCell.getColumnHeadings()) {
