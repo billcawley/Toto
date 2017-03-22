@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.TypedPair;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
@@ -114,8 +116,20 @@ public class ReportExecutor {
                     // if not a for each I guess we just execute? Will check for "do"
                 } else if (trimmedLine.toLowerCase().startsWith("do")) {
                     String reportToRun = trimmedLine.substring(2).trim();
-                    OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
+                    Database oldDatabase = null;
+                    OnlineReport onlineReport;
+                    // so, first try to get the report based off permissions, if so it might override the current database
+                    if (loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()) != null){
+                        onlineReport = loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()).getFirst();
+                        if (loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()).getSecond() != null){
+                            oldDatabase = loggedInUser.getDatabase();
+                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()).getSecond());
+                        }
+                    } else { // otherwise try a straight lookup - stick on whatever db we're currently on
+                        onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
+                    }
                     if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
+
                         loopsLog.append("Run : ").append(onlineReport.getReportName());
                         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), count.incrementAndGet() + " Running  " + onlineReport.getReportName() + " ,");
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilenameForDisk();
@@ -123,6 +137,7 @@ public class ReportExecutor {
                         book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
                         book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                         book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
+                        // taking off execute mode
                         final boolean save = ReportRenderer.populateBook(book, 0, false, true); // note true at the end here - keep on logging so users can see changes as they happen
                         if (save) { // so the data was changed and if we save from here it will make changes to the DB
                             for (SName name : book.getInternalBook().getNames()) {
@@ -155,6 +170,10 @@ public class ReportExecutor {
                             } else {
                                 toReturn = new TypedPair<>(outcomeCell.getStringValue(), null);
                             }
+                        }
+                        // revert database if
+                        if (oldDatabase != null){
+                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(),oldDatabase);
                         }
                     }
                 } else if (trimmedLine.toLowerCase().startsWith("repeat until outcome")) { // new conditional logic
