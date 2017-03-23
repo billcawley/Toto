@@ -11,4 +11,9 @@
         <name>org.zkoss.web.preferred.locale</name>
         <value>en_GB</value>
     </library-property>
+    <library-property>
+        <name>org.zkoss.zss.import.cache</name>
+        <value>true</value> <!-- turn the import cache on; default is false if not specified -->
+    </library-property>
+
 </zk>
