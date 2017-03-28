@@ -58,7 +58,7 @@ public class ExcelController {
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    static Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
+    public static final Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
 
     @RequestMapping(produces = "text/json;charset=UTF-8")
     @ResponseBody

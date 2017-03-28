@@ -397,7 +397,8 @@ class ZKContextMenu {
 
     private void buildContextMenuDrillDownIfApplicable(String region, int regionRow, int regionColumn) {
         for (SName sName : myzss.getBook().getInternalBook().getNames()) {
-            if (sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())) {
+            // going through all the names there might be one without a name
+            if (sName.getName() != null && sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())) {
                 String qualifier = sName.getName().substring(("az_drilldown" + region).length()).replace("_", " ");
                 String drillDownString = BookUtils.getSnameCell(sName).getStringValue();
                 if (drillDownString.length() > 0) {
