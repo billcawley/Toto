@@ -78,7 +78,7 @@ public class ExcelInterfaceController {
 //                    String sessionId =  java.util.Base64.getEncoder().encodeToString(BigInteger.valueOf(loggedInUser.hashCode()).toByteArray()); // chop it down to size
                     String sessionId = Integer.toHexString(loggedInUser.hashCode());
                     ExcelController.excelConnections.put(sessionId, loggedInUser); // could be repeatedly putting, do we care?
-                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilenameForDisk();
+                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
                     response.setContentType("application/vnd.ms-excel"); // Set up mime type
                     String extension = onlineReport.getFilenameForDisk().substring(onlineReport.getFilenameForDisk().lastIndexOf("."));
                     // todo, encode the report id? Do we care?

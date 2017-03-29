@@ -38,6 +38,8 @@ import java.util.*;
 
 public final class ImportService {
     public static final String dbPath = "/databases/";
+    public static final String onlineReportsDir = "/onlinereports/";
+    public static final String databaseSetupSheetsDir = "/databasesetupsheets/";
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
@@ -234,7 +236,7 @@ public final class ImportService {
         if (or != null) {
             // zap the old one first
             try {
-                String oldPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + or.getFilenameForDisk();
+                String oldPath = SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk();
                 File old = new File(oldPath);
                 old.delete();
             } catch (Exception e) {
@@ -246,7 +248,7 @@ public final class ImportService {
             or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, fileName, ""); // default to ZK now
         }
         OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
-        String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + "/onlinereports/" + or.getFilenameForDisk();
+        String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk();
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
         FileOutputStream out = new FileOutputStream(fullPath);

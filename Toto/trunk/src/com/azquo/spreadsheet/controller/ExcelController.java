@@ -109,7 +109,7 @@ public class ExcelController {
                     // populate the book as in the OnlineController but just do it server side then chuck it, the point is to sort the permissions
                     OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
                     if (or != null) { // then load it just here on the report server
-                        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilenameForDisk();
+                        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                         book.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
                         book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);

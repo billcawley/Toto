@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -183,7 +184,7 @@ public class ManageDatabasesController {
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
-
+            , @RequestParam(value = "setup", required = false) String setup
     ) {
         if (database != null) {
             request.getSession().setAttribute("lastSelected", database);
@@ -205,6 +206,16 @@ public class ManageDatabasesController {
                         // always move uplaoded files now, they'll need to be transferred to the DB server after code split
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
+                        // if flagged as setup we simply park the file to be reloaded each time regardless of checking it
+                        if ("true".equals(setup)){
+                            String extension = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".")) : "";
+                            String fullPath = SpreadsheetService.getHomeDir() +  ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + "Setup" + loggedInUser.getDatabase().getName() + extension;
+                            File file = new File(fullPath);
+                            file.getParentFile().mkdirs();
+                            FileOutputStream out = new FileOutputStream(fullPath);
+                            org.apache.commons.io.FileUtils.copyFile(moved, out);// straight copy of the source
+                            out.close();
+                        }
                         // need to add in code similar to report loading to give feedback on imports
                         new Thread(() -> {
                             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page

@@ -70,10 +70,9 @@ public class MagentoController {
                 }
             }
             if (op.equals("restart")) {
-                Database existingDb = loggedInUser.getDatabase();
-                if (existingDb != null) {
+                if (loggedInUser.getDatabase() != null) {
                     // an insecure call . . .
-                    AdminService.emptyDatabase(DatabaseServerDAO.findById(existingDb.getDatabaseServerId()), loggedInUser.getDatabase());
+                    AdminService.emptyDatabase(loggedInUser);
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                     String title = "Magento db clear " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                     AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);

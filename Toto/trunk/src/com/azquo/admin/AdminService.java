@@ -135,8 +135,11 @@ this may now not work at all, perhaps delete?
         }
     }
 
-    public static void emptyDatabase(DatabaseServer databaseServer, Database database) throws Exception {
-        RMIClient.getServerInterface(databaseServer.getIp()).emptyDatabase(database.getPersistenceName());
+    // used by magento, always the currently logged in db
+    public static void emptyDatabase(LoggedInUser loggedInUser) throws Exception {
+        DatabaseServer databaseServer = DatabaseServerDAO.findById(loggedInUser.getDatabase().getDatabaseServerId());
+        RMIClient.getServerInterface(databaseServer.getIp()).emptyDatabase(loggedInUser.getDatabase().getPersistenceName());
+        checkDBSetupFile(loggedInUser, loggedInUser.getDatabase());
     }
 
     public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
@@ -336,7 +339,7 @@ this may now not work at all, perhaps delete?
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         if (onlineReport != null && ((loggedInUser.getUser().isAdministrator() && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId())
                 || (loggedInUser.getUser().isDeveloper() && onlineReport.getBusinessId() == loggedInUser.getUser().getId()))) {
-            String fullPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + onlineReport.getFilenameForDisk();
+            String fullPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
             File file = new File(fullPath);
             if (file.exists()) {
                 file.delete();
@@ -372,6 +375,25 @@ this may now not work at all, perhaps delete?
         if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
                 || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getPersistenceName());
+            checkDBSetupFile(loggedInUser,db);
+        }
+    }
+
+    private static void checkDBSetupFile(LoggedInUser loggedInUser, Database db) throws Exception{
+//        String nearlyfullPath = SpreadsheetService.getHomeDir() +  ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + ;
+        File dir = new File(SpreadsheetService.getHomeDir() +  ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir);
+//        File file = new File(nearlyfullPath.substring(nearlyfullPath.lastIndexOf("/")));
+        // feedback on this?
+        File f = null;
+        if (dir.isDirectory()){
+            for (File file : dir.listFiles()){
+                if (file.getName().startsWith("Setup" + db.getName()) && (f == null || f.lastModified() < file.lastModified())){
+                    f = file;
+                }
+            }
+        }
+        if (f != null){
+            ImportService.importTheFile(loggedInUser, f.getName(), f.getAbsolutePath(), loggedInUser.getLanguages(), false);
         }
     }
 

@@ -219,7 +219,7 @@ public class OnlineController {
                             // so in here the new thread we set up the loading as it was originally before
                             try {
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-                                String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + finalLoggedInUser.getBusinessDirectory() + "/onlinereports/" + finalOnlineReport.getFilenameForDisk();
+                                String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + finalLoggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
                                 final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                                 book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                                 book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);

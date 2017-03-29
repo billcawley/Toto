@@ -40,7 +40,7 @@ Created by IntelliJ IDEA.
 					</c:forEach>
 				</select>
 			</td>
-			<td><!-- <label for="useType">Use database type?</label> <input id="useType" type="checkbox" name="useType"/>--></td>
+			<td><label for="useType">Setup File (reload file when database is cleared)</label> <input id="useType" type="checkbox" name="setup" value="true"/></td>
 			<td><input type="submit" name="Upload" value="Upload" class="button "/></td>
 			</tr>
 		</tbody>

@@ -349,7 +349,7 @@ public class SpreadsheetService {
                     throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
                 }
                 String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-                String bookPath = getHomeDir() + ImportService.dbPath + businessDirectory + "/onlinereports/" + onlineReport.getFilenameForDisk();
+                String bookPath = getHomeDir() + ImportService.dbPath + businessDirectory + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
 //                final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name"); // the old temporary one, should be fixed now in the ZK libraries
                 final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                 // the first two make sense. Little funny about the second two but we need a reference to these
