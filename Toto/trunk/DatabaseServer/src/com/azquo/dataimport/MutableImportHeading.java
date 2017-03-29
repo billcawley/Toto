@@ -72,5 +72,4 @@ class MutableImportHeading {
     // in context of childof - only load the line if this name is in the set already
     boolean existing = false;
     String splitChar = null;
-    Set<Name> splitNames = null;
  }

@@ -13,15 +13,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Extracted from AzquoMemoryDB by edward on 28/09/16.
  * <p>
- * This class is responsible for indexing of the AzquoMemoryDB. CUrrently names by attribute.
+ * This class is responsible for indexing of the AzquoMemoryDB. Currently names by attribute.
  * Queries to the index can be public, changes should be package private.
- *
+ * <p>
  * Thread safety is deferred to standard Java classes, should be fine.
- *
+ * <p>
  * Doesn't know which memory database it's held against, I see no reason for it to currently.
- *
+ * <p>
  * I'm using intern when adding strings to objects, it should be used wherever that string is going to hang around.
- *
  */
 public class AzquoMemoryDBIndex {
 
@@ -72,13 +71,9 @@ public class AzquoMemoryDBIndex {
                 return found; // and return straight away
             }
         }
-        Iterator<Name> iterator = possibles.iterator();
-        while (iterator.hasNext()) {
-            Name possible = iterator.next();
-            if (!possible.findAllParents().contains(parent)) {//logic changed by WFC 30/06/15 to allow sets import to search within a general set (e.g. 'date') rather than need an immediate parent (e.g. 'All dates')
-                iterator.remove();
-            }
-        }
+        //logic changed by WFC 30/06/15 to allow sets import to search within a general set (e.g. 'date') rather than need an immediate parent (e.g. 'All dates')
+        // get rid of any that are not in the parent - removeIf has the same logic as the iterator that was there before.
+        possibles.removeIf(possible -> !possible.findAllParents().contains(parent));
         return possibles; // so this could be more than one if there were multiple in a big parent set (presumably at different levels)
     }
 
@@ -126,7 +121,7 @@ public class AzquoMemoryDBIndex {
         int dupCount = 0;
         int testCount = 0;
         for (String string : map.keySet()) {
-            if (testCount++ % 50000 == 0){
+            if (testCount++ % 50000 == 0) {
                 System.out.println("testing for duplicates - count " + testCount + " dups found " + dupCount);
             }
             if (map.get(string).size() > 1) {
@@ -306,10 +301,10 @@ public class AzquoMemoryDBIndex {
         // ok, these got bigger than expected, big bottleneck. Using compute should be able to safely switch over at 512 entries
         //Collection<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
         Collection<Name> names = namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
-            if (v == null){
+            if (v == null) {
                 return new CopyOnWriteArrayList<>();
             }
-            if (v.size() == 512){
+            if (v.size() == 512) {
                 Collection<Name> asSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
                 asSet.addAll(v);
                 return asSet;
@@ -332,7 +327,7 @@ public class AzquoMemoryDBIndex {
         if (namesForThisAttribute != null) {// the map we care about
             // putting this modification in compute to be sure it won't get tripped up finding a collection that was switched in the mean time by the 512 setAttribute switch above
             namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
-                if (v != null){
+                if (v != null) {
                     v.remove(name);
                 }
                 return v;
@@ -375,19 +370,19 @@ public class AzquoMemoryDBIndex {
         removeAttributeFromNameInAttributeNameMapCount.set(0);
     }
 
-    void printIndexStats(){
+    void printIndexStats() {
         NumberFormat nf = NumberFormat.getInstance();
 
         List<TypedPair<String, Map<String, Collection<Name>>>> topAttributes = new ArrayList<>();
-        for (String attName : nameByAttributeMap.keySet()){
+        for (String attName : nameByAttributeMap.keySet()) {
             topAttributes.add(new TypedPair<>(attName, nameByAttributeMap.get(attName)));
         }
         topAttributes.sort((o1, o2) -> (Integer.compare(o2.getSecond().size(), o1.getSecond().size())));
         System.out.println("Attribute Name                          Number of values");
-        for (TypedPair<String, Map<String, Collection<Name>>> attEntry : topAttributes){
+        for (TypedPair<String, Map<String, Collection<Name>>> attEntry : topAttributes) {
             System.out.print(attEntry.getFirst());
-            if (attEntry.getFirst().length() < 40){
-                for (int i = 0; i < 40 - attEntry.getFirst().length(); i++){
+            if (attEntry.getFirst().length() < 40) {
+                for (int i = 0; i < 40 - attEntry.getFirst().length(); i++) {
                     System.out.print(" ");
                 }
             }
@@ -404,21 +399,21 @@ public class AzquoMemoryDBIndex {
                 counts.computeIfAbsent(size, i -> new AtomicInteger()).incrementAndGet(); // essentially count the number of indexes of any given size
             }
         }
-            List<Integer> sizes = new ArrayList<>(counts.keySet());
-            Collections.sort(sizes);
-            System.out.println("index size          number of indexes with that size");
-            for (Integer size : sizes){
-                String ssize = nf.format(size);
-                if (size == 512){
-                    ssize = ">=512";
-                }
-                System.out.print(ssize);
-                if (ssize.length() < 20){
-                    for (int i = 0; i < 20 - ssize.length(); i++){
-                        System.out.print(" ");
-                    }
-                }
-                System.out.println(counts.get(size));
+        List<Integer> sizes = new ArrayList<>(counts.keySet());
+        Collections.sort(sizes);
+        System.out.println("index size          number of indexes with that size");
+        for (Integer size : sizes) {
+            String ssize = nf.format(size);
+            if (size == 512) {
+                ssize = ">=512";
             }
+            System.out.print(ssize);
+            if (ssize.length() < 20) {
+                for (int i = 0; i < 20 - ssize.length(); i++) {
+                    System.out.print(" ");
+                }
+            }
+            System.out.println(counts.get(size));
+        }
     }
 }

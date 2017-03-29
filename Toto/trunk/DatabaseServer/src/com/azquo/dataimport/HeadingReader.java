@@ -30,26 +30,26 @@ class HeadingReader {
     How these are used is described in more detail in MutableImportHeading and the clause interpreter.
      */
 
-    public static final String CHILDOF = "child of "; // trailing space I suppose one could otherwise get a false "child ofweryhwrs" match which can't happen with the others
-    // parent of another heading (as opposed to name), would like the clause to be more explicit, as in differentiate between a name in the database and a column
-    public static final String PARENTOF = "parent of ";
-    public static final String ATTRIBUTE = "attribute";
-    public static final String LANGUAGE = "language";
-    public static final String PEERS = "peers";
-    public static final String LOCAL = "local";
-    public static final String COMPOSITION = "composition";
-    public static final String DEFAULT = "default";
-    public static final String NONZERO = "nonzero";
-    public static final String DATELANG = "date";
-    public static final String ONLY = "only";
-    public static final String EXCLUSIVE = "exclusive";
-    public static final String COMMENT = "comment";
-    public static final String EXISTING = "existing"; // only works in in context of child of
+    static final String CHILDOF = "child of "; // trailing space I suppose one could otherwise get a false "child ofweryhwrs" match which can't happen with the others
+    // parent of another heading (as opposed to name), would like the clause to be more explicit, as in differentiate between a name in the database and a column. This distinction still bugs me . . .
+    static final String PARENTOF = "parent of ";
+    static final String ATTRIBUTE = "attribute";
+    static final String LANGUAGE = "language";
+    static final String PEERS = "peers";
+    static final String LOCAL = "local";
+    static final String COMPOSITION = "composition";
+    static final String DEFAULT = "default";
+    static final String NONZERO = "nonzero";
+    static final String DATELANG = "date";
+    static final String ONLY = "only";
+    static final String EXCLUSIVE = "exclusive";
+    static final String COMMENT = "comment";
+    static final String EXISTING = "existing"; // only works in in context of child of
     // essentially using either of these keywords switches to pivot mode (like an Excel pivot) where a name is created
     // from the line number and in a set called the name of the file, uploading successive files with the same name would of course cause problems for this system, data should be cleared before re uploading
-    public static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table, they are replaced before parsing starts properly
-    public static final String LINEDATA = "linedata";
-    public static final String SPLIT = "split";
+    static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table, they are replaced before parsing starts properly
+    static final String LINEDATA = "linedata";
+    static final String SPLIT = "split";
 
     // Manages the context being assigned automatically to subsequent headers. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.

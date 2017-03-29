@@ -20,6 +20,9 @@ import java.util.Set;
  * I think I may even go so far as actually holding the object reference to the database as opposed to a database id.
  * If there is a way I don't yet know about for a constructor to only be called by another class this could be simplified
  * So far have seen no performance hits from constraining objects by DB
+ *
+ * A small note - with overridden functions it's possible that virtual function calling, that is to say functions called from this superclass that have to be worked out at runtime,
+ * MIGHT be a performance problem but I've not seen it so far. I was made aware of this in a JVM talk.
  */
 
 public abstract class AzquoMemoryDBEntity {
@@ -85,13 +88,13 @@ public abstract class AzquoMemoryDBEntity {
 
    One can do this also on the set instantiation but as the Koloboke author says "if you cannot fix the keys' hashCode() implementation" but we can. .withKeyEquivalence(HashCodeMixingEquivalence.INSTANCE) is how it would be done.
 
-   Essentially in going for top speed koloboke trusts the hashes (unlike standard hash based collections), you either give it good hashes or tell it to mix them up. Or have poor performance.
+   Essentially in going for top speed koloboke trusts the hashes (unlike standard Java hash based collections), you either give it good hashes or tell it to mix them up. Or have poor performance.
 
      */
 
     @Override
     public final int hashCode() {
-        return getId() * -1640531527; // mix it up as per koloboke advice - we might hit ids of of a few hundred million but often they'll be at the bottom, relatively small range from -2billion to +2billion.
+        return getId() * -1640531527; // mix it up as per koloboke advice - we might hit ids of of a few hundred million but often they'll be at the bottom, relatively small range from int possibles of -2billion to +2billion.
     }
 
     // should be called pretty much wherever objects are going to be added to each others maps/sets/lists

@@ -81,7 +81,7 @@ public class BatchImporter implements Callable<Void> {
         return null;
     }
 
-    // Checking only and existing means "should we import the line at all" bases on these criteria
+    // Checking only and existing means "should we import the line at all" based on these criteria
 
     private static boolean checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
         for (ImportCellWithHeading cell : cells) {
@@ -308,14 +308,14 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
             }
-            if (!peersOk){
+            if (!peersOk) {
                 linesRejected.add(lineNo); // new logic to mark unstored values in the lines rejected
             } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
                 // now we have the set of names for that name with peers get the value from that headingNo it's a header for
                 String value = cell.getLineValue();
                 if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
                     // finally store our value and names for it - only increnemt the value count if something actually changed in the DB
-                    if (ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue)){
+                    if (ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue)) {
                         valueCount++;
                     }
                 }
@@ -336,7 +336,7 @@ public class BatchImporter implements Callable<Void> {
         return valueCount;
     }
 
-    // todo accessed outside, move them out
+    // todo accessed outside, move them out?
 
     private static LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
         try {
@@ -352,7 +352,7 @@ public class BatchImporter implements Callable<Void> {
     private static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     public static LocalDate isADate(String maybeDate) {
-        String dateToTest = maybeDate.replace("/","-").replace(" ","-");
+        String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
         LocalDate date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, dateTimeFormatter);
         if (date != null) return date;
         date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, ukdf4);
@@ -389,31 +389,27 @@ public class BatchImporter implements Callable<Void> {
         }
         if (cellWithHeading.getSplitNames() == null) { // then create it, this will take care of the parents ("child of") while creating
             cellWithHeading.setSplitNames(new HashSet<>());
-            if (cellWithHeading.getImmutableImportHeading().splitChar ==null) {
-                if (cellWithHeading.getLineName()==null) {
+            if (cellWithHeading.getImmutableImportHeading().splitChar == null) {
+                if (cellWithHeading.getLineName() == null) {
                     cellWithHeading.setLineName(includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeadingLineValue
                             , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading(), attributeNames)));
-                }else{
-                    for (Name parent:cellWithHeading.getImmutableImportHeading().parentNames){
+                } else {
+                    for (Name parent : cellWithHeading.getImmutableImportHeading().parentNames) {
                         parent.addChildWillBePersisted(cellWithHeading.getLineName());
 
                     }
                 }
                 cellWithHeading.getSplitNames().add(cellWithHeading.getLineName());
-            }else{
+            } else {
                 //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
-                String[]splitStrings = cellWithHeadingLineValue.split(cellWithHeading.getImmutableImportHeading().splitChar);
-                for (String splitString:splitStrings){
+                String[] splitStrings = cellWithHeadingLineValue.split(cellWithHeading.getImmutableImportHeading().splitChar);
+                for (String splitString : splitStrings) {
                     cellWithHeading.getSplitNames().add(includeInParents(azquoMemoryDBConnection, namesFoundCache, splitString.trim()
                             , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading(), attributeNames)));
-
                 }
-
-
             }
-
         } else { // it existed (created below as a child name), sort parents if necessary
-            for (Name child:cellWithHeading.getSplitNames()) {
+            for (Name child : cellWithHeading.getSplitNames()) {
                 for (Name parent : cellWithHeading.getImmutableImportHeading().parentNames) { // apparently there can be multiple child ofs, put the name for the line in the appropriate sets, pretty vanilla based off the parents set up
                     parent.addChildWillBePersisted(child);
                 }
@@ -432,7 +428,7 @@ public class BatchImporter implements Callable<Void> {
                 childCell.setLineName(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childCell.getLineValue(), cellWithHeading.getLineName()
                         , cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(childCell.getImmutableImportHeading(), attributeNames)));
             }
-            for (Name parent:cellWithHeading.getSplitNames()) {
+            for (Name parent : cellWithHeading.getSplitNames()) {
                 //the 'parent' above is the current cell, not its parent
                 // check exclusive to remove the child from some other parents if necessary - this replaces the old "remove from" functionality
                 /*

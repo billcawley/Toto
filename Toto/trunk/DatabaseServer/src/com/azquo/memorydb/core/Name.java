@@ -609,7 +609,7 @@ public final class Name extends AzquoMemoryDBEntity {
             }
             for (Name child : children) {
                 if (child != null) {
-                    addChildWillBePersisted(child, 0, false); // no cache clear, will do it in a mo!
+                    addChildWillBePersisted(child, false); // no cache clear, will do it in a mo!
                 }
             }
             clearChildrenCaches();
@@ -621,7 +621,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public void addChildWillBePersisted(Name child) throws Exception {
         addChildWillBePersistedCount.incrementAndGet();
-        addChildWillBePersisted(child, 0, true);
+        addChildWillBePersisted(child, true);
     }
 
     // with position, will just add if none passed note : this sees position as starting at 1!
@@ -629,7 +629,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger addChildWillBePersisted3Count = new AtomicInteger(0);
 
-    private void addChildWillBePersisted(Name child, int position, boolean clearCache) throws Exception {
+    private void addChildWillBePersisted(Name child, boolean clearCache) throws Exception {
         addChildWillBePersisted3Count.incrementAndGet();
         checkDatabaseMatches(child);
         if (child.equals(this)) return;//don't put child into itself
@@ -655,13 +655,9 @@ public final class Name extends AzquoMemoryDBEntity {
                         childrenAsSet.add(child);
                         // children new arraylist?;
                     } else {
-                        if (position != 0) {
-                            children = NameUtils.nameArrayAppend(children, child, position);
-                        } else {
                             // unlike with parents and values we don't want to look for an empty initialised array here,
                             // children can be dealt with more cleanly in the linking (as in we'll make the array to size in one shot there after the names have been set in the maps in AzquoMemoryDB)
                             children = NameUtils.nameArrayAppend(children, child);
-                        }
                     }
                 }
             }

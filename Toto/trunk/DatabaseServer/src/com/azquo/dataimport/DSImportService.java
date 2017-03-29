@@ -188,8 +188,7 @@ public class DSImportService {
                     .append((System.currentTimeMillis() - track) / 1000)
                     .append(" second(s) for ")
                     .append(lineNo - 1)
-                    .append(" lines")
-                    .append(", " + valuesModifiedCounter + " values adjusted<br/>\n");
+                    .append(" lines").append(", ").append(valuesModifiedCounter).append(" values adjusted<br/>\n");
 
             // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
             if (!linesRejected.isEmpty()) {
@@ -307,7 +306,7 @@ public class DSImportService {
                     throw new Exception("Invalid headers on import file - is this a report that required az_ReportName?");
                 }
                 // option to stack the clauses vertically
-                buildHeadersFromVerticallyListedClauses(azquoMemoryDBConnection, headers, lineIteratorAndBatchSize.lineIterator);
+                buildHeadersFromVerticallyListedClauses(headers, lineIteratorAndBatchSize.lineIterator);
             }
             if (isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
@@ -328,13 +327,13 @@ public class DSImportService {
             }
         }
         // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
-        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, new ArrayList<String>(attributeNames), headers, importInterpreterLookup, fileNameForReplace);//attribute names may have additions when language is in the context
+        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, new ArrayList<>(attributeNames), headers, importInterpreterLookup, fileNameForReplace);//attribute names may have additions when language is in the context
         lineIteratorAndBatchSize.headings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, attributeNames);
         return lineIteratorAndBatchSize;
     }
 
     // the idea is that a header could be followed by successive clauses on cells below and this might be easier to read
-    private static void buildHeadersFromVerticallyListedClauses(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, Iterator<String[]> lineIterator) {
+    private static void buildHeadersFromVerticallyListedClauses(String[] headers, Iterator<String[]> lineIterator) {
         String[] nextLine = lineIterator.next();
         int headingCount = 1;
         boolean lastfilled = true;
@@ -367,27 +366,25 @@ public class DSImportService {
         }
     }
 
-    private static boolean findReservedWord(String heading){
+    private static boolean findReservedWord(String heading) {
         heading = heading.toLowerCase();
-        if (heading.startsWith(HeadingReader.CHILDOF)) return true;
-        if (heading.startsWith(HeadingReader.PARENTOF)) return true;
-        if (heading.startsWith(HeadingReader.ATTRIBUTE)) return true;
-        if (heading.startsWith(HeadingReader.LANGUAGE)) return true;
-        if (heading.startsWith(HeadingReader.PEERS)) return true;
-        if (heading.startsWith(HeadingReader.LOCAL)) return true;
-        if (heading.startsWith(HeadingReader.COMPOSITION)) return true;
-        if (heading.startsWith(HeadingReader.DEFAULT)) return true;
-        if (heading.startsWith(HeadingReader.NONZERO)) return true;
-        if (heading.startsWith(HeadingReader.DATELANG)) return true;
-        if (heading.startsWith(HeadingReader.ONLY)) return true;
-        if (heading.startsWith(HeadingReader.EXCLUSIVE)) return true;
-        if (heading.startsWith(HeadingReader.COMMENT)) return true;
-        if (heading.startsWith(HeadingReader.EXISTING)) return true;
-        if (heading.startsWith(HeadingReader.LINEHEADING)) return true;
-        if (heading.startsWith(HeadingReader.LINEDATA)) return true;
-        if (heading.startsWith(HeadingReader.SPLIT)) return true;
-        return false;
-
+        return heading.startsWith(HeadingReader.CHILDOF)
+                || heading.startsWith(HeadingReader.PARENTOF)
+                || heading.startsWith(HeadingReader.ATTRIBUTE)
+                || heading.startsWith(HeadingReader.LANGUAGE)
+                || heading.startsWith(HeadingReader.PEERS)
+                || heading.startsWith(HeadingReader.LOCAL)
+                || heading.startsWith(HeadingReader.COMPOSITION)
+                || heading.startsWith(HeadingReader.DEFAULT)
+                || heading.startsWith(HeadingReader.NONZERO)
+                || heading.startsWith(HeadingReader.DATELANG)
+                || heading.startsWith(HeadingReader.ONLY)
+                || heading.startsWith(HeadingReader.EXCLUSIVE)
+                || heading.startsWith(HeadingReader.COMMENT)
+                || heading.startsWith(HeadingReader.EXISTING)
+                || heading.startsWith(HeadingReader.LINEHEADING)
+                || heading.startsWith(HeadingReader.LINEDATA)
+                || heading.startsWith(HeadingReader.SPLIT);
     }
 
     private static void checkTranspose(Name importInterpreter, HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize) {
