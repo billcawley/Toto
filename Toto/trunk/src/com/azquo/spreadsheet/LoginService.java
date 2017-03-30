@@ -4,6 +4,9 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
+import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.*;
 import org.apache.log4j.Logger;
 
@@ -24,7 +27,13 @@ public class LoginService {
     private static final Logger logger = Logger.getLogger(LoginService.class);
 
     public static LoggedInUser loginLoggedInUser(final String sessionId, final String databaseName, final String userEmail, final String password, boolean loggedIn) throws Exception {
+        return loginLoggedInUser(sessionId, databaseName, userEmail, password, null, loggedIn);
+    }
+
+
+     public static LoggedInUser loginLoggedInUser(final String sessionId, String databaseName, final String userEmail, final String password, final String reportName, boolean loggedIn) throws Exception {
         User user;
+
         //for demo users, a new User id is made for each user.
         if (userEmail.startsWith("demo@user.com")) {
             user = UserDAO.findByEmail(userEmail);
@@ -39,7 +48,17 @@ public class LoginService {
         } else {
             user = UserDAO.findByEmail(userEmail);
         }
-        //boolean temporary = false;
+         if ((databaseName==null || databaseName.length()==0) && (reportName !=null && reportName.length() > 0 && user!=null)){
+             OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName,user.getBusinessId());
+             if (onlineReport!=null){
+                 List<Integer> dblist = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
+                 if (dblist.size()==1){
+                     databaseName = DatabaseDAO.findById(dblist.get(0)).getName();
+                 }
+             }
+         }
+
+         //boolean temporary = false;
         if (user != null && (loggedIn || AdminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword()))) {
             return loginLoggedInUser(sessionId, databaseName, user);
         }

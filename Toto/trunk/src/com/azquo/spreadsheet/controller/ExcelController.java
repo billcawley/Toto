@@ -91,7 +91,7 @@ public class ExcelController {
             }
             LoggedInUser loggedInUser = null;
             if (logon != null && logon.length() > 0) {
-                loggedInUser = LoginService.loginLoggedInUser("", database, logon, password, false);
+                loggedInUser = LoginService.loginLoggedInUser("", database, logon, password, reportNameCheck, false);
                 if (loggedInUser == null) {
                     return "error: User " + logon + " with this password does not exist";
                 }

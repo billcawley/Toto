@@ -76,6 +76,7 @@ public class OnlineController {
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
+            , @RequestParam(value = "sessionid", required = false, defaultValue = "") String sessionId
             , @RequestParam(value = "uploadfile", required = false) MultipartFile uploadfile
 
     ) {
@@ -83,12 +84,20 @@ public class OnlineController {
             return "redirect:/api/ExcelInterface?" + request.getQueryString();
         }
         try {
-            //long startTime = System.currentTimeMillis();
+               //long startTime = System.currentTimeMillis();
             try {
-                LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-                if (loggedInUser == null) {
+                LoggedInUser tempLoggedInUser = null;
+                if (sessionId != null && sessionId.length() > 0){
+                    tempLoggedInUser = ExcelController.excelConnections.get(sessionId);
+                    request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, tempLoggedInUser); // so it keeps working as they click around!
+                }
+                if (tempLoggedInUser==null){
+                    tempLoggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+                }
+                if (tempLoggedInUser == null) {
                     return "redirect:/api/Login";// I guess redirect to login page
                 }
+                final LoggedInUser loggedInUser = tempLoggedInUser;
                 // dealing with the report/database combo WAS below but I see no reason for this, try and resolve it now
                 OnlineReport onlineReport = null;
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && reportId != null && reportId.length() > 0 && !reportId.equals("1")) { // admin, we allow a report and possibly db to be set
@@ -288,7 +297,8 @@ public class OnlineController {
             , @RequestParam(value = "database", required = false, defaultValue = "") String database
             , @RequestParam(value = "imagename", required = false, defaultValue = "") String imageName
             , @RequestParam(value = "submit", required = false, defaultValue = "") String submit
+            , @RequestParam(value = "sessionid", required = false, defaultValue = "") String sessionId
     ) {
-        return handleRequest(model, request, reportId, databaseId, permissionId, opcode, database, imageName, submit, null);
+        return handleRequest(model, request, reportId, databaseId, permissionId, opcode, database, imageName, submit, sessionId, null);
     }
 }
