@@ -78,7 +78,12 @@ public class ZKSpreadsheetCommandController {
                     if ("UNFREEZE".equals(action)) {
                         Ranges.range(ss.getSelectedSheet()).setFreezePanel(0, 0);
                     }
+                    // now just pops up the processing, bounces back to actually save below
                     if ("XLS".equals(action)) {
+                        Clients.showBusy("Processing ...");
+                        Clients.evalJavaScript("postAjax('ActuallyXLS');");
+                    }
+                    if ("ActuallyXLS".equals(action)) {
                         Exporter exporter = Exporters.getExporter();
                         Book book = ss.getBook();
                         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
@@ -93,6 +98,7 @@ public class ZKSpreadsheetCommandController {
                         }
                         loggedInUser.userLog("Save : " + ss.getSelectedSheetName() + ".xlsx");
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".xlsx", null, null, file, true));
+                        Clients.clearBusy();
                     }
 
                     if ("SaveTemplate".equals(action)) { // similar to above but we're overwriting the report
