@@ -9,6 +9,7 @@ import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import sun.misc.BASE64Encoder;
 
@@ -375,7 +376,10 @@ this may now not work at all, perhaps delete?
         if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
                 || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getPersistenceName());
+            Database oldDb = loggedInUser.getDatabase();
+            LoginService.switchDatabase(loggedInUser, db);
             checkDBSetupFile(loggedInUser,db);
+            LoginService.switchDatabase(loggedInUser, oldDb);
         }
     }
 
