@@ -483,10 +483,10 @@ class AzquoCellService {
     private static boolean hasAttribute(AzquoCell cell){
         for(DataRegionHeading heading:cell.getColumnHeadings()){
 
-            if (heading != null && heading.getAttribute()!= null) return true;
+            if (heading != null && heading.getAttribute()!= null && !heading.getAttribute().equals(".")) return true;
         }
         for (DataRegionHeading heading:cell.getRowHeadings()) {
-            if (heading != null && heading.getAttribute() != null) return true;
+            if (heading != null && heading.getAttribute() != null && !heading.getAttribute().equals(".")) return true;
 
         }
         return false;
