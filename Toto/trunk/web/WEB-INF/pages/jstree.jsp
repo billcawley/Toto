@@ -146,9 +146,12 @@
                                     if (!parents) {
                                         url += "&parents=true";
                                     }
-
-                                    window.parent.$.inspectOverlay().tab(url, 'Parent');
-                                    //window.open(url, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
+                                    if (window != window.top){
+                                        window.parent.$.inspectOverlay().tab(url, 'Parent');
+                                    }else{
+                                        //window.open(url, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
+                                        window.open(url,"_blank","")
+                                    }
                                 }
 
                             }
@@ -187,8 +190,12 @@
 
 
         function changeLanguage(){
-            window.parent.$.inspectOverlay().tab("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", document.getElementById("attributeChosen").value);
-            //window.open("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
+            if (window!=window.top){
+                window.parent.$.inspectOverlay().tab("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", document.getElementById("attributeChosen").value);
+            }else{
+                //window.open("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
+                window.open("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", "_blank", "")
+            }
         }
 
         function submitChoice(){
