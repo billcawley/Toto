@@ -52,7 +52,7 @@ public class LoginService {
              OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName,user.getBusinessId());
              if (onlineReport!=null){
                  List<Integer> dblist = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
-                 if (dblist.size()==1){
+                 if (dblist.size() >0){//find the first database
                      databaseName = DatabaseDAO.findById(dblist.get(0)).getName();
                  }
              }
