@@ -48,7 +48,7 @@ public class LoginService {
         } else {
             user = UserDAO.findByEmail(userEmail);
         }
-         if ((databaseName==null || databaseName.length()==0) && (reportName !=null && reportName.length() > 0 && user!=null)){
+         if (reportName !=null && reportName.length() > 0 && user!=null){
              OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName,user.getBusinessId());
              if (onlineReport!=null){
                  List<Integer> dblist = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
