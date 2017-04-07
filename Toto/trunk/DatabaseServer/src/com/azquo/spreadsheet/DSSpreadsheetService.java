@@ -455,7 +455,7 @@ public class DSSpreadsheetService {
                                             if (oldAttVal == null || !oldAttVal.equals(cell.getNewStringValue())) {
                                                 Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
 
-                                                if (attSet != null && attSet.hasChildren() && !azquoMemoryDBConnection.getAzquoMemoryDBIndex().attributeExistsInDB(attribute)) {
+                                                if (attSet != null  && !azquoMemoryDBConnection.getAzquoMemoryDBIndex().attributeExistsInDB(attribute)) {
                                     /* right : when populating attribute based data findParentAttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
                                     returned is not in fact attributes but the name of an intermediate set in the hierarchy - suppose you want the category of a product the structure is
                                     all categories -> category -> product and .all categories is the column heading and the products are row headings then you'll get the category for the product as the cell value
