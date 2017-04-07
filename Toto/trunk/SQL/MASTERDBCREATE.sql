@@ -112,20 +112,6 @@ CREATE TABLE IF NOT EXISTS `open_database` (
   `close` datetime NOT NULL DEFAULT '0000-00-00 00:00:00'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `permission`
---
-
-CREATE TABLE IF NOT EXISTS `permission` (
-  `id` int(11) NOT NULL,
-  `report_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `database_id` int(11) NOT NULL,
-  `read_list` text COLLATE utf8_unicode_ci NOT NULL,
-  `write_list` text COLLATE utf8_unicode_ci NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -177,7 +163,9 @@ CREATE TABLE IF NOT EXISTS `user` (
   `status` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `salt` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `created_by` varchar(255) COLLATE utf8_unicode_ci NOT NULL
+  `created_by` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `database_id` int(11) NOT NULL,
+  `report_id` int(11) NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
@@ -256,11 +244,6 @@ ADD PRIMARY KEY (`id`), ADD KEY `business_id` (`business_id`);
 ALTER TABLE `open_database`
 ADD PRIMARY KEY (`id`), ADD KEY `close` (`close`), ADD KEY `database_id` (`database_id`,`close`);
 
---
--- Indexes for table `permission`
---
-ALTER TABLE `permission`
-ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `report_schedule`
@@ -368,11 +351,6 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 -- AUTO_INCREMENT for table `open_database`
 --
 ALTER TABLE `open_database`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `permission`
---
-ALTER TABLE `permission`
 MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `report_schedule`

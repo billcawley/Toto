@@ -23,14 +23,14 @@ import java.util.concurrent.atomic.AtomicReference;
  * Date: 25/10/13
  * Time: 10:33
  *
- * This class represents the azquo database itself through more practically it's holding references to all entities by id and dealing with locking values.
+ * This class represents the azquo database itself though more practically it's holding references to all entities by id and dealing with locking values.
  *
  * Also references to instances of this class are held against each entity in that database.
  *
  * The entities define how they relate to each other, that's not done here.
  *
  * Created after it became apparent that Mysql in the way I'd arranged the objects didn't have a hope in hell of
- * delivering data fast enough. Leverage collections to implement Azquo spec.
+ * delivering data fast enough. Use collections to implement Azquo spec.
  * <p>
  */
 

@@ -32,7 +32,7 @@ public final class Business extends StandardEntity {
         this.businessName = businessName;
     }
 
-    BusinessDetails getBusinessDetails() {
+    public BusinessDetails getBusinessDetails() {
         return businessDetails;
     }
 

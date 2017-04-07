@@ -3,7 +3,7 @@
 <html lang="en-GB">
 
 <head>
-	<title>${title} - Azquo 2 2 </title>
+	<title>${title} - Azquo</title>
 	<meta charset="UTF-8">
 	<meta NAME="description" CONTENT="">
 	<meta NAME="keywords" CONTENT="">

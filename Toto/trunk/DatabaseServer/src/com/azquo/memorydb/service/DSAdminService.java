@@ -110,6 +110,10 @@ public class DSAdminService {
         MySQLDatabaseManager.createNewDatabase(persistenceName);
     }
 
+    public static boolean databaseWithNameExists(final String checkName) throws Exception {
+        return MySQLDatabaseManager.databaseWithNameExists(checkName);
+    }
+
     // simple copy
     public static void copyDatabase(final String from, final String to) throws Exception {
         MySQLDatabaseManager.createNewDatabase(to);

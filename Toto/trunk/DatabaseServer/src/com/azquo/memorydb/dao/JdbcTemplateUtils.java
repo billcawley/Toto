@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -109,5 +110,9 @@ public class JdbcTemplateUtils {
         } catch (DataAccessException ignored){
             return 0;
         }
+    }
+
+    static int queryCount(String sql, MapSqlParameterSource namedParams){
+        return jdbcTemplate.queryForList(sql, namedParams).size();
     }
 }

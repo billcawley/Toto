@@ -130,7 +130,12 @@ public class ReportRenderer {
                     SName optionsRegion = sheet.getBook().getInternalBook().getNameByName(AZOPTIONS + region);
                     String optionsSource = "";
                     if (optionsRegion != null) {
-                        optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
+                        SCell optionsCell = BookUtils.getSnameCell(optionsRegion);
+                        if (optionsCell.getType() == SCell.CellType.FORMULA) {
+                            optionsCell.getFormulaResultType();
+                            optionsCell.clearFormulaResultCache();
+                        }
+                        optionsSource = optionsCell.getStringValue();
                     }
                     // better way to combine user region options from the sheet and report database
                     UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);

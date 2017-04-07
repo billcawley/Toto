@@ -99,13 +99,22 @@ this may now not work at all, perhaps delete?
         return "error:  incorrect key";
     }*/
 
-    private static String getSQLDatabaseName(final LoggedInUser loggedInUser, final String databaseName) {
-        //TODO  Check name below is unique.
-        return getBusinessPrefix(loggedInUser) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
+// logged in user conveying the db server and business
+    private static String getSQLDatabaseName(final LoggedInUser loggedInUser, final String databaseName) throws Exception{
+            Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+        return getSQLDatabaseName(loggedInUser.getDatabaseServer(), b, databaseName);
     }
 
-    private static String getBusinessPrefix(final LoggedInUser loggedInUser) {
-        Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+    // lower level - check for this business and name and on this database server
+    private static String getSQLDatabaseName(final DatabaseServer databaseServer, Business b, final String databaseName) throws Exception{
+        String candidate =  getBusinessPrefix(b) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
+        while (RMIClient.getServerInterface(databaseServer.getIp()).databaseWithNameExists(candidate)){
+            candidate += "Z";
+        }
+        return candidate;
+    }
+
+    private static String getBusinessPrefix(Business b) {
         return b != null ? (b.getBusinessName() + "     ").substring(0, 5).trim().replaceAll("[^A-Za-z0-9_]", "") : null;
     }
 
@@ -153,6 +162,17 @@ this may now not work at all, perhaps delete?
         DatabaseDAO.store(database);
         DatabaseServer server = DatabaseServerDAO.findById(database.getDatabaseServerId());
         RMIClient.getServerInterface(server.getIp()).copyDatabase(source.getPersistenceName(), database.getPersistenceName());
+    }
+
+    // added for the business copy function - copy a database to another business. Currently same db server, might change that later. I pass the new user as it's the one attached to the enw business
+    public static Database copyDatabase(LoggedInUser loggedInUser, Database source, User newUser) throws Exception {
+        Business b = BusinessDAO.findById(newUser.getBusinessId());
+        final String persistenceName = getSQLDatabaseName(DatabaseServerDAO.findById(source.getDatabaseServerId()), b, source.getName()); // we want the persistence name based off old db name and server but with the new business name
+        final Database database = new Database(0, newUser.getBusinessId(), newUser.getId(), source.getName(), persistenceName, source.getDatabaseType(), source.getNameCount(), source.getValueCount(), source.getDatabaseServerId());
+        DatabaseDAO.store(database);
+        DatabaseServer server = DatabaseServerDAO.findById(database.getDatabaseServerId());
+        RMIClient.getServerInterface(server.getIp()).copyDatabase(source.getPersistenceName(), database.getPersistenceName());
+        return database;
     }
 
     public static void createUser(final String email

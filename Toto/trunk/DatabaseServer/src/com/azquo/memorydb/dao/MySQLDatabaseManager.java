@@ -1,5 +1,7 @@
 package com.azquo.memorydb.dao;
 
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+
 import java.io.IOException;
 import java.util.HashMap;
 
@@ -48,5 +50,11 @@ public class MySQLDatabaseManager {
         // we assume the database name is safe, should we???
         databaseName = databaseName.replace("`", "oh no you don't");
         JdbcTemplateUtils.update("drop database `" + databaseName + "`", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+    }
+
+    public static boolean databaseWithNameExists(String checkName){
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue("NAME", checkName);
+        return JdbcTemplateUtils.queryCount("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :NAME", namedParams) > 0;
     }
 }

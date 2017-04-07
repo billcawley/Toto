@@ -416,4 +416,13 @@ class RMIImplementation implements RMIInterface {
             throw new RemoteException("Database Server Exception", e);
         }
     }
+
+    @Override
+    public boolean databaseWithNameExists(String nameCheck) throws RemoteException {
+        try {
+        return DSAdminService.databaseWithNameExists(nameCheck);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
 }
