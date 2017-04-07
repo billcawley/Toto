@@ -99,14 +99,7 @@ this may now not work at all, perhaps delete?
         return "error:  incorrect key";
     }*/
 
-// logged in user conveying the db server and business
-    private static String getSQLDatabaseName(final LoggedInUser loggedInUser, final String databaseName) throws Exception{
-            Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-        return getSQLDatabaseName(loggedInUser.getDatabaseServer(), b, databaseName);
-    }
-
-    // lower level - check for this business and name and on this database server
-    private static String getSQLDatabaseName(final DatabaseServer databaseServer, Business b, final String databaseName) throws Exception{
+    public static String getSQLDatabaseName(final DatabaseServer databaseServer, Business b, final String databaseName) throws Exception{
         String candidate =  getBusinessPrefix(b) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
         while (RMIClient.getServerInterface(databaseServer.getIp()).databaseWithNameExists(candidate)){
             candidate += "Z";
@@ -130,11 +123,11 @@ this may now not work at all, perhaps delete?
             if (existing != null) {
                 throw new Exception("That database already exists");
             }
-            final String persistenceName = getSQLDatabaseName(loggedInUser, databaseName);
             final Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
             if (b == null) {
                 throw new Exception("That business does not exist");
             }
+            final String persistenceName = getSQLDatabaseName(databaseServer, b, databaseName);
             final Database database = new Database(0, b.getId(), loggedInUser.getUser().getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId());
             DatabaseDAO.store(database);
             // will be over to the DB side
@@ -157,7 +150,11 @@ this may now not work at all, perhaps delete?
     }
 
     public static void copyDatabase(LoggedInUser loggedInUser, Database source, String newName) throws Exception {
-        final String persistenceName = getSQLDatabaseName(loggedInUser, newName);
+        final Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+        if (b == null) {
+            throw new Exception("That business does not exist");
+        }
+        final String persistenceName = getSQLDatabaseName(loggedInUser.getDatabaseServer(), b, newName);
         final Database database = new Database(0, source.getBusinessId(), loggedInUser.getUser().getId(), newName, persistenceName, source.getDatabaseType(), 0, 0, source.getDatabaseServerId());
         DatabaseDAO.store(database);
         DatabaseServer server = DatabaseServerDAO.findById(database.getDatabaseServerId());
