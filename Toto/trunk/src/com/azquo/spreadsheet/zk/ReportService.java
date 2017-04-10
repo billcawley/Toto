@@ -41,6 +41,11 @@ public class ReportService {
         Map<String, TypedPair<OnlineReport, Database>> permissionsFromReports = loggedInUser.getPermissionsFromReport() != null ? loggedInUser.getPermissionsFromReport() : new ConcurrentHashMap<>(); // cumulative permissions. Might as well make concurrent
         // a repeat call to this function - could be moved outside but I'm not too bothered about it at the moment
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
+        //current report is always allowable...
+        SName sReportName= sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
+        String thisReportName = BookUtils.getSnameCell(sReportName).getStringValue();
+        OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(),thisReportName);
+        permissionsFromReports.put(thisReportName.toLowerCase(),new TypedPair(or, loggedInUser.getDatabase()));
         for (SName sName : namesForSheet) {
             // run through every cell in any names region unlocking to I can later lock. Setting locking on a large selection seems to zap formatting, do it cell by cell
             if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
@@ -57,7 +62,7 @@ public class ReportService {
                             if (database == null) {
                                 database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
                             }
-                            if (report != null) {
+                            if (report != null && !reportName.equals(thisReportName)) {
                                 permissionsFromReports.put(name.toLowerCase(), new TypedPair<>(report, database));
                             }
                         }
@@ -88,9 +93,9 @@ public class ReportService {
                         }
                     }
                 }
-                loggedInUser.setPermissionsFromReport(permissionsFromReports); // re set it in case it was null above
             }
         }
+        loggedInUser.setPermissionsFromReport(permissionsFromReports); // re set it in case it was null above
     }
 
     static void resolveQueries(Sheet sheet, LoggedInUser loggedInUser) {
