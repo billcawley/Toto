@@ -414,7 +414,7 @@ public class DSDataLoadService {
                             }
                         }
                     } else {
-                        System.out.println("found an option value " + val + " for " + magentoProductCategory.getDefaultDisplayName());
+                        //System.out.println("found an option value " + val + " for " + magentoProductCategory.getDefaultDisplayName());
                     }
                 }
             }

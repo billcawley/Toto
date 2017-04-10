@@ -5,6 +5,7 @@ import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.User;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.crypto.Data;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,7 +53,7 @@ public class CopyBusinessController {
                         error.append("THat business already exists\n");
                     } else if (UserDAO.findByEmail(userEmail) != null){
                         error.append("THat user already exists\n");
-                    } else { // ok we copy, the business, databases, database report links, reports. No other users yet - should I? Would mean mapping database ids and report ids correctly. Perhaps doable with maps.
+                    } else { // ok we copy, the business, databases, database report links, reports. No other users yet - should I?
                         Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                         Business.BusinessDetails businessDetails = b.getBusinessDetails();
                         AdminService.registerBusiness(userEmail, userEmail, password, businessName
@@ -62,11 +64,18 @@ public class CopyBusinessController {
                         User newUser = UserDAO.findByEmail(userEmail);
                         Map<Integer, Integer> oldDBIdNewDBId = new HashMap<>();
                         for (Database source : DatabaseDAO.findForBusinessId(b.getId())){ // all of them for this business
-                            Database newDb = AdminService.copyDatabase(loggedInUser,source,newUser);
+                            Database newDb = AdminService.copyDatabase(source,newUser);
                             oldDBIdNewDBId.put(source.getId(), newDb.getId()); // will be useful for mapping if we copy users
                         }
                         for (OnlineReport or : OnlineReportDAO.findForBusinessId(b.getId())){
+                            OnlineReport newReport = AdminService.copyReport(loggedInUser, or, newUser); // this should copy files
+                            // now do the links
+                            List<Integer> databaseIdsForReportId = DatabaseReportLinkDAO.getDatabaseIdsForReportId(or.getId());
+                            for (Integer oldDbId  : databaseIdsForReportId){
+                                DatabaseReportLinkDAO.link(oldDBIdNewDBId.get(oldDbId), newReport.getId()); // so make a new link with the new ids
+                            }
                         }
+                        return "redirect:/api/Login?logoff=true";
                     }
                 }
             } catch (Exception e) {
