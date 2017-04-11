@@ -74,6 +74,12 @@ public class ReportScheduleDAO {
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + DATABASEID + " = :" + DATABASEID, TABLENAME, reportScheduleRowMapper, namedParams);
     }
 
+    public static List<ReportSchedule> findForReportId(final int reportId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(REPORTID, reportId);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + REPORTID + " = :" + REPORTID, TABLENAME, reportScheduleRowMapper, namedParams);
+    }
+
     public static List<ReportSchedule> findWhereDueBefore(LocalDateTime due) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(NEXTDUE, Date.from(due.atZone(ZoneId.systemDefault()).toInstant()));

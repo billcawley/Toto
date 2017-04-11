@@ -57,18 +57,6 @@ CREATE TABLE IF NOT EXISTS `database_server` (
   `sftp_url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `login_record`
---
-
-CREATE TABLE IF NOT EXISTS `login_record` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `database_id` int(11) NOT NULL,
-  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB AUTO_INCREMENT=190 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -227,12 +215,6 @@ ALTER TABLE `database_server`
 ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `login_record`
---
-ALTER TABLE `login_record`
-ADD PRIMARY KEY (`id`);
-
---
 -- Indexes for table `online_report`
 --
 ALTER TABLE `online_report`
@@ -336,11 +318,6 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 -- AUTO_INCREMENT for table `database_server`
 --
 ALTER TABLE `database_server`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `login_record`
---
-ALTER TABLE `login_record`
 MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `online_report`

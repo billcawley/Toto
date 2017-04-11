@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -90,6 +91,12 @@ public final class UserRegionOptionsDAO {
         namedParams.addValue(REPORTID, reportId);
         namedParams.addValue(REGION, region);
         return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID + " AND `" + REPORTID + "` = :" + REPORTID + " AND `" + REGION + "` = :" + REGION, TABLENAME, userRegionOptionsRowMapper, namedParams);
+    }
+
+    public static List<UserRegionOptions> findForUserId(final int userId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(USERID, userId);
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` =:" + USERID, TABLENAME, userRegionOptionsRowMapper, namedParams);
     }
 
     public static UserRegionOptions findById(int id) {

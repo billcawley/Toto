@@ -46,13 +46,13 @@ public class MagentoController {
             , @RequestParam(value = "op", required = false, defaultValue = "") String op
             , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
             , @RequestParam(value = "password", required = false, defaultValue = "") String password
+            , @RequestParam(value = "store", required = false, defaultValue = "") String store
             , @RequestParam(value = "data", required = false) MultipartFile data
     ) throws Exception {
         SimpleDateFormat df = new SimpleDateFormat("yyMMdd-hhmmss");
         try {
-
             if (op == null) op = "";// can this happen with the annotation above?
-            System.out.println("==================== db sent  : " + db + " op= " + op);
+            System.out.println("==================== logon : " + logon +  "db sent  : " + db + " op= " + op);
             //for testing only
             LoggedInUser loggedInUser = LoginService.loginLoggedInUser("", db, logon, password, false);
             if (loggedInUser == null) {
@@ -133,9 +133,10 @@ public class MagentoController {
             , @RequestParam(value = "op", required = false, defaultValue = "") String op
             , @RequestParam(value = "logon", required = false, defaultValue = "") String logon
             , @RequestParam(value = "password", required = false, defaultValue = "") String password
+            , @RequestParam(value = "store", required = false, defaultValue = "") String store
 
     ) throws Exception {
-        return handleRequest(request, response, db, op, logon, password, null);
+        return handleRequest(request, response, db, op, logon, password, store, null);
     }
 
     private String findRequiredTables(LoggedInUser loggedInUser, String remoteAddress) throws Exception {

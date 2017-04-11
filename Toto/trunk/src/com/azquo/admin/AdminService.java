@@ -383,6 +383,11 @@ this may now not work at all, perhaps delete?
                 file.delete();
             }
             OnlineReportDAO.removeById(onlineReport);
+            // and the schedules
+            List<ReportSchedule> reportSchedules = ReportScheduleDAO.findForReportId(reportId);
+            for (ReportSchedule reportSchedule : reportSchedules){
+                ReportScheduleDAO.removeById(reportSchedule);
+            }
         }
     }
 
@@ -392,7 +397,6 @@ this may now not work at all, perhaps delete?
         if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
                 || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
             // note, used to delete choices for the reports for this DB, won't do this now as
-            LoginRecordDAO.removeForDatabaseId(db.getId());
             // before unlinking get the reports to see if they need zapping
             final List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(db.getId());
             DatabaseReportLinkDAO.unLinkDatabase(databaseId);
