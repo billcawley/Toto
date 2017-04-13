@@ -48,7 +48,7 @@
                 <input class="itemselect" type="text" value="" id="itemschosen" name="itemschosen"/>
             </div>
 
-            <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="submitChoice(); return false;" class="button" value="Show data"></p></div>
+            <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="showData(); return false;" class="button" value="Show data"></p></div>
         </div>
     </form>
     <div class="namedetails" id="namedetails" style="display:none">
@@ -198,7 +198,7 @@
             }
         }
 
-        function submitChoice(){
+        function showData() {
             var itemsChosen = "";
             var dataFlag = false;
             if (document.getElementById("itemschosen").value == "") {
@@ -214,12 +214,16 @@
                 itemsChosen = document.getElementById("itemschosen").value;
             }
 
-            if (dataFlag){ // old style call
-                window.parent.$.inspectOverlay().tab("/api/Showdata?chosen=" + itemsChosen, 'Show Data');
-            } else {
+            if (dataFlag) {
+                if (window != window.top) {
+                    window.parent.$.inspectOverlay().tab("/api/Showdata?chosen=" + itemsChosen, 'Show Data');
+                } else {
+                    window.open("/api/Showdata?chosen=" + itemsChosen, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600");
+                }
+            }else {
                 window.parent.$.inspectOverlay().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
+
             }
-            //window.open("/api/Showdata?chosen=" + itemsChosen, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=800")
         }
 
         function hideDetails(){
