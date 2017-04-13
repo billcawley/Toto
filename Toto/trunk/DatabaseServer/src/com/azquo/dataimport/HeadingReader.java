@@ -43,6 +43,7 @@ class HeadingReader {
     static final String DATELANG = "date";
     static final String ONLY = "only";
     static final String EXCLUSIVE = "exclusive";
+    static final String CLEAR = "clear";
     static final String COMMENT = "comment";
     static final String EXISTING = "existing"; // only works in in context of child of
     // essentially using either of these keywords switches to pivot mode (like an Excel pivot) where a name is created
@@ -281,6 +282,12 @@ class HeadingReader {
             case EXISTING: // currently simply a boolean that can work with childof
                 heading.existing = true;
                 break;
+            case CLEAR:
+                if (heading.name==null){
+                    heading.name =  NameService.findOrCreateNameInParent(azquoMemoryDBConnection,heading.heading, null, false);
+                }
+                if (heading.name!=null) heading.name.setChildrenWillBePersisted(Collections.emptyList());
+                //nothing further to do - discard.
             default:
                 throw new Exception(firstWord + " not understood in headings");
         }
