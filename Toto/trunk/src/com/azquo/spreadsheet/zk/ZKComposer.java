@@ -7,6 +7,7 @@ import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.*;
 import org.zkoss.chart.ChartsEvent;
 import org.zkoss.zk.ui.*;
+import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
@@ -148,6 +149,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 try{
                     String saveResult = ReportService.save(myzss, loggedInUser);
                     if (saveResult.startsWith("Success")){
+                        // todo - processing warning here? The button isn't used much . . .
                         ZKComposerUtils.reloadBook(myzss, book);
                         // think this wil;l do it
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
@@ -234,8 +236,15 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
         }
         if (reload) {
-            ZKComposerUtils.reloadBook(myzss, book);
+            Clients.showBusy("Reloading . . .");
+            org.zkoss.zk.ui.event.Events.echoEvent("onReloadWhileClientProcessing", myzss, null);
         }
+    }
+
+    @Listen("onReloadWhileClientProcessing = #myzss")
+    public void onReloadWhileClientProcessing() {
+        ZKComposerUtils.reloadBook(myzss, myzss.getBook());
+        Clients.clearBusy();
     }
 
     // used directly below, I need a list of the following
@@ -479,7 +488,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), selectionName, loggedInUser.getUser().getEmail(), childIds);
                     filterPopup.close();
                     try {
-                        ZKComposerUtils.reloadBook(myzss, book);
+                        Clients.showBusy("Reloading . . .");
+                        org.zkoss.zk.ui.event.Events.echoEvent("onReloadWhileClientProcessing", myzss, null);
+//                        ZKComposerUtils.reloadBook(myzss, book);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
