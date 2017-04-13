@@ -460,7 +460,7 @@ public class BatchImporter implements Callable<Void> {
                     for (Name childCellParent : childCell.getLineName().getParents()) {
                         if (childCellParent == cellWithHeading.getLineName()) {
                             needsAdding = false;
-                        } else if (childCellParent == exclusiveName || exclusiveName.findAllChildren().contains(childCellParent)) {
+                        } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
                             childCellParent.removeFromChildrenWillBePersisted(childCell.getLineName());
                         }
                     }
