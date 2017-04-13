@@ -49,14 +49,26 @@ public class LoginService {
             user = UserDAO.findByEmail(userEmail);
         }
          if (reportName !=null && reportName.length() > 0 && user!=null){
-             OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName,user.getBusinessId());
-             if (onlineReport!=null){
-                 List<Integer> dblist = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
-                 if (dblist.size() >0){//find the first database
-                     databaseName = DatabaseDAO.findById(dblist.get(0)).getName();
+             if (reportName.equals("unknown")){
+                 List<Database>dbs = DatabaseDAO.findForUserId(user.getId());
+
+                 if (dbs.size()> 0){
+                     for (Database db:dbs){
+                          databaseName += db.getName() + ",";
+                     }
+                 }
+             }else {
+                 OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, user.getBusinessId());
+                 if (onlineReport != null) {
+                     List<Integer> dblist = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
+                     if (dblist.size() > 0) {
+                         for (Integer dbNo:dblist){
+                              databaseName += DatabaseDAO.findById(dbNo).getName() + ",";
+                         }
+                     }
                  }
              }
-         }
+          }
 
          //boolean temporary = false;
         if (user != null && (loggedIn || AdminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword()))) {
@@ -67,12 +79,14 @@ public class LoginService {
 
     // todo - what to do about database here, it's not ideal and based on the old model. Also inline the function?
 
-    private static LoggedInUser loginLoggedInUser(final String sessionId, String databaseName, final User user) throws Exception {
+    private static LoggedInUser loginLoggedInUser(final String sessionId, String databaseNames, final User user) throws Exception {
         Database database = null;
+        String databaseName = "";
         // ok user should be ok :)
-        if (databaseName == null) {
-            databaseName = "";
+        if (databaseNames!=null && databaseNames.length() > 0) {
+            databaseName = databaseNames.substring(0,databaseNames.indexOf(","));
         }
+
         // new logic run regardless of whether we were passed a db as we want to default if there's only one DB (this was lost and it knackered some magento uploads)
         if (user.isAdministrator()) {
             final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(user.getBusinessId());
@@ -113,7 +127,13 @@ public class LoginService {
             throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
         }
         String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-        return new LoggedInUser(sessionId, user, databaseServer, database, null, null, null, businessDirectory);// null the read/write list for the mo
+        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user, databaseServer, database, null, null, null, businessDirectory);// null the read/write list for the mo
+        loggedInUser.setDbNames(databaseNames);
+        if (loggedInUser.getUser().getId() != 25) { // stop recording Nic's logins which are also used by the monitoring software!
+            LoginRecordDAO.store(new LoginRecord(0, user.getId(), database != null ? database.getId() : 0, new Date()));
+        }
+        // I zapped something to do with anonymising here, don't know if it's still relevant
+        return loggedInUser;
     }
 
     // basic business match check on these functions

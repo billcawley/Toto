@@ -62,6 +62,7 @@ public class LoggedInUser {
     // moved back in here now (was on the db server for a bit)
 
     private AtomicInteger lastJSTreeNodeId;
+    private String dbNames;
 
     private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
 
@@ -83,6 +84,7 @@ public class LoggedInUser {
         this.imageStoreName = imageStoreName;
         this.context = null;
         lastJSTreeNodeId = new AtomicInteger();
+        dbNames = "";
         jsTreeLookupMap = new ConcurrentHashMap<>();
         // make log files dir if required
         File test = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + userLogsPath);
@@ -108,6 +110,7 @@ public class LoggedInUser {
         this.readPermissions = originalUser.readPermissions;
         this.writePermissions = originalUser.writePermissions;
         this.context = null;
+        this.dbNames = "";
         lastJSTreeNodeId = new AtomicInteger();
         jsTreeLookupMap = new ConcurrentHashMap<>();
         this.businessDirectory = originalUser.businessDirectory;
@@ -182,6 +185,10 @@ public class LoggedInUser {
     public void setImageStoreName(String imageStoreName) {
         this.imageStoreName = imageStoreName;
     }
+
+    public String getDbNames() {return dbNames; }
+
+    public void setDbNames(String dbNames) { this.dbNames = dbNames; }
 
     public String getContext() {
         return context;
