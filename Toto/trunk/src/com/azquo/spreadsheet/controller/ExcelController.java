@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.TypedPair;
+import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
@@ -318,7 +319,9 @@ public class ExcelController {
                     if (itemsChanged > 0) {
                         OnlineReport report = OnlineReportDAO.findById(excelJsonSaveRequest.reportId);
                         loggedInUser.setContext(excelJsonSaveRequest.context); // in this case context for provenance
-                        return SpreadsheetService.saveData(loggedInUser, excelJsonSaveRequest.region, excelJsonSaveRequest.reportId, report.getReportName());
+                        String toReturn = SpreadsheetService.saveData(loggedInUser, excelJsonSaveRequest.region, excelJsonSaveRequest.reportId, report.getReportName());
+                        AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
+                        return toReturn;
                     } else {
                         return "true 0";
                     }

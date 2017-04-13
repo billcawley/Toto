@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.TypedPair;
+import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -296,6 +297,7 @@ public class ReportService {
         }
         // new thing, look for followon, guess we need an instance of ZK azquobook utils
         // need to show readout like executing todo. On that topic could the executing loading screen say "running command?" or something similar?
+        AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         if (error == null) {
             error = "Success: " + savedItems + " values saved";
             loggedInUser.userLog("Save : " + onlineReport.getReportName());

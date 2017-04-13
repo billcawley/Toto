@@ -88,6 +88,7 @@ public final class ImportService {
         }
         UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", "", filePath);//should record the error? (in comment)
         UploadRecordDAO.store(uploadRecord);
+        AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         return toReturn;
     }
 

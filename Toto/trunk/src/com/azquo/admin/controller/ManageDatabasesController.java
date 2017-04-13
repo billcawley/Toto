@@ -149,12 +149,12 @@ public class ManageDatabasesController {
                 for (Database database : databaseList) {
                     boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database);
                     displayDataBases.add(new DisplayDataBase(isLoaded, database));
-                    if (isLoaded && (AdminService.getNameCount(loggedInUser, database) != database.getNameCount()
+/*                    if (isLoaded && (AdminService.getNameCount(loggedInUser, database) != database.getNameCount()
                             || AdminService.getValueCount(loggedInUser, database) != database.getValueCount())) { // then update the counts
                         database.setNameCount(AdminService.getNameCount(loggedInUser, database));
                         database.setValueCount(AdminService.getValueCount(loggedInUser, database));
                         DatabaseDAO.store(database);
-                    }
+                    }*/
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -243,12 +243,12 @@ public class ManageDatabasesController {
                 for (Database database1 : databaseList) {
                     boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database1);
                     displayDataBases.add(new DisplayDataBase(isLoaded, database1));
-                    if (isLoaded && (AdminService.getNameCount(loggedInUser, database1) != database1.getNameCount()
+/*                    if (isLoaded && (AdminService.getNameCount(loggedInUser, database1) != database1.getNameCount()
                             || AdminService.getValueCount(loggedInUser, database1) != database1.getValueCount())) { // then update the counts
                         database1.setNameCount(AdminService.getNameCount(loggedInUser, database1));
                         database1.setValueCount(AdminService.getValueCount(loggedInUser, database1));
                         DatabaseDAO.store(database1);
-                    }
+                    }*/
                 }
             } catch (Exception e) {
                 e.printStackTrace();

@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.TypedPair;
+import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -158,6 +159,7 @@ public class ReportExecutor {
                                     }
                                 }
                             }
+                            AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
                         }
                         // here we try to get an outcome to return
                         SName outcomeName = book.getInternalBook().getNameByName(OUTCOME); // I assume only one

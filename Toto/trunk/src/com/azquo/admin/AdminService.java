@@ -420,8 +420,15 @@ this may now not work at all, perhaps delete?
             Database oldDb = loggedInUser.getDatabase();
             LoginService.switchDatabase(loggedInUser, db);
             checkDBSetupFile(loggedInUser,db);
+            updateNameAndValueCounts(loggedInUser, db);
             LoginService.switchDatabase(loggedInUser, oldDb);
         }
+    }
+
+    public static void updateNameAndValueCounts(LoggedInUser loggedInUser, Database database) throws Exception {
+        database.setNameCount(AdminService.getNameCount(loggedInUser, database));
+        database.setValueCount(AdminService.getValueCount(loggedInUser, database));
+        DatabaseDAO.store(database);
     }
 
     private static void checkDBSetupFile(LoggedInUser loggedInUser, Database db) throws Exception{

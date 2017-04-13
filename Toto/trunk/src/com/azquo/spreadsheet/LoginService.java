@@ -129,9 +129,6 @@ public class LoginService {
         String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
         LoggedInUser loggedInUser = new LoggedInUser(sessionId, user, databaseServer, database, null, null, null, businessDirectory);// null the read/write list for the mo
         loggedInUser.setDbNames(databaseNames);
-        if (loggedInUser.getUser().getId() != 25) { // stop recording Nic's logins which are also used by the monitoring software!
-            LoginRecordDAO.store(new LoginRecord(0, user.getId(), database != null ? database.getId() : 0, new Date()));
-        }
         // I zapped something to do with anonymising here, don't know if it's still relevant
         return loggedInUser;
     }
