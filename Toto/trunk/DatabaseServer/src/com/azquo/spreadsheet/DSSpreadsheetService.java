@@ -311,8 +311,13 @@ public class DSSpreadsheetService {
             if (changed) {
                 return toReturn;
             }
+            //check for any set to be cleared
+
+            checkClear(azquoMemoryDBConnection,cellsAndHeadingsForDisplay.getColumnHeadings());
+            checkClear(azquoMemoryDBConnection,cellsAndHeadingsForDisplay.getRowHeadings());
 
             // multiple lookups on headings are causing problems, parsing them outside
+
             final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getContextSource(), databaseAccessToken.getLanguages());
             DataRegionHeading.SUFFIX contextSuffix = null;
             for (DataRegionHeading contextHeading : contextHeadings) {
@@ -451,9 +456,18 @@ public class DSSpreadsheetService {
                                                 && valuesForCell.getAttributeNames() != null && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
                                             Name toChange = valuesForCell.getNames().get(0);
                                             String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(StringLiterals.QUOTE + "", "");//remove the initial '.' and any `
+                                            if (attribute.endsWith(" clear")){
+                                                attribute = attribute.substring(1, attribute.length() - " clear".length());
+
+                                            }
+                                            boolean exclusive = false;
+                                            if (attribute.endsWith(" exclusive")){
+                                                exclusive = true;
+                                                attribute = attribute.substring(0,attribute.length() - " exclusive".length());
+                                            }
                                             String oldAttVal = toChange.getAttribute(attribute);
                                             if (oldAttVal == null || !oldAttVal.equals(cell.getNewStringValue())) {
-                                                Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
+                                                       Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
 
                                                 if (attSet != null  && !azquoMemoryDBConnection.getAzquoMemoryDBIndex().attributeExistsInDB(attribute)) {
                                     /* right : when populating attribute based data findParentAttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
@@ -463,7 +477,16 @@ public class DSSpreadsheetService {
                                      , named toChange at the moment to that category.
                                     */
                                                     //logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getNewStringValue() + " within " + attribute);
+
                                                     Name category = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getNewStringValue(), attSet, true);
+                                                    //Apr 17 - any save as attribute is considered to be exclusive.
+                                                    if (exclusive) {
+                                                        for (Name existingAtt : attSet.getChildren()) {
+                                                            if (!existingAtt.getDefaultDisplayName().equalsIgnoreCase(cell.getNewStringValue()) && existingAtt.getChildren().contains(toChange)) {
+                                                                existingAtt.removeFromChildrenWillBePersisted(toChange);
+                                                            }
+                                                        }
+                                                    }
                                                     category.addChildWillBePersisted(toChange);
                                                 } else {// simple attribute set
                                                     //logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
@@ -525,6 +548,25 @@ public class DSSpreadsheetService {
         return toReturn;
     }
 
+    private static void checkClear(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> headings) {
+        for (List<String> headingRow:headings){
+            for (String heading:headingRow){
+                if (heading.startsWith(".") && heading.toLowerCase().endsWith(" clear")){
+                    String att = heading.substring(1, heading.length() - " clear".length() - 1); //remove the initial '.' and ' clear'
+                    try {
+                        Name name = NameService.findByName(azquoMemoryDBConnection, att);
+                        if (name != null) {
+                            name.setChildrenWillBePersisted(Collections.emptyList());
+                        }
+                    }catch(Exception e){
+                        //ignore
+                    }
+                }
+            }
+        }
+
+
+    }
     // when doing things like debug/provenance the client needs to say "here's a region description and original position" to locate a cell server side
     public static AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
