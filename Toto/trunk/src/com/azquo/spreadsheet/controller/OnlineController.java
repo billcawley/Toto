@@ -64,6 +64,7 @@ public class OnlineController {
     private static final String EXECUTE = "EXECUTE";
     private static final String TEMPLATE = "TEMPLATE";
     private static final String UPLOAD = "UPLOAD";
+    private static final String UPLOADTEMPLATE = "UPLOADTEMPLATE";
 
     private static final SimpleDateFormat logDf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -132,7 +133,11 @@ public class OnlineController {
                 String result = "error: user has no permission for this report";
                 // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
                 // I wonder if this should be a different controller
-                if (opcode.equalsIgnoreCase(UPLOAD)) {
+                if (opcode.equalsIgnoreCase(UPLOAD) || opcode.equalsIgnoreCase(UPLOADTEMPLATE)) {
+                    boolean isData = true;
+                    if (opcode.equalsIgnoreCase(UPLOADTEMPLATE)){
+                        isData = false;
+                    }
                     reportId = "";
                     if (submit.length() > 0) {
                         // getting rid of database switch
@@ -143,7 +148,7 @@ public class OnlineController {
                             if (fileName.length() > 0) {
                                 File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp the upload to stop overwriting with a file with the same name is uploaded after
                                 uploadfile.transferTo(moved);
-                                result = ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages(), true); // always a data upload from here
+                                result = ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), loggedInUser.getLanguages(), isData);
                             } else {
                                 result = "no file to import";
                             }
