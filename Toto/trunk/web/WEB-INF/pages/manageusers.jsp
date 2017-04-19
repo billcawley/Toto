@@ -34,7 +34,7 @@
 				<td>${user.status}</td>
 				<td>${user.reportName}</td>
 				<td>${user.databaseName}</td>
-				<td><a href="/api/ManageUsers?deleteId=${user.id}" title="Delete ${user.name}" onclick="return confirm('Are you sure?')" class="button small"></a></td>
+				<td><a href="/api/ManageUsers?deleteId=${user.id}" title="Delete ${user.name}" onclick="return confirm('Are you sure?')" class="button small alt fa fa-trash"></a></td>
 				<td><a href="/api/ManageUsers?editId=${user.id}" title="Edit ${user.name}" class="button small fa fa-edit"></a></td>
 			</tr>
 		</c:forEach>
