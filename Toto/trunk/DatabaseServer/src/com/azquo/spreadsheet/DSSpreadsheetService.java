@@ -549,6 +549,7 @@ public class DSSpreadsheetService {
     }
 
     private static void checkClear(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> headings) {
+        if (headings==null) return;
         for (List<String> headingRow:headings){
             for (String heading:headingRow){
                 if (heading.startsWith(".") && heading.toLowerCase().endsWith(" clear")){
