@@ -63,7 +63,7 @@
 		</table>
 		<div class="centeralign">
 			<input type="submit" name="submit" value="Save Changes" class="button"/>
-			<a href="/api/ManageReportSchedules?new=true" class="button alt">Add new schedule</a>
+			<a href="/api/ManageReportSchedules?new=true" class="button">Add new schedule</a>
 		</div>	 
 	</form>
 </main>

@@ -32,7 +32,7 @@
 				 <!-- <td>${report.filename}</td> -->
 				 <td>${report.explanation}</td>
 				 <td><a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a>
-				 <a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" class="button small alt" title="Delete ${report.reportName}"><span class="fa fa-trash" title="Delete"></span> </a>
+				 <a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" class="button small" title="Delete ${report.reportName}"><span class="fa fa-trash" title="Delete"></span> </a>
 				 </td>
 			</tr>
 		</c:forEach>
