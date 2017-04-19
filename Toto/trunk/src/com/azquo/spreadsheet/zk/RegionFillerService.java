@@ -394,13 +394,13 @@ class RegionFillerService {
                             CellOperationUtil.applyFontColor(Ranges.range(sheet, row, col), "#FF0000");
                         }
                         // commented for the moment, requires the overall unlock per sheet followed by the protect later
-                        if (cellValue.isLocked()) {
+                        /*if (cellValue.isLocked()) {
                             Range selection = Ranges.range(sheet, row, col);
                             CellStyle oldStyle = selection.getCellStyle();
                             EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
                             newStyle.setLocked(true);
                             selection.setCellStyle(newStyle);
-                        }
+                        }*/
                     }
                     col++;
                     localCol++;

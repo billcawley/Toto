@@ -100,6 +100,7 @@ public class ManageDatabasesController {
                                 // todo - address whether we're still using such parameters and associated functions
             , @RequestParam(value = "backupTarget", required = false) String backupTarget
             , @RequestParam(value = "summaryLevel", required = false) String summaryLevel
+            , @RequestParam(value = "fileSearch", required = false) String fileSearch
     )
 
     {
@@ -171,7 +172,7 @@ public class ManageDatabasesController {
             } else {
                 model.put("serverList", false);
             }
-            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
+            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser, fileSearch));
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             return "managedatabases";
@@ -203,6 +204,7 @@ public class ManageDatabasesController {
                         // todo - security hole here, a developer could hack a file onto a different db . . .
                         LoginService.switchDatabase(loggedInUser, database); // could be blank now
                         String fileName = uploadFile.getOriginalFilename();
+                        loggedInUser.userLog("Upload file : " + fileName);
                         // always move uplaoded files now, they'll need to be transferred to the DB server after code split
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
@@ -261,7 +263,7 @@ public class ManageDatabasesController {
                 model.put("serverList", false);
             }
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
-            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser));
+            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser, null));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             return "managedatabases";
         } else {

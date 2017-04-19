@@ -40,7 +40,7 @@ Created by IntelliJ IDEA.
 					</c:forEach>
 				</select>
 			</td>
-			<td><label for="useType">Setup File (reload file when database is cleared)</label> <input id="useType" type="checkbox" name="setup" value="true"/></td>
+<!--			<td><label for="useType">Setup File (reload file when database is cleared)</label> <input id="useType" type="checkbox" name="setup" value="true"/></td> -->
 			<td><input type="submit" name="Upload" value="Upload" class="button "/></td>
 			</tr>
 		</tbody>
@@ -55,9 +55,9 @@ Created by IntelliJ IDEA.
 				<td>Business Name</td>
 				<td>Database Name</td>
 				<td>User Name</td>
-				<td>File Name</td>
-				<td>File Type</td>
-				<td>Comments</td>
+				<td><form method="post"> File Name <input size="20" name="fileSearch"></form></td>
+<!--				<td>File Type</td>
+				<td>Comments</td>-->
 				<td></td>
 			</tr>
 		</thead>
@@ -69,8 +69,8 @@ Created by IntelliJ IDEA.
 				<td>${upload.databaseName}</td>
 				<td>${upload.userName}</td>
 				<td>${upload.fileName}</td>
-				<td>${upload.fileType}</td>
-				<td>${upload.comments}</td>
+				<!--<td>${upload.fileType}</td>
+				<td>${upload.comments}</td> -->
 				<td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}">Download</a></c:if></td>
 			</tr>
 		</c:forEach>
@@ -141,7 +141,7 @@ Created by IntelliJ IDEA.
 					<td><a href="/api/ManageDatabases?deleteId=${database.id}" onclick="return confirm('Are you sure you want to Delete ${database.name}?')" class="button small alt" title="Delete ${database.name}"><span class="fa fa-trash" title="Delete"></span> </a></td>
 					<td><a href="/api/ManageDatabaseBackups?databaseId=${database.id}" class="button small alt" title="Manage Backups for ${database.name}"><span class="fa fa-archive" title="Backups"></span> </a></td>
 					<td><c:if test="${database.loaded}"><a href="/api/ManageDatabases?unloadId=${database.id}" class="button small" title="Unload ${database.name}"><span class="fa fa-eject" title="Unload"></span></a></c:if></td>
-					<td><a href="/api/CopyDatabase?databaseId=${database.id}">Copy</a></td>
+					<td><a href="/api/CopyDatabase?databaseId=${database.id}" class="button small alt" title="Copy ${database.name}"><span class="fa fa-copy" title="Copy"></span> </a></td>
 				</tr>
 				</c:forEach>
 			</tbody>

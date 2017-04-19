@@ -307,34 +307,36 @@ this may now not work at all, perhaps delete?
         return toReturn;
     }
 
-    public static List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInUser loggedInUser) {
+    public static List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInUser loggedInUser, String fileSearch) {
         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
             List<UploadRecord> uploadRecords = UploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<>();
             for (UploadRecord uploadRecord : uploadRecords) {
-                if (loggedInUser.getUser().isAdministrator() || uploadRecord.getUserId() == loggedInUser.getUser().getId()) { // admin is all, developer is just theirs
-                    String dbName = "";
-                    if (uploadRecord.getDatabaseId() > 0) {
-                        Database database = DatabaseDAO.findById(uploadRecord.getDatabaseId());
-                        if (database != null) {
-                            dbName = database.getName();
+                if (fileSearch == null || fileSearch.equals("") || (uploadRecord.getFileName().toLowerCase().contains(fileSearch.toLowerCase()))){
+                    if (loggedInUser.getUser().isAdministrator() || uploadRecord.getUserId() == loggedInUser.getUser().getId()) { // admin is all, developer is just theirs
+                        String dbName = "";
+                        if (uploadRecord.getDatabaseId() > 0) {
+                            Database database = DatabaseDAO.findById(uploadRecord.getDatabaseId());
+                            if (database != null) {
+                                dbName = database.getName();
+                            }
                         }
-                    }
-                    String userName = "";
-                    if (uploadRecord.getUserId() > 0) {
-                        User user = UserDAO.findById(uploadRecord.getUserId());
-                        if (user != null) {
-                            userName = user.getName();
+                        String userName = "";
+                        if (uploadRecord.getUserId() > 0) {
+                            User user = UserDAO.findById(uploadRecord.getUserId());
+                            if (user != null) {
+                                userName = user.getName();
+                            }
                         }
-                    }
-                    boolean downloadable = false;
-                    if (uploadRecord.getTempPath() != null && !uploadRecord.getTempPath().isEmpty()) {
-                        File test = new File(uploadRecord.getTempPath());
-                        if (test.exists() && test.isFile()) {
-                            downloadable = true;
+                        boolean downloadable = false;
+                        if (uploadRecord.getTempPath() != null && !uploadRecord.getTempPath().isEmpty()) {
+                            File test = new File(uploadRecord.getTempPath());
+                            if (test.exists() && test.isFile()) {
+                                downloadable = true;
+                            }
                         }
+                        uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
                     }
-                    uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
                 }
             }
             return uploadRecordsForDisplay;
