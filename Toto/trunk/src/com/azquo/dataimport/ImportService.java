@@ -417,7 +417,7 @@ public final class ImportService {
                         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
                         //NOTE - the import sheet may contain blank lines at the bottom and/or blank columns at the right where the original data region exceeds the size of the data found (row/column headings are sets).  This is acceptable
                         // TODO - WE SHOULD CHECK THAT THE HEADINGS MATCH
-                        if (data.size() <= sourceRegion.getRowCount() && data.get(0).size() <= sourceRegion.getColumnCount()) {//ignore region sizes which do not match (e.g. on transaction entries showing past entries)
+                        if (data.size() > 0 && data.size() <= sourceRegion.getRowCount() && data.get(0).size() <= sourceRegion.getColumnCount()) {//ignore region sizes which do not match (e.g. on transaction entries showing past entries)
                             //work on the original data size, not the uploaded size with the blank lines
                             for (int row = 0; row < data.size(); row++) {
                                 for (int col = 0; col < data.get(0).size(); col++) {
