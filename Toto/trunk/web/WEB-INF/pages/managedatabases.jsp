@@ -71,7 +71,7 @@ Created by IntelliJ IDEA.
 				<td>${upload.fileName}</td>
 				<!--<td>${upload.fileType}</td>
 				<td>${upload.comments}</td> -->
-				<td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}">Download</a></c:if></td>
+				<td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}" class="button small alt" title="Download"><span class="fa fa-download" title="Download"></span> </a></c:if></td>
 			</tr>
 		</c:forEach>
 		</tbody>
