@@ -415,7 +415,8 @@ public class ReportRenderer {
         }
         // add columns
         int maxRow = sheet.getLastRow();
-        if (displayDataRegion.getColumnCount() < cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() && displayDataRegion.getColumnCount() > 2) { // then we need to expand
+        int colsToShow = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size();
+        if (displayDataRegion.getColumnCount() < colsToShow && displayDataRegion.getColumnCount() > 1 && displayDataRegion.getColumnCount() < colsToShow) { // then we need to expand
             int colsToAdd = cellsAndHeadingsForDisplay.getColumnHeadings().get(0).size() - (displayDataRegion.getColumnCount());
             int topRow = 0;
             CellRegion displayColumnHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYCOLUMNHEADINGS + region);
@@ -437,11 +438,16 @@ public class ReportRenderer {
                     insertCol += colsToAdd;
                     colsToAdd = columnsFormattingPatternWidth * (copyCount - 1);
                 }
-                insertCol++;
-                copySource = Ranges.range(sheet, topRow, displayDataRegion.getColumn(), maxRow, insertCol - 1);
-            }
+             }
             Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col, except for permuted headings
             CellOperationUtil.insertColumn(insertRange);
+            if (columnsFormattingPatternWidth > 1) {
+                      //cut back the last column to it's original position, and shift the insert range one column to the right
+                      CellOperationUtil.cut(Ranges.range(sheet,topRow, insertCol + colsToAdd, maxRow, insertCol + colsToAdd), Ranges.range(sheet, topRow, insertCol, maxRow, insertCol));
+                      insertRange = Ranges.range(sheet, topRow, insertCol + 1, maxRow, insertCol + colsToAdd);
+                      copySource = Ranges.range(sheet, topRow, displayDataRegion.getColumn(), maxRow, insertCol);
+
+            }
             // will this paste the lot?
             CellOperationUtil.paste(copySource, insertRange);
             int originalWidth = sheet.getInternalSheet().getColumn(insertCol - 1).getWidth();
@@ -456,4 +462,18 @@ public class ReportRenderer {
             }
         }
     }
-}
+
+    /*  THIS MAY BE USEFUL FOR CREATING 'EXCEL STYLE' RANGES  (e.g. $AB$99)
+
+    private static String numberColToStringCol(int col) {
+        if (col < 26) return Character.toString((char)(65 + col));
+        int left = col / 26;
+        int right = col - left * 26;
+        return Character.toString((char)(64 + left)) + Character.toString((char)(65 + right));
+    }
+
+    private static String numberRangeToStringRange(int topRow, int bottomRow, int leftCol, int rightCol) {
+        return "$" + numberColToStringCol(leftCol) + "$" + (topRow + 1) + ":$" + numberColToStringCol(rightCol) + "$" + (bottomRow + 1);
+    }
+    */
+  }
