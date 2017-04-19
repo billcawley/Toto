@@ -129,6 +129,9 @@ public class ExcelController {
             if (sessionid != null && sessionid.length() > 0) {
                 loggedInUser = excelConnections.get(sessionid);
                 if (checkSession != null && loggedInUser != null) {
+                    if (database!=null){
+                        LoginService.switchDatabase(loggedInUser,database);
+                    }
                     return "true";
                 }
             }
