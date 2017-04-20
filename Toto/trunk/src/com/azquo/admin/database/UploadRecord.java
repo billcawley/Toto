@@ -2,6 +2,7 @@ package com.azquo.admin.database;
 
 import com.azquo.admin.StandardEntity;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
@@ -96,8 +97,9 @@ public final class UploadRecord extends StandardEntity {
         final String fileType;
         final String comments;
         final boolean downloadable;
+        final boolean setup;
 
-        public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName, boolean downloadable) {
+        public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName, boolean downloadable, boolean setup) {
             this.id = ur.id;
             this.date = ur.date;
             this.businessName = businessName;
@@ -107,10 +109,17 @@ public final class UploadRecord extends StandardEntity {
             fileType = ur.fileType;
             comments = ur.comments;
             this.downloadable = downloadable;
+            this.setup = setup;
         }
 
         public Date getDate() {
             return date;
+        }
+
+        static SimpleDateFormat df = new SimpleDateFormat("yyMMdd-hh:mm");
+
+        public String getFormattedDate() {
+            return df.format(date);
         }
 
         public String getBusinessName() {
@@ -139,6 +148,10 @@ public final class UploadRecord extends StandardEntity {
 
         public boolean getDownloadable() {
             return downloadable;
+        }
+
+        public boolean getSetup() {
+            return setup;
         }
 
         public int getId() {

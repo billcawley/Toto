@@ -309,11 +309,14 @@ this may now not work at all, perhaps delete?
 
     public static List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForBusiness(final LoggedInUser loggedInUser, String fileSearch) {
         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-            List<UploadRecord> uploadRecords = UploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            List<UploadRecord> uploadRecords = UploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()); // limited to 10k for the mo
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<>();
+            int count = 0;
+            Set<Integer> databaseIdsWithSetupsAlready = new HashSet<>();
             for (UploadRecord uploadRecord : uploadRecords) {
                 if (fileSearch == null || fileSearch.equals("") || (uploadRecord.getFileName().toLowerCase().contains(fileSearch.toLowerCase()))){
                     if (loggedInUser.getUser().isAdministrator() || uploadRecord.getUserId() == loggedInUser.getUser().getId()) { // admin is all, developer is just theirs
+                        count++;
                         String dbName = "";
                         if (uploadRecord.getDatabaseId() > 0) {
                             Database database = DatabaseDAO.findById(uploadRecord.getDatabaseId());
@@ -335,7 +338,15 @@ this may now not work at all, perhaps delete?
                                 downloadable = true;
                             }
                         }
-                        uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
+                        boolean setup = false;
+                        if ("setup".equals(uploadRecord.getFileType()) && !databaseIdsWithSetupsAlready.contains(uploadRecord.getDatabaseId())){
+                            databaseIdsWithSetupsAlready.add(uploadRecord.getDatabaseId());
+                            setup = true;
+                        }
+                        uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable, setup));
+                        if (count > 100){
+                            break;
+                        }
                     }
                 }
             }

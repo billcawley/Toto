@@ -40,7 +40,7 @@ Created by IntelliJ IDEA.
 					</c:forEach>
 				</select>
 			</td>
-<!--			<td><label for="useType">Setup File (reload file when database is cleared)</label> <input id="useType" type="checkbox" name="setup" value="true"/></td> -->
+			<td><label for="useType">Use as setup? (Reload after database cleared)</label> <input id="useType" type="checkbox" name="setup" value="true"/></td>
 			<td><input type="submit" name="Upload" value="Upload" class="button "/></td>
 			</tr>
 		</tbody>
@@ -64,11 +64,11 @@ Created by IntelliJ IDEA.
 		<tbody>
 		<c:forEach items="${uploads}" var="upload">
 			<tr>
-				<td>${upload.date}</td>
+				<td>${upload.formattedDate}</td>
 				<td>${upload.businessName}</td>
 				<td>${upload.databaseName}</td>
 				<td>${upload.userName}</td>
-				<td>${upload.fileName}</td>
+				<td><c:if test="${upload.setup}">*SETUP* </c:if>${upload.fileName}</td>
 				<!--<td>${upload.fileType}</td>
 				<td>${upload.comments}</td> -->
 				<td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}" class="button small" title="Download"><span class="fa fa-download" title="Download"></span> </a></c:if></td>

@@ -43,6 +43,10 @@ public final class ImportService {
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
+        return importTheFile(loggedInUser,fileName,filePath,attributeNames,isData, false);
+    }
+        // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
+    public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData, boolean setup) throws Exception { // setup just to flag it
         InputStream uploadFile = new FileInputStream(filePath);
         // todo : address provenance on an import
         if (loggedInUser.getDatabase() == null) {
@@ -86,7 +90,8 @@ public final class ImportService {
         } else { // vanilla
             toReturn = readBookOrFile(loggedInUser, fileName, tempFile, attributeNames, true, isData);
         }
-        UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, "", "", filePath);//should record the error? (in comment)
+        UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId()
+                , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, setup ? "setup" : "", "", filePath);//should record the error? (in comment)
         UploadRecordDAO.store(uploadRecord);
         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         return toReturn;
