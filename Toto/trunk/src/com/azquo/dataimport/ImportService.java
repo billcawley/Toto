@@ -273,6 +273,10 @@ public final class ImportService {
         }
         if (reportName != null) {
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
+                OnlineReport existing = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+                if (existing != null && existing.getUserId() != loggedInUser.getUser().getId()){
+                    return "A report with that name has been uploaded by another user.";
+                }
                 return uploadReport(loggedInUser, tempPath, fileName, reportName);
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
