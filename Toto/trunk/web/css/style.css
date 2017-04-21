@@ -60,7 +60,7 @@ b. strong{font-weight:700;}
 
 /* General Table Formating */
 table{margin:0; border-collapse:collapse; width:100%; margin-bottom:20px;}	
-table td,table th{padding:5px; vertical-align:top;}	
+table td,table th{padding:5px; vertical-align:middle;}
 
 table thead td, table th{ border-top:0px; color:#FFFFFF; padding-left:5px; font-weight:600;
 background: #444444; 
@@ -72,7 +72,6 @@ background: -o-linear-gradient(top,  #444444 0%,#222222 99%);
 background: -ms-linear-gradient(top,  #444444 0%,#222222 99%); 
 background: linear-gradient(to bottom,  #444444 0%,#222222 99%); 
 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#444444', endColorstr='#222222',GradientType=0 ); 
-
 }
 
 table thead td:first-child{border-radius:5px 0px 0px 0px; }
