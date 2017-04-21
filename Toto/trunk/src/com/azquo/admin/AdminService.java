@@ -294,6 +294,22 @@ this may now not work at all, perhaps delete?
                 }
             }
         }
+        reportList.sort((o1, o2) -> {
+            // adding isempty here as empty is the same as null for our sorting purposes
+            boolean n1Null = o1 == null || o1.getExplanation() == null || o1.getExplanation().isEmpty();
+            boolean n2Null = o2 == null || o2.getExplanation() == null || o2.getExplanation().isEmpty();
+            if (n1Null && n2Null) {
+                return 0;
+            }
+            // reversing default - blank or null at the end - if someone adds an explanation to a load of blanks send them to the top
+            if (n1Null) {
+                return 1;
+            }
+            if (n2Null) {
+                return -1;
+            }
+            return o1.getExplanation().compareTo(o2.getExplanation());
+        });
         return reportList;
     }
 
