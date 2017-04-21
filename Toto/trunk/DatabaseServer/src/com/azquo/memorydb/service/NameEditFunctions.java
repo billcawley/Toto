@@ -31,6 +31,21 @@ class NameEditFunctions {
                 return toReturn;
             }
         }
+        if (setFormula.startsWith("zapdata ")) {
+            Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages, true); // defaulting to list here
+            if (names != null) {
+                for (Name name : names){
+                    for (Value v : name.getValues()) {
+                        v.delete();
+                    }
+
+                }
+                azquoMemoryDBConnection.persist();
+                return toReturn;
+            }
+        }
+
+
         throw new Exception(setFormula + " not understood");
     }
 
