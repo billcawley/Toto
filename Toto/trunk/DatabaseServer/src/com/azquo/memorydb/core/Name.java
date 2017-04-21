@@ -839,10 +839,22 @@ public final class Name extends AzquoMemoryDBEntity {
                         }
                     }
 
-                    String attribute = parent.getAttribute(attributeName, true, checked);
+                    String attribute = parent.getAttribute(attributeName, false, null); // no parent check first time
                     if (attribute != null) {
                         return attribute;
                     }
+                }
+            }
+        }
+        // first loop doesn't do parent check (doesn't recurse).
+        // The issue here is that there may be early on a match but some distance up the parent hierarchy when a subsequent parent lower down matches more closely
+        // perhaps a direct parent. So run through the parents looking for a direct parent attribute match and if you can't find it then try again but allow going up a level
+        // Might cause performance issues - if so I'm not 100% on how easy it will be to optimise gracefully. Of course this is only an issue when there's not an attribute found easily
+        for (Name parent : child.parents) {
+            if (parent != null) {
+                String attribute = parent.getAttribute(attributeName, true, checked); // second time go up . . .
+                if (attribute != null) {
+                    return attribute;
                 }
             }
         }

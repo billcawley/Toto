@@ -59,6 +59,7 @@ Created by IntelliJ IDEA.
 <!--				<td>File Type</td>
 				<td>Comments</td>-->
 				<td></td>
+				<td></td>
 			</tr>
 		</thead>
 		<tbody>
@@ -72,6 +73,7 @@ Created by IntelliJ IDEA.
 				<!--<td>${upload.fileType}</td>
 				<td>${upload.comments}</td> -->
 				<td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}" class="button small" title="Download"><span class="fa fa-download" title="Download"></span> </a></c:if></td>
+				<td><c:if test="${upload.downloadable}"><a href="/api/ManageDatabases?deleteUploadRecordId=${upload.id}" class="button small" title="Delete"><span class="fa fa-trash" title="Delete"></span> </a></c:if></td>
 			</tr>
 		</c:forEach>
 		</tbody>

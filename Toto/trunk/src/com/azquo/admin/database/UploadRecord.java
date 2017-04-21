@@ -116,7 +116,7 @@ public final class UploadRecord extends StandardEntity {
             return date;
         }
 
-        static SimpleDateFormat df = new SimpleDateFormat("yyMMdd-hh:mm");
+        static SimpleDateFormat df = new SimpleDateFormat("dd/MM/yy-hh:mm");
 
         public String getFormattedDate() {
             return df.format(date);

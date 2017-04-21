@@ -494,6 +494,19 @@ this may now not work at all, perhaps delete?
         }
     }
 
+    public static void deleteUploadRecord(LoggedInUser loggedInUser, int uploadRecordId) throws Exception {
+        UploadRecord ur = UploadRecordDAO.findById(uploadRecordId);
+        if (ur != null && ur.getBusinessId() == loggedInUser.getUser().getBusinessId()){
+            if (ur.getTempPath() != null && !ur.getTempPath().isEmpty()) {
+                File test = new File(ur.getTempPath());
+                if (test.exists() && test.isFile()) {
+                    test.delete();
+                }
+            }
+            UploadRecordDAO.removeById(ur);
+        }
+    }
+
     // a little inconsistent but it will be called using a database object, no point looking up again
     public static boolean isDatabaseLoaded(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())

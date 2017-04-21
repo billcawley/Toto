@@ -101,6 +101,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "backupTarget", required = false) String backupTarget
             , @RequestParam(value = "summaryLevel", required = false) String summaryLevel
             , @RequestParam(value = "fileSearch", required = false) String fileSearch
+            , @RequestParam(value = "deleteUploadRecordId", required = false) String deleteUploadRecordId
     )
 
     {
@@ -136,6 +137,9 @@ public class ManageDatabasesController {
                 if (backupTarget != null) {
                     LoggedInUser loggedInUserTarget = LoginService.loginLoggedInUser(request.getSession().getId(), backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB
                     AdminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getLanguages());// re languages I should just be followign what was there before . . .
+                }
+                if (deleteUploadRecordId != null && NumberUtils.isNumber(deleteUploadRecordId)) {
+                    AdminService.deleteUploadRecord(loggedInUser, Integer.parseInt(deleteUploadRecordId));
                 }
             } catch (Exception e) {
                 e.printStackTrace();
