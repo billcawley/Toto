@@ -366,7 +366,7 @@ public class ExcelController {
                         for (TypedPair<Integer, List<String>> value : provenanceForDisplay.getValuesWithIdsAndNames()) {
                             if (value.getSecond() != null && !value.getSecond().isEmpty()) {
                                 for (String valueOrName : value.getSecond()) {
-                                    toSend.append("\t" + valueOrName);
+                                    toSend.append("\n\t" + valueOrName);
                                 }
                                 count++;
                                 if (++count > limit) {
