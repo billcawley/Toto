@@ -31,9 +31,10 @@ public class LoginService {
     }
 
 
-     public static LoggedInUser loginLoggedInUser(final String sessionId, String databaseName, final String userEmail, final String password, final String reportName, boolean loggedIn) throws Exception {
+    public static LoggedInUser loginLoggedInUser(final String sessionId, String databaseName, final String userEmail, final String password, final String reportName, boolean loggedIn) throws Exception {
         User user;
 
+        String databaseList = "";
         //for demo users, a new User id is made for each user.
         if (userEmail.startsWith("demo@user.com")) {
             user = UserDAO.findByEmail(userEmail);
@@ -46,33 +47,63 @@ public class LoginService {
                 }
             }
         } else {
-            user = UserDAO.findByEmail(userEmail);
-        }
-         if (reportName !=null && reportName.length() > 0 && user!=null){
-             if (reportName.equals("unknown")){
-                 List<Database>dbs = DatabaseDAO.findForUserId(user.getId());
+            user = UserDAO.findByEmail(userEmail);}
+        if (reportName !=null && reportName.length() > 0 && user!=null){
+            if (!user.isAdministrator() && !user.isDeveloper()){
+                if (reportName.equals("unknown")){
+                    List<Database>dbs = DatabaseDAO.findForUserId(user.getId());
 
-                 if (dbs.size()> 0){
-                     for (Database db:dbs){
-                          databaseName += db.getName() + ",";
-                     }
+                    if (dbs.size()> 0){
+                        for (Database db:dbs){
+                            databaseList += db.getName() + ",";
+                        }
+                    }
+                }else {
+                    OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, user.getBusinessId());
+                    if (onlineReport != null) {
+                        List<Integer> dblist = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
+                        if (dblist.size() > 0) {
+                            for (Integer dbNo : dblist) {
+                                databaseList += DatabaseDAO.findById(dbNo).getName() + ",";
+                            }
+                        }
+                    }
+                }
+            }else{
+                List<Integer> reportDBs = null;
+                if (!reportName.equals("unknown")) {
+                    OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, user.getBusinessId());
+                    if (onlineReport != null) {
+                        reportDBs = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
+
+                    }
+                }
+                 List<Database> dbs;
+                 if (user.isDeveloper()) {
+                     dbs = DatabaseDAO.findForUserId(user.getId());
+                 }else {
+                     dbs = DatabaseDAO.findForBusinessId(user.getBusinessId());
                  }
-             }else {
-                 OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, user.getBusinessId());
-                 if (onlineReport != null) {
-                     List<Integer> dblist = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
-                     if (dblist.size() > 0) {
-                         for (Integer dbNo:dblist){
-                              databaseName += DatabaseDAO.findById(dbNo).getName() + ",";
+                 if (dbs.size() > 0) {
+                     String firstDB = null;
+                     for (Database db : dbs) {
+                         if (reportDBs != null && reportDBs.size() > 0 && db.getId()==reportDBs.get(0)){
+                             firstDB = db.getName();
+
+                         }else {
+                             databaseList += db.getName() + ",";
                          }
+
                      }
+                     if (firstDB!=null) databaseList = firstDB + ","+ databaseList;
                  }
+
              }
-          }
+         }
 
          //boolean temporary = false;
         if (user != null && (loggedIn || AdminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword()))) {
-            return loginLoggedInUser(sessionId, databaseName, user);
+            return loginLoggedInUser(sessionId, databaseList, user);
         }
         return null;
     }
