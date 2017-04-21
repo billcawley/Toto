@@ -35,8 +35,8 @@ public class ReportUIUtils {
     }
 
     public static String trimString(String stringToShow) {
-        if (stringToShow.length() > 200) {
-            stringToShow = stringToShow.substring(0, 200) + " . . .\n";
+        if (stringToShow.length() > 300) {
+            stringToShow = stringToShow.substring(0, 300) + " . . .\n";
         }
         return stringToShow;
     }
