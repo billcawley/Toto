@@ -198,7 +198,7 @@ public class ZKSpreadsheetCommandController {
                         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
                             newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
                         }
-                        ReportRenderer.populateBook(newBook, 0, true, false);
+                        ReportRenderer.populateBook(newBook, 0, true, false, null);
                         ss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
                         if (ss.getSelectedSheet().isHidden()) {
                             for (SSheet s : ss.getSBook().getSheets()) {

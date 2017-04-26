@@ -49,10 +49,10 @@ public class ReportRenderer {
     public static final String AZSAVE = "az_save";
 
     public static boolean populateBook(Book book, int valueId) {
-        return populateBook(book, valueId, false, false);
+        return populateBook(book, valueId, false, false, null);
     }
 
-    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode) {
+    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors) {
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
         book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
         long track = System.currentTimeMillis();
@@ -161,14 +161,26 @@ public class ReportRenderer {
                         DatabaseServer origServer = loggedInUser.getDatabaseServer();
                         try {
                             LoginService.switchDatabase(loggedInUser, databaseName);
-                            populateRegionSet(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode); // in this case execute mode is telling the logs to be quiet
+                            String error = populateRegionSet(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode); // in this case execute mode is telling the logs to be quiet
+                            if (errors != null && error != null){
+                                if (errors.length() > 0){
+                                    errors.append("\n");
+                                }
+                                errors.append(error);
+                            }
                         } catch (Exception e) {
                             String eMessage = "Unknown database " + databaseName + " for region " + region;
                             BookUtils.setValue(sheet.getInternalSheet().getCell(0, 0), eMessage);
                         }
                         loggedInUser.setDatabaseWithServer(origServer, origDatabase);
                     } else {
-                        populateRegionSet(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode);
+                        String error = populateRegionSet(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode);
+                        if (errors != null && error != null){
+                            if (errors.length() > 0){
+                                errors.append("\n");
+                            }
+                            errors.append(error);
+                        }
                     }
                 }
             }
@@ -243,7 +255,8 @@ public class ReportRenderer {
         return showSave;
     }
 
-    private static void populateRegionSet(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet) {
+    // return the error, executing reports might want it
+    private static String populateRegionSet(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet) {
         if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
             sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
         }
@@ -266,7 +279,7 @@ public class ReportRenderer {
             // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(region, colHeadings, null, null, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
             loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
-            return;
+            return null;
         }
         if (columnHeadingsDescription != null) {
             try {
@@ -372,7 +385,7 @@ public class ReportRenderer {
                 int colNo = 0;
                 while (sheet.getInternalSheet().getColumn(colNo).isHidden() && colNo < 100) colNo++;
                 while (sheet.getInternalSheet().getRow(rowNo).isHidden() && rowNo < 100) rowNo++;
-                String eMessage = "Unable to find matching header and context regions for this data region : " + AZDATAREGION + region + " : " + errorMessage;
+                String eMessage = "Error populating this data region : " + AZDATAREGION + region + " : " + errorMessage;
                 sheet.getInternalSheet().getCell(rowNo, colNo).setStringValue(eMessage);
                 /*
                 CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
@@ -382,15 +395,19 @@ public class ReportRenderer {
                     System.out.println("no region found for az_DataRegion" + region);
                 }
                 */
+                return eMessage;
             }
         } else {
             CellRegion dataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);// this function should not be called without a valid data region
             if (dataRegion != null) {
                 sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching header and context regions for this data region : " + AZDATAREGION + region);
+                return "Unable to find matching header and context regions for this data region : " + AZDATAREGION + region;
             } else {
                 System.out.println("no region found for " + AZDATAREGION + region);
+                return "no region found for " + AZDATAREGION + region;
             }
         }
+        return null; // will it get here ever?
     }
 
     private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol) {

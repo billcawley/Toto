@@ -139,7 +139,7 @@ public class ReportExecutor {
                         book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                         book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
                         // taking off execute mode
-                        final boolean save = ReportRenderer.populateBook(book, 0, false, true); // note true at the end here - keep on logging so users can see changes as they happen
+                        final boolean save = ReportRenderer.populateBook(book, 0, false, true, loopsLog); // note true at the end here - keep on logging so users can see changes as they happen
                         if (save) { // so the data was changed and if we save from here it will make changes to the DB
                             for (SName name : book.getInternalBook().getNames()) {
                                 if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
