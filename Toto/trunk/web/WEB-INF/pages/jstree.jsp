@@ -270,7 +270,7 @@
 
 
         function submitNameDetails(){
-            var json = "\"operation\":\"edit\",\"id\":" + nameChosenNo + ",\"attributes\":{\"DEFAULT_DISPLAY_NAME\":\"" + document.getElementById("DEFAULT_DISPLAY_NAME").value + "\"";
+            var json = "\"operation\":\"edit\",\"id\":" + nameChosenNo + ",\"attributes\":{\"DEFAULT_DISPLAY_NAME\":" + encodeURIComponent(JSON.stringify(document.getElementById("DEFAULT_DISPLAY_NAME").value));
             for (var i= 0; i<20;i++){//max number of attributes = 20 - arbitrary
                 var attname = document.getElementById("attname" + i);
                 if (attname != null) {
