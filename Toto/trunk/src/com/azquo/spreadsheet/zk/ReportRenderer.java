@@ -17,6 +17,7 @@ import org.zkoss.zss.model.*;
 
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -52,7 +53,7 @@ public class ReportRenderer {
         return populateBook(book, valueId, false, false, null);
     }
 
-    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors) {
+    public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors) { // todo - make more elegant? error hack . . .
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
         book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
         long track = System.currentTimeMillis();
@@ -166,7 +167,7 @@ public class ReportRenderer {
                                 if (errors.length() > 0){
                                     errors.append("\n");
                                 }
-                                errors.append(error);
+                                errors.append("ERROR : " + error);
                             }
                         } catch (Exception e) {
                             String eMessage = "Unknown database " + databaseName + " for region " + region;
@@ -179,7 +180,7 @@ public class ReportRenderer {
                             if (errors.length() > 0){
                                 errors.append("\n");
                             }
-                            errors.append(error);
+                            errors.append("ERROR : " + error);
                         }
                     }
                 }

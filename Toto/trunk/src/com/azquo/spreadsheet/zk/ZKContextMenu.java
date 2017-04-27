@@ -12,6 +12,7 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
+import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Sessions;
@@ -366,7 +367,11 @@ class ZKContextMenu {
                                             if (value.getSecond() != null && !value.getSecond().isEmpty()) {
                                                 for (String valueOrName : value.getSecond()) {
                                                     xOffset++;
-                                                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(valueOrName);
+                                                    if (NumberUtils.isNumber(valueOrName)){
+                                                        sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setNumberValue(Double.parseDouble(valueOrName));
+                                                    } else {
+                                                        sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(valueOrName);
+                                                    }
                                                 }
                                                 yOffset++;
                                                 xOffset = 0;

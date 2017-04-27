@@ -112,6 +112,7 @@ public class ReportExecutor {
                             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
                             toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count);
+
                         }
                     }
                     // if not a for each I guess we just execute? Will check for "do"
@@ -138,8 +139,13 @@ public class ReportExecutor {
                         book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
                         book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                         book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
-                        // taking off execute mode
-                        final boolean save = ReportRenderer.populateBook(book, 0, false, true, loopsLog); // note true at the end here - keep on logging so users can see changes as they happen
+                        StringBuilder errorLog = new StringBuilder();
+                        final boolean save = ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
+                        if (errorLog.length() > 0){
+                            loopsLog.append(" ERROR : " + errorLog.toString());
+                            return null;
+                            // todo - how to stop all the way to the top? Can set count as -1 but this is hacky
+                        }
                         if (save) { // so the data was changed and if we save from here it will make changes to the DB
                             for (SName name : book.getInternalBook().getNames()) {
                                 if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
