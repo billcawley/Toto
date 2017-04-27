@@ -337,7 +337,7 @@ public class DSImportService {
         String[] nextLine = lineIterator.next();
         int headingCount = 1;
         boolean lastfilled = true;
-        while (lineIterator.hasNext() && lastfilled && headingCount++ < 10) {
+        while (nextLine != null && headingCount++ < 10) {
             int colNo = 0;
             lastfilled = false;
             // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
@@ -360,8 +360,10 @@ public class DSImportService {
                 }
                 colNo++;
             }
-            if (lastfilled) {
+            if (lineIterator.hasNext() && lastfilled) {
                 nextLine = lineIterator.next();
+            }else{
+                nextLine = null;
             }
         }
     }
