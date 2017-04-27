@@ -283,11 +283,12 @@ class HeadingReader {
                 heading.existing = true;
                 break;
             case CLEAR:
-                if (heading.name==null){
-                    heading.name =  NameService.findOrCreateNameInParent(azquoMemoryDBConnection,heading.heading, null, false);
+                if (heading.parentNames!=null){
+                    for (Name name:heading.parentNames) {
+                        name.setChildrenWillBePersisted(Collections.emptyList());
+                    }
                 }
-                if (heading.name!=null) heading.name.setChildrenWillBePersisted(Collections.emptyList());
-                //nothing further to do - discard.
+                break;
             default:
                 throw new Exception(firstWord + " not understood in headings");
         }
