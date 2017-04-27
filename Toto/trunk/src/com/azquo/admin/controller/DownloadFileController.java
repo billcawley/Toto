@@ -39,6 +39,9 @@ public class DownloadFileController {
                     if (byId.getTempPath().endsWith(".xlsx")){
                         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
                     }
+                    if (byId.getTempPath().endsWith(".csv") || byId.getTempPath().endsWith(".txt")){
+                        response.setContentType("text/plain");
+                    }
                     response.setHeader("Content-Disposition", "inline; filename=\"" + byId.getFileName() + "\"");
                     File f = new File(byId.getTempPath());
                     response.setHeader("Content-Length", String.valueOf(f.length()));
