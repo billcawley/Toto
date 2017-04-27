@@ -40,7 +40,7 @@ public class DownloadFileController {
                         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
                     }
                     if (byId.getTempPath().endsWith(".csv") || byId.getTempPath().endsWith(".txt")){
-                        response.setContentType("text/plain");
+                        response.setContentType("application/octet-stream");
                     }
                     response.setHeader("Content-Disposition", "inline; filename=\"" + byId.getFileName() + "\"");
                     File f = new File(byId.getTempPath());
