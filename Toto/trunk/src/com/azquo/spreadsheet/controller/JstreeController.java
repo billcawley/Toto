@@ -9,6 +9,7 @@ import com.azquo.spreadsheet.transport.json.JsonChildren;
 import com.azquo.spreadsheet.transport.json.NameJsonRequest;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URLEncoder;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
@@ -16,6 +17,7 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.zkoss.web.servlet.http.Encodes;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -120,7 +122,11 @@ public class JstreeController {
                         if (itemsChosen == null) itemsChosen = "";
                         model.addAttribute("parents", parents);
                         model.addAttribute("rootid", rootId);
-                        model.addAttribute("searchnames", itemsChosen);
+                        if (itemsChosen.length() > 0){
+                            model.addAttribute("searchnames", URLEncoder.encode(itemsChosen,"UTF-8"));
+                        }else{
+                            model.addAttribute("searchnames",itemsChosen);
+                        }
                         model.addAttribute("attributeChosen", attribute);
                         List<String> attributes = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getAttributeList(loggedInUser.getDataAccessToken());
                         model.addAttribute("attributes", attributes);
