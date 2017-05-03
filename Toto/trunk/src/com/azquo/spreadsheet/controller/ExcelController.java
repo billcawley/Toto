@@ -61,6 +61,7 @@ public class ExcelController {
 
     public static final Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
 
+    public static String SESSIONMARKER = "¬";
     @RequestMapping(produces = "text/json;charset=UTF-8")
     @ResponseBody
     public String handleRequest(HttpServletRequest request, @RequestParam(value = "logon", required = false, defaultValue = "") String logon
@@ -123,16 +124,16 @@ public class ExcelController {
                 excelConnections.put(session, loggedInUser);
                 if (json == null && jsonSave == null && userChoices == null && dropDownListForQuery == null
                         && resolveQuery == null && choiceName == null && choiceValue == null && checkSession == null) { // a bit messy, sort later
-                    return loggedInUser.getDbNames() + "|" + loggedInUser.getUser().getStatus()+"|" + session;
+                    return loggedInUser.getDbNames() + SESSIONMARKER + loggedInUser.getUser().getStatus()+ SESSIONMARKER + session;
                 }
             }
             if (sessionid != null && sessionid.length() > 0) {
                 loggedInUser = excelConnections.get(sessionid);
+                if (loggedInUser!= null && database!=null){
+                    LoginService.switchDatabase(loggedInUser,database);
+                }
                 if (checkSession != null && loggedInUser != null) {
-                    if (database!=null){
-                        LoginService.switchDatabase(loggedInUser,database);
-                    }
-                    return "true";
+                     return "true";
                 }
             }
             if (checkSession != null) {
