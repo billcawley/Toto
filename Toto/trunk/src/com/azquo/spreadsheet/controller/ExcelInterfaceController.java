@@ -65,10 +65,12 @@ public class ExcelInterfaceController {
                     }
                 } else if (permissionId != null && permissionId.length() > 0) {
                     //new logic for permissions ad hoc on a report
-                    if (loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase()) != null) { // then we have a permission as set by a report
+                    if (loggedInUser.getUser().isAdministrator() || loggedInUser.getPermissionsFromReport()==null ||loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase()) != null) { // then we have a permission as set by a report - POSSIBLY INSECURE CHANGE BY WFC TO ALLOW EXCEL ACCESS
                         onlineReport = OnlineReportDAO.findForNameAndBusinessId(permissionId, loggedInUser.getUser().getBusinessId());
                         if (onlineReport != null) {
-                            LoginService.switchDatabase(loggedInUser, loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase()).getSecond());
+                            if (!loggedInUser.getUser().isAdministrator()){
+                                LoginService.switchDatabase(loggedInUser, loggedInUser.getPermissionsFromReport().get(permissionId.toLowerCase()).getSecond());
+                            }
                         }
                     }
                 }
@@ -82,7 +84,7 @@ public class ExcelInterfaceController {
                     response.setContentType("application/vnd.ms-excel"); // Set up mime type
                     String extension = onlineReport.getFilenameForDisk().substring(onlineReport.getFilenameForDisk().lastIndexOf("."));
                     // todo, encode the report id? Do we care?
-                    response.addHeader("Content-Disposition", "attachment; filename=\"" + onlineReport.getReportName() + "|" + sessionId + "|" + onlineReport.getId() + extension + "\""); // doenbs't need url encoding??
+                    response.addHeader("Content-Disposition", "attachment; filename=\"" + onlineReport.getReportName() + ExcelController.SESSIONMARKER + sessionId + ExcelController.SESSIONMARKER + onlineReport.getId() + extension + "\""); // doenbs't need url encoding??
                     OutputStream out = response.getOutputStream();
                     FileInputStream in = new FileInputStream(bookPath);
                     byte[] buffer = new byte[4096];
