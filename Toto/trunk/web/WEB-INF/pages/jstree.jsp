@@ -211,7 +211,7 @@
                 itemsChosen += selected;
                 dataFlag = true;
             } else {
-                itemsChosen = document.getElementById("itemschosen").value;
+                itemsChosen = encodeURIComponent(document.getElementById("itemschosen").value);
             }
 
             if (dataFlag) {
