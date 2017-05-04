@@ -128,7 +128,7 @@ public class DSImportService {
             // parsed headings, the iterator for the data lines and how many lines should be processed by each task in the thread pool
             HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize = getHeadersWithIteratorAndBatchSize(azquoMemoryDBConnection, fileName, isSpreadsheet, filePath, attributeNames);
             if (headingsWithIteratorAndBatchSize == null) {
-                return "First line blank"; //most likely cause of it being null
+                return "No data that can be read"; //most likely cause of it being null
             }
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
             ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
@@ -255,7 +255,7 @@ public class DSImportService {
         // try to find a name which might have the headings in its attributes
         Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
         //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
-        while (!isSpreadsheet && importInterpreter == null && (importInterpreterLookup.contains(" ") || importInterpreterLookup.contains("_"))) {
+         while (importInterpreter == null && (importInterpreterLookup.contains(" ") || importInterpreterLookup.contains("_"))) {
             //There may, though, be separate interpreters for A_B_xxx and A_xxx, so we try A_B first
             if (importInterpreterLookup.contains(" ")) {
                 importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf(" "));
@@ -265,9 +265,8 @@ public class DSImportService {
             importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
         }
         // check if that name (assuming it's not null!) has groovy in an attribute
-        if (!isSpreadsheet){
-            filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
-        }
+        filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
+        if (importInterpreter != null && !maybeHasHeadings(filePath)) isSpreadsheet = false;//allow data uploaded in a spreadsheet to use pre-configured headings
         // checks the first few lines to sort batch size and get a hopefully correctly configured line iterator
         final HeadingsWithIteratorAndBatchSize lineIteratorAndBatchSize = getLineIteratorAndBatchSize(filePath, importInterpreter); // created here but it has no headers
         if (lineIteratorAndBatchSize == null) {
@@ -306,9 +305,12 @@ public class DSImportService {
                     throw new Exception("Invalid headers on import file - is this a report that required az_ReportName?");
                 }
                 // option to stack the clauses vertically
-                buildHeadersFromVerticallyListedClauses(headers, lineIteratorAndBatchSize.lineIterator);
+                if (!buildHeadersFromVerticallyListedClauses(headers, lineIteratorAndBatchSize.lineIterator)){
+                    return null;
+                }
+
             }
-            if (isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
+            if (headers != null && isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
                 // as in add the headings to the first upload then upload again without headings (assuming the file name is the same!)
                 Name importSheets = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All import sheets", null, false);
@@ -332,8 +334,36 @@ public class DSImportService {
         return lineIteratorAndBatchSize;
     }
 
+
+    private static boolean maybeHasHeadings(String filePath) throws Exception {
+        // checks the first few lines of a spreadsheet file to discover evidence of headings.  ten lines without a blank line, and without clauses in the top line indicates no headings
+        BufferedReader br = new BufferedReader(new FileReader(filePath));
+        String lineData = br.readLine();
+
+        if (lineData==null || lineData.contains(".") || lineData.contains(";")) {
+            br.close();
+            return true;
+        }
+
+        int lineCount = 10;
+        while (lineCount-- > 0) {
+
+            lineData = br.readLine();
+            if (lineData==null || lineData.replace("\t", "").replace(" ", "").length() == 0) {
+                br.close();
+                return true;
+            }
+        }
+        br.close();
+        return false;
+    }
+
+
+
+
+
     // the idea is that a header could be followed by successive clauses on cells below and this might be easier to read
-    private static void buildHeadersFromVerticallyListedClauses(String[] headers, Iterator<String[]> lineIterator) {
+    private static boolean buildHeadersFromVerticallyListedClauses(String[] headers, Iterator<String[]> lineIterator) {
         String[] nextLine = lineIterator.next();
         int headingCount = 1;
         boolean lastfilled = true;
@@ -366,6 +396,10 @@ public class DSImportService {
                 nextLine = null;
             }
         }
+        if (headingCount == 11){
+            return false;
+        }
+        return true;
     }
 
     private static boolean findReservedWord(String heading) {
