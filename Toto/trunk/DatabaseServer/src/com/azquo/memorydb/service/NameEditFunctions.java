@@ -36,20 +36,21 @@ class NameEditFunctions {
             String nameList = setFormula.substring(8);
             Collection<Value> toZap = null;
             String[] foundList = nameList.split("&&");
-            for (String partList:foundList){
-                Collection<Name> found = NameQueryParser.parseQuery(azquoMemoryDBConnection,partList.trim());
+            for (String partList : foundList) {
+                Collection<Name> found = NameQueryParser.parseQuery(azquoMemoryDBConnection, partList.trim());
                 Collection<Value> values = new HashSet<Value>();
-                for (Name name:found){
+                for (Name name : found) {
                     values.addAll(name.findValuesIncludingChildren());
                 }
-                if (toZap==null) toZap = values;
-                else{
+                if (toZap == null) {
+                    toZap = values;
+                } else {
                     toZap.retainAll(values);
                 }
             }
-            if (toZap!=null){
-               for (Value v : toZap) {
-                   v.delete();
+            if (toZap != null) {
+                for (Value v : toZap) {
+                    v.delete();
                 }
                 azquoMemoryDBConnection.persist();
                 return toReturn;

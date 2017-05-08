@@ -89,4 +89,12 @@ final class NameAttributes {
         }
         return stringBuilder.toString();
     }
+
+    @Override
+    public String toString() {
+        return "NameAttributes{" +
+                "attributeKeys=" + Arrays.toString(attributeKeys) +
+                ", attributeValues=" + Arrays.toString(attributeValues) +
+                '}';
+    }
 }
