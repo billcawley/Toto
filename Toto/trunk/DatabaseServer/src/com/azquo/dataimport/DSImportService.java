@@ -128,7 +128,7 @@ public class DSImportService {
             // parsed headings, the iterator for the data lines and how many lines should be processed by each task in the thread pool
             HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize = getHeadersWithIteratorAndBatchSize(azquoMemoryDBConnection, fileName, isSpreadsheet, filePath, attributeNames);
             if (headingsWithIteratorAndBatchSize == null) {
-                return "No data that can be read"; //most likely cause of it being null
+                return fileName + "No data that can be read\n"; //most likely cause of it being null
             }
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
             ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
