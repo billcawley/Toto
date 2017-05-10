@@ -239,6 +239,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
         }
+        setNeedsPersisting(); // will be ignored on loading. Best to put in here to be safe. COuld maybe check it's actually necessary above if performance an issue.
     }
 
     private static AtomicInteger removeFromValuesCount = new AtomicInteger(0);
@@ -274,6 +275,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
         }
+        setNeedsPersisting(); // will be ignored on loading. Best to put in here to be safe.
     }
 
     // returns list now as that's what it is!

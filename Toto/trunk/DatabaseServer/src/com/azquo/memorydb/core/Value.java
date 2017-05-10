@@ -61,7 +61,7 @@ public final class Value extends AzquoMemoryDBEntity {
         this.names = newNames;
         // this should be fine being handled here while loading a db - was storing this against the name but too much space
         for (Name newName : this.names) {
-            newName.checkValue(this); // true here means don't check duplicates, we assume integrity in persistence
+            newName.checkValue(this);
         }
         getAzquoMemoryDB().addValueToDb(this);
     }
