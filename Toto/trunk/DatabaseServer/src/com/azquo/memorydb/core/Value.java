@@ -44,7 +44,6 @@ public final class Value extends AzquoMemoryDBEntity {
         getAzquoMemoryDB().addValueToDb(this);
     }
 
-    // todo - can we stop it being public?
     private static AtomicInteger newValue3Count = new AtomicInteger(0);
 
     public Value(final AzquoMemoryDB azquoMemoryDB, final int id, final int provenanceId, String text, byte[] namesCache) throws Exception {

@@ -300,19 +300,20 @@ public class AzquoMemoryDBIndex {
         // cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
         // ok, these got bigger than expected, big bottleneck. Using compute should be able to safely switch over at 512 entries
         //Collection<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
-        Collection<Name> names = namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
+        // modification of the sets or list is in compute but I still need the collections themselves to be thread safe as I need to safely call an iterator on them
+        namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
+            // Could maybe get a little speed by adding a special case for the first name (as in singleton)?
             if (v == null) {
-                return new CopyOnWriteArrayList<>();
+                v = new CopyOnWriteArrayList<>();
             }
             if (v.size() == 512) {
                 Collection<Name> asSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
                 asSet.addAll(v);
-                return asSet;
+                v = asSet;
             }
+            v.add(name); // this WAS outside but in theory this might mean two different collections escaping to each have something added, hence an index entry gets missed. Unlikely but no harm in it being in here
             return v;
         });
-        names.add(name); // thread safe, internally locked but of course just for this particular attribute and value heh.
-        // Could maybe get a little speed by adding a special case for the first name (as in singleton)?
     }
 
     // I think this is just much more simple re thread safety in that if we can't find the map and list we just don't do anything and the final remove should be safe according to CopyOnWriteArray

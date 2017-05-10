@@ -49,36 +49,41 @@ public class BatchImporter implements Callable<Void> {
 
     @Override
     public Void call() throws Exception {
-        Long time = System.currentTimeMillis();
-        for (List<ImportCellWithHeading> lineToLoad : dataToLoad) {
+        try{
+            Long time = System.currentTimeMillis();
+            for (List<ImportCellWithHeading> lineToLoad : dataToLoad) {
             /* skip any line that has a blank in the first column unless the first column had no header
                of course if the first column has no header and then the second has data but not on this line then it would get loaded
                happy for the check to remain in here - more stuff for the multi threaded bit */
-            ImportCellWithHeading first = lineToLoad.get(0);
-            if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null || first.getImmutableImportHeading().compositionPattern != null) {
-                resolveCompositeValues(lineToLoad, lineNo);
-                if (checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames)) {
-                    try {
-                        // valueTracker simply the number of values imported
-                        valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo, linesRejected));
-                    } catch (Exception e) {
-                        azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
-                        throw e;
+                ImportCellWithHeading first = lineToLoad.get(0);
+                if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null || first.getImmutableImportHeading().compositionPattern != null) {
+                    resolveCompositeValues(lineToLoad, lineNo);
+                    if (checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames)) {
+                        try {
+                            // valueTracker simply the number of values imported
+                            valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo, linesRejected));
+                        } catch (Exception e) {
+                            azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
+                            throw e;
+                        }
+                        Long now = System.currentTimeMillis();
+                        if (now - time > 10) { // 10ms a bit arbitrary
+                            System.out.println("line no " + lineNo + " time = " + (now - time) + "ms");
+                        }
+                        time = now;
+                    } else if (linesRejected.size() < 1_000) {
+                        linesRejected.add(lineNo);
                     }
-                    Long now = System.currentTimeMillis();
-                    if (now - time > 10) { // 10ms a bit arbitrary
-                        System.out.println("line no " + lineNo + " time = " + (now - time) + "ms");
-                    }
-                    time = now;
-                } else if (linesRejected.size() < 1_000) {
-                    linesRejected.add(lineNo);
                 }
+                lineNo++;
             }
-            lineNo++;
+            azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(lineNo) + " imported.", true);
+            azquoMemoryDBConnection.addToUserLogNoException("Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
+            return null;
+        } catch (Exception e){ // stacktrace first
+            e.printStackTrace();
+            throw e;
         }
-        azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(lineNo) + " imported.", true);
-        azquoMemoryDBConnection.addToUserLogNoException("Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
-        return null;
     }
 
     // Checking only and existing means "should we import the line at all" based on these criteria

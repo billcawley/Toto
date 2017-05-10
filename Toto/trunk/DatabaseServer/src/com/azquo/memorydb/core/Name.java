@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * Also I'm using Double Checked Locking. With volatile DCL is correct according to the JMM,
  * Given that synchronization is not inherently expensive it might be worth considering how much places where I'm using DCL might actually be contended much.
- *
+ * <p>
  * I've extracted NameAttributes and a few static functions but there's still too much code in here. Values and children switching between arrays and sets is a problem.
  */
 public final class Name extends AzquoMemoryDBEntity {
@@ -245,27 +245,33 @@ public final class Name extends AzquoMemoryDBEntity {
 
     void removeFromValues(final Value value) throws Exception {
         removeFromValuesCount.incrementAndGet();
-        synchronized (this) { // just sync on this object to protect the lists
-            // double check - I'd forgotten to here! Regardless of whether values as set is volatile or not it could have been set in the mean time by addToValues above
-            if (valuesAsSet != null) {
-                if (valuesAsSet.remove(value)) {
+        if (valuesAsSet != null) {
+            if (valuesAsSet.remove(value)) {
+                valuesIncludingChildrenCache = null;
+            }
+        } else {
+            synchronized (this) { // just sync on this object to protect the lists
+                // double check - I'd forgotten to here! Regardless of whether values as set is volatile or not it could have been set in the mean time by addToValues above
+                if (valuesAsSet != null) {
+                    if (valuesAsSet.remove(value)) {
+                        valuesIncludingChildrenCache = null;
+                    }
+                    return;
+                }
+                List<Value> valuesList = Arrays.asList(values);
+                if (valuesList.contains(value)) {
+                    // ok and a manual copy, again since synchronized I can't see a massive problem here.
+                    Value[] newValuesArray = new Value[values.length - 1];
+                    int newArrayPosition = 0;// gotta have a separate index on the new array, they will go out of sync
+                    for (Value value1 : values) { // do one copy skipping the element we want removed
+                        if (!value1.equals(value)) { // if it's not the one we want to return then copy
+                            newValuesArray[newArrayPosition] = value1;
+                            newArrayPosition++;
+                        }
+                    }
+                    values = newValuesArray;
                     valuesIncludingChildrenCache = null;
                 }
-                return;
-            }
-            List<Value> valuesList = Arrays.asList(values);
-            if (valuesList.contains(value)) {
-                // ok and a manual copy, again since synchronized I can't see a massive problem here.
-                Value[] newValuesArray = new Value[values.length - 1];
-                int newArrayPosition = 0;// gotta have a separate index on the new array, they will go out of sync
-                for (Value value1 : values) { // do one copy skipping the element we want removed
-                    if (!value1.equals(value)) { // if it's not the one we want to return then copy
-                        newValuesArray[newArrayPosition] = value1;
-                        newArrayPosition++;
-                    }
-                }
-                values = newValuesArray;
-                valuesIncludingChildrenCache = null;
             }
         }
     }
@@ -655,9 +661,9 @@ public final class Name extends AzquoMemoryDBEntity {
                         childrenAsSet.add(child);
                         // children new arraylist?;
                     } else {
-                            // unlike with parents and values we don't want to look for an empty initialised array here,
-                            // children can be dealt with more cleanly in the linking (as in we'll make the array to size in one shot there after the names have been set in the maps in AzquoMemoryDB)
-                            children = NameUtils.nameArrayAppend(children, child);
+                        // unlike with parents and values we don't want to look for an empty initialised array here,
+                        // children can be dealt with more cleanly in the linking (as in we'll make the array to size in one shot there after the names have been set in the maps in AzquoMemoryDB)
+                        children = NameUtils.nameArrayAppend(children, child);
                     }
                 }
             }
@@ -813,7 +819,7 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger findParentAttributesCount = new AtomicInteger(0);
 
     private static String findParentAttributes(Name child, String attributeName, Set<Name> checked, Name origName, int level) {
-         findParentAttributesCount.incrementAndGet();
+        findParentAttributesCount.incrementAndGet();
         attributeName = attributeName.trim().toUpperCase();
         for (Name parent : child.parents) {
             if (parent == null) {
@@ -822,16 +828,16 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (!checked.contains(parent)) {
                     checked.add(parent);
                     // ok, check for the parent actually matching the display name, here we need to do a hack supporting the member of
-                    if (attributeName.contains(StringLiterals.MEMBEROF)){ // hacky doing this here but the alternative is bodging an AzquoMemoryDBConnection for NameService. Lesser of two evils.
+                    if (attributeName.contains(StringLiterals.MEMBEROF)) { // hacky doing this here but the alternative is bodging an AzquoMemoryDBConnection for NameService. Lesser of two evils.
                         String checkName = attributeName.substring(attributeName.indexOf(StringLiterals.MEMBEROF) + StringLiterals.MEMBEROF.length());
                         String parentName = attributeName.substring(0, attributeName.indexOf(StringLiterals.MEMBEROF));
                         if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(checkName)) { // ok a candidate!
                             // now check the parents to see if it's correct
-                            for (Name parentParent : parent.getParents()){ // yes parent parent a bit hacky, we're looking to qualify the parent. getParents not idea for garbage but I assume this will NOT be called that often!
-                                if (parentParent.getDefaultDisplayName().equalsIgnoreCase(parentName)){
+                            for (Name parentParent : parent.getParents()) { // yes parent parent a bit hacky, we're looking to qualify the parent. getParents not idea for garbage but I assume this will NOT be called that often!
+                                if (parentParent.getDefaultDisplayName().equalsIgnoreCase(parentName)) {
                                     if (level > 1) {
                                         //check that there is not a direct connection.
-                                        Set<Name> directConnection = new HashSet(origName.getParents());
+                                        Set<Name> directConnection = new HashSet<>(origName.getParents());
                                         directConnection.retainAll(parent.getChildren());
                                         if (directConnection.size() > 0) {
                                             return directConnection.iterator().next().getDefaultDisplayName();
@@ -845,7 +851,7 @@ public final class Name extends AzquoMemoryDBEntity {
                         if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
                             if (level > 1) {
                                 //check that there is not a direct connection.
-                                Set<Name> directConnection = new HashSet(origName.getParents());
+                                Set<Name> directConnection = new HashSet<>(origName.getParents());
                                 directConnection.retainAll(parent.getChildren());
                                 if (directConnection.size() > 0) {
                                     return directConnection.iterator().next().getDefaultDisplayName();
@@ -882,7 +888,7 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
 
-        public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked, Name origName, int level) {
+    public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked, Name origName, int level) {
         attributeName = attributeName.toUpperCase(); // edd adding (back?) in, need to do this since all attributes are uppercase internally - check there are not redundant uppercases in other places TODO
         getAttribute2Count.incrementAndGet();
         String attribute = nameAttributes.getAttribute(attributeName);

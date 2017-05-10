@@ -211,6 +211,7 @@ public class OnlineController {
                                 pdfMerges.add(name.getName().substring("az_PDF".length()).replace("_", " "));
                             }
                         }
+                        // if this NPEs then it's probably to do with sessions crossing . . .
                         Map<String, String> images = SpreadsheetService.getImageList(loggedInUser);
                         model.put("imagestorename", loggedInUser.getImageStoreName());
 

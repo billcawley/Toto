@@ -310,7 +310,7 @@ public class DSImportService {
                 }
 
             }
-            if (headers != null && isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
+            if (isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
                 // as in add the headings to the first upload then upload again without headings (assuming the file name is the same!)
                 Name importSheets = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All import sheets", null, false);
@@ -358,15 +358,11 @@ public class DSImportService {
         return false;
     }
 
-
-
-
-
     // the idea is that a header could be followed by successive clauses on cells below and this might be easier to read
     private static boolean buildHeadersFromVerticallyListedClauses(String[] headers, Iterator<String[]> lineIterator) {
         String[] nextLine = lineIterator.next();
         int headingCount = 1;
-        boolean lastfilled = true;
+        boolean lastfilled;
         while (nextLine != null && headingCount++ < 10) {
             int colNo = 0;
             lastfilled = false;
@@ -396,10 +392,7 @@ public class DSImportService {
                 nextLine = null;
             }
         }
-        if (headingCount == 11){
-            return false;
-        }
-        return true;
+        return headingCount != 11;
     }
 
     private static boolean findReservedWord(String heading) {

@@ -24,25 +24,6 @@ public class NameUtils {
     }
 
     // I realise some of this stuff is probably very like the internal workings of ArrayList! Important here to save space with vanilla arrays I'm rolling my own.
-
-    static Name[] nameArrayAppend(Name[] source, Name toAppend, int position) {
-        if (position >= source.length) {
-            return nameArrayAppend(source, toAppend);
-        }
-        Name[] newArray = new Name[source.length + 1];
-        for (int i = 0; i < source.length; i++) {
-            if (i <= position) {
-                newArray[i] = source[i];
-                if (i == position) {
-                    newArray[i + 1] = toAppend;
-                }
-            } else {
-                newArray[i + 1] = source[i];
-            }
-        }
-        return newArray;
-    }
-
     // can check contains
 
     static Name[] nameArrayRemoveIfExists(Name[] source, Name toRemove) {
