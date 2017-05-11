@@ -20,7 +20,7 @@ import java.util.Set;
  *
  */
 public class DataRegionHeading {
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, PERCENTILE, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT}
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, PERCENTILE, STDEVA, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT}
     /*
     COUNT               Value function      The number of values rather than the sum
     AVERAGE             Value function      The average value

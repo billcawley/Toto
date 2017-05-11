@@ -8,6 +8,7 @@ import com.azquo.memorydb.service.MutableBoolean;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.ValueService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 
 import java.util.*;
@@ -57,7 +58,7 @@ public class AzquoCellResolver {
         MutableBoolean locked = new MutableBoolean(); // we use a mutable boolean as the functions that resolve the cell value may want to set it
         boolean hasData = false;
         for (DataRegionHeading heading : rowHeadings) {
-            if (heading != null && (heading.getName() != null || heading.getAttribute() != null || heading.getFunction()!=null)) {
+            if (heading != null && (heading.getName() != null || heading.getAttribute() != null || heading.getFunction() != null)) {
                 hasData = true;
                 break;
             }
@@ -65,7 +66,7 @@ public class AzquoCellResolver {
         if (hasData) {
             hasData = false;
             for (DataRegionHeading heading : columnHeadings) {
-                if (heading != null && (heading.getName() != null || heading.getAttribute() != null || heading.getFunction()!=null)) {
+                if (heading != null && (heading.getName() != null || heading.getAttribute() != null || heading.getFunction() != null)) {
                     hasData = true;
                     break;
                 }
@@ -241,7 +242,7 @@ public class AzquoCellResolver {
                 for (DataRegionHeading heading : headingsForThisCell) {
                     if (heading.getFunction() != null) { // should NOT be a name function, that should have been caught before
                         function = heading.getFunction();
-                        if (function == DataRegionHeading.FUNCTION.PERCENTILE){ // hacky, any way around that?
+                        if (function == DataRegionHeading.FUNCTION.PERCENTILE) { // hacky, any way around that?
                             functionDoubleParameter = heading.getDoubleParameter();
                         }
                         valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
@@ -308,23 +309,39 @@ But can use a library?
                              */
                             double[] forPercentile = new double[valuesHook.values.size()];
                             int count = 0;
-                            for (Value v : valuesHook.values){
+                            for (Value v : valuesHook.values) {
                                 double d = 0;
-                                try{
+                                try {
                                     d = Double.parseDouble(v.getText());
-                                } catch (NumberFormatException ignored){}
+                                } catch (NumberFormatException ignored) {
+                                }
                                 forPercentile[count] = d;
                                 count++;
                             }
                             Arrays.sort(forPercentile);
                             // java doesn't like end case 0, deal with it here
-                            if (functionDoubleParameter == 0){
+                            if (functionDoubleParameter == 0) {
                                 doubleValue = forPercentile[0];
                             } else {
                                 Percentile p = new Percentile().withEstimationType(Percentile.EstimationType.R_7); // Excel type!
                                 p.setData(forPercentile);
                                 doubleValue = p.evaluate(functionDoubleParameter * 100); // I think this function expects out of 100. We'll see . . .
                             }
+                        }
+                        if (function == DataRegionHeading.FUNCTION.STDEVA) {
+                            double[] forSD = new double[valuesHook.values.size()];
+                            int count = 0;
+                            for (Value v : valuesHook.values) {
+                                double d = 0;
+                                try {
+                                    d = Double.parseDouble(v.getText());
+                                } catch (NumberFormatException ignored) {
+                                }
+                                forSD[count] = d;
+                                count++;
+                            }
+                            StandardDeviation sd = new StandardDeviation();
+                            doubleValue = sd.evaluate(forSD);
                         }
                         //if there's only one value, treat it as text (it may be text, or may include £,$,%)
                         if (valuesHook.values.size() == 1 && !locked.isTrue) {
@@ -393,8 +410,8 @@ But can use a library?
             locked.isTrue = true;
         }
         Collection<Name> attributeSet = null;
-        for (DataRegionHeading heading:headings){
-            if (heading.getAttributeSet() != null){
+        for (DataRegionHeading heading : headings) {
+            if (heading.getAttributeSet() != null) {
                 attributeSet = heading.getAttributeSet();
                 break;
             }
@@ -407,15 +424,15 @@ But can use a library?
         //code for multiple attributes by EFC  - WFC doesn't understand it!
         for (Name n : names) { // go through each name
             for (String attribute : attributes) {
-                if (attributeSet!=null){
-                    for (Name possibleParent:attributeSet){
-                        if (possibleParent.getChildren().contains(n)){
+                if (attributeSet != null) {
+                    for (Name possibleParent : attributeSet) {
+                        if (possibleParent.getChildren().contains(n)) {
                             attValue = possibleParent.getDefaultDisplayName();
                             break;
                         }
                     }
                 }
-                if (attValue== null){
+                if (attValue == null) {
                     attValue = n.getAttribute(attribute.replace("`", "").toUpperCase());
                 }
                 if (attValue != null) {
