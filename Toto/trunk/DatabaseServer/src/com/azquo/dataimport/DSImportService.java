@@ -128,7 +128,7 @@ public class DSImportService {
             // parsed headings, the iterator for the data lines and how many lines should be processed by each task in the thread pool
             HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize = getHeadersWithIteratorAndBatchSize(azquoMemoryDBConnection, fileName, isSpreadsheet, filePath, attributeNames);
             if (headingsWithIteratorAndBatchSize == null) {
-                return fileName + "No data that can be read\n"; //most likely cause of it being null
+                return fileName + " No data that can be read<br/>"; //most likely cause of it being null
             }
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
             ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
@@ -458,8 +458,8 @@ public class DSImportService {
         System.out.println("Lines guessed at : " + linesGuess);
         int batchSize = 100_000;
         if (linesGuess < 100_000) {
-            System.out.println("less than 100,000, dropping batch size to 1k");
-            batchSize = 1_000;
+            System.out.println("less than 100,000, dropping batch size to 5k");
+            batchSize = 5_000;
         } else if (linesGuess < 1_000_000) {
             System.out.println("less than 1,000,000, dropping batch size to 10k");
             batchSize = 10_000;
