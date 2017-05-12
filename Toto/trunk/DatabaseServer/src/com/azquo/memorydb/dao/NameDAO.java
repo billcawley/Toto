@@ -38,10 +38,7 @@ public class NameDAO {
 
         @Override
         public Name mapRow(final ResultSet rs, final int row) throws SQLException {
-            // todo - address this, ergh! in future perhaps say what the problem is, I don't know . . .
             try {
-                byte[] atttest = rs.getBytes(ATTRIBUTES);
-                String atttest2 = rs.getString(ATTRIBUTES);
                 return new Name(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(ATTRIBUTES), rs.getBytes(CHILDREN), rs.getInt(NOPARENTS), rs.getInt(NOVALUES));
             } catch (Exception e) {
                 e.printStackTrace();

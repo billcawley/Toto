@@ -6,7 +6,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.net.InetAddress;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -101,14 +100,6 @@ public class JdbcTemplateUtils {
             System.out.println("JDBC Error on " + sql);
             System.out.println("\ntrying again");
             return jdbcTemplate.queryForObject(sql, paramMap, requiredType);
-        }
-    }
-
-    static int updateNoException(String sql, Map<String, ?> namedParams){
-        try{
-            return jdbcTemplate.update(sql, namedParams);
-        } catch (DataAccessException ignored){
-            return 0;
         }
     }
 

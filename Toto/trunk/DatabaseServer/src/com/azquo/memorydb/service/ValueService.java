@@ -361,7 +361,12 @@ public final class ValueService {
             final List<List<Name>> permutationOfLists = MultidimensionalListUtils.get2DPermutationOfLists(toPermute);
             double toReturn = 0;
             for (List<Name> lowLevelCalcNames : permutationOfLists) { // it's lowLevelCalcNames that we were after
-                toReturn += ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, lowLevelCalcNames, locked, valuesHook, attributeNames, function, nameComboValueCache, debugInfo);
+                if (valuesHook.calcValues == null){
+                    valuesHook.calcValues = new ArrayList<>();
+                }
+                double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, lowLevelCalcNames, locked, valuesHook, attributeNames, function, nameComboValueCache, debugInfo);
+                valuesHook.calcValues.add(result);
+                toReturn += result;
             }
             return toReturn;
         } else {
@@ -401,7 +406,12 @@ public final class ValueService {
                 double toReturn = 0;
                 for (Name appliesToName : outerLoopNames) { // in normal use just a single
                     calcnames.add(appliesToName);
-                    toReturn += ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, calcnames, locked, valuesHook, attributeNames, function, nameComboValueCache, debugInfo);
+                    if (valuesHook.calcValues == null){
+                        valuesHook.calcValues = new ArrayList<>();
+                    }
+                    double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, calcnames, locked, valuesHook, attributeNames, function, nameComboValueCache, debugInfo);
+                    valuesHook.calcValues.add(result);
+                    toReturn += result;
                     calcnames.remove(appliesToName);
                 }
                 locked.isTrue = true;

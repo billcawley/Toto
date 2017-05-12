@@ -22,6 +22,7 @@ public class AzquoCellResolver {
     // hacky, I just need a way to pass the values without doing a redundant addAll
     public static class ValuesHook {
         public List<Value> values = null;
+        public List<Double> calcValues = null; // memory overhead?
     }
 
     static AzquoCell getAzquoCellForHeadings(AzquoMemoryDBConnection connection, List<DataRegionHeading> rowHeadings, List<DataRegionHeading> columnHeadings
@@ -307,17 +308,29 @@ between 2 and 3 so 1 in the amount between, times that by the difference between
 
 But can use a library?
                              */
-                            double[] forPercentile = new double[valuesHook.values.size()];
-                            int count = 0;
-                            for (Value v : valuesHook.values) {
-                                double d = 0;
-                                try {
-                                    d = Double.parseDouble(v.getText());
-                                } catch (NumberFormatException ignored) {
+                            double[] forPercentile;
+                            if (valuesHook.calcValues != null){ // then override with calc values
+                                forPercentile = new double[valuesHook.calcValues.size()];
+                                int count = 0;
+                                for (double d : valuesHook.calcValues) {
+                                    forPercentile[count] = d;
+                                    count++;
                                 }
-                                forPercentile[count] = d;
-                                count++;
+                            } else { // normal
+                                forPercentile = new double[valuesHook.values.size()];
+                                int count = 0;
+                                for (Value v : valuesHook.values) {
+                                    double d = 0;
+                                    try {
+                                        d = Double.parseDouble(v.getText());
+                                    } catch (NumberFormatException ignored) {
+                                    }
+                                    forPercentile[count] = d;
+                                    count++;
+                                }
                             }
+
+
                             Arrays.sort(forPercentile);
                             // java doesn't like end case 0, deal with it here
                             if (functionDoubleParameter == 0) {
@@ -329,16 +342,27 @@ But can use a library?
                             }
                         }
                         if (function == DataRegionHeading.FUNCTION.STDEVA) {
-                            double[] forSD = new double[valuesHook.values.size()];
-                            int count = 0;
-                            for (Value v : valuesHook.values) {
-                                double d = 0;
-                                try {
-                                    d = Double.parseDouble(v.getText());
-                                } catch (NumberFormatException ignored) {
+                            double[] forSD;
+                            if (valuesHook.calcValues != null){ // then override with calc values
+                                forSD = new double[valuesHook.calcValues.size()];
+                                int count = 0;
+                                for (double d : valuesHook.calcValues) {
+                                    System.out.println("Standard deviation calculated value : " + d);
+                                    forSD[count] = d;
+                                    count++;
                                 }
-                                forSD[count] = d;
-                                count++;
+                            } else { // normal
+                                forSD = new double[valuesHook.values.size()];
+                                int count = 0;
+                                for (Value v : valuesHook.values) {
+                                    double d = 0;
+                                    try {
+                                        d = Double.parseDouble(v.getText());
+                                    } catch (NumberFormatException ignored) {
+                                    }
+                                    forSD[count] = d;
+                                    count++;
+                                }
                             }
                             StandardDeviation sd = new StandardDeviation();
                             doubleValue = sd.evaluate(forSD);
