@@ -118,9 +118,14 @@ public final class Name extends AzquoMemoryDBEntity {
             azquoMemoryDB.getIndex().setAttributeForNameInAttributeNameMap(attributeKeys[i], attributeValues[i], this); // used to be done after, can't se a reason not to do this here
         }
         nameAttributes = new NameAttributes(attributeKeys, attributeValues);
-        valuesAsSet = noValues > ARRAYTHRESHOLD ? Collections.newSetFromMap(new ConcurrentHashMap<>(noValues)) : null; // should help loading - prepare the space
+        /* OK I realise that this criteria of greater than or equal to ARRAYTHRESHOLD assigning a set and less than an array is slightly inconsistent with addToValues
+        that is to say one could get to an array of 512, save and reload and then that 512 would be a set. I do this because the value loading is a bit of a hack
+        and if I copy the criteria then addToValues will crash on the edge case of 512. I don't really see a problem with this under typical operation. It might, I suppose,
+        be an issue in a database with many names with 512 values but the rest of the time it's a moot point. DOcumenting here in case anyone sees the incinsistency and tries to "fix" it.
+        */
+        valuesAsSet = noValues >= ARRAYTHRESHOLD ? Collections.newSetFromMap(new ConcurrentHashMap<>(noValues)) : null; // should help loading - prepare the space
         // could values be nulled if the set is being used? The saving would be minor I think.
-        values = new Value[noValues <= ARRAYTHRESHOLD ? noValues : 0]; // prepare the array, as long as this is taken into account later should be fine
+        values = new Value[noValues < ARRAYTHRESHOLD ? noValues : 0]; // prepare the array, as long as this is taken into account later should be fine
         parents = new Name[noParents]; // no parents as set! as mentioned parents will very rarely big big and certainly not in the same way children and values are.
         childrenAsSet = null;// dealt with properly later
         children = new Name[0];
