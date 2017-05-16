@@ -103,13 +103,24 @@ class NameFilterFunctions {
     }
 
     static NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String offsetString, final String compareWithString, List<Name> referencedNames) throws Exception {
+        int count = NameQueryParser.parseInt(countString, -1);
         if (nameSetList.list == null) {
+            // new criteria - can add a count to unordered
+            if (count != -1 && nameSetList.set != null && nameSetList.set.size() > count){ // so constrain the list
+                Set<Name> newSet = HashObjSets.newMutableSet(count);
+                for (Name n : nameSetList.set){
+                    if (newSet.size() == count){ // here to allow count 0
+                        break;
+                    }
+                    newSet.add(n);
+                }
+                nameSetList = new NameSetList(newSet, null, true);// then make it mutable
+            }
             return nameSetList; // don't bother trying to constrain a non list
         }
         final ArrayList<Name> toReturn = new ArrayList<>();
         int to = -10000;
         int from = 1;
-        int count = NameQueryParser.parseInt(countString, -1);
         int offset =  NameQueryParser.parseInt(offsetString, 0);
         int compareWith = NameQueryParser.parseInt(compareWithString, 0);
         int space = 1; //spacing between 'compare with' fields
