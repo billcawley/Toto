@@ -270,7 +270,9 @@ class ImportFileUtilities {
                     if (newStringValue.endsWith(".0")) {
                         stringValue = newStringValue.substring(0, newStringValue.length() - 2);
                     } else {
-                        stringValue = newStringValue;
+                        if (!newStringValue.endsWith(".000000")){
+                            stringValue = newStringValue;
+                        }
                     }
                 } catch (Exception ignored) {
                 }
