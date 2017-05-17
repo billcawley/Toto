@@ -409,6 +409,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.DATELANG)
                 || heading.startsWith(HeadingReader.ONLY)
                 || heading.startsWith(HeadingReader.EXCLUSIVE)
+                || heading.startsWith(HeadingReader.CLEAR)
                 || heading.startsWith(HeadingReader.COMMENT)
                 || heading.startsWith(HeadingReader.EXISTING)
                 || heading.startsWith(HeadingReader.LINEHEADING)

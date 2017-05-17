@@ -43,7 +43,7 @@ class HeadingReader {
     static final String DATELANG = "date";
     static final String ONLY = "only";
     static final String EXCLUSIVE = "exclusive";
-    private static final String CLEAR = "clear";
+    static final String CLEAR = "clear";
     static final String COMMENT = "comment";
     static final String EXISTING = "existing"; // only works in in context of child of
     // essentially using either of these keywords switches to pivot mode (like an Excel pivot) where a name is created
