@@ -90,8 +90,13 @@ public final class ImportService {
         } else { // vanilla
             toReturn = readBookOrFile(loggedInUser, fileName, tempFile, attributeNames, true, isData);
         }
+        // hacky way to get the report name so it can be seen on the list. I wonder if this should be removed . . .
+        String reportName = null;
+        if (toReturn.startsWith("Report uploaded : ")){
+            reportName = toReturn.substring("Report uploaded : ".length());
+        }
         UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId()
-                , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, setup ? "setup" : "", "", filePath);//should record the error? (in comment)
+                , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName + (reportName != null ? " - (" + reportName + ")" : ""), setup ? "setup" : "", "", filePath);//should record the error? (in comment)
         UploadRecordDAO.store(uploadRecord);
         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         return toReturn;
@@ -234,7 +239,7 @@ public final class ImportService {
         }
     }
 
-    private static String uploadReport(LoggedInUser loggedInUser, String filePath, String fileName, String reportName) throws Exception {
+    private static void uploadReport(LoggedInUser loggedInUser, String filePath, String fileName, String reportName) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = loggedInUser.getDatabase().getId();
         String pathName = loggedInUser.getBusinessDirectory();
@@ -261,7 +266,6 @@ public final class ImportService {
         org.apache.commons.io.FileUtils.copyFile(new File(filePath), out);// straight copy of the source
         out.close();
         DatabaseReportLinkDAO.link(databaseId, or.getId());
-        return reportName + " uploaded.";
     }
 
     private static String readBook(LoggedInUser loggedInUser, final String fileName, final String tempPath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
@@ -277,7 +281,8 @@ public final class ImportService {
                 if (existing != null && existing.getUserId() != loggedInUser.getUser().getId()){
                     return "A report with that name has been uploaded by another user.";
                 }
-                return uploadReport(loggedInUser, tempPath, fileName, reportName);
+                uploadReport(loggedInUser, tempPath, fileName, reportName);
+                return "Report uploaded : " + reportName;
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
             OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
