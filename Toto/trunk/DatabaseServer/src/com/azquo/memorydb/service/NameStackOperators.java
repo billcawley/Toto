@@ -75,7 +75,7 @@ class NameStackOperators {
         if (lastName.size() == 1) {
             Name setName = lastName.iterator().next();
             lastName = setName.findAllChildren();
-            if (lastName.size() == 0 && setName.getDefaultDisplayName().startsWith("az_")) {
+            if (lastName!=null && lastName.size() == 0 && setName.getDefaultDisplayName().startsWith("az_")) {
                 setName = NameService.findByName(azquoMemoryDBConnection, setName.getDefaultDisplayName().substring(3));
                 if (setName != null) {
                     lastName = setName.getChildren();
