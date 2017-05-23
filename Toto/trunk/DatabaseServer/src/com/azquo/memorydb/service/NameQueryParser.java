@@ -37,8 +37,7 @@ public class NameQueryParser {
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            NameSetList  nameSetList = null;
-            nameSetList = interpretSetTerm(nameSetList, nameName, formulaStrings, referencedNames, attributeStrings);
+            NameSetList  nameSetList = interpretSetTerm(null, nameName, formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection);
             Set<Name> nameSet = nameSetList.set != null ? nameSetList.set : HashObjSets.newMutableSet(nameSetList.list); // just wrap if it's a list, should be fine. This object return type is for the query parser really
             toReturn.add(nameSet);
         }
@@ -162,28 +161,8 @@ public class NameQueryParser {
         //int stringCount = 0;
         // now to act on the formulae which has been converted to Reverse Polish, hence stack based parsing and no brackets etc.
         // NOTE THAT THE SHUNTING YARD ALGORITHM HERE LEAVES FUNCTIONS AT THE START (e.g. Attributeset)
+        // now to act on the formulae which has been converted to Reverse Polish, hence stack based parsing and no brackets etc.
         while (pos < setFormula.length()) {
-            if (setFormula.substring(pos).trim().toLowerCase().startsWith(StringLiterals.ATTRIBUTESET)) { // perhaps not elegant but we'll leave for the moment, can't really treat in query functions like operators
-                pos = setFormula.indexOf(StringLiterals.ATTRIBUTESET) + StringLiterals.ATTRIBUTESET.length();
-                //grab a couple of terms (only sets of names can go onto the stack
-                try {
-                    int commaPos = setFormula.indexOf(",", pos);
-                    int spacePos = setFormula.indexOf(" ", commaPos + 2);
-                    if (spacePos == -1) {
-                        spacePos = setFormula.length();
-                    }
-                    String attName = getAttributeSetTerm(setFormula.substring(pos, commaPos), referencedNames, formulaStrings);
-                    String attValue = getAttributeSetTerm(setFormula.substring(commaPos + 1, spacePos), referencedNames, formulaStrings);
-                    nameStack.add(new NameSetList(attributeSet(azquoMemoryDBConnection, attName, attValue), null, true));
-                    stackCount++;
-                    pos = spacePos;
-                    while (pos < setFormula.length() && setFormula.charAt(pos) == ' ') {
-                        pos++;
-                    }
-                } catch (Exception e) {
-                    throw new Exception(formulaCopy + " " + StringLiterals.ATTRIBUTESET + " not understood");
-                }
-            } else {
                 Matcher m = p.matcher(setFormula.substring(pos + 2));
                 // HANDLE SET INTERSECTIONS UNIONS AND EXCLUSIONS (* + - )
                 char op = setFormula.charAt(pos);
@@ -204,7 +183,7 @@ public class NameQueryParser {
                 if (op == StringLiterals.NAMEMARKER) { // then a straight name children from to etc. Resolve in interpretSetTerm
                     stackCount++;
                     // now returns a custom little object that hods a list a set and whether it's immutable
-                    nameStack.add(interpretSetTerm(null,setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings));
+                    nameStack.add(interpretSetTerm(null,setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
                 } else if (stackCount-- < 2) {
                     throw new Exception("not understood:  " + formulaCopy);
                 } else if (op == '*') { // * meaning intersection here . . .
@@ -224,14 +203,13 @@ public class NameQueryParser {
                     int childrenPos = setFormula.substring(pos).indexOf("children");
                     if (childrenPos > 0) {
 
-                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1, pos + childrenPos), formulaStrings, referencedNames, attributeStrings));
-                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(childrenPos + pos), formulaStrings, referencedNames, attributeStrings));
+                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1, pos + childrenPos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
+                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(childrenPos + pos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
                     }else{
-                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1), formulaStrings, referencedNames, attributeStrings));
+                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
                     }
                 }
                 pos = nextTerm;
-            }
         }
         if (sorted){
             if (nameStack.get(0) == null || nameStack.get(0).list == null || !nameStack.get(0).mutable) { // then force to a mutable list, don't see that we have a choice
@@ -300,10 +278,11 @@ public class NameQueryParser {
     }
 
     // Managed to convert to returning NameSetList, the key being using fast collection operations where possible depending on what has been passed
-
+    // not entirely happy with this being able to be passed a name set list. It to allow more complex things such as calling children on a previously interpred set term. todo - make mroe elegant?
+    // needs azquomemory db conneciton for it's indexes for the attribute set criteria. Boring but can't see a way around that.
     private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
 
-    private static NameSetList interpretSetTerm(NameSetList namesFound, String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings) throws Exception {
+    private static NameSetList interpretSetTerm(NameSetList namesFound, String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         interpretSetTermCount.incrementAndGet();
         //System.out.println("interpret set term . . ." + setTerm);
         final String levelString = StringUtils.getInstruction(setTerm, StringLiterals.LEVEL);
@@ -317,6 +296,8 @@ public class NameQueryParser {
         String countString = StringUtils.getInstruction(setTerm, StringLiterals.COUNT);
         final String compareWithString = StringUtils.getInstruction(setTerm, StringLiterals.COMPAREWITH);
         String selectString = StringUtils.getInstruction(setTerm, StringLiterals.SELECT);
+        // now attribute set goes in here
+        final String attributeSetString = StringUtils.getInstruction(setTerm, StringLiterals.ATTRIBUTESET);
 
         int wherePos = setTerm.toLowerCase().indexOf(StringLiterals.WHERE.toLowerCase());
         String whereString = null;
@@ -382,6 +363,12 @@ public class NameQueryParser {
                 }
             }
         }
+        // I believe this is the correct place to put this, after resolving the set but before sorting/ordering etc. This will of course likely totally transform the set
+        if (attributeSetString != null) {
+            String resolvedString = strings.get(Integer.parseInt(attributeSetString.substring(1, 3))).toLowerCase();
+            namesFound = attributeSet(azquoMemoryDBConnection, resolvedString, namesFound);
+        }
+
         if (sorted != null) { // I guess force list
             if (namesFound.list == null || !namesFound.mutable) { // then force to a mutable list, don't see that we have a choice
                 namesFound = new NameSetList(null, new ArrayList<>(namesFound.getAsCollection()), true);
@@ -456,23 +443,15 @@ public class NameQueryParser {
         }
     }
 
-    private static String getAttributeSetTerm(String term, List<Name> referencedNames, List<String> strings) throws Exception {
-        term = term.trim();
-        if (term.startsWith("\"")) {
-            return strings.get(Integer.parseInt(term.substring(1, 3))).toLowerCase();
+    // used to simply match on a string literal, now matches a given attribute across the database to a name set.
+    // the initial use was the attribute unsubscribed which had a date in there and crossing that with a name query on dates
+    private static NameSetList attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, NameSetList toConvert) {
+        Set<Name> result = HashObjSets.newMutableSet();
+        for (Name source : toConvert.getAsCollection()){
+            // some collection wrapping in here, could be made more efficient if necessary
+            result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName, source.getDefaultDisplayName()));
         }
-        if (term.startsWith(StringLiterals.NAMEMARKER + "")) {
-            return getNameFromListAndMarker(term, referencedNames).getDefaultDisplayName();
-        }
-        return term;
-    }
-
-    // in parse query, we want to find any names with that attribute and value e.g. "BORNIN", "GUILDFORD"
-
-    private static Set<Name> attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, String attributeValue) {
-        List<String> attributeNames = new ArrayList<>();
-        attributeNames.add(attributeName);
-        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(attributeNames, attributeValue, null);
+        return new NameSetList(result,null, true);
     }
 
     public static void printFunctionCountStats() {
