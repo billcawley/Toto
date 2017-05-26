@@ -407,6 +407,9 @@ class DataRegionHeadingService {
             for (int i = 0; i < headingDefinitionRow.size(); i++) {
                 if (headingDefinitionRow.get(i) != null) {
                     hasTitles = true;
+                    if (i==0){
+                        lastHeadingRow=null;
+                    }
                 }
             }
             boolean permuting= false;
