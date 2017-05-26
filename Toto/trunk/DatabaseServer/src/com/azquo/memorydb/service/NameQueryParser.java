@@ -37,7 +37,7 @@ public class NameQueryParser {
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            NameSetList  nameSetList = interpretSetTerm(null, nameName, formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection);
+            NameSetList nameSetList = interpretSetTerm(null, nameName, formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection);
             Set<Name> nameSet = nameSetList.set != null ? nameSetList.set : HashObjSets.newMutableSet(nameSetList.list); // just wrap if it's a list, should be fine. This object return type is for the query parser really
             toReturn.add(nameSet);
         }
@@ -64,7 +64,7 @@ public class NameQueryParser {
     /* todo : sort exceptions?
     todo - cache option in here
     now uses NameSetList to move connections of names around and only copy them as necessary. Has made the logic a little more complex
-    in places but performance should be better and garbage generation reduced
+    in places but performance should be better and garbage reduced
     todo - check logic regarding toReturn makes sense.
     */
     private static AtomicInteger parseQuery3Count = new AtomicInteger(0);
@@ -127,9 +127,9 @@ public class NameQueryParser {
             return NameEditFunctions.handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(), languages);
         }
         boolean sorted = false;
-        if (setFormula.toLowerCase().endsWith(" "+StringLiterals.SORTED)){
+        if (setFormula.toLowerCase().endsWith(" " + StringLiterals.SORTED)) {
             sorted = true;
-            setFormula = setFormula.substring(0,setFormula.length() - StringLiterals.SORTED.length() - 1);
+            setFormula = setFormula.substring(0, setFormula.length() - StringLiterals.SORTED.length() - 1);
         }
 
         setFormula = StringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
@@ -157,63 +157,63 @@ public class NameQueryParser {
         logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
         // could we get rid of stack count and just use the ArrayList's size?
-         int stackCount = 0;
+        int stackCount = 0;
         //int stringCount = 0;
         // now to act on the formulae which has been converted to Reverse Polish, hence stack based parsing and no brackets etc.
         // NOTE THAT THE SHUNTING YARD ALGORITHM HERE LEAVES FUNCTIONS AT THE START (e.g. Attributeset)
         // now to act on the formulae which has been converted to Reverse Polish, hence stack based parsing and no brackets etc.
         while (pos < setFormula.length()) {
-                Matcher m = p.matcher(setFormula.substring(pos + 2));
-                // HANDLE SET INTERSECTIONS UNIONS AND EXCLUSIONS (* + - )
-                char op = setFormula.charAt(pos);
-                int nextTerm = setFormula.length() + 1;
-                if (m.find()) {
-                    nextTerm = m.start() + pos + 2;
-                    // PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
-                    // need to check for this....
-                    while (nextTerm < setFormula.length() && (StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.TO, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.FROM, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm))) {
-                        int startPos = nextTerm + 1;
-                        nextTerm = setFormula.length() + 1;
-                        m = p.matcher(setFormula.substring(startPos));
-                        if (m.find()) {
-                            nextTerm = m.start() + startPos;
-                        }
+            Matcher m = p.matcher(setFormula.substring(pos + 2));
+            // HANDLE SET INTERSECTIONS UNIONS AND EXCLUSIONS (* + - )
+            char op = setFormula.charAt(pos);
+            int nextTerm = setFormula.length() + 1;
+            if (m.find()) {
+                nextTerm = m.start() + pos + 2;
+                // PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
+                // need to check for this....
+                while (nextTerm < setFormula.length() && (StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.TO, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.FROM, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm))) {
+                    int startPos = nextTerm + 1;
+                    nextTerm = setFormula.length() + 1;
+                    m = p.matcher(setFormula.substring(startPos));
+                    if (m.find()) {
+                        nextTerm = m.start() + startPos;
                     }
                 }
-                if (op == StringLiterals.NAMEMARKER) { // then a straight name children from to etc. Resolve in interpretSetTerm
-                    stackCount++;
-                    // now returns a custom little object that hods a list a set and whether it's immutable
-                    nameStack.add(interpretSetTerm(null,setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
-                } else if (stackCount-- < 2) {
-                    throw new Exception("not understood:  " + formulaCopy);
-                } else if (op == '*') { // * meaning intersection here . . .
-                    NameStackOperators.setIntersection(nameStack, stackCount);
-                } else if (op == '/') {
-                    NameStackOperators.childParentsSetIntersection(azquoMemoryDBConnection, nameStack, stackCount);
-                } else if (op == '-') {
-                    NameStackOperators.removeFromSet(nameStack, stackCount);
-                } else if (op == '+') {
-                    NameStackOperators.addSets(nameStack, stackCount);
-                } else if (op == StringLiterals.ASSYMBOL) {
-                    resetDefs = true;
-                    NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount);
-                }
-                if (op!=StringLiterals.NAMEMARKER && nextTerm > setFormula.length() && pos < nextTerm - 3){
-                    //there's still more stuff to understand!  Having created a set, we may now wish to operate on that set
-                    int childrenPos = setFormula.substring(pos).indexOf("children");
-                    if (childrenPos > 0) {
+            }
+            if (op == StringLiterals.NAMEMARKER) { // then a straight name children from to etc. Resolve in interpretSetTerm
+                stackCount++;
+                // now returns a custom little object that hods a list a set and whether it's immutable
+                nameStack.add(interpretSetTerm(null, setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
+            } else if (stackCount-- < 2) {
+                throw new Exception("not understood:  " + formulaCopy);
+            } else if (op == '*') { // * meaning intersection here . . .
+                NameStackOperators.setIntersection(nameStack, stackCount);
+            } else if (op == '/') {
+                NameStackOperators.childParentsSetIntersection(azquoMemoryDBConnection, nameStack, stackCount);
+            } else if (op == '-') {
+                NameStackOperators.removeFromSet(nameStack, stackCount);
+            } else if (op == '+') {
+                NameStackOperators.addSets(nameStack, stackCount);
+            } else if (op == StringLiterals.ASSYMBOL) {
+                resetDefs = true;
+                NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount);
+            }
+            if (op != StringLiterals.NAMEMARKER && nextTerm > setFormula.length() && pos < nextTerm - 3) {
+                //there's still more stuff to understand!  Having created a set, we may now wish to operate on that set
+                int childrenPos = setFormula.substring(pos).indexOf("children");
+                if (childrenPos > 0) {
 
-                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1, pos + childrenPos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
-                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(childrenPos + pos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
-                    }else{
-                        nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
-                    }
+                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1, pos + childrenPos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
+                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(childrenPos + pos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
+                } else {
+                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
                 }
-                pos = nextTerm;
+            }
+            pos = nextTerm;
         }
-        if (sorted){
+        if (sorted) {
             if (nameStack.get(0) == null || nameStack.get(0).list == null || !nameStack.get(0).mutable) { // then force to a mutable list, don't see that we have a choice
-                nameStack.set(0,new NameSetList(null, new ArrayList<>(nameStack.get(0).getAsCollection()), true));
+                nameStack.set(0, new NameSetList(null, new ArrayList<>(nameStack.get(0).getAsCollection()), true));
             }
             nameStack.get(0).list.sort(NameService.defaultLanguageCaseInsensitiveNameComparator);
 
@@ -229,7 +229,7 @@ public class NameQueryParser {
             }
         } else { // add all can be inefficient as it does a .toArray but the big saving here can be if I can get a hint that the collection won't be modified, then I can just return what's on the namestack
             // note the first entry on the name stack might actually be mutable anyway and hence we could just return it IF a toReturn collection wasn't passed
-            if (returnReadOnlyCollection){
+            if (returnReadOnlyCollection) {
                 toReturn = nameStack.get(0).getAsCollection();
             } else {
                 toReturn.addAll(nameStack.get(0).getAsCollection());
@@ -307,7 +307,7 @@ public class NameQueryParser {
         if (levelString != null) {
             childrenString = "true";
         }
-        if (namesFound==null || namesFound.list.size() == 1) {
+        if (namesFound == null || namesFound.list.size() == 1) {
             Name name;
 
             if (namesFound == null) {
@@ -319,7 +319,7 @@ public class NameQueryParser {
                 if (name == null) {
                     throw new Exception(" not understood: " + nameString);
                 }
-            }else{
+            } else {
                 name = namesFound.list.get(0);
             }
             if (childrenString == null && fromString == null && toString == null && countString == null) {
@@ -340,13 +340,8 @@ public class NameQueryParser {
             if (!namesFound.mutable) {
                 namesFound = new NameSetList(namesFound);
             }
-            Iterator<Name> withChildrenOnlyIterator = namesFound.getAsCollection().iterator();
-            while (withChildrenOnlyIterator.hasNext()) {
-                Name check = withChildrenOnlyIterator.next();
-                if (!check.hasChildren()) {// use iterator remove for childless names
-                    withChildrenOnlyIterator.remove();
-                }
-            }
+            // removeif should have little performance hit
+            namesFound.getAsCollection().removeIf(check -> !check.hasChildren());
         }
         if (selectString != null) {
             String toFind = strings.get(Integer.parseInt(selectString.substring(1, 3))).toLowerCase();
@@ -354,14 +349,10 @@ public class NameQueryParser {
             if (!namesFound.mutable) {
                 namesFound = new NameSetList(namesFound);
             }
-            Iterator<Name> selectedNamesIterator = namesFound.getAsCollection().iterator();
-            while (selectedNamesIterator.hasNext()) {
-                Name check = selectedNamesIterator.next();
-                if (check == null || check.getDefaultDisplayName() == null
-                        || !check.getDefaultDisplayName().toLowerCase().contains(toFind)) { // reversing logic from before to use iterator remove to get rid of non relevant names
-                    selectedNamesIterator.remove(); //
-                }
-            }
+            // reversing logic from before to use iterator remove to get rid of non relevant names
+            // switching to removeif . . .this null checking botheres me a little - should either the name or it's DDN be null?
+            namesFound.getAsCollection().removeIf(check -> check == null || check.getDefaultDisplayName() == null
+                    || !check.getDefaultDisplayName().toLowerCase().contains(toFind));
         }
         // I believe this is the correct place to put this, after resolving the set but before sorting/ordering etc. This will of course likely totally transform the set
         if (attributeSetString != null) {
@@ -447,11 +438,11 @@ public class NameQueryParser {
     // the initial use was the attribute unsubscribed which had a date in there and crossing that with a name query on dates
     private static NameSetList attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, NameSetList toConvert) {
         Set<Name> result = HashObjSets.newMutableSet();
-        for (Name source : toConvert.getAsCollection()){
+        for (Name source : toConvert.getAsCollection()) {
             // some collection wrapping in here, could be made more efficient if necessary
             result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName, source.getDefaultDisplayName()));
         }
-        return new NameSetList(result,null, true);
+        return new NameSetList(result, null, true);
     }
 
     public static void printFunctionCountStats() {
