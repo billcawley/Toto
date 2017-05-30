@@ -11,13 +11,16 @@ import java.util.List;
 /**
  * Created by edward on 18/01/17.
  * the names or values that make up the cell are grouped into provenance
+ * More mutable than it was at first as ProvenanceForDisplay can be converted by an attribute against the import spec.
+ * see checkProvenanceForDisplayForAuditSheet in ProvenanceService.
+ *
  */
 public class ProvenanceForDisplay implements Serializable {
-    private final boolean inSpreadsheet;
+    private boolean inSpreadsheet;
     private final String user;
-    private final String method;
-    private final String name;
-    private final String context;
+    private String method;
+    private String name;
+    private String context;
     private final Date date;
     // now what can be attached to each provenance in this context?
     private List<TypedPair<Integer, List<String>>> valuesWithIdsAndNames;
@@ -32,6 +35,22 @@ public class ProvenanceForDisplay implements Serializable {
         this.date = date;
         names = null;
         valuesWithIdsAndNames = null;
+    }
+
+    public void setInSpreadsheet(boolean inSpreadsheet) {
+        this.inSpreadsheet = inSpreadsheet;
+    }
+
+    public void setMethod(String method) {
+        this.method = method;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setContext(String context) {
+        this.context = context;
     }
 
     public boolean isInSpreadsheet() {
@@ -70,7 +89,7 @@ public class ProvenanceForDisplay implements Serializable {
         this.valuesWithIdsAndNames = valuesWithIdsAndNames;
     }
 
-    private static DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
+    private final static DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
 
     @Override
     public String toString() {

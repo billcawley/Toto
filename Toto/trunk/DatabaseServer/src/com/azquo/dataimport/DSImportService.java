@@ -44,6 +44,8 @@ public class DSImportService {
     // is there a groovy pre processor?
     private static final String GROOVYPROCESSOR = "GROOVYPROCESSOR";
 
+    // where we store import specs for different file types
+    public static final String ALLIMPORTSHEETS = "All import sheets";
     /*
     Currently only two types of import supported and detection on file name (best idea?). Run the import and persist.
     Generally speaking creating the import headers and basic set structure is what is required to ready a database to load data.
@@ -313,7 +315,7 @@ public class DSImportService {
             if (isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
                 // as in add the headings to the first upload then upload again without headings (assuming the file name is the same!)
-                Name importSheets = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All import sheets", null, false);
+                Name importSheets = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, ALLIMPORTSHEETS, null, false);
                 Name dataImportThis = NameService.findOrCreateNameInParent(azquoMemoryDBConnection,
                         "DataImport " + importInterpreterLookup, importSheets, true);
                 StringBuilder sb = new StringBuilder();

@@ -1,7 +1,9 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.TypedPair;
+import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.Name;
@@ -15,6 +17,7 @@ import com.azquo.spreadsheet.DataRegionHeading;
 import com.azquo.spreadsheet.ListOfValuesOrNamesAndAttributeName;
 import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -75,7 +78,7 @@ public class ProvenanceService {
                 return nameCountProvenance(azquoCell);
             }
             if (valuesForCell.getValues() != null) {
-                return valuesProvenance(valuesForCell.getValues(), maxSize);
+                return valuesProvenance(azquoMemoryDBConnection, valuesForCell.getValues(), maxSize);
             }
             // todo - in case of no row headings (import style data) this may NPE
             if (azquoCell.getRowHeadings().get(0).getAttribute() != null || azquoCell.getColumnHeadings().get(0).getAttribute() != null) {
@@ -145,9 +148,11 @@ public class ProvenanceService {
         return new ProvenanceDetailsForDisplay(provString,Collections.singletonList(provenanceForDisplay));
     }
 
-    // logic will be changed for new object ProvenanceDetailsForDisplay
-    // TODO - as mentioned, value history!
-    private static ProvenanceDetailsForDisplay valuesProvenance(List<Value> values, int maxSize) {
+    /* logic will be changed for new object ProvenanceDetailsForDisplay
+     TODO - as mentioned, value history!
+     */
+
+    private static ProvenanceDetailsForDisplay valuesProvenance(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, int maxSize) throws Exception{
         List<ProvenanceForDisplay> provenanceForDisplays = new ArrayList<>();
         if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
             values.sort((o1, o2) -> (o2.getProvenance().getTimeStamp()).compareTo(o1.getProvenance().getTimeStamp()));
@@ -163,6 +168,7 @@ public class ProvenanceService {
                         oneUpdate = oneUpdate.subList(0, maxSize);
                     }
                     provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(oneUpdate)); // todo - value history . . .
+                    checkAuditSheet(azquoMemoryDBConnection,provenanceForDisplay,oneUpdate);
                     provenanceForDisplays.add(provenanceForDisplay);
                     oneUpdate = new ArrayList<>();
                     oneUpdate.add(value);
@@ -174,9 +180,120 @@ public class ProvenanceService {
                 oneUpdate = oneUpdate.subList(0, maxSize);
             }
             provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(oneUpdate)); // todo - value history . . .
+            checkAuditSheet(azquoMemoryDBConnection,provenanceForDisplay,oneUpdate);
             provenanceForDisplays.add(provenanceForDisplay);
         }
         return new ProvenanceDetailsForDisplay(null, provenanceForDisplays);
+    }
+
+    private static final String AUDITSET = "AuditSet";
+
+/*    A normal in spreadsheet provenance might look as follows :
+    {"user":"Bill Cawley","timeStamp":1495554373879,"method":"in spreadsheet","name":"Customer Categorisation","context":"month = May-16;"}
+    An imported one might be
+    {"user":"Bill Cawley","timeStamp":1495521349363,"method":"imported","name":"DG Setup2.xlsx:Mailouts","context":""}
+    This is relevant as there's going to be an option to create a drill down equivalent for imports. The "Mailouts" bit above means that in that database
+    there will be All import sheets -> DataImport Mailouts. The created drilldown will be an attribute AuditSheet against this name, a syntax is as follows :
+
+    <Report Name> with CHOSENSET = <name of chosen set>, <Choice> CHOSEN FROM <choice set>,....
+
+    e.g.  `Order Items chosen` with CHOSENSET = `Items chosen`, Territory CHOSEN FROM `All countries` children, Month CHOSEN FROM `All months` children*/
+
+    private static void checkAuditSheet(AzquoMemoryDBConnection azquoMemoryDBConnection, ProvenanceForDisplay provenanceForDisplay, List<Value> values) throws Exception{
+        if ("imported".equals(provenanceForDisplay.getMethod())){
+            if (provenanceForDisplay.getName().contains(":")){
+                String toSearch = provenanceForDisplay.getName().substring(provenanceForDisplay.getName().lastIndexOf(":") + 1); // so we've got our Mailouts or equivalent
+                Name allImportSheets = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), DSImportService.ALLIMPORTSHEETS, null);
+                // just check the children, more simple
+                if (allImportSheets != null){
+                    for (Name child : allImportSheets.getChildren()){
+                        if (child.getDefaultDisplayName().equals("DataImport " + toSearch)){ // todo - stop such use of string literals . . .
+                            if (child.getAttribute(AUDITSET) != null){ // then we have criteria
+                                String auditSetRule = child.getAttribute(AUDITSET);
+                                if (auditSetRule.contains("with")){ // this parsing could be more robust, also could be factored a bit?
+                                    String reportName = auditSetRule.substring(0, auditSetRule.indexOf("with")).replaceAll("`", "").trim();
+                                    provenanceForDisplay.setMethod("in spreadsheet");
+                                    provenanceForDisplay.setInSpreadsheet(true);
+                                    provenanceForDisplay.setName(reportName);
+                                    // todo - parsing a bit more robust here regarding `, escaping names
+                                    // dammit have to deal with character escapes . . .
+                                    String restOfRule = auditSetRule.substring(auditSetRule.indexOf("with") + 4).trim();
+                                    if (restOfRule.toUpperCase().startsWith("CHOSENSET =")){
+                                        restOfRule = restOfRule.substring("CHOSENSET =".length()).trim();
+                                        String chosenSet;
+                                        if (restOfRule.startsWith("`")){ // chosen set has escape quotes
+                                            int endQuote = restOfRule.indexOf("`",1);
+                                            chosenSet = restOfRule.substring(1, endQuote).trim();
+                                            restOfRule = restOfRule.substring(endQuote + 1).trim();
+                                        } else {
+                                            int commaPos = restOfRule.indexOf(",");
+                                            if (commaPos > 0){
+                                                chosenSet = restOfRule.substring(0, commaPos).trim();
+                                                restOfRule = restOfRule.substring(commaPos).trim();
+                                            } else {
+                                                chosenSet = restOfRule.trim();
+                                                restOfRule = null; // no more there
+                                            }
+                                        }
+                                        // ok, make the chosen set which are the names shared across all the values
+                                        Set<Name> sharedSet = HashObjSets.newMutableSet();
+                                        Set<Name> spareSet = HashObjSets.newMutableSet(); // what we'll try and match the context against
+                                        for (Value v : values){
+                                            if (sharedSet.isEmpty()){ // first one add them all
+                                                sharedSet.addAll(v.getNames());
+                                            } else {
+                                                for (Name n : v.getNames()){
+                                                    if (!sharedSet.contains(n)){
+                                                        spareSet.add(n);
+                                                    }
+                                                }
+                                                sharedSet.retainAll(v.getNames());
+                                            }
+                                        }
+                                        Name newSetForReport = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, chosenSet, null, false);// simple name create on the new set
+                                        newSetForReport.setChildrenWillBePersisted(spareSet);
+
+                                        StringBuilder context = new StringBuilder();
+                                        String CHOSENFROM = "CHOSEN FROM";
+                                        if (restOfRule != null){
+                                            // we want to create a context along the lines of something = something; somethingelse = somethingelse;
+                                            // parsing shouldn't be too difficult except that I need to watch out for commas in escaped names. If I parse around "CHOSEN FROM", assuming that isn't in the strings of course, this should be fairly robust
+                                            // , Territory CHOSEN FROM `All countries` children, Month CHOSEN FROM `All months` children
+                                            while (restOfRule.contains(CHOSENFROM)){
+                                                int chosenFromIndex = restOfRule.indexOf(CHOSENFROM);
+                                                String choiceName = restOfRule.substring(0, chosenFromIndex);
+                                                choiceName = choiceName.trim();
+                                                if (choiceName.startsWith(",")){
+                                                    choiceName = choiceName.substring(1).trim();
+                                                }
+                                                String setToSelectFrom;
+                                                restOfRule = restOfRule.substring(chosenFromIndex + CHOSENFROM.length());
+                                                if (restOfRule.contains(CHOSENFROM)){
+                                                    int nextCommaPos = restOfRule.substring(0, restOfRule.indexOf(CHOSENFROM)).lastIndexOf(","); // the last comma before the next chosenFrom
+                                                    setToSelectFrom = restOfRule.substring(0, nextCommaPos).trim();
+                                                    restOfRule = restOfRule.substring(nextCommaPos);
+                                                } else {
+                                                    // no need to adjust restOfRule we're finished with it
+                                                    setToSelectFrom = restOfRule.trim();
+                                                }
+                                                Collection<Name> setToSelectFromSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, setToSelectFrom);
+                                                // now, there should be ONE crossover between this set and the spare set
+                                                setToSelectFromSet.retainAll(sharedSet);
+                                                if (setToSelectFromSet.size() == 1){ // then we're in business!
+                                                    context.append(choiceName + " = " + setToSelectFromSet.iterator().next().getDefaultDisplayName() + ";");
+                                                }
+                                            }
+                                            provenanceForDisplay.setContext(context.toString());
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // first string is the value, then the names . . .
