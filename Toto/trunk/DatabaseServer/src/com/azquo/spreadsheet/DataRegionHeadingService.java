@@ -42,9 +42,13 @@ class DataRegionHeadingService {
             nameLists.add(row);
             for (String sourceCell : sourceRow) {
                 sourceCell = sourceCell.trim();
+
                 if (sourceCell == null || sourceCell.length() == 0) {
                     row.add(null);
                 } else {
+                    if (sourceCell.endsWith("↕") || sourceCell.endsWith("↑") || sourceCell.endsWith("↓")) {
+                        sourceCell = sourceCell.substring(0,sourceCell.length()-2);
+                    }
                     // was just a name expression, now we allow an attribute also. May be more in future.
                     if (sourceCell.startsWith(".")) { //
                         // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
