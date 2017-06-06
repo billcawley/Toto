@@ -31,7 +31,7 @@ public class ValueCalculationService {
     // fair few params, wonder if there's a way to avoid that?
     static double resolveCalc(AzquoMemoryDBConnection azquoMemoryDBConnection, String calcString, List<Name> formulaNames, List<Name> calcnames,
                               MutableBoolean locked, AzquoCellResolver.ValuesHook valuesHook, List<String> attributeNames
-            , DataRegionHeading.FUNCTION function, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
+            , DataRegionHeading functionHeading, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
         if (debugInfo != null) {
             debugInfo.append("\t");
             boolean first = true;
@@ -146,7 +146,7 @@ public class ValueCalculationService {
                         }
                     }
                     //note - would there be recursion? Resolve order of formulae might be unreliable
-                    double value = ValueService.findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, function, nameComboValueCache, null);
+                    double value = ValueService.findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, functionHeading, nameComboValueCache, null);
                     if (debugInfo != null) {
                         debugInfo.append("\t").append(value).append("\t");
                     }
@@ -168,7 +168,7 @@ public class ValueCalculationService {
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
     static double resolveValues(final List<Value> values
-            , AzquoCellResolver.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
+            , AzquoCellResolver.ValuesHook valuesHook, DataRegionHeading functionHeading, MutableBoolean locked) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
@@ -212,20 +212,23 @@ public class ValueCalculationService {
         if (values.size() > 1) {
             locked.isTrue = true;
         }
-        if (function == DataRegionHeading.FUNCTION.COUNT) {
-            return values.size();
-        }
-        if (function == DataRegionHeading.FUNCTION.AVERAGE) {
-            if (values.size() == 0) {
-                return 0; // avoid dividing by zero
+        if (functionHeading!=null) {
+            DataRegionHeading.FUNCTION function = functionHeading.getFunction();
+            if (function == DataRegionHeading.FUNCTION.COUNT) {
+                return values.size();
             }
-            return sumValue / values.size();
-        }
-        if (function == DataRegionHeading.FUNCTION.MAX) {
-            return max;
-        }
-        if (function == DataRegionHeading.FUNCTION.MIN) {
-            return min;
+            if (function == DataRegionHeading.FUNCTION.AVERAGE) {
+                if (values.size() == 0) {
+                    return 0; // avoid dividing by zero
+                }
+                return sumValue / values.size();
+            }
+            if (function == DataRegionHeading.FUNCTION.MAX) {
+                return max;
+            }
+            if (function == DataRegionHeading.FUNCTION.MIN) {
+                return min;
+            }
         }
         return sumValue; // default to sum, no function
     }

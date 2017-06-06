@@ -237,12 +237,14 @@ public class AzquoCellResolver {
                 locked.isTrue = true;
             } else {
                 // ok new logic here, we need to know if we're going to use attributes or values
+                DataRegionHeading functionHeading =null;
                 DataRegionHeading.FUNCTION function = null;
                 Collection<Name> valueFunctionSet = null;
                 double functionDoubleParameter = 0;
                 for (DataRegionHeading heading : headingsForThisCell) {
                     if (heading.getFunction() != null) { // should NOT be a name function, that should have been caught before
-                        function = heading.getFunction();
+                        functionHeading = heading;
+                        function = functionHeading.getFunction();
                         if (function == DataRegionHeading.FUNCTION.PERCENTILE) { // hacky, any way around that?
                             functionDoubleParameter = heading.getDoubleParameter();
                         }
@@ -277,7 +279,7 @@ public class AzquoCellResolver {
                                 locked.isTrue = true;
                             }
                         }
-                        doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, function, nameComboValueCache, debugInfo);
+                        doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, functionHeading, nameComboValueCache, debugInfo);
                         if (function == DataRegionHeading.FUNCTION.VALUEPARENTCOUNT && valueFunctionSet != null) { // then value parent count, we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             Set<Name> allValueParents = HashObjSets.newMutableSet();
