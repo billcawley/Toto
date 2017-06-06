@@ -60,6 +60,7 @@ public class NameUtils {
             qualified = parent.getDefaultDisplayName() + StringLiterals.MEMBEROF + qualified;
             parents = parent.getParents();
         }
+        qualified = qualified.replace(StringLiterals.MEMBEROF + "null","");//deal with user-specific names
         return StringLiterals.QUOTE + qualified + StringLiterals.QUOTE;
     }
 }
