@@ -186,7 +186,7 @@ public class ProvenanceService {
         return new ProvenanceDetailsForDisplay(null, provenanceForDisplays);
     }
 
-    private static final String AUDITSET = "AuditSet";
+    private static final String AUDITSHEET = "AuditSheet";
 
 /*    A normal in spreadsheet provenance might look as follows :
     {"user":"Bill Cawley","timeStamp":1495554373879,"method":"in spreadsheet","name":"Customer Categorisation","context":"month = May-16;"}
@@ -208,16 +208,16 @@ public class ProvenanceService {
                 if (allImportSheets != null){
                     for (Name child : allImportSheets.getChildren()){
                         if (child.getDefaultDisplayName().equals("DataImport " + toSearch)){ // todo - stop such use of string literals . . .
-                            if (child.getAttribute(AUDITSET) != null){ // then we have criteria
-                                String auditSetRule = child.getAttribute(AUDITSET);
-                                if (auditSetRule.contains("with")){ // this parsing could be more robust, also could be factored a bit?
-                                    String reportName = auditSetRule.substring(0, auditSetRule.indexOf("with")).replaceAll("`", "").trim();
+                            if (child.getAttribute(AUDITSHEET) != null){ // then we have criteria
+                                String auditSheetRule = child.getAttribute(AUDITSHEET);
+                                if (auditSheetRule.contains("with")){ // this parsing could be more robust, also could be factored a bit?
+                                    String reportName = auditSheetRule.substring(0, auditSheetRule.indexOf("with")).replaceAll("`", "").trim();
                                     provenanceForDisplay.setMethod("in spreadsheet");
                                     provenanceForDisplay.setInSpreadsheet(true);
                                     provenanceForDisplay.setName(reportName);
                                     // todo - parsing a bit more robust here regarding `, escaping names
                                     // dammit have to deal with character escapes . . .
-                                    String restOfRule = auditSetRule.substring(auditSetRule.indexOf("with") + 4).trim();
+                                    String restOfRule = auditSheetRule.substring(auditSheetRule.indexOf("with") + 4).trim();
                                     if (restOfRule.toUpperCase().startsWith("CHOSENSET =")){
                                         restOfRule = restOfRule.substring("CHOSENSET =".length()).trim();
                                         String chosenSet;
