@@ -153,7 +153,7 @@ public class NameQueryParser {
         setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "");
         setFormula = StringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
-        boolean resetDefs = false;
+        String resetDefs = null;
         logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
         // could we get rid of stack count and just use the ArrayList's size?
@@ -195,7 +195,9 @@ public class NameQueryParser {
             } else if (op == '+') {
                 NameStackOperators.addSets(nameStack, stackCount);
             } else if (op == StringLiterals.ASSYMBOL) {
-                resetDefs = true;
+                Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
+
+                resetDefs = totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME).toLowerCase();
                 NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount);
             }
             if (op != StringLiterals.NAMEMARKER && nextTerm > setFormula.length() && pos < nextTerm - 3) {
@@ -244,13 +246,13 @@ public class NameQueryParser {
             System.out.println("Parse query : " + formulaCopy + " took : " + time + "ms");
         }
         // check if this is necessary? Refactor?
-        if (resetDefs) {
+        if (resetDefs !=null) {
             //currently recalculates ALL definitions regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
             Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute("DEFINITION");
             if (defNames != null) {
                 for (Name defName : defNames) {
                     String definition = defName.getAttribute("DEFINITION");
-                    if (definition != null) {
+                    if (definition != null && definition.toLowerCase().contains(resetDefs)) {
                         if (attributeNames.size() > 1) {
                             String userEmail = attributeNames.get(0);
                             if (defName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
