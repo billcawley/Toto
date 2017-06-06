@@ -126,7 +126,7 @@ class NameFilterFunctions {
         int space = 1; //spacing between 'compare with' fields
         //first look for integers and encoded names...
 
-        if (toString.length() > 0 && count > 0) {
+        if (toString.length() > 0 && fromString.length()==0) {
             if (!nameSetList.mutable) {
                 nameSetList = new NameSetList(null, new ArrayList<>(nameSetList.list), true);// then make it mutable
             }
