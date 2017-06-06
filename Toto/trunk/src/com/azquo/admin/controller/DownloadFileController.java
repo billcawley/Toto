@@ -42,7 +42,12 @@ public class DownloadFileController {
                     if (byId.getTempPath().endsWith(".csv") || byId.getTempPath().endsWith(".txt")){
                         response.setContentType("application/octet-stream");
                     }
-                    response.setHeader("Content-Disposition", "inline; filename=\"" + byId.getFileName() + "\"");
+                    String fileName = byId.getFileName();
+                    int brackedPos = fileName.indexOf(" - (");
+                    if (brackedPos > 0){
+                        fileName = fileName.substring(0,brackedPos).trim();
+                    }
+                    response.setHeader("Content-Disposition", "inline; filename=\"" + fileName + "\"");
                     File f = new File(byId.getTempPath());
                     response.setHeader("Content-Length", String.valueOf(f.length()));
                     // maybe add a few more later
