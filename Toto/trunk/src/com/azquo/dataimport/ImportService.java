@@ -96,11 +96,7 @@ public final class ImportService {
             reportName = toReturn.substring("Report uploaded : ".length());
         }
         if (reportName != null){
-            if (fileName.contains(".")){
-                fileName = fileName.substring(0, fileName.lastIndexOf(".")) + " - (" + reportName + ")" + fileName.substring(fileName.lastIndexOf(".") + 1);
-            } else {
-                fileName = fileName + " - (" + reportName + ")";
-            }
+            fileName = fileName + " - (" + reportName + ")";
         }
         UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId()
                 , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, setup ? "setup" : "", "", filePath);//should record the error? (in comment)
