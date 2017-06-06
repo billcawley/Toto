@@ -551,13 +551,16 @@ public class DSSpreadsheetService {
     private static void checkClear(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> headings) {
         if (headings==null) return;
         for (List<String> headingRow:headings){
-            for (String heading:headingRow){
+            Iterator i = headingRow.iterator();
+            while (i.hasNext()){
+                String heading = (String) i.next();
                 if (heading.startsWith(".") && heading.toLowerCase().endsWith(" clear")){
                     String att = heading.substring(1, heading.length() - " clear".length() - 1); //remove the initial '.' and ' clear'
                     try {
                         Name name = NameService.findByName(azquoMemoryDBConnection, att);
                         if (name != null) {
                             name.setChildrenWillBePersisted(Collections.emptyList());
+                            heading = heading.substring(0,att.length() + 1);//todo  make sure that this does remove the 'clear'
                         }
                     }catch(Exception e){
                         //ignore
@@ -565,9 +568,9 @@ public class DSSpreadsheetService {
                 }
             }
         }
-
-
     }
+
+
     // when doing things like debug/provenance the client needs to say "here's a region description and original position" to locate a cell server side
     public static AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
