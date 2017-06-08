@@ -37,7 +37,7 @@ public class NameQueryParser {
         StringTokenizer st = new StringTokenizer(searchByNames, ",");
         while (st.hasMoreTokens()) {
             String nameName = st.nextToken().trim();
-            NameSetList nameSetList = interpretSetTerm(null, nameName, formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection);
+            NameSetList nameSetList = interpretSetTerm(null, nameName, formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames);
             Set<Name> nameSet = nameSetList.set != null ? nameSetList.set : HashObjSets.newMutableSet(nameSetList.list); // just wrap if it's a list, should be fine. This object return type is for the query parser really
             toReturn.add(nameSet);
         }
@@ -183,7 +183,7 @@ public class NameQueryParser {
             if (op == StringLiterals.NAMEMARKER) { // then a straight name children from to etc. Resolve in interpretSetTerm
                 stackCount++;
                 // now returns a custom little object that hods a list a set and whether it's immutable
-                nameStack.add(interpretSetTerm(null, setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
+                nameStack.add(interpretSetTerm(null, setFormula.substring(pos, nextTerm - 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames));
             } else if (stackCount-- < 2) {
                 throw new Exception("not understood:  " + formulaCopy);
             } else if (op == '*') { // * meaning intersection here . . .
@@ -205,10 +205,10 @@ public class NameQueryParser {
                 int childrenPos = setFormula.substring(pos).indexOf("children");
                 if (childrenPos > 0) {
 
-                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1, pos + childrenPos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
-                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(childrenPos + pos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
+                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1, pos + childrenPos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames));
+                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(childrenPos + pos), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames));
                 } else {
-                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection));
+                    nameStack.set(0, interpretSetTerm(nameStack.get(0), setFormula.substring(pos + 1), formulaStrings, referencedNames, attributeStrings, azquoMemoryDBConnection, attributeNames));
                 }
             }
             pos = nextTerm;
@@ -248,10 +248,10 @@ public class NameQueryParser {
         // check if this is necessary? Refactor?
         if (resetDefs !=null) {
             //currently recalculates ALL definitions regardless of whether they contain the changed set.  Could speed this by looking for expressions that contain the changed set name
-            Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute("DEFINITION");
+            Collection<Name> defNames = azquoMemoryDBConnection.getAzquoMemoryDBIndex().namesForAttribute(StringLiterals.DEFINITION);
             if (defNames != null) {
                 for (Name defName : defNames) {
-                    String definition = defName.getAttribute("DEFINITION");
+                    String definition = defName.getAttribute(StringLiterals.DEFINITION);
                     if (definition != null && definition.toLowerCase().contains(resetDefs)) {
                         if (attributeNames.size() > 1) {
                             String userEmail = attributeNames.get(0);
@@ -284,7 +284,7 @@ public class NameQueryParser {
     // needs azquomemory db conneciton for it's indexes for the attribute set criteria. Boring but can't see a way around that.
     private static AtomicInteger interpretSetTermCount = new AtomicInteger(0);
 
-    private static NameSetList interpretSetTerm(NameSetList namesFound, String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
+    private static NameSetList interpretSetTerm(NameSetList namesFound, String setTerm, List<String> strings, List<Name> referencedNames, List<String> attributeStrings, AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> languages) throws Exception {
         interpretSetTermCount.incrementAndGet();
         //System.out.println("interpret set term . . ." + setTerm);
         final String levelString = StringUtils.getInstruction(setTerm, StringLiterals.LEVEL);
@@ -330,6 +330,25 @@ public class NameQueryParser {
                 namesFound = new NameSetList(null, singleName, true);// mutable single item list
             } else {
                 namesFound = NameService.findChildrenAtLevel(name, levelString); // reassign names from the find children clause
+                if (languages.size() > 1){//need to check for a list of temporary names
+                    List<Name> replacementNames = new ArrayList<Name>();
+                    Iterator <Name> childIt = namesFound.getAsCollection().iterator();
+                    while (childIt.hasNext()) {
+                        Name child = childIt.next();
+                        if (child.getChildren().size() > 0 && child.getChildren().iterator().next().getDefaultDisplayName() == null) {//we have a temporary name
+                            Name localChild = NameService.findByName(azquoMemoryDBConnection, child.getDefaultDisplayName(), languages);
+                            if (localChild != null) {
+                                replacementNames.add(localChild);
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                    if (replacementNames.size()>0){//assuming ALL names are temporary currently
+                        namesFound = new NameSetList(null, replacementNames, true);
+
+                    }
+               }
             }
         }
         if (whereString != null) {
