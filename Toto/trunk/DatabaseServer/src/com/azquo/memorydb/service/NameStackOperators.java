@@ -192,7 +192,11 @@ class NameStackOperators {
                 totalName = userSpecificSet; // switch the new one in, it will be used as normal
             }
         }
-        totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection());
+        if (nameStack.get(stackCount-1).list != null){
+            totalName.setChildrenWillBePersisted(nameStack.get(stackCount-1).list);
+        }else{
+            totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection());
+        }
         nameStack.remove(stackCount);
         Set<Name> totalNameSet = HashObjSets.newMutableSet();
         totalNameSet.add(totalName);
