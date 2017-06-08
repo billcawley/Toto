@@ -250,6 +250,7 @@ public class ReportRenderer {
             // after stripping off some redundant exception throwing this was the only possibility left, ignore it
             try {
                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
+                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
             } catch (Exception ignored) {
             }
         }

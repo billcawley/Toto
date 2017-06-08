@@ -66,6 +66,7 @@ public class ReportExecutor {
         executeCommands(loggedInUser, commands, loops, new AtomicInteger(0));
         // it won't have cleared while executing
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
+        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
         SpreadsheetService.databasePersist(loggedInUser);
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);

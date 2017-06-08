@@ -417,6 +417,12 @@ public class NameQueryParser {
                 //to handle pivot filters...
                 toAdd = NameService.findNameAndAttribute(azquoMemoryDBConnection, nameString.substring(3), attributeNames);
             }
+            // typically used with as, a bunch of sets may be created as part of a report but we then sap them when the report has finished loading
+            if (toAdd == null && nameString.toUpperCase().endsWith("(TEMPORARY)")) { // hacky? Factor the literal?
+                Name temporaryNames = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, StringLiterals.TEMPORARYNAMES, null, false); // make if it's not there, I guess no harm in it hanging around
+                // create the temporary name to be used later in an "as" no doubt
+                toAdd = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, nameString, temporaryNames, true);
+            }
             if (toAdd == null) {
                 throw new Exception("Cannot resolve reference to a name " + nameString);
             }

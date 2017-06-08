@@ -25,6 +25,7 @@ public class StringLiterals {
     public static final String CHILDREN = "children";
     public static final String ATTRIBUTESET = "attributeset";
     public static final String SELECT = "select";
+    public static final String TEMPORARYNAMES  = "temporary names";
     //public static final String LOWEST = "lowest";
     //public static final String ALL = "all";
     public static final char NAMEMARKER = '~';

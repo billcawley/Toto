@@ -599,5 +599,13 @@ public class DSSpreadsheetService {
         return null; // no headings match the row/col passed
     }
 
-
+    // note : could be issues with reports which use this running concurrently - as in zap temporary names while they're being used. TODO
+    public static void clearTemporaryNames(DatabaseAccessToken databaseAccessToken) throws Exception {
+        final Name temporaryNames = NameService.findByName(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), StringLiterals.TEMPORARYNAMES);
+        if (temporaryNames != null){
+            for (Name temporaryName : temporaryNames.getChildren()){
+                temporaryName.delete();
+            }
+        }
+    }
 }
