@@ -7,6 +7,8 @@ package com.azquo;
  */
 public class StringLiterals {
     public static final String CALCULATION = "CALCULATION";
+    public static final String DEFINITION = "DEFINITION";
+    public static final String DISPLAYROWS = "DISPLAYROWS";
     public static final String LOCAL = "LOCAL";
     public static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
     public static final char QUOTE = '`';
@@ -25,7 +27,7 @@ public class StringLiterals {
     public static final String SELECT = "select";
     //public static final String LOWEST = "lowest";
     //public static final String ALL = "all";
-    public static final char NAMEMARKER = '!';
+    public static final char NAMEMARKER = '~';
     public static final char ATTRIBUTEMARKER = '|';
     public static final String CREATE = "create";
     public static final String EDIT = "edit";
@@ -38,4 +40,5 @@ public class StringLiterals {
     public static final String languageIndicator = "<-";
 
     public static final String HIERARCHY = "hierarchy";
+    public static final String EDITABLE = "editable";
 }
