@@ -540,7 +540,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
         public Set<Value> findValuesIncludingChildren(Name exactName) {
             if (this == exactName) {
-                return new HashSet(getValues());
+                return new HashSet<>(getValues());
             }
             return findValuesIncludingChildren();
         }

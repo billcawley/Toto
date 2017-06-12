@@ -175,10 +175,8 @@
              data.instance.refresh();
              });
              })*/.on('delete_node.jstree', function (e, data) {
-                $.get('/api/Jstree?op=delete_node', { 'id' : data.node.id })
-                    .fail(function () {
-                        data.instance.refresh();
-                    });
+                $.get('/api/Jstree?op=delete_node', { 'id' : data.node.id });
+                data.instance.refresh();
             });
 
         });

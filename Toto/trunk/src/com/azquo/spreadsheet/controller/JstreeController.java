@@ -151,9 +151,11 @@ public class JstreeController {
                                     .getNameDetailsJson(loggedInUser.getDataAccessToken(), currentNode.nameId));
                         }
                         if ("delete_node".equals(op)) { // still used?
-                            RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                                    .deleteNode(loggedInUser.getDataAccessToken(), currentNode.nameId);
-                            result = "true";
+                            if (loggedInUser.getUser().isAdministrator()){
+                                RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                                        .deleteNode(loggedInUser.getDataAccessToken(), currentNode.nameId);
+                                result = "true";
+                            }
                         }
                     }
                     if ("create_node".equals(op)) { // moved outside, it can operate with a null current node, adding to root

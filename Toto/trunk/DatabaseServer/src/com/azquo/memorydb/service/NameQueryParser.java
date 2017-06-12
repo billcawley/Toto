@@ -196,8 +196,9 @@ public class NameQueryParser {
                 NameStackOperators.addSets(nameStack, stackCount);
             } else if (op == StringLiterals.ASSYMBOL) {
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
-
-                resetDefs = totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME).toLowerCase();
+                if (totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME) != null){
+                    resetDefs = totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME).toLowerCase();
+                }
                 NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount);
             }
             if (op != StringLiterals.NAMEMARKER && nextTerm > setFormula.length() && pos < nextTerm - 3) {
@@ -418,6 +419,7 @@ public class NameQueryParser {
                 toAdd = NameService.findNameAndAttribute(azquoMemoryDBConnection, nameString.substring(3), attributeNames);
             }
             // typically used with as, a bunch of sets may be created as part of a report but we then sap them when the report has finished loading
+            nameString = nameString.replace(StringLiterals.QUOTE + "", "");
             if (toAdd == null && nameString.toUpperCase().endsWith("(TEMPORARY)")) { // hacky? Factor the literal?
                 Name temporaryNames = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, StringLiterals.TEMPORARYNAMES, null, false); // make if it's not there, I guess no harm in it hanging around
                 // create the temporary name to be used later in an "as" no doubt

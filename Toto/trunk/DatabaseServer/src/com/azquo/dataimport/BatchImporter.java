@@ -49,7 +49,7 @@ public class BatchImporter implements Callable<Void> {
 
     @Override
     public Void call() throws Exception {
-        try{
+        try {
             Long time = System.currentTimeMillis();
             for (List<ImportCellWithHeading> lineToLoad : dataToLoad) {
             /* skip any line that has a blank in the first column unless the first column had no header
@@ -80,7 +80,7 @@ public class BatchImporter implements Callable<Void> {
             azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(lineNo) + " imported.", true);
             azquoMemoryDBConnection.addToUserLogNoException("Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
             return null;
-        } catch (Exception e){ // stacktrace first
+        } catch (Exception e) { // stacktrace first
             e.printStackTrace();
             throw e;
         }
@@ -206,7 +206,8 @@ public class BatchImporter implements Callable<Void> {
                     // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
                     if (result.toLowerCase().startsWith("calc")) {
                         result = result.substring(5);
-                        Pattern p = Pattern.compile("[\\+\\-\\*\\/]");
+                        // IntelliJ said escaping  was redundant I shall assume it's correct.
+                        Pattern p = Pattern.compile("[+\\-*/]");
                         Matcher m = p.matcher(result);
                         if (m.find()) {
                             double dresult = 0.0;
