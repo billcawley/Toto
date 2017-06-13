@@ -35,7 +35,7 @@ public class ReportRenderer {
     public static final String AZREPEATSCOPE = "az_repeatscope";
     static final String AZREPEATITEM = "az_repeatitem";
     static final String AZREPEATLIST = "az_repeatlist";
-    private static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
+    public static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
     private static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
     static final String AZCOLUMNHEADINGS = "az_columnheadings";
     static final String AZROWHEADINGS = "az_rowheadings";
