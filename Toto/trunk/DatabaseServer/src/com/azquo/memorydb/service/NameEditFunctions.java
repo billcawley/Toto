@@ -49,8 +49,9 @@ class NameEditFunctions {
                 }
             }
             if (toZap != null) {
-                for (Value v : toZap) {
-                    v.delete();
+                Iterator<Value> valueIt = toZap.iterator();
+                while (valueIt.hasNext()){
+                    valueIt.next().delete();
                 }
                 azquoMemoryDBConnection.persist();
                 return toReturn;
