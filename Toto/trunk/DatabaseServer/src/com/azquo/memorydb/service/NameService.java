@@ -380,8 +380,28 @@ public final class NameService {
 
         if (level == 1) { // then no need to get clever, just return the children
             if (name.hasChildrenAsSet()) {
-                return new NameSetList(name.getChildrenAsSet(), null, false);
+                 return new NameSetList(name.getChildrenAsSet(), null, false);
             } else {
+                if (name.getAttribute(StringLiterals.DISPLAYROWS)!=null){
+                    int lineNo = 0;
+                    List<Name> children = new ArrayList<>();
+                    Iterator<Name> nameIt = name.getChildren().iterator();
+                    String[] displayRows = name.getAttribute(StringLiterals.DISPLAYROWS).split(",");
+                    for (String displayRow:displayRows){
+                        int dRow = Integer.parseInt(displayRow);
+                        while (dRow > ++lineNo) {
+                            children.add(null);
+                        }
+                        children.add(nameIt.next());
+                        if (!nameIt.hasNext()){
+                            break;
+                        }
+                    }
+                    while (nameIt.hasNext()){
+                        children.add(nameIt.next());
+                    }
+                    return new NameSetList(null, children, true);
+                }
                 return new NameSetList(null, name.getChildrenAsList(), false);
             }
         }
