@@ -229,7 +229,7 @@ public class OnlineController {
                         final OnlineReport finalOnlineReport = onlineReport;
                         final LoggedInUser finalLoggedInUser = loggedInUser;
                         final boolean templateMode = TEMPLATE.equalsIgnoreCase(opcode) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper());
-                        final boolean executeMode = EXECUTE.equalsIgnoreCase(opcode);
+                        final boolean executeMode = opcode.toUpperCase().startsWith(EXECUTE);//opcode seems to become execute.execute
                         new Thread(() -> {
                             // so in here the new thread we set up the loading as it was originally before
                             try {
