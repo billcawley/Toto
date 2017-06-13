@@ -8,6 +8,7 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.dataimport.ImportService;
+import com.azquo.memorydb.Constants;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -266,8 +267,12 @@ public class ReportExecutor {
                     } else {
                         loopsLog.append("badly formed repeat until outcome : ").append(trimmedLine);
                     }
-                } else {
-                    loopsLog.append("badly formed execute line  : ").append(trimmedLine);
+                } else if (trimmedLine.toLowerCase().startsWith("delete ")) {
+                  RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                            .getJsonChildren(loggedInUser.getDataAccessToken(),0, 0, false, "edit:zapdata " + trimmedLine.substring(7), Constants.DEFAULT_DISPLAY_NAME);
+
+                }else{
+                        loopsLog.append("badly formed execute line  : ").append(trimmedLine);
                 }
             }
         }
