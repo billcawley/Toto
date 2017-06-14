@@ -120,7 +120,10 @@ class DataRegionHeadingService {
                                 Name pName = NameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
                                 // if no set chosen, find the original set
                                 if (pName == null || pName.getChildren().size() == 0) {
-                                    pName = NameService.findByName(azquoMemoryDBConnection, permutedName);
+                                    // in new logic keep the attribute names in the search - otherwise incinsistent with above, will break on temporary names populated wth "as"
+                                    // I don't think I need to zap the quotes
+                                    pName = NameService.findByName(azquoMemoryDBConnection, permutedName, attributeNames);
+                                    //pName = NameService.findByName(azquoMemoryDBConnection, permutedName);
                                 }
                                 // ok now we are using sorted heare we can't use dataRegionHeadingsFromNames, this is similar to the check internally
                                 // I'm going to jam sorted in the description, hopefully won't be a problem
