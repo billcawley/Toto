@@ -167,7 +167,7 @@ public class ProvenanceService {
                     if (oneUpdate.size() > maxSize){
                         oneUpdate = oneUpdate.subList(0, maxSize);
                     }
-                    provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(oneUpdate)); // todo - value history . . .
+                    provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(azquoMemoryDBConnection, oneUpdate));
                     checkAuditSheet(azquoMemoryDBConnection,provenanceForDisplay,oneUpdate);
                     provenanceForDisplays.add(provenanceForDisplay);
                     oneUpdate = new ArrayList<>();
@@ -179,7 +179,7 @@ public class ProvenanceService {
             if (oneUpdate.size() > maxSize){
                 oneUpdate = oneUpdate.subList(0, maxSize);
             }
-            provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(oneUpdate)); // todo - value history . . .
+            provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(azquoMemoryDBConnection,oneUpdate));
             checkAuditSheet(azquoMemoryDBConnection,provenanceForDisplay,oneUpdate);
             provenanceForDisplays.add(provenanceForDisplay);
         }
@@ -297,16 +297,48 @@ public class ProvenanceService {
     }
 
     // first string is the value, then the names . . .
-    private static List<TypedPair<Integer, List<String>>> getIdValuesWithIdsAndNames(List<Value> values){
+    // needs the connection to check for historic values
+    private static List<TypedPair<Integer, List<String>>> getIdValuesWithIdsAndNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values){
         List<TypedPair<Integer, List<String>>> toReturn = new ArrayList<>();
+        Set<Name> commonNamesSet = HashObjSets.newMutableSet();
         for (Value v : values){
+            if (commonNamesSet.isEmpty()){
+                commonNamesSet.addAll(v.getNames());
+            } else {
+                commonNamesSet.retainAll(v.getNames());
+            }
+        }
+        List<Name> commonNamesList = new ArrayList<>(commonNamesSet);
+        commonNamesList.sort(Comparator.comparing(Name::getDefaultDisplayName));
+        boolean oneNameChanging = true;
+        for (Value v : values){
+            if (v.getNames().size() - commonNamesSet.size() != 1){
+                oneNameChanging = false;
+            }
             List<String> valueAndNames = new ArrayList<>();
             valueAndNames.add(v.getText());
-            // don't order names yet, think about that later
-            for (Name n : v.getNames()){
+            for (Name n : commonNamesList){
                 valueAndNames.add(n.getDefaultDisplayName());
             }
+            for (Name n : v.getNames()){
+                if (!commonNamesSet.contains(n)){
+                    valueAndNames.add(n.getDefaultDisplayName());
+                }
+            }
+            // now seartch for value history
+            final List<ValueHistory> historyForValue = ValueDAO.getHistoryForValue(azquoMemoryDBConnection.getAzquoMemoryDB(), v);
+            // now add them as strings to the end? SHould be ok
+            if (!historyForValue.isEmpty()){
+                valueAndNames.add("Value History : ");
+            }
+            for (ValueHistory valueHistory : historyForValue){
+                valueAndNames.add(valueHistory.getText() + ", " + valueHistory.getProvenance().getProvenanceForDisplay().toString());
+            }
             toReturn.add(new TypedPair<>(v.getId(), valueAndNames));
+        }
+        if (oneNameChanging){ // sort on the last one if it's just the last that's different
+            // use commonNamesList.size() as opposed to getSecond().size() - 1 as the second list may have had value history added to it
+            toReturn.sort(Comparator.comparing(integerListTypedPair -> integerListTypedPair.getSecond().get(commonNamesList.size())));
         }
         return toReturn;
     }
