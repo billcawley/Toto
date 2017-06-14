@@ -376,8 +376,12 @@ public class ChoicesService {
         try {
             List<String> languages = new ArrayList<>();
             languages.add(loggedInUser.getUser().getEmail());
-            List<String> chosenOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`" + filterName + "` children", languages);
             List<String> allOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, sourceSet);
+            List<String> chosenOptions = null;
+            chosenOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`" + filterName + "` children", languages);
+            if (chosenOptions.size()==1 && chosenOptions.get(0).startsWith("Error")){
+                chosenOptions = allOptions;
+            }
             if (allOptions.size() < 2) return null;
             if (chosenOptions.size() == 0 || chosenOptions.size() == allOptions.size()) return "[all]";
             if (chosenOptions.size() < 6) {
