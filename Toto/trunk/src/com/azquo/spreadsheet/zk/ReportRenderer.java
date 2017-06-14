@@ -305,7 +305,7 @@ public class ReportRenderer {
                             // will constrain by this set, if created, falling back on the set it's passed if not. Means what's in the permute will be a subset of the filters
                             // does this mean a double check? That it's constrained by selection here in context and again by the permute? I suppose no harm.
                             //if (possibleOptions.size() != choiceOptions.size() && choiceOptions.size() > 0) {
-                            if (choiceOptions.size() == 0) {
+                            if (choiceOptions.size() == 1 && choiceOptions.get(0).startsWith("Error")) {
                                 //THis should create the required bits server side . . .
                                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                                         .getFilterListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "` children", "az_" + filter, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
