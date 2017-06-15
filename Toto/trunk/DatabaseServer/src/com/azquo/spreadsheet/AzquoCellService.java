@@ -118,7 +118,13 @@ class AzquoCellService {
         long time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Context parsed in " + time + "ms");
         track = System.currentTimeMillis();
+        List<String> defaultLanguages = languages;
+        if (regionOptions.rowLanguage!=null && regionOptions.rowLanguage.length() > 0){
+            languages = new ArrayList<String>();
+            languages.add(regionOptions.rowLanguage);
+        }
         final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix, regionOptions.ignoreHeadingErrors);
+         languages = defaultLanguages;
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Row headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
@@ -127,7 +133,12 @@ class AzquoCellService {
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Row headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
+        if (regionOptions.columnLanguage!=null && regionOptions.columnLanguage.length() > 0){
+            languages = new ArrayList<String>();
+            languages.add(regionOptions.columnLanguage);
+        }
         final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages, AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, regionOptions.ignoreHeadingErrors);
+        languages = defaultLanguages;
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings parsed in " + time + "ms");
         track = System.currentTimeMillis();

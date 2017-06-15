@@ -71,8 +71,8 @@ public final class UserRegionOptionsDAO {
                         , rs.getInt(HIGHLIGHT_DAYS)
                         , false
                         , null
-                        , "" // todo - actually load this from the database!
-                        , ""
+                        , rs.getString(ROW_LANGUAGE) // todo - actually load this from the database!
+                        , rs.getString(COLUMN_LANGUAGE)
                         , false
                         , false
                 );

@@ -92,6 +92,8 @@ public class UserRegionOptions extends StandardEntity {
             this.noSave = spreadsheetSource.contains("nosave");
             String DATABASENAME = "database";
             this.databaseName = getOptionFromSpreadsheetOptions(DATABASENAME, spreadsheetSource);
+            this.rowLanguage = getOptionFromSpreadsheetOptions("row language", spreadsheetSource);
+            this.columnLanguage = getOptionFromSpreadsheetOptions("column language", spreadsheetSource);
             this.userLocked = spreadsheetSource.toLowerCase().contains("userlocked"); // the get option thing is no good for just an "exists with no value" check, this is the same
             this.ignoreHeadingErrors = spreadsheetSource.contains("ignoreheadingerrors");
         } else {
