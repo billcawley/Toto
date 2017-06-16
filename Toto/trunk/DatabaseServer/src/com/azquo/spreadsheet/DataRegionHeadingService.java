@@ -127,12 +127,14 @@ class DataRegionHeadingService {
                                 }
                                 // ok now we are using sorted heare we can't use dataRegionHeadingsFromNames, this is similar to the check internally
                                 // I'm going to jam sorted in the description, hopefully won't be a problem
-                                if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
+
+/*                                if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
                                     // will the new write permissions cause an overhead?
                                     headings.add(new DataRegionHeading(pName, NameQueryParser.isAllowed(pName, azquoMemoryDBConnection.getWritePermissions()), function, suffix, sorted ? "sorted" : null, null, null, 0));
                                 } else { // don't bother checking permissions, write permissions to true
+ */
                                     headings.add(new DataRegionHeading(pName, true, function, suffix, sorted ? "sorted" : null, null, null, 0));
-                                }
+   //                             }
                             }
                             row.clear();
                             row.add(headings);
@@ -609,6 +611,7 @@ class DataRegionHeadingService {
 
     private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
+      /*
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
             // then check permissions
             for (Name name : names) {
@@ -616,10 +619,11 @@ class DataRegionHeadingService {
                 dataRegionHeadings.add(new DataRegionHeading(name, NameQueryParser.isAllowed(name, azquoMemoryDBConnection.getWritePermissions()), function, suffix, null, offsetHeadings, valueFunctionSet, doubleParameter));
             }
         } else { // don't bother checking permissions, write permissions to true
+        */
             for (Name name : names) {
                 dataRegionHeadings.add(new DataRegionHeading(name, true, function, suffix, null, offsetHeadings, valueFunctionSet, doubleParameter));
             }
-        }
+        //}
         //System.out.println("time for dataRegionHeadingsFromNames " + (System.currentTimeMillis() - startTime));
         return dataRegionHeadings;
     }
