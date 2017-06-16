@@ -4,10 +4,7 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Extracted from NameQueryParser by edward on 27/10/16.
@@ -81,6 +78,14 @@ class NameStackOperators {
                     lastName = setName.getChildren();
                 }
             }
+        }
+        else{
+            Set<Name> bottomNames = new HashSet<Name>();
+            for (Name element:lastName){
+                bottomNames.addAll(element.findAllChildren());
+
+            }
+            lastName = bottomNames;
         }
         for (Name child : lastName) {
             Name.findAllParents(child, parents); // new call to static function cuts garbage generation a lot
