@@ -51,7 +51,7 @@ public class NameQueryParser {
         parseQueryCount.incrementAndGet();
         List<String> langs = new ArrayList<>();
         langs.add(Constants.DEFAULT_DISPLAY_NAME);
-        return parseQuery(azquoMemoryDBConnection, setFormula, langs, null, false);
+        return parseQuery(azquoMemoryDBConnection, setFormula, azquoMemoryDBConnection.getLanguages(), null, false);
     }
 
     private static AtomicInteger parseQuery2Count = new AtomicInteger(0);
@@ -223,7 +223,7 @@ public class NameQueryParser {
         }
 
         long heapIncreaseBeforeCopyToArray = ((runtime.totalMemory() - runtime.freeMemory()) / mb) - startUsed;
-
+/*
         if (azquoMemoryDBConnection.getReadPermissions().size() > 0) {
             for (Name possible : nameStack.get(0).getAsCollection()) {
                 if (possible == null || isAllowed(possible, azquoMemoryDBConnection.getReadPermissions())) {
@@ -231,13 +231,15 @@ public class NameQueryParser {
                 }
             }
         } else { // add all can be inefficient as it does a .toArray but the big saving here can be if I can get a hint that the collection won't be modified, then I can just return what's on the namestack
+
             // note the first entry on the name stack might actually be mutable anyway and hence we could just return it IF a toReturn collection wasn't passed
+  */
             if (returnReadOnlyCollection) {
                 toReturn = nameStack.get(0).getAsCollection();
             } else {
                 toReturn.addAll(nameStack.get(0).getAsCollection());
             }
-        }
+    //   }
         long time = (System.currentTimeMillis() - track);
         long heapIncrease = ((runtime.totalMemory() - runtime.freeMemory()) / mb) - startUsed;
         if (heapIncrease > 50) {
