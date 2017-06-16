@@ -47,8 +47,8 @@ public class LoggedInUser {
     // I'm a little unsure about this being separate but it will work for the moment
     private DatabaseServer databaseServer;
 
-    private String readPermissions;
-    private String writePermissions;
+    //private String readPermissions;
+    //private String writePermissions;
     private String imageStoreName;
     // context is not the same as context per region and in fact this needs to be like sent cells in that it needs to be per report and perhaps stored as pairs? Or a map. Choices for report TODO
     private String context;
@@ -69,7 +69,7 @@ public class LoggedInUser {
     private static final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
     private static final SimpleDateFormat df2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); // 24 hour
 
-    protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String readPermissions, String writePermissions, String imageStoreName, String businessDirectory) {
+    protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String imageStoreName, String businessDirectory) {
         this.sessionId = sessionId;
         this.user = user;
         this.businessDirectory = businessDirectory;
@@ -79,8 +79,8 @@ public class LoggedInUser {
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         this.database = database;
         this.databaseServer = databaseServer;
-        this.readPermissions = readPermissions;
-        this.writePermissions = writePermissions;
+        //this.readPermissions = readPermissions;
+        //this.writePermissions = writePermissions;
         this.imageStoreName = imageStoreName;
         this.context = null;
         lastJSTreeNodeId = new AtomicInteger();
@@ -107,8 +107,8 @@ public class LoggedInUser {
         languages.add(originalUser.user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
         this.database = originalUser.database;
         this.databaseServer = originalUser.databaseServer;
-        this.readPermissions = originalUser.readPermissions;
-        this.writePermissions = originalUser.writePermissions;
+        //this.readPermissions = originalUser.readPermissions;
+        //this.writePermissions = originalUser.writePermissions;
         this.context = null;
         this.dbNames = "";
         lastJSTreeNodeId = new AtomicInteger();
@@ -203,7 +203,7 @@ public class LoggedInUser {
     }
 
     public DatabaseAccessToken getDataAccessToken() {
-        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), database.getPersistenceName(), readPermissions, writePermissions, languages);
+        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), database.getPersistenceName(), languages);
     }
 
     public String getBusinessDirectory() {

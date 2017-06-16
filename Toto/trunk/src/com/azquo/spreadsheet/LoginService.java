@@ -158,7 +158,7 @@ public class LoginService {
             throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
         }
         String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user, databaseServer, database, null, null, null, businessDirectory);// null the read/write list for the mo
+        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user, databaseServer, database,  null, businessDirectory);// null the read/write list for the mo
         loggedInUser.setDbNames(databaseNames);
         // I zapped something to do with anonymising here, don't know if it's still relevant
         return loggedInUser;

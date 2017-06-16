@@ -26,13 +26,16 @@ public class AzquoMemoryDBConnection {
 
     private final AzquoMemoryDBIndex azquoMemoryDBIndex; // just shorthand - always set to the memoryDB's index
 
-    private final List<Set<Name>> readPermissions;
+    private final List<String> languages;
 
-    private final List<Set<Name>> writePermissions;
+    //private final List<Set<Name>> readPermissions;
+
+   // private final List<Set<Name>> writePermissions;
 
     private final StringBuffer userLog; // threadsafe, it probably needs to be
 
     protected Provenance provenance = null;
+
 
     // A bit involved but it makes this object immutable, think that's worth it - note
     // new logic here : we'll say that top test that have no permissions are added as allowed - if someone has added a department for example they should still have access to all dates
@@ -40,6 +43,7 @@ public class AzquoMemoryDBConnection {
     private AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, DatabaseAccessToken databaseAccessToken, List<String> languages, StringBuffer userLog) throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
         this.azquoMemoryDBIndex = azquoMemoryDB.getIndex();
+        /*
         if (databaseAccessToken.getWritePermissions() != null && !databaseAccessToken.getWritePermissions().isEmpty()) {
             writePermissions = NameQueryParser.decodeString(this, databaseAccessToken.getWritePermissions(), languages);
             addExtraPermissionIfRequired(writePermissions);
@@ -52,7 +56,10 @@ public class AzquoMemoryDBConnection {
         } else {
             readPermissions = new ArrayList<>();
         }
+        */
         this.userLog = userLog;
+
+        this.languages = databaseAccessToken.getLanguages();
     }
 
     // todo, clean this up when sessions are expired, maybe a last accessed time?
@@ -148,6 +155,7 @@ public class AzquoMemoryDBConnection {
             }
         }
     */
+    /*
     // todo : the sets could still be modified
     public List<Set<Name>> getReadPermissions() {
         return Collections.unmodifiableList(this.readPermissions);
@@ -157,6 +165,7 @@ public class AzquoMemoryDBConnection {
         return Collections.unmodifiableList(this.writePermissions);
     }
 
+    */
     public void persist() {
         azquoMemoryDB.persistToDataStore();
     }
@@ -200,6 +209,8 @@ public class AzquoMemoryDBConnection {
             throw new Exception("Execution interrupted by user");
         }
     }
+
+    public List<String>getLanguages(){ return languages;}
 
     public void addToUserLogNoException(String toAdd, boolean newline) {
         if (newline) {
