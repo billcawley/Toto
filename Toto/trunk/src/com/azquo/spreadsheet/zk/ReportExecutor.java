@@ -268,8 +268,9 @@ public class ReportExecutor {
                         loopsLog.append("badly formed repeat until outcome : ").append(trimmedLine);
                     }
                 } else if (trimmedLine.toLowerCase().startsWith("delete ")) {
+                    // zapdata is put through to the name query parser - this is not great practice really . . . .
                   RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                            .getJsonChildren(loggedInUser.getDataAccessToken(),0, 0, false, "edit:zapdata " + trimmedLine.substring(7), Constants.DEFAULT_DISPLAY_NAME);
+                            .getJsonChildren(loggedInUser.getDataAccessToken(),0, 0, false, "edit:zapdata " + trimmedLine.substring(7), Constants.DEFAULT_DISPLAY_NAME, 0);
 
                 }else{
                         loopsLog.append("badly formed execute line  : ").append(trimmedLine);

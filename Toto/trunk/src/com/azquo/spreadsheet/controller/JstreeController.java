@@ -17,7 +17,6 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.zkoss.web.servlet.http.Encodes;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -47,6 +46,7 @@ public class JstreeController {
     public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "id", required = false) String jsTreeId
+            , @RequestParam(value = "hundredsmore", required = false) String hundredsmore
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "json", required = false) String json
             , @RequestParam(value = "parents", required = false) String parents
@@ -139,9 +139,11 @@ public class JstreeController {
                         if (itemsChosen == null) {
                             itemsChosen = "";
                         }
+                        int hundredsMoreInt = ServletRequestUtils.getIntParameter(request, "hundredsmore", 0);
+
                         // the return type JsonChildren is designed to produce javascript that js tree understands
                         final JsonChildren jsonChildren = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                                .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"), itemsChosen, attribute);
+                                .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"), itemsChosen, attribute, hundredsMoreInt);
                         // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
                         jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);
                         result = jacksonMapper.writeValueAsString(jsonChildren);

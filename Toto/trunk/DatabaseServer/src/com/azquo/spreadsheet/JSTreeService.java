@@ -86,7 +86,8 @@ public class JSTreeService {
     }
 
     // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
-    public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws Exception {
+    public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) throws Exception {
+        int childrenLimit = (hundredMore + 1) * 100;
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Map<String, Boolean> state = new HashMap<>();
         state.put("opened", true);
@@ -127,8 +128,8 @@ public class JSTreeService {
             int count = 0;
             for (Name child : children) {
                 boolean childrenBoolean = child.hasChildren() || child.hasValues() || child.getAttributes().size() > 1;
-                if (count > 100) {
-                    childNodes.add(new JsonChildren.Node(-1, (children.size() - 100) + " more....", childrenBoolean, -1, -1));
+                if (count > childrenLimit) {
+                    childNodes.add(new JsonChildren.Node(-1, (children.size() - childrenLimit) + " more....", childrenBoolean, -1, -1));
                     break;
                 }
                 childNodes.add(new JsonChildren.Node(-1, child.getAttribute(language), childrenBoolean, child.getId(), name != null ? name.getId() : 0));

@@ -10,9 +10,11 @@
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/jstree.min.js"></script>
+<!--    <script src="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/jstree.min.js"></script> -->
+    <script src="/jstree/jstree.js"></script>
     <link rel="stylesheet" href="/css/themes/proton/style.min.css" />
-    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/themes/default/style.min.css" />
+    <!-- <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jstree/3.0.4/themes/default/style.min.css" />-->
+    <link rel="stylesheet" href="/jstree/themes/default/style.css" />
     <link href="/css/style.css" rel="stylesheet" type="text/css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
 </head>
@@ -82,6 +84,7 @@
     </div>
 
     <script type="text/javascript">
+        var hundredsMoreLookup = {};
         var parents = ${parents};
         var searchNames = "${searchnames}";
         var seeParents = "See parents";
@@ -103,7 +106,9 @@
                         "url" : "/api/Jstree?op=children&topnode=${rootid}&parents=" + parents + "&itemschosen=" + searchNames + "&attribute=" + decodeURI(document.getElementById("attributeChosen").value),
                         "dataType": "JSON",
                         "data" : function (node) {
-                            return { "id" : node.id };
+                            return { "id" : node.id,
+                                "hundredsmore" : hundredsMoreLookup[node.parent]
+                            };
                         }
                     },
                     "check_callback" : true
@@ -167,7 +172,7 @@
                         editAttributes(data.node); // here when the id has been sorted??
                     })
                     .fail(function () {
-                        data.instance.refresh();
+                        data.instance.refresh_node(data.node);
                     });
             })/*.on('rename_node.jstree', function (e, data) {
              $.get('response.php?operation=rename_node', { 'id' : data.node.id, 'text' : data.text })
@@ -176,7 +181,19 @@
              });
              })*/.on('delete_node.jstree', function (e, data) {
                 $.get('/api/Jstree?op=delete_node', { 'id' : data.node.id });
-                data.instance.refresh();
+               // data.instance.refresh_node(data.instance.get_node(data.instance).parent);
+            }).on('select_node.jstree', function (e, data) {
+                if (data.node.text.indexOf("more....") != -1){ // hacky that the more.... just has to match but anyway
+                    hundredsMoreLookup[data.node.parent] = (hundredsMoreLookup[data.node.parent] || 0) + 1;
+//                    alert("node info : " + data.node.id + " text " + data.node.text + " parent : " + data.node.parent + " parent : " + data.instance.get_node(data.node.parent).text + " hundreds more" + hundredsMoreLookup[data.node.id]);
+/*                    for (i in hundredsMoreLookup) {
+                        alert("Name: " + i + " Value: " + hundredsMoreLookup[i]);
+                    }*/
+//                $('#js-container').jstree(true).refresh_node('1');
+                    //data.instance.refresh_node(data.node)
+//                data.instance.refresh_node('1');
+                    data.instance.refresh_node(data.instance.get_node(data.node.parent));
+                }
             });
 
         });

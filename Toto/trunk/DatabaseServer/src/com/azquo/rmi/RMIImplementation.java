@@ -138,9 +138,9 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language) throws RemoteException {
+    public JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) throws RemoteException {
         try {
-            return JSTreeService.getJsonChildren(databaseAccessToken,jsTreeId,nameId,parents,searchTerm,language);
+            return JSTreeService.getJsonChildren(databaseAccessToken,jsTreeId,nameId,parents,searchTerm,language, hundredMore);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
