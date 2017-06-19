@@ -179,7 +179,7 @@ class NameStackOperators {
     }
 
     // "As" assign the results of a query as a certain name
-    static void assignSetAsName(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames, final List<NameSetList> nameStack, int stackCount) throws Exception {
+    static void assignSetAsName(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames, final List<NameSetList> nameStack, int stackCount, boolean global) throws Exception {
         // if it's empty we'll get no such element . . . what to do? todo
         Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
                 /* ok here's the thing. We don't want this to be under the default display name, new logic jams the user email as the first "language"
@@ -187,7 +187,7 @@ class NameStackOperators {
                 The point being that the result of "blah blah blah as 'Period Chosen'" will now mean different 'Period Chosen's for each user
                 Need to watch out regarding creating user specific sets : when we get the name see if it's for this user, if so then just change it otherwise make a new one
                 */
-        if (attributeNames.size() > 1) { // just checking we have have the user added to the list
+        if (!global && attributeNames.size() > 1) { // just checking we have have the user added to the list
             String userEmail = attributeNames.get(0);
             if (totalName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
                 Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set

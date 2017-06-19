@@ -151,9 +151,11 @@ public class NameQueryParser {
             throw e;
         }
         setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "");
+        setFormula = setFormula.replace(StringLiterals.ASGLOBAL, StringLiterals.ASGLOBALSYMBOL + "");
         setFormula = StringUtils.shuntingYardAlgorithm(setFormula);
-        Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
+        Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
         String resetDefs = null;
+        boolean global = false;
         logger.debug("Set formula after SYA " + setFormula);
         int pos = 0;
         // could we get rid of stack count and just use the ArrayList's size?
@@ -171,7 +173,7 @@ public class NameQueryParser {
                 nextTerm = m.start() + pos + 2;
                 // PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
                 // need to check for this....
-                while (nextTerm < setFormula.length() && (StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.TO, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.FROM, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm))) {
+                while (nextTerm < setFormula.length() && (StringUtils.precededBy(setFormula, StringLiterals.ASGLOBAL, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.TO, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.FROM, nextTerm))) {
                     int startPos = nextTerm + 1;
                     nextTerm = setFormula.length() + 1;
                     m = p.matcher(setFormula.substring(startPos));
@@ -199,7 +201,15 @@ public class NameQueryParser {
                 if (totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME) != null){
                     resetDefs = totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME).toLowerCase();
                 }
-                NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount);
+                NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, false);
+            }else if (op == StringLiterals.ASGLOBALSYMBOL){
+                Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
+                if (totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME) != null){
+                    resetDefs = totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME).toLowerCase();
+                }
+                NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, true);
+                global = true;
+
             }
             if (op != StringLiterals.NAMEMARKER && nextTerm > setFormula.length() && pos < nextTerm - 3) {
                 //there's still more stuff to understand!  Having created a set, we may now wish to operate on that set
@@ -256,7 +266,7 @@ public class NameQueryParser {
                 for (Name defName : defNames) {
                     String definition = defName.getAttribute(StringLiterals.DEFINITION);
                     if (definition != null && definition.toLowerCase().contains(resetDefs)) {
-                        if (attributeNames.size() > 1) {
+                        if (!global && attributeNames.size() > 1) {
                             String userEmail = attributeNames.get(0);
                             if (defName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
                                 List<String> localLanguages = new ArrayList<>();

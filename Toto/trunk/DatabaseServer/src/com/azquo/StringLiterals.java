@@ -36,7 +36,9 @@ public class StringLiterals {
     public static final String DELETE = "delete";
     public static final String COMPAREWITH = "comparewith";
     public static final String AS = "as";
+    public static final String ASGLOBAL = "asglobal";
     public static final char ASSYMBOL = '@';
+    public static final char ASGLOBALSYMBOL = '¬';//searching for symbols!
     public static final String WHERE = "where";
     public static final String languageIndicator = "<-";
 

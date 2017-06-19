@@ -226,8 +226,8 @@ I should be ok for StringTokenizer at this point
                 || term.equalsIgnoreCase(StringLiterals.SORTED) || term.equalsIgnoreCase(StringLiterals.CHILDREN)
                 || term.equalsIgnoreCase(StringLiterals.PARENTS) || term.equalsIgnoreCase(StringLiterals.ATTRIBUTESET)
                 || term.equalsIgnoreCase(StringLiterals.OFFSET) || term.equalsIgnoreCase(StringLiterals.COMPAREWITH)
-                || term.equalsIgnoreCase(StringLiterals.AS) || term.equalsIgnoreCase(StringLiterals.BACKSTEP)
-                || term.equalsIgnoreCase(StringLiterals.CREATE)
+                || term.equalsIgnoreCase(StringLiterals.AS) || term.equalsIgnoreCase(StringLiterals.ASGLOBAL)
+                || term.equalsIgnoreCase(StringLiterals.BACKSTEP) || term.equalsIgnoreCase(StringLiterals.CREATE)
                 || term.equalsIgnoreCase(StringLiterals.EDIT) || term.equalsIgnoreCase(StringLiterals.NEW)
                 || term.equalsIgnoreCase(StringLiterals.SELECT)
                 || term.equalsIgnoreCase(StringLiterals.DELETE) || term.equalsIgnoreCase(StringLiterals.WHERE);
@@ -239,7 +239,7 @@ I should be ok for StringTokenizer at this point
     */
 
     public static String shuntingYardAlgorithm(String calc) {
-        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
