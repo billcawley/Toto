@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ReportExecutor {
 
-    private static final String EXECUTERESULTS = "az_ExecuteResults";
+//    private static final String EXECUTERESULTS = "az_ExecuteResults";
     private static final String OUTCOME = "az_Outcome";
 
     public static boolean runExecuteCommandForBook(Book book, String sourceNamedRegion) throws Exception {
@@ -69,7 +69,7 @@ public class ReportExecutor {
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
         SpreadsheetService.databasePersist(loggedInUser);
-        for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+/*        for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
             for (SName sName : namesForSheet) {
@@ -78,8 +78,7 @@ public class ReportExecutor {
                     BookUtils.setValue(cell, loops.toString());
                 }
             }
-        }
-        ReportRenderer.populateBook(book, 0);// vanilla populate it at the end
+        }*/
         return true;
     }
 

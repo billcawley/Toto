@@ -236,7 +236,7 @@ public class OnlineController {
                             try {
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + finalLoggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
-                                final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                                Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                                 book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
                                 book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);
                                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
@@ -261,6 +261,13 @@ public class OnlineController {
                                     if (executeMode) {
                                         ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
                                         session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
+                                        // now reassign book - its contents may have changed due to the execute - todo - factor this?
+                                        book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                                        book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
+                                        book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);
+                                        System.out.println("Loading report : " + finalOnlineReport.getReportName());
+                                        book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
+                                        ReportRenderer.populateBook(book, valueId);
                                     }
                                 } else {
                                     finalLoggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
