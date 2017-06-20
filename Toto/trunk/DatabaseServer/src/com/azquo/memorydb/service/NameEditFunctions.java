@@ -35,7 +35,7 @@ class NameEditFunctions {
             //expecting a list of queries separated by |  e.g.   `Mens products`|2018
             String nameList = setFormula.substring(8);
             Collection<Value> toZap = null;
-            String[] foundList = nameList.split("&&");
+            String[] foundList = nameList.split("\\*");
             for (String partList : foundList) {
                 Collection<Name> found = NameQueryParser.parseQuery(azquoMemoryDBConnection, partList.trim());
                 Collection<Value> values = new HashSet<Value>();
