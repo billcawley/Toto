@@ -259,8 +259,6 @@ public class OnlineController {
                                     loggedInUser.userLog("Load report : " + finalOnlineReport.getReportName());
                                    session.setAttribute(finalReportId + SAVE_FLAG, ReportRenderer.populateBook(book, valueId));
                                     if (executeMode) {
-                                        // save first
-                                        ReportService.save(book, loggedInUser);
                                         ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
                                         session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                     }

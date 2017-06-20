@@ -88,7 +88,7 @@
 					</c:if>
 					<c:if test="${templateMode == false}">
 						<c:if test="${showTemplate == true}"><li><a href="#" onclick="window.location.assign(window.location.href+='&opcode=template')">View Template</a></li></c:if>
-						<c:if test="${execute == true}"><li><a href="#" onclick="window.location.assign(window.location.href+='&opcode=execute')">Execute</a></li></c:if>
+						<c:if test="${execute == true}"><li><a href="#" onclick="postAjax('Save');window.location.assign(window.location.href+='&opcode=execute')">Execute</a></li></c:if>
 						<li id="unlockButton" <c:if test="${showUnlockButton == false}"> style="display:none;"</c:if>><a href="#" onclick="postAjax('Unlock'); return false;">Unlock</a></li>
 						<li id="saveDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if>><a href="#" onclick="postAjax('Save'); return false;">Save Data</a></li>
 						<li id="restoreDataButton" <c:if test="${showSave == false}"> style="display:none;"</c:if>><a href="#" onclick="postAjax('RestoreSavedValues'); return false;">Restore Saved Values</a></li>
