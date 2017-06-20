@@ -228,6 +228,9 @@ class HeadingReader {
             case LANGUAGE: // language being attribute
                 if (result.equalsIgnoreCase(DATELANG)) {
                     heading.isDate = true;
+                    if (heading.attribute==null){
+                        heading.isAttributeSubject = true;
+                    }
                 } else {
                     heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
                 }
