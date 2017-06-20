@@ -259,7 +259,7 @@ public class AzquoCellResolver {
                 if (!DataRegionHeadingService.headingsHaveAttributes(headingsForThisCell)) { // we go the value route (as it was before allowing attributes), need the headings as names,
                     ValuesHook valuesHook = new ValuesHook(); // todo, can we use this only when necessary?
                     // now , get the function from the headings
-                    if (function != null) {
+                    if (function != null && !function.equals(DataRegionHeading.FUNCTION.ALLEXACT)) {
                         locked.isTrue = true;
                     }
                     if (headingsForThisCell.size() > 0) {
@@ -267,16 +267,18 @@ public class AzquoCellResolver {
                         if (valueId > 0) {
                             valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
                         }
-                        for (DataRegionHeading lockCheck : headingsForThisCell) {
-                            //'unlocked' on any cell allows entry
-                            if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED) {
-                                locked.isTrue = false;
-                                break;
-                            } else if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.LOCKED) {
-                                locked.isTrue = true;
-                            } else if (lockCheck.getName() != null && lockCheck.getName().hasChildren() && // a name with children so default locked UNLESS defined as unlocked or split
-                                    lockCheck.getSuffix() != DataRegionHeading.SUFFIX.UNLOCKED && lockCheck.getSuffix() != DataRegionHeading.SUFFIX.SPLIT) {
-                                locked.isTrue = true;
+                        if (function!=null&& !function.equals(DataRegionHeading.FUNCTION.ALLEXACT)) {
+                            for (DataRegionHeading lockCheck : headingsForThisCell) {
+                                //'unlocked' on any cell allows entry
+                                if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED) {
+                                    locked.isTrue = false;
+                                    break;
+                                } else if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.LOCKED) {
+                                    locked.isTrue = true;
+                                } else if (lockCheck.getName() != null && lockCheck.getName().hasChildren() && // a name with children so default locked UNLESS defined as unlocked or split
+                                        lockCheck.getSuffix() != DataRegionHeading.SUFFIX.UNLOCKED && lockCheck.getSuffix() != DataRegionHeading.SUFFIX.SPLIT) {
+                                    locked.isTrue = true;
+                                }
                             }
                         }
                         doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, functionHeading, nameComboValueCache, debugInfo);
