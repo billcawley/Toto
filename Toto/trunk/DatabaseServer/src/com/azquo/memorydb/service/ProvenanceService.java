@@ -195,9 +195,9 @@ public class ProvenanceService {
     This is relevant as there's going to be an option to create a drill down equivalent for imports. The "Mailouts" bit above means that in that database
     there will be All import sheets -> DataImport Mailouts. The created drilldown will be an attribute AuditSheet against this name, a syntax is as follows :
 
-    <Report Name> with CHOSENSET = <name of chosen set>, <Choice> CHOSEN FROM <choice set>,....
+    <Report Name> with CHOSENSET = <name of chosen set> CHOSEN FROM <choice set>, <Choice> CHOSEN FROM <choice set>,....
 
-    e.g.  `Order Items chosen` with CHOSENSET = `Items chosen`, Territory CHOSEN FROM `All countries` children, Month CHOSEN FROM `All months` children*/
+    e.g.  `Order Items chosen` with CHOSENSET = `Items chosen` CHOSEN FROM `All Order Items` children, Territory CHOSEN FROM `All countries` children, Month CHOSEN FROM `All months` children*/
 
     private static void checkAuditSheet(AzquoMemoryDBConnection azquoMemoryDBConnection, ProvenanceForDisplay provenanceForDisplay, List<Value> values) throws Exception{
         if ("imported".equals(provenanceForDisplay.getMethod())){
@@ -218,10 +218,15 @@ public class ProvenanceService {
                                     // todo - parsing a bit more robust here regarding `, escaping names
                                     // dammit have to deal with character escapes . . .
                                     String restOfRule = auditSheetRule.substring(auditSheetRule.indexOf("with") + 4).trim();
+                                    String CHOSENFROM = "CHOSEN FROM";
                                     if (restOfRule.toUpperCase().startsWith("CHOSENSET =")){
                                         restOfRule = restOfRule.substring("CHOSENSET =".length()).trim();
                                         String chosenSet;
-                                        if (restOfRule.startsWith("`")){ // chosen set has escape quotes
+                                        String chosenSetChosenFrom; // new addition - we're not going to try to derive the chosen set from a set of
+                                        // new logic - now chosen set also has a chosen from
+                                        chosenSet = restOfRule.substring(0, restOfRule.indexOf(CHOSENFROM)).trim(); // not stripping quotes actually shouyld be fine for findOrCreateNameInParent
+                                        restOfRule = restOfRule.substring(restOfRule.indexOf(CHOSENFROM) + CHOSENFROM.length());
+/*                                        if (restOfRule.startsWith("`")){ // chosen set has escape quotes
                                             int endQuote = restOfRule.indexOf("`",1);
                                             chosenSet = restOfRule.substring(1, endQuote).trim();
                                             restOfRule = restOfRule.substring(endQuote + 1).trim();
@@ -234,27 +239,38 @@ public class ProvenanceService {
                                                 chosenSet = restOfRule.trim();
                                                 restOfRule = null; // no more there
                                             }
+                                        }*/
+                                        // so now get the chosen from criteria - might be able to factor this with code below - this was added after
+                                        if (restOfRule.contains(CHOSENFROM)){
+                                            int chosenFromIndex = restOfRule.indexOf(CHOSENFROM);
+                                            int commaPos = restOfRule.substring(0, chosenFromIndex).lastIndexOf(","); // required to stop picking up commas in quoted names
+                                            chosenSetChosenFrom = restOfRule.substring(0, commaPos).trim();
+                                            restOfRule = restOfRule.substring(commaPos).trim();
+                                        } else { // it's just the rest
+                                            chosenSetChosenFrom = restOfRule.trim();
+                                            restOfRule = null; // no more there
                                         }
+                                        Collection<Name> chosenSetChosenFromSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, chosenSetChosenFrom);
+
                                         // ok, make the chosen set which are the names shared across all the values
                                         Set<Name> sharedSet = HashObjSets.newMutableSet();
-                                        Set<Name> spareSet = HashObjSets.newMutableSet(); // what we'll try and match the context against
+                                        Set<Name> chosenSetSet = HashObjSets.newMutableSet(); // no longet spare based off multiple names, we look for names attacehd to the values in this set
                                         for (Value v : values){
                                             if (sharedSet.isEmpty()){ // first one add them all
                                                 sharedSet.addAll(v.getNames());
                                             } else {
-                                                for (Name n : v.getNames()){
-                                                    if (!sharedSet.contains(n)){
-                                                        spareSet.add(n);
-                                                    }
-                                                }
                                                 sharedSet.retainAll(v.getNames());
+                                            }
+                                            for (Name n : v.getNames()){
+                                                if (chosenSetChosenFromSet.contains(n)){
+                                                    chosenSetSet.add(n);
+                                                }
                                             }
                                         }
                                         Name newSetForReport = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, chosenSet, null, false);// simple name create on the new set
-                                        newSetForReport.setChildrenWillBePersisted(spareSet);
+                                        newSetForReport.setChildrenWillBePersisted(chosenSetSet);
 
                                         StringBuilder context = new StringBuilder();
-                                        String CHOSENFROM = "CHOSEN FROM";
                                         if (restOfRule != null){
                                             // we want to create a context along the lines of something = something; somethingelse = somethingelse;
                                             // parsing shouldn't be too difficult except that I need to watch out for commas in escaped names. If I parse around "CHOSEN FROM", assuming that isn't in the strings of course, this should be fairly robust
