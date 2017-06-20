@@ -225,10 +225,13 @@ public class ReportService {
         return showSave;
     }
 
-    // factored off from the command controller
     public static String save(Spreadsheet ss, LoggedInUser loggedInUser) throws Exception{
-        // todo - provenance?
         final Book book = ss.getBook();
+        return save(book, loggedInUser);
+    }
+    // factored off from the command controller
+    public static String save(Book book, LoggedInUser loggedInUser) throws Exception{
+        // todo - provenance?
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         boolean saveOk = true;

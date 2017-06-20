@@ -9,6 +9,7 @@ import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.spreadsheet.zk.BookUtils;
+import com.azquo.spreadsheet.zk.ReportService;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -258,6 +259,8 @@ public class OnlineController {
                                     loggedInUser.userLog("Load report : " + finalOnlineReport.getReportName());
                                    session.setAttribute(finalReportId + SAVE_FLAG, ReportRenderer.populateBook(book, valueId));
                                     if (executeMode) {
+                                        // save first
+                                        ReportService.save(book, loggedInUser);
                                         ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
                                         session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                     }
