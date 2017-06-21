@@ -192,6 +192,11 @@ public class ZKSpreadsheetCommandController {
                         Clients.clearBusy();
                     }
 
+                    if ("ExecuteSave".equals(action)) {
+                        ReportService.save(ss,loggedInUser);
+                        Clients.clearBusy();
+                    }
+
                     if ("RestoreSavedValues".equals(action) || saveMessage.startsWith("Success")) {
                         final Book book = ss.getBook();
                         final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
