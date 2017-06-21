@@ -92,7 +92,7 @@ public final class ImportService {
         }
         // hacky way to get the report name so it can be seen on the list. I wonder if this should be removed . . .
         String reportName = null;
-        if (!fileName.contains(".zip") && toReturn.startsWith("Report uploaded : ")){
+        if (!filePath.contains(".zip") && toReturn.startsWith("Report uploaded : ")){
             reportName = toReturn.substring("Report uploaded : ".length());
         }
         if (reportName != null){
