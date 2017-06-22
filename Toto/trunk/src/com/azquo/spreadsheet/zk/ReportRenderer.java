@@ -324,6 +324,22 @@ public class ReportRenderer {
                         }
                     }
                 }
+                /* hack introduced by Edd 22/06/2017. For repeat regions I had assumed that the headings didn't rely on the repeat itemks hence I could do preparatory work here
+                (making space) without the repeat times. It seems headings might alter according to the item but NOTE! if the number of headings changes due to the item this will
+                 go wrong later as the code that prepares the space assumes heading numbers will stay consistent. Anyway the hack is jamming the first repeat item in so we can make
+                 this getCellsAndHeadingsForDisplay call without problems if it relies on it. Could the following little chunk be factored with the coed in fillDataForRepeatRegions? Not sure.
+                  */
+                SName repeatList = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATLIST + region);
+                SName repeatItem = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM + region);
+                if (repeatList != null && repeatItem != null){
+                    String repeatListText = BookUtils.getSnameCell(repeatList).getStringValue();
+                    List<String> repeatListItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText);
+                    if (!repeatListItems.isEmpty()){
+                        BookUtils.getSnameCell(repeatItem).setStringValue(repeatListItems.get(0));// and set the first
+                    }
+                }
+
+
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, BookUtils.nameToStringLists(columnHeadingsDescription),
                         contextList, userRegionOptions, quiet);
                 loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
