@@ -150,8 +150,8 @@ public class NameQueryParser {
             }*/
             throw e;
         }
-        setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "");
         setFormula = setFormula.replace(StringLiterals.ASGLOBAL, StringLiterals.ASGLOBALSYMBOL + "");
+        setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "");
         setFormula = StringUtils.shuntingYardAlgorithm(setFormula);
         Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
         String resetDefs = null;
