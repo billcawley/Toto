@@ -35,10 +35,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ReportExecutor {
 
-//    private static final String EXECUTERESULTS = "az_ExecuteResults";
+    private static final String EXECUTERESULTS = "az_ExecuteResults";
     private static final String OUTCOME = "az_Outcome";
 
-    public static boolean runExecuteCommandForBook(Book book, String sourceNamedRegion) throws Exception {
+    // now returns a book as it will need to be reloaded at the end
+    public static Book runExecuteCommandForBook(Book book, String sourceNamedRegion) throws Exception {
         String executeCommand = null;
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
@@ -51,7 +52,7 @@ public class ReportExecutor {
             }
         }
         if (executeCommand == null || executeCommand.isEmpty()) { // just return false for the moment, no executing
-            return false;
+            return book; // unchanged, nothing to run
         }
         List<String> commands = new ArrayList<>();
         StringTokenizer st = new StringTokenizer(executeCommand, "\n");
@@ -62,14 +63,20 @@ public class ReportExecutor {
             }
         }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Starting execute");
         StringBuilder loops = new StringBuilder();
         executeCommands(loggedInUser, commands, loops, new AtomicInteger(0));
         // it won't have cleared while executing
         RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
-        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
         SpreadsheetService.databasePersist(loggedInUser);
-/*        for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+
+        final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+        for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
+            newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+        }
+        ReportRenderer.populateBook(newBook, 0);
+        for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
             for (SName sName : namesForSheet) {
@@ -78,8 +85,8 @@ public class ReportExecutor {
                     BookUtils.setValue(cell, loops.toString());
                 }
             }
-        }*/
-        return true;
+        }
+        return newBook;
     }
 
     // we assume cleansed of blank lines
