@@ -62,9 +62,9 @@ public class ReportRenderer {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         // unlock data on every report load. Maybe make this clear to the user?
         // is the exception a concern here?
-        // also clear temporary names
+        // also clear temporary names?
         try {
-            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
+            //RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
             SpreadsheetService.unlockData(loggedInUser);
         } catch (Exception e) {
             e.printStackTrace();
