@@ -267,7 +267,7 @@ public class AzquoCellResolver {
                         if (valueId > 0) {
                             valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
                         }
-                        if (function!=null&& !function.equals(DataRegionHeading.FUNCTION.ALLEXACT)) {
+                        if (function==null || !function.equals(DataRegionHeading.FUNCTION.ALLEXACT)) {
                             for (DataRegionHeading lockCheck : headingsForThisCell) {
                                 //'unlocked' on any cell allows entry
                                 if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED) {
