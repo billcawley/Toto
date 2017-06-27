@@ -102,6 +102,11 @@ public class LoginService {
          }
 
          //boolean temporary = false;
+        // Bill changed something which meand that database name could be lost by this point which has broken magento uploads by admins which I use locally.
+        // Am adding it back in here - I don't think it's a security risk
+        if (databaseList.length() == 0 && databaseName != null && databaseName.length() > 0){
+            databaseList = databaseName + ","; // hacky!!
+        }
         if (user != null && (loggedIn || AdminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword()))) {
             return loginLoggedInUser(sessionId, databaseList, user);
         }

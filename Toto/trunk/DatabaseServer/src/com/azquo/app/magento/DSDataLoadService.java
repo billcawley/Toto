@@ -34,7 +34,7 @@ import java.util.*;
  */
 public class DSDataLoadService {
 
-    private static final String[] productAtts = {"url_path", "meta_description", "country_of_manufacture", "meta_title", "price", "weight", "ship_height", "ship_width", "ship_depth", "cost"};
+    private static final String[] productAtts = {"url_path", "meta_description", "country_of_manufacture", "meta_title", "price", "weight", "ship_height", "ship_width", "ship_depth", "cost", "commodity"};
 
     private static void logMemUseage() {
         final Runtime runtime = Runtime.getRuntime();

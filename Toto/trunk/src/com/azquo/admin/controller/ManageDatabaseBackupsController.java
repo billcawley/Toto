@@ -25,6 +25,8 @@ import java.util.List;
  * Created by cawley on 21/07/16.
  *
  * Basic back up and restore databases. Note that this only works if your report and db servers are on the same machine.
+ *
+ * todo - restore and backup should block to be safe otherwise a half restored DB for example bight be loaded
  */
 @Controller
 @RequestMapping("/ManageDatabaseBackups")
