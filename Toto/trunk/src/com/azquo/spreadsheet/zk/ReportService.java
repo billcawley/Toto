@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ReportService {
     // should functions like this be in another class? It's not really stateless or that low level
     static final String ALLOWABLE_REPORTS = "az_AllowableReports";
+    static final String REDUNDANT = "redundant";
 
     static void checkForPermissionsInSheet(LoggedInUser loggedInUser, Sheet sheet) {
         //have a look for "az_AllowableReports", it's read only, getting it here seems as reasonable as anything
@@ -237,6 +238,7 @@ public class ReportService {
         boolean saveOk = true;
         String error = null;
         int savedItems = 0;
+        String redundant = "";
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
@@ -256,8 +258,13 @@ public class ReportService {
                         Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
                         error = result;
                     }else{
+                        String count = result.substring(5);
+                         if (result.contains(REDUNDANT)){
+                             redundant += count.substring(count.indexOf(REDUNDANT));
+                             count = count.substring(0,count.indexOf(REDUNDANT)).trim();
+                         }
                         try{
-                            savedItems += Integer.parseInt(result.substring(5));
+                            savedItems += Integer.parseInt(count.trim());
                         } catch(Exception e){
 
                         }
@@ -303,6 +310,10 @@ public class ReportService {
         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         if (error == null) {
             error = "Success: " + savedItems + " values saved";
+            if (redundant.length() > 0){
+                error += " - " + redundant;
+            }
+
             loggedInUser.userLog("Save : " + onlineReport.getReportName());
             ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
             // unlock here makes sense think, if duff save probably leave locked

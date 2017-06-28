@@ -19,7 +19,7 @@ public class CellsAndHeadingsForDisplay implements Serializable {
 
     private final String region; // convenient
     private final List<List<String>> columnHeadings;
-    private final List<List<String>> rowHeadings;
+    private List<List<String>> rowHeadings;
     // ok, on loading the report renderer on the report server data regions can overwrite each other or create data to be saved based on formulae. Typically used when executing.
     // these two flag rows or columns where a zero result should be saved if there's currently no value for that cell in the DB. Normally 0 is the same as nothing so I don't bother saving.
     private final Set<Integer> zeroSavedColumnIndexes;
@@ -58,6 +58,9 @@ public class CellsAndHeadingsForDisplay implements Serializable {
 
     public List<List<String>> getRowHeadings() {
         return rowHeadings;
+    }
+    public void  setRowHeading(int rowNo, int colNo, String value) {
+         rowHeadings.get(rowNo).add(colNo,value);
     }
 
     public Set<Integer> getZeroSavedColumnIndexes() {

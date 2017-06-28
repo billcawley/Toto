@@ -246,6 +246,7 @@ public class DSSpreadsheetService {
     public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         int numberOfValuesModified = 0;
+        String redundantNames = "";
         synchronized (azquoMemoryDBConnection.getAzquoMemoryDB()) { // we don't want concurrent saves on a single database
             azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId()); // todo - is this the palce to unlock? It's probably fair
             boolean modifiedInTheMeanTime = azquoMemoryDBConnection.getDBLastModifiedTimeStamp() != cellsAndHeadingsForDisplay.getTimeStamp(); // if true we need to check if someone else changed the data
@@ -260,6 +261,7 @@ public class DSSpreadsheetService {
                 return "true " + numberOfValuesModified;
             }
             // check we're not getting cellsAndHeadingsForDisplay.getTimeStamp() = 0 here, it should only happen due tio ad hoc which should have returned by now . . .
+            redundantNames =  checkEditable(azquoMemoryDBConnection,cellsAndHeadingsForDisplay);
             boolean changed = false;
             String toReturn = "";
             //modifiedInTheMeanTime = true;
@@ -477,8 +479,10 @@ public class DSSpreadsheetService {
                                      , named toChange at the moment to that category.
                                     */
                                                     //logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getNewStringValue() + " within " + attribute);
-
-                                                    Name category = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getNewStringValue(), attSet, true);
+                                                    Name category = null;
+                                                    if(cell.getNewStringValue().length()>0){
+                                                         category = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getNewStringValue(), attSet, true);
+                                                    }
                                                     //Apr 17 - any save as attribute is considered to be exclusive.
                                                     if (exclusive) {
                                                         for (Name existingAtt : attSet.getChildren()) {
@@ -487,7 +491,9 @@ public class DSSpreadsheetService {
                                                             }
                                                         }
                                                     }
-                                                    category.addChildWillBePersisted(toChange);
+                                                    if (category!=null){
+                                                        category.addChildWillBePersisted(toChange);
+                                                    }
                                                 } else {// simple attribute set
                                                     //logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
                                                     toChange.setAttributeWillBePersisted(attribute, cell.getNewStringValue());
@@ -515,7 +521,100 @@ public class DSSpreadsheetService {
         // clear the caches after, if we do before then some will be recreated as part of saving.
         // Is this a bit overkill given that it should clear as it goes? I suppose there's the query and count caches, plus parents of the changed names
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
-        return "true " + numberOfValuesModified;
+        return "true " + numberOfValuesModified + " " + redundantNames;
+    }
+
+
+    private static String checkEditable(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws Exception{
+        //EDITABLE currently only checking top left cell of row headings
+        String topLeftRowHeading= cellsAndHeadingsForDisplay.getRowHeadingsSource().get(0).get(0);
+        if (!topLeftRowHeading.toLowerCase().endsWith(StringLiterals.EDITABLE)) {
+            return "";
+        }
+        String trimmedHeading = topLeftRowHeading.substring(0, topLeftRowHeading.indexOf(StringLiterals.EDITABLE)).trim();
+        if (!trimmedHeading.endsWith(StringLiterals.CHILDREN)) {
+            return "";
+        }
+        String setName = trimmedHeading.substring(0,trimmedHeading.indexOf(StringLiterals.CHILDREN)).trim();
+        Name parentName = NameService.findByName(azquoMemoryDBConnection,setName);
+        if (parentName == null) {
+            return "";
+        }
+        boolean changed = false;
+        List<String> languages = new ArrayList<>();
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        List<Name> origNames = (List<Name>)parentName.getChildren();
+        List<Name> origShownNames = (List<Name>)NameQueryParser.parseQuery(azquoMemoryDBConnection, trimmedHeading);
+        boolean needDisplayRows = false;
+        StringBuffer displayRows = new StringBuffer();
+        List<Name> newNames = new ArrayList<>();
+        for (int rowNo = 0;rowNo < cellsAndHeadingsForDisplay.getRowHeadings().size();rowNo++) {
+            String heading = cellsAndHeadingsForDisplay.getRowHeadings().get(rowNo).get(0);
+            if (heading.length() == 0) {
+                needDisplayRows = true;
+            }else {
+                Name newName =NameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading, parentName, true);
+                newNames.add(newName);
+                if (newName!= origShownNames.get(rowNo)){
+                    //mark the line as changed = these now refer to a new name
+                    List<CellForDisplay> dataRow = cellsAndHeadingsForDisplay.getData().get(rowNo);
+                    for (CellForDisplay cell:dataRow){
+                        cell.setChanged();
+                        cell.setLocked(false);//the figures on this line will be saved against the new name
+                        if (cell.getNewStringValue()==null){
+                            cell.setNewStringValue(cell.getStringValue());
+                        }
+                        if (cell.getNewDoubleValue()==0){
+                            cell.setNewDoubleValue(cell.getDoubleValue());
+                        }
+                    }
+
+                }
+                displayRows.append("," + (rowNo+1));
+            }
+        }
+        String oldDisplayRows = parentName.getAttribute(StringLiterals.DISPLAYROWS);
+        if (!needDisplayRows || displayRows.length()==0) {
+            if (oldDisplayRows!=null){
+                parentName.setAttributeWillBePersisted(StringLiterals.DISPLAYROWS,"");
+                changed = true;
+            }
+        }else{
+            if (!displayRows.toString().substring(1).equals(oldDisplayRows)){
+                parentName.setAttributeWillBePersisted(StringLiterals.DISPLAYROWS,displayRows.toString().substring(1));
+                changed = true;
+            }
+        }
+        int setsize = origNames.size();
+        if (origNames.size()!= newNames.size()) {
+            changed = true;
+         }else{
+            for (int item = 0; item < origNames.size();item++){
+                if (newNames.get(item)!= origNames.get(item)){
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        if (changed){
+            List<Name> unusedNames = new ArrayList<Name>(origNames);
+            unusedNames.removeAll(newNames);
+            //add to new names
+            newNames.addAll(unusedNames);
+            parentName.setChildrenWillBePersisted(Collections.emptyList());
+            parentName.setChildrenWillBePersisted(newNames);
+            if (unusedNames.size() == 0){
+                return "";
+            }
+            StringBuffer redundant = new StringBuffer();
+            redundant.append("redundant: `" + parentName.getDefaultDisplayName() + "`:");
+            for (Name name:unusedNames){
+                redundant.append("`" + name.getDefaultDisplayName() + "` ");
+            }
+            return redundant.toString();
+        }
+
+        return "";
     }
 
     private static boolean compareCells(String a1, String a2) {

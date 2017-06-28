@@ -72,6 +72,10 @@ public class CellForDisplay implements Serializable {
         return changed;
     }
 
+    public void setChanged() {
+        changed = true;
+    }
+
     public String getNewStringValue() {
         return newStringValue;
     }

@@ -303,6 +303,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         // regions may overlap - update all EXCEPT where there are repeat regions, in which case just do that as repeat regions will have overlap by their nature
         List<RegionRowCol> regionRowColsToSave = new ArrayList<>(); // a list to save - list due to the possibility of overlapping data regions
+        List<RegionRowCol> headingRowColsToSave = new ArrayList<>();
         if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
             final RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(book, row, col, repeatRegionNames.get(0));
             if (regionRowColForRepeatRegion != null) {
@@ -311,8 +312,15 @@ public class ZKComposer extends SelectorComposer<Component> {
         }
         if (regionRowColsToSave.isEmpty() && names != null) { // no repeat regions but there are normal ones
             for (SName name : names) {
-                regionRowColsToSave.add(new RegionRowCol(name.getName().substring("az_DataRegion".length()), row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
+                String regionName = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+                regionRowColsToSave.add(new RegionRowCol(regionName, row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
             }
+        }
+        List<SName> headingNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(),ReportRenderer.AZDISPLAYROWHEADINGS);
+        if (headingNames!=null){
+            for (SName name:headingNames){
+                  headingRowColsToSave.add(new RegionRowCol(name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length()),row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
+             }
         }
         for (RegionRowCol regionRowCol : regionRowColsToSave) {
             final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, regionRowCol.region);
@@ -342,6 +350,15 @@ public class ZKComposer extends SelectorComposer<Component> {
                         cellForDisplay.setHighlighted(true);
                         CellOperationUtil.applyFontColor(Ranges.range(event.getSheet(), row, col), "#FF0000");
                     }
+                }
+            }
+        }
+        for (RegionRowCol headingRowCol : headingRowColsToSave) { //recording any edited row heading
+            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, headingRowCol.region);
+            if (sentCells != null) { // a good start!
+                if (headingRowCol.row >= 0 && headingRowCol.col >= 0 &&
+                        sentCells.getRowHeadings().size() > headingRowCol.row && sentCells.getRowHeadings().get(headingRowCol.row).size() > headingRowCol.col) {
+                    sentCells.setRowHeading(headingRowCol.row,headingRowCol.col,chosen);
                 }
             }
         }
@@ -509,4 +526,16 @@ public class ZKComposer extends SelectorComposer<Component> {
         // "after_start" is the position we'd want
         filterPopup.open(pageX, pageY);
     }
+
+    @Listen("onCellSelection = #myzss")
+    public void onCellSelection(CellSelectionEvent event){
+        StringBuilder info = new StringBuilder();
+        info.append("Select on[")
+                .append(Ranges.getAreaRefString(event.getSheet(), event.getArea())).append("]");
+
+        //show info...
+    }
+
+
+
 }
