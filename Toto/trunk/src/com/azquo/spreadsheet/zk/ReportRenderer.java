@@ -127,10 +127,10 @@ public class ReportRenderer {
                 }
                 if (name.getName().toLowerCase().startsWith(AZDATAREGION)) { // then we have a data region to deal with here
                     String region = name.getName().substring(AZDATAREGION.length()); // might well be an empty string
-                    if (sheet.getBook().getInternalBook().getNameByName(AZROWHEADINGS + region) == null) { // if no row headings then this is an ad hoc region, save possible by default
+                    if (getNameByName(AZROWHEADINGS + region, sheet) == null) { // if no row headings then this is an ad hoc region, save possible by default
                         showSave = true;
                     }
-                    SName optionsRegion = sheet.getBook().getInternalBook().getNameByName(AZOPTIONS + region);
+                    SName optionsRegion = getNameByName(AZOPTIONS + region, sheet);
                     String optionsSource = "";
                     if (optionsRegion != null) {
                         SCell optionsCell = BookUtils.getSnameCell(optionsRegion);
@@ -263,9 +263,9 @@ public class ReportRenderer {
         if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
             sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
         }
-        SName columnHeadingsDescription = sheet.getBook().getInternalBook().getNameByName(AZCOLUMNHEADINGS + region);
-        SName rowHeadingsDescription = sheet.getBook().getInternalBook().getNameByName(AZROWHEADINGS + region);
-        SName contextDescription = sheet.getBook().getInternalBook().getNameByName(AZCONTEXT + region);
+        SName columnHeadingsDescription = getNameByName(AZCOLUMNHEADINGS + region, sheet);
+        SName rowHeadingsDescription = getNameByName(AZROWHEADINGS + region, sheet);
+        SName contextDescription = getNameByName(AZCONTEXT + region, sheet);
         String errorMessage = null;
         // make a blank area for data to be populated from, an upload in the sheet so to speak (ad hoc)
         if (columnHeadingsDescription != null && rowHeadingsDescription == null) {
@@ -289,9 +289,9 @@ public class ReportRenderer {
                 List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription);
                 List<List<String>> rowHeadingList = BookUtils.nameToStringLists(rowHeadingsDescription);
                 //check if this is a pivot - if so, then add in any additional filter needed
-                SName contextFilters = sheet.getBook().getInternalBook().getNameByName(AZCONTEXTFILTERS);
+                SName contextFilters = getNameByName(AZCONTEXTFILTERS, sheet);
                 if (contextFilters == null) {
-                    contextFilters = sheet.getBook().getInternalBook().getNameByName(AZPIVOTFILTERS);
+                    contextFilters = getNameByName(AZPIVOTFILTERS, sheet);
                 }
                 // a comma separated list of names
                 if (contextFilters != null) {
@@ -330,8 +330,8 @@ public class ReportRenderer {
                  go wrong later as the code that prepares the space assumes heading numbers will stay consistent. Anyway the hack is jamming the first repeat item in so we can make
                  this getCellsAndHeadingsForDisplay call without problems if it relies on it. Could the following little chunk be factored with the coed in fillDataForRepeatRegions? Not sure.
                   */
-                SName repeatList = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATLIST + region);
-                SName repeatItem = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM + region);
+                SName repeatList = getNameByName(ReportRenderer.AZREPEATLIST + region, sheet);
+                SName repeatItem = getNameByName(ReportRenderer.AZREPEATITEM + region, sheet);
                 if (repeatList != null && repeatItem != null){
                     String repeatListText = BookUtils.getSnameCell(repeatList).getStringValue();
                     List<String> repeatListItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText);
@@ -359,10 +359,10 @@ public class ReportRenderer {
                     // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't - this isn't a biggy it's just to do with name references which now I think about it probably don't need reloading but it's worth checking and being consistent
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                     // so it's NOT a repeat region. Fill the headings and populate the data!
-                    if (sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + region) == null
-                            || sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATSCOPE + region) == null
-                            || sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATLIST + region) == null
-                            || sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM + region) == null){
+                    if (getNameByName(ReportRenderer.AZREPEATREGION + region, sheet) == null
+                            || getNameByName(ReportRenderer.AZREPEATSCOPE + region, sheet) == null
+                            || getNameByName(ReportRenderer.AZREPEATLIST + region, sheet) == null
+                            || getNameByName(ReportRenderer.AZREPEATITEM + region, sheet) == null){
                         // ok there should be the right space for the headings
                         if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
                             int rowHeadingCols = cellsAndHeadingsForDisplay.getRowHeadings().get(0).size();
@@ -427,6 +427,16 @@ public class ReportRenderer {
             }
         }
         return null; // will it get here ever?
+    }
+
+    private static SName getNameByName(String name, Sheet sheet){
+        SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
+        if (toReturn != null){
+            return toReturn;
+
+        }
+        return sheet.getBook().getInternalBook().getNameByName(name);
+
     }
 
     private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol) {
