@@ -80,8 +80,12 @@ class ReportUtils {
             if (repeatCount > 1) return repeatCount;
             //check that the heading above is not a set (perhaps should check all headings above).  If so, and there is a value in the bottom right of the set, then the whold headings need to be expanded.
             String headingAbove = colHeadingsSource.get(colHeadingRow-2).get(0);
+            String topHeading = colHeadingsSource.get(0).get(0);
             if (headingAbove.length() > 0 && !headingAbove.equals(".")){
                 int setCount = CommonReportUtils.getDropdownListForQuery(loggedInUser,headingAbove).size();
+                if (setCount==1 && topHeading.length()>0 && !topHeading.equals(headingAbove)){
+                    setCount = CommonReportUtils.getDropdownListForQuery(loggedInUser, topHeading).size();
+                }
                 if (setCount > 1 && colHeadingsSource.get(colHeadingRow - 1).get(colHeadingsSource.get(0).size()-1).length() > 0){
                     return colHeadingsSource.get(0).size();
                 }
