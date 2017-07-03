@@ -9,6 +9,7 @@ import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
+import javax.xml.crypto.Data;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -259,9 +260,8 @@ class DataRegionHeadingService {
     /* ok, so, practically speaking the shared names if applicable are from context (probably the findAllChildren from one name)
     and the listToPermute is the contents of the permute function e.g. permute(`Product category`, `Product subcategory`) in Nisbets*/
 
-    private static List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<List<DataRegionHeading>> headingRow) throws Exception {
+    private static List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute) throws Exception {
         NumberFormat nf = NumberFormat.getInstance();
-        List<DataRegionHeading> listToPermute = headingRow.get(0);
         long startTime = System.currentTimeMillis();
         List<Collection<Name>> sharedNamesSets = new ArrayList<>();
         List<Name> permuteNames = new ArrayList<>();
@@ -368,9 +368,6 @@ class DataRegionHeadingService {
             sortLists.add(sortList);
         }
         List<List<DataRegionHeading>> permuted = sortCombos(listToPermute, foundCombinations, 0, sortLists);
-        for (int i = 1; i < headingRow.size(); i++) {
-            permuted = MultidimensionalListUtils.get2DArrayWithAddedPermutation(permuted, headingRow.get(i));
-        }
         System.out.println("Headings sorted in " + nf.format((System.currentTimeMillis() - startTime)));
         return permuted;
     }
@@ -397,7 +394,124 @@ class DataRegionHeadingService {
 
      */
 
-    static List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception {
+    static List<List<DataRegionHeading>> permuteHeadings(List<DataRegionHeading> mainHeading, List<List<List<DataRegionHeading>>> subHeadings, Collection<Name> sharedNames)throws Exception{
+        List<List<DataRegionHeading>> toReturn = new ArrayList<>();
+        List<List<DataRegionHeading>> expandedSubheadings = expandHeadings(subHeadings, sharedNames);
+        if (mainHeading!=null &&  mainHeading.size() > 0 && mainHeading.get(0).getFunction()==DataRegionHeading.FUNCTION.PERMUTE){
+            List<List<DataRegionHeading>>permuted =findPermutedItems(sharedNames, mainHeading);
+            for (List<DataRegionHeading> permuteLine:permuted){
+                for (List<DataRegionHeading> expandedSubheading : expandedSubheadings) {
+                    List<DataRegionHeading> newHeadings = new ArrayList<>();
+                    newHeadings.addAll(permuteLine);
+                    newHeadings.addAll(expandedSubheading);
+                    toReturn.add(newHeadings);
+                }
+
+            }
+
+        }else {
+            if (mainHeading==null){
+                //pity this is the same code as the lines below - could not work out how to combine them.
+                for (List<DataRegionHeading> expandedSubheading : expandedSubheadings) {
+                    List<DataRegionHeading> newHeadings = new ArrayList<>();
+                    newHeadings.add(null);
+                    newHeadings.addAll(expandedSubheading);
+                    toReturn.add(newHeadings);
+                }
+            }else {
+                for (DataRegionHeading mainElement : mainHeading) {
+                    for (List<DataRegionHeading> expandedSubheading : expandedSubheadings) {
+                        List<DataRegionHeading> newHeadings = new ArrayList<>();
+                        //if the last element is null, then all headings are null
+                        if (expandedSubheading.get(expandedSubheading.size()-1)==null){
+                            newHeadings.add(null);
+                        }else{
+                            newHeadings.add(mainElement);
+                        }
+                        newHeadings.addAll(expandedSubheading);
+                        toReturn.add(newHeadings);
+                    }
+                }
+            }
+        }
+        return toReturn;
+    }
+
+    static List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception{
+        List<List<DataRegionHeading>> toReturn = new ArrayList<>();
+        if (headingLists.get(0).size() > 1){
+            Iterator<List<List<DataRegionHeading>>> it = headingLists.iterator();
+            List<List<List<DataRegionHeading>>>subHeadings = null;
+            List<DataRegionHeading>mainHeading = null;
+            while (it.hasNext()){
+                List<List<DataRegionHeading>> headingRow = it.next();
+                if (subHeadings==null ||headingRow.get(0)!=null) {
+                    if (subHeadings!=null) {
+                        toReturn.addAll(permuteHeadings(mainHeading,subHeadings, sharedNames));
+                     }
+                    mainHeading=headingRow.get(0);
+                    subHeadings = new ArrayList<>();
+                }
+                List<List<DataRegionHeading>> subHeadingRow = new ArrayList<>();
+                Iterator<List<DataRegionHeading>> heading = headingRow.iterator();
+                heading.next();
+                while (heading.hasNext()) {
+                    subHeadingRow.add(heading.next());
+
+                }
+                subHeadings.add(subHeadingRow);
+
+            }
+            toReturn.addAll(permuteHeadings(mainHeading,subHeadings,sharedNames));
+
+        }else{
+             Iterator<List<List<DataRegionHeading>>> headingRowIterator = headingLists.iterator();
+            List<DataRegionHeading> nextHeading = headingRowIterator.next().get(0);
+            if (nextHeading!=null && nextHeading.size() > 0 && nextHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
+                toReturn.addAll(findPermutedItems(sharedNames, nextHeading));//assumes only one row of headings, it's a list of the permute names
+            }else {        //last column - simply expand, filling spaces where available.
+                List<DataRegionHeading> heading = null;
+                boolean workToDo = true;
+                while (headingRowIterator.hasNext() || workToDo) {
+                    heading = nextHeading;
+                    if (headingRowIterator.hasNext()) {
+                        nextHeading = headingRowIterator.next().get(0);
+                    } else {
+                        nextHeading = null;
+                        workToDo = false;
+
+
+                    }
+
+                    if (heading != null) {
+                        int count = 0;
+                        for (DataRegionHeading headingElement : heading) {
+                            List<DataRegionHeading> newRow = new ArrayList<>();
+                            newRow.add(headingElement);
+                            toReturn.add(newRow);
+                            if (count++ > 0 && nextHeading == null){
+                                if(headingRowIterator.hasNext()){
+                                    nextHeading = headingRowIterator.next().get(0);
+                                }else{
+                                    workToDo = false;
+                                }
+                            }
+                        }
+                    } else {
+                        List<DataRegionHeading> newRow = new ArrayList<>();
+                        newRow.add(null);
+                        toReturn.add(newRow);
+
+                    }
+                }
+            }
+
+        }
+        return toReturn;
+    }
+
+    /*
+    static List<List<DataRegionHeading>> expandHeadings2(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception {
         final int noOfHeadingDefinitionRows = headingLists.size();
         if (noOfHeadingDefinitionRows == 0) {
             return new ArrayList<>();
@@ -492,17 +606,7 @@ class DataRegionHeadingService {
         permutedLists.forEach(output::addAll);
         return output;
     }
-
-    // what we're saying is it's only got one cell in the heading definition filled and it's the last one.
-    private static boolean headingDefinitionRowHasOnlyTheRightCellPopulated(List<List<DataRegionHeading>> headingLists) {
-        int numberOfCellsInThisHeadingDefinition = headingLists.size();
-        for (int cellIndex = 0; cellIndex < numberOfCellsInThisHeadingDefinition; cellIndex++) {
-            if (headingLists.get(cellIndex) != null) {
-                return cellIndex == numberOfCellsInThisHeadingDefinition - 1; // if the first to trip the not null is the last in the row then true!
-            }
-        }
-        return true; // All null - treat as last cell populated - is this logical?
-    }
+*/
 
     // return headings as strings for display, I'm going to put blanks in here if null. Called after permuting/expanding
     static List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languagesSent) {
