@@ -8,16 +8,15 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
-import org.zkoss.zss.api.CellOperationUtil;
-import org.zkoss.zss.api.Range;
-import org.zkoss.zss.api.Ranges;
-import org.zkoss.zss.api.SheetOperationUtil;
+import org.zkoss.zss.api.*;
 import org.zkoss.zss.api.model.*;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -112,7 +111,9 @@ public class ReportRenderer {
 
             SName az_repeatSheet = BookUtils.getNameByName("az_RepeatSheet", sheet);
             SName az_repeatItem = BookUtils.getNameByName("az_RepeatItem", sheet);
-            if (az_repeatSheet != null && az_repeatItem != null){
+            // second name match is if the repeat item and repeat sheet names are set global, stop them being found on subsequent runs
+            if (az_repeatSheet != null && az_repeatSheet.getRefersToSheetName().equals(sheet.getSheetName())
+                    && az_repeatItem != null && az_repeatItem.getRefersToSheetName().equals(sheet.getSheetName())){
                 SCell snameCell = BookUtils.getSnameCell(az_repeatSheet);
                 if (snameCell != null && snameCell.getStringValue() != null && !snameCell.getStringValue().isEmpty()){
                     List<String> repeatItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, snameCell.getStringValue());
@@ -125,9 +126,8 @@ public class ReportRenderer {
                             firstItem = repeatItem;
                         } else { // make a new one and copy names
                             Range sheetRange = Ranges.range(sheet);
-                            // lower level call than copy sheet
-                            sheetRange.cloneSheet(repeatItem);
-                            // todo - move the sheet
+                            // our modified version of the function
+                            CopySheet(sheetRange, repeatItem);
                             Sheet newSheet = book.getSheetAt(book.getNumberOfSheets() - 1);// it will be the latest
                             for (SName name : namesForSheet){
                                 if (!name.getName().equalsIgnoreCase("az_RepeatSheet")){ // don't copy the repeat or we'll get a recursive loop!
@@ -135,7 +135,13 @@ public class ReportRenderer {
                                     // the new ones need to be applies to as well as refers to the new sheet
                                     // how to make a new name? Not sure I have so far!
                                     SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName());
-                                    String newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), newSheet.getSheetName());
+                                    // todo - add ! mark to make replace more robust? and below
+                                    String newFormula;
+                                    if (newSheet.getSheetName().contains(" ") && !name.getRefersToFormula().startsWith("'")){
+                                        newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), "'" + newSheet.getSheetName() + "'");
+                                    } else {
+                                        newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), newSheet.getSheetName());
+                                    }
                                     newName.setRefersToFormula(newFormula);
                                 }
                             }
@@ -147,14 +153,18 @@ public class ReportRenderer {
                         }
                         sheetPosition++;
                     }
-                    // finally set the name on the first one. We might be able to put this back in the loop in a bit but will do it out here for the moment
                     // fix the names range references first as setSheetName won't
-                    // this is a bit of a bug on ZK's part I think
+                    // this is a bit of a bug on ZK's part I think. Also doing this before in the loop seems to cause problems, might need to look into this
                     for (SName name : namesForSheet){
-                        String newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), firstItem);
+                        String newFormula;
+                        if (firstItem.contains(" ") && !name.getRefersToFormula().startsWith("'")){
+                            newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), "'" + firstItem + "'");
+                        } else {
+                            newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), firstItem);
+                        }
                         name.setRefersToFormula(newFormula);
                     }
-                    book.getInternalBook().setSheetName(sheet.getInternalSheet(), firstItem);
+                    book.getInternalBook().setSheetName(sheet.getInternalSheet(), suggestSheetName(book, firstItem));
                 }
             }
 
@@ -310,6 +320,47 @@ public class ReportRenderer {
             }
         }
         return showSave;
+    }
+
+    // edd modifying a version of ZK code to allow a suggested new sheet name
+    public static String suggestSheetName(Book book, String suggestedName){
+        if(book.getSheet(suggestedName) == null) {
+            return suggestedName;
+        }
+        int num = 1;
+        String name = null;
+        Pattern pattern = Pattern.compile("(.*) \\(([0-9]+)\\)$");
+        Matcher matcher = pattern.matcher(suggestedName);
+        if(matcher.find()) {
+            suggestedName = matcher.group(1);
+            num = Integer.parseInt(matcher.group(2));
+        }
+
+        int i = 0;
+
+        for(int length = book.getNumberOfSheets(); i <= length; ++i) {
+            StringBuilder var10000 = (new StringBuilder()).append(suggestedName).append(" (");
+            ++num;
+            String n = var10000.append(num).append(")").toString();
+            if(book.getSheet(n) == null) {
+                name = n;
+                break;
+            }
+        }
+        return name;
+    }
+
+    public static void CopySheet(Range range, String suggestedName) {
+        range.sync(new RangeRunner() {
+            public void run(Range range) {
+                // this little bracked bit is what I added to the ZK code
+                if (suggestedName != null && !suggestedName.isEmpty()){
+                        range.cloneSheet(suggestSheetName(range.getBook(), suggestedName));
+                } else {
+                    range.cloneSheet(suggestSheetName(range.getBook(), range.getSheetName()));
+                }
+            }
+        });
     }
 
     // return the error, executing reports might want it

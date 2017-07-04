@@ -256,6 +256,7 @@ public class BookUtils {
             return toReturn;
 
         }
+        // should we check the formula refers to the sheet here? I'm not sure. Applies will have been checked for above.
         return sheet.getBook().getInternalBook().getNameByName(name);
 
     }
