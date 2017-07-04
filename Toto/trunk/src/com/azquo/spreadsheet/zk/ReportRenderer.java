@@ -81,6 +81,32 @@ public class ReportRenderer {
             // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
 
+            // options and validation now sorted per sheet
+            ReportService.checkForPermissionsInSheet(loggedInUser, sheet);
+            /* with the protect sheet command below commented this is currently pointless. I think ZK had some misbehavior while locked so leave this for the moment.
+            int maxRow = sheet.getLastRow();
+            int maxCol = 0;
+            for (int row = 0; row <= maxRow; row++) {
+                if (maxCol < sheet.getLastColumn(row)) {
+                    maxCol = sheet.getLastColumn(row);
+                }
+            }
+            for (int row = 0; row <= maxRow; row++) {
+                for (int col = 0; col <= maxCol; col++) {
+                    Range selection = Ranges.range(sheet, row, col);
+                    CellStyle oldStyle = selection.getCellStyle();
+                    EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
+                    newStyle.setLocked(false);
+                    selection.setCellStyle(newStyle);
+                }
+            }*/
+            // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
+            List<CellRegion> regionsToWatchForMerge = new ArrayList<>();
+            // it will return the properly resolved choice options map as well as flagging the regions to merge by adding to the list
+            Map<String, List<String>> choiceOptionsMap = ChoicesService.resolveAndSetChoiceOptions(loggedInUser, sheet, regionsToWatchForMerge);
+            ReportService.resolveQueries(sheet, loggedInUser); // after all options sorted should be ok
+
+            // start repeat sheet stuff after choices and queries
             // az_RepeatSheet will have a valid name query in it, get the set of names (use choice query for this), then starting with the initial
             // sheet populate a sheet for each valie in az_RepeatItem starting with the first sheet and adding directly after
 
@@ -132,33 +158,6 @@ public class ReportRenderer {
                 }
             }
 
-
-
-
-            // options and validation now sorted per sheet
-            ReportService.checkForPermissionsInSheet(loggedInUser, sheet);
-            /* with the protect sheet command below commented this is currently pointless. I think ZK had some misbehavior while locked so leave this for the moment.
-            int maxRow = sheet.getLastRow();
-            int maxCol = 0;
-            for (int row = 0; row <= maxRow; row++) {
-                if (maxCol < sheet.getLastColumn(row)) {
-                    maxCol = sheet.getLastColumn(row);
-                }
-            }
-            for (int row = 0; row <= maxRow; row++) {
-                for (int col = 0; col <= maxCol; col++) {
-                    Range selection = Ranges.range(sheet, row, col);
-                    CellStyle oldStyle = selection.getCellStyle();
-                    EditableCellStyle newStyle = selection.getCellStyleHelper().createCellStyle(oldStyle);
-                    newStyle.setLocked(false);
-                    selection.setCellStyle(newStyle);
-                }
-            }*/
-            // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
-            List<CellRegion> regionsToWatchForMerge = new ArrayList<>();
-            // it will return the properly resolved choice options map as well as flagging the regions to merge by adding to the list
-            Map<String, List<String>> choiceOptionsMap = ChoicesService.resolveAndSetChoiceOptions(loggedInUser, sheet, regionsToWatchForMerge);
-            ReportService.resolveQueries(sheet, loggedInUser); // after all options sorted should be ok
             // ok the plan here is remove merges that might be adversely affected by regions expanding then put them back in after the regions are expanded.
             List<CellRegion> mergesToTemporarilyRemove = new ArrayList<>(sheet.getInternalSheet().getMergedRegions());
             Iterator<CellRegion> it = mergesToTemporarilyRemove.iterator();
