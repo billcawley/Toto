@@ -71,7 +71,7 @@ public class ChoicesService {
             if (name.getName().toLowerCase().endsWith("choice")) {
                 String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
                 SCell choiceCell = BookUtils.getSnameCell(name);
-                System.out.println("debug:  trying to find the region " + choiceName + "chosen");
+//                System.out.println("debug:  trying to find the region " + choiceName + "chosen");
                 SName chosen = book.getInternalBook().getNameByName(choiceName + "chosen"); // as ever I do wonder about these string literals
                 if (name.getRefersToCellRegion() != null && chosen != null) {
                     Sheet sheet = book.getSheet(chosen.getRefersToSheetName());

@@ -249,4 +249,14 @@ public class BookUtils {
             }
         }
     }
+
+    static SName getNameByName(String name, Sheet sheet){
+        SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
+        if (toReturn != null){
+            return toReturn;
+
+        }
+        return sheet.getBook().getInternalBook().getNameByName(name);
+
+    }
 }

@@ -48,7 +48,7 @@ class DataRegionHeadingService {
                     row.add(null);
                 } else {
                     if (sourceCell.endsWith("↕") || sourceCell.endsWith("↑") || sourceCell.endsWith("↓")) {
-                        sourceCell = sourceCell.substring(0,sourceCell.length()-2);
+                        sourceCell = sourceCell.substring(0, sourceCell.length() - 2);
                     }
                     // was just a name expression, now we allow an attribute also. May be more in future.
                     if (sourceCell.startsWith(".")) { //
@@ -58,11 +58,11 @@ class DataRegionHeadingService {
                         Collection<Name> attributeSet = null;
                         try {
                             attributeSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, sourceCell.substring(1));
-                        }catch(Exception e){
+                        } catch (Exception e) {
                             //not a recognisable set
                         }
                         single.add(new DataRegionHeading(sourceCell, true, attributeSet));// we say that an attribute heading defaults to writable, it will defer to the name
-                               row.add(single);
+                        row.add(single);
                     } else {
                         DataRegionHeading.FUNCTION function = null;// that's the value or sum of values
                         // now allow functions
@@ -134,8 +134,8 @@ class DataRegionHeadingService {
                                     headings.add(new DataRegionHeading(pName, NameQueryParser.isAllowed(pName, azquoMemoryDBConnection.getWritePermissions()), function, suffix, sorted ? "sorted" : null, null, null, 0));
                                 } else { // don't bother checking permissions, write permissions to true
  */
-                                    headings.add(new DataRegionHeading(pName, true, function, suffix, sorted ? "sorted" : null, null, null, 0));
-   //                             }
+                                headings.add(new DataRegionHeading(pName, true, function, suffix, sorted ? "sorted" : null, null, null, 0));
+                                //                             }
                             }
                             row.clear();
                             row.add(headings);
@@ -147,27 +147,27 @@ class DataRegionHeadingService {
                             // maybe these two could have a "true" on returnReadOnlyCollection . . . todo
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
                             final Collection<Name> selectionSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, false);
-                            row.add(dataRegionHeadingsFromNames(mainSet, azquoMemoryDBConnection, function, suffix, null,selectionSet, 0));
+                            row.add(dataRegionHeadingsFromNames(mainSet, azquoMemoryDBConnection, function, suffix, null, selectionSet, 0));
                         } else if (function == DataRegionHeading.FUNCTION.PERCENTILE) {
                             // todo - this function parameter parsing needs to be factored and be aware of commas in names
                             String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
                             String percentileParam = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();
                             boolean divideBy100 = false;
-                            if (percentileParam.contains("%")){
-                                percentileParam = percentileParam.replace("%","").trim();
+                            if (percentileParam.contains("%")) {
+                                percentileParam = percentileParam.replace("%", "").trim();
                                 divideBy100 = true;
                             }
                             double percentileDouble = 0;
-                            try{
+                            try {
                                 percentileDouble = Double.parseDouble(percentileParam);
-                                if (divideBy100){
+                                if (divideBy100) {
                                     percentileDouble /= 100;
                                 }
-                            } catch (NumberFormatException ignored){ // maybe add an error later?
+                            } catch (NumberFormatException ignored) { // maybe add an error later?
                             }
                             // maybe could have a "true" on returnReadOnlyCollection . . . todo
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
-                            row.add(dataRegionHeadingsFromNames(mainSet, azquoMemoryDBConnection, function, suffix, null,null, percentileDouble));
+                            row.add(dataRegionHeadingsFromNames(mainSet, azquoMemoryDBConnection, function, suffix, null, null, percentileDouble));
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             Collection<Name> names;
                             try {
@@ -373,6 +373,9 @@ class DataRegionHeadingService {
     }
 
     /*
+
+    Edd pasted stuff, might be ditched
+
     This is called after the names are loaded by createHeadingArraysFromSpreadsheetRegion. in the case of columns it is transposed first
 
     The dynamic name calls e.g. Seaports; children; have their lists populated but they have not been expanded out into the 2d set itself
@@ -384,33 +387,155 @@ class DataRegionHeadingService {
     We want to return a list<list> being row, cells in that row, the expansion of each of the rows. The source in my example being ony one row with 2 cells in it
     those two cells holding lists of 96 and 4 hence we get 384 back, each with 2 cells.
 
-    Heading definitions are a region if this region is more than on column wide then rows which have only one cell populated
-    and that cell is the right most cell then that cell is added to the cell above it, it becomes part of that permutation.
-    I renamed the function headingDefinitionRowHasOnlyTheRightCellPopulated to help make this clear.
-
     That logic just described is the bulk of the function I think. Permutation is handed off to get2DPermutationOfLists, then those permuted lists are simply stacked together.
 
     Note! the permute FUNCTION is a different from standard permute in that it takes a list of names combined with the context and then only shows permutations that actually have data
 
+    This now needs to support a more advanced structure. So, given the definitions on the left it should now look like the first permutation rather the second as it was (pasted from WFC spec)
+
+    Definition                                  Results we want                             How it was rendering
+
+    Set1	Item1	    Item 2                  S11	    Item 1	    Item 2                  S11	    Item1	    Item 2
+            Set 2	    Item 3                  	    S21	        Item 3                  S12	    Item1	    Item 2
+                        Item4                   	    	        Item 4                  S13	    Item1	    Item 2
+                                                	    S22 	    Item 3                  	    S22 	    Item 3
+            Set 5	    Item 5                  	    	        Item 4                  	    	        Item 4
+                        Item6                   	    S23	        Item 3                  	    S23	        Item 3
+    Item 7	Item 98	    Item 9                  	    	        Item 4                  	    	        Item 4
+                                                	    S51	        Item5                   	    S51	        Item5
+                                                	    	        Item 6                  	    	        Item 6
+                                                	    S52	        Item 5                  	    S52	        Item 5
+                                                	    	        Item 6                  	    	        Item 6
+                                                S12	    Item 1	    Item 2                  Item 7	Item 98	    Item 9
+                                                	    S21	        Item 3
+                                                	    	        Item 4
+                                                	    S22 	    Item 3
+                                                	    	        Item 4
+                                                	    S23	        Item 3
+                                                	    	        Item 4
+                                                	    S51	        Item5
+                                                	    	        Item 6
+                                                	    S52	        Item 5
+                                                	    	        Item 6
+                                                S13	    Item 1	    Item 2
+                                                	    S21	        Item 3
+                                                	    	        Item 4
+                                                	    S22 	    Item 3
+                                                	    	        Item 4
+                                                	    S23	        Item 3
+                                                	    	        Item 4
+                                                	    S51	        Item5
+                                                	    	        Item 6
+                                                	    S52	        Item 5
+                                                	    	        Item 6
+                                                Item 7	Item 98	    Item 9
+
+    The old code supported this kind of logic on the last column as a bit of a hack but now we want structure to permute correctly.
+    One can NOT just compress each column and then permute the lot, the structure will be lost. We'll probably need a new object
+    that holds the headings represented as a tree structure that can be resolved. The input is still the same - a 2d List of lists
+    representing the cells that are the heading definitions. A list per cell since it may be a Name query rather than a reference
+    to a name.
+
+    Note : should the example from WFC include spaces? I think perhaps it should. Deal with spaces in a bit.
+
+    The Tree object will have a list or names and a list of Tree objects I think
+
      */
 
-    static List<List<DataRegionHeading>> permuteHeadings(List<DataRegionHeading> mainHeading, List<List<List<DataRegionHeading>>> subHeadings, Collection<Name> sharedNames)throws Exception{
+    /* commenting for the mo . . .
+
+    private static class HeadingTreeNode {
+
+        public final List<DataRegionHeading> headings;
+        public final List<HeadingTreeNode> childNodes;
+
+        public HeadingTreeNode(List<DataRegionHeading> headings, List<HeadingTreeNode> childNodes) {
+            this.headings = headings;
+            this.childNodes = childNodes;
+        }
+    }
+
+    static List<List<DataRegionHeading>> newExpandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception {
+        final int noOfHeadingDefinitionRows = headingLists.size();
+        if (noOfHeadingDefinitionRows == 0) {
+            return new ArrayList<>();
+        }
+        List<List<DataRegionHeading>> output = new ArrayList<>();
+        // first job needs to be packaging up the headings
+        List<HeadingTreeNode> headingTreeNodesFromHeadings = getHeadingTreeNodesFromHeadings(headingLists);
+        // and now resolve them!
+        for (HeadingTreeNode headingTreeNode : headingTreeNodesFromHeadings) {
+            expandTreeNode(headingTreeNode, output);
+        }
+        // todo - what about permute and hasTitles?
+        return output;
+    }
+
+    // ok the following two functions might be able to be combined. Not worth it for performance. Would it be clearer?
+    // Probably not as the combined function would need to take into account the expanded sets. Leaving for the mo.
+    public static void expandTreeNode(HeadingTreeNode headingTreeNode, List<List<DataRegionHeading>> headingsSoFar) {
+        boolean first = true;
+        List<DataRegionHeading> startingRow = headingsSoFar.get(headingsSoFar.size() - 1);
+        List<DataRegionHeading> startingRowCopy = new ArrayList<>(startingRow); // copy as it will be modified
+        for (DataRegionHeading dataRegionHeading : headingTreeNode.headings) {
+            if (first) {
+                startingRow.add(dataRegionHeading);
+            } else {
+                List<DataRegionHeading> newRow = new ArrayList<>(startingRowCopy);
+                newRow.add(dataRegionHeading);
+                headingsSoFar.add(newRow);
+            }
+            for (HeadingTreeNode childNode : headingTreeNode.childNodes) {
+                expandTreeNode(childNode, headingsSoFar);
+            }
+            first = false;
+        }
+    }
+
+    // todo - totally blank lines?
+    // package headings according to new tree criteria, this function will be recursive
+    public static List<HeadingTreeNode> getHeadingTreeNodesFromHeadings(final List<List<List<DataRegionHeading>>> headingLists) {
+        List<HeadingTreeNode> toReturn = new ArrayList<>();
+        if (headingLists == null || headingLists.isEmpty()) {
+            return toReturn; // null maybe? Not sure there's much advantage to it. There won't be many of these objects.
+        }
+        List<List<List<DataRegionHeading>>> subList = new ArrayList<>();
+        List<DataRegionHeading> currentHeading = null;
+        for (List<List<DataRegionHeading>> headingListsRow : headingLists) {
+            if (headingListsRow.get(0) != null && !headingListsRow.get(0).isEmpty()) { // then there is something on this line
+                if (currentHeading != null) { // so it's not the first
+                    toReturn.add(new HeadingTreeNode(currentHeading, getHeadingTreeNodesFromHeadings(subList)));
+                    subList = new ArrayList<>();
+                }
+                currentHeading = headingListsRow.get(0);
+            }
+            if (headingListsRow.size() > 1) { // can't add to a sub list if there's nothing further to add
+                subList.add(headingListsRow.subList(1, headingListsRow.size()));
+            }
+        }
+        if (currentHeading != null) { // catch the last one
+            toReturn.add(new HeadingTreeNode(currentHeading, getHeadingTreeNodesFromHeadings(subList)));
+        }
+        return toReturn;
+    }
+
+    */
+
+    static List<List<DataRegionHeading>> permuteHeadings(List<DataRegionHeading> mainHeading, List<List<List<DataRegionHeading>>> subHeadings, Collection<Name> sharedNames) throws Exception {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
         List<List<DataRegionHeading>> expandedSubheadings = expandHeadings(subHeadings, sharedNames);
-        if (mainHeading!=null &&  mainHeading.size() > 0 && mainHeading.get(0).getFunction()==DataRegionHeading.FUNCTION.PERMUTE){
-            List<List<DataRegionHeading>>permuted =findPermutedItems(sharedNames, mainHeading);
-            for (List<DataRegionHeading> permuteLine:permuted){
+        if (mainHeading != null && mainHeading.size() > 0 && mainHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) {
+            List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, mainHeading);
+            for (List<DataRegionHeading> permuteLine : permuted) {
                 for (List<DataRegionHeading> expandedSubheading : expandedSubheadings) {
                     List<DataRegionHeading> newHeadings = new ArrayList<>();
                     newHeadings.addAll(permuteLine);
                     newHeadings.addAll(expandedSubheading);
                     toReturn.add(newHeadings);
                 }
-
             }
-
-        }else {
-            if (mainHeading==null){
+        } else {
+            if (mainHeading == null) {
                 //pity this is the same code as the lines below - could not work out how to combine them.
                 for (List<DataRegionHeading> expandedSubheading : expandedSubheadings) {
                     List<DataRegionHeading> newHeadings = new ArrayList<>();
@@ -418,14 +543,14 @@ class DataRegionHeadingService {
                     newHeadings.addAll(expandedSubheading);
                     toReturn.add(newHeadings);
                 }
-            }else {
+            } else {
                 for (DataRegionHeading mainElement : mainHeading) {
                     for (List<DataRegionHeading> expandedSubheading : expandedSubheadings) {
                         List<DataRegionHeading> newHeadings = new ArrayList<>();
                         //if the last element is null, then all headings are null
-                        if (expandedSubheading.get(expandedSubheading.size()-1)==null){
+                        if (expandedSubheading.get(expandedSubheading.size() - 1) == null) {
                             newHeadings.add(null);
-                        }else{
+                        } else {
                             newHeadings.add(mainElement);
                         }
                         newHeadings.addAll(expandedSubheading);
@@ -437,19 +562,19 @@ class DataRegionHeadingService {
         return toReturn;
     }
 
-    static List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception{
+    static List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
-        if (headingLists.get(0).size() > 1){
+        if (headingLists.get(0).size() > 1) {
             Iterator<List<List<DataRegionHeading>>> it = headingLists.iterator();
-            List<List<List<DataRegionHeading>>>subHeadings = null;
-            List<DataRegionHeading>mainHeading = null;
-            while (it.hasNext()){
+            List<List<List<DataRegionHeading>>> subHeadings = null;
+            List<DataRegionHeading> mainHeading = null;
+            while (it.hasNext()) {
                 List<List<DataRegionHeading>> headingRow = it.next();
-                if (subHeadings==null ||headingRow.get(0)!=null) {
-                    if (subHeadings!=null) {
-                        toReturn.addAll(permuteHeadings(mainHeading,subHeadings, sharedNames));
-                     }
-                    mainHeading=headingRow.get(0);
+                if (subHeadings == null || headingRow.get(0) != null) {
+                    if (subHeadings != null) {
+                        toReturn.addAll(permuteHeadings(mainHeading, subHeadings, sharedNames));
+                    }
+                    mainHeading = headingRow.get(0);
                     subHeadings = new ArrayList<>();
                 }
                 List<List<DataRegionHeading>> subHeadingRow = new ArrayList<>();
@@ -460,16 +585,14 @@ class DataRegionHeadingService {
 
                 }
                 subHeadings.add(subHeadingRow);
-
             }
-            toReturn.addAll(permuteHeadings(mainHeading,subHeadings,sharedNames));
-
-        }else{
-             Iterator<List<List<DataRegionHeading>>> headingRowIterator = headingLists.iterator();
+            toReturn.addAll(permuteHeadings(mainHeading, subHeadings, sharedNames));
+        } else {
+            Iterator<List<List<DataRegionHeading>>> headingRowIterator = headingLists.iterator();
             List<DataRegionHeading> nextHeading = headingRowIterator.next().get(0);
-            if (nextHeading!=null && nextHeading.size() > 0 && nextHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
+            if (nextHeading != null && nextHeading.size() > 0 && nextHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
                 toReturn.addAll(findPermutedItems(sharedNames, nextHeading));//assumes only one row of headings, it's a list of the permute names
-            }else {        //last column - simply expand, filling spaces where available.
+            } else {        //last column - simply expand, filling spaces where available.
                 List<DataRegionHeading> heading = null;
                 boolean workToDo = true;
                 while (headingRowIterator.hasNext() || workToDo) {
@@ -479,20 +602,17 @@ class DataRegionHeadingService {
                     } else {
                         nextHeading = null;
                         workToDo = false;
-
-
                     }
-
                     if (heading != null) {
                         int count = 0;
                         for (DataRegionHeading headingElement : heading) {
                             List<DataRegionHeading> newRow = new ArrayList<>();
                             newRow.add(headingElement);
                             toReturn.add(newRow);
-                            if (count++ > 0 && nextHeading == null){
-                                if(headingRowIterator.hasNext()){
+                            if (count++ > 0 && nextHeading == null) {
+                                if (headingRowIterator.hasNext()) {
                                     nextHeading = headingRowIterator.next().get(0);
-                                }else{
+                                } else {
                                     workToDo = false;
                                 }
                             }
@@ -501,112 +621,12 @@ class DataRegionHeadingService {
                         List<DataRegionHeading> newRow = new ArrayList<>();
                         newRow.add(null);
                         toReturn.add(newRow);
-
                     }
                 }
             }
-
         }
         return toReturn;
     }
-
-    /*
-    static List<List<DataRegionHeading>> expandHeadings2(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception {
-        final int noOfHeadingDefinitionRows = headingLists.size();
-        if (noOfHeadingDefinitionRows == 0) {
-            return new ArrayList<>();
-        }
-        final int lastHeadingDefinitionCellIndex = headingLists.get(0).size() - 1; // the headingLists will be square, that is to say all row lists the same length as prepared by createHeadingArraysFromSpreadsheetRegion
-        // ok here's the logic, what's passed is a 2d array of lists, as created from createHeadingArraysFromSpreadsheetRegion
-        // we would just run through the rows running a 2d permutation on each row BUT there's a rule that if there's
-        // a row below blank except the right most one then add that right most to the one above
-        boolean starting = true;
-        // ok the reason I'm doing this is to avoid unnecessary array copying and resizing. If the size is 1 can just return that otherwise create an ArrayList of the right size and copy in
-        ArrayList<List<List<DataRegionHeading>>> permutedLists = new ArrayList<>(noOfHeadingDefinitionRows); // could be slightly less elements than this but it's unlikely to be a biggy.
-        List<List<DataRegionHeading>> lastHeadingRow = null;
-        for (int headingDefinitionRowIndex = 0; headingDefinitionRowIndex < noOfHeadingDefinitionRows; headingDefinitionRowIndex++) { // not using a vanilla for loop as we want to skip forward to allow folding of rows with one cell on the right into the list above
-            List<List<DataRegionHeading>> headingDefinitionRow = headingLists.get(headingDefinitionRowIndex);
-            boolean hasTitles = false;
-            for (int i = 0; i < headingDefinitionRow.size(); i++) {
-                if (headingDefinitionRow.get(i) != null) {
-                    hasTitles = true;
-                    if (i==0){
-                        lastHeadingRow=null;
-                    }
-                }
-            }
-            boolean permuting= false;
-            if (lastHeadingRow != null && hasTitles) {
-                //copy down titles
-               for (int i = 0; i < headingDefinitionRow.size(); i++) {
-                    if (headingDefinitionRow.get(i) == null && lastHeadingRow.get(i) != null) {
-                        headingDefinitionRow.set(i, lastHeadingRow.get(i));
-                    }
-                }
-            }
-
-            if (headingDefinitionRow.size() == 0) {
-                headingDefinitionRow.add(null);
-            }
-            if (headingDefinitionRow.get(lastHeadingDefinitionCellIndex) == null) {
-                headingDefinitionRow.set(lastHeadingDefinitionCellIndex, new ArrayList<>());
-                headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
-            }
-            int startCount = headingDefinitionRow.get(lastHeadingDefinitionCellIndex).size() - 1;
-            if (lastHeadingDefinitionCellIndex > 0 && !headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex)))
-                starting = false;// Don't permute until you have something to permute!
-            while (!starting && headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 // we're not on the last row
-                    && headingLists.get(headingDefinitionRowIndex + 1).size() > 1 // the next row is not a single cell (will all rows be the same length?)
-                    && headingDefinitionRowHasOnlyTheRightCellPopulated(headingLists.get(headingDefinitionRowIndex + 1)) // and the last cell is the only not null one
-                    ) {
-                // add the single last cell from the next row to the end of this row
-                if (headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex) == null) { // note if it's completely empty headingDefinitionRowHasOnlyTheRightCellPopulated would return true, not sure if this logic is completely correct, left over from the old code, I think having nulls in the permuations is allowed
-                    if (startCount-- <= 0) {
-                        headingDefinitionRow.get(lastHeadingDefinitionCellIndex).add(null);
-                    }
-                } else {
-                    headingDefinitionRow.get(lastHeadingDefinitionCellIndex).addAll(headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex));
-                    startCount = headingLists.get(headingDefinitionRowIndex + 1).get(lastHeadingDefinitionCellIndex).size() - 1;
-                }
-                headingDefinitionRowIndex++;
-            }
-            if (headingDefinitionRow.get(0) != null && headingDefinitionRow.get(0).size() > 0 && headingDefinitionRow.get(0).get(0) != null && headingDefinitionRow.get(0).get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
-                List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, headingDefinitionRow);//assumes only one row of headings, it's a list of the permute names
-                permutedLists.add(permuted);
-            } else {
-                List<List<DataRegionHeading>> permuted = MultidimensionalListUtils.get2DPermutationOfLists(headingDefinitionRow);
-                if (permuted.size() > headingDefinitionRow.get(headingDefinitionRow.size()-1).size()) {
-                    permuting = true;
-                }
-                permutedLists.add(permuted);
-                if (lastHeadingDefinitionCellIndex == 0) {
-                    int spaceNeeded = permuted.size() - 1;
-                    while (spaceNeeded-- > 0 && headingDefinitionRowIndex < noOfHeadingDefinitionRows - 1 && headingLists.get(headingDefinitionRowIndex + 1).get(0) == null) {
-                        headingDefinitionRowIndex++;
-                    }
-                }
-
-            }
-            if (hasTitles){
-                lastHeadingRow = headingDefinitionRow;
-            }
-            if (permuting){
-                lastHeadingRow = null;
-            }
-        }
-        if (permutedLists.size() == 1) { // it was just one row to permute, return it as is rather than combining the permuted results together which might result in a bit of garbage due to array copying
-            return permutedLists.get(0);
-        }
-        // the point is I only want to make a new ArrayList if there are lists to be combined and then I want it to be the right size. Some reports have had millions in here . . .
-        int size = 0;
-        for (List<List<DataRegionHeading>> permuted : permutedLists) {
-            size += permuted.size();
-        }
-        List<List<DataRegionHeading>> output = new ArrayList<>(size);
-        permutedLists.forEach(output::addAll);
-        return output;
-    }
-*/
 
     // return headings as strings for display, I'm going to put blanks in here if null. Called after permuting/expanding
     static List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languagesSent) {
@@ -724,9 +744,9 @@ class DataRegionHeadingService {
             }
         } else { // don't bother checking permissions, write permissions to true
         */
-            for (Name name : names) {
-                dataRegionHeadings.add(new DataRegionHeading(name, true, function, suffix, null, offsetHeadings, valueFunctionSet, doubleParameter));
-            }
+        for (Name name : names) {
+            dataRegionHeadings.add(new DataRegionHeading(name, true, function, suffix, null, offsetHeadings, valueFunctionSet, doubleParameter));
+        }
         //}
         //System.out.println("time for dataRegionHeadingsFromNames " + (System.currentTimeMillis() - startTime));
         return dataRegionHeadings;

@@ -11,13 +11,13 @@ import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import org.zkoss.zss.api.CellOperationUtil;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
+import org.zkoss.zss.api.SheetOperationUtil;
 import org.zkoss.zss.api.model.*;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 
 import java.rmi.RemoteException;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -78,6 +78,56 @@ public class ReportRenderer {
             if (sheet.getSheetName().endsWith(ChoicesService.VALIDATION_SHEET)) {
                 continue;
             }
+            // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
+            List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
+
+            // az_RepeatSheet will have a valid name query in it, get the set of names (use choice query for this), then starting with the initial
+            // sheet populate a sheet for each valie in az_RepeatItem starting with the first sheet and adding directly after
+
+            SName az_repeatSheet = BookUtils.getNameByName("az_RepeatSheet", sheet);
+            SName az_repeatItem = BookUtils.getNameByName("az_RepeatItem", sheet);
+            if (az_repeatSheet != null && az_repeatItem != null){
+                SCell snameCell = BookUtils.getSnameCell(az_repeatSheet);
+                if (snameCell != null && snameCell.getStringValue() != null && !snameCell.getStringValue().isEmpty()){
+                    List<String> repeatItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, snameCell.getStringValue());
+                    String firstItem = null; // for api purposes I need to set the initial sheet name after it's copied or I get NPEs
+                    int sheetPosition = 0;
+                    for (String repeatItem : repeatItems){
+                        if (firstItem == null){ // set the repeat tiem on this sheet
+                            SCell repeatItemCell = BookUtils.getSnameCell(az_repeatItem);
+                            repeatItemCell.setStringValue(repeatItem);
+                            firstItem = repeatItem;
+                            //book.getInternalBook().setSheetName(sheet.getInternalSheet(), repeatItem);
+                        } else { // make a new one and copy names
+                            Range sheetRange = Ranges.range(sheet);
+                            SheetOperationUtil.CopySheet(sheetRange);
+                            // todo - move the sheet
+                            Sheet newSheet = book.getSheetAt(book.getNumberOfSheets() - 1);// it will be the latest
+                            for (SName name : namesForSheet){
+                                if (!name.getName().equalsIgnoreCase("az_RepeatSheet")){ // don'tcopy the repeat or we'll get a recursive loop!
+                                    // CopySheet won't copy the names, need to make new ones
+                                    // the new ones need to be applies to as well as refers to the new sheet
+                                    // how to make a new name? Not sure I have so far!
+                                    SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName());
+                                    String newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), newSheet.getSheetName());
+                                    newName.setRefersToFormula(newFormula);
+                                }
+                            }
+                            SName newRepeatItem = BookUtils.getNameByName("az_RepeatItem", newSheet);
+                            SCell repeatItemCell = BookUtils.getSnameCell(newRepeatItem);
+                            repeatItemCell.setStringValue(repeatItem);
+                            // now need to move it and rename - hopefully references e.g. names will be affected correctly?
+                            book.getInternalBook().moveSheetTo(newSheet.getInternalSheet(), book.getSheetIndex(sheet) + sheetPosition);
+//                            book.getInternalBook().setSheetName(newSheet.getInternalSheet(), "new name " + repeatItem);
+                        }
+                        sheetPosition++;
+                    }
+                }
+            }
+
+
+
+
             // options and validation now sorted per sheet
             ReportService.checkForPermissionsInSheet(loggedInUser, sheet);
             /* with the protect sheet command below commented this is currently pointless. I think ZK had some misbehavior while locked so leave this for the moment.
@@ -97,8 +147,6 @@ public class ReportRenderer {
                     selection.setCellStyle(newStyle);
                 }
             }*/
-            // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
-            List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
             // we must resolve the options here before filling the ranges as they might feature "as" name populating queries
             List<CellRegion> regionsToWatchForMerge = new ArrayList<>();
             // it will return the properly resolved choice options map as well as flagging the regions to merge by adding to the list
@@ -127,10 +175,10 @@ public class ReportRenderer {
                 }
                 if (name.getName().toLowerCase().startsWith(AZDATAREGION)) { // then we have a data region to deal with here
                     String region = name.getName().substring(AZDATAREGION.length()); // might well be an empty string
-                    if (getNameByName(AZROWHEADINGS + region, sheet) == null) { // if no row headings then this is an ad hoc region, save possible by default
+                    if (BookUtils.getNameByName(AZROWHEADINGS + region, sheet) == null) { // if no row headings then this is an ad hoc region, save possible by default
                         showSave = true;
                     }
-                    SName optionsRegion = getNameByName(AZOPTIONS + region, sheet);
+                    SName optionsRegion = BookUtils.getNameByName(AZOPTIONS + region, sheet);
                     String optionsSource = "";
                     if (optionsRegion != null) {
                         SCell optionsCell = BookUtils.getSnameCell(optionsRegion);
@@ -263,9 +311,9 @@ public class ReportRenderer {
         if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
             sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
         }
-        SName columnHeadingsDescription = getNameByName(AZCOLUMNHEADINGS + region, sheet);
-        SName rowHeadingsDescription = getNameByName(AZROWHEADINGS + region, sheet);
-        SName contextDescription = getNameByName(AZCONTEXT + region, sheet);
+        SName columnHeadingsDescription = BookUtils.getNameByName(AZCOLUMNHEADINGS + region, sheet);
+        SName rowHeadingsDescription = BookUtils.getNameByName(AZROWHEADINGS + region, sheet);
+        SName contextDescription = BookUtils.getNameByName(AZCONTEXT + region, sheet);
         String errorMessage = null;
         // make a blank area for data to be populated from, an upload in the sheet so to speak (ad hoc)
         if (columnHeadingsDescription != null && rowHeadingsDescription == null) {
@@ -289,9 +337,9 @@ public class ReportRenderer {
                 List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription);
                 List<List<String>> rowHeadingList = BookUtils.nameToStringLists(rowHeadingsDescription);
                 //check if this is a pivot - if so, then add in any additional filter needed
-                SName contextFilters = getNameByName(AZCONTEXTFILTERS, sheet);
+                SName contextFilters = BookUtils.getNameByName(AZCONTEXTFILTERS, sheet);
                 if (contextFilters == null) {
-                    contextFilters = getNameByName(AZPIVOTFILTERS, sheet);
+                    contextFilters = BookUtils.getNameByName(AZPIVOTFILTERS, sheet);
                 }
                 // a comma separated list of names
                 if (contextFilters != null) {
@@ -330,8 +378,8 @@ public class ReportRenderer {
                  go wrong later as the code that prepares the space assumes heading numbers will stay consistent. Anyway the hack is jamming the first repeat item in so we can make
                  this getCellsAndHeadingsForDisplay call without problems if it relies on it. Could the following little chunk be factored with the coed in fillDataForRepeatRegions? Not sure.
                   */
-                SName repeatList = getNameByName(ReportRenderer.AZREPEATLIST + region, sheet);
-                SName repeatItem = getNameByName(ReportRenderer.AZREPEATITEM + region, sheet);
+                SName repeatList = BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + region, sheet);
+                SName repeatItem = BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + region, sheet);
                 if (repeatList != null && repeatItem != null){
                     String repeatListText = BookUtils.getSnameCell(repeatList).getStringValue();
                     List<String> repeatListItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText);
@@ -359,10 +407,10 @@ public class ReportRenderer {
                     // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't - this isn't a biggy it's just to do with name references which now I think about it probably don't need reloading but it's worth checking and being consistent
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
                     // so it's NOT a repeat region. Fill the headings and populate the data!
-                    if (getNameByName(ReportRenderer.AZREPEATREGION + region, sheet) == null
-                            || getNameByName(ReportRenderer.AZREPEATSCOPE + region, sheet) == null
-                            || getNameByName(ReportRenderer.AZREPEATLIST + region, sheet) == null
-                            || getNameByName(ReportRenderer.AZREPEATITEM + region, sheet) == null){
+                    if (BookUtils.getNameByName(ReportRenderer.AZREPEATREGION + region, sheet) == null
+                            || BookUtils.getNameByName(ReportRenderer.AZREPEATSCOPE + region, sheet) == null
+                            || BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + region, sheet) == null
+                            || BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + region, sheet) == null){
                         // ok there should be the right space for the headings
                         if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
                             int rowHeadingCols = cellsAndHeadingsForDisplay.getRowHeadings().get(0).size();
@@ -427,16 +475,6 @@ public class ReportRenderer {
             }
         }
         return null; // will it get here ever?
-    }
-
-    private static SName getNameByName(String name, Sheet sheet){
-        SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
-        if (toReturn != null){
-            return toReturn;
-
-        }
-        return sheet.getBook().getInternalBook().getNameByName(name);
-
     }
 
     private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol) {
