@@ -97,15 +97,15 @@ public class ReportRenderer {
                             SCell repeatItemCell = BookUtils.getSnameCell(az_repeatItem);
                             repeatItemCell.setStringValue(repeatItem);
                             firstItem = repeatItem;
-                            //book.getInternalBook().setSheetName(sheet.getInternalSheet(), repeatItem);
                         } else { // make a new one and copy names
                             Range sheetRange = Ranges.range(sheet);
-                            SheetOperationUtil.CopySheet(sheetRange);
+                            // lower level call than copy sheet
+                            sheetRange.cloneSheet(repeatItem);
                             // todo - move the sheet
                             Sheet newSheet = book.getSheetAt(book.getNumberOfSheets() - 1);// it will be the latest
                             for (SName name : namesForSheet){
-                                if (!name.getName().equalsIgnoreCase("az_RepeatSheet")){ // don'tcopy the repeat or we'll get a recursive loop!
-                                    // CopySheet won't copy the names, need to make new ones
+                                if (!name.getName().equalsIgnoreCase("az_RepeatSheet")){ // don't copy the repeat or we'll get a recursive loop!
+                                    // cloneSheet won't copy the names, need to make new ones
                                     // the new ones need to be applies to as well as refers to the new sheet
                                     // how to make a new name? Not sure I have so far!
                                     SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName());
@@ -118,10 +118,17 @@ public class ReportRenderer {
                             repeatItemCell.setStringValue(repeatItem);
                             // now need to move it and rename - hopefully references e.g. names will be affected correctly?
                             book.getInternalBook().moveSheetTo(newSheet.getInternalSheet(), book.getSheetIndex(sheet) + sheetPosition);
-//                            book.getInternalBook().setSheetName(newSheet.getInternalSheet(), "new name " + repeatItem);
                         }
                         sheetPosition++;
                     }
+                    // finally set the name on the first one. We might be able to put this back in the loop in a bit but will do it out here for the moment
+                    // fix the names range references first as setSheetName won't
+                    // this is a bit of a bug on ZK's part I think
+                    for (SName name : namesForSheet){
+                        String newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), firstItem);
+                        name.setRefersToFormula(newFormula);
+                    }
+                    book.getInternalBook().setSheetName(sheet.getInternalSheet(), firstItem);
                 }
             }
 
