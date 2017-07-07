@@ -252,7 +252,7 @@ class ImportFileUtilities {
                     //ZK BUG - reads "hh:mm" as "h:mm"
                     stringValue = "0"+stringValue;
                 }
-                if (r > 0 && dataFormat.toLowerCase().contains("mm-") && (stringValue.length() == 8 || stringValue.length() == 6)) {//another ZK bug
+                if ((stringValue.length() == 6 || stringValue.length()==8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-") ) {//another ZK bug
                     stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
                 }
             } catch (Exception ignored) {
