@@ -38,6 +38,7 @@ public class LoggedInUser {
     private final String sessionId; // it's used to match to a log server side
     private final User user;
 
+    // in theory the concantation of strings for keys could trip up, maybe make more robust? TODO
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
 
     private List<String> languages;
@@ -58,6 +59,7 @@ public class LoggedInUser {
     private Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport; // hold them here after they're set by a "home page" report for linking
 
     private static final String defaultRegion = "default-region";
+    private static final String defaultSheet = "default-sheet";
 
     // moved back in here now (was on the db server for a bit)
 
@@ -123,12 +125,24 @@ public class LoggedInUser {
 
     // adding in report id (a little hacky, could maybe change later?) otherwise two reports on different tabs could clash on identically named regions - bug identified by drilldowns
 
-    public CellsAndHeadingsForDisplay getSentCells(final int reportId, final String region) {
-        if (region == null || region.isEmpty()) {
-            return sentCellsMaps.get(reportId + "-" + defaultRegion);
-        } else {
-            return sentCellsMaps.get(reportId + "-" + region.toLowerCase());
+    public CellsAndHeadingsForDisplay getSentCells(final int reportId, String sheetName, String region) {
+        if (sheetName == null && sheetName.isEmpty()){
+            sheetName = defaultSheet;
         }
+        if (region == null || region.isEmpty()) {
+            region = defaultRegion;
+        }
+        return sentCellsMaps.get(reportId + "-"  + sheetName + "-" + region.toLowerCase());
+    }
+
+    public void setSentCells(final int reportId, String sheetName, String region, final CellsAndHeadingsForDisplay sentCells) {
+        if (sheetName == null && sheetName.isEmpty()){
+            sheetName = defaultSheet;
+        }
+        if (region == null || region.isEmpty()) {
+            region = defaultRegion;
+        }
+        this.sentCellsMaps.put(reportId + "-"  + sheetName + "-" + region.toLowerCase(), sentCells);
     }
 
     public List<CellsAndHeadingsForDisplay> getSentForReport(final int reportId) {
@@ -141,12 +155,14 @@ public class LoggedInUser {
         return toReturn;
     }
 
-    public void setSentCells(final int reportId, final String region, final CellsAndHeadingsForDisplay sentCells) {
-        if (region == null || region.isEmpty()) {
-            this.sentCellsMaps.put(reportId + "-" + defaultRegion, sentCells);
-        } else {
-            this.sentCellsMaps.put(reportId + "-" + region.toLowerCase(), sentCells);
+    public List<CellsAndHeadingsForDisplay> getSentForReportAndSheet(final int reportId, String sheetName) {
+        List<CellsAndHeadingsForDisplay> toReturn = new ArrayList<>();
+        for (String key : sentCellsMaps.keySet()) {
+            if (key.startsWith(reportId + "-" + sheetName + "-")) {
+                toReturn.add(sentCellsMaps.get(key));
+            }
         }
+        return toReturn;
     }
 
     // todo a version that includes the email and one that doesn't

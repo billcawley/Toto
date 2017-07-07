@@ -149,7 +149,7 @@ public class ReportService {
                 if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
                     String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
                     CellRegion displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, ReportRenderer.AZDATAREGION + region);
-                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
+                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId,sheet.getSheetName(), region);
                     if (displayDataRegion != null && sentCells != null) {
                         int startRow = displayDataRegion.getRow();
                         int endRow = displayDataRegion.getLastRow();
@@ -253,7 +253,7 @@ public class ReportService {
                     noSave = userRegionOptions.getNoSave();
                 }
                 if (!noSave) {
-                    final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                    final String result = SpreadsheetService.saveData(loggedInUser, reportId, onlineReport != null ? onlineReport.getReportName() : "", name.getRefersToSheetName(), region.toLowerCase());
                     if (!result.startsWith("true")) {
                         Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
                         error = result;
@@ -284,8 +284,8 @@ public class ReportService {
                     for (int row = 0; row < repeatRows; row++) {
                         for (int col = 0; col < repeatCols; col++) {
                             //region + "-" + repeatRow + "-" + repeatColumn
-                            if (loggedInUser.getSentCells(reportId, region.toLowerCase() + "-" + row + "-" + col) != null) { // the last ones on the repeat scope might be blank
-                                final String result = SpreadsheetService.saveData(loggedInUser, region.toLowerCase() + "-" + row + "-" + col, reportId, onlineReport != null ? onlineReport.getReportName() : "");
+                            if (loggedInUser.getSentCells(reportId, repeatRegion.getRefersToSheetName(),region.toLowerCase() + "-" + row + "-" + col) != null) { // the last ones on the repeat scope might be blank
+                                final String result = SpreadsheetService.saveData(loggedInUser, reportId, onlineReport != null ? onlineReport.getReportName() : "", repeatRegion.getRefersToSheetName(), region.toLowerCase() + "-" + row + "-" + col);
                                 if (!result.startsWith("true")) {
                                     Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
                                     saveOk = false;
@@ -301,6 +301,7 @@ public class ReportService {
                     }
                 }
             }
+            // repeat sheet save, ergh . . .
             if (error != null) {
                 break; // stop looping through the names if a save failed
             }

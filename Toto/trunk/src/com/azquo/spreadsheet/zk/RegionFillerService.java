@@ -360,7 +360,7 @@ class RegionFillerService {
                         , rootRow + (repeatRegionHeight * repeatRow) + repeatColumnHeadingsLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatColumnHeadingsLastColumnOffset);
                 RegionFillerService.fillColumnHeadings(sheet, userRegionOptions, displayColumnHeadings, cellsAndHeadingsForDisplay);
             }
-            loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!
+            loggedInUser.setSentCells(reportId, sheet.getSheetName(), region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay); // todo- perhaps address that this is a bit of a hack!
             RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
             repeatColumn++;
             if (repeatColumn == repeatColumns) { // zap if back to the first column

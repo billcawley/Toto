@@ -28,12 +28,17 @@ public class CellForDisplay implements Serializable {
     private boolean selected;
 
     private String comment; // being sent both ways now. It's in the provenance also but nice to put in here
+    // the value id if this cell is made from a single value. For auditing drilldown where the source is on another sheet in the same workbook.
+    // Where sheets are auto generated from a choice like list
+    private final int valueId;
 
-    public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted, int unsortedRow, int unsortedCol, boolean ignored, boolean selected, String comment) {
+
+    public CellForDisplay(boolean locked, String stringValue, double doubleValue, boolean highlighted, int unsortedRow, int unsortedCol, boolean ignored, boolean selected, String comment, int valueId) {
         this.locked = locked;
         this.stringValue = stringValue;
         this.doubleValue = doubleValue;
         this.highlighted = highlighted;
+        this.valueId = valueId;
         newStringValue = null;
         newDoubleValue = 0;
         changed = false;
@@ -138,6 +143,10 @@ public class CellForDisplay implements Serializable {
         return comment;
     }
 
+    public int getValueId() {
+        return valueId;
+    }
+
     @Override
     public String toString() {
         return "CellForDisplay{" +
@@ -152,6 +161,8 @@ public class CellForDisplay implements Serializable {
                 ", unsortedCol=" + unsortedCol +
                 ", ignored=" + ignored +
                 ", selected=" + selected +
+                ", comment='" + comment + '\'' +
+                ", valueId=" + valueId +
                 '}';
     }
 }

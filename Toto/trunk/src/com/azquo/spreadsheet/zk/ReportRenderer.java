@@ -47,6 +47,7 @@ public class ReportRenderer {
     public static final String EXECUTE = "az_Execute";
     public static final String FOLLOWON = "az_Followon";
     public static final String AZSAVE = "az_save";
+    public static final String AZREPEATSHEET = "az_repeatsheet";
 
     public static boolean populateBook(Book book, int valueId) {
         return populateBook(book, valueId, false, false, null);
@@ -109,8 +110,8 @@ public class ReportRenderer {
             // az_RepeatSheet will have a valid name query in it, get the set of names (use choice query for this), then starting with the initial
             // sheet populate a sheet for each valie in az_RepeatItem starting with the first sheet and adding directly after
 
-            SName az_repeatSheet = BookUtils.getNameByName("az_RepeatSheet", sheet);
-            SName az_repeatItem = BookUtils.getNameByName("az_RepeatItem", sheet);
+            SName az_repeatSheet = BookUtils.getNameByName(AZREPEATSHEET, sheet);
+            SName az_repeatItem = BookUtils.getNameByName(AZREPEATITEM, sheet);
             // second name match is if the repeat item and repeat sheet names are set global, stop them being found on subsequent runs
             if (az_repeatSheet != null && az_repeatSheet.getRefersToSheetName().equals(sheet.getSheetName())
                     && az_repeatItem != null && az_repeatItem.getRefersToSheetName().equals(sheet.getSheetName())){
@@ -130,7 +131,7 @@ public class ReportRenderer {
                             CopySheet(sheetRange, repeatItem);
                             Sheet newSheet = book.getSheetAt(book.getNumberOfSheets() - 1);// it will be the latest
                             for (SName name : namesForSheet){
-                                if (!name.getName().equalsIgnoreCase("az_RepeatSheet")){ // don't copy the repeat or we'll get a recursive loop!
+                                if (!name.getName().equalsIgnoreCase(AZREPEATSHEET)){ // don't copy the repeat or we'll get a recursive loop!
                                     // cloneSheet won't copy the names, need to make new ones
                                     // the new ones need to be applies to as well as refers to the new sheet
                                     // how to make a new name? Not sure I have so far!
@@ -145,7 +146,7 @@ public class ReportRenderer {
                                     newName.setRefersToFormula(newFormula);
                                 }
                             }
-                            SName newRepeatItem = BookUtils.getNameByName("az_RepeatItem", newSheet);
+                            SName newRepeatItem = BookUtils.getNameByName(AZREPEATITEM, newSheet);
                             SCell repeatItemCell = BookUtils.getSnameCell(newRepeatItem);
                             repeatItemCell.setStringValue(repeatItem);
                             // now need to move it and rename - hopefully references e.g. names will be affected correctly?
@@ -228,7 +229,7 @@ public class ReportRenderer {
                         DatabaseServer origServer = loggedInUser.getDatabaseServer();
                         try {
                             LoginService.switchDatabase(loggedInUser, databaseName);
-                            String error = populateRegionSet(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode); // in this case execute mode is telling the logs to be quiet
+                            String error = populateRegionSet(sheet, reportId,sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode); // in this case execute mode is telling the logs to be quiet
                             if (errors != null && error != null){
                                 if (errors.length() > 0){
                                     errors.append("\n");
@@ -241,7 +242,7 @@ public class ReportRenderer {
                         }
                         loggedInUser.setDatabaseWithServer(origServer, origDatabase);
                     } else {
-                        String error = populateRegionSet(sheet, reportId, region, valueId, userRegionOptions, loggedInUser, executeMode);
+                        String error = populateRegionSet(sheet, reportId,sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode);
                         if (errors != null && error != null){
                             if (errors.length() > 0){
                                 errors.append("\n");
@@ -364,7 +365,7 @@ public class ReportRenderer {
     }
 
     // return the error, executing reports might want it
-    private static String populateRegionSet(Sheet sheet, int reportId, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet) {
+    private static String populateRegionSet(Sheet sheet, int reportId, final String sheetName, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet) {
         if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
             sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
         }
@@ -380,13 +381,13 @@ public class ReportRenderer {
             for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
                 List<CellForDisplay> oneRow = new ArrayList<>();
                 for (int colNo = 0; colNo < dataRegion.getColumnCount(); colNo++) {
-                    oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true, false, null)); // make these ignored. Edd note : I'm not particularly happy about this, sent data should be sent data, this is just made up . . .
+                    oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true, false, null, 0)); // make these ignored. Edd note : I'm not particularly happy about this, sent data should be sent data, this is just made up . . .
                 }
                 dataRegionCells.add(oneRow);
             }
             // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings
             CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(region, colHeadings, null, null, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
-            loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
+            loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
             return null;
         }
         if (columnHeadingsDescription != null) {
@@ -448,7 +449,7 @@ public class ReportRenderer {
 
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, BookUtils.nameToStringLists(columnHeadingsDescription),
                         contextList, userRegionOptions, quiet);
-                loggedInUser.setSentCells(reportId, region, cellsAndHeadingsForDisplay);
+                loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
                 // might be factored into fill range in a bit
                 CellRegion displayRowHeadings = BookUtils.getCellRegionForSheetAndName(sheet, AZDISPLAYROWHEADINGS + region);

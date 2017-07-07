@@ -408,7 +408,7 @@ public final class ImportService {
                             for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
                                 int colInRegion = col % regionWitdh;
                                 int repeatCol = col / regionWitdh;
-                                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), regionName + "-" + repeatRow + "-" + repeatCol); // getting each time might be a little inefficient, can optimise if there is a performance problem here
+                                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), sName.getRefersToSheetName(),regionName + "-" + repeatRow + "-" + repeatCol); // getting each time might be a little inefficient, can optimise if there is a performance problem here
                                 if (colInRegion >= dataStartCol && rowInRegion >= dataStartRow
                                         && colInRegion <= dataStartCol + dataWitdh
                                         && rowInRegion <= dataStartRow + dataHeight
@@ -428,7 +428,7 @@ public final class ImportService {
                     }
                     return null;
                 } else { // a normal data region. Note that the data region used by a repeat scope should be harmless here as it will return a null on getSentCells, no need to be clever
-                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), regionName);
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), sName.getRefersToSheetName(), regionName);
                     if (cellsAndHeadingsForDisplay != null) {
                         //needs to be able to handle repeat regions here....
                         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
@@ -452,7 +452,7 @@ public final class ImportService {
                         }
                     }
                     try {
-                        final String result = SpreadsheetService.saveData(loggedInUser, regionName, onlineReport.getId(), onlineReport.getReportName());
+                        final String result = SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), sName.getRefersToSheetName(), regionName);
                         if (!result.startsWith("true")) {// unlikely to fail here I think but catch it anyway . . .
 
                             errorMessage += "- in region " + regionName + " -" + result;

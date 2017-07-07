@@ -130,8 +130,8 @@ public class SpreadsheetService {
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
-    public static ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(LoggedInUser loggedInUser, int reportId, String region, int rowInt, int colInt, int maxSize) throws Exception {
-        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
+    public static ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(LoggedInUser loggedInUser, int reportId,String sheetName, String region, int rowInt, int colInt, int maxSize) throws Exception {
+        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId,sheetName, region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).size() > colInt
@@ -147,8 +147,8 @@ public class SpreadsheetService {
 
     // some code duplication with above, a way to factor?
 
-    public static String getDebugForCell(LoggedInUser loggedInUser, int reportId, String region, int rowInt, int colInt) throws Exception {
-        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
+    public static String getDebugForCell(LoggedInUser loggedInUser, int reportId, String sheetName, String region, int rowInt, int colInt) throws Exception {
+        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId,sheetName, region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).size() > colInt
@@ -167,12 +167,12 @@ public class SpreadsheetService {
         RMIClient.getServerInterface(databaseAccessToken.getServerIp()).persistDatabase(databaseAccessToken);
     }
 
-    public static String saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName) throws Exception {
-        return saveData(loggedInUser, region, reportId, reportName, true); // default to persist server side
+    public static String saveData(LoggedInUser loggedInUser, int reportId, String reportName, String sheetName,  String region) throws Exception {
+        return saveData(loggedInUser, reportId, reportName, sheetName, region,  true); // default to persist server side
     }
 
-    public static String saveData(LoggedInUser loggedInUser, String region, int reportId, String reportName, boolean persist) throws Exception {
-        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
+    public static String saveData(LoggedInUser loggedInUser, int reportId, String reportName, String sheetName, String region, boolean persist) throws Exception {
+        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
         if (cellsAndHeadingsForDisplay != null) {
             // maybe go back to this later, currently it will be tripped up by a spreadsheet querying from more than one DB
             //if (!cellsAndHeadingsForDisplay.getOptions().noSave) {

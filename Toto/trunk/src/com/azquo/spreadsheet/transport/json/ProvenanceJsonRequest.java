@@ -7,6 +7,7 @@ import java.io.Serializable;
  */
 public class ProvenanceJsonRequest implements Serializable {
     public int reportId;
+    public String sheetName;
     public String region;
     public int row;
     public int col;

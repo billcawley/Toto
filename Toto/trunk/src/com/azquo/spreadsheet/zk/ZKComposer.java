@@ -202,7 +202,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
                 // ok here's the thing, the value on the spreadsheet (heading) is no good, it could be just for display, I want what the database would call the heading
                 // so I'd better get the headings.
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region); // maybe jam this object against the book? Otherwise multiple books could cause problems
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, name.getRefersToSheetName(), region); // maybe jam this object against the book? Otherwise multiple books could cause problems
                 if (cellsAndHeadingsForDisplay != null) {
                     //int localRow = event.getRow() - name.getRefersToCellRegion().getRow();
                     int localRow = cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1;//assume the bottom row
@@ -249,11 +249,13 @@ public class ZKComposer extends SelectorComposer<Component> {
 
     // used directly below, I need a list of the following
     static class RegionRowCol {
+        public final String sheetName;
         public final String region;
         public final int row;
         public final int col;
 
-        RegionRowCol(String region, int row, int col) {
+        RegionRowCol(String sheetName ,String region, int row, int col) {
+            this.sheetName = sheetName;
             this.region = region;
             this.row = row;
             this.col = col;
@@ -313,17 +315,17 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (regionRowColsToSave.isEmpty() && names != null) { // no repeat regions but there are normal ones
             for (SName name : names) {
                 String regionName = name.getName().substring(ReportRenderer.AZDATAREGION.length());
-                regionRowColsToSave.add(new RegionRowCol(regionName, row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
+                regionRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), regionName, row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
             }
         }
         List<SName> headingNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(),ReportRenderer.AZDISPLAYROWHEADINGS);
         if (headingNames!=null){
             for (SName name:headingNames){
-                  headingRowColsToSave.add(new RegionRowCol(name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length()),row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
+                  headingRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length()),row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
              }
         }
         for (RegionRowCol regionRowCol : regionRowColsToSave) {
-            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, regionRowCol.region);
+            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, regionRowCol.sheetName, regionRowCol.region);
             if (sentCells != null) { // a good start!
                 if (regionRowCol.row >= 0 && regionRowCol.col >= 0 &&
                         sentCells.getData().size() > regionRowCol.row && sentCells.getData().get(regionRowCol.row).size() > regionRowCol.col) {
@@ -354,7 +356,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
         }
         for (RegionRowCol headingRowCol : headingRowColsToSave) { //recording any edited row heading
-            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, headingRowCol.region);
+            final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, headingRowCol.sheetName, headingRowCol.region);
             if (sentCells != null) { // a good start!
                 if (headingRowCol.row >= 0 && headingRowCol.col >= 0 &&
                         sentCells.getRowHeadings().size() > headingRowCol.row && sentCells.getRowHeadings().get(headingRowCol.row).size() > headingRowCol.col) {
@@ -367,16 +369,16 @@ public class ZKComposer extends SelectorComposer<Component> {
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
-        showAzquoContextMenu(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
+        showAzquoContextMenu(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty(), myzss.getBook());
     }
 
 
-    private void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY) {
-        zkContextMenu.showAzquoContextMenu(cellRow, cellCol, mouseX, mouseY, null);
+    private void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY, Book book) {
+        zkContextMenu.showAzquoContextMenu(cellRow, cellCol, mouseX, mouseY, null, myzss);
     }
 
-    private void showAzquoContextMenu(int cellRow, int cellCol, Component ref) {
-        zkContextMenu.showAzquoContextMenu(cellRow, cellCol, 0, 0, ref);
+    private void showAzquoContextMenu(int cellRow, int cellCol, Component ref, Book book) {
+        zkContextMenu.showAzquoContextMenu(cellRow, cellCol, 0, 0, ref, myzss);
     }
 
 
@@ -408,11 +410,11 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         final Range range = Ranges.range(myzss.getSelectedSheet(), series.getValuesFormula());
                                         int pointIndex = chartsEvent.getPointIndex();
                                         if (range.getRowCount() == 0) {
-                                            showAzquoContextMenu(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getTarget());
+                                            showAzquoContextMenu(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getTarget(), myzss.getBook());
                                             //myzss.focusTo(range.getRow() + pointIndex, range.getColumn());
                                         } else {
                                             //myzss.focusTo(range.getRow(), range.getColumn() + pointIndex);
-                                            showAzquoContextMenu(range.getRow(), range.getColumn() + pointIndex, chartsEvent.getTarget());
+                                            showAzquoContextMenu(range.getRow(), range.getColumn() + pointIndex, chartsEvent.getTarget(), myzss.getBook());
                                         }
                                     } catch (Exception e) {
                                         e.printStackTrace();

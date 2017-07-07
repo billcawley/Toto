@@ -12,6 +12,7 @@ import java.util.List;
  */
 public class ExcelJsonRequest implements Serializable {
     public int reportId;
+    public String sheetName; // hopefully ok if not passed
     public String region;
     public String optionsSource;
     public List<List<String>> rowHeadings;

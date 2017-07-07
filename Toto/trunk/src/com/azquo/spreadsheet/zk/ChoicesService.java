@@ -415,17 +415,26 @@ public class ChoicesService {
         }
     }
 
-    static void setChoices(LoggedInUser loggedInUser, String context) {
+    static Map<String, String> parseChoicesFromDrillDownContextString(String context){
+        Map<String,String> map = new HashMap<>();
         int equalsPos = context.indexOf(" = ");
         while (equalsPos > 0) {
             int endParam = context.indexOf(";");
             if (endParam < 0) endParam = context.length();
             String paramName = context.substring(0, equalsPos).trim();
             String paramValue = context.substring(equalsPos + 3, endParam).trim();
-            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), paramName, paramValue);
+            map.put(paramName, paramValue);
             context = context.substring(endParam);
             if (context.length() > 0) context = context.substring(1);//remove the semicolon
             equalsPos = context.indexOf(" = ");
+        }
+        return map;
+    }
+
+    static void setChoices(LoggedInUser loggedInUser, String context) {
+        Map<String, String> stringStringMap = parseChoicesFromDrillDownContextString(context);
+        for (String key : stringStringMap.keySet()){
+            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), key, stringStringMap.get(key));
         }
     }
 }

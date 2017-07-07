@@ -9,6 +9,7 @@ import com.azquo.memorydb.Constants;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
+import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
@@ -23,6 +24,7 @@ import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
+import org.zkoss.zss.model.SSheet;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zssex.ui.widget.Ghost;
 import org.zkoss.zul.*;
@@ -32,6 +34,7 @@ import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by edward on 26/01/17.
@@ -115,7 +118,7 @@ class ZKContextMenu {
     Instructions Labels - more region definitions
     highlight
     */
-    void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY, Component ref) {
+    void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY, Component ref, Spreadsheet myzss) {
         while (editPopup.getChildren().size() > 0) { // clear it out
             editPopup.removeChild(editPopup.getLastChild());
         }
@@ -173,22 +176,22 @@ class ZKContextMenu {
                 }
             }
             try {
-                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, region, regionRow, regionColumn, 1000);
+                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, regionRow, regionColumn, 1000);
                 if (provenanceDetailsForDisplay.getProcenanceForDisplayList() != null && !provenanceDetailsForDisplay.getProcenanceForDisplayList().isEmpty()) {
-                    buildContextMenuProvenance(provenanceDetailsForDisplay);
+                    buildContextMenuProvenance(provenanceDetailsForDisplay, myzss);
                     buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
                     Menuitem auditItem = new Menuitem("Audit");
                     editPopup.appendChild(auditItem);
                     auditItem.setPopup(provenancePopup);
 //                            auditItem.addEventListener("onClick",
 //                                    event -> System.out.println("audit menu item clicked"));
-                    buildContextMenuDrillDownIfApplicable(region, regionRow, regionColumn);
+                    buildContextMenuDrillDownIfApplicable(myzss.getSelectedSheetName(), region, regionRow, regionColumn);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            buildContextMenuDebug(region, regionRow, regionColumn);
-            buildContextMenuInstructions(region);
+            buildContextMenuDebug(myzss.getSelectedSheetName(), region, regionRow, regionColumn);
+            buildContextMenuInstructions(myzss.getSelectedSheetName(), region);
 
             popupChild = highlightPopup.getFirstChild();
             while (popupChild != null) {
@@ -262,7 +265,7 @@ class ZKContextMenu {
         }
     }
 
-    private void buildContextMenuProvenance(ProvenanceDetailsForDisplay provenanceDetailsForDisplay) {
+    private void buildContextMenuProvenance(ProvenanceDetailsForDisplay provenanceDetailsForDisplay, Spreadsheet myzss) {
         Label provenanceLabel;
         if (provenanceDetailsForDisplay.getFunction() != null) {
             provenanceLabel = new Label();
@@ -293,8 +296,76 @@ class ZKContextMenu {
                         Iterator<String> it = value.getSecond().iterator();
                         if (provenanceForDisplay.isInSpreadsheet() && value.getFirst() != null && value.getFirst() > 0) {
                             final Toolbarbutton provButton = new Toolbarbutton("\t" + it.next());
+                            // are we going to switch to another sheet? need to pas the book through
                             provButton.addEventListener("onClick",
-                                    event -> ZKComposerUtils.openDrillDown(loggedInUser, provenanceForDisplay.getName(), provenanceForDisplay.getContext(), value.getFirst()));
+                                    event -> {
+    /* Now we have the option to make a sheet per choice finding the sheet shouldn't be that difficult, is there a
+    report name that matches along with a repeat item that matches one of the choices the issue then is how to focus
+    the cell - we would need to scan the sent regions for the value id maybe or create the drilldown report but don't
+    show it and instead just get the cell coordinates we're interested off it
+     */
+                                            Book book = myzss.getBook();
+                                            boolean trySheetSwitch = false;
+                                            for (SName name : book.getInternalBook().getNames()){
+                                                if (name.getName().toLowerCase().contains(ReportRenderer.AZREPEATSHEET)){
+                                                    trySheetSwitch = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (trySheetSwitch){
+                                                for (SSheet sheet : book.getInternalBook().getSheets()){
+                                                    SName reportNameName = BookUtils.getNameByName(ReportRenderer.AZREPORTNAME, book.getSheet(sheet.getSheetName()));
+                                                    if (reportNameName != null && reportNameName.getRefersToSheetName() == sheet.getSheetName() &&
+                                                            BookUtils.getSnameCell(reportNameName).getStringValue().equalsIgnoreCase(provenanceForDisplay.getName())){ // then it's a candidate
+                                                        SName repeatItemName = book.getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM, sheet.getSheetName()); // should be fine we want it specific to this
+                                                        if (repeatItemName != null){
+                                                            String repeatItem = BookUtils.getSnameCell(repeatItemName).getStringValue();
+                                                            // does the repeatItem match a choice? I suppose there could be false matches, cross that bridge when we come to it.
+                                                            Map<String, String> stringStringMap = ChoicesService.parseChoicesFromDrillDownContextString(provenanceForDisplay.getContext());
+                                                            if (stringStringMap.values().contains(repeatItem)){ // it should case match as from the same source
+                                                                // then it's this sheet we want
+                                                                myzss.setSelectedSheet(sheet.getSheetName());
+                                                                // ok, now, how to set the cell according to the value???
+                                                                List<CellsAndHeadingsForDisplay> sentForReportAndSheet = loggedInUser.getSentForReportAndSheet(reportId, repeatItem);
+                                                                String region = null;
+                                                                int rowIndex = 0;
+                                                                int colIndex = 0;
+                                                                for (CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay : sentForReportAndSheet){
+                                                                    rowIndex = 0;
+                                                                    for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()){
+                                                                        colIndex = 0;
+                                                                        for (CellForDisplay cellForDisplay : row){
+                                                                            // now check the value id
+                                                                            if (cellForDisplay.getValueId() == value.getFirst()){
+                                                                                region = cellsAndHeadingsForDisplay.getRegion(); // how we'll detect to break the outer loops
+                                                                                break;
+                                                                            }
+                                                                            colIndex++;
+                                                                        }
+                                                                        if (region != null){
+                                                                            break;
+                                                                        }
+                                                                        rowIndex++;
+                                                                    }
+                                                                    if (region != null){
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                if (region != null){ // so now fund the data region's name, add the row and col indexes and we should have our cell to select!
+                                                                    SName dataRegionName = BookUtils.getNameByName(ReportRenderer.AZDATAREGION + region, book.getSheet(sheet.getSheetName()));
+                                                                    if (dataRegionName.getRefersToSheetName().equalsIgnoreCase(sheet.getSheetName())){ // gotta double check as global names may be left hanging around . . .
+                                                                        myzss.focusTo(dataRegionName.getRefersToCellRegion().getRow() + rowIndex, dataRegionName.getRefersToCellRegion().getColumn() + colIndex);
+                                                                        myzss.setFocus(true);
+                                                                        return; // don't do the normal stuff
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        ZKComposerUtils.openDrillDown(loggedInUser, provenanceForDisplay.getName(), provenanceForDisplay.getContext(), value.getFirst());
+                                    });
                             provenancePopup.appendChild(provButton);
                         } else {
                             provenanceLabel = new Label();
@@ -304,10 +375,13 @@ class ZKContextMenu {
                         }
                         StringBuilder names = new StringBuilder();
                         while (it.hasNext()) {
-                            if (names.length() > 0) {
-                                names.append(", ");
+                            String s = it.next();
+                            if (!s.startsWith("Value History")){ // hacky string literal . . .anyway stop showing history at this point
+                                if (names.length() > 0) {
+                                    names.append(", ");
+                                }
+                                names.append(s);
                             }
-                            names.append(it.next());
                         }
                         provenanceLabel = new Label();
                         provenanceLabel.setMultiline(true);
@@ -400,14 +474,14 @@ class ZKContextMenu {
         provenancePopup.appendChild(button);
     }
 
-    private void buildContextMenuDrillDownIfApplicable(String region, int regionRow, int regionColumn) {
+    private void buildContextMenuDrillDownIfApplicable(String sheetName, String region, int regionRow, int regionColumn) {
         for (SName sName : myzss.getBook().getInternalBook().getNames()) {
             // going through all the names there might be one without a name
             if (sName.getName() != null && sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())) {
                 String qualifier = sName.getName().substring(("az_drilldown" + region).length()).replace("_", " ");
                 String drillDownString = BookUtils.getSnameCell(sName).getStringValue();
                 if (drillDownString.length() > 0) {
-                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, region);
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
                     final List<String> rowHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(regionRow);
                     List<String> colHeadings = new ArrayList<>();
                     for (int rowNo = 0; rowNo < cellsAndHeadingsForDisplay.getColumnHeadings().size(); rowNo++) {
@@ -444,10 +518,10 @@ class ZKContextMenu {
         }
     }
 
-    private void buildContextMenuDebug(String region, int regionRow, int regionColumn) {
+    private void buildContextMenuDebug(String sheetName, String region, int regionRow, int regionColumn) {
         // ok, adding new debug info here, it doesn't require values in the cell unlike provenance
         try {
-            String debugString = SpreadsheetService.getDebugForCell(loggedInUser, reportId, region, regionRow, regionColumn);
+            String debugString = SpreadsheetService.getDebugForCell(loggedInUser, reportId, sheetName, region, regionRow, regionColumn);
             Label debugLabel = new Label();
             debugLabel.setMultiline(true);
             debugLabel.setValue("Debug\n");
@@ -509,8 +583,8 @@ class ZKContextMenu {
         }
     }
 
-    private void buildContextMenuInstructions(String region) {
-        final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, region);
+    private void buildContextMenuInstructions(String sheetName, String region) {
+        final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, sheetName, region);
         if (sentCells != null && sentCells.getData().size() > 0) {
             StringBuilder instructionsText = new StringBuilder();
             instructionsText.append("COLUMN HEADINGS\n\n");

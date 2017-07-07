@@ -93,10 +93,13 @@ public class DSSpreadsheetService {
                         sourceCell.setLocked(true); // and lock the cell!
                     }
                 }
-                // I can only add a comment here if it is a single value or single name
+                // I can only add a comment here if it is a single value or single name#
+                // I can also assign value id if there's one value which can be useful report side fort finding a cell to select on "same workbook" dirlldowns
+                int thisValueId = 0;
                 Provenance p = null;
                 if (sourceCell.getListOfValuesOrNamesAndAttributeName() != null) { // can it be? It seems so
                     if (sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues().size() == 1) {
+                        thisValueId = sourceCell.getListOfValuesOrNamesAndAttributeName().getValues().get(0).getId();
                         p = sourceCell.getListOfValuesOrNamesAndAttributeName().getValues().get(0).getProvenance();
                     } else if (sourceCell.getListOfValuesOrNamesAndAttributeName().getNames() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getNames().size() == 1) {
                         p = sourceCell.getListOfValuesOrNamesAndAttributeName().getNames().get(0).getProvenance();
@@ -106,7 +109,8 @@ public class DSSpreadsheetService {
                 if (p != null && p.getMethod() != null && p.getMethod().contains("comment :")) { // got to stop these kinds of string literals
                     comment = p.getMethod().substring(p.getMethod().indexOf("comment :") + "comment :".length()).trim();
                 }
-                displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored, sourceCell.isSelected(), comment));
+
+                displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored, sourceCell.isSelected(), comment, thisValueId));
                 if (regionOptions.lockRequest && lockCheckResult.size() == 0) { // if we're going to lock gather all relevant values, stop gathering if we found data already locked
                     if (sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null
                             && !sourceCell.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {

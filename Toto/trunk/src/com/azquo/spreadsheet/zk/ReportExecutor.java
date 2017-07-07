@@ -169,7 +169,7 @@ public class ReportExecutor {
                                         noSave = userRegionOptions.getNoSave();
                                     }
                                     if (!noSave) {
-                                        SpreadsheetService.saveData(loggedInUser, region.toLowerCase(), onlineReport.getId(), onlineReport.getReportName(), false); // to not persist right now
+                                        SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), name.getRefersToSheetName(), region.toLowerCase(), false); // to not persist right now
                                     }
                                 }
                             }

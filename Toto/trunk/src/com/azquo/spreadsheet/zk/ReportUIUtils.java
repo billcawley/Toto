@@ -167,7 +167,7 @@ public class ReportUIUtils {
             // take into account the offset from the top left of the repeated region and the data region in it
             localRow -= dataRowStartInRepeatRegion;
             localCol -= dataColStartInRepeatRegion;
-            return new ZKComposer.RegionRowCol(repeatRegionName + "-" + repeatRow + "-" + repeatCol, localRow, localCol);
+            return new ZKComposer.RegionRowCol(repeatRegion.getRefersToSheetName(), repeatRegionName + "-" + repeatRow + "-" + repeatCol, localRow, localCol);
         }
         return null;
     }

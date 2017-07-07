@@ -227,12 +227,12 @@ public class ExcelController {
                     // put an empty data set here as the reference is final, fill it out below with the data sent size from the user
                     // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings, parsed into an array in Excel
                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(excelJsonRequest.region, colHeadings, null, null, null, new ArrayList<>(), null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);
-                    loggedInUser.setSentCells(excelJsonRequest.reportId, excelJsonRequest.region, cellsAndHeadingsForDisplay);
+                    loggedInUser.setSentCells(excelJsonRequest.reportId, excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
                     return "Empty space set to ad hoc data : " + excelJsonRequest.region;
                 } else {
                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), excelJsonRequest.region, 0, excelJsonRequest.rowHeadings, excelJsonRequest.columnHeadings,
                             excelJsonRequest.context, userRegionOptions, true);
-                    loggedInUser.setSentCells(excelJsonRequest.reportId, excelJsonRequest.region, cellsAndHeadingsForDisplay);
+                    loggedInUser.setSentCells(excelJsonRequest.reportId, excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
                     return jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(cellsAndHeadingsForDisplay));
                 }
             }
@@ -241,7 +241,7 @@ public class ExcelController {
                 // todo : ad hoc . . .
                 ExcelJsonSaveRequest excelJsonSaveRequest = jacksonMapper.readValue(jsonSave, ExcelJsonSaveRequest.class);
                 String result = null;
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(excelJsonSaveRequest.reportId, excelJsonSaveRequest.region);
+                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(excelJsonSaveRequest.reportId, excelJsonSaveRequest.sheetName, excelJsonSaveRequest.region);
                 boolean adHoc = false;
                 if (cellsAndHeadingsForDisplay != null) {
                     final List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
@@ -250,7 +250,7 @@ public class ExcelController {
                         for (int rowNo = 0; rowNo < excelJsonSaveRequest.data.size(); rowNo++) {
                             List<CellForDisplay> oneRow = new ArrayList<>();
                             for (int colNo = 0; colNo < excelJsonSaveRequest.data.get(0).size(); colNo++) {
-                                oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true, false, null)); // make these ignored. Edd note : I'm not particularly happy about this, sent data should be sent data, this is just made up . . .
+                                oneRow.add(new CellForDisplay(false, "", 0, false, rowNo, colNo, true, false, null, 0)); // make these ignored. Edd note : I'm not particularly happy about this, sent data should be sent data, this is just made up . . .
                             }
                             sentData.add(oneRow);
                         }
@@ -318,12 +318,12 @@ public class ExcelController {
                     }
                     // then reset the sent cells, they should be blanked after each save if it's an adhoc region. Need to think clearly about how things like this work.
                     if (adHoc) {
-                        loggedInUser.setSentCells(excelJsonSaveRequest.reportId, cellsAndHeadingsForDisplay.getRegion(), new CellsAndHeadingsForDisplay(cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getColumnHeadings(), null, null, null, new ArrayList<>(), null, null, null, 0, cellsAndHeadingsForDisplay.getOptions(), null));
+                        loggedInUser.setSentCells(excelJsonSaveRequest.reportId, excelJsonSaveRequest.sheetName, cellsAndHeadingsForDisplay.getRegion(), new CellsAndHeadingsForDisplay(cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getColumnHeadings(), null, null, null, new ArrayList<>(), null, null, null, 0, cellsAndHeadingsForDisplay.getOptions(), null));
                     }
                     if (itemsChanged > 0) {
                         OnlineReport report = OnlineReportDAO.findById(excelJsonSaveRequest.reportId);
                         loggedInUser.setContext(excelJsonSaveRequest.context); // in this case context for provenance
-                        String toReturn = SpreadsheetService.saveData(loggedInUser, excelJsonSaveRequest.region, excelJsonSaveRequest.reportId, report.getReportName());
+                        String toReturn = SpreadsheetService.saveData(loggedInUser, excelJsonSaveRequest.reportId, report.getReportName(), excelJsonSaveRequest.sheetName, excelJsonSaveRequest.region);
                         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
                         return toReturn;
                     } else {
@@ -348,7 +348,7 @@ public class ExcelController {
             }
             if (provenanceJson != null) {
                 ProvenanceJsonRequest provenanceJsonRequest = jacksonMapper.readValue(provenanceJson, ProvenanceJsonRequest.class);
-                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, provenanceJsonRequest.reportId, provenanceJsonRequest.region, provenanceJsonRequest.row, provenanceJsonRequest.col, 1000);
+                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, provenanceJsonRequest.reportId, provenanceJsonRequest.sheetName, provenanceJsonRequest.region, provenanceJsonRequest.row, provenanceJsonRequest.col, 1000);
                 // todo - push the formatting to Excel! Just want it to work for the moment . . .
                 StringBuilder toSend = new StringBuilder();
                 int count = 0;
