@@ -371,61 +371,65 @@ public class ZKComposer extends SelectorComposer<Component> {
         //we do not seem to be able to detect insertion or deletion of rows, so this routine detects row insertion/deletion after the event
         SBook book = sheet.getInternalSheet().getBook();
         for (SName name : book.getNames()) {
-            if (name.getRefersToSheetName().equals(sheet.getSheetName()) && name.getName().toLowerCase().startsWith(ReportRenderer.AZDISPLAYROWHEADINGS)) {
-                String region = name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length());
-                int size = name.getRefersToCellRegion().getRowCount();
-                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheet.getSheetName(),region); // maybe jam this object against the book? Otherwise multiple books could cause problems
-                int oldSize = cellsAndHeadingsForDisplay.getRowHeadings().size();
-                CellRegion newHeadings = name.getRefersToCellRegion();
-                List<List<String>> oldHeadings = cellsAndHeadingsForDisplay.getRowHeadings();
-                //WE ASSUME ONLY ONE COLUMN OF HEADINGS!
-                if (oldSize != size) {
-                    List<List<String>> revisedHeadings = new ArrayList<>();
-                    List<List<CellForDisplay>> revisedData = new ArrayList<>();
-                    List<List<CellForDisplay>> oldData = cellsAndHeadingsForDisplay.getData();
-                     if (oldSize < size) {
-                                    boolean inserted = false;
-                        //assuming that inserts/deletes cannot happen on the bottom line - the region would not adjust
-                         int added = 0;
+            try {
+                if (name.getRefersToSheetName().equals(sheet.getSheetName()) && name.getName().toLowerCase().startsWith(ReportRenderer.AZDISPLAYROWHEADINGS)) {
+                    String region = name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length());
+                    int size = name.getRefersToCellRegion().getRowCount();
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheet.getSheetName(), region); // maybe jam this object against the book? Otherwise multiple books could cause problems
+                    int oldSize = cellsAndHeadingsForDisplay.getRowHeadings().size();
+                    CellRegion newHeadings = name.getRefersToCellRegion();
+                    List<List<String>> oldHeadings = cellsAndHeadingsForDisplay.getRowHeadings();
+                    //WE ASSUME ONLY ONE COLUMN OF HEADINGS!
+                    if (oldSize != size) {
+                        List<List<String>> revisedHeadings = new ArrayList<>();
+                        List<List<CellForDisplay>> revisedData = new ArrayList<>();
+                        List<List<CellForDisplay>> oldData = cellsAndHeadingsForDisplay.getData();
+                        if (oldSize < size) {
+                            boolean inserted = false;
+                            //assuming that inserts/deletes cannot happen on the bottom line - the region would not adjust
+                            int added = 0;
 
-                        for (int rowNo = 0; rowNo < size; rowNo++) {
-                            if (!inserted && (rowNo >= oldSize || !sheet.getInternalSheet().getCell(newHeadings.getRow() + rowNo, newHeadings.getColumn()).getStringValue().equals(oldHeadings.get(rowNo).get(0)))) {
-                                for (int rowNo3 = 0; rowNo3 < size - oldSize; rowNo3++) {
-                                    List<String> blankHeading = new ArrayList<>();
-                                    blankHeading.add("");
-                                    List<CellForDisplay> blankData = new ArrayList<>();
-                                    for (int colNo = 0;colNo < cellsAndHeadingsForDisplay.getData().get(0).size();colNo++){
-                                        blankData.add(new CellForDisplay(false,"",0,false, 0,colNo, false,false,"",0));//there might be problems if the columns have been sorted!
+                            for (int rowNo = 0; rowNo < size; rowNo++) {
+                                if (!inserted && (rowNo >= oldSize || !sheet.getInternalSheet().getCell(newHeadings.getRow() + rowNo, newHeadings.getColumn()).getStringValue().equals(oldHeadings.get(rowNo).get(0)))) {
+                                    for (int rowNo3 = 0; rowNo3 < size - oldSize; rowNo3++) {
+                                        List<String> blankHeading = new ArrayList<>();
+                                        blankHeading.add("");
+                                        List<CellForDisplay> blankData = new ArrayList<>();
+                                        for (int colNo = 0; colNo < cellsAndHeadingsForDisplay.getData().get(0).size(); colNo++) {
+                                            blankData.add(new CellForDisplay(false, "", 0, false, 0, colNo, false, false, "", 0));//there might be problems if the columns have been sorted!
+                                        }
+                                        revisedHeadings.add(blankHeading);
+                                        revisedData.add(blankData);
+                                        added++;
+                                        rowNo++;
                                     }
-                                    revisedHeadings.add(blankHeading);
-                                    revisedData.add(blankData);
-                                    added++;
-                                    rowNo++;
+                                    inserted = true;
                                 }
-                                inserted = true;
-                            }
-                            revisedData.add(oldData.get(rowNo - added));
-                            revisedHeadings.add(oldHeadings.get(rowNo - added));
+                                revisedData.add(oldData.get(rowNo - added));
+                                revisedHeadings.add(oldHeadings.get(rowNo - added));
 
-                        }
-                    } else {
-                        boolean deleted = false;
-                        int rowNo = 0;
-                         while (rowNo < oldSize){
-                            if (!deleted && (rowNo >= size || !sheet.getInternalSheet().getCell(newHeadings.getRow() + rowNo, newHeadings.getColumn()).getStringValue().equals(oldHeadings.get(rowNo).get(0)))) {
-                                rowNo += oldSize - size;
-                                deleted = true;
                             }
-                            revisedData.add(oldData.get(rowNo));
-                            revisedHeadings.add(oldHeadings.get(rowNo));
-                            rowNo++;
+                        } else {
+                            boolean deleted = false;
+                            int rowNo = 0;
+                            while (rowNo < oldSize) {
+                                if (!deleted && (rowNo >= size || !sheet.getInternalSheet().getCell(newHeadings.getRow() + rowNo, newHeadings.getColumn()).getStringValue().equals(oldHeadings.get(rowNo).get(0)))) {
+                                    rowNo += oldSize - size;
+                                    deleted = true;
+                                }
+                                revisedData.add(oldData.get(rowNo));
+                                revisedHeadings.add(oldHeadings.get(rowNo));
+                                rowNo++;
+                            }
                         }
+                        cellsAndHeadingsForDisplay.setData(revisedData);
+                        cellsAndHeadingsForDisplay.setRowHeadings(revisedHeadings);
+
                     }
-                    cellsAndHeadingsForDisplay.setData(revisedData);
-                    cellsAndHeadingsForDisplay.setRowHeadings(revisedHeadings);
 
                 }
-
+            }catch (Exception e){
+                //bad name
             }
         }
     }
