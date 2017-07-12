@@ -43,7 +43,10 @@ class DataRegionHeadingService {
             nameLists.add(row);
             for (String sourceCell : sourceRow) {
                 sourceCell = sourceCell.trim();
-
+                //ignore 'editable' at this stage
+                if (sourceCell.toLowerCase().endsWith(StringLiterals.EDITABLE)){
+                    sourceCell = sourceCell.substring(0,sourceCell.length()-StringLiterals.EDITABLE.length()).trim();
+                }
                 if (sourceCell == null || sourceCell.length() == 0) {
                     row.add(null);
                 } else {
