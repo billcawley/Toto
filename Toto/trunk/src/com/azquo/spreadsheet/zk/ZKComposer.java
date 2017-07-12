@@ -599,6 +599,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         filterPopup.open(pageX, pageY);
     }
 
+
+/* not used might as well comment for the mo
     @Listen("onCellSelection = #myzss")
     public void onCellSelection(CellSelectionEvent event){
         StringBuilder info = new StringBuilder();
@@ -607,7 +609,7 @@ public class ZKComposer extends SelectorComposer<Component> {
 
         //show info...
     }
-
+*/
 
 
 }
