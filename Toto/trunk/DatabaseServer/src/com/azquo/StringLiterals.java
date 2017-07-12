@@ -43,5 +43,5 @@ public class StringLiterals {
     public static final String languageIndicator = "<-";
 
     public static final String HIERARCHY = "hierarchy";
-    public static final String EDITABLE = "editable";
+    public static final String EDITABLE = " editable";
 }
