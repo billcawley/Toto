@@ -24,7 +24,7 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     // these two flag rows or columns where a zero result should be saved if there's currently no value for that cell in the DB. Normally 0 is the same as nothing so I don't bother saving.
     private final Set<Integer> zeroSavedColumnIndexes;
     private final Set<Integer> zeroSavedRowIndexes;
-    private final List<List<CellForDisplay>> data;
+    private List<List<CellForDisplay>> data;
     private final List<List<String>> rowHeadingsSource;
     private final List<List<String>> colHeadingsSource;
     private final List<List<String>> contextSource;
@@ -59,8 +59,11 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     public List<List<String>> getRowHeadings() {
         return rowHeadings;
     }
+
+    public void setRowHeadings(List<List<String>> rowHeadings){ this.rowHeadings = rowHeadings;
+    }
     public void  setRowHeading(int rowNo, int colNo, String value) {
-         rowHeadings.get(rowNo).add(colNo,value);
+         rowHeadings.get(rowNo).set(colNo,value);
     }
 
     public Set<Integer> getZeroSavedColumnIndexes() {
@@ -74,6 +77,8 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     public List<List<CellForDisplay>> getData() {
         return data;
     }
+
+    public void setData(List<List<CellForDisplay>> data){this.data = data;}
 
     public List<List<String>> getRowHeadingsSource() {
         return rowHeadingsSource;
