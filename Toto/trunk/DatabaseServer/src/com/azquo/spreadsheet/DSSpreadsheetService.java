@@ -554,12 +554,12 @@ public class DSSpreadsheetService {
         List<Name> newNames = new ArrayList<>();
         for (int rowNo = 0;rowNo < cellsAndHeadingsForDisplay.getRowHeadings().size();rowNo++) {
             String heading = cellsAndHeadingsForDisplay.getRowHeadings().get(rowNo).get(0);
-            if (heading.length() == 0) {
-                needDisplayRows = true;
+            if (heading==null || heading.length() == 0) {
+                 needDisplayRows = true;
             }else {
                 Name newName =NameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading, parentName, true);
                 newNames.add(newName);
-                if (newName!= origShownNames.get(rowNo)){
+                if (rowNo>= origShownNames.size() || newName!= origShownNames.get(rowNo)){
                     //mark the line as changed = these now refer to a new name
                     List<CellForDisplay> dataRow = cellsAndHeadingsForDisplay.getData().get(rowNo);
                     for (CellForDisplay cell:dataRow){
@@ -657,7 +657,7 @@ public class DSSpreadsheetService {
             Iterator i = headingRow.iterator();
             while (i.hasNext()){
                 String heading = (String) i.next();
-                if (heading.startsWith(".") && heading.toLowerCase().endsWith(" clear")){
+                if (heading!=null && heading.startsWith(".") && heading.toLowerCase().endsWith(" clear")){
                     String att = heading.substring(1, heading.length() - " clear".length() - 1); //remove the initial '.' and ' clear'
                     try {
                         Name name = NameService.findByName(azquoMemoryDBConnection, att);
