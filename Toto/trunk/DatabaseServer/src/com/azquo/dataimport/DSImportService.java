@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  * <p>
  * Created by Edd on 20/05/15.
- *
+ * <p>
  * This class is the entry point for processing an uploaded data file. It will do basic preparation e.g. guessing the number of
  * lines and possible headings that may be stored in the database. Simple sets files are dealt with in here.
  * Otherwise other classes in this package are required to parse headers and read the lines.
@@ -58,11 +58,11 @@ public class DSImportService {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an XLSX import, a different thing from a data entry area.
         azquoMemoryDBConnection.setProvenance(user, "imported", fileName, "");
-        if (fileName.contains(":")){
+        if (fileName.contains(":")) {
             fileName = fileName.substring(fileName.indexOf(":") + 1);//remove the workbook name.  sent only for the provenance.
         }
         return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, attributeNames, persistAfter, isSpreadsheet, new AtomicInteger());
-   }
+    }
 
     // Other entry point into the class functionality, called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     // I wonder if the valuesModifiedCounter is a bit hacky, will maybe revisit this later
@@ -257,7 +257,7 @@ public class DSImportService {
         // try to find a name which might have the headings in its attributes
         Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
         //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
-         while (importInterpreter == null && (importInterpreterLookup.contains(" ") || importInterpreterLookup.contains("_"))) {
+        while (importInterpreter == null && (importInterpreterLookup.contains(" ") || importInterpreterLookup.contains("_"))) {
             //There may, though, be separate interpreters for A_B_xxx and A_xxx, so we try A_B first
             if (importInterpreterLookup.contains(" ")) {
                 importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf(" "));
@@ -268,7 +268,8 @@ public class DSImportService {
         }
         // check if that name (assuming it's not null!) has groovy in an attribute
         filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
-        if (importInterpreter != null && !maybeHasHeadings(filePath)) isSpreadsheet = false;//allow data uploaded in a spreadsheet to use pre-configured headings
+        if (importInterpreter != null && !maybeHasHeadings(filePath))
+            isSpreadsheet = false;//allow data uploaded in a spreadsheet to use pre-configured headings
         // checks the first few lines to sort batch size and get a hopefully correctly configured line iterator
         final HeadingsWithIteratorAndBatchSize lineIteratorAndBatchSize = getLineIteratorAndBatchSize(filePath, importInterpreter); // created here but it has no headers
         if (lineIteratorAndBatchSize == null) {
@@ -307,10 +308,9 @@ public class DSImportService {
                     throw new Exception("Invalid headers on import file - is this a report that required az_ReportName?");
                 }
                 // option to stack the clauses vertically
-                if (!buildHeadersFromVerticallyListedClauses(headers, lineIteratorAndBatchSize.lineIterator)){
+                if (!buildHeadersFromVerticallyListedClauses(headers, lineIteratorAndBatchSize.lineIterator)) {
                     return null;
                 }
-
             }
             if (isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
@@ -341,17 +341,14 @@ public class DSImportService {
         // checks the first few lines of a spreadsheet file to discover evidence of headings.  ten lines without a blank line, and without clauses in the top line indicates no headings
         BufferedReader br = new BufferedReader(new FileReader(filePath));
         String lineData = br.readLine();
-
-        if (lineData==null || lineData.contains(".") || lineData.contains(";")) {
+        if (lineData == null || lineData.contains(".") || lineData.contains(";")) {
             br.close();
             return true;
         }
-
         int lineCount = 10;
         while (lineCount-- > 0) {
-
             lineData = br.readLine();
-            if (lineData==null || lineData.replace("\t", "").replace(" ", "").length() == 0) {
+            if (lineData == null || lineData.replace("\t", "").replace(" ", "").length() == 0) {
                 br.close();
                 return true;
             }
@@ -377,8 +374,8 @@ public class DSImportService {
                         if (headers[colNo].length() == 0) {
                             headers[colNo] = heading;
                         } else {
-                            if (findReservedWord(heading)){
-                                 headers[colNo] += ";" + heading;
+                            if (findReservedWord(heading)) {
+                                headers[colNo] += ";" + heading;
                             } else {
                                 headers[colNo] = heading + "|" + headers[colNo];
                             }
@@ -390,7 +387,7 @@ public class DSImportService {
             }
             if (lineIterator.hasNext() && lastfilled) {
                 nextLine = lineIterator.next();
-            }else{
+            } else {
                 nextLine = null;
             }
         }

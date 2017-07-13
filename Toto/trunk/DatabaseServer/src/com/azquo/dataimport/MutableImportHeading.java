@@ -71,5 +71,6 @@ class MutableImportHeading {
     String exclusive = null;
     // in context of childof - only load the line if this name is in the set already
     boolean existing = false;
+    // if line values had a comma separated list for example , would be the split char. Only used for PwC russia so far
     String splitChar = null;
- }
+}

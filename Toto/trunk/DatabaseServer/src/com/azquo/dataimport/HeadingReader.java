@@ -61,16 +61,16 @@ class HeadingReader {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 int dividerPos = header.lastIndexOf(headingDivider); // is there context defined here?
                 // works backwards simply for convenience to chop off the context headings until only the heading is left, there is nothing significant about the ordering in contextHeadings
-                if (dividerPos > 0){
+                if (dividerPos > 0) {
                     contextHeadings = new ArrayList<>(); // reset/build the context headings
                 }
                 while (dividerPos >= 0) {
-                     final String contextHeadingString = header.substring(dividerPos + 1);
+                    final String contextHeadingString = header.substring(dividerPos + 1);
                     // if the heading ends with | the context heading will be blank, ignore it. A way to clear context if you just put a single | at the end of a heading
                     if (contextHeadingString.length() > 0) {
                         // context headings may not use many features but using the standard heading objects and interpreter is fine
                         MutableImportHeading contextHeading = interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames);
-                        if (contextHeading.attribute != null){
+                        if (contextHeading.attribute != null) {
                             attributeNames.add(contextHeading.attribute);//not sure when this should be removed.  It must apply until the context is changed THIS IS AN ADDITIONAL LANGUAGE USED TO UNDERSTAND THE HEADERS - NOT THE DATA!
                         }
                         contextHeadings.add(contextHeading);
@@ -228,7 +228,7 @@ class HeadingReader {
             case LANGUAGE: // language being attribute
                 if (result.equalsIgnoreCase(DATELANG)) {
                     heading.isDate = true;
-                    if (heading.attribute==null){
+                    if (heading.attribute == null) {
                         heading.isAttributeSubject = true;
                     }
                 } else {
@@ -286,8 +286,8 @@ class HeadingReader {
                 heading.existing = true;
                 break;
             case CLEAR:
-                if (heading.parentNames!=null){
-                    for (Name name:heading.parentNames) {
+                if (heading.parentNames != null) {
+                    for (Name name : heading.parentNames) {
                         name.setChildrenWillBePersisted(Collections.emptyList());
                     }
                 }
@@ -323,7 +323,7 @@ class HeadingReader {
                         }
                         if (!contextHeading.peers.isEmpty()) { // then try to resolve the peers! Generally context headings will feature one with peers but it's not 100%
                             // Context only really works with name in the heading otherwise how would the context differ over different headings, hence make the main heading name if it's not there
-                            if (mutableImportHeading.name==null){
+                            if (mutableImportHeading.name == null) {
                                 mutableImportHeading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, false);
                             }
                             if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()) {
@@ -401,7 +401,7 @@ class HeadingReader {
             }
             //as from Nov 16 all context headings are assumed to be peer headings
             heading.peerNames.add(heading.name);
-            for (MutableImportHeading cHeading:heading.contextHeadings){
+            for (MutableImportHeading cHeading : heading.contextHeadings) {
                 heading.peerNames.add(cHeading.name);
 
             }

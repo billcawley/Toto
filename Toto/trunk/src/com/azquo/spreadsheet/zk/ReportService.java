@@ -47,7 +47,7 @@ public class ReportService {
         SName sReportName= sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
         String thisReportName = BookUtils.getSnameCell(sReportName).getStringValue();
         OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(),thisReportName);
-        permissionsFromReports.put(thisReportName.toLowerCase(),new TypedPair(or, loggedInUser.getDatabase()));
+        permissionsFromReports.put(thisReportName.toLowerCase(),new TypedPair<>(or, loggedInUser.getDatabase()));
         for (SName sName : namesForSheet) {
             // run through every cell in any names region unlocking to I can later lock. Setting locking on a large selection seems to zap formatting, do it cell by cell
             if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {

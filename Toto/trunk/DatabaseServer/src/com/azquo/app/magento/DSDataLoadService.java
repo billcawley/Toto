@@ -274,17 +274,17 @@ public class DSDataLoadService {
         for (Map<String, String> entityTypeRecord : tableMap.get("catalog_category_entity")) {
             //invert the path for uploading to Azquo  -  1/2/3 becomes `3`,`2`,`1`
             StringTokenizer pathBits = new StringTokenizer(entityTypeRecord.get("path"), "/");
-            String path = "";
+            StringBuilder path = new StringBuilder();
             String thisCatNo = entityTypeRecord.get("entity_id");
             while (pathBits.hasMoreTokens()) {
                 String catNo = pathBits.nextToken();
                 if (catNo == null) {
                     System.out.println("we have a category with no name!");
                 }
-                if (path.isEmpty()) {
-                    path = catNo;
+                if (path.length() == 0) {
+                    path = new StringBuilder(catNo);
                 } else {
-                    path = path + StringLiterals.MEMBEROF + catNo;
+                    path.append(StringLiterals.MEMBEROF).append(catNo);
                 }
             }
             //TODO consider what might happen if importing categories from two different databases - don't do it!
@@ -297,7 +297,7 @@ public class DSDataLoadService {
         List<String> skuLanguage = new ArrayList<>();
         skuLanguage.add("SKU");
         for (Map<String, String> entityRow : tableMap.get("catalog_product_entity")) {
-            if (entityRow.get("sku") == null || entityRow.get("sku").isEmpty()){
+            if (entityRow.get("sku") == null || entityRow.get("sku").isEmpty()) {
                 System.out.println("Sku null on " + entityRow);
             } else {
                 Name magentoName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, entityRow.get("sku"), allSKUs, true, skuLanguage);
@@ -358,15 +358,15 @@ public class DSDataLoadService {
             String attributeNo = attribute.get("attribute_id");
             //attributeNames.put(attributeNo, attribute.get("attribute_code"));
             String attName = attribute.get("frontend_label");
-            if (attName == null || attName.isEmpty()){
+            if (attName == null || attName.isEmpty()) {
                 attName = attribute.get("attribute_code");
             }
-            if (attName == null || attName.isEmpty()){
+            if (attName == null || attName.isEmpty()) {
                 attName = "BLANK";
             }
             attributeNames.put(attributeNo, attName);
             // not default or custom then don't try to look up
-            if (!"".equals(attribute.get("source_model")) && !"eav/entity_attribute_source_table".equals(attribute.get("source_model"))){
+            if (!"".equals(attribute.get("source_model")) && !"eav/entity_attribute_source_table".equals(attribute.get("source_model"))) {
                 attributeNoLookup.add(attributeNo);
             }
         }
@@ -393,14 +393,14 @@ public class DSDataLoadService {
                     String val = attVals.get("value");
                     if (optionValues.get(val) != null || attributeNoLookup.contains(attNo)) {
                         String resolvedValue = optionValues.get(val);
-                        if (attributeNoLookup.contains(attNo)){ // hack for things like boolean
+                        if (attributeNoLookup.contains(attNo)) { // hack for things like boolean
                             resolvedValue = val;
                         }
                         /* new code added by Edd according to instruction from WFC 10/11/2016. A product (magentoName) cannot be in more than one option
                         On a clean load this won't happen anyway but on update it can e.g. in stock/out of stock. If the product is not removed from options first
                         then on a subsequent upload a product could appear as both in and out of stock! So run through existing options taking the product out . . .
                          */
-                        for (Name existingOption : magentoProductCategory.getChildren()){
+                        for (Name existingOption : magentoProductCategory.getChildren()) {
                             existingOption.removeFromChildrenWillBePersisted(magentoName);
                         }
                         //note - this is NOT a product id, so don't use the product id to find it!
@@ -422,14 +422,14 @@ public class DSDataLoadService {
         tableMap.remove("catalog_product_entity_int");
         String currentParent = "";
         Name bundleName = null;
-        String bundlePrices = "";
+        StringBuilder bundlePrices = new StringBuilder();
         for (Map<String, String> attVals : tableMap.get("catalog_product_bundle_selection")) {
             String parentId = attVals.get("parent_product_id");
             if (!currentParent.equals(parentId)) {
                 if (currentParent.length() > 0) {
-                    bundleName.setAttributeWillBePersisted("BUNDLEPRICES", bundlePrices);
+                    bundleName.setAttributeWillBePersisted("BUNDLEPRICES", bundlePrices.toString());
                 }
-                bundlePrices = "";
+                bundlePrices = new StringBuilder();
                 currentParent = parentId;
                 bundleName = azquoProductsFound.get(parentId);
                 if (bundleName == null) {
@@ -449,11 +449,11 @@ public class DSDataLoadService {
             }
             String sKU = childName.getAttribute("SKU");
             String price = attVals.get("selection_price_value");
-            if (bundlePrices.length() > 0) bundlePrices += ",";
-            bundlePrices += sKU + "=" + price;
+            if (bundlePrices.length() > 0) bundlePrices.append(",");
+            bundlePrices.append(sKU).append("=").append(price);
         }
         if (currentParent.length() > 0) {
-            bundleName.setAttributeWillBePersisted("bundleprices", bundlePrices);
+            bundleName.setAttributeWillBePersisted("bundleprices", bundlePrices.toString());
         }
 
         tableMap.remove("catalog_product_bundle_selection");
