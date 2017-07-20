@@ -303,6 +303,8 @@ class RegionFillerService {
             Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // rows to add - 1 as rows are inclusive
             CellOperationUtil.insertRow(insertRange);
         }
+        // a nasty bug WFC discovered - if the repeat scope isn't bigger than the repeat region then the repeat region may have been stretched!
+
         // so there should be enough space now the thing is to format the space
         int repeatColumn = 0;
         int repeatRow = 0;
@@ -312,7 +314,9 @@ class RegionFillerService {
         final int repeatDataLastRowOffset = displayDataRegion.getLastRow() - repeatRegion.getRefersToCellRegion().getRow();
         final int repeatDataLastColumnOffset = displayDataRegion.getLastColumn() - repeatRegion.getRefersToCellRegion().getColumn();
 
-        Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
+        // a nasty bug WFC discovered - if the repeat scope isn't bigger than the repeat region then the repeat region may have been stretched!
+//        Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
+        Range copySource = Ranges.range(sheet, rootRow, rootCol, rootRow + repeatRegionHeight - 1, rootCol + repeatRegionWidth - 1);
         // prepare the sapce for the data, it may have things like formulae
         if (repeatList2 != null && repeatItem2 != null) { // new cols x rows according to two repeat lists logic
             for (String item : repeatListItems) {
