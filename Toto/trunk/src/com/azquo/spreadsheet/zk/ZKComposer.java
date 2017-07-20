@@ -479,12 +479,12 @@ public class ZKComposer extends SelectorComposer<Component> {
                                     try {
                                         final Range range = Ranges.range(myzss.getSelectedSheet(), series.getValuesFormula());
                                         int pointIndex = chartsEvent.getPointIndex();
-                                        if (range.getRowCount() == 0) {
-                                            showAzquoContextMenu(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getTarget(), myzss.getBook());
-                                            //myzss.focusTo(range.getRow() + pointIndex, range.getColumn());
-                                        } else {
+                                        if (range.getRowCount() == 1) {
                                             //myzss.focusTo(range.getRow(), range.getColumn() + pointIndex);
                                             showAzquoContextMenu(range.getRow(), range.getColumn() + pointIndex, chartsEvent.getTarget(), myzss.getBook());
+                                        } else {
+                                            //myzss.focusTo(range.getRow() + pointIndex, range.getColumn());
+                                            showAzquoContextMenu(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getTarget(), myzss.getBook());
                                         }
                                     } catch (Exception e) {
                                         e.printStackTrace();
