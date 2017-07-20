@@ -9,7 +9,6 @@ import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
-import javax.xml.crypto.Data;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -104,8 +103,8 @@ class DataRegionHeadingService {
                             Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, name, attributeNames, true); // should return one
                             if (!names.isEmpty()) {// it should be just one
                                 List<DataRegionHeading> hierarchyList = new ArrayList<>();
-                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null, 0); // I assume this will be only one!
-                                resolveHierarchyForHeading(azquoMemoryDBConnection, offsetHeadings.get(0), hierarchyList, function, suffix, new ArrayList<>(), level);
+                                List<DataRegionHeading> offsetHeadings = dataRegionHeadingsFromNames(names, function, suffix, null, null, 0); // I assume this will be only one!
+                                resolveHierarchyForHeading(offsetHeadings.get(0), hierarchyList, function, suffix, new ArrayList<>(), level);
                                 if (namesQueryLimit > 0 && hierarchyList.size() > namesQueryLimit) {
                                     throw new Exception("While creating headings " + sourceCell + " resulted in " + hierarchyList.size() + " names, more than the specified limit of " + namesQueryLimit);
                                 }
@@ -150,7 +149,7 @@ class DataRegionHeadingService {
                             // maybe these two could have a "true" on returnReadOnlyCollection . . . todo
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
                             final Collection<Name> selectionSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, false);
-                            row.add(dataRegionHeadingsFromNames(mainSet, azquoMemoryDBConnection, function, suffix, null, selectionSet, 0));
+                            row.add(dataRegionHeadingsFromNames(mainSet, function, suffix, null, selectionSet, 0));
                         } else if (function == DataRegionHeading.FUNCTION.PERCENTILE) {
                             // todo - this function parameter parsing needs to be factored and be aware of commas in names
                             String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
@@ -170,7 +169,7 @@ class DataRegionHeadingService {
                             }
                             // maybe could have a "true" on returnReadOnlyCollection . . . todo
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
-                            row.add(dataRegionHeadingsFromNames(mainSet, azquoMemoryDBConnection, function, suffix, null, null, percentileDouble));
+                            row.add(dataRegionHeadingsFromNames(mainSet, function, suffix, null, null, percentileDouble));
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             Collection<Name> names;
                             try {
@@ -187,7 +186,7 @@ class DataRegionHeadingService {
                             if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
                                 throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
                             }
-                            row.add(dataRegionHeadingsFromNames(names, azquoMemoryDBConnection, function, suffix, null, null, 0));
+                            row.add(dataRegionHeadingsFromNames(names, function, suffix, null, null, 0));
                         }
                     }
                 }
@@ -197,13 +196,13 @@ class DataRegionHeadingService {
     }
 
     // recursive, the key is to add the offset to allow formatting of the hierarchy
-    private static void resolveHierarchyForHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading heading, List<DataRegionHeading> target
+    private static void resolveHierarchyForHeading(DataRegionHeading heading, List<DataRegionHeading> target
             , DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, int levelLimit) {
         if (offsetHeadings.size() < levelLimit) {// then get the children
             List<DataRegionHeading> offsetHeadingsCopy = new ArrayList<>(offsetHeadings);
             offsetHeadingsCopy.add(heading);
-            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), azquoMemoryDBConnection, function, suffix, offsetHeadingsCopy, null, 0)) {
-                resolveHierarchyForHeading(azquoMemoryDBConnection, child, target, function, suffix, offsetHeadingsCopy, levelLimit);
+            for (DataRegionHeading child : dataRegionHeadingsFromNames(heading.getName().getChildren(), function, suffix, offsetHeadingsCopy, null, 0)) {
+                resolveHierarchyForHeading(child, target, function, suffix, offsetHeadingsCopy, levelLimit);
             }
         }
         target.add(heading); // the "parent" is added after
@@ -736,7 +735,7 @@ class DataRegionHeadingService {
         return contextHeadings;
     }
 
-    private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, AzquoMemoryDBConnection azquoMemoryDBConnection, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
+    private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
       /*
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {

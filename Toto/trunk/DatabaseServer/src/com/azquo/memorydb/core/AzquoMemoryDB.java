@@ -22,13 +22,13 @@ import java.util.concurrent.atomic.AtomicReference;
  * User: cawley
  * Date: 25/10/13
  * Time: 10:33
- *
+ * <p>
  * This class represents the azquo database itself though more practically it's holding references to all entities by id and dealing with locking values.
- *
+ * <p>
  * Also references to instances of this class are held against each entity in that database.
- *
+ * <p>
  * The entities define how they relate to each other, that's not done here.
- *
+ * <p>
  * Created after it became apparent that Mysql in the way I'd arranged the objects didn't have a hope in hell of
  * delivering data fast enough. Use collections to implement Azquo spec.
  * <p>
@@ -54,7 +54,7 @@ public final class AzquoMemoryDB {
 
     // vanilla use of ConcurrentHashMap, should be fine
     public static AzquoMemoryDB getAzquoMemoryDB(String persistenceName, StringBuffer sessionLog) throws Exception {
-        return memoryDatabaseMap.computeIfAbsent(persistenceName, t-> new AzquoMemoryDB(persistenceName, sessionLog));
+        return memoryDatabaseMap.computeIfAbsent(persistenceName, t -> new AzquoMemoryDB(persistenceName, sessionLog));
         // open database logging could maybe be added back in client side
     }
 
@@ -140,7 +140,7 @@ public final class AzquoMemoryDB {
     public synchronized void lockTest() {
     }
 
-    public String getPersistenceName(){
+    public String getPersistenceName() {
         return azquoMemoryDBTransport.getPersistenceName();
     }
     // reads from a list of changed objects
@@ -160,7 +160,7 @@ public final class AzquoMemoryDB {
     }
 
     // while loading check that the id of the entity just loaded isn't above the current "next" id
-    void setNextId(int newNext){
+    void setNextId(int newNext) {
         nextId.getAndUpdate(current -> current < newNext ? newNext : current);
     }
 

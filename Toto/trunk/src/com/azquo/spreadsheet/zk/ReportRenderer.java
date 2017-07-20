@@ -487,7 +487,7 @@ public class ReportRenderer {
                         RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
                     } else {
                         // the more complex function that deals with repeat regions - it now notably does the headings
-                        RegionFillerService.fillDataForRepeatRegions(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxCol, valueId, quiet);
+                        RegionFillerService.fillDataForRepeatRegions(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxRow, maxCol, valueId, quiet);
                     }
                 }
             } catch (RemoteException re) {

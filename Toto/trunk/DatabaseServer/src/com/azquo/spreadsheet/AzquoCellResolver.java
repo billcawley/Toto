@@ -11,6 +11,7 @@ import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 
+
 import java.util.*;
 
 /**
@@ -237,7 +238,7 @@ public class AzquoCellResolver {
                 locked.isTrue = true;
             } else {
                 // ok new logic here, we need to know if we're going to use attributes or values
-                DataRegionHeading functionHeading =null;
+                DataRegionHeading functionHeading = null;
                 DataRegionHeading.FUNCTION function = null;
                 Collection<Name> valueFunctionSet = null;
                 double functionDoubleParameter = 0;
@@ -267,7 +268,7 @@ public class AzquoCellResolver {
                         if (valueId > 0) {
                             valueToTestFor = connection.getAzquoMemoryDB().getValueById(valueId);
                         }
-                        if (function==null || !function.equals(DataRegionHeading.FUNCTION.ALLEXACT)) {
+                        if (function == null || !function.equals(DataRegionHeading.FUNCTION.ALLEXACT)) {
                             for (DataRegionHeading lockCheck : headingsForThisCell) {
                                 //'unlocked' on any cell allows entry
                                 if (lockCheck.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED) {
@@ -313,7 +314,7 @@ between 2 and 3 so 1 in the amount between, times that by the difference between
 But can use a library?
                              */
                             double[] forPercentile;
-                            if (valuesHook.calcValues != null){ // then override with calc values
+                            if (valuesHook.calcValues != null) { // then override with calc values
                                 forPercentile = new double[valuesHook.calcValues.size()];
                                 int count = 0;
                                 for (double d : valuesHook.calcValues) {
@@ -345,9 +346,25 @@ But can use a library?
                                 doubleValue = p.evaluate(functionDoubleParameter * 100); // I think this function expects out of 100. We'll see . . .
                             }
                         }
+                        /* commenting for the mo
+                        if (function == DataRegionHeading.FUNCTION.NPV) {
+                            // looked at logic online and adapted to this - should work
+                            double r1 = functionDoubleParameter + 1;
+                            double trate = r1;
+                            for (Value v : valuesHook.values) {
+                                // currently not a number treated as 0, easy to make it skipped
+                                double d = 0;
+                                try {
+                                    d = Double.parseDouble(v.getText());
+                                } catch (NumberFormatException ignored) {
+                                }
+                                doubleValue += d / trate;
+                                trate *= r1;
+                            }
+                        }*/
                         if (function == DataRegionHeading.FUNCTION.STDEVA) {
                             double[] forSD;
-                            if (valuesHook.calcValues != null){ // then override with calc values
+                            if (valuesHook.calcValues != null) { // then override with calc values
                                 forSD = new double[valuesHook.calcValues.size()];
                                 int count = 0;
                                 for (double d : valuesHook.calcValues) {

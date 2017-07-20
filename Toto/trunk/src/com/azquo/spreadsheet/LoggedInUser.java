@@ -126,7 +126,7 @@ public class LoggedInUser {
     // adding in report id (a little hacky, could maybe change later?) otherwise two reports on different tabs could clash on identically named regions - bug identified by drilldowns
 
     public CellsAndHeadingsForDisplay getSentCells(final int reportId, String sheetName, String region) {
-        if (sheetName == null && sheetName.isEmpty()){
+        if (sheetName == null || sheetName.isEmpty()){
             sheetName = defaultSheet;
         }
         if (region == null || region.isEmpty()) {
@@ -136,7 +136,7 @@ public class LoggedInUser {
     }
 
     public void setSentCells(final int reportId, String sheetName, String region, final CellsAndHeadingsForDisplay sentCells) {
-        if (sheetName == null && sheetName.isEmpty()){
+        if (sheetName == null || sheetName.isEmpty()){
             sheetName = defaultSheet;
         }
         if (region == null || region.isEmpty()) {
@@ -156,6 +156,9 @@ public class LoggedInUser {
     }
 
     public List<CellsAndHeadingsForDisplay> getSentForReportAndSheet(final int reportId, String sheetName) {
+        if (sheetName == null || sheetName.isEmpty()){
+            sheetName = defaultSheet;
+        }
         List<CellsAndHeadingsForDisplay> toReturn = new ArrayList<>();
         for (String key : sentCellsMaps.keySet()) {
             if (key.startsWith(reportId + "-" + sheetName + "-")) {
