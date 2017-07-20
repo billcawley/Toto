@@ -250,7 +250,8 @@ class RegionFillerService {
         // the cell we'll put the items in the list in
         final SName repeatItem2 = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM + "2" + region);
 
-        /* new criteria - if we have repeatList2 and repeatItem2 then repeatList and repeatItem define the columns in terms of repeat regions
+        /*
+        new criteria - if we have repeatList2 and repeatItem2 then repeatList and repeatItem define the columns in terms of repeat regions
         and repeatList2 and repeatItem2 are the rows. Normally the repeatScope will only extend downward but under these circumstances it
         will be to the right and down to accomodate the criteria
         */
@@ -279,8 +280,8 @@ class RegionFillerService {
             String repeatListText2 = BookUtils.getSnameCell(repeatList2).getStringValue();
             repeatListItems2 = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText2);
             // ok first make sure the repeatscope is wide enough
-            repeatColumns = repeatListItems2.size();
-            int columnsRequired = repeatRegionWidth * repeatColumns;
+            repeatColumns = repeatListItems.size();
+            int columnsRequired =  repeatColumns * repeatRegionWidth;
             // only expand repeat scope width in here - not required under a vanilla repeat region
             if (columnsRequired > repeatScopeWidth) {
                 int columnsToAdd = columnsRequired - repeatScopeWidth;
@@ -288,6 +289,7 @@ class RegionFillerService {
                 Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + columnsToAdd - 1); // insert just before the last col
                 CellOperationUtil.insertColumn(insertRange);
             }
+            rowsRequired = repeatListItems2.size() * repeatRegionHeight;
         } else { // old logic -
             // so the expansion within each region will be dealt with by fill region internally but out here I need to ensure that there's enough space for the regions
             repeatColumns = repeatScopeWidth / repeatRegionWidth; // as many as can fit in the required size
@@ -325,8 +327,8 @@ class RegionFillerService {
         System.out.println("1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n");*/
         // prepare the sapce for the data, it may have things like formulae
         if (repeatList2 != null && repeatItem2 != null) { // new cols x rows according to two repeat lists logic
-            for (String item : repeatListItems) {
-                for (String item2 : repeatListItems2) {
+            for (String item2 : repeatListItems2) { // rows are the second one, columns first
+                for (String item : repeatListItems) {
                     if (copyFormatting){
                         Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight - 1, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth - 1);
                         if (repeatRow > 0 || repeatColumn > 0) { // no need to paste over the first
