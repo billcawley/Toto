@@ -392,6 +392,32 @@ public class ReportRenderer {
         }
         if (columnHeadingsDescription != null) {
             try {
+                /* hack introduced by Edd 22/06/2017. For repeat regions I had assumed that the headings/context didn't rely on the repeat items hence I could do preparatory work here
+                (making space) without the repeat times. It seems headings might alter according to the item but NOTE! if the number of headings changes due to the item this will
+                 go wrong later as the code that prepares the space assumes heading numbers will stay consistent. Anyway the hack is jamming the first repeat item in so we can make
+                 this getCellsAndHeadingsForDisplay call without problems if it relies on it. Could the following little chunk be factored with the coed in fillDataForRepeatRegions? Not sure.
+
+                 Have added repeat item 2 as well
+                  */
+                SName repeatList = BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + region, sheet);
+                SName repeatItem = BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + region, sheet);
+                if (repeatList != null && repeatItem != null){
+                    String repeatListText = BookUtils.getSnameCell(repeatList).getStringValue();
+                    List<String> repeatListItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText);
+                    if (!repeatListItems.isEmpty()){
+                        BookUtils.getSnameCell(repeatItem).setStringValue(repeatListItems.get(0));// and set the first
+                    }
+                }
+                SName repeatList2 = BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + "2" + region, sheet);
+                SName repeatItem2 = BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + "2" + region, sheet);
+                if (repeatList2 != null && repeatItem2 != null){
+                    String repeatListText2 = BookUtils.getSnameCell(repeatList2).getStringValue();
+                    List<String> repeatListItems2 = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText2);
+                    if (!repeatListItems2.isEmpty()){
+                        BookUtils.getSnameCell(repeatItem2).setStringValue(repeatListItems2.get(0));// and set the first
+                    }
+                }
+
                 List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription);
                 List<List<String>> rowHeadingList = BookUtils.nameToStringLists(rowHeadingsDescription);
                 //check if this is a pivot - if so, then add in any additional filter needed
@@ -431,21 +457,6 @@ public class ReportRenderer {
                         }
                     }
                 }
-                /* hack introduced by Edd 22/06/2017. For repeat regions I had assumed that the headings didn't rely on the repeat itemks hence I could do preparatory work here
-                (making space) without the repeat times. It seems headings might alter according to the item but NOTE! if the number of headings changes due to the item this will
-                 go wrong later as the code that prepares the space assumes heading numbers will stay consistent. Anyway the hack is jamming the first repeat item in so we can make
-                 this getCellsAndHeadingsForDisplay call without problems if it relies on it. Could the following little chunk be factored with the coed in fillDataForRepeatRegions? Not sure.
-                  */
-                SName repeatList = BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + region, sheet);
-                SName repeatItem = BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + region, sheet);
-                if (repeatList != null && repeatItem != null){
-                    String repeatListText = BookUtils.getSnameCell(repeatList).getStringValue();
-                    List<String> repeatListItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText);
-                    if (!repeatListItems.isEmpty()){
-                        BookUtils.getSnameCell(repeatItem).setStringValue(repeatListItems.get(0));// and set the first
-                    }
-                }
-
 
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), region, valueId, rowHeadingList, BookUtils.nameToStringLists(columnHeadingsDescription),
                         contextList, userRegionOptions, quiet);
