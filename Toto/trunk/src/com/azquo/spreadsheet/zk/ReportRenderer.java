@@ -73,6 +73,8 @@ public class ReportRenderer {
         //String context = "";
         // why a sheet loop at the outside, why not just run all the names? Need to have a think . . .
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
+            // I'd like to put this somewhere else but for the moment it must be per sheet to lessen the chances of overlapping repeat regions interfering with each other
+            Set<String> repeatRegionTracker = new HashSet<>();
             Sheet sheet = book.getSheetAt(sheetNumber);
             // check we're not hitting a validation sheet we added!
             if (sheet.getSheetName().endsWith(ChoicesService.VALIDATION_SHEET)) {
@@ -229,7 +231,7 @@ public class ReportRenderer {
                         DatabaseServer origServer = loggedInUser.getDatabaseServer();
                         try {
                             LoginService.switchDatabase(loggedInUser, databaseName);
-                            String error = populateRegionSet(sheet, reportId,sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode); // in this case execute mode is telling the logs to be quiet
+                            String error = populateRegionSet(sheet, reportId,sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode,repeatRegionTracker); // in this case execute mode is telling the logs to be quiet
                             if (errors != null && error != null){
                                 if (errors.length() > 0){
                                     errors.append("\n");
@@ -242,7 +244,7 @@ public class ReportRenderer {
                         }
                         loggedInUser.setDatabaseWithServer(origServer, origDatabase);
                     } else {
-                        String error = populateRegionSet(sheet, reportId,sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode);
+                        String error = populateRegionSet(sheet, reportId,sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode,repeatRegionTracker);
                         if (errors != null && error != null){
                             if (errors.length() > 0){
                                 errors.append("\n");
@@ -365,7 +367,7 @@ public class ReportRenderer {
     }
 
     // return the error, executing reports might want it
-    private static String populateRegionSet(Sheet sheet, int reportId, final String sheetName, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet) {
+    private static String populateRegionSet(Sheet sheet, int reportId, final String sheetName, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet, Set<String> repeatRegionTracker) {
         if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
             sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
         }
@@ -498,7 +500,7 @@ public class ReportRenderer {
                         RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
                     } else {
                         // the more complex function that deals with repeat regions - it now notably does the headings
-                        RegionFillerService.fillDataForRepeatRegions(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxRow, maxCol, valueId, quiet);
+                        RegionFillerService.fillDataForRepeatRegions(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxRow, maxCol, valueId, quiet, repeatRegionTracker);
                     }
                 }
             } catch (RemoteException re) {

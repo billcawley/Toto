@@ -15,6 +15,7 @@ import org.zkoss.zss.model.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by edward on 12/01/17.
@@ -231,7 +232,7 @@ class RegionFillerService {
     // crucial to the repeat regions is that the top left region, before being copied around, is a useful size for all variations
     static void fillDataForRepeatRegions(LoggedInUser loggedInUser, int reportId, Sheet sheet, String region, UserRegionOptions userRegionOptions
             , CellRegion displayRowHeadings, CellRegion displayColumnHeadings, CellRegion displayDataRegion, SName rowHeadingDescription
-            , SName columnHeadingsDescription, SName contextDescription, int maxRow, int maxCol, int valueId, boolean quiet) throws Exception {
+            , SName columnHeadingsDescription, SName contextDescription, int maxRow, int maxCol, int valueId, boolean quiet, Set<String> repeatRegionTracker) throws Exception {
         // note - this means the repeatRegion may have been expanded but I think this makes sense - before if it wasn't big enough it would break
         // won't be properly tested until we need it again
         // the region to be repeated, will contain headings and an item which changes for each repetition
@@ -317,12 +318,54 @@ class RegionFillerService {
         // a nasty bug WFC discovered - if the repeat scope isn't bigger than the repeat region then the repeat region may have been stretched!
 //        Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
         Range copySource = Ranges.range(sheet, rootRow, rootCol, rootRow + repeatRegionHeight - 1, rootCol + repeatRegionWidth - 1);
+        boolean copyFormatting = repeatRegionTracker.add(copySource.asString()); // crude but the point is : only copy formatting if we've not copied from this range before
+/*        System.out.println("1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n");
+        System.out.println("copyformatting : " + copyFormatting);
+        System.out.println(copySource.asString());
+        System.out.println("1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n");*/
         // prepare the sapce for the data, it may have things like formulae
         if (repeatList2 != null && repeatItem2 != null) { // new cols x rows according to two repeat lists logic
             for (String item : repeatListItems) {
                 for (String item2 : repeatListItems2) {
+                    if (copyFormatting){
+                        Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight - 1, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth - 1);
+                        if (repeatRow > 0 || repeatColumn > 0) { // no need to paste over the first
+                            CellOperationUtil.paste(copySource, insertRange);
+                            if (repeatRow == 0) { // then it's the top line after the first - need to adjust column widths and hidden
+                                for (int colOffest = 0; colOffest < copySource.getColumnCount(); colOffest++) {
+                                    // copy width and hidden
+                                    final SColumn sourceCol = sheet.getInternalSheet().getColumn(rootCol + colOffest);
+                                    final SColumn newCol = sheet.getInternalSheet().getColumn(rootCol + (repeatRegionWidth * repeatColumn) + colOffest);
+                                    newCol.setWidth(sourceCol.getWidth());
+                                    newCol.setHidden(sourceCol.isHidden());
+                                }
+                            }
+                            if (repeatColumn == 0) { // then it's the first column after the first row - need to adjust row heights and hidden
+                                for (int rowOffest = 0; rowOffest < copySource.getRowCount(); rowOffest++) {
+                                    // copy width and hidden
+                                    final SRow sourceRow = sheet.getInternalSheet().getRow(rootRow + rowOffest);
+                                    final SRow newRow = sheet.getInternalSheet().getRow(rootRow + (repeatRegionHeight * repeatRow) + rowOffest);
+                                    newRow.setHeight(sourceRow.getHeight());
+                                    newRow.setHidden(sourceRow.isHidden());
+                                }
+                            }
+                        }
+                    }
+                    // and set the item
+                    BookUtils.setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset), item);
+                    // and set item2!
+                    BookUtils.setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItem2RowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItem2ColumnOffset), item2);
+                    repeatColumn++;
+                }
+                repeatColumn = 0;
+                repeatRow++;
+            }
+        } else {
+            for (String item : repeatListItems) {
+                if (copyFormatting) {
                     Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight - 1, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth - 1);
                     if (repeatRow > 0 || repeatColumn > 0) { // no need to paste over the first
+                        // I agree with intelliJ, could factor! later. todo
                         CellOperationUtil.paste(copySource, insertRange);
                         if (repeatRow == 0) { // then it's the top line after the first - need to adjust column widths and hidden
                             for (int colOffest = 0; colOffest < copySource.getColumnCount(); colOffest++) {
@@ -341,39 +384,6 @@ class RegionFillerService {
                                 newRow.setHeight(sourceRow.getHeight());
                                 newRow.setHidden(sourceRow.isHidden());
                             }
-                        }
-                    }
-                    // and set the item
-                    BookUtils.setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset), item);
-                    // and set item2!
-                    BookUtils.setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItem2RowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItem2ColumnOffset), item2);
-                    repeatColumn++;
-                }
-                repeatColumn = 0;
-                repeatRow++;
-            }
-        } else {
-            for (String item : repeatListItems) {
-                Range insertRange = Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow), rootCol + (repeatRegionWidth * repeatColumn), rootRow + (repeatRegionHeight * repeatRow) + repeatRegionHeight - 1, rootCol + (repeatRegionWidth * repeatColumn) + repeatRegionWidth - 1);
-                if (repeatRow > 0 || repeatColumn > 0) { // no need to paste over the first
-                    // I agree with intelliJ, could factor! later. todo
-                    CellOperationUtil.paste(copySource, insertRange);
-                    if (repeatRow == 0) { // then it's the top line after the first - need to adjust column widths and hidden
-                        for (int colOffest = 0; colOffest < copySource.getColumnCount(); colOffest++) {
-                            // copy width and hidden
-                            final SColumn sourceCol = sheet.getInternalSheet().getColumn(rootCol + colOffest);
-                            final SColumn newCol = sheet.getInternalSheet().getColumn(rootCol + (repeatRegionWidth * repeatColumn) + colOffest);
-                            newCol.setWidth(sourceCol.getWidth());
-                            newCol.setHidden(sourceCol.isHidden());
-                        }
-                    }
-                    if (repeatColumn == 0) { // then it's the first column after the first row - need to adjust row heights and hidden
-                        for (int rowOffest = 0; rowOffest < copySource.getRowCount(); rowOffest++) {
-                            // copy width and hidden
-                            final SRow sourceRow = sheet.getInternalSheet().getRow(rootRow + rowOffest);
-                            final SRow newRow = sheet.getInternalSheet().getRow(rootRow + (repeatRegionHeight * repeatRow) + rowOffest);
-                            newRow.setHeight(sourceRow.getHeight());
-                            newRow.setHidden(sourceRow.isHidden());
                         }
                     }
                 }
