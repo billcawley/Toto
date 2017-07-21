@@ -149,8 +149,9 @@ public class SpreadsheetService {
 
     public static String getDebugForCell(LoggedInUser loggedInUser, int reportId, String sheetName, String region, int rowInt, int colInt) throws Exception {
         final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId,sheetName, region);
-        if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
+        if (cellsAndHeadingsForDisplay != null
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
+                && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).size() > colInt
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);

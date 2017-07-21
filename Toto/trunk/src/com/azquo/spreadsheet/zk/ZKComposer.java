@@ -307,10 +307,12 @@ public class ZKComposer extends SelectorComposer<Component> {
         // regions may overlap - update all EXCEPT where there are repeat regions, in which case just do that as repeat regions will have overlap by their nature
         List<RegionRowCol> regionRowColsToSave = new ArrayList<>(); // a list to save - list due to the possibility of overlapping data regions
         List<RegionRowCol> headingRowColsToSave = new ArrayList<>();
-        if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
-            final RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(book, row, col, repeatRegionNames.get(0));
-            if (regionRowColForRepeatRegion != null) {
-                regionRowColsToSave.add(regionRowColForRepeatRegion);
+        if (repeatRegionNames != null) {
+            for (SName name : repeatRegionNames) {
+                final RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(book, row, col, name);
+                if (regionRowColForRepeatRegion != null) {
+                    regionRowColsToSave.add(regionRowColForRepeatRegion);
+                }
             }
         }
         if (regionRowColsToSave.isEmpty() && names != null) { // no repeat regions but there are normal ones

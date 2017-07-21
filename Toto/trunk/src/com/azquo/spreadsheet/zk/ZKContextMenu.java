@@ -157,11 +157,15 @@ class ZKContextMenu {
             // adding support for repeat regions. There's an additional check for row headings in a normal data region but I think this is redundant in repeat regions
             List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE);
             if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
-                ZKComposer.RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(myzss.getBook(), cellRow, cellCol, repeatRegionNames.get(0));
-                if (regionRowColForRepeatRegion != null) {
-                    region = regionRowColForRepeatRegion.region;
-                    regionRow = regionRowColForRepeatRegion.row;
-                    regionColumn = regionRowColForRepeatRegion.col;
+                // repeat can overlap now, this should help
+                for (SName name : repeatRegionNames) {
+                    ZKComposer.RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(myzss.getBook(), cellRow, cellCol, name);
+                    if (regionRowColForRepeatRegion != null) {
+                        region = regionRowColForRepeatRegion.region;
+                        regionRow = regionRowColForRepeatRegion.row;
+                        regionColumn = regionRowColForRepeatRegion.col;
+                        break;
+                    }
                 }
             } else { // standard
                 List<SName> names = BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());

@@ -167,6 +167,13 @@ public class ReportUIUtils {
             // take into account the offset from the top left of the repeated region and the data region in it
             localRow -= dataRowStartInRepeatRegion;
             localCol -= dataColStartInRepeatRegion;
+            // this could be tripped with overlapping repeat regions, return null so we know not to use this one
+            if (localRow < 0 || localCol < 0
+                    || localRow > repeatDataRegion.getRefersToCellRegion().getRowCount()
+                    || localCol > repeatDataRegion.getRefersToCellRegion().getColumnCount()
+                    ){
+                return null;
+            }
             return new ZKComposer.RegionRowCol(repeatRegion.getRefersToSheetName(), repeatRegionName + "-" + repeatRow + "-" + repeatCol, localRow, localCol);
         }
         return null;
