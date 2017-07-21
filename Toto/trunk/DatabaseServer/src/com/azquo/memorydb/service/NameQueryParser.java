@@ -348,13 +348,15 @@ public class NameQueryParser {
                     Iterator <Name> childIt = namesFound.getAsCollection().iterator();
                     while (childIt.hasNext()) {
                         Name child = childIt.next();
-                        if (child.getChildren().size() > 0 && child.getChildren().iterator().next().getDefaultDisplayName() == null) {//we have a temporary name
-                            Name localChild = NameService.findByName(azquoMemoryDBConnection, child.getDefaultDisplayName(), languages);
-                            if (localChild != null) {
-                                replacementNames.add(localChild);
+                        if (child!=null) {
+                            if (child.getChildren().size() > 0 && child.getChildren().iterator().next().getDefaultDisplayName() == null) {//we have a temporary name
+                                Name localChild = NameService.findByName(azquoMemoryDBConnection, child.getDefaultDisplayName(), languages);
+                                if (localChild != null) {
+                                    replacementNames.add(localChild);
+                                }
+                            } else {
+                                break;
                             }
-                        } else {
-                            break;
                         }
                     }
                     if (replacementNames.size()>0){//assuming ALL names are temporary currently
