@@ -320,7 +320,7 @@ class RegionFillerService {
         // a nasty bug WFC discovered - if the repeat scope isn't bigger than the repeat region then the repeat region may have been stretched!
 //        Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
         Range copySource = Ranges.range(sheet, rootRow, rootCol, rootRow + repeatRegionHeight - 1, rootCol + repeatRegionWidth - 1);
-        boolean copyFormatting = repeatRegionTracker.add(copySource.asString()); // crude but the point is : only copy formatting if we've not copied from this range before
+        boolean copyFormatting = repeatRegionTracker.add(copySource.asString().substring(0,copySource.asString().indexOf(":"))); // crude but the point is : only copy formatting if we've not copied from this range before
 /*        System.out.println("1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n");
         System.out.println("copyformatting : " + copyFormatting);
         System.out.println(copySource.asString());
