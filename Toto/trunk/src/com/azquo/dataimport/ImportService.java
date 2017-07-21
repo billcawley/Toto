@@ -7,6 +7,7 @@ import com.azquo.admin.onlinereport.*;
 import com.azquo.admin.user.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
+import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
@@ -289,17 +290,18 @@ public final class ImportService {
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
             OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loadingUser.getDatabase().getId(), reportName);
-            if (or == null) return "no report named " + reportName + " found";
             Map<String, String> choices = uploadChoices(book);
             for (String choice : choices.keySet()) {
                 SpreadsheetService.setUserChoice(loadingUser.getUser().getId(), choice, choices.get(choice));
             }
+            checkEditableSets(book,loggedInUser);
             //String bookPath = spreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + "/onlinereports/" + or.getFilenameForDisk();
             final Book reportBook = Importers.getImporter().imports(new File(tempPath), "Report name");
             reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, tempPath);
             reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
             reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
-            ReportRenderer.populateBook(reportBook, 0);
+            //the uploaded book will already have the repeat sheet repeated - so zap the name
+            ReportRenderer.populateBook(reportBook, 0, false);
             return fillDataRangesFromCopy(loggedInUser, book, or);
         }
         if (loggedInUser.getDatabase() == null) {
@@ -314,6 +316,40 @@ public final class ImportService {
         return toReturn.toString();
     }
 
+    private static void checkEditableSets(Book book, LoggedInUser loggedInUser){
+        for(SName sName:book.getInternalBook().getNames()){
+            if (sName.getName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)){
+                String region = sName.getName().substring(ReportRenderer.AZROWHEADINGS.length());
+                Sheet sheet = book.getSheet(sName.getRefersToSheetName());
+                String rowHeading = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getStringValue();
+                if (rowHeading.toLowerCase().endsWith(" children editable")){
+                    String setName = rowHeading.substring(0,rowHeading.length() - " children editable".length()).replace("`","");
+                    SName displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS+region, sheet);
+                    if (displayName!=null) {
+                        StringBuffer editLine = new StringBuffer();
+                        editLine.append("edit:saveset ");
+                        editLine.append("`" + setName + "` ");
+                        CellRegion dispRegion = displayName.getRefersToCellRegion();
+                        for (int rowNo = 0; rowNo < dispRegion.getRowCount(); rowNo++) {
+                            String cellVal = "";
+                            SCell cell = sheet.getInternalSheet().getCell(dispRegion.getRow() + rowNo, dispRegion.getColumn());
+                            try {
+                                cellVal = cell.getStringValue();
+
+                            } catch (Exception e) {
+                                cellVal = cell.getNumberValue() + "";
+                            }
+                            editLine.append("`" + cellVal + "`,");
+                        }
+                        CommonReportUtils.getDropdownListForQuery(loggedInUser, editLine.toString());
+                    }
+
+                }
+            }
+        }
+
+
+    }
     private static String readSheet(LoggedInUser loggedInUser, String fileName, Sheet sheet, final String tempFileName, List<String> attributeNames, boolean persistAfter) throws Exception {
         boolean transpose = false;
         String sheetName = sheet.getInternalSheet().getSheetName();
@@ -382,16 +418,16 @@ public final class ImportService {
     private static String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
         String errorMessage = "";
         int saveCount = 0;
-        Sheet sourceSheet = sourceBook.getSheetAt(0);
         for (SName sName : sourceBook.getInternalBook().getNames()) {
             String name = sName.getName();
             String regionName = getRegionName(name);
+            Sheet sheet = sourceBook.getSheet(sName.getRefersToSheetName());
             if (regionName != null) {
                 CellRegion sourceRegion = sName.getRefersToCellRegion();
                 if (name.toLowerCase().contains(ReportRenderer.AZREPEATSCOPE)) { // then deal with the multiple data regions sent due to this
                     // need to gather associated names for calculations, the region and the data region, code copied and changewd from getRegionRowColForRepeatRegion, it needs to work well for a batch of cells not just one
-                    SName repeatRegion = sourceBook.getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + regionName);
-                    SName repeatDataRegion = sourceBook.getInternalBook().getNameByName("az_DataRegion" + regionName); // todo string literals ergh!
+                    SName repeatRegion = getNameByName(ReportRenderer.AZREPEATREGION + regionName, sheet);
+                    SName repeatDataRegion = getNameByName("az_DataRegion" + regionName, sheet); // todo string literals ergh!
                     // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
                     if (repeatRegion != null && repeatDataRegion != null) {
                         int regionHeight = repeatRegion.getRefersToCellRegion().getRowCount();
@@ -414,7 +450,7 @@ public final class ImportService {
                                         && rowInRegion <= dataStartRow + dataHeight
                                         && cellsAndHeadingsForDisplay != null) {
                                     final List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                                    final TypedPair<Double, String> cellValue = ImportFileUtilities.getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    final TypedPair<Double, String> cellValue = ImportFileUtilities.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
                                     data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewStringValue(cellValue.getSecond());
                                     // added by Edd, should sort some numbers being ignored!
                                     if (cellValue.getFirst() != null) {
@@ -439,7 +475,7 @@ public final class ImportService {
                             for (int row = 0; row < data.size(); row++) {
                                 for (int col = 0; col < data.get(0).size(); col++) {
                                     // note that this function might return a null double but no null string. Perhaps could be mroe consistent? THis area is a bit hacky . . .
-                                    final TypedPair<Double, String> cellValue = ImportFileUtilities.getCellValue(sourceSheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    final TypedPair<Double, String> cellValue = ImportFileUtilities.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
                                     data.get(row).get(col).setNewStringValue(cellValue.getSecond());
                                     // added by Edd, should sort some numbers being ignored!
                                     if (cellValue.getFirst() != null) {
@@ -450,6 +486,7 @@ public final class ImportService {
                                 }
                             }
                         }
+                        //AND THE ROW HEADINGS IF EDITABLE.
                     }
                     try {
                         final String result = SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), sName.getRefersToSheetName(), regionName);
@@ -472,6 +509,18 @@ public final class ImportService {
         }
         return errorMessage + " - " + saveCount + " data items amended successfully";
     }
+
+    static SName getNameByName(String name, Sheet sheet){
+        SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
+        if (toReturn != null){
+            return toReturn;
+
+        }
+        // should we check the formula refers to the sheet here? I'm not sure. Applies will have been checked for above.
+        return sheet.getBook().getInternalBook().getNameByName(name);
+
+    }
+
 
     private static String getRegionName(String name) {
         if (name.toLowerCase().startsWith("az_dataregion")) {
