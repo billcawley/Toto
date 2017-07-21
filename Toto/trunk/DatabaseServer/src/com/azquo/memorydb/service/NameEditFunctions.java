@@ -1,5 +1,6 @@
 package com.azquo.memorydb.service;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
@@ -57,11 +58,94 @@ class NameEditFunctions {
                 return toReturn;
             }
         }
+        if (setFormula.startsWith("saveset")){
+            int formulaPos = 8;
+            String setName = extractName(setFormula.substring(formulaPos));
+            if (setName==null) return null;
+            Name set = NameService.findByName(azquoMemoryDBConnection,setName);
+            formulaPos += skipTwoQuotes(setFormula.substring(formulaPos));
+            List<String> children = new ArrayList<>();
+            int rowNo = 1;
+            StringBuffer displayRows = new StringBuffer();
+            boolean needsDisplayRows = false;
+            boolean hasBlanks = false;
+            while (formulaPos < setFormula.length()) {
+                String child = extractName(setFormula.substring(formulaPos));
+                if (child == null) {
+                    formulaPos = setFormula.length();
+                } else {
+                    formulaPos = formulaPos + skipTwoQuotes(setFormula.substring(formulaPos));
+                    if (child.length() > 0) {
+                        children.add(child);
+                        displayRows.append("," + rowNo);
+                        if (hasBlanks) {
+                            needsDisplayRows = true;
+                        }
+                    } else {
+                        hasBlanks = true;
+                    }
+                    rowNo++;
+                }
+            }
+            String dRows = "";
+            if (needsDisplayRows){
+                dRows = displayRows.toString().substring(1);
+            }
+            String oldDRows = set.getAttribute("DISPLAYROWS");
+            if (oldDRows == null) oldDRows = "";
+            boolean changed = false;
+            if (!oldDRows.equals(dRows)){
+                changed = true;
+            }else{
+                Collection<Name> childNames = set.getChildren();
+                if (childNames.size()!= children.size()){
+                    changed = true;
+                }else{
+                    if (childNames.size() > 0) {
+                        List<Name> childList = (ArrayList) set.getChildren();
+                        for (int childNo = 0; childNo < childNames.size(); childNo++) {
+                            if (!childList.get(childNo).getDefaultDisplayName().equals(children.get(childNo))) {
+                                changed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if (changed){
+                List<Name>newChildren = new ArrayList<>();
+                for (String child:children){
+                    newChildren.add(NameService.findOrCreateNameInParent(azquoMemoryDBConnection,child,set,true));//make local name
+                }
+                Collection<Name> redundantNames = new ArrayList<>(set.getChildren());
+                redundantNames.removeAll(newChildren);
+                newChildren.addAll(redundantNames);//must ensure that there are no 'floating names'
+                set.setChildrenWillBePersisted(newChildren);
+                set.setAttributeWillBePersisted("DISPLAYROWS",dRows);;
+            }
+            return toReturn;
+
+        }
+
 
 
         throw new Exception(setFormula + " not understood");
     }
 
+    private static int skipTwoQuotes(String source){
+        int firstQuote = source.indexOf(StringLiterals.QUOTE);
+        return source.indexOf(StringLiterals.QUOTE, firstQuote+1) + 1;
+    }
+
+
+    private static String extractName(String source){
+        int firstQuote = source.indexOf(StringLiterals.QUOTE);
+        if (firstQuote++ >=0){
+            int secondQuote = source.indexOf(StringLiterals.QUOTE, firstQuote);
+            if (secondQuote> 0) return source.substring(firstQuote, secondQuote);
+        }
+        return null;
+    }
     // Edd note - I'm not completely clear on the deduplicate utility functions but they are not core functionality, more to do with importing (should they be in there?)
     // so happy to just check for code warnings and not understand 100%
 
