@@ -37,7 +37,7 @@ public class ReportRenderer {
     public static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
     private static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
     static final String AZCOLUMNHEADINGS = "az_columnheadings";
-    static final String AZROWHEADINGS = "az_rowheadings";
+    public static final String AZROWHEADINGS = "az_rowheadings";
     private static final String AZCONTEXT = "az_context";
     static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
     static final String AZCONTEXTFILTERS = "az_contextfilters";
@@ -50,10 +50,21 @@ public class ReportRenderer {
     public static final String AZREPEATSHEET = "az_repeatsheet";
 
     public static boolean populateBook(Book book, int valueId) {
-        return populateBook(book, valueId, false, false, null);
+        return populateBook(book, valueId, false, false, null, true);
     }
 
+    public static boolean populateBook(Book book, int valueId, boolean useRepeats) {
+        return populateBook(book, valueId, false, false, null, useRepeats);
+    }
+
+
     public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors) { // todo - make more elegant? error hack . . .
+        return populateBook(book, valueId, useSavedValuesOnFormulae, executeMode, errors, true);
+    }
+
+
+
+        public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) { // todo - make more elegant? error hack . . .
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
         book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
         long track = System.currentTimeMillis();
@@ -115,7 +126,7 @@ public class ReportRenderer {
             SName az_repeatSheet = BookUtils.getNameByName(AZREPEATSHEET, sheet);
             SName az_repeatItem = BookUtils.getNameByName(AZREPEATITEM, sheet);
             // second name match is if the repeat item and repeat sheet names are set global, stop them being found on subsequent runs
-            if (az_repeatSheet != null && az_repeatSheet.getRefersToSheetName().equals(sheet.getSheetName())
+            if (useRepeats && az_repeatSheet != null && az_repeatSheet.getRefersToSheetName().equals(sheet.getSheetName())
                     && az_repeatItem != null && az_repeatItem.getRefersToSheetName().equals(sheet.getSheetName())){
                 SCell snameCell = BookUtils.getSnameCell(az_repeatSheet);
                 if (snameCell != null && snameCell.getStringValue() != null && !snameCell.getStringValue().isEmpty()){
