@@ -336,13 +336,16 @@ public class DSSpreadsheetService {
             final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames);
             final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getColHeadingsSource(), databaseAccessToken.getLanguages(), AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, false); // same as standard limit for col headings
             final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames);
-            for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
+            for (int rowNo = 0; rowNo <cellsAndHeadingsForDisplay.getData().size();rowNo++){
+                List<CellForDisplay> row = cellsAndHeadingsForDisplay.getData().get(rowNo);
                 for (CellForDisplay cell : row) {
                     // todo. sprt provenance for comments
                     if (!cell.isLocked() && cell.isChanged()) {
+                        int cellRow = cell.getUnsortedRow();
+                        if (redundantNames!=null) cellRow = rowNo;//if the cell is editable, then it cannot be sorted
                         //logger.info(orig + "|" + edited + "|"); // we no longer know the original value unless we jam it in AzquoCell
-                        if (cell.getUnsortedRow() < rowHeadings.size() && cell.getUnsortedCol() < columnHeadings.size()) {
-                            AzquoCell azquoCell = AzquoCellResolver.getAzquoCellForHeadings(azquoMemoryDBConnection, rowHeadings.get(cell.getUnsortedRow()), columnHeadings.get(cell.getUnsortedCol()), contextHeadings, cell.getUnsortedRow(), cell.getUnsortedCol(), databaseAccessToken.getLanguages(), 0, null, null);
+                        if (cellRow < rowHeadings.size() && cell.getUnsortedCol() < columnHeadings.size()) {
+                              AzquoCell azquoCell = AzquoCellResolver.getAzquoCellForHeadings(azquoMemoryDBConnection, rowHeadings.get(cellRow), columnHeadings.get(cell.getUnsortedCol()), contextHeadings, cellRow, cell.getUnsortedCol(), databaseAccessToken.getLanguages(), 0, null, null);
                             if (!azquoCell.isLocked()) {
                                 // this save logic is the same as before but getting necessary info from the AzquoCell
                                 final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
@@ -525,6 +528,7 @@ public class DSSpreadsheetService {
         // clear the caches after, if we do before then some will be recreated as part of saving.
         // Is this a bit overkill given that it should clear as it goes? I suppose there's the query and count caches, plus parents of the changed names
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
+        if (redundantNames==null) return "true " + numberOfValuesModified;
         return "true " + numberOfValuesModified + " " + redundantNames;
     }
 
@@ -533,11 +537,11 @@ public class DSSpreadsheetService {
         //EDITABLE currently only checking top left cell of row headings
         String topLeftRowHeading= cellsAndHeadingsForDisplay.getRowHeadingsSource().get(0).get(0);
         if (!topLeftRowHeading.toLowerCase().endsWith(StringLiterals.EDITABLE)) {
-            return "";
+            return null;
         }
         String trimmedHeading = topLeftRowHeading.substring(0, topLeftRowHeading.indexOf(StringLiterals.EDITABLE)).trim();
         if (!trimmedHeading.endsWith(StringLiterals.CHILDREN)) {
-            return "";
+            return null;
         }
         String setName = trimmedHeading.substring(0,trimmedHeading.indexOf(StringLiterals.CHILDREN)).trim();
         Name parentName = NameService.findByName(azquoMemoryDBConnection,setName);
