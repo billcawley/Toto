@@ -39,7 +39,8 @@ public class ChoicesService {
     public static final String VALIDATION_SHEET = "VALIDATION_SHEET";
 
     // now adds one validation sheet per sheet so to speak - validation in Excel terms, putting validation on a cell adds a dropdown to it
-    static List<SName> addValidation(String sheetName, LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap) {
+    static List<SName> addValidation(Sheet sheet, LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap) {
+        String sheetName = sheet.getSheetName().replace(" ","");
         // trim the sheet name as it can't be longer than 31 chars when appended to VALIDATION_SHEET
         // should I be replacing spaces commas etc?
         if (sheetName.length() > 10) {
@@ -72,9 +73,8 @@ public class ChoicesService {
                 String choiceName = name.getName().substring(0, name.getName().length() - "choice".length());
                 SCell choiceCell = BookUtils.getSnameCell(name);
 //                System.out.println("debug:  trying to find the region " + choiceName + "chosen");
-                SName chosen = book.getInternalBook().getNameByName(choiceName + "chosen"); // as ever I do wonder about these string literals
+                SName chosen = BookUtils.getNameByName(choiceName + "chosen", sheet);// as ever I do wonder about these string literals
                 if (name.getRefersToCellRegion() != null && chosen != null) {
-                    Sheet sheet = book.getSheet(chosen.getRefersToSheetName());
                     CellRegion chosenRegion = chosen.getRefersToCellRegion();
                     if (chosenRegion != null) {
                         List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());

@@ -320,9 +320,9 @@ class RegionFillerService {
         // a nasty bug WFC discovered - if the repeat scope isn't bigger than the repeat region then the repeat region may have been stretched!
 //        Range copySource = Ranges.range(sheet, rootRow, rootCol, repeatRegion.getRefersToCellRegion().getLastRow(), repeatRegion.getRefersToCellRegion().getLastColumn());
         Range copySource = Ranges.range(sheet, rootRow, rootCol, rootRow + repeatRegionHeight - 1, rootCol + repeatRegionWidth - 1);
-        boolean copyFormatting = repeatRegionTracker.add(copySource.asString().substring(0,copySource.asString().indexOf(":"))); // crude but the point is : only copy formatting if we've not copied from this range before
+        boolean copyFormatting = repeatRegionTracker.add(copySource.asString()); // crude but the point is : only copy formatting if we've not copied from this range before
 /*        System.out.println("1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n");
-        System.out.println("copyformatting : " + copyFormatting);
+        System.out.println("copyformatting : " + copyFormatting + " region " + region);
         System.out.println(copySource.asString());
         System.out.println("1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n");*/
         // prepare the sapce for the data, it may have things like formulae
@@ -403,8 +403,8 @@ class RegionFillerService {
         repeatRow = 0;
         // and now do the data, separate loop otherwise I'll be copy/pasting data from the first area
         if (repeatList2 != null && repeatItem2 != null) { // new cols x rows according to two repeat lists logic
-            for (String item : repeatListItems) {
-                for (String item2 : repeatListItems2) {
+            for (String item2 : repeatListItems2) {
+                for (String item : repeatListItems) {
                     repeatRegionFill(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, rowHeadingDescription, columnHeadingsDescription, contextDescription, valueId, quiet, repeatRegion, repeatRegionWidth, repeatRegionHeight, rootRow, rootCol, repeatColumn, repeatRow, repeatDataRowOffset, repeatDataColumnOffset, repeatDataLastRowOffset, repeatDataLastColumnOffset);
                     repeatColumn++;
                 }
