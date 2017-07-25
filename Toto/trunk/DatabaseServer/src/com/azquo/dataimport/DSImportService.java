@@ -297,6 +297,11 @@ public class DSImportService {
         // We might use the headers on the data file, this is notably used when setting up the headers themselves.
         if (headers == null) {
             headers = lineIteratorAndBatchSize.lineIterator.next();
+            for (int i = 0; i < headers.length; i++){
+                // what we did to make a csv geenrated from excel properly formatted, undo it! todo - should I do this to the line values also? Will it slow things down?
+                //.replace("\n", "\\\\n").replace("\t", "\\\\t")
+                headers[i] = headers[i].replace("\\\\n","\n").replace("\\\\t","\t");
+            }
             boolean hasClauses = false;
             for (String header : headers) {
                 if (header.contains(".") || header.contains(";")) {
@@ -308,8 +313,12 @@ public class DSImportService {
                     throw new Exception("Invalid headers on import file - is this a report that required az_ReportName?");
                 }
                 // option to stack the clauses vertically
+                String oldHeaders[] = new String[headers.length];
+                System.arraycopy(headers, 0, oldHeaders,0, headers.length);
                 if (!buildHeadersFromVerticallyListedClauses(headers, lineIteratorAndBatchSize.lineIterator)) {
-                    return null;
+                    // NO NO NO NO NO, do not return null!! otherwise vanilla headings just won't work!!! TODO - address what was going on here
+                    //return null;
+                    headers = oldHeaders;
                 }
             }
             if (isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)

@@ -19,6 +19,10 @@ class HeadingReader {
     // to define context headings use this divider
     private static final String headingDivider = "|";
 
+    // allows extra (typically composite) headings to be added when using the lookup heading by attribute process in preProcessHeadersAndCreatePivotSetsIfRequired
+    private static final String COMPOSITEHEADINGS = "COMPOSITEHEADINGS";
+
+
     /*
     These are heading clauses. Heading definitions can be in the data file but Azquo is setup to support data "as it comes".
     Hence when dealing with a new set of data the key is to set up sets and headings so that the system can load the data.
@@ -96,6 +100,15 @@ class HeadingReader {
     static String[] preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames, String[] headers, String importInterpreterLookup, String fileName) throws Exception {
         //  if the file is of type (e.g.) 'sales' and there is a name 'dataimport sales', this is used as an interpreter. Attributes with the header's name override the header.
         Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
+        // so below allows stored headers to be bought up according to attribute names, what if you want, for example, composites?
+        if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null){
+            String[] extraCompositeHeadings = importInterpreter.getAttribute(COMPOSITEHEADINGS).split("¬"); // delimiter match the other headings string
+            String[] headersWithExtras = new String[headers.length + extraCompositeHeadings.length];
+            System.arraycopy(headers, 0, headersWithExtras, 0, headers.length);
+            System.arraycopy(extraCompositeHeadings, 0, headersWithExtras, headers.length, extraCompositeHeadings.length);
+            headers = headersWithExtras;
+        }
+
         String lastHeading = "";
         boolean pivot = false;
         for (int i = 0; i < headers.length; i++) {
