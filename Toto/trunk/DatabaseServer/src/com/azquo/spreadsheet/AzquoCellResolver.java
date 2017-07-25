@@ -346,13 +346,18 @@ But can use a library?
 
 
                             Arrays.sort(forPercentile);
-                            // java doesn't like end case 0, deal with it here
-                            if (functionDoubleParameter == 0) {
-                                doubleValue = forPercentile[0];
+                            // just in case
+                            if (forPercentile.length == 0){
+                                doubleValue = 0;
                             } else {
-                                Percentile p = new Percentile().withEstimationType(Percentile.EstimationType.R_7); // Excel type!
-                                p.setData(forPercentile);
-                                doubleValue = p.evaluate(functionDoubleParameter * 100); // I think this function expects out of 100. We'll see . . .
+                                // java doesn't like end case 0, deal with it here
+                                if (functionDoubleParameter == 0) {
+                                    doubleValue = forPercentile[0];
+                                } else {
+                                    Percentile p = new Percentile().withEstimationType(Percentile.EstimationType.R_7); // Excel type!
+                                    p.setData(forPercentile);
+                                    doubleValue = p.evaluate(functionDoubleParameter * 100); // I think this function expects out of 100. We'll see . . .
+                                }
                             }
                         }
                         /* commenting for the mo
