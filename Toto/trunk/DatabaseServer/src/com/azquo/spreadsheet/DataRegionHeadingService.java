@@ -150,7 +150,7 @@ class DataRegionHeadingService {
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
                             final Collection<Name> selectionSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, false);
                             row.add(dataRegionHeadingsFromNames(mainSet, function, suffix, null, selectionSet, 0));
-                        } else if (function == DataRegionHeading.FUNCTION.PERCENTILE) {
+                        } else if (function == DataRegionHeading.FUNCTION.PERCENTILE || function == DataRegionHeading.FUNCTION.PERCENTILENZ) {
                             // todo - this function parameter parsing needs to be factored and be aware of commas in names
                             String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
                             String percentileParam = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();

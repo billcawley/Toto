@@ -246,7 +246,7 @@ public class AzquoCellResolver {
                     if (heading.getFunction() != null) { // should NOT be a name function, that should have been caught before
                         functionHeading = heading;
                         function = functionHeading.getFunction();
-                        if (function == DataRegionHeading.FUNCTION.PERCENTILE) { // hacky, any way around that?
+                        if (function == DataRegionHeading.FUNCTION.PERCENTILE || function == DataRegionHeading.FUNCTION.PERCENTILENZ) { // hacky, any way around that?
                             functionDoubleParameter = heading.getDoubleParameter();
                         }
                         valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
@@ -299,7 +299,7 @@ public class AzquoCellResolver {
                                 doubleValue = findOverlap(allValueParents, valueFunctionSet);
                             }
                         }
-                        if (function == DataRegionHeading.FUNCTION.PERCENTILE) {
+                        if (function == DataRegionHeading.FUNCTION.PERCENTILE || function == DataRegionHeading.FUNCTION.PERCENTILENZ) {
                             /*
 Calculation is
 
@@ -313,26 +313,35 @@ between 2 and 3 so 1 in the amount between, times that by the difference between
 
 But can use a library?
                              */
-                            double[] forPercentile;
+                            double[] forPercentile; // switching to list as if we use Percentile Non Zero we don'#t know how long it will be
+                            int count = 0;
                             if (valuesHook.calcValues != null) { // then override with calc values
                                 forPercentile = new double[valuesHook.calcValues.size()];
-                                int count = 0;
                                 for (double d : valuesHook.calcValues) {
-                                    forPercentile[count] = d;
-                                    count++;
+                                    if (function == DataRegionHeading.FUNCTION.PERCENTILE || d != 0) {
+                                        forPercentile[count] = d;
+                                        count++;
+                                    }
                                 }
                             } else { // normal
                                 forPercentile = new double[valuesHook.values.size()];
-                                int count = 0;
                                 for (Value v : valuesHook.values) {
                                     double d = 0;
                                     try {
                                         d = Double.parseDouble(v.getText());
                                     } catch (NumberFormatException ignored) {
                                     }
-                                    forPercentile[count] = d;
-                                    count++;
+                                    if (function == DataRegionHeading.FUNCTION.PERCENTILE || d != 0) {
+                                        forPercentile[count] = d;
+                                        count++;
+                                    }
                                 }
+                            }
+                            // whole array wasn't used. FOr all I know this might be fine but best to trim it to size
+                            if (count != forPercentile.length){
+                                double[] forPercentileAdjusted = new double[count];
+                                System.arraycopy(forPercentile, 0, forPercentileAdjusted, 0, count);
+                                forPercentile = forPercentileAdjusted;
                             }
 
 
