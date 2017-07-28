@@ -33,6 +33,7 @@
 				 <td>${report.explanation}</td>
 				 <td><a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a>
 				 <a href="/api/ManageReports?deleteId=${report.id}" onclick="return confirm('Are you sure you want to delete ${report.reportName}?')" class="button small" title="Delete ${report.reportName}"><span class="fa fa-trash" title="Delete"></span> </a>
+					 <a href="/api/DownloadTemplate?reportId=${report.id}" class="button small" title="Download"><span class="fa fa-download" title="Download"></span> </a>
 				 </td>
 			</tr>
 		</c:forEach>

@@ -27,11 +27,13 @@ public class UserChoiceService {
         justUserNameLanguages.add(userName);
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
-        set.setChildrenWillBePersisted(Collections.emptyList()); // easiest way to clear them
-        for (Integer childId : childrenIds) {
-            Name childName = NameService.findById(connectionFromAccessToken, childId);
-            if (childName != null) { // it really should not be!
-                set.addChildWillBePersisted(childName); // and that should be it!
+        if (childrenIds != null){ // it may be if we're just confirming sets exist, in that case don't modify contents
+            set.setChildrenWillBePersisted(Collections.emptyList()); // easiest way to clear them
+            for (Integer childId : childrenIds) {
+                Name childName = NameService.findById(connectionFromAccessToken, childId);
+                if (childName != null) { // it really should not be!
+                    set.addChildWillBePersisted(childName); // and that should be it!
+                }
             }
         }
     }
@@ -142,7 +144,11 @@ public class UserChoiceService {
             query = query.substring(0, query.indexOf("showparents"));
             forceFirstLevel = true;
         }
-        return getUniqueNameStrings(getUniqueNames(NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, false), forceFirstLevel));
+        Collection<Name> names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, false);
+        if (names.size() > 500){ // don't even try, you're not getting the dropdown or multi select
+            return Collections.emptyList();
+        }
+        return getUniqueNameStrings(getUniqueNames(names, forceFirstLevel));
     }
 
     public static List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws Exception {

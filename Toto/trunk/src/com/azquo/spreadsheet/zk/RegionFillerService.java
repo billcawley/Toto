@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.admin.user.UserRegionOptions;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -27,7 +28,7 @@ class RegionFillerService {
     // as it says. Need to consider the factoring here given the number of parameters passed
     // this had clonecols which was added to "selection" to make it wider, this made no sense and has been removed
     static void fillRowHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayRowHeadings
-            , CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) {
+            , CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws Exception {
         int rowHeadingsColumn = displayRowHeadings.getColumn();
         boolean isHierarchy = ReportUtils.isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
         int row = displayRowHeadings.getRow();
@@ -143,6 +144,8 @@ class RegionFillerService {
                     if (rowHeading.contains(" sorted")) { // maybe factor the string literal? Need to make it work for the mo
                         rowHeading = rowHeading.substring(0, rowHeading.indexOf(" sorted")).trim();
                     }
+                    // create the filter set, it may not exist which would error below
+                    RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), null);
                     String colHeading = ChoicesService.multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
                     if (colHeading == null || colHeading.equals("[all]")) colHeading = rowHeading;
                     BookUtils.setValue(sheet.getInternalSheet().getCell(hrow, hcol++), colHeading);

@@ -203,6 +203,8 @@ public class ReportRenderer {
                 if (name.getName().equals("az_ImageStoreName")) {
                     imageStoreName = BookUtils.getRegionValue(sheet, name.getRefersToCellRegion());
                 }
+            }
+            for (SName name : namesForSheet) {
                 if (name.getName().toLowerCase().startsWith(AZDATAREGION)) { // then we have a data region to deal with here
                     String region = name.getName().substring(AZDATAREGION.length()); // might well be an empty string
                     if (BookUtils.getNameByName(AZROWHEADINGS + region, sheet) == null) { // if no row headings then this is an ad hoc region, save possible by default
