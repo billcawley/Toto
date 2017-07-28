@@ -194,7 +194,7 @@ public class DSImportService {
 
             // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
             if (!linesRejected.isEmpty()) {
-                toReturn.append("Line numbers rejected : <br/>\n");
+                toReturn.append("Line numbers with rejected cells : <br/>\n");
                 int col = 0;
                 ArrayList<Integer> lineNumbersList = new ArrayList<>(linesRejected);
                 Collections.sort(lineNumbersList); // should do the basic sort

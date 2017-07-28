@@ -52,4 +52,13 @@ class ImportCellWithHeading {
         this.splitNames = splitNames;
     }
 
+    @Override
+    public String toString() {
+        return "ImportCellWithHeading{" +
+                "immutableImportHeading=" + immutableImportHeading +
+                ", lineValue='" + lineValue + '\'' +
+                ", lineName=" + lineName +
+                ", splitNames=" + splitNames +
+                '}';
+    }
 }

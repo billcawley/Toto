@@ -331,7 +331,11 @@ public class BatchImporter implements Callable<Void> {
                     && cell.getLineValue().length() > 0) {
                 // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
                 ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our source cell
-                identityCell.getLineName().setAttributeWillBePersisted(cell.getImmutableImportHeading().attribute, cell.getLineValue().replace("\\\\t", "\t").replace("\\\\n", "\n"));
+                if (identityCell.getLineName() == null){
+                    linesRejected.add(lineNo); // well just mark that the line was no good, should be ok for the moment
+                } else {
+                    identityCell.getLineName().setAttributeWillBePersisted(cell.getImmutableImportHeading().attribute, cell.getLineValue().replace("\\\\t", "\t").replace("\\\\n", "\n"));
+                }
             }
             long now = System.currentTimeMillis();
             if (now - time > tooLong) {

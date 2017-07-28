@@ -4,6 +4,7 @@ import com.azquo.admin.StandardEntity;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.Date;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -22,6 +23,8 @@ public final class Database extends StandardEntity {
     private int nameCount;
     private int valueCount;
     private int databaseServerId;
+    private final Date created;
+
 
     public Database(int id
             , int businessId
@@ -31,8 +34,7 @@ public final class Database extends StandardEntity {
             , String databaseType
             , int nameCount
             , int valueCount
-            , int databaseServerId
-    ) {
+            , int databaseServerId) {
         this.id = id;
         this.businessId = businessId;
         this.userId = userId;
@@ -42,6 +44,7 @@ public final class Database extends StandardEntity {
         this.nameCount = nameCount;
         this.valueCount = valueCount;
         this.databaseServerId = databaseServerId;
+        this.created = new Date();// no readson to set it outside
     }
 
     public int getBusinessId() {
@@ -113,6 +116,10 @@ public final class Database extends StandardEntity {
 
     public int getDatabaseServerId() {
         return databaseServerId;
+    }
+
+    public Date getCreated() {
+        return created;
     }
 
     @Override

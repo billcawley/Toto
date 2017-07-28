@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS `database` (
   `database_type` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `name_count` int(11) NOT NULL,
   `value_count` int(11) NOT NULL,
-  `database_server_id` int(11) NOT NULL
+  `database_server_id` int(11) NOT NULL,
+  `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------

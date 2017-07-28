@@ -67,7 +67,7 @@
 						<div class="well">
 							<div>
 								<label for="password">Password</label>
-								<input name="password" id="password">
+								<input name="password" id="password" type="password">
 							</div>
 						</div>
 					</td>
