@@ -483,8 +483,17 @@ public class NameQueryParser {
         Set<Name> result = HashObjSets.newMutableSet();
         for (Name source : toConvert.getAsCollection()) {
             // some collection wrapping in here, could be made more efficient if necessary
+            /*if the source has the attribute that it's looking for from the set, then find all others using that attribute
+            e.g.   If you are looking for sales witha promotion code and the source is a list of promotions, each with a code, then first try the promotion code
+            ...but remember to remove the source set from the result.
+
+             */
+            if (source.getAttribute(attributeName) != null){
+                result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName,source.getAttribute(attributeName)));
+            }
             result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName, source.getDefaultDisplayName()));
         }
+        result.removeAll(toConvert.getAsCollection());
         return new NameSetList(result, null, true);
     }
 
