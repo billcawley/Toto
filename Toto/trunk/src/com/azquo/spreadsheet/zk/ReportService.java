@@ -103,15 +103,20 @@ public class ReportService {
     static void resolveQueries(Sheet sheet, LoggedInUser loggedInUser) {
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
             if (name != null && name.getName() != null && name.getName().endsWith("Query")) {
-                SCell queryCell = BookUtils.getSnameCell(name);
-                // as will happen to the whole sheet later
-                if (queryCell.getType() == SCell.CellType.FORMULA) {
-                    //System.out.println("doing the cell thing on " + cell);
-                    queryCell.getFormulaResultType();
-                    queryCell.clearFormulaResultCache();
-                }
-                if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR)) {
-                    BookUtils.setValue(queryCell, CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue()));
+                //adjusted by WFC to allow a whole range to be the query.
+                for (int row = 0;row< name.getRefersToCellRegion().getRowCount();row++) {
+                    for (int col = 0; col < name.getRefersToCellRegion().getColumnCount(); col++) {
+                        SCell queryCell = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow() + row, name.getRefersToCellRegion().getColumn() + col);
+                        // as will happen to the whole sheet later
+                        if (queryCell.getType() == SCell.CellType.FORMULA) {
+                            //System.out.println("doing the cell thing on " + cell);
+                            queryCell.getFormulaResultType();
+                            queryCell.clearFormulaResultCache();
+                        }
+                        if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR && queryCell.getStringValue().length()> 0)) {
+                            BookUtils.setValue(queryCell, CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue()));
+                        }
+                    }
                 }
             }
         }
