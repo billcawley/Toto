@@ -9,12 +9,11 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <c:set var="title" scope="request" value="Manage Database Backups" />
 <%@ include file="../includes/admin_header.jsp" %>
-
-
+<div id="loading" class="loading" style="display:none"><h3>Copying...</h3> <div class="loader"><span class="fa fa-spin fa-cog"></span></div> </div>
 <main class="databases">
     <h1>Copy database ${database}</h1>
     <div class="error">${error}</div>
-    <form><label for="copyName">New Database Name:</label> <input name="copyName" id="copyName"/><input type="hidden" name="databaseId" value="${databaseId}"/>
+    <form onsubmit="$('#loading').show();"><label for="copyName">New Database Name:</label> <input name="copyName" id="copyName"/><input type="hidden" name="databaseId" value="${databaseId}"/>
         <input type="submit" name="Copy" value="Copy" class="button"/></form>
 
 </main>

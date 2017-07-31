@@ -4,6 +4,7 @@ import com.azquo.admin.StandardEntity;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -23,7 +24,7 @@ public final class Database extends StandardEntity {
     private int nameCount;
     private int valueCount;
     private int databaseServerId;
-    private final Date created;
+    private final LocalDateTime created;
 
 
     public Database(int id
@@ -34,7 +35,8 @@ public final class Database extends StandardEntity {
             , String databaseType
             , int nameCount
             , int valueCount
-            , int databaseServerId) {
+            , int databaseServerId
+    , LocalDateTime created) {
         this.id = id;
         this.businessId = businessId;
         this.userId = userId;
@@ -44,7 +46,7 @@ public final class Database extends StandardEntity {
         this.nameCount = nameCount;
         this.valueCount = valueCount;
         this.databaseServerId = databaseServerId;
-        this.created = new Date();// no readson to set it outside
+        this.created = created != null ? created : LocalDateTime.now();
     }
 
     public int getBusinessId() {
@@ -118,7 +120,7 @@ public final class Database extends StandardEntity {
         return databaseServerId;
     }
 
-    public Date getCreated() {
+    public LocalDateTime getCreated() {
         return created;
     }
 

@@ -21,8 +21,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import javax.swing.text.DateFormatter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +44,7 @@ import java.util.List;
 public class ManageDatabasesController {
 
     private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
+    private static DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yy-HH:mm");
 
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
     public class DisplayDataBase {
@@ -85,6 +90,11 @@ public class ManageDatabasesController {
 
         public String getUrlEncodedName() {
             return database.getUrlEncodedName();
+        }
+
+
+        public String getCreated() {
+            return format.format(database.getCreated());
         }
     }
 

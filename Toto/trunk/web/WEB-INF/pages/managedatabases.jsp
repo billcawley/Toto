@@ -120,6 +120,7 @@ Created by IntelliJ IDEA.
 					<td>Persistence Name</td>
 					<td>Name Count</td>
 					<td>Value Count</td>
+					<td>Created</td>
 					<td></td>
 					<td></td>
 					<td></td>
@@ -138,6 +139,7 @@ Created by IntelliJ IDEA.
 					<td>${database.persistenceName}</td>
 					<td>${database.nameCount}</td>
 					<td>${database.valueCount}</td>
+					<td>${database.created}</td>
 					<td><a href="/api/Jstree?op=new&database=${database.urlEncodedName}" data-title="${database.urlEncodedName}" class="button small inspect" title="Inspect"><span class="fa fa-eye" title="Inspect ${database.name}"></span></a></td>
 					<td><a href="/api/ManageDatabases?emptyId=${database.id}" onclick="return confirm('Are you sure you want to Empty ${database.name}?')" class="button small" title="Empty ${database.name}"><span class="fa fa-bomb" title="Empty"></span></a></td>
 					<td><a href="/api/ManageDatabases?deleteId=${database.id}" onclick="return confirm('Are you sure you want to Delete ${database.name}?')" class="button small" title="Delete ${database.name}"><span class="fa fa-trash" title="Delete"></span> </a></td>

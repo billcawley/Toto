@@ -6,6 +6,8 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +32,7 @@ public final class DatabaseDAO {
     private static final String NAMECOUNT = "name_count";
     private static final String VALUECOUNT = "value_count";
     private static final String DATABASESERVERID = "database_server_id";
+    private static final String CREATED = "created";
 
     public static Map<String, Object> getColumnNameValueMap(Database database) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -42,6 +45,8 @@ public final class DatabaseDAO {
         toReturn.put(NAMECOUNT, database.getNameCount());
         toReturn.put(VALUECOUNT, database.getValueCount());
         toReturn.put(DATABASESERVERID, database.getDatabaseServerId());
+        toReturn.put(DATABASESERVERID, database.getDatabaseServerId());
+        toReturn.put(CREATED, Date.from(database.getCreated().atZone(ZoneId.systemDefault()).toInstant()));
         return toReturn;
     }
 
@@ -57,7 +62,8 @@ public final class DatabaseDAO {
                         , rs.getString(DATABASETYPE)
                         , rs.getInt(NAMECOUNT)
                         , rs.getInt(VALUECOUNT)
-                        , rs.getInt(DATABASESERVERID));
+                        , rs.getInt(DATABASESERVERID),
+                        StandardDAO.getLocalDateTimeFromDate(rs.getDate(CREATED)));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

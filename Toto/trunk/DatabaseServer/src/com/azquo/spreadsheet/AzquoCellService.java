@@ -518,6 +518,7 @@ class AzquoCellService {
         }*/
         List<List<AzquoCell>> toReturn = new ArrayList<>(totalRows);
         if (!quiet) {
+            // todo - depending on filter the size might not be accurate which is a red herring at least for client side processing
             connection.addToUserLog("Size = " + totalRows + " * " + totalCols);
             connection.addToUserLog("1%--------25%---------50%---------75%--------100%");
         }
