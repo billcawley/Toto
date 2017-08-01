@@ -1,10 +1,7 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
-import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.admin.database.DatabaseServer;
-import com.azquo.admin.database.DatabaseServerDAO;
+import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -112,12 +109,39 @@ public class ManageDatabasesController {
             , @RequestParam(value = "summaryLevel", required = false) String summaryLevel
             , @RequestParam(value = "fileSearch", required = false) String fileSearch
             , @RequestParam(value = "deleteUploadRecordId", required = false) String deleteUploadRecordId
+            , @RequestParam(value = "uploadAnyway", required = false) String uploadAnyway
     )
 
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+            if (uploadAnyway != null){
+                // todo - factor?
+                try{
+                    UploadRecord ur = UploadRecordDAO.findById(Integer.parseInt(uploadAnyway));
+                    if (ur != null && ur.getUserId() == loggedInUser.getUser().getId()){
+                        HttpSession session = request.getSession();
+                        new Thread(() -> {
+                            // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
+                            try {
+                                List<String> languages = new ArrayList<>(loggedInUser.getLanguages());
+                                languages.remove(loggedInUser.getUser().getEmail());
+                                session.setAttribute("importResult",
+                                        ImportService.importTheFile(loggedInUser, ur.getFileName(), ur.getTempPath(), languages, false, false, true)
+                                );
+                            } catch (Exception e) {
+                                session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
+                            }
+                        }).start();
+                        return "importrunning";
+                    }
+                } catch (Exception e) { // now the import has it's on exception catching
+                    String exceptionError = e.getMessage();
+                    e.printStackTrace();
+                    model.put("error", exceptionError);
+                }
+            }
             StringBuilder error = new StringBuilder();
             if (request.getSession().getAttribute("importResult") != null) {
                 error.append(request.getSession().getAttribute("importResult"));

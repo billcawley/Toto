@@ -44,10 +44,10 @@ public final class ImportService {
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData) throws Exception {
-        return importTheFile(loggedInUser,fileName,filePath,attributeNames,isData, false);
+        return importTheFile(loggedInUser,fileName,filePath,attributeNames,isData, false, false);
     }
         // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData, boolean setup) throws Exception { // setup just to flag it
+    public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean isData, boolean setup, boolean forceReportUpload) throws Exception { // setup just to flag it
         InputStream uploadFile = new FileInputStream(filePath);
         // todo : address provenance on an import
         if (loggedInUser.getDatabase() == null) {
@@ -82,14 +82,14 @@ public final class ImportService {
             while (fileIterator.hasNext()) {
                 File f = fileIterator.next();
                 if (fileIterator.hasNext()) {
-                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, false, isData)).append("\n");
+                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, false, isData, false)).append("\n");
                 } else {
-                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, true, isData)); // persist on the last one
+                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, true, isData, false)); // persist on the last one
                 }
             }
             toReturn = sb.toString();
         } else { // vanilla
-            toReturn = readBookOrFile(loggedInUser, fileName, tempFile, attributeNames, true, isData);
+            toReturn = readBookOrFile(loggedInUser, fileName, tempFile, attributeNames, true, isData, forceReportUpload);
         }
         // hacky way to get the report name so it can be seen on the list. I wonder if this should be removed . . .
         String reportName = null;
@@ -102,11 +102,14 @@ public final class ImportService {
         UploadRecord uploadRecord = new UploadRecord(0, new Date(), loggedInUser.getUser().getBusinessId()
                 , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, setup ? "setup" : "", "", filePath);//should record the error? (in comment)
         UploadRecordDAO.store(uploadRecord);
+        if (Objects.equals(toReturn, UPLOADEDBYANOTHERUSER)){ //  .equals to shut intelliJ up. Of little consequence.
+            toReturn = UPLOADEDBYANOTHERUSER + " <a href=\"/api/ManageDatabases?uploadAnyway=" + uploadRecord.getId() + "\">Upload Anyway</a>"; // and should there be HTML in here? It will work I guess . . .
+        }
         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         return toReturn;
     }
 
-    private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
+    private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData, boolean forceReportUpload) throws Exception {
         if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(filePath), "Report name");
             List<String> notAllowed = new ArrayList<>();
@@ -237,7 +240,7 @@ public final class ImportService {
             }
             return "Report schedules file uploaded"; // I hope that's what it is looking for.
         } else if (fileName.contains(".xls")) { // normal. I'm not entirely sure the code for users etc above should be in this file, maybe a different importer?
-            return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter, isData);
+            return readBook(loggedInUser, fileName, filePath, attributeNames, persistAfter, isData, forceReportUpload);
         } else {
             return readPreparedFile(loggedInUser, filePath, fileName, attributeNames, persistAfter, false);
         }
@@ -272,7 +275,9 @@ public final class ImportService {
         DatabaseReportLinkDAO.link(databaseId, or.getId());
     }
 
-    private static String readBook(LoggedInUser loggedInUser, final String fileName, final String tempPath, List<String> attributeNames, boolean persistAfter, boolean isData) throws Exception {
+    public static String UPLOADEDBYANOTHERUSER = "A report with that name has been uploaded by another user.";
+
+    private static String readBook(LoggedInUser loggedInUser, final String fileName, final String tempPath, List<String> attributeNames, boolean persistAfter, boolean isData, boolean forceReportUpload) throws Exception {
         final Book book = Importers.getImporter().imports(new File(tempPath), "Imported");
         String reportName = null;
         SName reportRange = book.getInternalBook().getNameByName("az_ReportName");
@@ -282,8 +287,8 @@ public final class ImportService {
         if (reportName != null) {
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
                 OnlineReport existing = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-                if (existing != null && existing.getUserId() != loggedInUser.getUser().getId()){
-                    return "A report with that name has been uploaded by another user.";
+                if (existing != null && existing.getUserId() != loggedInUser.getUser().getId() && !forceReportUpload){
+                    return UPLOADEDBYANOTHERUSER;
                 }
                 uploadReport(loggedInUser, tempPath, fileName, reportName);
                 return "Report uploaded : " + reportName;
