@@ -28,8 +28,8 @@ import java.util.regex.Pattern;
 public class ReportRenderer {
 
     // all case insensetive now so make these lower case and make the names from the reports .toLowerCase().startsWith().
-    public static final String AZDATAREGION = "az_dataregion";
-    public static final String AZOPTIONS = "az_options";
+    static final String AZDATAREGION = "az_dataregion";
+    static final String AZOPTIONS = "az_options";
     public static final String AZREPEATREGION = "az_repeatregion";
     public static final String AZREPEATSCOPE = "az_repeatscope";
     static final String AZREPEATITEM = "az_repeatitem";
@@ -45,16 +45,16 @@ public class ReportRenderer {
     static final String AZPIVOTHEADINGS = "az_pivotheadings";//old version
     static final String AZREPORTNAME = "az_reportname";
     public static final String EXECUTE = "az_Execute";
-    public static final String FOLLOWON = "az_Followon";
-    public static final String AZSAVE = "az_save";
-    public static final String AZREPEATSHEET = "az_repeatsheet";
+    static final String FOLLOWON = "az_Followon";
+    static final String AZSAVE = "az_save";
+    static final String AZREPEATSHEET = "az_repeatsheet";
 
     public static boolean populateBook(Book book, int valueId) {
         return populateBook(book, valueId, false, false, null, true);
     }
 
-    public static boolean populateBook(Book book, int valueId, boolean useRepeats) {
-        return populateBook(book, valueId, false, false, null, useRepeats);
+    public static void populateBook(Book book, int valueId, boolean useRepeats) {
+        populateBook(book, valueId, false, false, null, useRepeats);
     }
 
 
@@ -64,7 +64,7 @@ public class ReportRenderer {
 
 
 
-        public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) { // todo - make more elegant? error hack . . .
+    private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) { // todo - make more elegant? error hack . . .
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
         book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
         long track = System.currentTimeMillis();
@@ -81,6 +81,7 @@ public class ReportRenderer {
             e.printStackTrace();
         }
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+        Map<SSheet, String> sheetsToRename = new HashMap<>(); // the repeat sheet can require renaming the first "template" sheet but this seems to trip up ZK so do it at the end after all the expanding etc
         //String context = "";
         // why a sheet loop at the outside, why not just run all the names? Need to have a think . . .
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
@@ -91,7 +92,6 @@ public class ReportRenderer {
             if (sheet.getSheetName().endsWith(ChoicesService.VALIDATION_SHEET)) {
                 continue;
             }
-            // names are per book, not sheet. Perhaps we could make names the big outside loop but for the moment I'll go by sheet - convenience function
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
 
             // options and validation now sorted per sheet
@@ -147,7 +147,6 @@ public class ReportRenderer {
                                 if (!name.getName().equalsIgnoreCase(AZREPEATSHEET)){ // don't copy the repeat or we'll get a recursive loop!
                                     // cloneSheet won't copy the names, need to make new ones
                                     // the new ones need to be applies to as well as refers to the new sheet
-                                    // how to make a new name? Not sure I have so far!
                                     SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName());
                                     // todo - add ! mark to make replace more robust? and below
                                     String newFormula;
@@ -167,18 +166,7 @@ public class ReportRenderer {
                         }
                         sheetPosition++;
                     }
-                    // fix the names range references first as setSheetName won't
-                    // this is a bit of a bug on ZK's part I think. Also doing this before in the loop seems to cause problems, might need to look into this
-                    for (SName name : namesForSheet){
-                        String newFormula;
-                        if (firstItem.contains(" ") && !name.getRefersToFormula().startsWith("'")){
-                            newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), "'" + firstItem + "'");
-                        } else {
-                            newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), firstItem);
-                        }
-                        name.setRefersToFormula(newFormula);
-                    }
-                    book.getInternalBook().setSheetName(sheet.getInternalSheet(), suggestSheetName(book, firstItem));
+                    sheetsToRename.put(sheet.getInternalSheet(), firstItem);
                 }
             }
 
@@ -249,7 +237,7 @@ public class ReportRenderer {
                                 if (errors.length() > 0){
                                     errors.append("\n");
                                 }
-                                errors.append("ERROR : " + error);
+                                errors.append("ERROR : ").append(error);
                             }
                         } catch (Exception e) {
                             String eMessage = "Unknown database " + databaseName + " for region " + region;
@@ -262,7 +250,7 @@ public class ReportRenderer {
                             if (errors.length() > 0){
                                 errors.append("\n");
                             }
-                            errors.append("ERROR : " + error);
+                            errors.append("ERROR : ").append(error);
                         }
                     }
                 }
@@ -325,6 +313,9 @@ public class ReportRenderer {
                 ChoicesService.resolveDependentChoiceOptions(sheet.getSheetName().replace(" ",""), dependentRanges, book, loggedInUser);
             }
         }
+        for (SSheet sheet : sheetsToRename.keySet()){
+            book.getInternalBook().setSheetName(sheet, suggestSheetName(book, sheetsToRename.get(sheet)));
+        }
         //
         loggedInUser.setImageStoreName(imageStoreName);
         // we won't clear the log in the case of execute
@@ -339,7 +330,7 @@ public class ReportRenderer {
     }
 
     // edd modifying a version of ZK code to allow a suggested new sheet name
-    public static String suggestSheetName(Book book, String suggestedName){
+    private static String suggestSheetName(Book book, String suggestedName){
         if(book.getSheet(suggestedName) == null) {
             return suggestedName;
         }
@@ -366,15 +357,13 @@ public class ReportRenderer {
         return name;
     }
 
-    public static void CopySheet(Range range, String suggestedName) {
-        range.sync(new RangeRunner() {
-            public void run(Range range) {
-                // this little bracked bit is what I added to the ZK code
-                if (suggestedName != null && !suggestedName.isEmpty()){
-                        range.cloneSheet(suggestSheetName(range.getBook(), suggestedName));
-                } else {
-                    range.cloneSheet(suggestSheetName(range.getBook(), range.getSheetName()));
-                }
+    private static void CopySheet(Range range, String suggestedName) {
+        range.sync(range1 -> {
+            // this little bracketed bit is what I added to the ZK code
+            if (suggestedName != null && !suggestedName.isEmpty()){
+                range1.cloneSheet(suggestSheetName(range1.getBook(), suggestedName));
+            } else {
+                range1.cloneSheet(suggestSheetName(range1.getBook(), range1.getSheetName()));
             }
         });
     }
