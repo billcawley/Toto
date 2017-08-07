@@ -84,6 +84,9 @@ public class ExcelController {
     ) {
         String errorMessage = null;
         try {
+            if (reportNameCheck != null){
+                reportNameCheck = reportNameCheck.trim();
+            }
             if (toggle != null) {
                 request.getSession().setAttribute("excelToggle", toggle);
                 return "";
@@ -93,7 +96,6 @@ public class ExcelController {
             }
             LoggedInUser loggedInUser = null;
             if (logon != null && logon.length() > 0) {
-                if (reportNameCheck==null) reportNameCheck = "unknown";
                 loggedInUser = LoginService.loginLoggedInUser("", database, logon, password, reportNameCheck, false);
                 if (loggedInUser == null) {
                     return "error: User " + logon + " with this password does not exist";
@@ -348,7 +350,8 @@ public class ExcelController {
             }
             if (provenanceJson != null) {
                 ProvenanceJsonRequest provenanceJsonRequest = jacksonMapper.readValue(provenanceJson, ProvenanceJsonRequest.class);
-                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, provenanceJsonRequest.reportId, provenanceJsonRequest.sheetName, provenanceJsonRequest.region, provenanceJsonRequest.row, provenanceJsonRequest.col, 1000);
+                UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), provenanceJsonRequest.reportId, provenanceJsonRequest.region, ""); // todo - send options source from
+                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, provenanceJsonRequest.reportId, provenanceJsonRequest.sheetName, provenanceJsonRequest.region, userRegionOptions, provenanceJsonRequest.row, provenanceJsonRequest.col, 1000);
                 // todo - push the formatting to Excel! Just want it to work for the moment . . .
                 StringBuilder toSend = new StringBuilder();
                 int count = 0;

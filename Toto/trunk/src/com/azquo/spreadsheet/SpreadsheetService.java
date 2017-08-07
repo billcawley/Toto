@@ -130,7 +130,7 @@ public class SpreadsheetService {
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
-    public static ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(LoggedInUser loggedInUser, int reportId,String sheetName, String region, int rowInt, int colInt, int maxSize) throws Exception {
+    public static ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(LoggedInUser loggedInUser, int reportId, String sheetName, String region, UserRegionOptions userRegionOptions, int rowInt, int colInt, int maxSize) throws Exception {
         final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId,sheetName, region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
@@ -139,15 +139,15 @@ public class SpreadsheetService {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
             return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getProvenanceDetailsForDisplay(databaseAccessToken, cellsAndHeadingsForDisplay.getRowHeadingsSource()
-                    , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
-                    , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(), maxSize);
+                    , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource(), userRegionOptions.getRegionOptionsForTransport()
+                    , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(),  maxSize);
         }
         return new ProvenanceDetailsForDisplay(null, null); // maybe "not found"?
     }
 
     // some code duplication with above, a way to factor?
 
-    public static String getDebugForCell(LoggedInUser loggedInUser, int reportId, String sheetName, String region, int rowInt, int colInt) throws Exception {
+    public static String getDebugForCell(LoggedInUser loggedInUser, int reportId, String sheetName, String region, UserRegionOptions userRegionOptions, int rowInt, int colInt) throws Exception {
         final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId,sheetName, region);
         if (cellsAndHeadingsForDisplay != null
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
@@ -157,7 +157,7 @@ public class SpreadsheetService {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
             return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getDebugForCell(databaseAccessToken, cellsAndHeadingsForDisplay.getRowHeadingsSource()
-                    , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
+                    , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource(), userRegionOptions.getRegionOptionsForTransport()
                     , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol());
         }
         return "not found";

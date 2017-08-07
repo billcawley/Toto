@@ -34,7 +34,7 @@ public class LoginService {
     public static LoggedInUser loginLoggedInUser(final String sessionId, String databaseName, final String userEmail, final String password, final String reportName, boolean loggedIn) throws Exception {
         User user;
 
-        String databaseList = "";
+        StringBuilder databaseList = new StringBuilder();
         //for demo users, a new User id is made for each user.
         if (userEmail.startsWith("demo@user.com")) {
             user = UserDAO.findByEmail(userEmail);
@@ -47,68 +47,67 @@ public class LoginService {
                 }
             }
         } else {
-            user = UserDAO.findByEmail(userEmail);}
-        if (reportName !=null && reportName.length() > 0 && user!=null){
-            if (!user.isAdministrator() && !user.isDeveloper()){
-                if (reportName.equals("unknown")){
-                    List<Database>dbs = DatabaseDAO.findForUserId(user.getId());
-
-                    if (dbs.size()> 0){
-                        for (Database db:dbs){
-                            databaseList += db.getName() + ",";
+            user = UserDAO.findByEmail(userEmail);
+        }
+        if (user != null) {
+            if (!user.isAdministrator() && !user.isDeveloper()) {
+                if (reportName == null || reportName.length() > 0) {
+                    List<Database> dbs = DatabaseDAO.findForUserId(user.getId());
+                    if (dbs.size() > 0) {
+                        for (Database db : dbs) {
+                            databaseList.append(db.getName()).append(",");
                         }
                     }
-                }else {
+                } else {
                     OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, user.getBusinessId());
                     if (onlineReport != null) {
                         List<Integer> dblist = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
                         if (dblist.size() > 0) {
                             for (Integer dbNo : dblist) {
-                                databaseList += DatabaseDAO.findById(dbNo).getName() + ",";
+                                databaseList.append(DatabaseDAO.findById(dbNo).getName()).append(",");
                             }
                         }
                     }
                 }
-            }else{
+            } else {
                 List<Integer> reportDBs = null;
-                if (!reportName.equals("unknown")) {
+                if (reportName != null && reportName.length() > 0) {
                     OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, user.getBusinessId());
                     if (onlineReport != null) {
                         reportDBs = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
 
                     }
                 }
-                 List<Database> dbs;
-                 if (user.isDeveloper()) {
-                     dbs = DatabaseDAO.findForUserId(user.getId());
-                 }else {
-                     dbs = DatabaseDAO.findForBusinessId(user.getBusinessId());
-                 }
-                 if (dbs.size() > 0) {
-                     String firstDB = null;
-                     for (Database db : dbs) {
-                         if (reportDBs != null && reportDBs.size() > 0 && db.getId()==reportDBs.get(0)){
-                             firstDB = db.getName();
+                List<Database> dbs;
+                if (user.isDeveloper()) {
+                    dbs = DatabaseDAO.findForUserId(user.getId());
+                } else {
+                    dbs = DatabaseDAO.findForBusinessId(user.getBusinessId());
+                }
+                if (dbs.size() > 0) {
+                    String firstDB = null;
+                    for (Database db : dbs) {
+                        if (reportDBs != null && reportDBs.size() > 0 && db.getId() == reportDBs.get(0)) {
+                            firstDB = db.getName();
 
-                         }else {
-                             databaseList += db.getName() + ",";
-                         }
+                        } else {
+                            databaseList.append(db.getName()).append(",");
+                        }
 
-                     }
-                     if (firstDB!=null) databaseList = firstDB + ","+ databaseList;
-                 }
+                    }
+                    if (firstDB != null) databaseList.insert(0, firstDB + ",");
+                }
+            }
+        }
 
-             }
-         }
-
-         //boolean temporary = false;
+        //boolean temporary = false;
         // Bill changed something which meand that database name could be lost by this point which has broken magento uploads by admins which I use locally.
         // Am adding it back in here - I don't think it's a security risk
-        if (databaseList.length() == 0 && databaseName != null && databaseName.length() > 0){
-            databaseList = databaseName + ","; // hacky!!
+        if (databaseList.length() == 0 && databaseName != null && databaseName.length() > 0) {
+            databaseList = new StringBuilder(databaseName + ","); // hacky!!
         }
         if (user != null && (loggedIn || AdminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword()))) {
-            return loginLoggedInUser(sessionId, databaseList, user);
+            return loginLoggedInUser(sessionId, databaseList.toString(), user);
         }
         return null;
     }
@@ -119,8 +118,8 @@ public class LoginService {
         Database database = null;
         String databaseName = "";
         // ok user should be ok :)
-        if (databaseNames!=null && databaseNames.length() > 0) {
-            databaseName = databaseNames.substring(0,databaseNames.indexOf(","));
+        if (databaseNames != null && databaseNames.length() > 0) {
+            databaseName = databaseNames.substring(0, databaseNames.indexOf(","));
         }
 
         // new logic run regardless of whether we were passed a db as we want to default if there's only one DB (this was lost and it knackered some magento uploads)
@@ -163,7 +162,7 @@ public class LoginService {
             throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
         }
         String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user, databaseServer, database,  null, businessDirectory);// null the read/write list for the mo
+        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user, databaseServer, database, null, businessDirectory);// null the read/write list for the mo
         loggedInUser.setDbNames(databaseNames);
         // I zapped something to do with anonymising here, don't know if it's still relevant
         return loggedInUser;

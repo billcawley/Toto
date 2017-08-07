@@ -245,18 +245,18 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
+    public ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
         try {
-            return ProvenanceService.getDataRegionProvenance(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, maxSize);
+            return ProvenanceService.getDataRegionProvenance(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws RemoteException {
+    public String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol) throws RemoteException {
         try {
-            return DSSpreadsheetService.getDebugForCell(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource,unsortedRow,unsortedCol);
+            return DSSpreadsheetService.getDebugForCell(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource, regionOptionsForTransport,unsortedRow,unsortedCol);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

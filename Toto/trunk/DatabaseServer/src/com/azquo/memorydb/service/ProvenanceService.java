@@ -17,6 +17,7 @@ import com.azquo.spreadsheet.DataRegionHeading;
 import com.azquo.spreadsheet.ListOfValuesOrNamesAndAttributeName;
 import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
+import com.azquo.spreadsheet.transport.RegionOptions;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.text.DateFormat;
@@ -68,9 +69,9 @@ public class ProvenanceService {
 
     // This will be changed to return a new object - ProvenanceDetailsForDisplay
     public static ProvenanceDetailsForDisplay getDataRegionProvenance(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol, int maxSize) throws Exception {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, int maxSize) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
-        AzquoCell azquoCell = DSSpreadsheetService.getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, databaseAccessToken.getLanguages(), null);
+        AzquoCell azquoCell = DSSpreadsheetService.getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, databaseAccessToken.getLanguages(), null);
         if (azquoCell != null) {
             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
             // todo, deal with name functions properly, will need to check through the DataRegionHeadings (as in don't just assume it's name count, could be something else)
@@ -81,11 +82,12 @@ public class ProvenanceService {
                 return valuesProvenance(azquoMemoryDBConnection, valuesForCell.getValues(), maxSize);
             }
             // todo - in case of no row headings (import style data) this may NPE
-            if (azquoCell.getRowHeadings().get(0).getAttribute() != null || azquoCell.getColumnHeadings().get(0).getAttribute() != null) {
-                if (azquoCell.getRowHeadings().get(0).getAttribute() != null) { // then col name, row attribute
-                    return attributeProvenance(azquoCell.getColumnHeadings().get(0).getName(), azquoCell.getRowHeadings().get(0).getAttribute());
+            // get the last not the first when looking for attributes, first ones could be null
+            if (azquoCell.getRowHeadings().get(azquoCell.getRowHeadings().size() - 1).getAttribute() != null || azquoCell.getColumnHeadings().get(azquoCell.getColumnHeadings().size() - 1).getAttribute() != null) {
+                if (azquoCell.getRowHeadings().get(azquoCell.getRowHeadings().size() - 1).getAttribute() != null) { // then col name, row attribute
+                    return attributeProvenance(azquoCell.getColumnHeadings().get(azquoCell.getColumnHeadings().size() - 1).getName(), azquoCell.getRowHeadings().get(azquoCell.getRowHeadings().size() - 1).getAttribute());
                 } else { // the other way around
-                    return attributeProvenance(azquoCell.getRowHeadings().get(0).getName(), azquoCell.getColumnHeadings().get(0).getAttribute());
+                    return attributeProvenance(azquoCell.getRowHeadings().get(azquoCell.getRowHeadings().size() - 1).getName(), azquoCell.getColumnHeadings().get(azquoCell.getColumnHeadings().size() - 1).getAttribute());
                 }
             }
         }

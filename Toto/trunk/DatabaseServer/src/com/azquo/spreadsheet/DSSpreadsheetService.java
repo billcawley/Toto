@@ -169,11 +169,11 @@ public class DSSpreadsheetService {
 
     // like above to find the relevant cell BUT in this case we want as much detail about how the cell was made. I'm just going to return a string here
     public static String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, int unsortedRow, int unsortedCol) throws Exception {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol) throws Exception {
         int maxDebugLength = 2_000_000; // two million, a bit arbritrary for the moment
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         StringBuilder debugInfo = new StringBuilder();
-        getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, unsortedRow, unsortedCol, databaseAccessToken.getLanguages(), debugInfo);
+        getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, databaseAccessToken.getLanguages(), debugInfo);
         if (debugInfo.length() > maxDebugLength) {
             return debugInfo.substring(0, maxDebugLength);
         } else {
@@ -658,18 +658,16 @@ public class DSSpreadsheetService {
     private static void checkClear(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> headings) {
         if (headings==null) return;
         for (List<String> headingRow:headings){
-            Iterator i = headingRow.iterator();
-            while (i.hasNext()){
-                String heading = (String) i.next();
-                if (heading!=null && heading.startsWith(".") && heading.toLowerCase().endsWith(" clear")){
+            for (String heading : headingRow) {
+                if (heading != null && heading.startsWith(".") && heading.toLowerCase().endsWith(" clear")) {
                     String att = heading.substring(1, heading.length() - " clear".length() - 1); //remove the initial '.' and ' clear'
                     try {
                         Name name = NameService.findByName(azquoMemoryDBConnection, att);
                         if (name != null) {
                             name.setChildrenWillBePersisted(Collections.emptyList());
-                            heading = heading.substring(0,att.length() + 1);//todo  make sure that this does remove the 'clear'
+                            heading = heading.substring(0, att.length() + 1);//todo  make sure that this does remove the 'clear'
                         }
-                    }catch(Exception e){
+                    } catch (Exception e) {
                         //ignore
                     }
                 }
@@ -681,7 +679,7 @@ public class DSSpreadsheetService {
     // when doing things like debug/provenance the client needs to say "here's a region description and original position" to locate a cell server side
     public static AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , int unsortedRow, int unsortedCol, List<String> languages, StringBuilder debugInfo) throws Exception {
+            , RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, List<String> languages, StringBuilder debugInfo) throws Exception {
         // these 25 lines or so are used elsewhere, maybe normalise?
         final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBCOnnection, contextSource, languages);
         DataRegionHeading.SUFFIX contextSuffix = null;
@@ -691,9 +689,22 @@ public class DSSpreadsheetService {
             }
         }
         Collection<Name> sharedNames = AzquoCellService.getSharedNames(contextHeadings);//sharedNames only required for permutations
-        final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix, false); // don't surpress errors, will this be a problem?
+        List<String> defaultLanguages = languages;
+        if (regionOptionsForTransport.rowLanguage!=null && regionOptionsForTransport.rowLanguage.length() > 0){
+            languages = new ArrayList<>();
+            languages.add(regionOptionsForTransport.rowLanguage);
+        }
+        final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(
+                azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix, false); // don't surpress errors, will this be a problem?
+        languages = defaultLanguages;
         final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames);
-        final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages, AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, false); // same as standard limit for col headings
+        if (regionOptionsForTransport.columnLanguage!=null && regionOptionsForTransport.columnLanguage.length() > 0){
+            languages = new ArrayList<>();
+            languages.add(regionOptionsForTransport.columnLanguage);
+        }
+        final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(
+                azquoMemoryDBCOnnection, colHeadingsSource, languages, AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, false); // same as standard limit for col headings
+        languages = defaultLanguages;
         final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames);
         if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
             return null;

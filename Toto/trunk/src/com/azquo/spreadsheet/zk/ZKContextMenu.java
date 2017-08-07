@@ -179,54 +179,65 @@ class ZKContextMenu {
                     }
                 }
             }
-            try {
-                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, regionRow, regionColumn, 1000);
-                if (provenanceDetailsForDisplay.getProcenanceForDisplayList() != null && !provenanceDetailsForDisplay.getProcenanceForDisplayList().isEmpty()) {
-                    buildContextMenuProvenance(provenanceDetailsForDisplay, myzss);
-                    buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
-                    Menuitem auditItem = new Menuitem("Audit");
-                    editPopup.appendChild(auditItem);
-                    auditItem.setPopup(provenancePopup);
+            // going to put a check on region not being null - should provenance etc work on headings? It will stop it for the mo
+            if (region != null){
+                // Edd adding in the user region options that are now required due to column and row languages
+                SName optionsRegion = myzss.getSelectedSheet().getBook().getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
+                String source = null;
+                if (optionsRegion != null) {
+                    source = BookUtils.getSnameCell(optionsRegion).getStringValue();
+                }
+                UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
+                try {
+                    final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn, 1000);
+                    if (provenanceDetailsForDisplay.getProcenanceForDisplayList() != null && !provenanceDetailsForDisplay.getProcenanceForDisplayList().isEmpty()) {
+                        buildContextMenuProvenance(provenanceDetailsForDisplay, myzss);
+                        buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
+                        Menuitem auditItem = new Menuitem("Audit");
+                        editPopup.appendChild(auditItem);
+                        auditItem.setPopup(provenancePopup);
 //                            auditItem.addEventListener("onClick",
 //                                    event -> System.out.println("audit menu item clicked"));
-                    buildContextMenuDrillDownIfApplicable(myzss.getSelectedSheetName(), region, regionRow, regionColumn);
+                        buildContextMenuDrillDownIfApplicable(myzss.getSelectedSheetName(), region, regionRow, regionColumn);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            buildContextMenuDebug(myzss.getSelectedSheetName(), region, regionRow, regionColumn);
-            buildContextMenuInstructions(myzss.getSelectedSheetName(), region);
+                buildContextMenuDebug(myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn);
+                buildContextMenuInstructions(myzss.getSelectedSheetName(), region);
 
-            popupChild = highlightPopup.getFirstChild();
-            while (popupChild != null) {
-                highlightPopup.removeChild(popupChild);
                 popupChild = highlightPopup.getFirstChild();
-            }
-            UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
-            int highlightDays = 0;
-            if (userRegionOptions != null) {
-                highlightDays = userRegionOptions.getHighlightDays();
-            }
-            String highlightString = "no highlight";
-            if (highlightDays > 0) highlightString = highlightDays + " days";
-            final String highlightList = "Current highlight is " + highlightString + "\n";
-            Label highlightLabel = new Label();
-            highlightLabel.setMultiline(true);
-            highlightLabel.setValue(highlightList);
-            highlightPopup.appendChild(highlightLabel);
-            addHighlight(highlightPopup, 0);
-            addHighlight(highlightPopup, 2);
-            addHighlight(highlightPopup, 1);
-            addHighlight(highlightPopup, 7);
-            addHighlight(highlightPopup, 30);
-            addHighlight(highlightPopup, 90);
-            Menuitem highlightItem = new Menuitem("Highlight");
-            editPopup.appendChild(highlightItem);
-            highlightItem.setPopup(highlightPopup);
-            if (ref != null) {
-                editPopup.open(ref, "at_pointer");
-            } else {
-                editPopup.open(mouseX - 140, mouseY);
+                while (popupChild != null) {
+                    highlightPopup.removeChild(popupChild);
+                    popupChild = highlightPopup.getFirstChild();
+                }
+                // just concerned withe the user ones as opposed to the report ones
+                userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+                int highlightDays = 0;
+                if (userRegionOptions != null) {
+                    highlightDays = userRegionOptions.getHighlightDays();
+                }
+                String highlightString = "no highlight";
+                if (highlightDays > 0) highlightString = highlightDays + " days";
+                final String highlightList = "Current highlight is " + highlightString + "\n";
+                Label highlightLabel = new Label();
+                highlightLabel.setMultiline(true);
+                highlightLabel.setValue(highlightList);
+                highlightPopup.appendChild(highlightLabel);
+                addHighlight(highlightPopup, 0);
+                addHighlight(highlightPopup, 2);
+                addHighlight(highlightPopup, 1);
+                addHighlight(highlightPopup, 7);
+                addHighlight(highlightPopup, 30);
+                addHighlight(highlightPopup, 90);
+                Menuitem highlightItem = new Menuitem("Highlight");
+                editPopup.appendChild(highlightItem);
+                highlightItem.setPopup(highlightPopup);
+                if (ref != null) {
+                    editPopup.open(ref, "at_pointer");
+                } else {
+                    editPopup.open(mouseX - 140, mouseY);
+                }
             }
         }
     }
@@ -522,10 +533,10 @@ class ZKContextMenu {
         }
     }
 
-    private void buildContextMenuDebug(String sheetName, String region, int regionRow, int regionColumn) {
+    private void buildContextMenuDebug(String sheetName, String region, UserRegionOptions userRegionOptions, int regionRow, int regionColumn) {
         // ok, adding new debug info here, it doesn't require values in the cell unlike provenance
         try {
-            String debugString = SpreadsheetService.getDebugForCell(loggedInUser, reportId, sheetName, region, regionRow, regionColumn);
+            String debugString = SpreadsheetService.getDebugForCell(loggedInUser, reportId, sheetName, region,userRegionOptions, regionRow, regionColumn);
             Label debugLabel = new Label();
             debugLabel.setMultiline(true);
             debugLabel.setValue("Debug\n");
