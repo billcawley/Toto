@@ -57,6 +57,17 @@ public class AzquoMemoryDBIndex {
         return Collections.emptySet(); // moving away from nulls - this will complain outside if it is modified though!
     }
 
+    private static AtomicInteger getValuesForAttributeCount = new AtomicInteger(0);
+
+    public Set<String> getValuesForAttribute(final String attributeName) {
+        getValuesForAttributeCount.incrementAndGet();
+        Map<String, Collection<Name>> map = nameByAttributeMap.get(attributeName.toUpperCase().trim());
+        if (map != null) { // that attribute is there
+            return HashObjSets.newMutableSet(map.keySet());
+        }
+        return Collections.emptySet(); // moving away from nulls - this will complain outside if it is modified though!
+    }
+
     // same as above but then zap any not in the parent
 
     private static AtomicInteger getNamesForAttributeAndParentCount = new AtomicInteger(0);
@@ -340,6 +351,7 @@ public class AzquoMemoryDBIndex {
         System.out.println("######### AZQUO MEMORY DB INDEX FUNCTION COUNTS");
         System.out.println("getAttributesCount\t\t\t\t" + getAttributesCount.get());
         System.out.println("getNamesForAttributeCount\t\t\t\t" + getNamesForAttributeCount.get());
+        System.out.println("getValuesForAttributeCount\t\t\t\t" + getValuesForAttributeCount.get());
         System.out.println("attributeExistsInDBCount\t\t\t\t" + attributeExistsInDBCount.get());
         System.out.println("getNamesForAttributeAndParentCount\t\t\t\t" + getNamesForAttributeAndParentCount.get());
         System.out.println("getNamesForAttributeNamesAndParentCount\t\t\t\t" + getNamesForAttributeNamesAndParentCount.get());
@@ -356,6 +368,7 @@ public class AzquoMemoryDBIndex {
     private static void clearFunctionCountStats() {
         getAttributesCount.set(0);
         getNamesForAttributeCount.set(0);
+        getValuesForAttributeCount.set(0);
         attributeExistsInDBCount.set(0);
         getNamesForAttributeAndParentCount.set(0);
         getNamesForAttributeNamesAndParentCount.set(0);

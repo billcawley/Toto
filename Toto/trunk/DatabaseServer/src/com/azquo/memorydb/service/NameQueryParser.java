@@ -104,6 +104,10 @@ public class NameQueryParser {
                 setFormula = setFormula.substring(languagePos + 2);
             }
         }
+        //todo - find a better way of using 'parseQuery` for other operations
+        if (setFormula.toLowerCase().startsWith("edit:")) {
+            return NameEditFunctions.handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(), languages);
+        }
 
         List<NameSetList> nameStack = new ArrayList<>(); // now use the container object, means we only create new collections at the last minute as required
         List<String> formulaStrings = new ArrayList<>();
@@ -121,10 +125,6 @@ public class NameQueryParser {
                 System.out.println("Parse query : " + formulaCopy + " took : " + time + "ms");
             }
             return toReturn;
-        }
-        //todo - find a better way of using 'parseQuery` for other operations
-        if (setFormula.toLowerCase().startsWith("edit:")) {
-            return NameEditFunctions.handleEdit(azquoMemoryDBConnection, setFormula.substring(5).trim(), languages);
         }
         boolean sorted = false;
         if (setFormula.toLowerCase().endsWith(" " + StringLiterals.SORTED)) {

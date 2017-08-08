@@ -18,6 +18,9 @@ class NameEditFunctions {
 
     static List<Name> handleEdit(AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula, List<String> languages) throws Exception {
         List<Name> toReturn = new ArrayList<>();
+        if (setFormula.toLowerCase().startsWith("namesfromattribute")) {
+            return namesFromAttribute(azquoMemoryDBConnection, setFormula.substring("namesFromAttribute".length()).replace("`","").trim());
+        }
         if (setFormula.startsWith("deduplicate")) {
             return deduplicate(azquoMemoryDBConnection, setFormula.substring(12));
         }
@@ -124,12 +127,29 @@ class NameEditFunctions {
                 set.setAttributeWillBePersisted("DISPLAYROWS",dRows);;
             }
             return toReturn;
-
         }
-
-
-
         throw new Exception(setFormula + " not understood");
+    }
+
+    private static List<Name> namesFromAttribute(AzquoMemoryDBConnection azquoMemoryDBConnection, String attribute) throws Exception {
+        if (attribute == null || attribute.isEmpty()){
+            return Collections.emptyList();
+        }
+        // first order of business is to create/find the attribtue name at the top level and delete all children
+        Name attributeName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, attribute, null, false);
+        // clear children
+        for (Name child : attributeName.getChildren()){
+            child.delete();
+        }
+        Set<String> valuesForAttribute = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getValuesForAttribute(attribute);
+        List<Name> toReturn = new ArrayList<>(valuesForAttribute.size());
+        for (String attValue : valuesForAttribute){
+            Name attributeValueName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, attValue, attributeName, true); // local child of the name we just cleared/created
+            attributeValueName.setChildrenWillBePersisted(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, attValue));
+            toReturn.add(attributeValueName);
+        }
+        azquoMemoryDBConnection.persist();
+        return toReturn;
     }
 
     private static int skipTwoQuotes(String source){
