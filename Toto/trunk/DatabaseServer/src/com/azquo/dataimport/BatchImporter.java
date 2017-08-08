@@ -57,6 +57,20 @@ public class BatchImporter implements Callable<Void> {
                happy for the check to remain in here - more stuff for the multi threaded bit */
                 ImportCellWithHeading first = lineToLoad.get(0);
                 if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null || first.getImmutableImportHeading().compositionPattern != null) {
+                    //check dates before resolving composite values
+                    for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
+                        // this basic value checking was outside, I see no reason it shouldn't be in here
+                        if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().isDate) {
+                    /*
+                    interpret the date and change to standard form
+                    todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+                    */
+                            LocalDate date = isADate(importCellWithHeading.getLineValue());
+                            if (date != null) {
+                                importCellWithHeading.setLineValue(dateTimeFormatter.format(date));
+                            }
+                        }
+                    }
                     resolveCompositeValues(lineToLoad, lineNo);
                     if (checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames)) {
                         try {
@@ -266,18 +280,7 @@ public class BatchImporter implements Callable<Void> {
             }
         }
         for (ImportCellWithHeading importCellWithHeading : cells) {
-            // this basic value checking was outside, I see no reason it shouldn't be in here
-            if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().isDate) {
-                    /*
-                    interpret the date and change to standard form
-                    todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                    */
-                LocalDate date = isADate(importCellWithHeading.getLineValue());
-                if (date != null) {
-                    importCellWithHeading.setLineValue(dateTimeFormatter.format(date));
-                }
-            }
-            /* 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
+             /* 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
              the key here is that the resolveLineNameParentsAndChildForCell has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
              both pedestrianized (ok) and street (NOT ok!) will have their line names resolved
              whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
