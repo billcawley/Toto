@@ -493,7 +493,7 @@ public class NameQueryParser {
             }
             result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName, source.getDefaultDisplayName()));
         }
-        result.removeAll(toConvert.getAsCollection());
+        result.removeAll(toConvert.list);
         return new NameSetList(result, null, true);
     }
 
