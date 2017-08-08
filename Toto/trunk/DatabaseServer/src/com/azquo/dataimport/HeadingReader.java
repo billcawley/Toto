@@ -431,11 +431,11 @@ class HeadingReader {
             //checking the name itself, then the name as part of a comma separated string
             if (heading.heading != null
                     && (heading.heading.equalsIgnoreCase(nameToFind) || heading.heading.toLowerCase().startsWith(nameToFind.toLowerCase() + ","))
-                    && (heading.isAttributeSubject || heading.attribute == null || heading.isDate)) {
+                    && (heading.isAttributeSubject || heading.attribute == null || heading.attribute.equals(DATELANG))) {
                 if (heading.isAttributeSubject) {
                     return headingNo;
                 }
-                if (headingFound == -1) {
+                if ( headingFound == -1) {
                     headingFound = headingNo;
                 } else {
                     return -1;//too many possibilities
