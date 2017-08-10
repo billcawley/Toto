@@ -61,9 +61,13 @@ public class AzquoCellResolver {
         boolean hasData = false;
         for (DataRegionHeading heading : rowHeadings) {
             if (heading != null && (heading.getName() != null || heading.getAttribute() != null || heading.getFunction() != null)) {
-                hasData = true;
-                break;
-            }
+                 hasData = true;
+           }
+
+        }
+        DataRegionHeading lastHeading =rowHeadings.get(rowHeadings.size()-1);
+        if (lastHeading!=null && lastHeading.getAttribute()!=null && lastHeading.getAttribute().equals(".")){
+                hasData = false;
         }
         if (hasData) {
             hasData = false;
@@ -73,9 +77,14 @@ public class AzquoCellResolver {
                     break;
                 }
             }
+            lastHeading =columnHeadings.get(columnHeadings.size()-1);
+            if (lastHeading!=null&& lastHeading.getAttribute()!=null && lastHeading.getAttribute().equals(".")){
+                hasData = false;
+            }
+
         }
         if (!hasData) {
-            return new AzquoCell(locked.isTrue, null, rowHeadings, columnHeadings, contextHeadings, rowNo, colNo, "", doubleValue, false, false);
+            return new AzquoCell(true, null, rowHeadings, columnHeadings, contextHeadings, rowNo, colNo, "", doubleValue, false, false);
         }
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
         // ok under new logic the complex functions will work very differently evaluating a query for each cell rather than gathering headings as below. Hence a big if here
