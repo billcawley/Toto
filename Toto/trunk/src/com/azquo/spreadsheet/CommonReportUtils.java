@@ -41,6 +41,16 @@ public class CommonReportUtils {
         }
     }
 
+    public static int getNameQueryCount(LoggedInUser loggedInUser, String query) {
+        try {
+            return RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getNameQueryCount(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
+        } catch (Exception e){
+            // for the moment be "quiet", this function used to help formatting
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query) {
         return getDropdownListForQuery(loggedInUser, query, loggedInUser.getLanguages());
     }

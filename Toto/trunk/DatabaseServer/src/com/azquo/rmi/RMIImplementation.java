@@ -7,6 +7,7 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.service.DSAdminService;
+import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.ProvenanceService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
@@ -196,6 +197,15 @@ class RMIImplementation implements RMIInterface {
     public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
         try {
             return UserChoiceService.getDropDownListForQuery(databaseAccessToken, query, languages);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public int getNameQueryCount(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
+        try{
+            return NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, true).size();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

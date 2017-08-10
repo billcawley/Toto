@@ -238,6 +238,7 @@ public class ReportService {
     // factored off from the command controller
     public static String save(Book book, LoggedInUser loggedInUser) throws Exception{
         // todo - provenance?
+        long time = System.currentTimeMillis();
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         boolean saveOk = true;
@@ -314,6 +315,7 @@ public class ReportService {
         // new thing, look for followon, guess we need an instance of ZK azquobook utils
         // need to show readout like executing todo. On that topic could the executing loading screen say "running command?" or something similar?
         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
+        System.out.println("Save time ms : " + (System.currentTimeMillis() - time));
         if (error == null) {
             error = "Success: " + savedItems + " values saved";
             if (redundant.length() > 0){

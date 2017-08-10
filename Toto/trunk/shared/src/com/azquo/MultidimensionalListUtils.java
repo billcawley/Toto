@@ -1,4 +1,4 @@
-package com.azquo.spreadsheet;
+package com.azquo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -142,7 +142,7 @@ public class MultidimensionalListUtils {
 
     */
 
-    static <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
+    public static <T> List<List<T>> transpose2DList(final List<List<T>> source2Dlist) {
         if (source2Dlist.size() == 0) {
             return new ArrayList<>();
         }

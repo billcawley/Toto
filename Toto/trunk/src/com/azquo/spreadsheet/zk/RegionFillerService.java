@@ -235,7 +235,7 @@ class RegionFillerService {
     // crucial to the repeat regions is that the top left region, before being copied around, is a useful size for all variations
     static void fillDataForRepeatRegions(LoggedInUser loggedInUser, int reportId, Sheet sheet, String region, UserRegionOptions userRegionOptions
             , CellRegion displayRowHeadings, CellRegion displayColumnHeadings, CellRegion displayDataRegion, SName rowHeadingDescription
-            , SName columnHeadingsDescription, SName contextDescription, int maxRow, int maxCol, int valueId, boolean quiet, Set<String> repeatRegionTracker) throws Exception {
+            , SName columnHeadingsDescription, SName contextDescription, int maxRow, int valueId, boolean quiet, Set<String> repeatRegionTracker) throws Exception {
         // note - this means the repeatRegion may have been expanded but I think this makes sense - before if it wasn't big enough it would break
         // won't be properly tested until we need it again
         // the region to be repeated, will contain headings and an item which changes for each repetition
@@ -306,7 +306,7 @@ class RegionFillerService {
         if (rowsRequired > repeatScopeHeight) {
             int rowsToAdd = rowsRequired - repeatScopeHeight;
             int insertRow = repeatScope.getRefersToCellRegion().getRow() + repeatScope.getRefersToCellRegion().getRowCount() - 1; // last row, inserting here shifts the row down - should it be called last row? -1 on the row count as rows are inclusive. Rows 3-4 is not 1 row it's 2!
-            Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // rows to add - 1 as rows are inclusive
+            Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, 0).toRowRange(); // rows to add - 1 as rows are inclusive
             CellOperationUtil.insertRow(insertRange);
         }
         // a nasty bug WFC discovered - if the repeat scope isn't bigger than the repeat region then the repeat region may have been stretched!

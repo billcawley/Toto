@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.MultidimensionalListUtils;
 import com.azquo.StringLiterals;
 import com.azquo.ThreadPools;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
@@ -46,7 +47,7 @@ class DataRegionHeadingService {
                 if (sourceCell.toLowerCase().endsWith(StringLiterals.EDITABLE)){
                     sourceCell = sourceCell.substring(0,sourceCell.length()-StringLiterals.EDITABLE.length()).trim();
                 }
-                if (sourceCell == null || sourceCell.length() == 0) {
+                if (sourceCell.length() == 0) {
                     row.add(null);
                 } else {
                     if (sourceCell.endsWith("↕") || sourceCell.endsWith("↑") || sourceCell.endsWith("↓")) {

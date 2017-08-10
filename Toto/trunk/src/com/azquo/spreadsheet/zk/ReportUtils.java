@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.admin.user.UserDAO;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 
@@ -65,8 +66,37 @@ class ReportUtils {
     // col heading source as in the definition, the AQL
     // It's trying to give a clue for formatting expanding
     // the size of the thing on the bottom column heading row that's repeated e.g. "sales, costs of sales, profit" - get its size unless it's permute
-    // so if costs was a red column it would continue to be red as teh columns expanded
+    // so if costs was a red column it would continue to be red as the columns expanded
     static int guessColumnsFormattingPatternWidth(LoggedInUser loggedInUser, List<List<String>> colHeadingsSource) {
+        int colHeadingRow = colHeadingsSource.size();
+        if (colHeadingRow == 1) return 1;
+        String lastColHeading = colHeadingsSource.get(colHeadingRow - 1).get(0);
+        int repeatCount = 1;
+        if (!lastColHeading.startsWith(".")) {
+            if (lastColHeading.toLowerCase().startsWith("permute")) {
+                return 1;//permutes are unpredictable unless followed by a set
+            }
+            // so what we're saying is how big is the set at the bottom of the col definitions?
+            repeatCount = CommonReportUtils.getNameQueryCount(loggedInUser, lastColHeading);
+            if (repeatCount > 1) return repeatCount;
+            //check that the heading above is not a set (perhaps should check all headings above).  If so, and there is a value in the bottom right of the set, then the whold headings need to be expanded.
+            String headingAbove = colHeadingsSource.get(colHeadingRow-2).get(0);
+            String topHeading = colHeadingsSource.get(0).get(0);
+            if (headingAbove.length() > 0 && !headingAbove.equals(".")){
+                int setCount = CommonReportUtils.getNameQueryCount(loggedInUser, headingAbove);
+                if (setCount==1 && topHeading.length()>0 && !topHeading.equals(headingAbove)){
+                    setCount = CommonReportUtils.getNameQueryCount(loggedInUser, topHeading);
+                }
+                if (setCount > 1 && colHeadingsSource.get(colHeadingRow - 1).get(colHeadingsSource.get(0).size()-1).length() > 0){
+                    return colHeadingsSource.get(0).size();
+                }
+            }
+        }
+        return repeatCount;
+    }
+/*
+    // as above for columns
+    static int guessRowsFormattingPatternHeight(LoggedInUser loggedInUser, List<List<String>> rowHeadingsSource) {
         int colHeadingRow = colHeadingsSource.size();
         if (colHeadingRow == 1) return 1;
         String lastColHeading = colHeadingsSource.get(colHeadingRow - 1).get(0);
@@ -92,7 +122,7 @@ class ReportUtils {
             }
         }
         return repeatCount;
-    }
+    }*/
 
     static boolean isHierarchy(List<List<String>> headings) {
         for (List<String> oneCol : headings) {

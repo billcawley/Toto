@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.MultidimensionalListUtils;
 import com.azquo.StringLiterals;
 import com.azquo.dataimport.BatchImporter;
 import com.azquo.dataimport.DSImportService;
@@ -15,6 +16,7 @@ import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
 import java.io.*;
+import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 /*
@@ -245,12 +247,33 @@ public class DSSpreadsheetService {
         azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId());
     }
 
+    private static NumberFormat nf = NumberFormat.getInstance();
+
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
     // could I derive context from cells and headings for display? Also region. Worth considering . . .
     public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        boolean changedAtAll = false;
+        for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
+            for (CellForDisplay cell : row) {
+                if (cell.isChanged()) {
+                    changedAtAll = true;
+                    break;
+                }
+            }
+            if (changedAtAll) {
+                break;
+            }
+        }
+        if (!changedAtAll) {
+            return "true 0";
+        }
+
         int numberOfValuesModified = 0;
         String redundantNames = "";
+        //check for any set to be cleared - WFC logic - EFC doesn't own possible problems from this at the moment
+        checkClear(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getColumnHeadings());
+        checkClear(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadings());
         synchronized (azquoMemoryDBConnection.getAzquoMemoryDB()) { // we don't want concurrent saves on a single database
             azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId()); // todo - is this the palce to unlock? It's probably fair
             boolean modifiedInTheMeanTime = azquoMemoryDBConnection.getDBLastModifiedTimeStamp() != cellsAndHeadingsForDisplay.getTimeStamp(); // if true we need to check if someone else changed the data
@@ -265,13 +288,14 @@ public class DSSpreadsheetService {
                 return "true " + numberOfValuesModified;
             }
             // check we're not getting cellsAndHeadingsForDisplay.getTimeStamp() = 0 here, it should only happen due tio ad hoc which should have returned by now . . .
-            redundantNames =  checkEditable(azquoMemoryDBConnection,cellsAndHeadingsForDisplay);
+            redundantNames = checkEditable(azquoMemoryDBConnection, cellsAndHeadingsForDisplay);
             boolean changed = false;
             String toReturn = "";
-            //modifiedInTheMeanTime = true;
+            // new logic - get this out here and use it for the cells. Means the region is re resolved regardless but we're getting bottlenecks resolving every cell in this
+            // function, executes are slowing it down
+            List<List<AzquoCell>> currentData = AzquoCellService.getDataRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getRowHeadingsSource(), cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
+                    , cellsAndHeadingsForDisplay.getOptions(), databaseAccessToken.getLanguages(), 0, true);
             if (modifiedInTheMeanTime) { // then we need to compare data as sent to what it is now before trying to save - assuming this is not relevant to the import style above
-                List<List<AzquoCell>> currentData = AzquoCellService.getDataRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getRowHeadingsSource(), cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
-                        , cellsAndHeadingsForDisplay.getOptions(), databaseAccessToken.getLanguages(), 0, true);
                 List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
                 if (currentData.size() != sentData.size()) {
                     toReturn = "Data region " + cellsAndHeadingsForDisplay.getRegion() + " has changed size!";
@@ -317,46 +341,27 @@ public class DSSpreadsheetService {
             if (changed) {
                 return toReturn;
             }
-            //check for any set to be cleared
 
-            checkClear(azquoMemoryDBConnection,cellsAndHeadingsForDisplay.getColumnHeadings());
-            checkClear(azquoMemoryDBConnection,cellsAndHeadingsForDisplay.getRowHeadings());
-
-            // multiple lookups on headings are causing problems, parsing them outside
-
-            final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getContextSource(), databaseAccessToken.getLanguages());
-            DataRegionHeading.SUFFIX contextSuffix = null;
-            for (DataRegionHeading contextHeading : contextHeadings) {
-                if (contextHeading != null && (contextHeading.getSuffix() == DataRegionHeading.SUFFIX.LOCKED || contextHeading.getSuffix() == DataRegionHeading.SUFFIX.UNLOCKED)) {
-                    contextSuffix = contextHeading.getSuffix();
-                }
-            }
-            Collection<Name> sharedNames = AzquoCellService.getSharedNames(contextHeadings);//sharedNames only required for permutations
-            final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRowHeadingsSource(), databaseAccessToken.getLanguages(), contextSuffix, false); // don't surpress errors, will this be a problem?
-            final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames);
-            final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getColHeadingsSource(), databaseAccessToken.getLanguages(), AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, false); // same as standard limit for col headings
-            final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames);
-            for (int rowNo = 0; rowNo <cellsAndHeadingsForDisplay.getData().size();rowNo++){
-                List<CellForDisplay> row = cellsAndHeadingsForDisplay.getData().get(rowNo);
+            int rowIndex = 0;
+            for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
+                int colIndex = 0;
                 for (CellForDisplay cell : row) {
                     // todo. sprt provenance for comments
                     if (!cell.isLocked() && cell.isChanged()) {
-                        int cellRow = cell.getUnsortedRow();
-                        if (redundantNames!=null) cellRow = rowNo;//if the cell is editable, then it cannot be sorted
                         //logger.info(orig + "|" + edited + "|"); // we no longer know the original value unless we jam it in AzquoCell
-                        if (cellRow < rowHeadings.size() && cell.getUnsortedCol() < columnHeadings.size()) {
-                              AzquoCell azquoCell = AzquoCellResolver.getAzquoCellForHeadings(azquoMemoryDBConnection, rowHeadings.get(cellRow), columnHeadings.get(cell.getUnsortedCol()), contextHeadings, cellRow, cell.getUnsortedCol(), databaseAccessToken.getLanguages(), 0, null, null);
-                            if (!azquoCell.isLocked()) {
-                                // this save logic is the same as before but getting necessary info from the AzquoCell
-                                final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-                                if (valuesForCell != null) {
-                                    Provenance originalProvenance = azquoMemoryDBConnection.getProvenance();
-                                    if (cell.getComment() != null && !cell.getComment().isEmpty()) {
-                                        azquoMemoryDBConnection.setProvenance(user, Constants.IN_SPREADSHEET + ", comment : " + cell.getComment(), reportName, context);
-                                    }
-                                    //logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
-                                    // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
-                                    // first align text and numbers where appropriate
+//                        AzquoCell azquoCell = AzquoCellResolver.getAzquoCellForHeadings(azquoMemoryDBConnection, rowHeadings.get(cellRow), columnHeadings.get(cell.getUnsortedCol()), contextHeadings, cellRow, cell.getUnsortedCol(), databaseAccessToken.getLanguages(), 0, null, null);
+                        AzquoCell azquoCell = currentData.get(rowIndex).get(colIndex); // looks dangerous but if data had been changed it should have been detected above!
+                        if (!azquoCell.isLocked()) {
+                            // this save logic is the same as before but getting necessary info from the AzquoCell
+                            final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
+                            if (valuesForCell != null) {
+                                Provenance originalProvenance = azquoMemoryDBConnection.getProvenance();
+                                if (cell.getComment() != null && !cell.getComment().isEmpty()) {
+                                    azquoMemoryDBConnection.setProvenance(user, Constants.IN_SPREADSHEET + ", comment : " + cell.getComment(), reportName, context);
+                                }
+                                //logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
+                                // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
+                                // first align text and numbers where appropriate
                         /* edd commenting 07/03/2016, this was stopping deleting a cell and I think it makes no sense looking at the ZK code that happens on editing, maybe a hangover from Aspose?
                         try {
                             if (cell.getNewDoubleValue() != 0.0) {
@@ -364,160 +369,161 @@ public class DSSpreadsheetService {
                             }
                         } catch (Exception ignored) {
                         }*/
-                                    //a cell can have a double value without having a string value.....
+                                //a cell can have a double value without having a string value.....
+                                try {
+                                    double d = cell.getNewDoubleValue();
+                                    if (d != 0) {
+                                        String numericValue = d + "";
+                                        if (numericValue.endsWith(".0")) {
+                                            numericValue = numericValue.substring(0, numericValue.length() - 2);
+                                        }
+                                        cell.setNewStringValue(numericValue);
+                                    }
+                                } catch (Exception ignored) {
+                                }
+                                if (cell.getNewStringValue() != null && cell.getNewStringValue().endsWith("%")) {
+                                    String percent = cell.getNewStringValue().substring(0, cell.getNewStringValue().length() - 1);
                                     try {
-                                        double d = cell.getNewDoubleValue();
-                                        if (d != 0) {
-                                            String numericValue = d + "";
-                                            if (numericValue.endsWith(".0")) {
-                                                numericValue = numericValue.substring(0, numericValue.length() - 2);
-                                            }
-                                            cell.setNewStringValue(numericValue);
-                                        }
-                                    } catch (Exception ignored) {
+                                        double d = Double.parseDouble(percent) / 100;
+                                        cell.setNewStringValue(d + "");
+                                    } catch (Exception e) {
+                                        //do nothing
                                     }
-                                    if (cell.getNewStringValue() != null && cell.getNewStringValue().endsWith("%")) {
-                                        String percent = cell.getNewStringValue().substring(0, cell.getNewStringValue().length() - 1);
+                                }
+                                final Set<DataRegionHeading> headingsForCell = HashObjSets.newMutableSet(azquoCell.getColumnHeadings().size() + azquoCell.getRowHeadings().size());
+                                headingsForCell.addAll(azquoCell.getColumnHeadings());
+                                headingsForCell.addAll(azquoCell.getRowHeadings());
+                                headingsForCell.addAll(azquoCell.getContexts());
+                                Name splitName = null;
+                                for (DataRegionHeading heading : headingsForCell) {
+                                    if (heading != null && heading.getSuffix() == DataRegionHeading.SUFFIX.SPLIT) {
+                                        splitName = heading.getName(); // I suppose could be assigned null but this would be a nonsensical heading
+                                        break;
+                                    }
+                                }
+                                if (valuesForCell.getValues() != null) { // this assumes empty values rather than null if the populating code couldn't find any (as opposed to attribute cell that would be null values)
+                                    // check for split first
+                                    if (splitName != null) { // get the lowest level names and see if we can split the value among them
                                         try {
-                                            double d = Double.parseDouble(percent) / 100;
-                                            cell.setNewStringValue(d + "");
-                                        } catch (Exception e) {
-                                            //do nothing
-                                        }
-                                    }
-                                    final Set<DataRegionHeading> headingsForCell = HashObjSets.newMutableSet(azquoCell.getColumnHeadings().size() + azquoCell.getRowHeadings().size());
-                                    headingsForCell.addAll(azquoCell.getColumnHeadings());
-                                    headingsForCell.addAll(azquoCell.getRowHeadings());
-                                    headingsForCell.addAll(azquoCell.getContexts());
-                                    Name splitName = null;
-                                    for (DataRegionHeading heading : headingsForCell) {
-                                        if (heading != null && heading.getSuffix() == DataRegionHeading.SUFFIX.SPLIT) {
-                                            splitName = heading.getName(); // I suppose could be assigned null but this would be a nonsensical heading
-                                            break;
-                                        }
-                                    }
-                                    if (valuesForCell.getValues() != null) { // this assumes empty values rather than null if the populating code couldn't find any (as opposed to attribute cell that would be null values)
-                                        // check for split first
-                                        if (splitName != null) { // get the lowest level names and see if we can split the value among them
-                                            try {
-                                                double valueToSplit = 0;
-                                                if (cell.getNewStringValue() != null && cell.getNewStringValue().length() > 0) {
-                                                    valueToSplit = Double.parseDouble(cell.getNewStringValue().replace(",", ""));
-                                                }
-                                                final List<Name> names = DataRegionHeadingService.namesFromDataRegionHeadings(headingsForCell);
-                                                names.remove(splitName);
-                                                List<Name> lowestChildren = new ArrayList<>();
-                                                for (Name child : splitName.findAllChildren()) {
-                                                    if (!child.hasChildren()) {
-                                                        lowestChildren.add(child);
-                                                    }
-                                                }
-                                                double splitValue = valueToSplit / lowestChildren.size();
-                                                // ok now try to spread them around
-                                                for (Name child : lowestChildren) {
-                                                    Set<Name> nameSet = new HashSet<>(names);
-                                                    nameSet.add(child); // so we now have the cells names except the split one but the child of the split one instead.
-                                                    // we want an exact match
-                                                    final List<Value> forNames = ValueService.findForNames(nameSet);
-                                                    if (forNames.size() > 1) {
-                                                        System.out.println("multiple values found for a split, this should not happen! " + forNames);
-                                                    } else if (forNames.size() == 1) {
-                                                        Value v = forNames.get(0);
-                                                        if (splitValue == 0) { // we'll consider 0 OR blank deleting in this context
-                                                            v.delete();
-                                                            numberOfValuesModified++;
-                                                        } else { // overwrite!
-                                                            ValueService.overWriteExistingValue(azquoMemoryDBConnection, v, splitValue + ""); // a double to a string and back, hacky but that's the call for the mo
-                                                        }
-                                                    } else { // new value!
-                                                        if (splitValue != 0) { // then something to store
-                                                            ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, splitValue + "", nameSet);
-                                                            numberOfValuesModified++;
-                                                        }
-                                                    }
-                                                }
-                                            } catch (Exception e) {
-                                                System.out.println("unable to split value : " + e.getMessage());
+                                            double valueToSplit = 0;
+                                            if (cell.getNewStringValue() != null && cell.getNewStringValue().length() > 0) {
+                                                valueToSplit = Double.parseDouble(cell.getNewStringValue().replace(",", ""));
                                             }
-                                        } else { // normal behavior, most of the time
-                                            if (valuesForCell.getValues().size() == 1) {
-                                                final Value theValue = valuesForCell.getValues().get(0);
-                                                if (cell.getNewStringValue() != null && cell.getNewStringValue().length() > 0) {
-                                                    //sometimes non-existent original values are stored as '0'
-                                                    if (!cell.getNewStringValue().equals(theValue.getText())) {
-                                                        ValueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getNewStringValue());
+                                            final List<Name> names = DataRegionHeadingService.namesFromDataRegionHeadings(headingsForCell);
+                                            names.remove(splitName);
+                                            List<Name> lowestChildren = new ArrayList<>();
+                                            for (Name child : splitName.findAllChildren()) {
+                                                if (!child.hasChildren()) {
+                                                    lowestChildren.add(child);
+                                                }
+                                            }
+                                            double splitValue = valueToSplit / lowestChildren.size();
+                                            // ok now try to spread them around
+                                            for (Name child : lowestChildren) {
+                                                Set<Name> nameSet = new HashSet<>(names);
+                                                nameSet.add(child); // so we now have the cells names except the split one but the child of the split one instead.
+                                                // we want an exact match
+                                                final List<Value> forNames = ValueService.findForNames(nameSet);
+                                                if (forNames.size() > 1) {
+                                                    System.out.println("multiple values found for a split, this should not happen! " + forNames);
+                                                } else if (forNames.size() == 1) {
+                                                    Value v = forNames.get(0);
+                                                    if (splitValue == 0) { // we'll consider 0 OR blank deleting in this context
+                                                        v.delete();
+                                                        numberOfValuesModified++;
+                                                    } else { // overwrite!
+                                                        ValueService.overWriteExistingValue(azquoMemoryDBConnection, v, splitValue + ""); // a double to a string and back, hacky but that's the call for the mo
+                                                    }
+                                                } else { // new value!
+                                                    if (splitValue != 0) { // then something to store
+                                                        ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, splitValue + "", nameSet);
                                                         numberOfValuesModified++;
                                                     }
-                                                } else {
-                                                    theValue.delete();
+                                                }
+                                            }
+                                        } catch (Exception e) {
+                                            System.out.println("unable to split value : " + e.getMessage());
+                                        }
+                                    } else { // normal behavior, most of the time
+                                        if (valuesForCell.getValues().size() == 1) {
+                                            final Value theValue = valuesForCell.getValues().get(0);
+                                            if (cell.getNewStringValue() != null && cell.getNewStringValue().length() > 0) {
+                                                //sometimes non-existent original values are stored as '0'
+                                                if (!cell.getNewStringValue().equals(theValue.getText())) {
+                                                    ValueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getNewStringValue());
                                                     numberOfValuesModified++;
                                                 }
-                                            } else if (valuesForCell.getValues().isEmpty() && cell.getNewStringValue() != null && cell.getNewStringValue().length() > 0) {
-                                                List<Name> cellNames = DataRegionHeadingService.namesFromDataRegionHeadings(headingsForCell);
-                                                ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getNewStringValue(), new HashSet<>(cellNames));
+                                            } else {
+                                                theValue.delete();
                                                 numberOfValuesModified++;
                                             }
-                                            // warning on multiple values?
+                                        } else if (valuesForCell.getValues().isEmpty() && cell.getNewStringValue() != null && cell.getNewStringValue().length() > 0) {
+                                            List<Name> cellNames = DataRegionHeadingService.namesFromDataRegionHeadings(headingsForCell);
+                                            ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, cell.getNewStringValue(), new HashSet<>(cellNames));
+                                            numberOfValuesModified++;
                                         }
-                                    } else {
-                                        // added not null checks - can names or attributes be null here? Best check - todo
-                                        if (valuesForCell.getNames() != null && valuesForCell.getNames().size() == 1
-                                                && valuesForCell.getAttributeNames() != null && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
-                                            Name toChange = valuesForCell.getNames().get(0);
-                                            String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(StringLiterals.QUOTE + "", "");//remove the initial '.' and any `
-                                            if (attribute.endsWith(" clear")){
-                                                attribute = attribute.substring(1, attribute.length() - " clear".length());
+                                        // warning on multiple values?
+                                    }
+                                } else {
+                                    // added not null checks - can names or attributes be null here? Best check - todo
+                                    if (valuesForCell.getNames() != null && valuesForCell.getNames().size() == 1
+                                            && valuesForCell.getAttributeNames() != null && valuesForCell.getAttributeNames().size() == 1) { // allows a simple attribute store
+                                        Name toChange = valuesForCell.getNames().get(0);
+                                        String attribute = valuesForCell.getAttributeNames().get(0).substring(1).replace(StringLiterals.QUOTE + "", "");//remove the initial '.' and any `
+                                        if (attribute.endsWith(" clear")) {
+                                            attribute = attribute.substring(1, attribute.length() - " clear".length());
 
-                                            }
-                                            boolean exclusive = false;
-                                            if (attribute.endsWith(" exclusive")){
-                                                exclusive = true;
-                                                attribute = attribute.substring(0,attribute.length() - " exclusive".length());
-                                            }
-                                            String oldAttVal = toChange.getAttribute(attribute);
-                                            if (oldAttVal == null || !oldAttVal.equals(cell.getNewStringValue())) {
-                                                       Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
+                                        }
+                                        boolean exclusive = false;
+                                        if (attribute.endsWith(" exclusive")) {
+                                            exclusive = true;
+                                            attribute = attribute.substring(0, attribute.length() - " exclusive".length());
+                                        }
+                                        String oldAttVal = toChange.getAttribute(attribute);
+                                        if (oldAttVal == null || !oldAttVal.equals(cell.getNewStringValue())) {
+                                            Name attSet = NameService.findByName(azquoMemoryDBConnection, attribute);
 
-                                                if (attSet != null  && !azquoMemoryDBConnection.getAzquoMemoryDBIndex().attributeExistsInDB(attribute)) {
+                                            if (attSet != null && !azquoMemoryDBConnection.getAzquoMemoryDBIndex().attributeExistsInDB(attribute)) {
                                     /* right : when populating attribute based data findParentAttributes can be called internally in Name. DSSpreadsheetService is not aware of it but it means (in that case) the data
                                     returned is not in fact attributes but the name of an intermediate set in the hierarchy - suppose you want the category of a product the structure is
                                     all categories -> category -> product and .all categories is the column heading and the products are row headings then you'll get the category for the product as the cell value
                                      So attSet following that example is "All Categories", category is a (possibly) new name that's a child of all categories and then we need to add the product
                                      , named toChange at the moment to that category.
                                     */
-                                                    //logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getNewStringValue() + " within " + attribute);
-                                                    Name category = null;
-                                                    if(cell.getNewStringValue().length()>0){
-                                                         category = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getNewStringValue(), attSet, true);
-                                                    }
-                                                    //Apr 17 - any save as attribute is considered to be exclusive.
-                                                    if (exclusive) {
-                                                        for (Name existingAtt : attSet.getChildren()) {
-                                                            if (!existingAtt.getDefaultDisplayName().equalsIgnoreCase(cell.getNewStringValue()) && existingAtt.getChildren().contains(toChange)) {
-                                                                existingAtt.removeFromChildrenWillBePersisted(toChange);
-                                                            }
+                                                //logger.info("storing " + toChange.getDefaultDisplayName() + " to children of  " + cell.getNewStringValue() + " within " + attribute);
+                                                Name category = null;
+                                                if (cell.getNewStringValue().length() > 0) {
+                                                    category = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell.getNewStringValue(), attSet, true);
+                                                }
+                                                //Apr 17 - any save as attribute is considered to be exclusive.
+                                                if (exclusive) {
+                                                    for (Name existingAtt : attSet.getChildren()) {
+                                                        if (!existingAtt.getDefaultDisplayName().equalsIgnoreCase(cell.getNewStringValue()) && existingAtt.getChildren().contains(toChange)) {
+                                                            existingAtt.removeFromChildrenWillBePersisted(toChange);
                                                         }
                                                     }
-                                                    if (category!=null){
-                                                        category.addChildWillBePersisted(toChange);
-                                                    }
-                                                } else {// simple attribute set
-                                                    //logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
-                                                    toChange.setAttributeWillBePersisted(attribute, cell.getNewStringValue());
                                                 }
-                                                numberOfValuesModified++;
+                                                if (category != null) {
+                                                    category.addChildWillBePersisted(toChange);
+                                                }
+                                            } else {// simple attribute set
+                                                //logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
+                                                toChange.setAttributeWillBePersisted(attribute, cell.getNewStringValue());
                                             }
+                                            numberOfValuesModified++;
                                         }
                                     }
-                                    // switch provenance back if it was overridden due to a comment
-                                    if (originalProvenance != null) {
-                                        azquoMemoryDBConnection.setProvenance(originalProvenance);
-                                    }
+                                }
+                                // switch provenance back if it was overridden due to a comment
+                                if (originalProvenance != null) {
+                                    azquoMemoryDBConnection.setProvenance(originalProvenance);
                                 }
                             }
                         }
                     }
+                    colIndex++;
                 }
+                rowIndex++;
             }
         } // the close of the block synchronised on the database, close it here before persisting since that is synchronized on the same object - if anything inside the block synchronizes on the database we'll find out pretty quickly!
         if (numberOfValuesModified > 0) {
@@ -528,14 +534,14 @@ public class DSSpreadsheetService {
         // clear the caches after, if we do before then some will be recreated as part of saving.
         // Is this a bit overkill given that it should clear as it goes? I suppose there's the query and count caches, plus parents of the changed names
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
-        if (redundantNames==null) return "true " + numberOfValuesModified;
+        if (redundantNames == null) return "true " + numberOfValuesModified;
         return "true " + numberOfValuesModified + " " + redundantNames;
     }
 
 
-    private static String checkEditable(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws Exception{
+    private static String checkEditable(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws Exception {
         //EDITABLE currently only checking top left cell of row headings
-        String topLeftRowHeading= cellsAndHeadingsForDisplay.getRowHeadingsSource().get(0).get(0);
+        String topLeftRowHeading = cellsAndHeadingsForDisplay.getRowHeadingsSource().get(0).get(0);
         if (!topLeftRowHeading.toLowerCase().endsWith(StringLiterals.EDITABLE)) {
             return null;
         }
@@ -543,80 +549,80 @@ public class DSSpreadsheetService {
         if (!trimmedHeading.endsWith(StringLiterals.CHILDREN)) {
             return null;
         }
-        String setName = trimmedHeading.substring(0,trimmedHeading.indexOf(StringLiterals.CHILDREN)).trim();
-        Name parentName = NameService.findByName(azquoMemoryDBConnection,setName);
+        String setName = trimmedHeading.substring(0, trimmedHeading.indexOf(StringLiterals.CHILDREN)).trim();
+        Name parentName = NameService.findByName(azquoMemoryDBConnection, setName);
         if (parentName == null) {
             return "";
         }
         boolean changed = false;
         List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        List<Name> origNames = (List<Name>)parentName.getChildren();
-        List<Name> origShownNames = (List<Name>)NameQueryParser.parseQuery(azquoMemoryDBConnection, trimmedHeading);
+        List<Name> origNames = (List<Name>) parentName.getChildren();
+        List<Name> origShownNames = (List<Name>) NameQueryParser.parseQuery(azquoMemoryDBConnection, trimmedHeading);
         boolean needDisplayRows = false;
         StringBuffer displayRows = new StringBuffer();
         List<Name> newNames = new ArrayList<>();
-        for (int rowNo = 0;rowNo < cellsAndHeadingsForDisplay.getRowHeadings().size();rowNo++) {
+        for (int rowNo = 0; rowNo < cellsAndHeadingsForDisplay.getRowHeadings().size(); rowNo++) {
             String heading = cellsAndHeadingsForDisplay.getRowHeadings().get(rowNo).get(0);
-            if (heading==null || heading.length() == 0) {
-                 needDisplayRows = true;
-            }else {
-                Name newName =NameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading, parentName, true);
+            if (heading == null || heading.length() == 0) {
+                needDisplayRows = true;
+            } else {
+                Name newName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading, parentName, true);
                 newNames.add(newName);
-                if (rowNo>= origShownNames.size() || newName!= origShownNames.get(rowNo)){
+                if (rowNo >= origShownNames.size() || newName != origShownNames.get(rowNo)) {
                     //mark the line as changed = these now refer to a new name
                     List<CellForDisplay> dataRow = cellsAndHeadingsForDisplay.getData().get(rowNo);
-                    for (CellForDisplay cell:dataRow){
+                    for (CellForDisplay cell : dataRow) {
                         cell.setChanged();
                         cell.setLocked(false);//the figures on this line will be saved against the new name
-                        if (cell.getNewStringValue()==null){
+                        if (cell.getNewStringValue() == null) {
                             cell.setNewStringValue(cell.getStringValue());
                         }
-                        if (cell.getNewDoubleValue()==0){
+                        if (cell.getNewDoubleValue() == 0) {
                             cell.setNewDoubleValue(cell.getDoubleValue());
                         }
                     }
 
                 }
-                displayRows.append("," + (rowNo+1));
+                displayRows.append("," + (rowNo + 1));
             }
         }
         String oldDisplayRows = parentName.getAttribute(StringLiterals.DISPLAYROWS);
-        if (!needDisplayRows || displayRows.length()==0) {
-            if (oldDisplayRows!=null){
-                parentName.setAttributeWillBePersisted(StringLiterals.DISPLAYROWS,"");
+        if (!needDisplayRows || displayRows.length() == 0) {
+            if (oldDisplayRows != null) {
+                parentName.setAttributeWillBePersisted(StringLiterals.DISPLAYROWS, "");
                 changed = true;
             }
-        }else{
-            if (!displayRows.toString().substring(1).equals(oldDisplayRows)){
-                parentName.setAttributeWillBePersisted(StringLiterals.DISPLAYROWS,displayRows.toString().substring(1));
+        } else {
+            if (!displayRows.toString().substring(1).equals(oldDisplayRows)) {
+                parentName.setAttributeWillBePersisted(StringLiterals.DISPLAYROWS, displayRows.toString().substring(1));
                 changed = true;
             }
         }
         int setsize = origNames.size();
-        if (origNames.size()!= newNames.size()) {
+        if (origNames.size() != newNames.size()) {
             changed = true;
-         }else{
-            for (int item = 0; item < origNames.size();item++){
-                if (newNames.get(item)!= origNames.get(item)){
+        } else {
+            for (int item = 0; item < origNames.size(); item++) {
+                if (newNames.get(item) != origNames.get(item)) {
                     changed = true;
                     break;
                 }
             }
         }
-        if (changed){
+        if (changed) {
             List<Name> unusedNames = new ArrayList<Name>(origNames);
             unusedNames.removeAll(newNames);
             //add to new names
             newNames.addAll(unusedNames);
             parentName.setChildrenWillBePersisted(Collections.emptyList());
             parentName.setChildrenWillBePersisted(newNames);
-            if (unusedNames.size() == 0){
+            if (unusedNames.size() == 0) {
                 return "";
             }
             StringBuffer redundant = new StringBuffer();
             redundant.append("redundant: `" + parentName.getDefaultDisplayName() + "`:");
-            for (Name name:unusedNames){
+            for (Name name : unusedNames) {
                 redundant.append("`" + name.getDefaultDisplayName() + "` ");
             }
             return redundant.toString();
@@ -656,8 +662,8 @@ public class DSSpreadsheetService {
     }
 
     private static void checkClear(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> headings) {
-        if (headings==null) return;
-        for (List<String> headingRow:headings){
+        if (headings == null) return;
+        for (List<String> headingRow : headings) {
             for (String heading : headingRow) {
                 if (heading != null && heading.startsWith(".") && heading.toLowerCase().endsWith(" clear")) {
                     String att = heading.substring(1, heading.length() - " clear".length() - 1); //remove the initial '.' and ' clear'
@@ -690,7 +696,7 @@ public class DSSpreadsheetService {
         }
         Collection<Name> sharedNames = AzquoCellService.getSharedNames(contextHeadings);//sharedNames only required for permutations
         List<String> defaultLanguages = languages;
-        if (regionOptionsForTransport.rowLanguage!=null && regionOptionsForTransport.rowLanguage.length() > 0){
+        if (regionOptionsForTransport.rowLanguage != null && regionOptionsForTransport.rowLanguage.length() > 0) {
             languages = new ArrayList<>();
             languages.add(regionOptionsForTransport.rowLanguage);
         }
@@ -698,7 +704,7 @@ public class DSSpreadsheetService {
                 azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix, false); // don't surpress errors, will this be a problem?
         languages = defaultLanguages;
         final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames);
-        if (regionOptionsForTransport.columnLanguage!=null && regionOptionsForTransport.columnLanguage.length() > 0){
+        if (regionOptionsForTransport.columnLanguage != null && regionOptionsForTransport.columnLanguage.length() > 0) {
             languages = new ArrayList<>();
             languages.add(regionOptionsForTransport.columnLanguage);
         }
@@ -720,8 +726,8 @@ public class DSSpreadsheetService {
     // note : could be issues with reports which use this running concurrently - as in zap temporary names while they're being used. TODO
     public static void clearTemporaryNames(DatabaseAccessToken databaseAccessToken) throws Exception {
         final Name temporaryNames = NameService.findByName(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), StringLiterals.TEMPORARYNAMES);
-        if (temporaryNames != null){
-            for (Name temporaryName : temporaryNames.getChildren()){
+        if (temporaryNames != null) {
+            for (Name temporaryName : temporaryNames.getChildren()) {
                 temporaryName.delete();
             }
         }

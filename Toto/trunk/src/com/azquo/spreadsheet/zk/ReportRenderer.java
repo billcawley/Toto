@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.MultidimensionalListUtils;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.user.*;
@@ -61,7 +62,6 @@ public class ReportRenderer {
     public static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors) { // todo - make more elegant? error hack . . .
         return populateBook(book, valueId, useSavedValuesOnFormulae, executeMode, errors, true);
     }
-
 
 
     private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) { // todo - make more elegant? error hack . . .
@@ -127,14 +127,14 @@ public class ReportRenderer {
             SName az_repeatItem = BookUtils.getNameByName(AZREPEATITEM, sheet);
             // second name match is if the repeat item and repeat sheet names are set global, stop them being found on subsequent runs
             if (useRepeats && az_repeatSheet != null && az_repeatSheet.getRefersToSheetName().equals(sheet.getSheetName())
-                    && az_repeatItem != null && az_repeatItem.getRefersToSheetName().equals(sheet.getSheetName())){
+                    && az_repeatItem != null && az_repeatItem.getRefersToSheetName().equals(sheet.getSheetName())) {
                 SCell snameCell = BookUtils.getSnameCell(az_repeatSheet);
-                if (snameCell != null && snameCell.getStringValue() != null && !snameCell.getStringValue().isEmpty()){
+                if (snameCell != null && snameCell.getStringValue() != null && !snameCell.getStringValue().isEmpty()) {
                     List<String> repeatItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, snameCell.getStringValue());
                     String firstItem = null; // for api purposes I need to set the initial sheet name after it's copied or I get NPEs
                     int sheetPosition = 0;
-                    for (String repeatItem : repeatItems){
-                        if (firstItem == null){ // set the repeat tiem on this sheet
+                    for (String repeatItem : repeatItems) {
+                        if (firstItem == null) { // set the repeat tiem on this sheet
                             SCell repeatItemCell = BookUtils.getSnameCell(az_repeatItem);
                             repeatItemCell.setStringValue(repeatItem);
                             firstItem = repeatItem;
@@ -143,14 +143,14 @@ public class ReportRenderer {
                             // our modified version of the function
                             CopySheet(sheetRange, repeatItem);
                             Sheet newSheet = book.getSheetAt(book.getNumberOfSheets() - 1);// it will be the latest
-                            for (SName name : namesForSheet){
-                                if (!name.getName().equalsIgnoreCase(AZREPEATSHEET)){ // don't copy the repeat or we'll get a recursive loop!
+                            for (SName name : namesForSheet) {
+                                if (!name.getName().equalsIgnoreCase(AZREPEATSHEET)) { // don't copy the repeat or we'll get a recursive loop!
                                     // cloneSheet won't copy the names, need to make new ones
                                     // the new ones need to be applies to as well as refers to the new sheet
                                     SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName());
                                     // todo - add ! mark to make replace more robust? and below
                                     String newFormula;
-                                    if (newSheet.getSheetName().contains(" ") && !name.getRefersToFormula().startsWith("'")){
+                                    if (newSheet.getSheetName().contains(" ") && !name.getRefersToFormula().startsWith("'")) {
                                         newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), "'" + newSheet.getSheetName() + "'");
                                     } else {
                                         newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), newSheet.getSheetName());
@@ -232,9 +232,9 @@ public class ReportRenderer {
                         DatabaseServer origServer = loggedInUser.getDatabaseServer();
                         try {
                             LoginService.switchDatabase(loggedInUser, databaseName);
-                            String error = populateRegionSet(sheet, reportId,sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode,repeatRegionTracker); // in this case execute mode is telling the logs to be quiet
-                            if (errors != null && error != null){
-                                if (errors.length() > 0){
+                            String error = populateRegionSet(sheet, reportId, sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode, repeatRegionTracker); // in this case execute mode is telling the logs to be quiet
+                            if (errors != null && error != null) {
+                                if (errors.length() > 0) {
                                     errors.append("\n");
                                 }
                                 errors.append("ERROR : ").append(error);
@@ -245,9 +245,9 @@ public class ReportRenderer {
                         }
                         loggedInUser.setDatabaseWithServer(origServer, origDatabase);
                     } else {
-                        String error = populateRegionSet(sheet, reportId,sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode,repeatRegionTracker);
-                        if (errors != null && error != null){
-                            if (errors.length() > 0){
+                        String error = populateRegionSet(sheet, reportId, sheet.getSheetName(), region, valueId, userRegionOptions, loggedInUser, executeMode, repeatRegionTracker);
+                        if (errors != null && error != null) {
+                            if (errors.length() > 0) {
                                 errors.append("\n");
                             }
                             errors.append("ERROR : ").append(error);
@@ -310,10 +310,10 @@ public class ReportRenderer {
             }
             List<SName> dependentRanges = ChoicesService.addValidation(sheet, loggedInUser, book, choiceOptionsMap);
             if (dependentRanges.size() > 0) {
-                ChoicesService.resolveDependentChoiceOptions(sheet.getSheetName().replace(" ",""), dependentRanges, book, loggedInUser);
+                ChoicesService.resolveDependentChoiceOptions(sheet.getSheetName().replace(" ", ""), dependentRanges, book, loggedInUser);
             }
         }
-        for (SSheet sheet : sheetsToRename.keySet()){
+        for (SSheet sheet : sheetsToRename.keySet()) {
             book.getInternalBook().setSheetName(sheet, suggestSheetName(book, sheetsToRename.get(sheet)));
         }
         //
@@ -330,26 +330,26 @@ public class ReportRenderer {
     }
 
     // edd modifying a version of ZK code to allow a suggested new sheet name
-    private static String suggestSheetName(Book book, String suggestedName){
-        if(book.getSheet(suggestedName) == null) {
+    private static String suggestSheetName(Book book, String suggestedName) {
+        if (book.getSheet(suggestedName) == null) {
             return suggestedName;
         }
         int num = 1;
         String name = null;
         Pattern pattern = Pattern.compile("(.*) \\(([0-9]+)\\)$");
         Matcher matcher = pattern.matcher(suggestedName);
-        if(matcher.find()) {
+        if (matcher.find()) {
             suggestedName = matcher.group(1);
             num = Integer.parseInt(matcher.group(2));
         }
 
         int i = 0;
 
-        for(int length = book.getNumberOfSheets(); i <= length; ++i) {
+        for (int length = book.getNumberOfSheets(); i <= length; ++i) {
             StringBuilder var10000 = (new StringBuilder()).append(suggestedName).append(" (");
             ++num;
             String n = var10000.append(num).append(")").toString();
-            if(book.getSheet(n) == null) {
+            if (book.getSheet(n) == null) {
                 name = n;
                 break;
             }
@@ -360,7 +360,7 @@ public class ReportRenderer {
     private static void CopySheet(Range range, String suggestedName) {
         range.sync(range1 -> {
             // this little bracketed bit is what I added to the ZK code
-            if (suggestedName != null && !suggestedName.isEmpty()){
+            if (suggestedName != null && !suggestedName.isEmpty()) {
                 range1.cloneSheet(suggestSheetName(range1.getBook(), suggestedName));
             } else {
                 range1.cloneSheet(suggestSheetName(range1.getBook(), range1.getSheetName()));
@@ -405,19 +405,19 @@ public class ReportRenderer {
                   */
                 SName repeatList = BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + region, sheet);
                 SName repeatItem = BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + region, sheet);
-                if (repeatList != null && repeatItem != null){
+                if (repeatList != null && repeatItem != null) {
                     String repeatListText = BookUtils.getSnameCell(repeatList).getStringValue();
                     List<String> repeatListItems = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText);
-                    if (!repeatListItems.isEmpty()){
+                    if (!repeatListItems.isEmpty()) {
                         BookUtils.getSnameCell(repeatItem).setStringValue(repeatListItems.get(0));// and set the first
                     }
                 }
                 SName repeatList2 = BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + "2" + region, sheet);
                 SName repeatItem2 = BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + "2" + region, sheet);
-                if (repeatList2 != null && repeatItem2 != null){
+                if (repeatList2 != null && repeatItem2 != null) {
                     String repeatListText2 = BookUtils.getSnameCell(repeatList2).getStringValue();
                     List<String> repeatListItems2 = CommonReportUtils.getDropdownListForQuery(loggedInUser, repeatListText2);
-                    if (!repeatListItems2.isEmpty()){
+                    if (!repeatListItems2.isEmpty()) {
                         BookUtils.getSnameCell(repeatItem2).setStringValue(repeatListItems2.get(0));// and set the first
                     }
                 }
@@ -474,8 +474,7 @@ public class ReportRenderer {
                 int colsToAdd;
                 int maxRow = sheet.getLastRow();
                 if (displayDataRegion != null) {
-                    int maxCol = BookUtils.getMaxCol(sheet);
-                    expandDataRegionBasedOnHeadings(loggedInUser, sheet, region, displayDataRegion, cellsAndHeadingsForDisplay, maxCol);
+                    expandDataRegionBasedOnHeadings(loggedInUser, sheet, region, displayDataRegion, cellsAndHeadingsForDisplay);
                     // these re loadings are because the region may have changed
                     // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't - this isn't a biggy it's just to do with name references which now I think about it probably don't need reloading but it's worth checking and being consistent
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
@@ -483,7 +482,7 @@ public class ReportRenderer {
                     if (BookUtils.getNameByName(ReportRenderer.AZREPEATREGION + region, sheet) == null
                             || BookUtils.getNameByName(ReportRenderer.AZREPEATSCOPE + region, sheet) == null
                             || BookUtils.getNameByName(ReportRenderer.AZREPEATLIST + region, sheet) == null
-                            || BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + region, sheet) == null){
+                            || BookUtils.getNameByName(ReportRenderer.AZREPEATITEM + region, sheet) == null) {
                         // ok there should be the right space for the headings
                         if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
                             int rowHeadingCols = cellsAndHeadingsForDisplay.getRowHeadings().get(0).size();
@@ -502,7 +501,7 @@ public class ReportRenderer {
                         RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
                     } else {
                         // the more complex function that deals with repeat regions - it now notably does the headings
-                        RegionFillerService.fillDataForRepeatRegions(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxRow, maxCol, valueId, quiet, repeatRegionTracker);
+                        RegionFillerService.fillDataForRepeatRegions(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxRow, valueId, quiet, repeatRegionTracker);
                     }
                 }
             } catch (RemoteException re) {
@@ -550,14 +549,40 @@ public class ReportRenderer {
         return null; // will it get here ever?
     }
 
-    private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol) {
+    private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) {
         // add rows
         if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
             int rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
             int insertRow = displayDataRegion.getRow() + displayDataRegion.getRowCount() - 1; // last but one row
-            Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
-            Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+            Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, 0).toRowRange();
+            // now need to emulate the formatting based copying used for columns
+            // most of the time rowsFormattingPatternHeight will be the same height as the row headings size but if the space is smaller need to do a first expand before we can do the tessalating copy paste
+            int rowsFormattingPatternHeight = ReportUtils.guessColumnsFormattingPatternWidth(loggedInUser, MultidimensionalListUtils.transpose2DList(cellsAndHeadingsForDisplay.getRowHeadingsSource()));
+            // make it up to a multiple of the pattern if it isn't
+            if (rowsFormattingPatternHeight > 1 && rowsFormattingPatternHeight < cellsAndHeadingsForDisplay.getRowHeadings().size()) {
+                int copyCount = cellsAndHeadingsForDisplay.getRowHeadings().size() / rowsFormattingPatternHeight;
+                if (rowsFormattingPatternHeight > displayDataRegion.getRowCount()) {
+                    rowsToAdd = rowsFormattingPatternHeight - displayDataRegion.getRowCount();
+                    Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, 0).toRowRange(); // insert just before the last col
+                    CellOperationUtil.insertRow(insertRange);
+                    // will this paste the lot?
+                    CellOperationUtil.paste(copySource, insertRange);
+                    insertRow += rowsToAdd;
+                    rowsToAdd = rowsFormattingPatternHeight * (copyCount - 1);
+                }
+            }
+            // now the insert as normal
+            Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, 0).toRowRange(); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
             CellOperationUtil.insertRow(insertRange);
+            // this is hacky, the bulk insert above will have pushed the bottom row down and in many cases we want it back where it was for teh pattern to be pasted properly
+            if (rowsFormattingPatternHeight > 1) {
+                //cut back the last column to it's original position, and shift the insert range one column to the right
+                CellOperationUtil.cut(Ranges.range(sheet, insertRow + rowsToAdd, 0, insertRow + rowsToAdd, 0).toRowRange()
+                        , Ranges.range(sheet, insertRow, 0, insertRow, 0).toRowRange());
+                // so the next row after the first section to copy until the end bit
+                insertRange = Ranges.range(sheet, insertRow + 1, 0, insertRow + rowsToAdd, 0).toRowRange();
+                copySource = Ranges.range(sheet, displayDataRegion.getRow(), 0, displayDataRegion.getRow() + rowsFormattingPatternHeight - 1, 0).toRowRange();// should be the section representing the pattern we want to copy (with the last row restored to where it was)
+            }
             CellOperationUtil.paste(copySource, insertRange);
             int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
             if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
@@ -595,15 +620,14 @@ public class ReportRenderer {
                     insertCol += colsToAdd;
                     colsToAdd = columnsFormattingPatternWidth * (copyCount - 1);
                 }
-             }
+            }
             Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col, except for permuted headings
             CellOperationUtil.insertColumn(insertRange);
             if (columnsFormattingPatternWidth > 1) {
-                      //cut back the last column to it's original position, and shift the insert range one column to the right
-                      CellOperationUtil.cut(Ranges.range(sheet,topRow, insertCol + colsToAdd, maxRow, insertCol + colsToAdd), Ranges.range(sheet, topRow, insertCol, maxRow, insertCol));
-                      insertRange = Ranges.range(sheet, topRow, insertCol + 1, maxRow, insertCol + colsToAdd);
-                      copySource = Ranges.range(sheet, topRow, displayDataRegion.getColumn(), maxRow, insertCol);
-
+                //cut back the last column to it's original position, and shift the insert range one column to the right
+                CellOperationUtil.cut(Ranges.range(sheet, topRow, insertCol + colsToAdd, maxRow, insertCol + colsToAdd), Ranges.range(sheet, topRow, insertCol, maxRow, insertCol));
+                insertRange = Ranges.range(sheet, topRow, insertCol + 1, maxRow, insertCol + colsToAdd);
+                copySource = Ranges.range(sheet, topRow, displayDataRegion.getColumn(), maxRow, displayDataRegion.getColumn() + columnsFormattingPatternWidth - 1);
             }
             // will this paste the lot?
             CellOperationUtil.paste(copySource, insertRange);
@@ -633,4 +657,4 @@ public class ReportRenderer {
         return "$" + numberColToStringCol(leftCol) + "$" + (topRow + 1) + ":$" + numberColToStringCol(rightCol) + "$" + (bottomRow + 1);
     }
     */
-  }
+}
