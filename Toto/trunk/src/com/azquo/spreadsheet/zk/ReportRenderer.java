@@ -573,7 +573,8 @@ public class ReportRenderer {
             }
             // now the insert as normal
             Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, 0).toRowRange(); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
-            CellOperationUtil.insertRow(insertRange);
+//            CellOperationUtil.insertRow(insertRange);
+            CellOperationUtil.insert(insertRange, Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE); // don't copy any formatting . . .
             // this is hacky, the bulk insert above will have pushed the bottom row down and in many cases we want it back where it was for teh pattern to be pasted properly
             if (rowsFormattingPatternHeight > 1) {
                 //cut back the last column to it's original position, and shift the insert range one column to the right
@@ -583,6 +584,7 @@ public class ReportRenderer {
                 insertRange = Ranges.range(sheet, insertRow + 1, 0, insertRow + rowsToAdd, 0).toRowRange();
                 copySource = Ranges.range(sheet, displayDataRegion.getRow(), 0, displayDataRegion.getRow() + rowsFormattingPatternHeight - 1, 0).toRowRange();// should be the section representing the pattern we want to copy (with the last row restored to where it was)
             }
+//            CellOperationUtil.pasteSpecial(copySource, insertRange, Range.PasteType.FORMULAS, Range.PasteOperation.NONE, false, false);
             CellOperationUtil.paste(copySource, insertRange);
             int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
             if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert

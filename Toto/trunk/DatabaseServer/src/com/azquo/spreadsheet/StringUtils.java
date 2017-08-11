@@ -333,4 +333,15 @@ I should be ok for StringTokenizer at this point
         }
         return val;
     }
+
+    public static boolean isStringInQuotes(String sourceString, String searchString, char quoteChar){
+        boolean inQuotes = false;
+        int index = sourceString.indexOf(searchString);
+        for (int i = 0; i < index; i++){
+            if (sourceString.charAt(i) == quoteChar){
+                inQuotes = !inQuotes;
+            }
+        }
+        return inQuotes;
+    }
 }

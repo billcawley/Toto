@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.NameUtils;
@@ -88,47 +89,55 @@ public class AzquoCellResolver {
         }
         ListOfValuesOrNamesAndAttributeName listOfValuesOrNamesAndAttributeName = null;
         // ok under new logic the complex functions will work very differently evaluating a query for each cell rather than gathering headings as below. Hence a big if here
-        DataRegionHeading nameFunctionHeading = null;
+        DataRegionHeading expressionFunctionHeading = null;
         for (DataRegionHeading columnHeading : columnHeadings) { // try column headings first
-            if (columnHeading != null && columnHeading.isNameFunction()) {
-                nameFunctionHeading = columnHeading;
+            if (columnHeading != null && columnHeading.isExpressionFunction()) {
+                expressionFunctionHeading = columnHeading;
                 break;
             }
         }
-        if (nameFunctionHeading == null) { // then check the row headings
+        if (expressionFunctionHeading == null) { // then check the row headings
             for (DataRegionHeading rowHeading : rowHeadings) {
-                if (rowHeading != null && rowHeading.isNameFunction()) {
-                    nameFunctionHeading = rowHeading;
+                if (rowHeading != null && rowHeading.isExpressionFunction()) {
+                    expressionFunctionHeading = rowHeading;
                     break;
                 }
             }
         }
-        if (nameFunctionHeading == null) { // finally context for permuted name functions
+        if (expressionFunctionHeading == null) { // finally context for permuted name functions
             for (DataRegionHeading contextHeading : contextHeadings) {
-                if (contextHeading != null && contextHeading.isNameFunction()) {
-                    nameFunctionHeading = contextHeading;
+                if (contextHeading != null && contextHeading.isExpressionFunction()) {
+                    expressionFunctionHeading = contextHeading;
                     break;
                 }
             }
         }
         // todo re-implement caching here if there are performance problems - I did use findOverlap before here but I don't think is applicable now the name query is much more flexible. Caching fragments of the query would be the thing
-        if (nameFunctionHeading != null) {
-            String cellQuery = nameFunctionHeading.getDescription();
+        if (expressionFunctionHeading != null) {
+            String cellQuery = expressionFunctionHeading.getDescription();
+            Set<Name> usedInExpression = HashObjSets.newMutableSet(); // if we need to later ignore a name referenced by the [COLUMNHEADING] or [ROWHEADING]
             //testing here for [rowheading], [rowheading2] etc...
             String ROWHEADING = "[ROWHEADING";
             if (!rowHeadings.isEmpty()) {
                 if (!cellQuery.contains(ROWHEADING)) {
                     ROWHEADING = ROWHEADING.toLowerCase();
                 }
+                // edd todo - variable names here could be better?
                 if (cellQuery.contains(ROWHEADING)) {
                     String filler = "";
                     for (int colNo1 = 0; colNo1 < rowHeadings.size(); colNo1++) {
                         String fillerAll = ROWHEADING + filler + "]";
                         if (cellQuery.contains(fillerAll)) {
+                            boolean inQuotes = StringUtils.isStringInQuotes(cellQuery, fillerAll, StringLiterals.QUOTE);
                             if (rowHeadings.get(colNo1).getName() == null) {
                                 cellQuery = "";
                             } else {
-                                cellQuery = cellQuery.replace(fillerAll, NameUtils.getFullyQualifiedDefaultDisplayName(rowHeadings.get(colNo1).getName())); // we assume the row heading has a "legal" description. Probably a name identifier !1234
+                                usedInExpression.add(rowHeadings.get(colNo1).getName());
+                                if (inQuotes){
+                                    cellQuery = cellQuery.replace(fillerAll, rowHeadings.get(colNo1).getName().getDefaultDisplayName());
+                                } else {
+                                    cellQuery = cellQuery.replace(fillerAll, NameUtils.getFullyQualifiedDefaultDisplayName(rowHeadings.get(colNo1).getName()));
+                                }
                             }
                         }
                         filler = (colNo1 + 2) + "";
@@ -137,25 +146,70 @@ public class AzquoCellResolver {
             }
             String COLUMNHEADING = "[COLUMNHEADING]";
             String COLUMNHEADINGLOWERCASE = "[columnheading]";
-            if (!columnHeadings.isEmpty() && (cellQuery.contains(COLUMNHEADING) || cellQuery.contains(COLUMNHEADINGLOWERCASE))) {
-                cellQuery = cellQuery.replace(COLUMNHEADING, NameUtils.getFullyQualifiedDefaultDisplayName(columnHeadings.get(0).getName()))
-                        .replace(COLUMNHEADINGLOWERCASE, NameUtils.getFullyQualifiedDefaultDisplayName(columnHeadings.get(0).getName())); // and now the col headings
+            // todo sort crap logic
+            if (!columnHeadings.isEmpty()) {
+                if (cellQuery.contains(COLUMNHEADING)){
+                    boolean inQuotes = StringUtils.isStringInQuotes(cellQuery, COLUMNHEADING, StringLiterals.QUOTE);
+                    usedInExpression.add(columnHeadings.get(0).getName());
+                    if (inQuotes){
+                        cellQuery = cellQuery.replace(COLUMNHEADING, columnHeadings.get(0).getName().getDefaultDisplayName());
+                    } else {
+                        cellQuery = cellQuery.replace(COLUMNHEADING, NameUtils.getFullyQualifiedDefaultDisplayName(columnHeadings.get(0).getName()));
+                    }
+                }
+                if (cellQuery.contains(COLUMNHEADINGLOWERCASE)){
+                    boolean inQuotes = StringUtils.isStringInQuotes(cellQuery, COLUMNHEADINGLOWERCASE, StringLiterals.QUOTE);
+                    usedInExpression.add(columnHeadings.get(0).getName());
+                    if (inQuotes){
+                        cellQuery = cellQuery.replace(COLUMNHEADINGLOWERCASE, columnHeadings.get(0).getName().getDefaultDisplayName());
+                    } else {
+                        cellQuery = cellQuery.replace(COLUMNHEADINGLOWERCASE, NameUtils.getFullyQualifiedDefaultDisplayName(columnHeadings.get(0).getName()));
+                    }
+                }
             }
             if (debugInfo != null) {
                 debugInfo.append("\nFunction\n\n");
-                debugInfo.append("\t" + nameFunctionHeading.getFunction() + "\n");
+                debugInfo.append("\t" + expressionFunctionHeading.getFunction() + "\n");
                 debugInfo.append("\nQuery\n\n");
                 debugInfo.append("\t" + cellQuery + "\n");
             }
             locked.isTrue = true; // they cant edit the results from complex functions
-            if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
+            if (expressionFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.VALUESET) { // run through the names in the expression matching them against the remaining heading names and sum the result
+                // could this little bit be more efficient? Will consider if there are performance problems
+                List<Name> namesToResolve = new ArrayList<>();
+                for (DataRegionHeading drh : contextHeadings){
+                    if (drh.getName() != null && !usedInExpression.contains(drh.getName())){
+                        namesToResolve.add(drh.getName());
+                    }
+                }
+                for (DataRegionHeading drh : rowHeadings){
+                    if (drh.getName() != null && !usedInExpression.contains(drh.getName())){
+                        namesToResolve.add(drh.getName());
+                    }
+                }
+                for (DataRegionHeading drh : columnHeadings){
+                    if (drh.getName() != null && !usedInExpression.contains(drh.getName())){
+                        namesToResolve.add(drh.getName());
+                    }
+                }
+                // typically used to sort a from e.g. 2017 children from July
+                Collection<Name> names = NameQueryParser.parseQuery(connection, cellQuery, languages, null, true);// pretty sure a readonly collection returned is fine
+                ValuesHook valuesHook = new ValuesHook(); // needed for the code to run currently, any
+                for (Name name : names){
+                    namesToResolve.add(name);
+                    // no extra function
+                    doubleValue += ValueService.findValueForNames(connection, namesToResolve, locked, valuesHook, languages, null, nameComboValueCache, debugInfo);
+                    namesToResolve.remove(namesToResolve.size() - 1);
+                }
+                stringValue = doubleValue + "";
+            } else if (expressionFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) { // a straight set but with [ROWHEADING] as part of the criteria
                 Set<Name> namesToCount = HashObjSets.newMutableSet(); // I think this will be faster for purpose
                 NameQueryParser.parseQuery(connection, cellQuery, languages, namesToCount, false);
                 doubleValue = namesToCount.size();
                 stringValue = doubleValue + "";
-            } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
+            } else if (expressionFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.PATHCOUNT) { // new syntax, before it was name, set now it's set, set. Sticking to very basic , split
                 //todo - this parsing needs to happen in the DateRegionHeadingService and needs to be robust to commas in names!
-                String[] twoSets = nameFunctionHeading.getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
+                String[] twoSets = expressionFunctionHeading.getDescription().split(","); // we assume this will give an array of two, I guess see if this is a problem
                 Set<Name> leftSet = HashObjSets.newMutableSet();
                 Set<Name> rightSet = HashObjSets.newMutableSet();
                 NameQueryParser.parseQuery(connection, twoSets[0], languages, leftSet, false);
@@ -179,7 +233,7 @@ public class AzquoCellResolver {
                 }
                 doubleValue = count;
                 stringValue = count + "";
-            } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.SET) {
+            } else if (expressionFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.SET) {
                 final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages, true);
                 doubleValue = 0;
                 StringBuilder sb = new StringBuilder();
@@ -192,11 +246,11 @@ public class AzquoCellResolver {
                     first = false;
                 }
                 stringValue = sb.toString();
-            } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.FIRST) { // we may have to pass a hint about ordering to the query parser, let's see how it goes without it
+            } else if (expressionFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.FIRST) { // we may have to pass a hint about ordering to the query parser, let's see how it goes without it
                 final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages, true);
                 doubleValue = 0;
                 stringValue = set.isEmpty() ? "" : set.iterator().next().getDefaultDisplayName();
-            } else if (nameFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.LAST) {
+            } else if (expressionFunctionHeading.getFunction() == DataRegionHeading.FUNCTION.LAST) {
                 final Collection<Name> set = NameQueryParser.parseQuery(connection, cellQuery, languages, true);
                 doubleValue = 0;
                 stringValue = "";

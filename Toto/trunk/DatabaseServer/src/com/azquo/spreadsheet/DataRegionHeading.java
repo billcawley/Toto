@@ -21,7 +21,7 @@ import java.util.Set;
  */
 public class DataRegionHeading {
     // todo - average min and max use calculation?
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, PERCENTILE, PERCENTILENZ, STDEVA, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT, ALLEXACT}
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, VALUESET, PERCENTILE, PERCENTILENZ, STDEVA, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT, ALLEXACT}
     /*
     COUNT               Value function      The number of values rather than the sum
     AVERAGE             Value function      The average value
@@ -132,12 +132,12 @@ public class DataRegionHeading {
         return valueFunctionSet;
     }
 
-    boolean isNameFunction(){
-        return isNameFunction(function);
+    boolean isExpressionFunction(){
+        return isExpressionFunction(function);
     }
     // useful to be called outside if an instance
-    static boolean isNameFunction(FUNCTION function){
-        return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT || function == FUNCTION.SET || function == FUNCTION.FIRST || function == FUNCTION.LAST);
+    static boolean isExpressionFunction(FUNCTION function){
+        return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT || function == FUNCTION.SET || function == FUNCTION.FIRST || function == FUNCTION.LAST || function == FUNCTION.VALUESET);
     }
 
     double getDoubleParameter() {

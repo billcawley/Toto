@@ -85,14 +85,14 @@ class DataRegionHeadingService {
                         if (suffix == null && defaultSuffix != null) {
                             suffix = defaultSuffix;
                         }
-                        /* The way name functions work is going to change to allow [ROWHEADING] and [COLUMNHEADING] which work with set operators, / * - + etc.
-                           This means that in the case of name functions the heading can't cache sets, it needs to evaluate the formulae on each line and it means that each
+                        /* The way expression functions work is going to change to allow [ROWHEADING] and [COLUMNHEADING] which work with set operators, / * - + etc.
+                           This means that in the case of expression functions the heading can't cache sets, it needs to evaluate the formulae on each line and it means that each
                            heading needs to have its description populated even if it's a simple name. Caching of heading will be broken, this would slow down Damart (which will be broken anyway due to changing syntax)
                            for example but that's not such a concern right now. Later when evaluating cells it will look for a function in the row heading first then the column heading
                            and it will evaluate the first it finds taking into account [ROWHEADING] and [COLUMNHEADING], it can't evaluate both. And [ROWHEADING] means the first row heading
                            if there are more than one we may later allow [ROWHEADING1], [ROWHEADING2] etc.
                            */
-                        if (DataRegionHeading.isNameFunction(function)) { // then just set the description to be resolved later
+                        if (DataRegionHeading.isExpressionFunction(function)) { // then just set the description to be resolved later
                             List<DataRegionHeading> forFunction = new ArrayList<>();
                             forFunction.add(new DataRegionHeading(null, false, function, suffix, sourceCell, null)); // in this case the heading is just a placeholder for the formula to be evaluated later - that forumla being held in the description of the heading
                             row.add(forFunction);

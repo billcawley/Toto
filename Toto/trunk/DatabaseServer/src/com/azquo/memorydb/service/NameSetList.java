@@ -11,7 +11,8 @@ import java.util.Set;
 /**
  * Extracted from NameService by edward on 18/10/16.
  *
- * in order to avoid unnecessary collection copying (we could be talking millions of names) I made this little container to move a collection that could be a list or set and possibly mutable
+ * in order to avoid unnecessary collection copying (we could be talking millions of names)
+ * I made this little container to move a collection that could be a list or set and possibly mutable
  */
 class NameSetList {
     public final Set<Name> set;
@@ -32,6 +33,6 @@ class NameSetList {
     }
 
     Collection<Name> getAsCollection() {
-        return set != null ? set : list != null ? list : null;
+        return set != null ? set : list;
     }
 }

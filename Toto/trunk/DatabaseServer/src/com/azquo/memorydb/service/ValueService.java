@@ -7,6 +7,7 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.*;
+import net.openhft.koloboke.collect.set.hash.HashObjSet;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
@@ -186,7 +187,7 @@ public final class ValueService {
     private static AtomicInteger numberOfTimesCalled1 = new AtomicInteger(0);
 
     // aside from a recursive call this is used in one place and is crucial to
-
+    // how to get rid of exactName that WFC added???
     private static AtomicInteger findForNamesIncludeChildrenCount = new AtomicInteger(0);
 
     private static List<Value> findForNamesIncludeChildren(final List<Name> names, Map<List<Name>, Set<Value>> nameComboValueCache, Name exactName) {
@@ -220,14 +221,24 @@ public final class ValueService {
             setsToCheck[0] = names.get(names.size() - 2).findValuesIncludingChildren(payAttentionToAdditive);
             setsToCheck[1] = names.get(names.size() - 1).findValuesIncludingChildren(payAttentionToAdditive);*/
             setsToCheck = new Set[1];
-            setsToCheck[0] = names.get(names.size() - 1).findValuesIncludingChildren(exactName);
+            // Edd note - I'm not particularly happy about this
+            if (exactName != null && names.get(names.size() - 1) == exactName){
+                setsToCheck[0] = HashObjSets.newImmutableSet(names.get(names.size() - 1).getValues());
+            } else {
+                setsToCheck[0] = names.get(names.size() - 1).findValuesIncludingChildren();
+            }
         } else {
             // first get the shortest value list taking into account children
             int smallestNameSetSize = -1;
             Name smallestName = null;
             for (Name name : names) {
                 int setSizeIncludingChildren = 0;
-                setSizeIncludingChildren = name.findValuesIncludingChildren(exactName).size();
+
+                if (name == exactName){
+                    setSizeIncludingChildren = name.getValues().size();
+                } else {
+                    setSizeIncludingChildren = name.findValuesIncludingChildren().size();
+                }
 
                 if (smallestNameSetSize == -1 || setSizeIncludingChildren < smallestNameSetSize) {
                     smallestNameSetSize = setSizeIncludingChildren;
@@ -240,7 +251,12 @@ public final class ValueService {
             part1NanoCallTime1.addAndGet(System.nanoTime() - point);
             point = System.nanoTime();
             assert smallestName != null; // make intellij happy
-            smallestValuesSet = smallestName.findValuesIncludingChildren(exactName);
+
+            if (smallestName == exactName){
+                smallestValuesSet = HashObjSets.newImmutableSet(smallestName.getValues());
+            } else {
+                smallestValuesSet = smallestName.findValuesIncludingChildren();
+            }
              part2NanoCallTime1.addAndGet(System.nanoTime() - point);
             point = System.nanoTime();
             // ok from testing a new list using contains against values seems to be the thing, double the speed at least I think!
@@ -249,7 +265,11 @@ public final class ValueService {
             for (Name name : names) {
                 // note if smallest name is in there twice (duplicate names) then setsToCheck will hav e mull elements at the end, I check for this later in the big loop, should probably zap that. Or get rid of the smallest names before?
                 if (name != smallestName) { // a little cheaper than making a new name set and knocking this one off I think
-                    setsToCheck[arrayIndex] = name.findValuesIncludingChildren(exactName);
+                    if (name == exactName){
+                        setsToCheck[arrayIndex] = HashObjSets.newImmutableSet(name.getValues());
+                    } else {
+                        setsToCheck[arrayIndex] = name.findValuesIncludingChildren();
+                    }
                     arrayIndex++;
                 }
             }

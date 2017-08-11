@@ -537,14 +537,6 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger findValuesIncludingChildrenCount = new AtomicInteger(0);
 
-
-        public Set<Value> findValuesIncludingChildren(Name exactName) {
-            if (this == exactName) {
-                return new HashSet<>(getValues());
-            }
-            return findValuesIncludingChildren();
-        }
-
     public Set<Value> findValuesIncludingChildren() {
         findValuesIncludingChildrenCount.incrementAndGet();
         Set<Value> localReference = valuesIncludingChildrenCache;
