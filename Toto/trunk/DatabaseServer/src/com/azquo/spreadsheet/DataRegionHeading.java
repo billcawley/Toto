@@ -132,7 +132,7 @@ public class DataRegionHeading {
         return valueFunctionSet;
     }
 
-    boolean isExpressionFunction(){
+    public boolean isExpressionFunction(){
         return isExpressionFunction(function);
     }
     // useful to be called outside if an instance

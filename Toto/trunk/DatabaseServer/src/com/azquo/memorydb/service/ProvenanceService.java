@@ -74,7 +74,7 @@ public class ProvenanceService {
         AzquoCell azquoCell = DSSpreadsheetService.getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, databaseAccessToken.getLanguages(), null);
         if (azquoCell != null) {
             final ListOfValuesOrNamesAndAttributeName valuesForCell = azquoCell.getListOfValuesOrNamesAndAttributeName();
-            // todo, deal with name functions properly, will need to check through the DataRegionHeadings (as in don't just assume it's name count, could be something else)
+            // todo, deal with name functions properly, will need to check through the DataRegionHeadings (as in don't just assume it's name count, could be something else) also valuse set
             if (valuesForCell == null) {
                 return nameCountProvenance(azquoCell);
             }
@@ -95,6 +95,7 @@ public class ProvenanceService {
     }
 
     // might need to rewrite this and/or check variable names
+    // todo make generic for the expression provenance but what should it show???
     private static ProvenanceDetailsForDisplay nameCountProvenance(AzquoCell azquoCell) {
         String provString = "";
         Set<Name> cellNames = new HashSet<>();
