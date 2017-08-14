@@ -473,8 +473,15 @@ public class ReportRenderer {
 
                 int colsToAdd;
                 int maxRow = sheet.getLastRow();
+                int maxCol = 0;
+                for (int row = 0; row <= maxRow; row++) {
+                    if (maxCol < sheet.getLastColumn(row)) {
+                        maxCol = sheet.getLastColumn(row);
+                    }
+                }
+
                 if (displayDataRegion != null) {
-                    expandDataRegionBasedOnHeadings(loggedInUser, sheet, region, displayDataRegion, cellsAndHeadingsForDisplay);
+                    expandDataRegionBasedOnHeadings(loggedInUser, sheet, region, displayDataRegion, cellsAndHeadingsForDisplay, maxCol);
                     // these re loadings are because the region may have changed
                     // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't - this isn't a biggy it's just to do with name references which now I think about it probably don't need reloading but it's worth checking and being consistent
                     displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
@@ -549,12 +556,12 @@ public class ReportRenderer {
         return null; // will it get here ever?
     }
 
-    private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) {
+    private static void expandDataRegionBasedOnHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, int maxCol) {
         // add rows
         if (cellsAndHeadingsForDisplay.getRowHeadings() != null && (displayDataRegion.getRowCount() < cellsAndHeadingsForDisplay.getRowHeadings().size()) && displayDataRegion.getRowCount() > 2) { // then we need to expand, and there is space to do so (3 or more allocated already)
             int rowsToAdd = cellsAndHeadingsForDisplay.getRowHeadings().size() - (displayDataRegion.getRowCount());
             int insertRow = displayDataRegion.getRow() + displayDataRegion.getRowCount() - 1; // last but one row
-            Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, 0).toRowRange();
+            Range copySource = Ranges.range(sheet, insertRow - 1, 0, insertRow - 1, maxCol);
             // now need to emulate the formatting based copying used for columns
             // most of the time rowsFormattingPatternHeight will be the same height as the row headings size but if the space is smaller need to do a first expand before we can do the tessalating copy paste
             int rowsFormattingPatternHeight = ReportUtils.guessColumnsFormattingPatternWidth(loggedInUser, MultidimensionalListUtils.transpose2DList(cellsAndHeadingsForDisplay.getRowHeadingsSource()));
@@ -563,7 +570,7 @@ public class ReportRenderer {
                 int copyCount = cellsAndHeadingsForDisplay.getRowHeadings().size() / rowsFormattingPatternHeight;
                 if (rowsFormattingPatternHeight > displayDataRegion.getRowCount()) {
                     rowsToAdd = rowsFormattingPatternHeight - displayDataRegion.getRowCount();
-                    Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, 0).toRowRange(); // insert just before the last col
+                    Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert just before the last col
                     CellOperationUtil.insertRow(insertRange);
                     // will this paste the lot?
                     CellOperationUtil.paste(copySource, insertRange);
@@ -572,17 +579,17 @@ public class ReportRenderer {
                 }
             }
             // now the insert as normal
-            Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, 0).toRowRange(); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
+            Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
 //            CellOperationUtil.insertRow(insertRange);
             CellOperationUtil.insert(insertRange, Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE); // don't copy any formatting . . .
             // this is hacky, the bulk insert above will have pushed the bottom row down and in many cases we want it back where it was for teh pattern to be pasted properly
             if (rowsFormattingPatternHeight > 1) {
                 //cut back the last column to it's original position, and shift the insert range one column to the right
-                CellOperationUtil.cut(Ranges.range(sheet, insertRow + rowsToAdd, 0, insertRow + rowsToAdd, 0).toRowRange()
-                        , Ranges.range(sheet, insertRow, 0, insertRow, 0).toRowRange());
+                CellOperationUtil.cut(Ranges.range(sheet, insertRow + rowsToAdd, 0, insertRow + rowsToAdd, maxCol)
+                        , Ranges.range(sheet, insertRow, 0, insertRow, maxCol));
                 // so the next row after the first section to copy until the end bit
-                insertRange = Ranges.range(sheet, insertRow + 1, 0, insertRow + rowsToAdd, 0).toRowRange();
-                copySource = Ranges.range(sheet, displayDataRegion.getRow(), 0, displayDataRegion.getRow() + rowsFormattingPatternHeight - 1, 0).toRowRange();// should be the section representing the pattern we want to copy (with the last row restored to where it was)
+                insertRange = Ranges.range(sheet, insertRow + 1, 0, insertRow + rowsToAdd, maxCol);
+                copySource = Ranges.range(sheet, displayDataRegion.getRow(), 0, displayDataRegion.getRow() + rowsFormattingPatternHeight - 1, maxCol);// should be the section representing the pattern we want to copy (with the last row restored to where it was)
             }
 //            CellOperationUtil.pasteSpecial(copySource, insertRange, Range.PasteType.FORMULAS, Range.PasteOperation.NONE, false, false);
             CellOperationUtil.paste(copySource, insertRange);
