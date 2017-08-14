@@ -275,7 +275,7 @@ public class BatchImporter implements Callable<Void> {
         // initial pass to deal with defaults, dates and local parents
         // set defaults before dealing with local parent/child
         for (ImportCellWithHeading importCellWithHeading : cells) {
-            if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && importCellWithHeading.getLineValue().length() == 0) {
+            if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && importCellWithHeading.getLineValue().trim().length() == 0) {
                 importCellWithHeading.setLineValue(importCellWithHeading.getImmutableImportHeading().defaultValue);
             }
         }
