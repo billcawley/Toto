@@ -389,8 +389,18 @@ public class BatchImporter implements Callable<Void> {
     // it tests to see if the current line name is null or not as it may have been set by a call to resolveLineNamesParentsChildrenRemove on a different cell setting the child name
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
                                                               ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
-        if (cellWithHeading.getLineValue().length() == 0) { // so nothing to do
-            return;
+        String localLanguage = cellWithHeading.getImmutableImportHeading().attribute;
+        if (cellWithHeading.getLineValue().length() == 0 || (cellWithHeading.getImmutableImportHeading().defaultValue != null && cellWithHeading.getLineValue().equals(cellWithHeading.getImmutableImportHeading().defaultValue))) { // so nothing to do
+             for (ImportCellWithHeading cell:cells){
+                if (cell!= cellWithHeading && cell.getImmutableImportHeading().indexForAttribute == cells.indexOf(cellWithHeading) && cell.getLineValue().length() > 0){
+                    localLanguage = cell.getImmutableImportHeading().attribute;
+                    cellWithHeading.setLineValue(cell.getLineValue());
+                    break;
+                }
+            }
+            if (cellWithHeading.getLineValue().length()==0){
+                return;
+            }
         }
         /* ok this is important - I was adjusting cellWithHeading.getLineValue() to add quotes,
         this was not clever as it's referenced in other places (goes back to the idea that ideally this would be immutable)
@@ -405,7 +415,7 @@ public class BatchImporter implements Callable<Void> {
             if (cellWithHeading.getImmutableImportHeading().splitChar == null) {
                 if (cellWithHeading.getLineName() == null) {
                     cellWithHeading.setLineName(includeInParents(azquoMemoryDBConnection, namesFoundCache, cellWithHeadingLineValue
-                            , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading(), attributeNames)));
+                            , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(localLanguage, attributeNames)));
                 } else {
                     for (Name parent : cellWithHeading.getImmutableImportHeading().parentNames) {
                         parent.addChildWillBePersisted(cellWithHeading.getLineName());
@@ -418,7 +428,7 @@ public class BatchImporter implements Callable<Void> {
                 String[] splitStrings = cellWithHeadingLineValue.split(cellWithHeading.getImmutableImportHeading().splitChar);
                 for (String splitString : splitStrings) {
                     cellWithHeading.getSplitNames().add(includeInParents(azquoMemoryDBConnection, namesFoundCache, splitString.trim()
-                            , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading(), attributeNames)));
+                            , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(localLanguage, attributeNames)));
                 }
             }
         } else { // it existed (created below as a child name), sort parents if necessary
@@ -439,7 +449,7 @@ public class BatchImporter implements Callable<Void> {
             boolean needsAdding = true; // defaults to true
             if (childCell.getLineName() == null) {
                 childCell.setLineName(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childCell.getLineValue(), cellWithHeading.getLineName()
-                        , cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(childCell.getImmutableImportHeading(), attributeNames)));
+                        , cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(childCell.getImmutableImportHeading().attribute, attributeNames)));
             }
             for (Name parent : cellWithHeading.getSplitNames()) {
                 //the 'parent' above is the current cell, not its parent
@@ -518,10 +528,10 @@ public class BatchImporter implements Callable<Void> {
         return child;
     }
 
-    private static List<String> setLocalLanguage(ImmutableImportHeading heading, List<String> defaultLanguages) {
+    private static List<String> setLocalLanguage(String localLanguage, List<String> defaultLanguages) {
         List<String> languages = new ArrayList<>();
-        if (heading.attribute != null) {
-            languages.add(heading.attribute);
+        if (localLanguage != null) {
+            languages.add(localLanguage);
         } else {
             languages.addAll(defaultLanguages);
         }
