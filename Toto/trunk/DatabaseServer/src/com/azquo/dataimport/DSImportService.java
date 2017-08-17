@@ -76,6 +76,15 @@ public class DSImportService {
             toReturn = setsImport(azquoMemoryDBConnection, filePath, fileName, attributeNames);
         } else {
             toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileName, attributeNames, isSpreadsheet, valuesModifiedCounter);
+            //now look to see if there's a need to execute after import
+            Name importInterpreter = findInterpreter(azquoMemoryDBConnection, fileName,attributeNames);
+            if (importInterpreter!=null){
+                String execute = importInterpreter.getAttribute("EXECUTE");
+                if (execute!=null&& execute.length()>0){
+                    toReturn += "EXECUTE:" + execute + "EXECUTEEND";
+                }
+
+            }
         }
         if (persistAfter) { // get back to the user straight away. Should not be a problem, multiple persists would be queued. The only issue is of changes while persisting, need to check this in the memory db.
             new Thread(azquoMemoryDBConnection::persist).start();
@@ -246,15 +255,13 @@ public class DSImportService {
     // The function to make the an instance of HeadingsWithIteratorAndBatchSize. It will itself call a few utility functions as well as the HeadingReader class.
     // This function is mainly concerned with possible sources of the headers either in the database as attributes or in the uploaded file
 
-    private static HeadingsWithIteratorAndBatchSize getHeadersWithIteratorAndBatchSize(AzquoMemoryDBConnection azquoMemoryDBConnection
-            , String importInterpreterLookup, boolean isSpreadsheet, String filePath, List<String> attributeNames) throws Exception {
+    public static Name findInterpreter(AzquoMemoryDBConnection azquoMemoryDBConnection, String importInterpreterLookup, List<String> attributeNames)throws Exception{
         if (importInterpreterLookup.contains(".")) {
             importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
         }
         // this distinction was previously dealt with by fileType and fileName, we still support the filename being replaced
         // in the headings and it expects this (filename without extension), importInterpreterLookup is no good as it may be mangled further
-        String fileNameForReplace = importInterpreterLookup;
-        // try to find a name which might have the headings in its attributes
+         // try to find a name which might have the headings in its attributes
         Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
         //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
         while (importInterpreter == null && (importInterpreterLookup.contains(" ") || importInterpreterLookup.contains("_"))) {
@@ -266,6 +273,14 @@ public class DSImportService {
             }
             importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
         }
+        return importInterpreter;
+
+    }
+
+    private static HeadingsWithIteratorAndBatchSize getHeadersWithIteratorAndBatchSize(AzquoMemoryDBConnection azquoMemoryDBConnection
+            , String importInterpreterLookup, boolean isSpreadsheet, String filePath, List<String> attributeNames) throws Exception {
+        String fileNameForReplace = importInterpreterLookup;
+        Name importInterpreter = findInterpreter(azquoMemoryDBConnection, importInterpreterLookup, attributeNames);
         // check if that name (assuming it's not null!) has groovy in an attribute
         filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
         if (importInterpreter != null && !maybeHasHeadings(filePath))

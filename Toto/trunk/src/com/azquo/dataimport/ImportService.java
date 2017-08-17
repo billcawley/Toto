@@ -14,6 +14,7 @@ import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.csvreader.CsvWriter;
@@ -106,6 +107,13 @@ public final class ImportService {
             toReturn = UPLOADEDBYANOTHERUSER + " <a href=\"/api/ManageDatabases?uploadAnyway=" + uploadRecord.getId() + "\">Upload Anyway</a>"; // and should there be HTML in here? It will work I guess . . .
         }
         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
+        int executePos = toReturn.toLowerCase().indexOf("execute:");
+        if (executePos > 0){
+            String execute = toReturn.substring(executePos + "execute:".length());
+            int executeEnd = execute.toLowerCase().indexOf("executeend");
+            toReturn = toReturn.substring(0, executePos) +execute.substring(executeEnd + "executeend".length());
+            toReturn += " " + ReportExecutor.runExecute(loggedInUser, execute.substring(0,executeEnd)).toString();
+        }
         return toReturn;
     }
 

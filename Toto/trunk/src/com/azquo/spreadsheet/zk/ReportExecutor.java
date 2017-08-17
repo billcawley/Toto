@@ -54,22 +54,8 @@ public class ReportExecutor {
         if (executeCommand == null || executeCommand.isEmpty()) { // just return false for the moment, no executing
             return book; // unchanged, nothing to run
         }
-        List<String> commands = new ArrayList<>();
-        StringTokenizer st = new StringTokenizer(executeCommand, "\n");
-        while (st.hasMoreTokens()) {
-            String line = st.nextToken();
-            if (!line.trim().isEmpty()) {
-                commands.add(line);
-            }
-        }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        //RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
-        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Starting execute");
-        StringBuilder loops = new StringBuilder();
-        executeCommands(loggedInUser, commands, loops, new AtomicInteger(0));
-        // it won't have cleared while executing
-        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
-        SpreadsheetService.databasePersist(loggedInUser);
+        StringBuilder loops = runExecute(loggedInUser, executeCommand);
 
         final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
@@ -88,6 +74,27 @@ public class ReportExecutor {
         }
         return newBook;
     }
+
+  public static StringBuilder runExecute(LoggedInUser loggedInUser, String executeCommand) throws Exception{
+      List<String> commands = new ArrayList<>();
+      StringTokenizer st = new StringTokenizer(executeCommand, "\n");
+      while (st.hasMoreTokens()) {
+          String line = st.nextToken();
+          if (!line.trim().isEmpty()) {
+              commands.add(line);
+          }
+      }
+      //RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
+      RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Starting execute");
+      StringBuilder loops = new StringBuilder();
+      executeCommands(loggedInUser, commands, loops, new AtomicInteger(0));
+      // it won't have cleared while executing
+      RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
+      SpreadsheetService.databasePersist(loggedInUser);
+      return loops;
+
+  }
+
 
     // we assume cleansed of blank lines
     // now can return the outcome if there's an az_Outcome cell. Assuming a loop or list of "do"s then the String returned is the last.
@@ -129,7 +136,7 @@ public class ReportExecutor {
                     Database oldDatabase = null;
                     OnlineReport onlineReport;
                     // so, first try to get the report based off permissions, if so it might override the current database
-                    if (loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()) != null){
+                    if (loggedInUser.getPermissionsFromReport()!=null && loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()) != null){
                         onlineReport = loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()).getFirst();
                         if (loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()).getSecond() != null){
                             oldDatabase = loggedInUser.getDatabase();
