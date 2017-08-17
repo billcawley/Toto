@@ -22,13 +22,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by edward on 09/01/17.
- *
+ * <p>
  * Low level ZK manipulation functions.
  */
 public class BookUtils {
 
     static List<List<String>> nameToStringLists(SName sName) {
-          return nameToStringLists(sName, null, 0,0);
+        return nameToStringLists(sName, null, 0, 0);
     }
 
     static List<List<String>> nameToStringLists(SName sName, SName repeatRegion, int rowOffset, int colOffset) {
@@ -36,12 +36,12 @@ public class BookUtils {
         if (sName == null) return toReturn;
         // EFC note - this only applies in the case of repeat regions as called in teh report filler service, really this check should be out there
         // the catch is that row headings might be in the region
-        if (repeatRegion!=null){
+        if (repeatRegion != null) {
             //if sName is outside the repeat region, do not add on the row col offsets
             if (sName.getRefersToCellRegion().getRow() < repeatRegion.getRefersToCellRegion().getRow()
                     || sName.getRefersToCellRegion().getRow() >= repeatRegion.getRefersToCellRegion().getRow() + repeatRegion.getRefersToCellRegion().getRowCount()
                     || sName.getRefersToCellRegion().getColumn() < repeatRegion.getRefersToCellRegion().getColumn()
-                    || sName.getRefersToCellRegion().getColumn() >= repeatRegion.getRefersToCellRegion().getColumn() + repeatRegion.getRefersToCellRegion().getColumnCount()){
+                    || sName.getRefersToCellRegion().getColumn() >= repeatRegion.getRefersToCellRegion().getColumn() + repeatRegion.getRefersToCellRegion().getColumnCount()) {
                 rowOffset = 0;
                 colOffset = 0;
             }
@@ -54,31 +54,35 @@ public class BookUtils {
             toReturn.add(row);
             for (int colIndex = region.getColumn() + colOffset; colIndex <= region.getLastColumn() + colOffset; colIndex++) {
                 SCell cell = sheet.getCell(rowIndex, colIndex);
-                // being paraniod?
-                if (cell != null && cell.getType() == SCell.CellType.FORMULA) {
-                    //System.out.println("doing the cell thing on " + cell);
-                    cell.getFormulaResultType();
-                    cell.clearFormulaResultCache();
-                }
-                // I assume non null cell has a non null string value, this may not be true. Also will I get another type of exception?
-                try {
-                    row.add(cell.getStringValue());
-                } catch (Exception e) {
-
-                    if (cell != null && !cell.getType().equals(SCell.CellType.BLANK)) {
-                        try{
-                            String numberGuess = cell.getNumberValue() + "";
-                            if (numberGuess.endsWith(".0")) {
-                                numberGuess = numberGuess.substring(0, numberGuess.length() - 2);
-                            }
-                            if (numberGuess.equals("0")) numberGuess = "";
-                            row.add(numberGuess);
-                        }catch(Exception e2){
-                            row.add(cell.getStringValue());
-                        }
-                    }else{
-                        row.add("");
+                if (cell != null) {
+                    // being paraniod?
+                    if (cell.getType() == SCell.CellType.FORMULA) {
+                        //System.out.println("doing the cell thing on " + cell);
+                        cell.getFormulaResultType();
+                        cell.clearFormulaResultCache();
                     }
+                    // I assume non null cell has a non null string value, this may not be true. Also will I get another type of exception?
+                    try {
+                        // boolean required as sometimes there could be a leftover string value
+                            row.add(cell.getStringValue());
+                    } catch (Exception e) {
+                        if (!cell.getType().equals(SCell.CellType.BLANK)) {
+                            try {
+                                String numberGuess = cell.getNumberValue() + "";
+                                if (numberGuess.endsWith(".0")) {
+                                    numberGuess = numberGuess.substring(0, numberGuess.length() - 2);
+                                }
+                                if (numberGuess.equals("0")) numberGuess = "";
+                                row.add(numberGuess);
+                            } catch (Exception e2) {
+                                row.add(cell.getStringValue());
+                            }
+                        } else {
+                            row.add("");
+                        }
+                    }
+                } else {
+                    row.add("");
                 }
             }
         }
@@ -175,7 +179,7 @@ public class BookUtils {
         if (NumberUtils.isNumber(sValue)) {
             try {
                 sCell.setValue(Double.parseDouble(sValue));
-            }catch(Exception e){
+            } catch (Exception e) {
                 //isNumber seems to allow 100000L   so ignore the exception - it's not a number
             }
         }
@@ -237,27 +241,31 @@ public class BookUtils {
     }
 
     // duff names can casue all sorts of problems, best to zap them
-    static void removeNamesWithNoRegion(Book book){
-        for (SName name : book.getInternalBook().getNames()){
-            if (name.getRefersToCellRegion() == null && name.getRefersToFormula()==null){
+    static void removeNamesWithNoRegion(Book book) {
+        for (SName name : book.getInternalBook().getNames()) {
+            if (name.getRefersToCellRegion() == null && name.getRefersToFormula() == null) {
                 // how to remove the name?
-               try{
-                   book.getInternalBook().deleteName(name);
-               }catch(Exception e){
-                   //maybe we cannot delete in this way
-               }
+                try {
+                    book.getInternalBook().deleteName(name);
+                } catch (Exception e) {
+                    //maybe we cannot delete in this way
+                }
             }
         }
     }
 
-    static SName getNameByName(String name, Sheet sheet){
+    static SName getNameByName(String name, Sheet sheet) {
         SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
-        if (toReturn != null){
+        if (toReturn != null) {
             return toReturn;
 
         }
         // should we check the formula refers to the sheet here? I'm not sure. Applies will have been checked for above.
         return sheet.getBook().getInternalBook().getNameByName(name);
+    }
 
+    static void notifyChangeOnRegion(Sheet sheet, CellRegion region){
+        Range selection = Ranges.range(sheet, region.row, region.column, region.lastRow, region.lastColumn);
+        selection.notifyChange();
     }
 }

@@ -129,6 +129,7 @@ public class ReportService {
         boolean showSave = false;
         // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
         // can't do this in the fill region as formulae need to be dealt with outside
+        // todo - is this redundant if we notify changes after populating regions?? DIdn't know about it before . . ., can almost certainly zap this but need to just make it work for the mo
         for (int formulaeResolveTries = 0; formulaeResolveTries < 3; formulaeResolveTries++){
             final Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator();// only rows with values in them
             while (rowIterator.hasNext()) {

@@ -423,6 +423,7 @@ public class ReportRenderer {
                 }
 
                 List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription);
+                // can it sort out the formulae issues?
                 List<List<String>> rowHeadingList = BookUtils.nameToStringLists(rowHeadingsDescription);
                 //check if this is a pivot - if so, then add in any additional filter needed
                 SName contextFilters = BookUtils.getNameByName(AZCONTEXTFILTERS, sheet);
@@ -506,6 +507,9 @@ public class ReportRenderer {
                             RegionFillerService.fillColumnHeadings(sheet, userRegionOptions, displayColumnHeadings, cellsAndHeadingsForDisplay);
                         }
                         RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
+                        // without this multi step formulae e.g. in headings won't resolve. If this is a performance issue might need to pass through fast load.
+                        // does this make later clear formulae result caches or indeed the lot redundant?? todo - investigate!
+                        BookUtils.notifyChangeOnRegion(sheet,displayDataRegion);
                     } else {
                         // the more complex function that deals with repeat regions - it now notably does the headings
                         RegionFillerService.fillDataForRepeatRegions(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxRow, valueId, quiet, repeatRegionTracker);
