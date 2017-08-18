@@ -81,7 +81,7 @@ public class ReportRenderer {
             e.printStackTrace();
         }
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-        Map<SSheet, String> sheetsToRename = new HashMap<>(); // the repeat sheet can require renaming the first "template" sheet but this seems to trip up ZK so do it at the end after all the expanding etc
+        Map<Sheet, String> sheetsToRename = new HashMap<>(); // the repeat sheet can require renaming the first "template" sheet but this seems to trip up ZK so do it at the end after all the expanding etc
         //String context = "";
         // why a sheet loop at the outside, why not just run all the names? Need to have a think . . .
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
@@ -148,12 +148,15 @@ public class ReportRenderer {
                                     // cloneSheet won't copy the names, need to make new ones
                                     // the new ones need to be applies to as well as refers to the new sheet
                                     SName newName = book.getInternalBook().createName(name.getName(), newSheet.getSheetName());
-                                    // todo - add ! mark to make replace more robust? and below
                                     String newFormula;
-                                    if (newSheet.getSheetName().contains(" ") && !name.getRefersToFormula().startsWith("'")) {
-                                        newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), "'" + newSheet.getSheetName() + "'");
+                                    if (newSheet.getSheetName().contains(" ") && !name.getRefersToFormula().startsWith("'")) { // then we need to add quotes
+                                        newFormula = name.getRefersToFormula().replace(sheet.getSheetName() + "!", "'" + newSheet.getSheetName() + "'!");
                                     } else {
-                                        newFormula = name.getRefersToFormula().replace(sheet.getSheetName(), newSheet.getSheetName());
+                                        if (name.getRefersToFormula().startsWith("'")) {
+                                            newFormula = name.getRefersToFormula().replace("'" + sheet.getSheetName() + "'!", "'" + newSheet.getSheetName() + "'!");
+                                        } else {
+                                            newFormula = name.getRefersToFormula().replace(sheet.getSheetName() + "!", newSheet.getSheetName() + "!");
+                                        }
                                     }
                                     newName.setRefersToFormula(newFormula);
                                 }
@@ -166,7 +169,7 @@ public class ReportRenderer {
                         }
                         sheetPosition++;
                     }
-                    sheetsToRename.put(sheet.getInternalSheet(), firstItem);
+                    sheetsToRename.put(sheet, firstItem);
                 }
             }
 
@@ -313,8 +316,25 @@ public class ReportRenderer {
                 ChoicesService.resolveDependentChoiceOptions(sheet.getSheetName().replace(" ", ""), dependentRanges, book, loggedInUser);
             }
         }
-        for (SSheet sheet : sheetsToRename.keySet()) {
-            book.getInternalBook().setSheetName(sheet, suggestSheetName(book, sheetsToRename.get(sheet)));
+        for (Sheet sheet : sheetsToRename.keySet()) {
+            String oldName = sheet.getSheetName();
+            String newName = sheetsToRename.get(sheet);
+            List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
+            book.getInternalBook().setSheetName(sheet.getInternalSheet(), suggestSheetName(book, newName));
+            // and we need to sort the names
+            for (SName name : namesForSheet) {
+                String newFormula;
+                if (newName.contains(" ") && !name.getRefersToFormula().startsWith("'")) { // then we need to add quotes
+                    newFormula = name.getRefersToFormula().replace(oldName + "!", "'" + newName + "'!");
+                } else {
+                    if (name.getRefersToFormula().startsWith("'")) {
+                        newFormula = name.getRefersToFormula().replace("'" + oldName + "'!", "'" + newName + "'!");
+                    } else {
+                        newFormula = name.getRefersToFormula().replace(oldName + "!", newName + "!");
+                    }
+                }
+                name.setRefersToFormula(newFormula);
+            }
         }
         //
         loggedInUser.setImageStoreName(imageStoreName);
@@ -509,7 +529,7 @@ public class ReportRenderer {
                         RegionFillerService.fillData(sheet, cellsAndHeadingsForDisplay, displayDataRegion);
                         // without this multi step formulae e.g. in headings won't resolve. If this is a performance issue might need to pass through fast load.
                         // does this make later clear formulae result caches or indeed the lot redundant?? todo - investigate!
-                        BookUtils.notifyChangeOnRegion(sheet,displayDataRegion);
+                        BookUtils.notifyChangeOnRegion(sheet, displayDataRegion);
                     } else {
                         // the more complex function that deals with repeat regions - it now notably does the headings
                         RegionFillerService.fillDataForRepeatRegions(loggedInUser, reportId, sheet, region, userRegionOptions, displayRowHeadings, displayColumnHeadings, displayDataRegion, rowHeadingsDescription, columnHeadingsDescription, contextDescription, maxRow, valueId, quiet, repeatRegionTracker);

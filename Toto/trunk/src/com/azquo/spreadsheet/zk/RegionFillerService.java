@@ -150,7 +150,6 @@ class RegionFillerService {
                     if (colHeading == null || colHeading.equals("[all]")) colHeading = rowHeading;
                     BookUtils.setValue(sheet.getInternalSheet().getCell(hrow, hcol++), colHeading);
                 }
-
             }
         }
     }
