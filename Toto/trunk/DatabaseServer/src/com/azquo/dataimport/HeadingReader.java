@@ -129,19 +129,30 @@ class HeadingReader {
                         lastHeading = header;
                     }
                 }
-                int fileNamePos = header.toLowerCase().indexOf("right(filename,");
+                boolean left = false;
+                String function = "right(filename,";
+                int fileNamePos = header.toLowerCase().indexOf(function);
+                if (fileNamePos < 0) {
+                    left = true;
+                    function = "left(filename,";
+                    fileNamePos = header.toLowerCase().indexOf(function);
+                }
                 if (fileNamePos > 0) {
                     //extract this part of the file name.  This is currently limited to this format
                     int functionEnd = header.indexOf(")", fileNamePos);
                     if (functionEnd > 0) {
                         try {
-                            int len = Integer.parseInt(header.substring(fileNamePos + "right(filename,".length(), functionEnd));
+                            int len = Integer.parseInt(header.substring(fileNamePos + function.length(), functionEnd));
                             String replacement = "";
                             if (fileName.contains(".")) {// hack aagh todo
                                 fileName = fileName.substring(0, fileName.lastIndexOf("."));
                             }
                             if (len < fileName.length()) {
-                                replacement = fileName.substring(fileName.length() - len);
+                                if (left){
+                                    replacement = fileName.substring(0,len);
+                                }else{
+                                    replacement = fileName.substring(fileName.length() - len);
+                                }
                             }
                             header = header.replace(header.substring(fileNamePos - 1, functionEnd + 2), replacement);// accomodating the quote marks
                         } catch (Exception ignored) {
