@@ -132,7 +132,7 @@ public final class ImportService {
                 // keep them to use if not set. Should I be updating records instead? I'm not sure.
                 Map<String, String> oldPasswordMap = new HashMap<>();
                 Map<String, String> oldSaltMap = new HashMap<>();
-                List<User> userList = AdminService.getUserListForBusiness(loggedInUser);
+                List<User> userList = UserDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()); // don't use the admin call, it will just return for this user, we want all for the business so we can check not allowed
                 //todo - work out what users DEVELOPERs can upload
                 for (User user : userList) {
                     if (user.getId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
@@ -147,8 +147,8 @@ public final class ImportService {
                 }
                 while (userSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && userSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
                     //Email	Name  Password	End Date	Status	Database	Report
-                    String user = userSheet.getInternalSheet().getCell(row, 1).getStringValue();
-                    String email = userSheet.getInternalSheet().getCell(row, 0).getStringValue();
+                    String user = userSheet.getInternalSheet().getCell(row, 1).getStringValue().trim();
+                    String email = userSheet.getInternalSheet().getCell(row, 0).getStringValue().trim();
                     if (notAllowed.contains(email)) rejected.add(email);
                     if (!loggedInUser.getUser().getEmail().equals(email) && !notAllowed.contains(email)) { // leave the logged in user alone!
                         String salt = "";
