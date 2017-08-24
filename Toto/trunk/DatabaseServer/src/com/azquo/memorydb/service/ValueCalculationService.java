@@ -1,5 +1,6 @@
 package com.azquo.memorydb.service;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
@@ -22,10 +23,12 @@ public class ValueCalculationService {
 
     private static final Logger logger = Logger.getLogger(ValueCalculationService.class);
 
-    private static final String OPS = "+-*/";
+    private static final String OPS = "+-*/|";
     private static final String INDEPENDENTOF = "INDEPENDENT OF";
     private static final String USELEVEL = "USE LEVEL";
     private static final String DEPENDENTON = "DEPENDENT ON";
+
+    private static final int EXPFUNCTION = 1;
 
     // Factored off to implement "lowest" calculation criteria (resolve for each permutation and sum) without duplicated code
     // fair few params, wonder if there's a way to avoid that?
@@ -48,12 +51,17 @@ public class ValueCalculationService {
         double[] values = new double[20];//should be enough!!
         int valNo = 0;
         StringTokenizer st = new StringTokenizer(calcString, " ");
+        // exposure * PD * LGD - exp(ECL)
         while (st.hasMoreTokens()) {
             String term = st.nextToken();
             if (OPS.contains(term)) { // operation
                 valNo--;
                 char charTerm = term.charAt(0);
-                if (charTerm == '+') {
+                if (charTerm == '|') { // function
+                    if (values[valNo] == EXPFUNCTION){
+                        values[valNo - 1] = Math.exp(values[valNo - 1]);
+                    }
+                } else if (charTerm == '+') {
                     values[valNo - 1] += values[valNo];
                 } else if (charTerm == '-') {
                     values[valNo - 1] -= values[valNo];
@@ -65,7 +73,9 @@ public class ValueCalculationService {
                     values[valNo - 1] /= values[valNo];
                 }
             } else { // a value, not in the Azquo sense, a number or reference to a name
-                if (NumberUtils.isNumber(term)) {
+                if (StringLiterals.EXP.equalsIgnoreCase(term)){ // factor off to something more general later
+                    values[valNo++] = EXPFUNCTION;
+                } else if (NumberUtils.isNumber(term)) {
                     values[valNo++] = Double.parseDouble(term);
                 } else {
                     // we assume it's a name id starting with NAMEMARKER

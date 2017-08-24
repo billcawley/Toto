@@ -57,8 +57,8 @@ public final class ImportService {
         String tempFile = ImportFileUtilities.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
         uploadFile.close(); // windows requires this (though windows should not be used in production), perhaps not a bad idea anyway
         String toReturn;
-        if (fileName.endsWith(".zip")) {
-            fileName = fileName.substring(0, fileName.length() - 4);
+        if (fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
+            //fileName = fileName.substring(0, fileName.length() - 4); // not sure why that was!
             List<File> files = ImportFileUtilities.unZip(tempFile);
             // should be sorting by xls first then size ascending
             files.sort((f1, f2) -> {
@@ -94,7 +94,7 @@ public final class ImportService {
         }
         // hacky way to get the report name so it can be seen on the list. I wonder if this should be removed . . .
         String reportName = null;
-        if (!filePath.contains(".zip") && toReturn.startsWith("Report uploaded : ")){
+        if (!filePath.contains(".zip") && !filePath.contains(".7z") && toReturn.startsWith("Report uploaded : ")){
             reportName = toReturn.substring("Report uploaded : ".length());
         }
         if (reportName != null){

@@ -152,6 +152,7 @@ class RegionFillerService {
                 }
             }
         }
+        Ranges.range(sheet, displayRowHeadings.getRow(), displayRowHeadings.getColumn(), displayRowHeadings.lastRow, displayRowHeadings.lastColumn).notifyChange();
     }
 
     //← → ↑ ↓ ↔ ↕ ah I can just paste it here, thanks IntelliJ :)
@@ -228,6 +229,7 @@ class RegionFillerService {
         // for the moment don't allow user column sorting (row heading sorting). Shouldn't be too difficult to add
 /*                if (sortable != null && sortable.equalsIgnoreCase("all")) { // criteria from azquobook to make row heading sortable
                 }*/
+        Ranges.range(sheet, displayColumnHeadings.getRow(), displayColumnHeadings.getColumn(), displayColumnHeadings.lastRow, displayColumnHeadings.lastColumn).notifyChange();
     }
 
     // now dedicated to just repeat regions - if the regions aren't there it will NPE, I think this is correct
@@ -357,8 +359,10 @@ class RegionFillerService {
                     }
                     // and set the item
                     BookUtils.setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset), item);
+                    Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset).notifyChange();
                     // and set item2!
                     BookUtils.setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItem2RowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItem2ColumnOffset), item2);
+                    Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow) + repeatItem2RowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItem2ColumnOffset).notifyChange();
                     repeatColumn++;
                 }
                 repeatColumn = 0;
@@ -393,6 +397,7 @@ class RegionFillerService {
                 }
                 // and set the item
                 BookUtils.setValue(sheet.getInternalSheet().getCell(rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset), item);
+                Ranges.range(sheet, rootRow + (repeatRegionHeight * repeatRow) + repeatItemRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatItemColumnOffset).notifyChange();
                 repeatColumn++;
                 if (repeatColumn == repeatColumns) { // zap if back to the first column
                     repeatColumn = 0;
@@ -576,5 +581,7 @@ class RegionFillerService {
                 row++;
             }
         }
+        Ranges.range(sheet, displayDataRegion.getRow(), displayDataRegion.getColumn(), displayDataRegion.lastRow, displayDataRegion.lastColumn).notifyChange();
+
     }
 }

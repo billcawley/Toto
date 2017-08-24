@@ -350,6 +350,7 @@ public final class ValueService {
                     List<String> attributeStrings = new ArrayList<>();
                     calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
                     formulaNames = NameQueryParser.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
+                    calc = StringUtils.fixNumberFunction(calc, StringLiterals.EXP);
                     calc = StringUtils.shuntingYardAlgorithm(calc);
                     //todo : make sure name lookups below use the new style of marker
                     if (!calc.startsWith("error")) { // there should be a better way to deal with errors

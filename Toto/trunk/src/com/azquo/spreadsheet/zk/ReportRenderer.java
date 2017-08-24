@@ -185,6 +185,7 @@ public class ReportRenderer {
                 }
             }
             // and now we want to run through all regions for this sheet
+            // todo - should fastload be poassed down to stop range notify changes? What is being used to replace the formula result cache clear - I guess depends on performance
             boolean fastLoad = false; // skip some checks, initially related to saving
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on prefixes. (fast load being set outside the loop so is there a problem with it not being found before data regions??)
@@ -205,10 +206,6 @@ public class ReportRenderer {
                     String optionsSource = "";
                     if (optionsRegion != null) {
                         SCell optionsCell = BookUtils.getSnameCell(optionsRegion);
-                        if (optionsCell.getType() == SCell.CellType.FORMULA) {
-                            optionsCell.getFormulaResultType();
-                            optionsCell.clearFormulaResultCache();
-                        }
                         optionsSource = optionsCell.getStringValue();
                     }
                     // better way to combine user region options from the sheet and report database
@@ -303,7 +300,7 @@ public class ReportRenderer {
             );*/
             // all data for that sheet should be populated
             // returns true if data changed by formulae
-            if (ReportService.resolveFormulaeAndSnapCharts(loggedInUser, reportId, book, sheet, fastLoad, useSavedValuesOnFormulae)) {
+            if (ReportService.checkDataChangeAndSnapCharts(loggedInUser, reportId, book, sheet, fastLoad, useSavedValuesOnFormulae)) {
                 showSave = true;
             }
             // now remerge

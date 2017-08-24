@@ -43,5 +43,8 @@ public class StringLiterals {
     public static final String languageIndicator = "<-";
 
     public static final String HIERARCHY = "hierarchy";
-    public static final String EDITABLE = " editable";
+    public static final String EDITABLE = " editable"; // why the space before?
+
+    public static final String EXP = "exp"; // new math function for calculation . . , considered a keyword or operator
+
 }

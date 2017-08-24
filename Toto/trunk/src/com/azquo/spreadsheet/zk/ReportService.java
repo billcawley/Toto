@@ -107,14 +107,13 @@ public class ReportService {
                 for (int row = 0;row< name.getRefersToCellRegion().getRowCount();row++) {
                     for (int col = 0; col < name.getRefersToCellRegion().getColumnCount(); col++) {
                         SCell queryCell = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow() + row, name.getRefersToCellRegion().getColumn() + col);
-                        // as will happen to the whole sheet later
-                        if (queryCell.getType() == SCell.CellType.FORMULA) {
-                            //System.out.println("doing the cell thing on " + cell);
-                            queryCell.getFormulaResultType();
-                            queryCell.clearFormulaResultCache();
-                        }
                         if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR && queryCell.getStringValue().length()> 0)) {
+                            // hack - on resolving a forumlae if the formula is a string but formatted as number get stirng can error unless you do this
+                            if (queryCell.getFormulaResultType() == SCell.CellType.NUMBER){
+                                queryCell.clearFormulaResultCache();;
+                            }
                             BookUtils.setValue(queryCell, CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue()));
+                            Ranges.range(sheet, queryCell.getRowIndex(), queryCell.getColumnIndex()).notifyChange(); //
                         }
                     }
                 }
@@ -125,26 +124,9 @@ public class ReportService {
     private static final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
     // make ZK resolve formulae and the, assuming not fast save check for formulae changing data. Finally snap the charts.
-    static boolean resolveFormulaeAndSnapCharts(LoggedInUser loggedInUser, int reportId, Book book, Sheet sheet, boolean skipSaveCheck, boolean useSavedValuesOnFormulae) {
+    static boolean checkDataChangeAndSnapCharts(LoggedInUser loggedInUser, int reportId, Book book, Sheet sheet, boolean skipSaveCheck, boolean useSavedValuesOnFormulae) {
         boolean showSave = false;
-        // this is a pain, it seems I need to call 2 functions on each formula cell or the formula may not be calculated. ANNOYING!
-        // can't do this in the fill region as formulae need to be dealt with outside
-        // todo - is this redundant if we notify changes after populating regions?? DIdn't know about it before . . ., can almost certainly zap this but need to just make it work for the mo
-        for (int formulaeResolveTries = 0; formulaeResolveTries < 3; formulaeResolveTries++){
-            final Iterator<SRow> rowIterator = sheet.getInternalSheet().getRowIterator();// only rows with values in them
-            while (rowIterator.hasNext()) {
-                Iterator<SCell> cellIterator = sheet.getInternalSheet().getCellIterator(rowIterator.next().getIndex());
-                while (cellIterator.hasNext()) {
-                    SCell cell = cellIterator.next();
-                    if (cell.getType() == SCell.CellType.FORMULA) {
-                        //System.out.println("doing the cell thing on " + cell);
-                        cell.getFormulaResultType();
-                        cell.clearFormulaResultCache();
-                    }
-                }
-            }
-        }
-            /* Now formulae should have been calculated check if anything might need to be saved
+            /* heck if anything might need to be saved
             I'd avoided doing this but now I am it's useful for restoring values and checking for overlapping data regions.
             so similar loop to above - also we want to check for the logic of using the loaded values
             */

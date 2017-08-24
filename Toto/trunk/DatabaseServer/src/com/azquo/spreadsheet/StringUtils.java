@@ -230,8 +230,10 @@ I should be ok for StringTokenizer at this point
                 || term.equalsIgnoreCase(StringLiterals.BACKSTEP) || term.equalsIgnoreCase(StringLiterals.CREATE)
                 || term.equalsIgnoreCase(StringLiterals.EDIT) || term.equalsIgnoreCase(StringLiterals.NEW)
                 || term.equalsIgnoreCase(StringLiterals.SELECT)
-                || term.equalsIgnoreCase(StringLiterals.DELETE) || term.equalsIgnoreCase(StringLiterals.WHERE);
+                || term.equalsIgnoreCase(StringLiterals.DELETE) || term.equalsIgnoreCase(StringLiterals.WHERE)
+                || term.equalsIgnoreCase(StringLiterals.EXP);
     }
+
 
     /*
      reverse polish is a list of values with a list of operations so 5*(2+3) would be 5,2,3,+,*
@@ -239,7 +241,7 @@ I should be ok for StringTokenizer at this point
     */
 
     public static String shuntingYardAlgorithm(String calc) {
-        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "|\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
@@ -253,7 +255,7 @@ I should be ok for StringTokenizer at this point
                 sb.append(namefound).append(" ");
             }
             char lastOffStack = ' ';
-            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && ")+-/*(".indexOf(thisOp) <= "(+-/*".indexOf(stack.charAt(0)))) {
+            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && ")+-/*|(".indexOf(thisOp) <= "(+-/*|".indexOf(stack.charAt(0)))) {
                 if (stack.charAt(0) != '(') {
                     sb.append(stack.charAt(0)).append(" ");
                 }
@@ -343,5 +345,47 @@ I should be ok for StringTokenizer at this point
             }
         }
         return inQuotes;
+    }
+
+    // to make number functions work with the SYA I'm going to say e.g. that EXP ((x / y) + (a * b)) is changed to ( ((x / y) + (a * b)) | EXP), then make the calc resolver understand it
+    public static String fixNumberFunction(String statement, String function) {
+        int nextClosed = getNextClosedBracketFrom(statement, function);
+        while (nextClosed != -1){
+            int functionIndex = statement.toLowerCase().indexOf(function.toLowerCase());
+            statement = statement.substring(0, functionIndex)
+                    + " ( " + statement.substring(functionIndex + function.length(), nextClosed + 1)
+                    + " | " + function + " ) " + statement.substring( nextClosed + 1); // arbitrary use of pipe here, todo - factor? It's in the SYA in three places
+            statement = statement.trim();
+            nextClosed = getNextClosedBracketFrom(statement, function);
+        }
+        return statement;
+    }
+
+    private static int getNextClosedBracketFrom(String statement, String from){
+        // could leave the lowercases? Efficient?
+        statement = statement.toLowerCase();
+        from = from.toLowerCase();
+        if (!statement.contains(from)){
+            return  -1;
+        }
+        int start = statement.indexOf(from);
+        start = statement.indexOf("(", start);
+        if (start == -1){
+            return -1;
+        }
+        start++;
+        int brackets = 1;
+        for (int i = start; i < statement.length(); i++){
+            if (statement.charAt(i) == '('){
+                brackets++;
+            }
+            if (statement.charAt(i) == ')'){
+                brackets--;
+            }
+            if (brackets == 0){
+                return i;
+            }
+        }
+        return -1;
     }
 }

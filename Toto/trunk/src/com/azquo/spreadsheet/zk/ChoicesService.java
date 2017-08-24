@@ -80,6 +80,10 @@ public class ChoicesService {
                         List<String> choiceOptions = choiceOptionsMap.get(name.getName().toLowerCase());
                         boolean dataRegionDropdown = !BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
+                            // check to make it work for Darren after some recent changes - todo - address what's actually going on here
+                            if (choiceCell.getType() == SCell.CellType.FORMULA && choiceCell.getFormulaResultType() == SCell.CellType.NUMBER){
+                                choiceCell.clearFormulaResultCache();
+                            }
                             String query = choiceCell.getStringValue();
                             int contentPos = query.toLowerCase().indexOf(CONTENTS);
                             if ((chosenRegion.getRowCount() == 1 || dataRegionDropdown) && (choiceOptions != null || contentPos >= 0)) {// dataregiondropdown is to determine if it's in a data region, the choice drop downs are sometimes used (abused?) in such a manner, a bank of drop downs in a data region
@@ -211,6 +215,7 @@ public class ChoicesService {
                             if (userChoice != null) {
                                 SCell sCell = sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn());
                                 BookUtils.setValue(sCell, userChoice);
+                                Ranges.range(sheet, sCell.getRowIndex(), sCell.getColumnIndex()).notifyChange(); // might well be formulae related to the choice setting
                                 context += choiceName + " = " + userChoice + ";";
                             }
                         }
@@ -251,15 +256,14 @@ public class ChoicesService {
                 List<String> choiceOptions = new ArrayList<>(); // was null, see no help in that
                 // new lines from edd to try to resolve choice stuff
                 SCell choiceCell = BookUtils.getSnameCell(name);
-                // as will happen to the whole sheet later
-                if (choiceCell.getType() == SCell.CellType.FORMULA) {
-                    //System.out.println("doing the cell thing on " + cell);
-                    choiceCell.getFormulaResultType();
-                    choiceCell.clearFormulaResultCache();
-                }
                 //System.out.println("Choice cell : " + choiceCell);
                 if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
-                    String query = choiceCell.getStringValue();
+                    String query;
+                    // check to make it work for Darren after some recent changes - todo - address what's actually going on here
+                    if (choiceCell.getType() == SCell.CellType.FORMULA && choiceCell.getFormulaResultType() == SCell.CellType.NUMBER){
+                        choiceCell.clearFormulaResultCache();;
+                    }
+                        query = choiceCell.getStringValue();
                     if (!query.toLowerCase().contains(CONTENTS)) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
                         if (query.toLowerCase().contains("default")) {
                             query = query.substring(0, query.toLowerCase().indexOf("default"));
