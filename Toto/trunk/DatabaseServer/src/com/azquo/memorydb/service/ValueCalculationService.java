@@ -185,6 +185,8 @@ public class ValueCalculationService {
 
         double max = 0;
         double min = 0;
+        Value maxVal = null;;
+        Value minVal = null;
         double sumValue = 0;
         boolean first = true;
         for (Value value : values) {
@@ -204,8 +206,20 @@ public class ValueCalculationService {
                         }
                     }
                     sumValue += doubleValue;
+                 } catch (Exception e) {
+                    if (first) {
+                        maxVal = value;
+                        minVal = value;
+                    } else {
+                        if (maxVal.getText().compareTo(value.getText()) < 0) {
+                            maxVal = value;
+                        }
+                        if (minVal.getText().compareTo(value.getText()) > 0) {
+                            minVal = value;
+                        }
+                    }
                     first = false;
-                } catch (Exception ignored) {
+
                 }
             }
         }
@@ -234,9 +248,20 @@ public class ValueCalculationService {
                 return sumValue / values.size();
             }
             if (function == DataRegionHeading.FUNCTION.MAX) {
-                return max;
+
+                if (maxVal!=null){
+                    values.clear();
+                    values.add(maxVal);
+                    return 0;
+                }
+                 return max;
             }
             if (function == DataRegionHeading.FUNCTION.MIN) {
+                if (minVal!=null) {
+                    values.clear();
+                    values.add(minVal);
+                    return 0;
+                }
                 return min;
             }
         }
