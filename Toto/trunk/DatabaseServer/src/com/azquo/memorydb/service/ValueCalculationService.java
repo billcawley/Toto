@@ -23,7 +23,7 @@ public class ValueCalculationService {
 
     private static final Logger logger = Logger.getLogger(ValueCalculationService.class);
 
-    private static final String OPS = "+-*/|";
+    private static final String OPS = "+-*/" + StringLiterals.MATHFUNCTION;
     private static final String INDEPENDENTOF = "INDEPENDENT OF";
     private static final String USELEVEL = "USE LEVEL";
     private static final String DEPENDENTON = "DEPENDENT ON";
@@ -57,7 +57,7 @@ public class ValueCalculationService {
             if (OPS.contains(term)) { // operation
                 valNo--;
                 char charTerm = term.charAt(0);
-                if (charTerm == '|') { // function
+                if (charTerm == StringLiterals.MATHFUNCTION) { // function
                     if (values[valNo] == EXPFUNCTION){
                         values[valNo - 1] = Math.exp(values[valNo - 1]);
                     }

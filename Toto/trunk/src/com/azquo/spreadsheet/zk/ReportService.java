@@ -109,7 +109,7 @@ public class ReportService {
                         SCell queryCell = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow() + row, name.getRefersToCellRegion().getColumn() + col);
                         if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR && queryCell.getStringValue().length()> 0)) {
                             // hack - on resolving a forumlae if the formula is a string but formatted as number get stirng can error unless you do this
-                            if (queryCell.getFormulaResultType() == SCell.CellType.NUMBER){
+                            if (queryCell.getType() == SCell.CellType.FORMULA && queryCell.getFormulaResultType() == SCell.CellType.NUMBER){
                                 queryCell.clearFormulaResultCache();;
                             }
                             BookUtils.setValue(queryCell, CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue()));

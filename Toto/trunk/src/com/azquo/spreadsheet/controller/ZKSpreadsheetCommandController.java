@@ -96,8 +96,10 @@ public class ZKSpreadsheetCommandController {
                                 fos.close();
                             }
                         }
-                        loggedInUser.userLog("Save : " + ss.getSelectedSheetName() + ".xlsx");
-                        Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".xlsx", null, null, file, true));
+                        int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
+                        OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
+                        loggedInUser.userLog("Save : " + onlineReport.getReportName() + ".xlsx");
+                        Filedownload.save(new AMedia(onlineReport.getReportName() + ".xlsx", null, null, file, true));
                         Clients.clearBusy();
                     }
 

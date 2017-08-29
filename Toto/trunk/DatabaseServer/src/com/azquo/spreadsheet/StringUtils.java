@@ -241,7 +241,7 @@ I should be ok for StringTokenizer at this point
     */
 
     public static String shuntingYardAlgorithm(String calc) {
-        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "|\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + StringLiterals.MATHFUNCTION + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
@@ -255,7 +255,7 @@ I should be ok for StringTokenizer at this point
                 sb.append(namefound).append(" ");
             }
             char lastOffStack = ' ';
-            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && ")+-/*|(".indexOf(thisOp) <= "(+-/*|".indexOf(stack.charAt(0)))) {
+            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && (")+-/*" + StringLiterals.MATHFUNCTION + "(").indexOf(thisOp) <= ("(+-/*" + StringLiterals.MATHFUNCTION).indexOf(stack.charAt(0)))) {
                 if (stack.charAt(0) != '(') {
                     sb.append(stack.charAt(0)).append(" ");
                 }
@@ -354,7 +354,7 @@ I should be ok for StringTokenizer at this point
             int functionIndex = statement.toLowerCase().indexOf(function.toLowerCase());
             statement = statement.substring(0, functionIndex)
                     + " ( " + statement.substring(functionIndex + function.length(), nextClosed + 1)
-                    + " | " + function + " ) " + statement.substring( nextClosed + 1); // arbitrary use of pipe here, todo - factor? It's in the SYA in three places
+                    + " " + StringLiterals.MATHFUNCTION + " " + function + " ) " + statement.substring( nextClosed + 1);
             statement = statement.trim();
             nextClosed = getNextClosedBracketFrom(statement, function);
         }

@@ -46,5 +46,5 @@ public class StringLiterals {
     public static final String EDITABLE = " editable"; // why the space before?
 
     public static final String EXP = "exp"; // new math function for calculation . . , considered a keyword or operator
-
+    public static final char MATHFUNCTION = '⠁';// braille pattern
 }
