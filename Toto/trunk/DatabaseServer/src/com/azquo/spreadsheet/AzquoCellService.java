@@ -456,6 +456,33 @@ class AzquoCellService {
                 }
             }
         }
+        if (regionOptions.hideCols > 0) {
+            int colNo = 0;
+            while (colNo < toReturn.get(0).size()) {
+                boolean colsBlank = true;
+                for (int j = 0; j < regionOptions.hideCols; j++) {
+                    for (int rowNo = 0; rowNo < toReturn.size();rowNo++) {
+                        AzquoCell cellToCheck = toReturn.get(rowNo).get(colNo + j);
+                        if (cellToCheck.getStringValue() != null && cellToCheck.getStringValue().length() > 0 && !cellToCheck.getStringValue().equals("0.0")) {
+                            colsBlank = false;
+                            break;
+                        }
+                    }
+                    if (!colsBlank) {
+                        break;
+                    }
+                }
+                if (colsBlank) {
+                    for (int i = 0; i < regionOptions.hideCols; i++) {
+                        for (int j=0;j<toReturn.size();j++){
+                            toReturn.get(j).remove(colNo);
+                        }
+                    }
+                } else {
+                    colNo += regionOptions.hideCols;
+                }
+            }
+        }
 
         // it's at this point we actually have data that's going to be sent to a user in newRow so do the highlighting here I think
         if (regionOptions.highlightDays > 0) {
