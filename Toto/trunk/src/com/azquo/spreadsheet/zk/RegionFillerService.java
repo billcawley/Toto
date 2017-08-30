@@ -145,7 +145,7 @@ class RegionFillerService {
                         rowHeading = rowHeading.substring(0, rowHeading.indexOf(" sorted")).trim();
                     }
                     // create the filter set, it may not exist which would error below
-                    RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), null);
+                    RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), "az_" + rowHeading, loggedInUser.getUser().getEmail(), new ArrayList<>());
                     String colHeading = ChoicesService.multiList(loggedInUser, "az_" + rowHeading, "`" + rowHeading + "` children");
                     if (colHeading == null || colHeading.equals("[all]")) colHeading = rowHeading;
                     BookUtils.setValue(sheet.getInternalSheet().getCell(hrow, hcol++), colHeading);

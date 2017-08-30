@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -125,13 +126,6 @@ public class ChoicesService {
                             }
                         }// do anything in the case of excel error?
                     }
-                } else {
-                    SName multi = book.getInternalBook().getNameByName(choiceName + "multi"); // as ever I do wonder about these string literals
-                    if (multi != null) {
-                        SCell resultCell = BookUtils.getSnameCell(multi);
-                        // all multi list is is a fancy way of saying to the user what is selected, e.g. all, various, all but or a list of those selected. The actual selection box is created in the composer, onclick
-                        BookUtils.setValue(resultCell, multiList(loggedInUser, choiceName + "Multi", choiceCell.getStringValue()));
-                    }
                 }
             }
         }
@@ -221,6 +215,16 @@ public class ChoicesService {
                         }
                     }
                     regionsToWatchForMerge.add(chosen);
+                } else if (sName.getName().toLowerCase().endsWith("multi")) { // set the multi here - it was during validation which makes no sense
+                        SCell resultCell = BookUtils.getSnameCell(sName);
+                        String choiceLookup = sName.getName().substring(0, sName.getName().length() - 5);
+                        SName choiceName = BookUtils.getNameByName(choiceLookup + "Choice", sheet);
+                        SCell choiceCell = BookUtils.getSnameCell(choiceName);
+                        if (choiceName != null){
+                            // all multi list is is a fancy way of saying to the user what is selected, e.g. all, various, all but or a list of those selected. The actual selection box is created in the composer, onclick
+                            // pointless strip and re add of "Multi"? copied, code - todo address
+                            BookUtils.setValue(resultCell, multiList(loggedInUser, choiceLookup + "Multi", choiceCell.getStringValue()));
+                        }
                 }
                 if (sName.getName().equalsIgnoreCase(ReportRenderer.AZREPORTNAME)) {
                     regionsToWatchForMerge.add(sName.getRefersToCellRegion());
@@ -383,8 +387,10 @@ public class ChoicesService {
             List<String> allOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, sourceSet);
             List<String> chosenOptions = null;
             chosenOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`" + filterName + "` children", languages);
-            if (chosenOptions.size()==1 && chosenOptions.get(0).startsWith("Error")){
+            if (chosenOptions.size()==1 && chosenOptions.get(0).startsWith("Error")){ // this stops the error on making the drop down list
                 chosenOptions = allOptions;
+                // and create the set server side, it will no doubt be referenced
+                RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), filterName, loggedInUser.getUser().getEmail(), sourceSet);
             }
             if (allOptions.size() < 2) return null;
             if (chosenOptions.size() == 0 || chosenOptions.size() == allOptions.size()) return "[all]";

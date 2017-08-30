@@ -253,10 +253,10 @@ public class NameQueryParser {
         long time = (System.currentTimeMillis() - track);
         long heapIncrease = ((runtime.totalMemory() - runtime.freeMemory()) / mb) - startUsed;
         if (heapIncrease > 50) {
-            System.out.println("Parse query : " + formulaCopy + " heap increase : " + heapIncrease + "MB. Before copying to array : " + heapIncreaseBeforeCopyToArray + " ###########");
+            System.out.println("Parse query : " + formulaCopy + " heap increase : " + heapIncrease + "MB. Before copying to array : " + heapIncreaseBeforeCopyToArray + " ########### size : " + toReturn.size());
         }
         if (time > 50) {
-            System.out.println("Parse query : " + formulaCopy + " took : " + time + "ms");
+            System.out.println("Parse query : " + formulaCopy + " took : " + time + "ms size : " + toReturn.size());
         }
         // check if this is necessary? Refactor?
         if (resetDefs !=null) {

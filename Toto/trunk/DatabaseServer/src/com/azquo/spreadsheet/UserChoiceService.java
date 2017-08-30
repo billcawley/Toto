@@ -38,6 +38,17 @@ public class UserChoiceService {
         }
     }
 
+    // support for passing a query, for creating [all] sets on initial report load
+
+    public static void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, String query) throws Exception {
+        final AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        List<String> justUserNameLanguages = new ArrayList<>();
+        justUserNameLanguages.add(userName);
+        Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
+        Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
+        set.setChildrenWillBePersisted(NameQueryParser.parseQuery(connectionFromAccessToken, query));
+    }
+
     // This class and two functions are to make qualified listings on a drop down, adding parents to qualify where necessary.
     private static class UniqueName {
         final Name bottomName;

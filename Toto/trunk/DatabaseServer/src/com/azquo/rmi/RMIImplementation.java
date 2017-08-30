@@ -230,6 +230,15 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
+    public void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, String query) throws RemoteException {
+        try {
+            UserChoiceService.createFilterSet(databaseAccessToken, setName, userName, query);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
     public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
         try {
             UserChoiceService.resolveQuery(databaseAccessToken,query,languages);

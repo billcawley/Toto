@@ -121,10 +121,16 @@ class DataRegionHeadingService {
                                     permutedName = permutedName.substring(0, permutedName.indexOf(" sorted")).trim();
                                 }
                                 // EFC noting the hack, looking for a name created by pivot selections to permute as the first possibility.Need to see how this is set to confirm if it can be improved. todo
-                                Name pName = NameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
+                                Name pName = null;
+                                // now need try catch - might get an error if other users made the name but this one didn't thus the lookup is ambiguous
+                                try{
+                                    pName = NameService.findByName(azquoMemoryDBConnection, "az_" + permutedName.replace("`", "").trim(), attributeNames);
+                                } catch (Exception e){
+                                    System.out.println("permute lookup error " + e.getMessage());
+                                }
                                 // if no set chosen, find the original set
                                 if (pName == null || pName.getChildren().size() == 0) {
-                                    // in new logic keep the attribute names in the search - otherwise incinsistent with above, will break on temporary names populated wth "as"
+                                    // in new logic keep the attribute names in the search - otherwise inconsistent with above, will break on temporary names populated wth "as"
                                     // I don't think I need to zap the quotes
                                     pName = NameService.findByName(azquoMemoryDBConnection, permutedName, attributeNames);
                                     //pName = NameService.findByName(azquoMemoryDBConnection, permutedName);
