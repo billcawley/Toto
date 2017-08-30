@@ -297,11 +297,11 @@ public class DSSpreadsheetService {
                     , cellsAndHeadingsForDisplay.getOptions(), databaseAccessToken.getLanguages(), 0, true);
             if (modifiedInTheMeanTime) { // then we need to compare data as sent to what it is now before trying to save - assuming this is not relevant to the import style above
                 List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
-                if (currentData.size() != sentData.size()) {
+                if (currentData.size() != sentData.size()&& redundantNames==null) {// overlapping editable ranges change size if there are redundant names
                     toReturn = "Data region " + cellsAndHeadingsForDisplay.getRegion() + " has changed size!";
                     changed = true;
                 } else {
-                    for (int y = 0; y < currentData.size(); y++) {
+                    for (int y = 0; y < sentData.size(); y++) {
                         List<AzquoCell> currentRow = currentData.get(y);
                         List<CellForDisplay> sentRow = sentData.get(y);
                         if (currentRow.size() != sentRow.size()) {
