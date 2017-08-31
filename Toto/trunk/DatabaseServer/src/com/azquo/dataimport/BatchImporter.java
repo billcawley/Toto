@@ -52,25 +52,25 @@ public class BatchImporter implements Callable<Void> {
         try {
             Long time = System.currentTimeMillis();
             for (List<ImportCellWithHeading> lineToLoad : dataToLoad) {
-            /* skip any line that has a blank in the first column unless the first column had no header
-               of course if the first column has no header and then the second has data but not on this line then it would get loaded
-               happy for the check to remain in here - more stuff for the multi threaded bit */
+            /* skip any line that has a blank in the first column unless the first column had no header or it's composite
+            happy for the check to remain in here - more stuff for the multi threaded bit */
                 ImportCellWithHeading first = lineToLoad.get(0);
                 if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null || first.getImmutableImportHeading().compositionPattern != null) {
                     //check dates before resolving composite values
                     for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
                         // this basic value checking was outside, I see no reason it shouldn't be in here
                         if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().isDate) {
-                    /*
-                    interpret the date and change to standard form
-                    todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                    */
+                            /*
+                            interpret the date and change to standard form
+                            todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+                            */
                             LocalDate date = isADate(importCellWithHeading.getLineValue());
                             if (date != null) {
                                 importCellWithHeading.setLineValue(dateTimeFormatter.format(date));
                             }
                         }
                     }
+                    // composite might do things that affect only and existing hence do it before
                     resolveCompositeValues(lineToLoad, lineNo);
                     if (checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames)) {
                         try {
@@ -127,7 +127,9 @@ public class BatchImporter implements Callable<Void> {
                 }
             }
             // we could be deriving the name from composite so check existing here
+            // note that the code assumes there can only be one "existing" per line, it will exit this function on the first one.
             if (cell.getImmutableImportHeading().existing) {
+                boolean cellOk = false;
                 if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
                     languages = Collections.singletonList(cell.getImmutableImportHeading().attribute);
                 }
@@ -137,10 +139,13 @@ public class BatchImporter implements Callable<Void> {
                 // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
                 for (Name parent : cell.getImmutableImportHeading().parentNames) { // try to find any names from anywhere
                     if (!azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, cell.getLineValue(), parent).isEmpty()) { // NOT empty, we found one!
-                        return true; // no point carrying on
+                        cellOk = true;
+                        break; // no point continuing, we found one
                     }
                 }
-                return false; // none found
+                if (!cellOk){
+                    return false; // none found break the line
+                }
             }
         }
         return true;
@@ -148,11 +153,14 @@ public class BatchImporter implements Callable<Void> {
 
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
     // Now supports basic excel like string operations, left right and mid, also simple single operator calculation on the results.
+    // Calcs simple for the moment - if required could integrate the shunting yard algorithm
 
     private static void resolveCompositeValues(List<ImportCellWithHeading> cells, int lineNo) {
         boolean adjusted = true;
         //loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
-        while (adjusted) {
+        // note : a circular reference could cause an infinite loop - could to add a counter
+        int counter = 0;
+        while (adjusted && counter < 10) {
             adjusted = false;
             for (ImportCellWithHeading cell : cells) {
                 if (cell.getImmutableImportHeading().compositionPattern != null) {
@@ -255,10 +263,11 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
             }
+            counter++;
         }
     }
 
-    // more simple than the column index look up - we just want a a match, don't care about attributes etc.
+    // more simple than the column index look up - we just want a match, don't care about attributes etc.
     private static ImportCellWithHeading findCellWithHeadingForComposite(String nameToFind, List<ImportCellWithHeading> importCellWithHeadings) {
         for (ImportCellWithHeading importCellWithHeading : importCellWithHeadings) {
             ImmutableImportHeading heading = importCellWithHeading.getImmutableImportHeading();
@@ -272,7 +281,7 @@ public class BatchImporter implements Callable<Void> {
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
     private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo, Set<Integer> linesRejected) throws Exception {
         int valueCount = 0;
-        // initial pass to deal with defaults, dates and local parents
+        // initial pass to deal with defaults and local parents
         // set defaults before dealing with local parent/child
         for (ImportCellWithHeading importCellWithHeading : cells) {
             if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && importCellWithHeading.getLineValue().trim().length() == 0) {
@@ -299,9 +308,9 @@ public class BatchImporter implements Callable<Void> {
 
         long tooLong = 2; // now ms
         long time = System.currentTimeMillis();
-        // now do the peers
         for (ImportCellWithHeading cell : cells) {
             boolean peersOk = true;
+            // now do the peers
             final Set<Name> namesForValue = new HashSet<>(); // the names we're going to look for for this value
             // The heading reader has now improved to hand over one set of peer names and indexes, this class need not know if they came from context or not
             // Fairly simple, add the names we already have then look up the ones from the lines based on the peerIndexes
@@ -329,15 +338,15 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
             }
-            // ok that's the peer/value stuff done I think, now onto attributes
+            // ok that's the peer/value stuff done I think, now onto attribute, highly unlikely a cell would be both value and attribute but we'll allow it
             if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null
                     && cell.getLineValue().length() > 0) {
                 // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
                 ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our source cell
-                if (identityCell.getLineName() == null){
+                if (identityCell.getLineName() == null) {
                     linesRejected.add(lineNo); // well just mark that the line was no good, should be ok for the moment
                 } else {
-                    identityCell.getLineName().setAttributeWillBePersisted(cell.getImmutableImportHeading().attribute, cell.getLineValue().replace("\\\\t", "\t").replace("\\\\n", "\n"));
+                    identityCell.getLineName().setAttributeWillBePersisted(cell.getImmutableImportHeading().attribute, cell.getLineValue());
                 }
             }
             long now = System.currentTimeMillis();
@@ -348,8 +357,6 @@ public class BatchImporter implements Callable<Void> {
         }
         return valueCount;
     }
-
-    // todo accessed outside, move them out?
 
     private static LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
         try {
@@ -363,6 +370,8 @@ public class BatchImporter implements Callable<Void> {
     private static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd-MM-yy");
     private static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
     private static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+    // todo accessed outside, move it out?
 
     public static LocalDate isADate(String maybeDate) {
         String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
@@ -390,15 +399,18 @@ public class BatchImporter implements Callable<Void> {
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
                                                               ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
         String localLanguage = cellWithHeading.getImmutableImportHeading().attribute;
-        if (cellWithHeading.getLineValue().length() == 0 || (cellWithHeading.getImmutableImportHeading().defaultValue != null && cellWithHeading.getLineValue().equals(cellWithHeading.getImmutableImportHeading().defaultValue))) { // so nothing to do
-             for (ImportCellWithHeading cell:cells){
-                if (cell!= cellWithHeading && cell.getImmutableImportHeading().indexForAttribute == cells.indexOf(cellWithHeading) && cell.getLineValue().length() > 0){
+        if (cellWithHeading.getLineValue().length() == 0 || (cellWithHeading.getImmutableImportHeading().defaultValue != null && cellWithHeading.getLineValue().equals(cellWithHeading.getImmutableImportHeading().defaultValue))) { // it's blank/default
+            for (ImportCellWithHeading cell : cells) {
+                // attribute hack, need to check with WFC (todo). If one of the other cells is referring to this as it's attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Cutomer.Address1 and set the language to Address1
+                // So keep the line imported if there's data missing I guess
+                if (cell != cellWithHeading && cell.getImmutableImportHeading().indexForAttribute == cells.indexOf(cellWithHeading) && cell.getLineValue().length() > 0) {
                     localLanguage = cell.getImmutableImportHeading().attribute;
                     cellWithHeading.setLineValue(cell.getLineValue());
                     break;
                 }
             }
-            if (cellWithHeading.getLineValue().length()==0){
+            // if blank we're done but notably default will still get through, I think that's fair, again confirm
+            if (cellWithHeading.getLineValue().length() == 0) {
                 return;
             }
         }
@@ -419,7 +431,6 @@ public class BatchImporter implements Callable<Void> {
                 } else {
                     for (Name parent : cellWithHeading.getImmutableImportHeading().parentNames) {
                         parent.addChildWillBePersisted(cellWithHeading.getLineName());
-
                     }
                 }
                 cellWithHeading.getSplitNames().add(cellWithHeading.getLineName());
@@ -431,7 +442,7 @@ public class BatchImporter implements Callable<Void> {
                             , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(localLanguage, attributeNames)));
                 }
             }
-        } else { // it existed (created below as a child name), sort parents if necessary
+        } else { // it existed (created below as a child name), sort parents if necessary todo - clarify how it can ever not be null here??
             for (Name child : cellWithHeading.getSplitNames()) {
                 for (Name parent : cellWithHeading.getImmutableImportHeading().parentNames) { // apparently there can be multiple child ofs, put the name for the line in the appropriate sets, pretty vanilla based off the parents set up
                     parent.addChildWillBePersisted(child);

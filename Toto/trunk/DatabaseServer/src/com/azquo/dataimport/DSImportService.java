@@ -73,6 +73,7 @@ public class DSImportService {
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         String toReturn;
         if (fileName.toLowerCase().startsWith("sets")) { // typically from a sheet with that name in a book
+            // not currently paying attention to isSpreadsheet - only possible issue is the replacing of \\\n with \n required based off writeCell in ImportFileUtilities
             toReturn = setsImport(azquoMemoryDBConnection, filePath, fileName, attributeNames);
         } else {
             toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileName, attributeNames, isSpreadsheet, valuesModifiedCounter);
@@ -163,6 +164,11 @@ public class DSImportService {
                     }
                     if (lineValue.startsWith("\"") && lineValue.endsWith("\""))
                         lineValue = lineValue.substring(1, lineValue.length() - 1).replace("\"\"", "\"");//strip spurious quote marks inserted by Excel
+                    // if generated from a spreadsheet this is a danger, fix now before any interpreting
+                    //.replace("\n", "\\\\n").replace("\t", "\\\\t") is what that function did on the report server.
+                    if (isSpreadsheet){
+                        lineValue = lineValue.replace("\\\\t", "\t").replace("\\\\n", "\n");
+                    }
                     importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null));
                     columnIndex++;
                 }
@@ -313,7 +319,7 @@ public class DSImportService {
         if (headers == null) {
             headers = lineIteratorAndBatchSize.lineIterator.next();
             for (int i = 0; i < headers.length; i++){
-                // what we did to make a csv geenrated from excel properly formatted, undo it! todo - should I do this to the line values also? Will it slow things down?
+                // might have gotten in there if generating a csv from an Excel sheet, writeCell from ImportFileUtilities, undo it! Since this is just for headers no need to check based off a flag.
                 //.replace("\n", "\\\\n").replace("\t", "\\\\t")
                 headers[i] = headers[i].replace("\\\\n","\n").replace("\\\\t","\t");
             }

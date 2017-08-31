@@ -413,9 +413,9 @@ public class DSDataLoadService {
                                 orphans.addChildWillBePersisted(magentoName);
                             }
                         }
-                    } else {
-                        //System.out.println("found an option value " + val + " for " + magentoProductCategory.getDefaultDisplayName());
-                    }
+                    }/* else {
+                        System.out.println("found an option value " + val + " for " + magentoProductCategory.getDefaultDisplayName());
+                    }*/
                 }
             }
         }
