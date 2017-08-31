@@ -169,7 +169,7 @@ public class DSImportService {
                     if (isSpreadsheet){
                         lineValue = lineValue.replace("\\\\t", "\t").replace("\\\\n", "\n");
                     }
-                    importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue, null));
+                    importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue));
                     columnIndex++;
                 }
                 if (!corrupt) {

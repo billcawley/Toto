@@ -1,6 +1,7 @@
 package com.azquo.dataimport;
 
 import com.azquo.memorydb.core.Name;
+import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.util.Set;
 
@@ -14,13 +15,12 @@ import java.util.Set;
 class ImportCellWithHeading {
     private final ImmutableImportHeading immutableImportHeading;
     private String lineValue;// prefix  line to try to avoid confusion
-    private Name lineName;
-    private Set<Name> splitNames;
+    private Set<Name> lineNames; // it could be a comma separated list. Added for PwC, I'm not entirely happy about this but if it's necessary it's necessary - EFC
 
-    ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value, Name name) {
+    ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value) {
         this.immutableImportHeading = immutableImportHeading;
         this.lineValue = value;
-        this.lineName = name;
+        this.lineNames = null;
     }
 
     ImmutableImportHeading getImmutableImportHeading() {
@@ -31,25 +31,20 @@ class ImportCellWithHeading {
         return lineValue;
     }
 
-    // I've called it this as it's the only reason I can think that the value would be overwritten
     void setLineValue(String lineValue) {
         this.lineValue = lineValue;
     }
 
-    Name getLineName() {
-        return lineName;
+    Set<Name> getLineNames() {
+        return lineNames;
     }
 
-    void setLineName(Name lineName) {
-        this.lineName = lineName;
-    }
-
-    Set<Name> getSplitNames() {
-        return splitNames;
-    }
-
-    void setSplitNames(Set<Name> splitNames) {
-        this.splitNames = splitNames;
+    // NOT thread safe - I assume that one thread will deal with one line
+    void addToLineNames(Name name) {
+        if (lineNames == null){
+            lineNames = HashObjSets.newMutableSet();
+        }
+        lineNames.add(name);
     }
 
     @Override
@@ -57,8 +52,7 @@ class ImportCellWithHeading {
         return "ImportCellWithHeading{" +
                 "immutableImportHeading=" + immutableImportHeading +
                 ", lineValue='" + lineValue + '\'' +
-                ", lineName=" + lineName +
-                ", splitNames=" + splitNames +
+                ", lineNames=" + lineNames +
                 '}';
     }
 }
