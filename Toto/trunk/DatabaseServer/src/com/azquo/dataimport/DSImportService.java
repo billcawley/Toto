@@ -78,10 +78,10 @@ public class DSImportService {
         } else {
             toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileName, attributeNames, isSpreadsheet, valuesModifiedCounter);
             //now look to see if there's a need to execute after import
-            Name importInterpreter = findInterpreter(azquoMemoryDBConnection, fileName,attributeNames);
-            if (importInterpreter!=null){
+            Name importInterpreter = findInterpreter(azquoMemoryDBConnection, fileName, attributeNames);
+            if (importInterpreter != null) {
                 String execute = importInterpreter.getAttribute("EXECUTE");
-                if (execute!=null&& execute.length()>0){
+                if (execute != null && execute.length() > 0) {
                     toReturn += "EXECUTE:" + execute + "EXECUTEEND";
                 }
 
@@ -166,7 +166,7 @@ public class DSImportService {
                         lineValue = lineValue.substring(1, lineValue.length() - 1).replace("\"\"", "\"");//strip spurious quote marks inserted by Excel
                     // if generated from a spreadsheet this is a danger, fix now before any interpreting
                     //.replace("\n", "\\\\n").replace("\t", "\\\\t") is what that function did on the report server.
-                    if (isSpreadsheet){
+                    if (isSpreadsheet) {
                         lineValue = lineValue.replace("\\\\t", "\t").replace("\\\\n", "\n");
                     }
                     importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue));
@@ -261,13 +261,13 @@ public class DSImportService {
     // The function to make the an instance of HeadingsWithIteratorAndBatchSize. It will itself call a few utility functions as well as the HeadingReader class.
     // This function is mainly concerned with possible sources of the headers either in the database as attributes or in the uploaded file
 
-    public static Name findInterpreter(AzquoMemoryDBConnection azquoMemoryDBConnection, String importInterpreterLookup, List<String> attributeNames)throws Exception{
+    public static Name findInterpreter(AzquoMemoryDBConnection azquoMemoryDBConnection, String importInterpreterLookup, List<String> attributeNames) throws Exception {
         if (importInterpreterLookup.contains(".")) {
             importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
         }
         // this distinction was previously dealt with by fileType and fileName, we still support the filename being replaced
         // in the headings and it expects this (filename without extension), importInterpreterLookup is no good as it may be mangled further
-         // try to find a name which might have the headings in its attributes
+        // try to find a name which might have the headings in its attributes
         Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
         //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
         while (importInterpreter == null && (importInterpreterLookup.contains(" ") || importInterpreterLookup.contains("_"))) {
@@ -318,10 +318,10 @@ public class DSImportService {
         // We might use the headers on the data file, this is notably used when setting up the headers themselves.
         if (headers == null) {
             headers = lineIteratorAndBatchSize.lineIterator.next();
-            for (int i = 0; i < headers.length; i++){
+            for (int i = 0; i < headers.length; i++) {
                 // might have gotten in there if generating a csv from an Excel sheet, writeCell from ImportFileUtilities, undo it! Since this is just for headers no need to check based off a flag.
                 //.replace("\n", "\\\\n").replace("\t", "\\\\t")
-                headers[i] = headers[i].replace("\\\\n","\n").replace("\\\\t","\t");
+                headers[i] = headers[i].replace("\\\\n", "\n").replace("\\\\t", "\t");
             }
             boolean hasClauses = false;
             for (String header : headers) {
@@ -335,7 +335,7 @@ public class DSImportService {
                 }
                 // option to stack the clauses vertically
                 String oldHeaders[] = new String[headers.length];
-                System.arraycopy(headers, 0, oldHeaders,0, headers.length);
+                System.arraycopy(headers, 0, oldHeaders, 0, headers.length);
                 if (!buildHeadersFromVerticallyListedClauses(headers, lineIteratorAndBatchSize.lineIterator)) {
                     // NO NO NO NO NO, do not return null!! otherwise vanilla headings just won't work!!! TODO - address what was going on here
                     //return null;

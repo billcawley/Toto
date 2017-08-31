@@ -22,7 +22,6 @@ class HeadingReader {
     // allows extra (typically composite) headings to be added when using the lookup heading by attribute process in preProcessHeadersAndCreatePivotSetsIfRequired
     private static final String COMPOSITEHEADINGS = "COMPOSITEHEADINGS";
 
-
     /*
     These are heading clauses. Heading definitions can be in the data file but Azquo is setup to support data "as it comes".
     Hence when dealing with a new set of data the key is to set up sets and headings so that the system can load the data.
@@ -100,8 +99,8 @@ class HeadingReader {
     static String[] preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames, String[] headers, String importInterpreterLookup, String fileName) throws Exception {
         //  if the file is of type (e.g.) 'sales' and there is a name 'dataimport sales', this is used as an interpreter. Attributes with the header's name override the header.
         Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
-        // so below allows stored headers to be bought up according to attribute names, what if you want, for example, composites?
-        if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null){
+        // option for extra composite headings - I think for PwC, a little odd but harmless.
+        if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null) {
             String[] extraCompositeHeadings = importInterpreter.getAttribute(COMPOSITEHEADINGS).split("¬"); // delimiter match the other headings string
             String[] headersWithExtras = new String[headers.length + extraCompositeHeadings.length];
             System.arraycopy(headers, 0, headersWithExtras, 0, headers.length);
@@ -113,7 +112,7 @@ class HeadingReader {
         boolean pivot = false;
         for (int i = 0; i < headers.length; i++) {
             String header = headers[i];
-            if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
+            if (header.trim().length() > 0) {
                 // stored header overrides one on the file
                 if (importInterpreter != null && importInterpreter.getAttribute(header) != null) {
                     header = importInterpreter.getAttribute(header);
@@ -144,17 +143,17 @@ class HeadingReader {
                         try {
                             int len = Integer.parseInt(header.substring(fileNamePos + function.length(), functionEnd));
                             String replacement = "";
-                            if (fileName.contains(".")) {// hack aagh todo
+                            if (fileName.contains(".")) {// this had a comment saying it was a hack - as long as behavior is consistent I see no harm in stripping the extension
                                 fileName = fileName.substring(0, fileName.lastIndexOf("."));
                             }
                             if (len < fileName.length()) {
-                                if (left){
-                                    replacement = fileName.substring(0,len);
-                                }else{
+                                if (left) {
+                                    replacement = fileName.substring(0, len);
+                                } else {
                                     replacement = fileName.substring(fileName.length() - len);
                                 }
                             }
-                            header = header.replace(header.substring(fileNamePos - 1, functionEnd + 2), replacement);// accomodating the quote marks
+                            header = header.replace(header.substring(fileNamePos - 1, functionEnd + 2), replacement);// accommodating the quote marks
                         } catch (Exception ignored) {
                         }
                     }
@@ -274,8 +273,7 @@ class HeadingReader {
             case COMPOSITION:// combine more than one column
                 heading.compositionPattern = result;
                 break;
-
-            case SPLIT:
+            case SPLIT:// character to use to split the line values of this column, so that if referring to a name instead it's a list of names
                 heading.splitChar = result.trim();
                 break;
             case COMMENT: // ignore
@@ -285,7 +283,7 @@ class HeadingReader {
                     heading.defaultValue = result;
                 }
                 break;
-            case PEERS: // in new logic this is the only place that peers are defined in Azquo - previously they were agains the Name object
+            case PEERS: // in new logic this is the only place that peers are defined in Azquo - previously they were against the Name object
                 heading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);
                 String peersString = result;
                 if (peersString.startsWith("{")) { // array, typically when creating in the first place, the spreadsheet call will insert after any existing. Like children not robust to commas
@@ -321,7 +319,7 @@ class HeadingReader {
         }
     }
 
-    /* Fill header information that is interdependent */
+    /* Fill header information that is interdependent, so called after resolving individual headings as much as possible */
 
     private static void resolvePeersAttributesAndParentOf(AzquoMemoryDBConnection azquoMemoryDBConnection, List<MutableImportHeading> headings) throws Exception {
         // while looping collect column indexes that indicate that the cell value in that column needs to be resolved to a name
@@ -339,22 +337,20 @@ class HeadingReader {
                     resolvePeers(mutableImportHeading, null, headings);
                 }
                 // Resolve context heading peers if we have them.
-                if (mutableImportHeading.contextHeadings.size() > 0) {
-                    for (MutableImportHeading contextHeading : mutableImportHeading.contextHeadings) {
-                        // non zero in context pushes onto the heading
-                        if (contextHeading.blankZeroes) {
-                            mutableImportHeading.blankZeroes = true;
+                for (MutableImportHeading contextHeading : mutableImportHeading.contextHeadings) {
+                    // non zero in context pushes onto the heading
+                    if (contextHeading.blankZeroes) {
+                        mutableImportHeading.blankZeroes = true;
+                    }
+                    if (!contextHeading.peers.isEmpty()) { // then try to resolve the peers! Generally context headings will feature one with peers but it's not 100%
+                        // Context only really works with name in the heading otherwise how would the context differ over different headings, hence make the main heading name if it's not there
+                        if (mutableImportHeading.name == null) {
+                            mutableImportHeading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, false);
                         }
-                        if (!contextHeading.peers.isEmpty()) { // then try to resolve the peers! Generally context headings will feature one with peers but it's not 100%
-                            // Context only really works with name in the heading otherwise how would the context differ over different headings, hence make the main heading name if it's not there
-                            if (mutableImportHeading.name == null) {
-                                mutableImportHeading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, false);
-                            }
-                            if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()) {
-                                throw new Exception("context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName());
-                            }
-                            resolvePeers(mutableImportHeading, contextHeading, headings);
+                        if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()) {
+                            throw new Exception("context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName());
                         }
+                        resolvePeers(mutableImportHeading, contextHeading, headings);
                     }
                 }
                 // Resolve Attributes. Having an attribute means the content of this column relates to a name in another column,
@@ -383,51 +379,30 @@ class HeadingReader {
                 }
             }
         }
-        // Finally set the line name flags. This has to be done after in a separate loop as indexesNeedingNames needs to be complete before testing each heading
+        // Finally set the line name flags. This has to be done after in a separate loop as indexesNeedingNames needs to be complete (it accommodates headings saying that OTHER headings need line names) before testing each heading
         for (int i = 0; i < headings.size(); i++) {
             MutableImportHeading mutableImportHeading = headings.get(i);
             mutableImportHeading.lineNameRequired = mutableImportHeading.indexForChild != -1 || !mutableImportHeading.parentNames.isEmpty() || indexesNeedingNames.contains(i) || mutableImportHeading.isAttributeSubject;
         }
     }
 
-    /* Supports resolving peers defined in the heading or the context. Context means the definition and main name (the one with the peers)
-     comes from the context heading and there's a special case for "this" for context where it can assign the main headings name as a peer.
-     since a set of context headings is spread across multiple columns "this" will change. For non context the contextHeading parameter will be null.
-     Fairly simple - add the name attached to the source heading then run through the peers, try and find them by looking for another column
-       that matches or in the context names. */
+    /* Updated 31 Aug 2017. Now doens't look up heading names by name, just columns. Gather the heading name and all context names as peers
+     * Only difference if optional context is sent is that the context is the source of the peers string list */
     private static void resolvePeers(MutableImportHeading heading, MutableImportHeading contextHeading, List<MutableImportHeading> headings) throws Exception {
         MutableImportHeading peersSource = contextHeading != null ? contextHeading : heading;
-        heading.peerNames.add(peersSource.name);// ok the "defining" name with the peers.
+        // updated logic - starter for 10 is adding this heading and all context headings to the peers list
+        heading.peerNames.add(heading.name);
+        for (MutableImportHeading cHeading : heading.contextHeadings) {
+            heading.peerNames.add(cHeading.name);
+        }
         for (String peer : peersSource.peers) { // we assume the source has peers otherwise this function wouldn't be called
             peer = peer.trim();
-            if (contextHeading != null && peer.equalsIgnoreCase("this")) { // context peers asking for the main heading's name
-                // add the name from the main heading. Notable that this means that peerNames built from context can change across different columns even if the context is the same
-                heading.peerNames.add(heading.name);
+            // try peer from the headings then try context
+            int peerHeadingIndex = findMutableHeadingIndex(peer, headings);
+            if (peerHeadingIndex >= 0) {
+                heading.peerIndexes.add(peerHeadingIndex);
             } else {
-                boolean found = false;
-                // try peer from the headings then try context
-                int peerHeadingIndex = findMutableHeadingIndex(peer, headings);
-                if (peerHeadingIndex >= 0) {
-                    heading.peerIndexes.add(peerHeadingIndex);
-                    found = true;
-                } else { // try context for a name we can resolve now rather than one that will be resolved based on the line value
-                    for (MutableImportHeading contextCheck : heading.contextHeadings) {
-                        if (contextCheck.name.getDefaultDisplayName().equalsIgnoreCase(peer)) {
-                            heading.peerNames.add(contextCheck.name);
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-                if (!found) {
-                    throw new Exception("Cannot find peer " + peer + " for " + peersSource.name.getDefaultDisplayName() + (contextHeading != null ? "(context source)" : ""));
-                }
-            }
-            //as from Nov 16 all context headings are assumed to be peer headings
-            heading.peerNames.add(heading.name);
-            for (MutableImportHeading cHeading : heading.contextHeadings) {
-                heading.peerNames.add(cHeading.name);
-
+                throw new Exception("Cannot find peer " + peer + " for " + peersSource.name.getDefaultDisplayName() + (contextHeading != null ? "(context source)" : ""));
             }
         }
     }
@@ -446,10 +421,10 @@ class HeadingReader {
                 if (heading.isAttributeSubject) {
                     return headingNo;
                 }
-                if ( headingFound == -1) {
+                if (headingFound == -1) {
                     headingFound = headingNo;
                 } else {
-                    return -1;//too many possibilities
+                    return -1;//found more than one revert back to -1 as it's unclear which heading we're after
                 }
             }
         }
