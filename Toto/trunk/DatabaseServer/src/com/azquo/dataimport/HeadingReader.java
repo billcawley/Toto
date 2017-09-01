@@ -64,7 +64,7 @@ class HeadingReader {
             if (header.trim().length() > 0) { // I don't know if the csv reader checks for this
                 int dividerPos = header.lastIndexOf(headingDivider); // is there context defined here?
                 // works backwards simply for convenience to chop off the context headings until only the heading is left, there is nothing significant about the ordering in contextHeadings
-                if (dividerPos > 0) {
+                if (dividerPos > 0 || header.indexOf(";")>0) {//any further clauses void context headings
                     contextHeadings = new ArrayList<>(); // reset/build the context headings
                 }
                 while (dividerPos >= 0) {
