@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
 public class ReportRenderer {
 
     // all case insensetive now so make these lower case and make the names from the reports .toLowerCase().startsWith().
-    static final String AZDATAREGION = "az_dataregion";
+    public static final String AZDATAREGION = "az_dataregion";
     static final String AZOPTIONS = "az_options";
     public static final String AZREPEATREGION = "az_repeatregion";
     public static final String AZREPEATSCOPE = "az_repeatscope";
@@ -37,14 +37,15 @@ public class ReportRenderer {
     static final String AZREPEATLIST = "az_repeatlist";
     public static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
     private static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
-    static final String AZCOLUMNHEADINGS = "az_columnheadings";
+    public static final String AZCOLUMNHEADINGS = "az_columnheadings";
     public static final String AZROWHEADINGS = "az_rowheadings";
     private static final String AZCONTEXT = "az_context";
     static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
     static final String AZCONTEXTFILTERS = "az_contextfilters";
     static final String AZCONTEXTHEADINGS = "az_contextheadings";
     static final String AZPIVOTHEADINGS = "az_pivotheadings";//old version
-    static final String AZREPORTNAME = "az_reportname";
+    public static final String AZREPORTNAME = "az_reportname";
+    public static final String AZIMPORTNAME = "az_importname";
     public static final String EXECUTE = "az_Execute";
     static final String FOLLOWON = "az_Followon";
     static final String AZSAVE = "az_save";
