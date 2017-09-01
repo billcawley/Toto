@@ -180,7 +180,7 @@ this may now not work at all, perhaps delete?
     public static OnlineReport copyReport(LoggedInUser loggedInUser, OnlineReport source, User newUser) throws Exception {
         Business b = BusinessDAO.findById(newUser.getBusinessId());
         String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-           OnlineReport newReport = new OnlineReport(0, LocalDateTime.now(), b.getId(), newUser.getId(), source.getDatabase(), source.getReportName(), source.getFilename(), "");
+           OnlineReport newReport = new OnlineReport(0, LocalDateTime.now(), b.getId(), newUser.getId(), source.getDatabase(), source.getReportName(), source.getFilename(), "", null);
         OnlineReportDAO.store(newReport); // store before or.getFilenameForDisk() or the id will be wrong!
         String fullPath = SpreadsheetService.getHomeDir() + dbPath + businessDirectory + onlineReportsDir + newReport.getFilenameForDisk();
         File file = new File(fullPath);
@@ -284,7 +284,7 @@ this may now not work at all, perhaps delete?
         }
         // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {
-            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, 0, "", "No reports found", "", "");
+            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, 0, "", "No reports found", "", "",null);
             reportList.add(notFound);
         } else {
             for (OnlineReport or : reportList){

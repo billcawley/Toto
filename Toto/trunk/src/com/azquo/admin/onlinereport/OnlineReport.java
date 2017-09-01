@@ -20,6 +20,7 @@ public class OnlineReport extends StandardEntity {
     private String reportName;
     private String filename;
     private String explanation;
+    private String identityCell;
 
     public OnlineReport(int id
             , LocalDateTime dateCreated
@@ -29,6 +30,8 @@ public class OnlineReport extends StandardEntity {
             , String reportName
             , String filename
             , String explanation
+            , String identityCell
+
     ) {
         this.id = id;
         this.dateCreated = dateCreated;
@@ -38,6 +41,7 @@ public class OnlineReport extends StandardEntity {
         this.reportName = reportName;
         this.filename = filename;
         this.explanation = explanation;
+        this.identityCell = identityCell;
     }
 
     public int getBusinessId() {
@@ -103,6 +107,10 @@ public class OnlineReport extends StandardEntity {
         this.explanation = explanation;
     }
 
+    public String getIdentityCell() { return identityCell; }
+
+    public void setIdentityCell(String identityCell) {this.identityCell = identityCell; }
+
     @Override
     public String toString() {
         return "OnlineReport{" +
@@ -114,6 +122,7 @@ public class OnlineReport extends StandardEntity {
                 ", reportName='" + reportName + '\'' +
                 ", filename='" + filename + '\'' +
                 ", explanation='" + explanation + '\'' +
+                ", identityCell='" + identityCell + '\'' +
                 '}';
     }
 }

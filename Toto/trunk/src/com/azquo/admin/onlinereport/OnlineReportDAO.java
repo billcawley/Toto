@@ -29,6 +29,7 @@ public class OnlineReportDAO {
 //    private static final String USERSTATUS = "user_status";
     private static final String FILENAME = "filename";
     private static final String EXPLANATION = "explanation";
+    private static final String IDENTITYCELL = "identity_cell";
 
     public static Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -39,6 +40,7 @@ public class OnlineReportDAO {
         toReturn.put(REPORTNAME, onlineReport.getReportName());
         toReturn.put(FILENAME, onlineReport.getFilename());
         toReturn.put(EXPLANATION, onlineReport.getExplanation());
+        toReturn.put(IDENTITYCELL,onlineReport.getIdentityCell());
         return toReturn;
     }
 
@@ -54,6 +56,7 @@ public class OnlineReportDAO {
                         , rs.getString(REPORTNAME)
                         , rs.getString(FILENAME)
                         , rs.getString(EXPLANATION)
+                        , rs.getString(IDENTITYCELL)
                 );
             } catch (Exception e) {
                 e.printStackTrace();
