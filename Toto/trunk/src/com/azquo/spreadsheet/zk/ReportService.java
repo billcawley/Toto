@@ -45,6 +45,9 @@ public class ReportService {
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         //current report is always allowable...
         SName sReportName= sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
+        if (sReportName == null){
+            sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZIMPORTNAME);
+        }
         String thisReportName = BookUtils.getSnameCell(sReportName).getStringValue();
         OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(),thisReportName);
         permissionsFromReports.put(thisReportName.toLowerCase(),new TypedPair<>(or, loggedInUser.getDatabase()));
