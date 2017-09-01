@@ -602,8 +602,8 @@ public class ReportRenderer {
             }
             // now the insert as normal
             Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
-//            CellOperationUtil.insertRow(insertRange);
-            CellOperationUtil.insert(insertRange, Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE); // don't copy any formatting . . .
+            CellOperationUtil.insertRow(insertRange);
+//            CellOperationUtil.insert(insertRange, Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE); // don't copy any formatting . . . a problem with hidden rows!
             // this is hacky, the bulk insert above will have pushed the bottom row down and in many cases we want it back where it was for teh pattern to be pasted properly
             if (rowsFormattingPatternHeight > 1) {
                 //cut back the last column to it's original position, and shift the insert range one column to the right
