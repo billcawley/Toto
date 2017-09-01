@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS `database_server` (
 
 --
 -- Table structure for table `online_report`
---
+-- `identity_cell` applies only to import templates
 
 CREATE TABLE IF NOT EXISTS `online_report` (
   `id` int(11) NOT NULL,
@@ -72,7 +72,9 @@ CREATE TABLE IF NOT EXISTS `online_report` (
   `user_id` int(11) NOT NULL,
   `report_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `filename` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `explanation` text COLLATE utf8_unicode_ci NOT NULL
+  `explanation` text COLLATE utf8_unicode_ci NOT NULL,
+  `identity_cell` varchar(2) COLLATE utf8_unicode_ci
+
 ) ENGINE=InnoDB AUTO_INCREMENT=223 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
