@@ -254,7 +254,7 @@ public final class ImportService {
         }
     }
 
-    private static void uploadReport(LoggedInUser loggedInUser, String filePath, String fileName, String reportName) throws Exception {
+    private static void uploadReport(LoggedInUser loggedInUser, String filePath, String fileName, String reportName, String identityCell) throws Exception {
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = loggedInUser.getDatabase().getId();
         String pathName = loggedInUser.getBusinessDirectory();
@@ -270,8 +270,9 @@ public final class ImportService {
                 e.printStackTrace();
             }
             or.setFilename(fileName); // it might have changed, I don't think much else under these circumstances
+            or.setIdentityCell(identityCell);
         } else {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, fileName, ""); // default to ZK now
+            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, fileName, "", identityCell); // default to ZK now
         }
         OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
         String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk();
@@ -288,7 +289,12 @@ public final class ImportService {
     private static String readBook(LoggedInUser loggedInUser, final String fileName, final String tempPath, List<String> attributeNames, boolean persistAfter, boolean isData, boolean forceReportUpload) throws Exception {
         final Book book = Importers.getImporter().imports(new File(tempPath), "Imported");
         String reportName = null;
-        SName reportRange = book.getInternalBook().getNameByName("az_ReportName");
+        boolean isImportTemplate = false;
+        SName reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
+        if (reportRange == null){
+            reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZIMPORTNAME);
+            isImportTemplate = true;
+        }
         if (reportRange != null) {
             reportName = BookUtils.getSnameCell(reportRange).getStringValue().trim();
         }
@@ -298,7 +304,17 @@ public final class ImportService {
                 if (existing != null && existing.getUserId() != loggedInUser.getUser().getId() && !forceReportUpload){
                     return UPLOADEDBYANOTHERUSER;
                 }
-                uploadReport(loggedInUser, tempPath, fileName, reportName);
+                String identityCell = null;
+                if (isImportTemplate){
+                    //identity cell in Excel format
+                    identityCell = "" + (char) (reportRange.getRefersToCellRegion().getColumn() + 65) + (reportRange.getRefersToCellRegion().getRow() + 1);
+                }
+
+                uploadReport(loggedInUser, tempPath, fileName, reportName, identityCell);
+                if (isImportTemplate){
+                     return "Import uploaded : " + reportName;
+                }
+
                 return "Report uploaded : " + reportName;
             }
             LoggedInUser loadingUser = new LoggedInUser(loggedInUser);
@@ -321,9 +337,10 @@ public final class ImportService {
             throw new Exception("no database set");
         }
         StringBuilder toReturn = new StringBuilder();
+        Map<String,String> knownValues = new HashMap<String,String>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            toReturn.append(readSheet(loggedInUser, fileName, sheet, tempPath, attributeNames, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
+            toReturn.append(readSheet(loggedInUser, fileName, sheet, tempPath, attributeNames, knownValues, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
             toReturn.append("\n");
         }
         return toReturn.toString();
@@ -334,7 +351,7 @@ public final class ImportService {
             if (sName.getName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)){
                 String region = sName.getName().substring(ReportRenderer.AZROWHEADINGS.length());
                 Sheet sheet = book.getSheet(sName.getRefersToSheetName());
-                String rowHeading = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getStringValue();
+                String rowHeading = ImportFileUtilities.getCellValue(sheet,sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getSecond();
                 if (rowHeading.toLowerCase().endsWith(" children editable")){
                     String setName = rowHeading.substring(0,rowHeading.length() - " children editable".length()).replace("`","");
                     SName displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS+region, sheet);
@@ -344,15 +361,8 @@ public final class ImportService {
                         editLine.append("`" + setName + "` ");
                         CellRegion dispRegion = displayName.getRefersToCellRegion();
                         for (int rowNo = 0; rowNo < dispRegion.getRowCount(); rowNo++) {
-                            String cellVal = "";
-                            SCell cell = sheet.getInternalSheet().getCell(dispRegion.getRow() + rowNo, dispRegion.getColumn());
-                            try {
-                                cellVal = cell.getStringValue();
+                             editLine.append("`" + ImportFileUtilities.getCellValue(sheet, dispRegion.getRow() + rowNo, dispRegion.getColumn()).getSecond() + "`,");
 
-                            } catch (Exception e) {
-                                cellVal = cell.getNumberValue() + "";
-                            }
-                            editLine.append("`" + cellVal + "`,");
                         }
                         CommonReportUtils.getDropdownListForQuery(loggedInUser, editLine.toString());
                     }
@@ -360,15 +370,94 @@ public final class ImportService {
                 }
             }
         }
+    }
 
+
+    private static void rangeToCSV(Sheet sheet, CellRegion region, Map<String,String>knownNames, CsvWriter csvW)throws Exception{
+        for (int rNo = region.getRow(); rNo < region.getRow() + region.getRowCount() ;rNo++) {
+            SRow row = sheet.getInternalSheet().getRow(rNo);
+            if (row != null) {
+                //System.out.println("Excel row " + r);
+                //int colCount = 0;
+                for (int cNo = region.getColumn(); cNo < region.getColumn() + region.getColumnCount(); cNo++) {
+                    String val = ImportFileUtilities.getCellValue(sheet, rNo, cNo).getSecond();
+                    if (knownNames!=null){
+                        for (String knownName:knownNames.keySet()){
+                            val = val.replaceAll("`" + knownName + "`",knownNames.get(knownName));
+                        }
+
+                    }
+                    csvW.write(val.replace("\n", "\\\\n").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+
+                }
+                csvW.endRecord();
+            }
+        }
 
     }
-    private static String readSheet(LoggedInUser loggedInUser, String fileName, Sheet sheet, final String tempFileName, List<String> attributeNames, boolean persistAfter) throws Exception {
+
+
+    private static String readSheet(LoggedInUser loggedInUser, String fileName, Sheet sheet, final String tempFileName, List<String> attributeNames, Map<String,String> knownValues,boolean persistAfter) throws Exception {
         boolean transpose = false;
         String sheetName = sheet.getInternalSheet().getSheetName();
         if (sheetName.toLowerCase().contains("transpose")) {
             transpose = true;
         }
+        String toReturn = "";
+        List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(loggedInUser.getDatabase().getId());
+        for (OnlineReport report:reports){
+            String cell = report.getIdentityCell();
+            if (cell!=null && cell.length() > 0){
+                int row = Integer.parseInt(cell.substring(1)) - 1;
+                int col = cell.charAt(0) - 65;
+                if (ImportFileUtilities.getCellValue(sheet,row, col).getSecond().equals(report.getReportName())){
+                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + report.getFilenameForDisk();
+                    final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                    book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
+                    book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+                    book.getInternalBook().setAttribute(OnlineController.REPORT_ID, report.getId());
+                    Sheet template = book.getSheetAt(0);
+                    //FIRST  glean information from range names
+                    List<SName> namesForTemplate = BookUtils.getNamesForSheet(template);
+                    List<SName> columnHeadings = new ArrayList<>();
+                    for (SName name:namesForTemplate) {
+                        if (name.getRefersToCellRegion().getRowCount() == 1 && name.getRefersToCellRegion().getColumnCount() == 1) {
+                            int rowNo = name.getRefersToCellRegion().getRow();
+                            int colNo = name.getRefersToCellRegion().getColumn();
+                            knownValues.put(name.getName(), ImportFileUtilities.getCellValue(sheet, rowNo, colNo).getSecond());
+                        }
+                    }
+                    //now copy across the column headings in full
+                    for (SName name:namesForTemplate) {
+
+                        if (name.getName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
+                            SName dataRegion = getNameByName(ReportRenderer.AZDATAREGION + name.getName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()),template);
+                            if (dataRegion!=null){
+                                File temp = File.createTempFile(tempFileName, ".csv");
+                                String tempPath = temp.getPath();
+                                temp.deleteOnExit();
+                                //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
+                                FileOutputStream fos = new FileOutputStream(tempPath);
+                                CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
+                                csvW.setUseTextQualifier(false);
+                                rangeToCSV(template,name.getRefersToCellRegion(),knownValues,csvW);
+                                rangeToCSV(sheet,dataRegion.getRefersToCellRegion(),null, csvW);
+                                csvW.close();
+                                fos.close();
+                                toReturn += readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, attributeNames, persistAfter, true);
+                                temp.delete();
+
+                            }
+                        }
+                    }
+                    return toReturn;
+
+                }
+            }
+        }
+
+
+
         File temp = File.createTempFile(tempFileName, ".csv");
         String tempPath = temp.getPath();
         temp.deleteOnExit();
@@ -379,10 +468,10 @@ public final class ImportService {
         ImportFileUtilities.convertRangeToCSV(sheet, csvW, transpose);
         csvW.close();
         fos.close();
-        return readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName , attributeNames, persistAfter, true);
-    }
+        return readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, attributeNames, persistAfter, true);
+       }
 
-    private static String LOCALIP = "127.0.0.1";
+        private static String LOCALIP = "127.0.0.1";
 
     private static String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileName, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
