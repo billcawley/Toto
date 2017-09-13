@@ -14,7 +14,6 @@ import org.zkoss.zss.api.model.*;
 import org.zkoss.zss.model.*;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -28,7 +27,7 @@ class RegionFillerService {
     // as it says. Need to consider the factoring here given the number of parameters passed
     // this had clonecols which was added to "selection" to make it wider, this made no sense and has been removed
     static void fillRowHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayRowHeadings
-            , CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay) throws Exception {
+            , CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, UserRegionOptions userRegionOptions) throws Exception {
         int rowHeadingsColumn = displayRowHeadings.getColumn();
         boolean isHierarchy = ReportUtils.isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
         int row = displayRowHeadings.getRow();
@@ -53,7 +52,7 @@ class RegionFillerService {
                 col++;
             }
             lineNo++;
-            if (isHierarchy && lineNo > 1) {
+            if (isHierarchy && lineNo > 1 && !userRegionOptions.getNoPermuteTotals()) {
                 int sameValues;
                 for (sameValues = 0; sameValues < lastRowHeadings.size(); sameValues++) {
                     if (!rowHeading.get(sameValues).equals(lastRowHeadings.get(sameValues))) {
@@ -465,7 +464,7 @@ class RegionFillerService {
                     // display row headings region practically speaking
                     new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatRowHeadingsRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatRowHeadingsColumnOffset
                             , rootRow + (repeatRegionHeight * repeatRow) + repeatRowHeadingsLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatRowHeadingsLastColumnOffset)
-                    , displayDataRegion, cellsAndHeadingsForDisplay);
+                    , displayDataRegion, cellsAndHeadingsForDisplay, userRegionOptions);
         }
         if (displayColumnHeadings != null) {
             int repeatColumnHeadingsRowOffset = displayColumnHeadings.getRow() - repeatRegion.getRefersToCellRegion().getRow();
@@ -531,7 +530,7 @@ class RegionFillerService {
         if (displayRowHeadings != null && cellsAndHeadingsForDisplay.getRowHeadings() != null) {
             displayRowHeadings = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatRowHeadingsRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatRowHeadingsColumnOffset
                     , rootRow + (repeatRegionHeight * repeatRow) + repeatRowHeadingsLastRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatRowHeadingsLastColumnOffset);
-            RegionFillerService.fillRowHeadings(loggedInUser, sheet, region, displayRowHeadings, displayDataRegion, cellsAndHeadingsForDisplay);
+            RegionFillerService.fillRowHeadings(loggedInUser, sheet, region, displayRowHeadings, displayDataRegion, cellsAndHeadingsForDisplay, userRegionOptions);
         }
         if (displayColumnHeadings != null) {
             displayColumnHeadings = new CellRegion(rootRow + (repeatRegionHeight * repeatRow) + repeatColumnHeadingsRowOffset, rootCol + (repeatRegionWidth * repeatColumn) + repeatColumnHeadingsColumnOffset

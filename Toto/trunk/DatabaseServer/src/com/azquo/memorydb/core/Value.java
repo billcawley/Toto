@@ -2,13 +2,14 @@ package com.azquo.memorydb.core;
 
 //import org.apache.log4j.Logger;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 22/10/13
@@ -22,9 +23,9 @@ public final class Value extends AzquoMemoryDBEntity {
 
     //private static final Logger logger = Logger.getLogger(Value.class);
 
-    // issue of final here and bits of the init being in a try block. Need to have a little think about that
     private Provenance provenance;
     // todo, consider alternate value representation. Double option with this null? Char array?
+    // Notable that getText is used in all of 19 places so this is doable though it would need changes to the DAO also.
     // Empty String is about 40 bytes I think so maybe 30 bytes saved if there's a null pointer and double instead.
     private String text;//no longer final.   May be adjusted during imports (if duplicate lines are found will sum...)
 
@@ -124,7 +125,7 @@ public final class Value extends AzquoMemoryDBEntity {
 
     public void delete() throws Exception {
         deleteCount.incrementAndGet();
-        needsDeleting = true;
+        setNeedsDeleting();
         for (Name newName : this.names) {
             newName.removeFromValues(this);
         }
@@ -139,34 +140,44 @@ public final class Value extends AzquoMemoryDBEntity {
 
     private static AtomicInteger getNameIdsAsBytesCount = new AtomicInteger(0);
 
+    // now follows same pattern as the function for children ids in Name. Highly unlikely that the number of names will change during the function but it's possible
     public byte[] getNameIdsAsBytes() {
+        return getNameIdsAsBytes(0);
+    }
+
+    private byte[] getNameIdsAsBytes(int tries) {
         getNameIdsAsBytesCount.incrementAndGet();
-        ByteBuffer buffer = ByteBuffer.allocate(names.length * 4);
-        for (Name name : names) {
-            buffer.putInt(name.getId());
+        try {
+            ByteBuffer buffer = ByteBuffer.allocate(names.length * 4);
+            for (Name name : names) {
+                buffer.putInt(name.getId());
+            }
+            return buffer.array();
+        } catch (BufferOverflowException e) {
+            if (tries < 5) { // a bit arbitrary
+                tries++;
+                System.out.println("retrying after buffer overflow in getNameIdsAsBytes on value id " + getId() + " try number " + tries);
+                return getNameIdsAsBytes(tries);
+            } else {
+                throw e;
+            }
         }
-        return buffer.array();
     }
 
     // used when deleting values and the value needs to be put in the values history table. We want an index by a combination of name ids
     // , that requires ordering of the ids
     public byte[] getNameIdsAsBytesSorted() {
         getNameIdsAsBytesCount.incrementAndGet();
-        ByteBuffer buffer = ByteBuffer.allocate(names.length * 4);
-        Name[] namesCopy = new Name[names.length];
-        // could exception if names is changed in the mean time? In fact that may apply to the above?
-        System.arraycopy(names, 0, namesCopy, 0, names.length);
-        Arrays.sort(namesCopy, Comparator.comparing(Name::getId)); // I think that will sort it!
-        for (Name name : namesCopy) {
-            buffer.putInt(name.getId());
-        }
-        return buffer.array();
+        byte[] nameIdsAsBytes = getNameIdsAsBytes();
+        Arrays.sort(nameIdsAsBytes); // I hope the same as the below! Hard to check. Could case a problem if different and there's existing data. Code tighter though, want to leave this here.
+//        Arrays.sort(namesCopy, Comparator.comparing(Name::getId)); // I think that will sort it!
+        return nameIdsAsBytes;
     }
 
 
     boolean hasName(Name name) {
-        for (Name test : names){
-            if (test == name){
+        for (Name test : names) {
+            if (test == name) {
                 return true;
             }
         }
@@ -184,11 +195,11 @@ public final class Value extends AzquoMemoryDBEntity {
     }
 
     static void clearFunctionCountStats() {
-        newValueCount.set(0);
-        newValue3Count.set(0);
-        getNamesCount.set(0);
-        setNamesWillBePersistedCount.set(0);
-        deleteCount.set(0);
-        getNameIdsAsBytesCount.set(0);
+        NameUtils.clearAtomicIntegerCounters(newValueCount
+                , newValue3Count
+                , getNamesCount
+                , setNamesWillBePersistedCount
+                , deleteCount
+                , getNameIdsAsBytesCount);
     }
 }

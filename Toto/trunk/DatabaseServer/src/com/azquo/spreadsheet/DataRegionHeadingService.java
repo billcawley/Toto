@@ -221,7 +221,7 @@ class DataRegionHeadingService {
     A comparator might provide a more succinct sort (we'd need to pass sortLists still), would need to address how the totals were added after. Something to consider.
     */
 
-    private static List<List<DataRegionHeading>> sortCombos(List<DataRegionHeading> listToPermute, Set<List<Name>> foundCombinations, int position, final List<Map<Name, Integer>> sortLists) {
+    private static List<List<DataRegionHeading>> sortCombos(List<DataRegionHeading> listToPermute, Set<List<Name>> foundCombinations, int position, final List<Map<Name, Integer>> sortLists, boolean noPermuteTotals) {
         Map<Name, Integer> sortList = sortLists.get(position);
         // a tree map is ordered by keys, means putting by sort position will result in a correctly ordered iterator
         Map<Integer, Set<List<Name>>> sortMap = new TreeMap<>();
@@ -247,11 +247,11 @@ class DataRegionHeadingService {
                 }
                 // if it's not the last grab this clump of combos and run them through this function again to sort on the next level down
             } else {
-                toReturn.addAll(sortCombos(listToPermute, sortMap.get(key), position, sortLists));
+                toReturn.addAll(sortCombos(listToPermute, sortMap.get(key), position, sortLists, noPermuteTotals));
             }
         }
         // now add totals - remember this is recursive - this will happen leaving each level
-        if (toReturn.size() > 0) {//maybe should be 1 - no need for totals if there's only one item
+        if (toReturn.size() > 0 && !noPermuteTotals) {//maybe should be 1 - no need for totals if there's only one item
             // I think this means add the last but one and then populate the rest with the top sets? it would make sense for totals
             List<DataRegionHeading> drhEntry = new ArrayList<>();
             List<DataRegionHeading> lastEntry = toReturn.get(toReturn.size() - 1);
@@ -269,7 +269,7 @@ class DataRegionHeadingService {
     /* ok, so, practically speaking the shared names if applicable are from context (probably the findAllChildren from one name)
     and the listToPermute is the contents of the permute function e.g. permute(`Product category`, `Product subcategory`) in Nisbets*/
 
-    private static List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute) throws Exception {
+    private static List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute, boolean noPermuteTotals) throws Exception {
         NumberFormat nf = NumberFormat.getInstance();
         long startTime = System.currentTimeMillis();
         List<Collection<Name>> sharedNamesSets = new ArrayList<>();
@@ -310,7 +310,6 @@ class DataRegionHeadingService {
             }
             boolean add;
             int index;
-            assert smallestNameSet != null;
             for (Name name : smallestNameSet) {
                 add = true;
                 for (index = 0; index < setsToCheck.length; index++) {
@@ -376,7 +375,7 @@ class DataRegionHeadingService {
             }
             sortLists.add(sortList);
         }
-        List<List<DataRegionHeading>> permuted = sortCombos(listToPermute, foundCombinations, 0, sortLists);
+        List<List<DataRegionHeading>> permuted = sortCombos(listToPermute, foundCombinations, 0, sortLists, noPermuteTotals);
         System.out.println("Headings sorted in " + nf.format((System.currentTimeMillis() - startTime)));
         return permuted;
     }
@@ -530,11 +529,11 @@ class DataRegionHeadingService {
 
     */
 
-    static List<List<DataRegionHeading>> permuteHeadings(List<DataRegionHeading> mainHeading, List<List<List<DataRegionHeading>>> subHeadings, Collection<Name> sharedNames) throws Exception {
+    static List<List<DataRegionHeading>> permuteHeadings(List<DataRegionHeading> mainHeading, List<List<List<DataRegionHeading>>> subHeadings, Collection<Name> sharedNames, boolean noPermuteTotals) throws Exception {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
-        List<List<DataRegionHeading>> expandedSubheadings = expandHeadings(subHeadings, sharedNames);
+        List<List<DataRegionHeading>> expandedSubheadings = expandHeadings(subHeadings, sharedNames, noPermuteTotals);
         if (mainHeading != null && mainHeading.size() > 0 && mainHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) {
-            List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, mainHeading);
+            List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, mainHeading, noPermuteTotals);
             for (List<DataRegionHeading> permuteLine : permuted) {
                 for (List<DataRegionHeading> expandedSubheading : expandedSubheadings) {
                     List<DataRegionHeading> newHeadings = new ArrayList<>();
@@ -571,7 +570,8 @@ class DataRegionHeadingService {
         return toReturn;
     }
 
-    static List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames) throws Exception {
+    // last 2 params only for permute - a concern?
+    static List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames, boolean noPermuteTotals) throws Exception {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
         if (headingLists.get(0).size() > 1) {
             Iterator<List<List<DataRegionHeading>>> it = headingLists.iterator();
@@ -581,7 +581,7 @@ class DataRegionHeadingService {
                 List<List<DataRegionHeading>> headingRow = it.next();
                 if (subHeadings == null || headingRow.get(0) != null) {
                     if (subHeadings != null) {
-                        toReturn.addAll(permuteHeadings(mainHeading, subHeadings, sharedNames));
+                        toReturn.addAll(permuteHeadings(mainHeading, subHeadings, sharedNames, noPermuteTotals));
                     }
                     mainHeading = headingRow.get(0);
                     subHeadings = new ArrayList<>();
@@ -595,12 +595,12 @@ class DataRegionHeadingService {
                 }
                 subHeadings.add(subHeadingRow);
             }
-            toReturn.addAll(permuteHeadings(mainHeading, subHeadings, sharedNames));
+            toReturn.addAll(permuteHeadings(mainHeading, subHeadings, sharedNames, noPermuteTotals));
         } else {
             Iterator<List<List<DataRegionHeading>>> headingRowIterator = headingLists.iterator();
             List<DataRegionHeading> nextHeading = headingRowIterator.next().get(0);
             if (nextHeading != null && nextHeading.size() > 0 && nextHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
-                toReturn.addAll(findPermutedItems(sharedNames, nextHeading));//assumes only one row of headings, it's a list of the permute names
+                toReturn.addAll(findPermutedItems(sharedNames, nextHeading, noPermuteTotals));//assumes only one row of headings, it's a list of the permute names
             } else {        //last column - simply expand, filling spaces where available.
                 List<DataRegionHeading> heading = null;
                 boolean workToDo = true;

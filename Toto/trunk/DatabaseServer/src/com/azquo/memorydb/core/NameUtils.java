@@ -5,10 +5,11 @@ import com.azquo.StringLiterals;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Extracted from Name by edward on 07/10/16.
- *
+ * <p>
  * Just some low level stuff extracted from Name, trying to reduce the size of that class.
  */
 public class NameUtils {
@@ -24,7 +25,6 @@ public class NameUtils {
     }
 
     // I realise some of this stuff is probably very like the internal workings of ArrayList! Important here to save space with vanilla arrays I'm rolling my own.
-    // can check contains
 
     static Name[] nameArrayRemoveIfExists(Name[] source, Name toRemove) {
         List<Name> sourceList = Arrays.asList(source);
@@ -54,13 +54,20 @@ public class NameUtils {
             return StringLiterals.QUOTE + name.getDefaultDisplayName() + StringLiterals.QUOTE;
         }
         Collection<Name> parents = name.getParents();
-        String qualified = name.getDefaultDisplayName();
+        StringBuilder qualified = new StringBuilder(name.getDefaultDisplayName());
+        // IntelliJ suggested StringBuilder with .insert, I didn't know about that before :)
         while (!parents.isEmpty()) {
             Name parent = parents.iterator().next();
-            qualified = parent.getDefaultDisplayName() + StringLiterals.MEMBEROF + qualified;
+            qualified.insert(0, parent.getDefaultDisplayName() + StringLiterals.MEMBEROF);
             parents = parent.getParents();
         }
-        qualified = qualified.replace(StringLiterals.MEMBEROF + "null","");//deal with user-specific names
-        return StringLiterals.QUOTE + qualified + StringLiterals.QUOTE;
+        qualified = new StringBuilder(qualified.toString().replace(StringLiterals.MEMBEROF + "null", ""));//deal with user-specific names
+        return StringLiterals.QUOTE + qualified.toString() + StringLiterals.QUOTE;
+    }
+
+    static void clearAtomicIntegerCounters(AtomicInteger... args){
+        for (AtomicInteger counter : args){
+            counter.set(0);
+        }
     }
 }

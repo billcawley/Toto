@@ -59,7 +59,6 @@ public final class AzquoMemoryDB {
     }
 
     // worth being aware that if the db is still referenced somewhere then the garbage collector won't chuck it (which is what we want)
-
     public static void removeDBFromMap(String persistenceName) throws Exception {
         memoryDatabaseMap.remove(persistenceName);
     }
@@ -147,11 +146,9 @@ public final class AzquoMemoryDB {
     // should we synchronize on a write lock object? I think it might be a plan.
 
     public synchronized void persistToDataStore() {
-        // todo : write locking the db probably should start here
-        // this is where I need to think carefully about concurrency, azquodb has the last say when the sets are modified although the flags are another point
-        // just a simple DB write lock should to it
-        // for the moment just make it work.
-        // internally it will call setPersisted() on entites which will in turn bouce back to functions here. Since set as persisted is only in context of the load perhaps remove that?
+        // I was going to write lock the DB here but since I've been defensive when persisting I don't think it's necessary,
+        // the worst that SHOULD happen is that an entity is persisted twice.
+        // See AzquoMemoryDBTransport - more specifically I'm currently going to make it the responsibility of AzquoMemoryDBTransport
         azquoMemoryDBTransport.persistDatabase();
     }
 
@@ -236,9 +233,6 @@ public final class AzquoMemoryDB {
 
     void addNameToDb(final Name newName) throws Exception {
         newName.checkDatabaseMatches(this);
-        // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
-        // there was a check that the name had an Id greater than 0, I don't know why
-        //if (newName.getId() > 0 && nameByIdMap.get(newName.getId()) != null) {
         if (nameByIdMap.putIfAbsent(newName.getId(), newName) != null) {
             throw new Exception("tried to add a name to the database with an existing id!");
         }
@@ -314,7 +308,8 @@ public final class AzquoMemoryDB {
         return mostRecentProvenance.get();
     }
 
-    // note - this function will NOT check for existing locks for these values, it just clears for this user then sets new locks
+    // should lock stuff be in a different class?
+    // note - this function will NOT check for existing locks for these values, it just sets time for this user then sets new locks
     public void setValuesLockForUser(Collection<Value> values, String userId) {
         valueLockTimes.put(userId, LocalDateTime.now());
         for (Value value : values) {
@@ -326,6 +321,7 @@ public final class AzquoMemoryDB {
         if (valueLockTimes.remove(userId) != null) { // only check the values if there was an entry in time so to speak
             valueLocks.values().removeAll(Collections.singleton(userId)); // need to force a collection rather than an instance to remove all values in the map that match. Hence do NOT remove .singleton here!
         }
+        // and remove all old locks for all users
         removeOldLocks(60); // arbitrary time, this seems as good a palce as any to check
     }
 
@@ -356,7 +352,7 @@ public final class AzquoMemoryDB {
         return null;
     }
 
-    // I may change these later, for the mo I just want to stop drops and clears at the same time as persistence
+    // I may change these later, for the mo I just want to stop drops and clears at the same time as persistToDataStore
     public synchronized void synchronizedClear() throws Exception {
         DSAdminService.emptyDatabaseInPersistence(azquoMemoryDBTransport.getPersistenceName());
     }
@@ -376,12 +372,12 @@ public final class AzquoMemoryDB {
     }
 
     private static void clearFunctionCountStats() {
-        newDatabaseCount.set(0);
-        findTopNames2Count.set(0);
-        clearCachesCount.set(0);
-        setJsonEntityNeedsPersistingCount.set(0);
-        setNameNeedsPersistingCount.set(0);
-        setValueNeedsPersistingCount.set(0);
+        NameUtils.clearAtomicIntegerCounters(newDatabaseCount,
+                findTopNames2Count,
+                clearCachesCount,
+                setJsonEntityNeedsPersistingCount,
+                setNameNeedsPersistingCount,
+                setValueNeedsPersistingCount);
     }
 
     // debug stuff, I'll allow the warnings for the moment. Really need calls to be based off a flag, not commented/uncommented

@@ -10,17 +10,19 @@ import java.util.Date;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 24/10/13
  * Time: 17:38
- *
+ * <p>
  * Represents the Provenance, or Audit as we now call it, against a name or value.
  * Unlike Value and Name immutable. Currently the only one using the Json persist pattern,
  * Value and Name now have custom classes to improve speed on loading and saving.
- *
+ * <p>
  * Some old databases may have null timestamps, I'm not going to tolerate this, hence timestamps will default to 1st Jan 1970.
+ * <p>
+ * It may be worth, at some point, revisiting te structure here. Whether we need name and context for example.
  */
 public final class Provenance extends AzquoMemoryDBEntity {
 
@@ -33,6 +35,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
     private final String method;
     private final String name; // name of the report or upload file? A bit vague!
     private final String context;
+
     // won't have this call the package local constructor below, does not factor in the same way now
     // this is the practical use constructor, calling it adds it to the memory db. I used to pass the date, that made no sense, set it in here.
     public Provenance(final AzquoMemoryDB azquoMemoryDB
@@ -105,6 +108,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
         public final String method;
         public final String name;
         public final String context;
+
         @JsonCreator
         private JsonTransport(@JsonProperty("user") String user
                 , @JsonProperty("timeStamp") Date timeStamp
@@ -134,7 +138,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
         getAzquoMemoryDB().setJsonEntityNeedsPersisting(PERSIST_TABLE, this);
     }
 
-    public ProvenanceForDisplay getProvenanceForDisplay(){
-        return new ProvenanceForDisplay(method != null && method.toLowerCase().startsWith(Constants.IN_SPREADSHEET), user,method,name,context, timeStamp);
+    public ProvenanceForDisplay getProvenanceForDisplay() {
+        return new ProvenanceForDisplay(method != null && method.toLowerCase().startsWith(Constants.IN_SPREADSHEET), user, method, name, context, timeStamp);
     }
 }

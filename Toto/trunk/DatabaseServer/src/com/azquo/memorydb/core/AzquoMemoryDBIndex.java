@@ -26,7 +26,7 @@ public class AzquoMemoryDBIndex {
 
     // immutable in a superficial sense?
 
-    private final Map<String, Map<String, Collection<Name>>> nameByAttributeMap; // a map of maps of lists of names. Fun! Moved back to lists to save memory, the lists are unlikely to be big (implemented by CopyOnWriteArray)
+    private final Map<String, Map<String, Collection<Name>>> nameByAttributeMap; // a map of maps of Collections of names. Collections so I can do the classic switch from CopyOnWriteArray to a concurrent set when it gets too big. Otherwise COpyOnWriteArray can really jam things up when it gets big.
 
     AzquoMemoryDBIndex() {
         nameByAttributeMap = new ConcurrentHashMap<>();
@@ -34,9 +34,10 @@ public class AzquoMemoryDBIndex {
 
     private static AtomicInteger getAttributesCount = new AtomicInteger(0);
 
+    // was unmodifable, since it's a copy I see no reason. Also its only use is serialised.
     public List<String> getAttributes() {
         getAttributesCount.incrementAndGet();
-        return Collections.unmodifiableList(new ArrayList<>(nameByAttributeMap.keySet()));
+        return new ArrayList<>(nameByAttributeMap.keySet());
     }
 
     // fundamental low level function to get a set of names from the attribute indexes. Forces case insensitivity.
@@ -68,7 +69,7 @@ public class AzquoMemoryDBIndex {
         return Collections.emptySet(); // moving away from nulls - this will complain outside if it is modified though!
     }
 
-    // same as above but then zap any not in the parent
+    // same as above but then zap any not in the parent - if one cant find a direct parent then allow indiret parents which might mean multiple names
 
     private static AtomicInteger getNamesForAttributeAndParentCount = new AtomicInteger(0);
 
@@ -82,7 +83,6 @@ public class AzquoMemoryDBIndex {
                 return found; // and return straight away
             }
         }
-        //logic changed by WFC 30/06/15 to allow sets import to search within a general set (e.g. 'date') rather than need an immediate parent (e.g. 'All dates')
         // get rid of any that are not in the parent - removeIf has the same logic as the iterator that was there before.
         possibles.removeIf(possible -> !possible.findAllParents().contains(parent));
         return possibles; // so this could be more than one if there were multiple in a big parent set (presumably at different levels)
@@ -122,6 +122,7 @@ public class AzquoMemoryDBIndex {
     }
 
     // the root is a command in the UI tree edit findduplicates
+    // is this still used? Check with WFC todo
 
     private static AtomicInteger getNameByAttributeCount = new AtomicInteger(0);
 
@@ -262,7 +263,7 @@ public class AzquoMemoryDBIndex {
                 if (!name.hasParents()) { // top parent full stop
                     toReturn.add(name);
                 } else { // little hazy on the logic here but I think the point is to say that if all the parents of the name are NOT in the language specified then that's a top name for this language.
-                    // Kind of makes sense but where is this used? I can only see when attribute is passed to JSTree. Maybe clarify with WFC.
+                    // Kind of makes sense but where is this used? I can only see when attribute is passed to JSTree. Maybe clarify with WFC. todo
                     boolean include = true;
                     for (Name parent : name.getParents()) {
                         if (parent.getAttribute(language) != null) {
@@ -327,7 +328,7 @@ public class AzquoMemoryDBIndex {
         });
     }
 
-    // I think this is just much more simple re thread safety in that if we can't find the map and list we just don't do anything and the final remove should be safe according to CopyOnWriteArray
+    // Again use the compute, keeps things safe
 
     private static AtomicInteger removeAttributeFromNameInAttributeNameMapCount = new AtomicInteger(0);
 

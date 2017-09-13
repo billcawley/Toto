@@ -98,7 +98,7 @@ public final class Name extends AzquoMemoryDBEntity {
         setProvenanceWillBePersisted(provenance);
     }
 
-    // For loading, it should only be used by the NameDAO. Can I reshuffle and make it non public? Todo.
+    // For loading, it should only be used by the NameDAO, I can't really restrict it and make it non public without rearranging the package I don't think.
     // yes I am exposing "this". Seems ok so far. Interning the attributes should help memory usage.
 
     private static AtomicInteger newName3Count = new AtomicInteger(0);
@@ -196,13 +196,13 @@ public final class Name extends AzquoMemoryDBEntity {
 
     void addToValues(final Value value) throws Exception {
         addToValuesCount.incrementAndGet();
-        boolean noDuplicationCheck = getAzquoMemoryDB().getNeedsLoading();
+        boolean databaseIsLoading = getAzquoMemoryDB().getNeedsLoading();
         checkDatabaseMatches(value);
         // may make this more clever as in clearing only if there's a change but not now
         valuesIncludingChildrenCache = null;
         // without volatile supposedly this (and getValues) could be accessing a not yet instantiated set. I am sceptical.
         if (valuesAsSet != null) {
-            valuesAsSet.add(value);// Backed by concurrent hash map should be thread safe
+            valuesAsSet.add(value);// Backed by concurrent hash map, will be thread safe
         } else {
             synchronized (this) { // syncing changes on this is fine, don't want to on values itself as it's about to be changed - synchronizing on a non final field is asking for trouble
                 // The ol' double checked locking
@@ -211,8 +211,8 @@ public final class Name extends AzquoMemoryDBEntity {
                     return;
                 }
                 // it's this contains expense that means we should stop using ArrayList over a certain size.
-                // If loading skip the duplication check, we assume data integrity, asList an attempt to reduce garbage, I think it's object is lighter than an Arraylist. It won't be hit during loading but will during importing,
-                if (noDuplicationCheck || !Arrays.asList(values).contains(value)) {
+                // If loading skip the duplication check, we assume data integrity, asList an attempt to reduce garbage, I think it's object is lighter than an ArrayList. It won't be hit during loading but will during importing,
+                if (databaseIsLoading || !Arrays.asList(values).contains(value)) {
                     if (values.length >= ARRAYTHRESHOLD) { // we need to convert. copy the array to a new concurrent hash set then set it
                         /* Note! I've read it would be possible in theory for a half baked reference to the set to escape if the reference wasn't volatile.
                         That is to say a reference escaping before the constructor completed.
@@ -222,12 +222,12 @@ public final class Name extends AzquoMemoryDBEntity {
                         localValuesAsSet.addAll(Arrays.asList(values)); // add the existing ones
                         localValuesAsSet.add(value);
                         valuesAsSet = localValuesAsSet; // and now switch it in - since we have used a local variable this should fulfil textbook double checked locking
-                        //values = new ArrayList<Value>(); // to save memory, leaving commented as the saving probably isn't that much and I'm a little worried about concurrency.
-                        // todo - profile how many of these are left over in a large database?
-                    } else { // ok we have to switch a new one in, need to think of the best way with the new array model
+                        // I could clear the old values array but this might trip up the getValues since it's not synchronized. Won't be an issue when the DB is loaded from persistence
+                    } else { // ok we have to switch a new array in
                         // this is synchronized, I should be able to be simple about this and be safe still
                         // new code to deal with arrays assigned to the correct size on loading
-                        if (values.length != 0 && values[values.length - 1] == null) { // during loading - should noduplication really be used since that's what it is? todo
+                        if (databaseIsLoading) { // used to check if the last element in the array was null but really what we're saying is : is the database loading? If so trust that there's an empty array of the correct size waiting
+                            // If there's a mismatch and noValues is too small it just won't be added to the list. But if noValues isn't correct things have already gone wrong
                             for (int i = 0; i < values.length; i++) { // being synchronised this should be all ok
                                 if (values[i] == null) {
                                     values[i] = value;
@@ -307,21 +307,19 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger addToParentsCount = new AtomicInteger(0);
 
-    private void addToParents(final Name name, boolean noDuplicationCheck) throws Exception {
+    private void addToParents(final Name name, boolean databaseIsLoading) throws Exception {
         addToParentsCount.incrementAndGet();
         synchronized (this) {
-            if (noDuplicationCheck || !Arrays.asList(parents).contains(name)) {
-                if (parents.length != 0 && parents[parents.length - 1] == null) {
-                    for (int i = 0; i < parents.length; i++) {
-                        if (parents[i] == null) {
-                            parents[i] = name;
-                            break;
-                        }
+            if (databaseIsLoading) { // now more trusting of databaseIsLoading - it assumes an array of the right size ahs been initialised
+                for (int i = 0; i < parents.length; i++) {
+                    if (parents[i] == null) {
+                        parents[i] = name;
+                        break;
                     }
-                } else {
-                    parents = NameUtils.nameArrayAppend(parents, name);
                 }
-                setNeedsPersisting();
+            } else if (!Arrays.asList(parents).contains(name)) {
+                parents = NameUtils.nameArrayAppend(parents, name);
+                setNeedsPersisting(); // no point calling setNeedsPersisting outside since we have a simple databaseIsLoading if above
             }
         }
     }
@@ -354,21 +352,20 @@ public final class Name extends AzquoMemoryDBEntity {
     // public and stateless, in here as it accesses things I don't want accessed outside
     public static void findAllParents(Name name, final Set<Name> allParents) {
         findAllParents2Count.incrementAndGet();
-
-        if (name.parents.length > 0) {
-            for (int i = 0; i < name.parents.length; i++) {
-                if (name.parents[i] == null) { // having fixed a bug this should be rare now
-                    System.out.println("DATABASE CORRUPTION " + name.getDefaultDisplayName() + " id " + name.getId() + " has a null parent");
-                } else {
-                    if (allParents.add(name.parents[i])) { // the function was moved in here to access this array directly. Externally it would need to be wrapped in an unmodifiable List. Means garbage!
-                        findAllParents(name.parents[i], allParents);
-                    }
+        Name[] parentsRefCopy = name.parents; // ok in theory the parents could get modified in the for loop, this wouldn't be helpful so I'll keep a copy of the reference to use in case name.parents gets switched out
+        for (Name parent : parentsRefCopy) { // should be the same as a for int i; i < parentsRefCopy.length; i++
+            if (parent == null) { // having fixed a bug this should be rare now. Typical cause of a null parent would be no_parents in MySQL being incorrect and too big
+                System.out.println("DATABASE CORRUPTION " + name.getDefaultDisplayName() + " id " + name.getId() + " has a null parent");
+            } else {
+                if (allParents.add(parent)) { // the function was moved in here to access this array directly. Externally it would need to be wrapped in an unmodifiable List. Means garbage!
+                    findAllParents(parent, allParents);
                 }
             }
         }
     }
 
     // as above being made static in here due to performance
+    // used when permuting - for element we want to find a parent it has (possibly up the chain) in top set. So if we had a shop and we did member name with that and "All Counties" we'd hope to find the county the shop was in
     private static AtomicInteger memberNameCount = new AtomicInteger(0);
 
     public static Name memberName(Name element, Name topSet) {
@@ -402,7 +399,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 if (name.childrenAsSet != null) {
                     namesFound.addAll(name.childrenAsSet);
                 } else if (name.children.length > 0) {
-                    //noinspection ManualArrayToCollectionCopy, surpressing as I believe this is a little more efficient in terms of not instantiating an Iterator
+                    //IntelliJ recommends Collections.addAll(namesFound, name.children); instead. I think it's not quite as efficient
                     for (int i = 0; i < name.children.length; i++) {
                         namesFound.add(name.children[i]);
                     }
@@ -416,6 +413,7 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     // to support negative levels on children clause, level is seen as parent level, same as above but moving in the opposite direction
+    // more simple as parents are just an array, no parentsAsSet currently
     // Used by find parents at level, this is hammered, efficiency is important
     public static void addParentNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
         addNamesCount.incrementAndGet();
@@ -447,7 +445,8 @@ public final class Name extends AzquoMemoryDBEntity {
         findATopParentCount.incrementAndGet();
         if (hasParents()) {
             Name parent = parents[0];
-            while (parent != null) { // can this ever be null? I'd say it shouldn't be. Logic works fine though.
+            // todo check with WFC - are we using local??? also zap this null check
+            while (parent != null) {
                 if (parent.hasParents() && parent.getAttribute(StringLiterals.LOCAL) == null) {
                     parent = parent.parents[0];
                 } else {
@@ -484,7 +483,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private void findAllChildren(Name name, final Set<Name> allChildren) {
         finaAllChildrenCount.incrementAndGet();
-        // similar to optimisation for get all parents, this potentially could cause a concurrency problem if the array were shrunk by another thread, I don't think this a concern in the context it's used
+        // similar to optimisation for get all parents
         // and we'll know if we look at the log. If this happened a local reference to the array should sort it, save the pointer garbage for the mo
         if (name.childrenAsSet != null) {
             for (Name child : name.childrenAsSet) { // as mentioned above I'll allow this kind of access in here
@@ -493,9 +492,10 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
         } else if (name.children.length > 0) {
-            for (int i = 0; i < name.children.length; i++) {
-                if (allChildren.add(name.children[i])) {
-                    findAllChildren(name.children[i], allChildren);
+            Name[] childrenRefCopy = children; // in case it gets switched out half way through
+            for (Name aChildrenRefCopy : childrenRefCopy) {
+                if (allChildren.add(aChildrenRefCopy)) {
+                    findAllChildren(aChildrenRefCopy, allChildren);
                 }
             }
         }
@@ -550,8 +550,10 @@ public final class Name extends AzquoMemoryDBEntity {
                         if (child.valuesAsSet != null) {
                             localReference.addAll(child.valuesAsSet);
                         } else if (child.values.length > 0) {
-                            for (i = 0; i < child.values.length; i++) {
-                                localReference.add(child.values[i]);
+                            Value[] refCopy = child.values; // in case values is swapped out while adding
+                            // Intellij wants to change this I think it's a bit more efficient as it is, might look into this
+                            for (Value v : refCopy) {
+                                localReference.add(v);
                             }
                         }
                     }
@@ -619,12 +621,11 @@ public final class Name extends AzquoMemoryDBEntity {
         don't keep reassigning "as" and clearing the caches when the collection is the same */
         if (children.size() != existingChildren.size() || !children.containsAll(existingChildren)) {
             for (Name oldChild : this.getChildren()) {
-                removeFromChildrenWillBePersisted(oldChild, false); // no cache clear, will do it in a mo!
+                removeFromChildrenWillBePersistedNoCacheClear(oldChild);
             }
+            // there was a child null check here, not keen on that
             for (Name child : children) {
-                if (child != null) {
-                    addChildWillBePersisted(child, false); // no cache clear, will do it in a mo!
-                }
+                removeFromChildrenWillBePersistedNoCacheClear(child);
             }
             clearChildrenCaches();
             //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
@@ -637,9 +638,6 @@ public final class Name extends AzquoMemoryDBEntity {
         addChildWillBePersistedCount.incrementAndGet();
         addChildWillBePersisted(child, true);
     }
-
-    // with position, will just add if none passed note : this sees position as starting at 1!
-    // note : modified to do nothing if the name is in the set. No changing of position.
 
     private static AtomicInteger addChildWillBePersisted3Count = new AtomicInteger(0);
 
@@ -699,12 +697,14 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public void removeFromChildrenWillBePersisted(Name name) throws Exception {
         removeFromChildrenWillBePersistedCount.incrementAndGet();
-        removeFromChildrenWillBePersisted(name, true);
+        removeFromChildrenWillBePersistedNoCacheClear(name);
+        clearChildrenCaches();
+        //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
     }
 
     private static AtomicInteger removeFromChildrenWillBePersisted2Count = new AtomicInteger(0);
 
-    private void removeFromChildrenWillBePersisted(Name name, boolean clearCache) throws Exception {
+    private void removeFromChildrenWillBePersistedNoCacheClear(Name name) throws Exception {
         removeFromChildrenWillBePersisted2Count.incrementAndGet();
         checkDatabaseMatches(name);// even if not needed throw the exception!
         // maybe could narrow this a little?
@@ -718,10 +718,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
                 setNeedsPersisting();
             }
-        }
-        if (clearCache) {
-            clearChildrenCaches();
-            //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
         }
     }
 
@@ -753,8 +749,7 @@ public final class Name extends AzquoMemoryDBEntity {
             attributeValue = attributeValue.replace(StringLiterals.ATTRIBUTEDIVIDER, "");
         }
         attributeName = attributeName.trim().toUpperCase(); // I think this is the only point at which attributes are created thus if it's uppercased here we should not need to check anywhere else
-        /* important, manage persistence, allowed name rules, db look ups only care about ones in this set
-         code adapted from map based code to lists assume nameAttributes reference only set in code synchronized in these three functions and constructors*/
+        /* code adapted from map based code to lists assume nameAttributes reference only set in code synchronized in these three functions and constructors*/
         List<String> attributeKeys = new ArrayList<>(nameAttributes.getAttributeKeys());
         List<String> attributeValues = new ArrayList<>(nameAttributes.getAttributeValues());
 
@@ -791,7 +786,6 @@ public final class Name extends AzquoMemoryDBEntity {
         }
         nameAttributes = new NameAttributes(attributeKeys, attributeValues);
         // now deal with the DB maps!
-        // ok here I did say addNameToAttributeNameMap but that is inefficient, it uses every attribute, we've only changed one
         getAzquoMemoryDB().getIndex().setAttributeForNameInAttributeNameMap(attributeName, attributeValue, this);
         setNeedsPersisting();
     }
@@ -830,49 +824,46 @@ public final class Name extends AzquoMemoryDBEntity {
         findParentAttributesCount.incrementAndGet();
         attributeName = attributeName.trim().toUpperCase();
         for (Name parent : child.parents) {
-            if (parent == null) {
-                System.out.println("null parent on " + child.getDefaultDisplayName());
-            } else {
-                if (!checked.contains(parent)) {
-                    checked.add(parent);
-                    // ok, check for the parent actually matching the display name, here we need to do a hack supporting the member of
-                    if (attributeName.contains(StringLiterals.MEMBEROF)) { // hacky doing this here but the alternative is bodging an AzquoMemoryDBConnection for NameService. Lesser of two evils.
-                        String checkName = attributeName.substring(attributeName.indexOf(StringLiterals.MEMBEROF) + StringLiterals.MEMBEROF.length());
-                        String parentName = attributeName.substring(0, attributeName.indexOf(StringLiterals.MEMBEROF));
-                        if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(checkName)) { // ok a candidate!
-                            // now check the parents to see if it's correct
-                            for (Name parentParent : parent.getParents()) { // yes parent parent a bit hacky, we're looking to qualify the parent. getParents not idea for garbage but I assume this will NOT be called that often!
-                                if (parentParent.getDefaultDisplayName().equalsIgnoreCase(parentName)) {
-                                    if (level > 1) {
-                                        //check that there is not a direct connection.
-                                        Set<Name> directConnection = new HashSet<>(origName.getParents());
-                                        directConnection.retainAll(parent.getChildren());
-                                        if (directConnection.size() > 0) {
-                                            return directConnection.iterator().next().getDefaultDisplayName();
-                                        }
+            if (!checked.contains(parent)) {
+                checked.add(parent);
+                // ok, check for the parent actually matching the display name, here we need to do a hack supporting the member of
+                if (attributeName.contains(StringLiterals.MEMBEROF)) { // hacky doing this here but the alternative is bodging an AzquoMemoryDBConnection for NameService. Lesser of two evils.
+                    String checkName = attributeName.substring(attributeName.indexOf(StringLiterals.MEMBEROF) + StringLiterals.MEMBEROF.length());
+                    String parentName = attributeName.substring(0, attributeName.indexOf(StringLiterals.MEMBEROF));
+                    if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(checkName)) { // ok a candidate!
+                        // now check the parents to see if it's correct
+                        for (Name parentParent : parent.getParents()) { // yes parent parent a bit hacky, we're looking to qualify the parent. getParents not idea for garbage but I assume this will NOT be called that often!
+                            if (parentParent.getDefaultDisplayName().equalsIgnoreCase(parentName)) {
+                                if (level > 1) {
+                                    //check that there is not a direct connection.
+                                    // EFC comment - this is the attribute as names thing so if we ask for Azquo.TOWN and azquo is in Ludlow which is in Town then we return Ludlow.
+                                    // I understand this logic but it's a classic thing that might not be documented and perhaps the code needs checking for perfoamnce issues
+                                    Set<Name> directConnection = new HashSet<>(origName.getParents());
+                                    directConnection.retainAll(parent.getChildren());
+                                    if (directConnection.size() > 0) {
+                                        return directConnection.iterator().next().getDefaultDisplayName();
                                     }
-                                    return child.getDefaultDisplayName();
                                 }
+                                return child.getDefaultDisplayName();
                             }
                         }
-                    } else { // normal
-                        if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
-                            if (level > 1) {
-                                //check that there is not a direct connection.
-                                Set<Name> directConnection = new HashSet<>(origName.getParents());
-                                directConnection.retainAll(parent.getChildren());
-                                if (directConnection.size() > 0) {
-                                    return directConnection.iterator().next().getDefaultDisplayName();
-                                }
+                    }
+                } else { // normal
+                    if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
+                        if (level > 1) {
+                            //check that there is not a direct connection.
+                            Set<Name> directConnection = new HashSet<>(origName.getParents());
+                            directConnection.retainAll(parent.getChildren());
+                            if (directConnection.size() > 0) {
+                                return directConnection.iterator().next().getDefaultDisplayName();
                             }
-                            return child.getDefaultDisplayName();
                         }
+                        return child.getDefaultDisplayName();
                     }
-
-                    String attribute = parent.getAttribute(attributeName, true, checked, origName, level + 1); // no parent check first time
-                    if (attribute != null) {
-                        return attribute;
-                    }
+                }
+                String attribute = parent.getAttribute(attributeName, true, checked, origName, level + 1); // no parent check first time
+                if (attribute != null) {
+                    return attribute;
                 }
             }
         }
@@ -891,7 +882,6 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger getAttribute2Count = new AtomicInteger(0);
 
     public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked) {
-
         return getAttribute(attributeName, parentCheck, checked, this, 0);
     }
 
@@ -935,7 +925,7 @@ public final class Name extends AzquoMemoryDBEntity {
         try {
             if (childrenAsSet != null) {
                 // theoretical possibility of size changing between allocate and creating the byte array
-                // my initial method to sort this will be to catch the exception and try again. TODO
+                // my initial method to sort this will be to catch the exception and try again.
                 ByteBuffer buffer = ByteBuffer.allocate(childrenAsSet.size() * 4);
                 for (Name name : childrenAsSet) {
                     buffer.putInt(name.getId());
@@ -997,8 +987,11 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         } else {
             //noinspection ForLoopReplaceableByForEach, surpressing as I believe this is a little more efficient in terms of not instantiating an Iterator
-            for (int i = 0; i < children.length; i++) { // directly hitting the array could cause a problem if it were reassigned while this happened but here it should be fine. Again intellij wants an API call but I'm sceptical since this is hammered
-                children[i].addToParents(this, true);
+            // directly hitting the array could cause a problem if it were reassigned while this happened but here it should be fine,
+            // loading doesn't alter the array lengths, they're set in preparation.
+            // simpliefied to foreach, should be fine
+            for (Name aChildren : children) {
+                aChildren.addToParents(this, true);
             }
         }
     }
@@ -1018,7 +1011,7 @@ public final class Name extends AzquoMemoryDBEntity {
             parents = getParents();
             // the basics are done here in the synchronized block
             getAzquoMemoryDB().removeNameFromDb(this);
-            needsDeleting = true;
+            setNeedsDeleting();
             setNeedsPersisting();
             // remove children - this is using the same lock so do it in here
             for (Name child : getChildren()) {

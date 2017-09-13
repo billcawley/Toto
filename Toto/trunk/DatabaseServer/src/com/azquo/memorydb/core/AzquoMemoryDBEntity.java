@@ -7,12 +7,12 @@ import java.util.Set;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created with IntelliJ IDEA.
  * User: cawley
  * Date: 17/10/13
  * Time: 09:23
- *
+ * <p>
  * OK with the new in memory DB thing these objects form the in memory database - it would be awkward to make them immutable
  * as I'd kind of like to so instead we want to make it so that it's very clear that modification after creation will flag them to be persisted.
  * Also, these objects act as data objects hence each object SHOULD only exist in context of a azquo memory db, code here is designed to enforce this
@@ -20,7 +20,7 @@ import java.util.Set;
  * I think I may even go so far as actually holding the object reference to the database as opposed to a database id.
  * If there is a way I don't yet know about for a constructor to only be called by another class this could be simplified
  * So far have seen no performance hits from constraining objects by DB
- *
+ * <p>
  * A small note - with overridden functions it's possible that virtual function calling, that is to say functions called from this superclass that have to be worked out at runtime,
  * MIGHT be a performance problem but I've not seen it so far. I was made aware of this in a JVM talk.
  */
@@ -34,10 +34,10 @@ public abstract class AzquoMemoryDBEntity {
     private final AzquoMemoryDB azquoMemoryDB;
     // final id, can only be set in the constructor, we like that! Note I'm limiting to 2 billion entities total per database. Not a problem right now.
     private final int id;
-    // it's a new object, this is private as all dealt with here
+    // it's a new object, this is private as all dealt with here. Needsinserting can go from true to false but not the other way around
     private boolean needsInserting;
-    // flag for deletion, to be picked up by the persistence
-    boolean needsDeleting;
+    // flag for deletion, to be picked up by the persistence, can go from false to true but not the other way around
+    private boolean needsDeleting;
 
     //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
     AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id) throws Exception {
@@ -64,7 +64,7 @@ public abstract class AzquoMemoryDBEntity {
     }
 
     // ok, a class that can json serialize needs to override this, not sure if this is best practice but it seems to reduce the amount of code. Otherwise could be a few extra interfaces.
-    protected String getAsJson(){
+    protected String getAsJson() {
         return null;
     }
 
@@ -115,7 +115,8 @@ public abstract class AzquoMemoryDBEntity {
         }
     }
 
-    void setAsPersisted(){
+    // now NOT overidden, just the inserting flag
+    final void setNeedsInsertingFalse() {
         needsInserting = false;
     }
 
@@ -129,6 +130,11 @@ public abstract class AzquoMemoryDBEntity {
     // public for the DAOs
     public final boolean getNeedsDeleting() {
         return needsDeleting;
+    }
+
+    // protect in here which way the flag can go
+    final void setNeedsDeleting() {
+        needsDeleting = true;
     }
 
 }

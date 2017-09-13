@@ -18,13 +18,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Extracted from AzquoMemoryDB by edward on 29/09/16.
  * <p>
  * This class is responsible for loading an saving the AzquoMemoryDB. Currently MySQL is the only form of persistence.
- *
+ * <p>
  * I'm a little bothered about memory visibility of the
  * populated memory db but breaking the loading off into this class does't affect the logic as it was before or which thread it was running in.
  * Persist sets are using Java concurrency classes, that will be fine, it's population of names for example that might be a concern.
- *
+ * <p>
  * The issue is object publication - I think all is well or certainly no worse than before factoring this off.
- *
+ * <p>
  * As mentioned in AzquoMemoryDB since all Names have to reference the instance of AzquoMemoryDB then to stop this escaping from the constructor one would
  * either need to assign the AzquoMemory dbs later or somehow not put a reference in the entities which I don't think is practical.
  */
@@ -113,11 +113,12 @@ class AzquoMemoryDBTransport {
 
         @Override
         public Void call() {
-            List<Name> names = NameDAO.findForMinMaxId(memDB, minId, maxId);
-            for (Name name : names) {// bit of an overhead just to get the max id? I guess no concern - zapping the lists would save garbage but
+            List<Name> names = NameDAO.findForMinMaxId(memDB, minId, maxId); // internally this will be populating the names into the database
+            for (Name name : names) {// bit of an overhead just to get the max id?I guess no concern -
+                // zapping the lists would save garbage but noth bothered for the mo and I'd need to change findForMinMaxId
+                // could save this if persistence saved a max id. A thought.
                 azquoMemoryDB.setNextId(name.getId());
             }
-            // this was only when min id % 100_000, not sure why . . .
             loadTracker.addAndGet(names.size());
             if (minId % 1_000_000 == 0) {
                 logInSessionLogAndSystem("loaded " + loadTracker.get());
@@ -145,9 +146,7 @@ class AzquoMemoryDBTransport {
             for (Value value : values) {// bit of an overhead just to get the max id? I guess no concern.
                 azquoMemoryDB.setNextId(value.getId());
             }
-            if (minId % 100_000 == 0) {
-                loadTracker.addAndGet(values.size());
-            }
+            loadTracker.addAndGet(values.size());
             if (minId % 1_000_000 == 0) {
                 logInSessionLogAndSystem("loaded " + loadTracker.get());
             }
@@ -182,6 +181,7 @@ class AzquoMemoryDBTransport {
     }
 
     // should only be called in the memory db constructor, is there a way to enforce this?
+    // It should be noted that a fair amount of effort has been put into optimising this, consider carefully before making changes
     void loadData(boolean memoryTrack) {
         ValueDAO.createValueHistoryTableIfItDoesntExist(persistenceName); // should get rid of this at some point!
         long startTime = System.currentTimeMillis();
@@ -200,7 +200,7 @@ class AzquoMemoryDBTransport {
         try {
                 /*
                 Load order is important as value and name use provenance and value uses names. Names uses itself (child/parents)
-                hence all names need initialisation finished after the id map is sorted
+                hence all names need initialisation (linking) finished after the id map is sorted
                 This is why when multi threading we wait util a type of entity is fully loaded before moving onto the next
                 Atomic integers to pass through to the multi threaded code for logging, tracking numbers loaded
                 */
@@ -208,7 +208,7 @@ class AzquoMemoryDBTransport {
             AtomicInteger namesLoaded = new AtomicInteger();
             AtomicInteger valuesLoaded = new AtomicInteger();
             AtomicInteger jsonRecordsLoaded = new AtomicInteger();
-            final int step = 100_000; // not so much step now as id range given how we're now querying mysql. Cutting down to 100,000 to reduce the chance of SQL errors
+            final int step = 100_000; // not so much step now as id range given how we're now querying mysql. Cutting down to 100,000 to reduce the chance of SQL errors (buffer verflow on big query)
             marker = System.currentTimeMillis();
             // create thread pool, rack up the loading tasks and wait for it to finish. Repeat for name and values.
             // going to set up for multiple json persisted entities even if it's only provenance for the mo
@@ -334,6 +334,9 @@ class AzquoMemoryDBTransport {
         valuesToPersist.add(value);
     }
 
+    /* now, this is only called by the AzquoMemoryDB and is synchronized against that object so two can't run conncurrently
+    BUT at the moment I'm allowing the database to be modified while persisting, this function should be robust to that
+     */
     void persistDatabase() {
         System.out.println("PERSIST STARTING");
         // ok first do the json bits, currently this is just provenance, may well be others
@@ -343,21 +346,28 @@ class AzquoMemoryDBTransport {
                 // multi thread this chunk? It can slow things down a little . . .
                 System.out.println("Json entities to put in " + tableName + " : " + entities.size());
                 List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
-                for (AzquoMemoryDBEntity entity : new ArrayList<>(entities)) { // we're taking a copy of the set before running through it. Copy perhaps expensive but consistency is important
+                // new logic, use an iterator, I don't see why not? ConcurrentHashMap should handle changes behind the scenes effectively.
+                // if more are added in the background this is fine, persist needs to be started again which it should be anyway by whatever logic was modifying the object
+                Iterator<AzquoMemoryDBEntity> it = entities.iterator();
+                while (it.hasNext()) {
+                    AzquoMemoryDBEntity entity = it.next();
+                    /* take off the source immediately - since the access to a set backed by ConcurrentHashMap remove/add for this entity is atomic
+                    * So in theory, yes there could be an entity stored in an inconsistent state if it's changing while being stored (during getAsJson for example) but it will be put back
+                    * into the entities set and stored again. */
+                    it.remove();
                     JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
+                    // this could be modified outside, a concern? If an entity is deleted there is no way to undelete - it would just be zapped twice.
                     if (entity.getNeedsDeleting()) {
                         state = JsonRecordTransport.State.DELETE;
                     }
+                    // two of persistDatabase will not be running at the same time so we can't
+                    // somehow get needsInserting Set to false when it shouldn't be which could cause an false store (update a record that doens't exist)
+                    // that is to say : the only thing that modifies needsInserting is entity.setNeedsInsertingFalse() as below.
                     if (entity.getNeedsInserting()) {
                         state = JsonRecordTransport.State.INSERT;
                     }
-                    /* ok we do this before setting to save so we don't get a state for save, state changed, then set as persisted (hence not allowing for latest changes)
-                        the multi threaded handling of sets to persist is via concurrent hash map, hence ordering which is important here should be right I hope. The only concern is for the same
-                        element being removed being added back into the map and I think the internal locking (via striping?) should deal with this*/
-                    entity.setAsPersisted();
-                    // used to be done in the above line by proxying back through AzquoMemoryDb. I see little point in this, the "to persist" sets are held in here.
-                    entities.remove(entity);
-                    recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state));
+                    entity.setNeedsInsertingFalse();
+                    recordsToStore.add(new JsonRecordTransport(entity.getId(), entity.getAsJson(), state)); // getAsJson means the state at that time. If it changes afer it will have been re added and stored again
                 }
                 // and end here
                 try {
@@ -370,31 +380,35 @@ class AzquoMemoryDBTransport {
         }
         // todo re-examine given new patterns. can genericize? As in pass the DAOs around? Maybe not as they're typed . . .
         System.out.println("name store : " + namesToPersist.size());
-        // I think here the copy happens to be defensive, there should be no missed changes or rather entities flagged as persisted that need to be persisted (change right after save but before set as persisted)
-        List<Name> namesToStore = new ArrayList<>(namesToPersist); // make a copy before persisting anf removing
-        // Notably removing elements from the set while iterating didn't cause a problem. Anyway copying now.
-        for (Name name : namesToStore) {
-            // note! Doing this changes the inserting flag meaning there may be a bunch of unnecessary deletes. Doesn't break anything but not necessary, need to sort that TODO
-            name.setAsPersisted();
-            // The actual saving of the state happens later. If modified in the mean time a name will be added back onto the set
-            namesToPersist.remove(name);
-        }
+        // make a copy before persisting and removing - defensive in that if an entity is changed during persistence it will be added to the list to be persisted again
+        // Also this list will be passed through a few times and after removal so it makes sense (not making a copy consisting of JsonRecordTransports like above)
+        List<Name> namesToStore = new ArrayList<>(namesToPersist);
+        // copy then clear
+        namesToPersist.removeAll(namesToStore);
+        // now persist. Notable that internally it doens't actually update it just deleted before inserting if needsInserting is false
+        // but now the surrounding logic is more consistent - if we switch to proper update it should be fine
+        // Note : as with the JSON is IS possible that a name could be stored in an inconsistent state
+        // (the code for getting children ids takes this into account already) but stopping that is not trivial, it will be back on the queue to be stored again.
         try {
             NameDAO.persistNames(persistenceName, namesToStore);
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+        // as noted above this function is the only that calls setNeedsInsertingFalse so it's value in this function (the only place it's read) will be consistent
+        for (Name name : namesToStore) {
+            name.setNeedsInsertingFalse();
+        }
+        // same pattern as with name
         System.out.println("value store : " + valuesToPersist.size());
         List<Value> valuesToStore = new ArrayList<>(valuesToPersist);
-        for (Value value : valuesToPersist) {
-            value.setAsPersisted();
-            valuesToPersist.remove(value);
-        }
+        valuesToPersist.removeAll(valuesToStore);
         try {
             ValueDAO.persistValues(persistenceName, valuesToStore);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+        for (Value value : valuesToPersist) {
+            value.setNeedsInsertingFalse();
         }
         System.out.println("persist done.");
     }

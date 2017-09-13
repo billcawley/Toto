@@ -9,6 +9,8 @@ import com.azquo.spreadsheet.transport.RegionOptions;
  * Created by cawley on 29/06/15.
  * <p>
  * Options against a report data region.
+ *
+ * todo - sort field/function ordering
  */
 public class UserRegionOptions extends StandardEntity {
     private final int userId;
@@ -29,6 +31,7 @@ public class UserRegionOptions extends StandardEntity {
     private boolean noSave;
     private String databaseName;
     private boolean userLocked;
+    private boolean noPermuteTotals;
 
     private String rowLanguage;
     private String columnLanguage;
@@ -37,7 +40,7 @@ public class UserRegionOptions extends StandardEntity {
 
     UserRegionOptions(int id, int userId, int reportId, String region, int hideRows, int hideRowValues, int hideCols, boolean sortable
             , int rowLimit, int columnLimit, String sortRow, boolean sortRowAsc, String sortColumn
-            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, boolean ignoreHeadingErrors) {
+            , boolean sortColumnAsc, int highlightDays, boolean noSave, String databaseName, String rowLanguage, String columnLanguage, boolean userLocked, boolean noPermuteTotals, boolean ignoreHeadingErrors) {
         this.id = id;
         this.userId = userId;
         this.reportId = reportId;
@@ -57,6 +60,7 @@ public class UserRegionOptions extends StandardEntity {
         this.databaseName = databaseName;
         this.rowLanguage = rowLanguage;
         this.columnLanguage = columnLanguage;
+        this.noPermuteTotals = noPermuteTotals;
         this.userLocked = userLocked;
         this.ignoreHeadingErrors = ignoreHeadingErrors;
     }
@@ -95,6 +99,7 @@ public class UserRegionOptions extends StandardEntity {
             this.rowLanguage = getOptionFromSpreadsheetOptions("row language", spreadsheetSource);
             this.columnLanguage = getOptionFromSpreadsheetOptions("column language", spreadsheetSource);
             this.userLocked = spreadsheetSource.toLowerCase().contains("userlocked"); // the get option thing is no good for just an "exists with no value" check, this is the same
+            this.noPermuteTotals = spreadsheetSource.toLowerCase().contains("nopermutetotals");
             this.ignoreHeadingErrors = spreadsheetSource.contains("ignoreheadingerrors");
         } else {
             this.sortable = false;
@@ -260,7 +265,7 @@ public class UserRegionOptions extends StandardEntity {
 
     // As mentioned in RegionOptions,
     public RegionOptions getRegionOptionsForTransport() {
-        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, ignoreHeadingErrors);
+        return new RegionOptions(hideRows, hideRowValues, hideCols, sortable, rowLimit, columnLimit, sortRow, sortRowAsc, sortColumn, sortColumnAsc, highlightDays, rowLanguage, columnLanguage, noSave, databaseName, userLocked, noPermuteTotals, ignoreHeadingErrors);
     }
 
     public String getRowLanguage() {
@@ -293,6 +298,10 @@ public class UserRegionOptions extends StandardEntity {
 
     public void setUserLocked(boolean userLocked) {
         this.userLocked = userLocked;
+    }
+
+    public boolean getNoPermuteTotals() {
+        return noPermuteTotals;
     }
 
     public boolean getIgnoreHeadingErrors() {
