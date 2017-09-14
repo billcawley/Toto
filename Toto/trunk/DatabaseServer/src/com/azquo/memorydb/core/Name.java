@@ -492,7 +492,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
         } else if (name.children.length > 0) {
-            Name[] childrenRefCopy = children; // in case it gets switched out half way through
+            Name[] childrenRefCopy = name.children; // in case it gets switched out half way through
             for (Name aChildrenRefCopy : childrenRefCopy) {
                 if (allChildren.add(aChildrenRefCopy)) {
                     findAllChildren(aChildrenRefCopy, allChildren);
