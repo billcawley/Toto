@@ -480,7 +480,7 @@ But can use a library?
                             doubleValue = sd.evaluate(forSD);
                         }
                         //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                        if (valuesHook.values.size() == 1){//  REMOVED BY WFC to enable MAX and MIN to work on strings..... && !locked.isTrue) {
+                        if (valuesHook.values.size() == 1 && !locked.isTrue) { // locked conditional added back in by Edd, required or counts of one for example won't work.
                             Value value = valuesHook.values.get(0);
                             selected = valueToTestFor == value; // I think this is the right logic - is the value the one drilled down from?
                             stringValue = value.getText();
