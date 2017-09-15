@@ -154,6 +154,10 @@ public class ValueDAO {
                 insertHistoryCount++;
             }
         }
+        //todo - sort values logging, not every 2500
+        //futureBatches.add(executor.submit(new NameDAO.BulkNameInserter(persistenceName, toInsert, counter % 1_000_000 == 0 ? "bulk inserted " + counter + " remaining to add " + insertCount : null)));
+
+
         List<Future> futureBatches = new ArrayList<>();
         for (Value value : values) {
             if (!value.getNeedsDeleting()) { // then we insert, either it's new or was updated hence deleted ready for reinsertion

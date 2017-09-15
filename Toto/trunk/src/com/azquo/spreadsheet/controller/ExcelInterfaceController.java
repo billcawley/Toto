@@ -86,13 +86,14 @@ public class ExcelInterfaceController {
                     // todo, encode the report id? Do we care?
                     response.addHeader("Content-Disposition", "attachment; filename=\"" + onlineReport.getReportName() + ExcelController.SESSIONMARKER + sessionId + ExcelController.SESSIONMARKER + onlineReport.getId() + extension + "\""); // doenbs't need url encoding??
                     OutputStream out = response.getOutputStream();
-                    FileInputStream in = new FileInputStream(bookPath);
-                    byte[] buffer = new byte[4096];
-                    int length;
-                    while ((length = in.read(buffer)) > 0) {
-                        out.write(buffer, 0, length);
+                    try (FileInputStream in = new FileInputStream(bookPath)) {
+                        byte[] buffer = new byte[4096];
+                        int length;
+                        while ((length = in.read(buffer)) > 0) {
+                            out.write(buffer, 0, length);
+                        }
+                        in.close();
                     }
-                    in.close();
                     out.flush();
                 }
             }

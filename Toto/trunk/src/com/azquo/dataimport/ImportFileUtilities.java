@@ -52,12 +52,13 @@ class ImportFileUtilities {
                     newFile.mkdirs();
                 } else {
                     toReturn.add(newFile);
-                    FileOutputStream fos = new FileOutputStream(newFile);
-                    int len;
-                    while ((len = zis.read(buffer)) > 0) {
-                        fos.write(buffer, 0, len);
+                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, len);
+                        }
+                        fos.close();
                     }
-                    fos.close();
                 }
                 ze = zis.getNextEntry();
             }

@@ -431,11 +431,12 @@ public class ExcelController {
         String fileName = data.getOriginalFilename();
         // always move uplaoded files now, they'll need to be transferred to the DB server after code split
         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // stop overwriting with successive uploads
-        FileOutputStream fos = new FileOutputStream(moved);
-        byte[] byteArray = data.getBytes();
-        String s = new String(byteArray);
-        fos.write(parseBase64Binary(s));
-        fos.close();
+        try (FileOutputStream fos = new FileOutputStream(moved)) {
+            byte[] byteArray = data.getBytes();
+            String s = new String(byteArray);
+            fos.write(parseBase64Binary(s));
+            fos.close();
+        }
         // need to add in code similar to report loading to give feedback on imports
         try {
             List<String> languages = new ArrayList<>(loggedInUser.getLanguages());

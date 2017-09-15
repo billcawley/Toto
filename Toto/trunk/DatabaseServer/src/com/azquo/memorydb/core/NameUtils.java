@@ -54,17 +54,38 @@ public class NameUtils {
             return StringLiterals.QUOTE + name.getDefaultDisplayName() + StringLiterals.QUOTE;
         }
         Collection<Name> parents = name.getParents();
-        StringBuilder qualified = new StringBuilder(name.getDefaultDisplayName());
+        // ignore where there's no default display name
+        StringBuilder qualified = new StringBuilder(name.getDefaultDisplayName() != null ? name.getDefaultDisplayName() : "");
         // IntelliJ suggested StringBuilder with .insert, I didn't know about that before :)
         while (!parents.isEmpty()) {
             Name parent = parents.iterator().next();
-            qualified.insert(0, parent.getDefaultDisplayName() + StringLiterals.MEMBEROF);
+            if (parent.getDefaultDisplayName() != null){
+                if (qualified.length() == 0){
+                    qualified.append(parent.getDefaultDisplayName());
+                } else {
+                    qualified.insert(0, parent.getDefaultDisplayName() + StringLiterals.MEMBEROF);
+                }
+            }
             parents = parent.getParents();
         }
-        qualified = new StringBuilder(qualified.toString().replace(StringLiterals.MEMBEROF + "null", ""));//deal with user-specific names
         return StringLiterals.QUOTE + qualified.toString() + StringLiterals.QUOTE;
     }
 
+/*    public static String getFullyQualifiedDefaultDisplayName(Name name) {
+        if (!name.hasParents()) {
+            return StringLiterals.QUOTE + name.getDefaultDisplayName() + StringLiterals.QUOTE;
+        }
+        Collection<Name> parents = name.getParents();
+        String qualified = name.getDefaultDisplayName();
+        while (!parents.isEmpty()) {
+            Name parent = parents.iterator().next();
+            qualified = parent.getDefaultDisplayName() + StringLiterals.MEMBEROF + qualified;
+            parents = parent.getParents();
+        }
+        qualified = qualified.replace(StringLiterals.MEMBEROF + "null","");//deal with user-specific names
+        return StringLiterals.QUOTE + qualified + StringLiterals.QUOTE;
+    }
+*/
     static void clearAtomicIntegerCounters(AtomicInteger... args){
         for (AtomicInteger counter : args){
             counter.set(0);

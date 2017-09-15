@@ -140,6 +140,13 @@ public final class Name extends AzquoMemoryDBEntity {
         return nameAttributes.getAttribute(Constants.DEFAULT_DISPLAY_NAME);
     }
 
+    private static AtomicInteger hasDefaultDisplayNameCount = new AtomicInteger(0);
+
+    public boolean hasDefaultDisplayName() {
+        hasDefaultDisplayNameCount.incrementAndGet();
+        return nameAttributes.hasAttribute(Constants.DEFAULT_DISPLAY_NAME);
+    }
+
     // provenance immutable. If it were not then would need to clone
 
     public Provenance getProvenance() {
@@ -493,9 +500,9 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         } else if (name.children.length > 0) {
             Name[] childrenRefCopy = name.children; // in case it gets switched out half way through
-            for (Name aChildrenRefCopy : childrenRefCopy) {
-                if (allChildren.add(aChildrenRefCopy)) {
-                    findAllChildren(aChildrenRefCopy, allChildren);
+            for (Name child: childrenRefCopy) {
+                if (allChildren.add(child)) {
+                    findAllChildren(child, allChildren);
                 }
             }
         }
@@ -625,7 +632,7 @@ public final class Name extends AzquoMemoryDBEntity {
             }
             // there was a child null check here, not keen on that
             for (Name child : children) {
-                removeFromChildrenWillBePersistedNoCacheClear(child);
+                addChildWillBePersisted(child, false); // todo, get rid of the boolean
             }
             clearChildrenCaches();
             //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
@@ -1036,6 +1043,7 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("newNameCount\t\t\t\t" + newNameCount.get());
         System.out.println("newNameCount3\t\t\t\t" + newName3Count.get());
         System.out.println("getDefaultDisplayNameCount\t\t\t\t" + getDefaultDisplayNameCount.get());
+        System.out.println("hasDefaultDisplayNameCount\t\t\t\t" + hasDefaultDisplayNameCount.get());
         System.out.println("getValuesCount\t\t\t\t" + getValuesCount.get());
         System.out.println("addToValuesCount\t\t\t\t" + addToValuesCount.get());
         System.out.println("removeFromValuesCount\t\t\t\t" + removeFromValuesCount.get());
@@ -1077,6 +1085,7 @@ public final class Name extends AzquoMemoryDBEntity {
         newNameCount.set(0);
         newName3Count.set(0);
         getDefaultDisplayNameCount.set(0);
+        hasDefaultDisplayNameCount.set(0);
         getValuesCount.set(0);
         addToValuesCount.set(0);
         removeFromValuesCount.set(0);

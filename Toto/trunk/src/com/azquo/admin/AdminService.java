@@ -14,7 +14,8 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import sun.misc.BASE64Encoder;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -182,12 +183,9 @@ this may now not work at all, perhaps delete?
         String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
            OnlineReport newReport = new OnlineReport(0, LocalDateTime.now(), b.getId(), newUser.getId(), source.getDatabase(), source.getReportName(), source.getFilename(), "", null);
         OnlineReportDAO.store(newReport); // store before or.getFilenameForDisk() or the id will be wrong!
-        String fullPath = SpreadsheetService.getHomeDir() + dbPath + businessDirectory + onlineReportsDir + newReport.getFilenameForDisk();
-        File file = new File(fullPath);
-        file.getParentFile().mkdirs();
-        FileOutputStream out = new FileOutputStream(fullPath);
-        org.apache.commons.io.FileUtils.copyFile(new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + source.getFilenameForDisk()), out);// straight copy of the source
-        out.close();
+        // new java 7 call, much better!
+        Files.copy(Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + source.getFilenameForDisk())
+                , Paths.get(SpreadsheetService.getHomeDir() + dbPath + businessDirectory + onlineReportsDir + newReport.getFilenameForDisk()));
         // do the links after
         return newReport;
     }

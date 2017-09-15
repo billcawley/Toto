@@ -383,8 +383,10 @@ class AzquoMemoryDBTransport {
         // make a copy before persisting and removing - defensive in that if an entity is changed during persistence it will be added to the list to be persisted again
         // Also this list will be passed through a few times and after removal so it makes sense (not making a copy consisting of JsonRecordTransports like above)
         List<Name> namesToStore = new ArrayList<>(namesToPersist);
-        // copy then clear
-        namesToPersist.removeAll(namesToStore);
+        for (Name name : namesToStore) { // faster than removeall, way faster
+            namesToPersist.remove(name);
+        }
+        //namesToPersist.removeAll(namesToStore); NO! it calls contains on the arraylist loads . . .
         // now persist. Notable that internally it doens't actually update it just deleted before inserting if needsInserting is false
         // but now the surrounding logic is more consistent - if we switch to proper update it should be fine
         // Note : as with the JSON is IS possible that a name could be stored in an inconsistent state
@@ -401,7 +403,9 @@ class AzquoMemoryDBTransport {
         // same pattern as with name
         System.out.println("value store : " + valuesToPersist.size());
         List<Value> valuesToStore = new ArrayList<>(valuesToPersist);
-        valuesToPersist.removeAll(valuesToStore);
+        for (Value value : valuesToPersist) {
+            valuesToPersist.remove(value);
+        }
         try {
             ValueDAO.persistValues(persistenceName, valuesToStore);
         } catch (Exception e) {
