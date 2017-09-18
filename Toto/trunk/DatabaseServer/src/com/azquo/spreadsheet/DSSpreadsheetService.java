@@ -555,8 +555,6 @@ public class DSSpreadsheetService {
             return "";
         }
         boolean changed = false;
-        List<String> languages = new ArrayList<>();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
         List<Name> origNames = (List<Name>) parentName.getChildren();
         List<Name> origShownNames = (List<Name>) NameQueryParser.parseQuery(azquoMemoryDBConnection, trimmedHeading);
         boolean needDisplayRows = false;
@@ -599,7 +597,6 @@ public class DSSpreadsheetService {
                 changed = true;
             }
         }
-        int setsize = origNames.size();
         if (origNames.size() != newNames.size()) {
             changed = true;
         } else {
