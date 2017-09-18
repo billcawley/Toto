@@ -404,72 +404,77 @@ public final class ImportService {
             transpose = true;
         }
         String toReturn = "";
-        List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(loggedInUser.getDatabase().getId());
-        for (OnlineReport report:reports){
-            String cell = report.getIdentityCell();
-            if (cell!=null && cell.length() > 0){
-                int row = Integer.parseInt(cell.substring(1)) - 1;
-                int col = cell.charAt(0) - 65;
-                if (ImportFileUtilities.getCellValue(sheet,row, col).getSecond().equals(report.getReportName())){
-                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + report.getFilenameForDisk();
-                    final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                    book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
-                    book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
-                    book.getInternalBook().setAttribute(OnlineController.REPORT_ID, report.getId());
-                    Sheet template = book.getSheetAt(0);
-                    //FIRST  glean information from range names
-                    List<SName> namesForTemplate = BookUtils.getNamesForSheet(template);
-                    List<SName> columnHeadings = new ArrayList<>();
-                    for (SName name:namesForTemplate) {
-                        if (name.getRefersToCellRegion().getRowCount() == 1 && name.getRefersToCellRegion().getColumnCount() == 1) {
-                            int rowNo = name.getRefersToCellRegion().getRow();
-                            int colNo = name.getRefersToCellRegion().getColumn();
-                            knownValues.put(name.getName(), ImportFileUtilities.getCellValue(sheet, rowNo, colNo).getSecond());
-                        }
-                    }
-                    //now copy across the column headings in full
-                    for (SName name:namesForTemplate) {
-
-                        if (name.getName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
-                            SName dataRegion = getNameByName(ReportRenderer.AZDATAREGION + name.getName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()),template);
-                            if (dataRegion!=null){
-                                File temp = File.createTempFile(tempFileName, ".csv");
-                                String tempPath = temp.getPath();
-                                temp.deleteOnExit();
-                                //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
-                                FileOutputStream fos = new FileOutputStream(tempPath);
-                                CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
-                                csvW.setUseTextQualifier(false);
-                                rangeToCSV(template,name.getRefersToCellRegion(),knownValues,csvW);
-                                rangeToCSV(sheet,dataRegion.getRefersToCellRegion(),null, csvW);
-                                csvW.close();
-                                fos.close();
-                                toReturn += readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, attributeNames, persistAfter, true);
-                                temp.delete();
-
+        try {
+            List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(loggedInUser.getDatabase().getId());
+            for (OnlineReport report : reports) {
+                String cell = report.getIdentityCell();
+                if (cell != null && cell.length() > 0) {
+                    int row = Integer.parseInt(cell.substring(1)) - 1;
+                    int col = cell.charAt(0) - 65;
+                    if (ImportFileUtilities.getCellValue(sheet, row, col).getSecond().equals(report.getReportName())) {
+                        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + report.getFilenameForDisk();
+                        final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                        book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
+                        book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+                        book.getInternalBook().setAttribute(OnlineController.REPORT_ID, report.getId());
+                        Sheet template = book.getSheetAt(0);
+                        //FIRST  glean information from range names
+                        List<SName> namesForTemplate = BookUtils.getNamesForSheet(template);
+                        List<SName> columnHeadings = new ArrayList<>();
+                        for (SName name : namesForTemplate) {
+                            if (name.getRefersToCellRegion().getRowCount() == 1 && name.getRefersToCellRegion().getColumnCount() == 1) {
+                                int rowNo = name.getRefersToCellRegion().getRow();
+                                int colNo = name.getRefersToCellRegion().getColumn();
+                                knownValues.put(name.getName(), ImportFileUtilities.getCellValue(sheet, rowNo, colNo).getSecond());
                             }
                         }
-                    }
-                    return toReturn;
+                        //now copy across the column headings in full
+                        for (SName name : namesForTemplate) {
 
+                            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
+                                SName dataRegion = getNameByName(ReportRenderer.AZDATAREGION + name.getName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()), template);
+                                if (dataRegion != null) {
+                                    File temp = File.createTempFile(tempFileName, ".csv");
+                                    String tempPath = temp.getPath();
+                                    temp.deleteOnExit();
+                                    //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
+                                    FileOutputStream fos = new FileOutputStream(tempPath);
+                                    CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
+                                    csvW.setUseTextQualifier(false);
+                                    rangeToCSV(template, name.getRefersToCellRegion(), knownValues, csvW);
+                                    rangeToCSV(sheet, dataRegion.getRefersToCellRegion(), null, csvW);
+                                    csvW.close();
+                                    fos.close();
+                                    toReturn += readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, attributeNames, persistAfter, true);
+                                    temp.delete();
+
+                                }
+                            }
+                        }
+                        return toReturn;
+
+                    }
                 }
             }
+
+
+
+            File temp = File.createTempFile(tempFileName, ".csv");
+            String tempPath = temp.getPath();
+            temp.deleteOnExit();
+            //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
+            FileOutputStream fos = new FileOutputStream(tempPath);
+            CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
+            csvW.setUseTextQualifier(false);
+            ImportFileUtilities.convertRangeToCSV(sheet, csvW, transpose);
+            csvW.close();
+            fos.close();
+            return readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, attributeNames, persistAfter, true);
+        }catch(Exception e){
+            return e.getMessage()+"\n";
         }
 
-
-
-        File temp = File.createTempFile(tempFileName, ".csv");
-        String tempPath = temp.getPath();
-        temp.deleteOnExit();
-        //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
-        FileOutputStream fos = new FileOutputStream(tempPath);
-        CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
-        csvW.setUseTextQualifier(false);
-        ImportFileUtilities.convertRangeToCSV(sheet, csvW, transpose);
-        csvW.close();
-        fos.close();
-        return readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, attributeNames, persistAfter, true);
-       }
+    }
 
         private static String LOCALIP = "127.0.0.1";
 
