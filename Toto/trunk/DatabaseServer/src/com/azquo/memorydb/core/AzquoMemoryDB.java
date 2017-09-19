@@ -130,6 +130,10 @@ public final class AzquoMemoryDB {
         azquoMemoryDBTransport.loadData(memoryTrack);
         nextId.incrementAndGet(); // bump it up one, the logic later is get and increment;
         needsLoading = false;
+        if (azquoMemoryDBTransport.hasNamesToPersist()){
+            System.out.println("***************** name integrity problems detected/fixed on load, persisting fixes");
+            persistToDataStore();
+        }
     }
 
     boolean getNeedsLoading() {
@@ -269,6 +273,16 @@ public final class AzquoMemoryDB {
         }
     }
 
+    // for DB check on load
+    private static AtomicInteger forceNameNeedsPersistingCount = new AtomicInteger(0);
+
+    void forceNameNeedsPersisting(Name name) {
+        forceNameNeedsPersistingCount.incrementAndGet();
+        azquoMemoryDBTransport.setNameNeedsPersisting(name);
+    }
+
+
+
     private static AtomicInteger setValueNeedsPersistingCount = new AtomicInteger(0);
 
     void setValueNeedsPersisting(Value value) {
@@ -366,6 +380,7 @@ public final class AzquoMemoryDB {
         System.out.println("clearCachesCount\t\t\t\t" + clearCachesCount.get());
         System.out.println("setJsonEntityNeedsPersistingCount\t\t\t\t" + setJsonEntityNeedsPersistingCount.get());
         System.out.println("setNameNeedsPersistingCount\t\t\t\t" + setNameNeedsPersistingCount.get());
+        System.out.println("forceNameNeedsPersistingCount\t\t\t\t" + forceNameNeedsPersistingCount.get());
         System.out.println("setValueNeedsPersistingCount\t\t\t\t" + setValueNeedsPersistingCount.get());
     }
 
@@ -375,6 +390,7 @@ public final class AzquoMemoryDB {
                 clearCachesCount,
                 setJsonEntityNeedsPersistingCount,
                 setNameNeedsPersistingCount,
+                forceNameNeedsPersistingCount,
                 setValueNeedsPersistingCount);
     }
 

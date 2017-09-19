@@ -316,6 +316,50 @@ class AzquoMemoryDBTransport {
         for (Future linkFuture : linkFutures) {
             linkFuture.get(1, TimeUnit.HOURS);
         }
+        int counter = 0;
+        long marker = System.currentTimeMillis();
+        for (Name name : azquoMemoryDB.getAllNames()) {
+            if (name.hasParents() && name.getParents().get(name.getParents().size() - 1) == null){
+                int number = 0;
+                for (Name parent : name.getParents()){
+                    if (parent == null){
+                        break;
+                    }
+                    number++;
+                }
+//                System.out.print("update fast_name set no_parents = " + number + " where id = " + name.getId() + ";     ");
+                System.out.println("parent problem on : " + name.getDefaultDisplayName() +  " space = " + name.getParents().size() + ", number : " + number);
+                counter++;
+                name.parentArrayCheck();
+                azquoMemoryDB.forceNameNeedsPersisting(name);
+                if (counter > 10000){
+                    System.out.println("10k breaking;");
+                    break;
+                }
+            }
+        }
+        for (Name name : azquoMemoryDB.getAllNames()) {
+            if (name.hasValues()){
+                int number = 0;
+                for (Value v : name.getValues()){
+                    if (v != null){
+                        number++;
+                    }
+                }
+                if (number != name.getValues().size()){
+//                    System.out.print("update fast_name set no_values = " + number + " where id = " + name.getId() + ";      ");
+                    System.out.println("value problem on : " + name.getDefaultDisplayName() +  " space = " + name.getValues().size() + ", number : " + number);
+                    name.valueArrayCheck();
+                    azquoMemoryDB.forceNameNeedsPersisting(name);
+                    counter++;
+                    if (counter > 10000){
+                        System.out.println("10k breaking;");
+                        break;
+                    }
+                }
+            }
+        }
+        System.out.println("Name integrity check took " + (System.currentTimeMillis() - marker) + "ms");
     }
 
 
@@ -332,6 +376,10 @@ class AzquoMemoryDBTransport {
 
     void setValueNeedsPersisting(Value value) {
         valuesToPersist.add(value);
+    }
+
+    boolean hasNamesToPersist(){
+        return !namesToPersist.isEmpty();
     }
 
     /* now, this is only called by the AzquoMemoryDB and is synchronized against that object so two can't run conncurrently

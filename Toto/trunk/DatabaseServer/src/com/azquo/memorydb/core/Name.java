@@ -198,6 +198,28 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
+    synchronized void valueArrayCheck() throws Exception {
+        if (valuesAsSet == null){
+            ArrayList<Value> newList = new ArrayList<>();
+            for (Value v : values){
+                if (v != null){
+                    newList.add(v);
+                }
+            }
+            values = newList.toArray(new Value[newList.size()]);
+        }
+    }
+
+    synchronized void parentArrayCheck() throws Exception {
+            ArrayList<Name> newList = new ArrayList<>();
+            for (Name n : parents){
+                if (n != null){
+                    newList.add(n);
+                }
+            }
+            parents = newList.toArray(new Name[newList.size()]);
+    }
+
     // no duplication is while loading, to reduce work
     private static AtomicInteger addToValuesCount = new AtomicInteger(0);
 
@@ -233,7 +255,12 @@ public final class Name extends AzquoMemoryDBEntity {
                     } else { // ok we have to switch a new array in
                         // this is synchronized, I should be able to be simple about this and be safe still
                         // new code to deal with arrays assigned to the correct size on loading
-                        if (databaseIsLoading) { // used to check if the last element in the array was null but really what we're saying is : is the database loading? If so trust that there's an empty array of the correct size waiting
+                        // don't trust no_values, compensate and log
+                        if (values.length != 0 && values[values.length - 1] == null) {
+                            if (!databaseIsLoading){
+                                System.out.println("empty space in values after the database has finished loading - no_values wrong on name id " + getId() + " " + getDefaultDisplayName());
+                                getAzquoMemoryDB().forceNameNeedsPersisting(this);
+                            }
                             // If there's a mismatch and noValues is too small it just won't be added to the list. But if noValues isn't correct things have already gone wrong
                             for (int i = 0; i < values.length; i++) { // being synchronised this should be all ok
                                 if (values[i] == null) {
@@ -242,6 +269,10 @@ public final class Name extends AzquoMemoryDBEntity {
                                 }
                             }
                         } else { // normal modification
+                            if (databaseIsLoading){
+                                System.out.println("while loading ran out of values space - no_values wrong on name id " + getId() + " " + getDefaultDisplayName());
+                                getAzquoMemoryDB().forceNameNeedsPersisting(this);
+                            }
                             Value[] newValuesArray = new Value[values.length + 1];
                             System.arraycopy(values, 0, newValuesArray, 0, values.length); // intellij simplified it to this, should be fine
                             newValuesArray[values.length] = value;
@@ -314,19 +345,31 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger addToParentsCount = new AtomicInteger(0);
 
+    // don't trust no_parents, revert to old style but add logging
     private void addToParents(final Name name, boolean databaseIsLoading) throws Exception {
         addToParentsCount.incrementAndGet();
         synchronized (this) {
-            if (databaseIsLoading) { // now more trusting of databaseIsLoading - it assumes an array of the right size ahs been initialised
-                for (int i = 0; i < parents.length; i++) {
-                    if (parents[i] == null) {
-                        parents[i] = name;
-                        break;
+            if (databaseIsLoading || !Arrays.asList(parents).contains(name)) {
+                if (parents.length != 0 && parents[parents.length - 1] == null) {
+                    if (!databaseIsLoading){
+                        System.out.println("empty space in parents after the database has finished loading - no_parents wrong on name id " + getId() + " " + getDefaultDisplayName());
+                        getAzquoMemoryDB().forceNameNeedsPersisting(this);
                     }
+                    for (int i = 0; i < parents.length; i++) {
+                        if (parents[i] == null) {
+                            parents[i] = name;
+                            break;
+                        }
+                    }
+                } else {
+                    if (databaseIsLoading){
+                        System.out.println("while loading ran out of parents space - no_parents wrong on name id " + getId() + " " + getDefaultDisplayName());
+                        getAzquoMemoryDB().forceNameNeedsPersisting(this);
+                    }
+                    parents = NameUtils.nameArrayAppend(parents, name);
                 }
-            } else if (!Arrays.asList(parents).contains(name)) {
-                parents = NameUtils.nameArrayAppend(parents, name);
-                setNeedsPersisting(); // no point calling setNeedsPersisting outside since we have a simple databaseIsLoading if above
+                // won't of course be used if we're loading . . .
+                setNeedsPersisting();
             }
         }
     }
