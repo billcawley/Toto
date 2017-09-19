@@ -114,7 +114,7 @@ public class DSSpreadsheetService {
 
                 displayDataRow.add(new CellForDisplay(sourceCell.isLocked(), sourceCell.getStringValue(), sourceCell.getDoubleValue(), sourceCell.isHighlighted(), sourceCell.getUnsortedRow(), sourceCell.getUnsortedCol(), ignored, sourceCell.isSelected(), comment, thisValueId));
                 if (regionOptions.lockRequest && lockCheckResult.size() == 0) { // if we're going to lock gather all relevant values, stop gathering if we found data already locked
-                    if (sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null
+                    if (sourceCell.getListOfValuesOrNamesAndAttributeName() != null && sourceCell.getListOfValuesOrNamesAndAttributeName().getValues() != null
                             && !sourceCell.getListOfValuesOrNamesAndAttributeName().getValues().isEmpty()) {
                         toLock.addAll(sourceCell.getListOfValuesOrNamesAndAttributeName().getValues());
                     }
@@ -661,7 +661,8 @@ public class DSSpreadsheetService {
     private static void checkClear(AzquoMemoryDBConnection azquoMemoryDBConnection, List<List<String>> headings) {
         if (headings == null) return;
         for (List<String> headingRow : headings) {
-            for (String heading : headingRow) {
+            for (int i = 0; i < headingRow.size(); i++) {
+                String heading = headingRow.get(i);
                 if (heading != null && heading.startsWith(".") && heading.toLowerCase().endsWith(" clear")) {
                     String att = heading.substring(1, heading.length() - " clear".length() - 1); //remove the initial '.' and ' clear'
                     try {
@@ -669,6 +670,7 @@ public class DSSpreadsheetService {
                         if (name != null) {
                             name.setChildrenWillBePersisted(Collections.emptyList());
                             heading = heading.substring(0, att.length() + 1);//todo  make sure that this does remove the 'clear'
+                            headingRow.set(i, heading);
                         }
                     } catch (Exception e) {
                         //ignore

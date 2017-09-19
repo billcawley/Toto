@@ -49,8 +49,6 @@ public class NameQueryParser {
 
     public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
         parseQueryCount.incrementAndGet();
-        List<String> langs = new ArrayList<>();
-        langs.add(Constants.DEFAULT_DISPLAY_NAME);
         return parseQuery(azquoMemoryDBConnection, setFormula, azquoMemoryDBConnection.getLanguages(), null, false);
     }
 

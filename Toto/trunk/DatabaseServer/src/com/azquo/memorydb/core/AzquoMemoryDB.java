@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
@@ -287,21 +288,18 @@ public final class AzquoMemoryDB {
 
     private volatile AtomicReference<Provenance> mostRecentProvenance = new AtomicReference<>();
 
-    // last modified according to provenance!
-    private final AtomicLong lastModified = new AtomicLong();
-
     void addProvenanceToDb(final Provenance newProvenance) throws Exception {
         newProvenance.checkDatabaseMatches(this);
         // add it to the memory database, this means it's in line for proper persistence (the ID map is considered reference)
         if (provenanceByIdMap.putIfAbsent(newProvenance.getId(), newProvenance) != null) {
             throw new Exception("tried to add a provenance to the database with an existing id!");
         }
-        mostRecentProvenance.getAndUpdate(provenance -> provenance != null && provenance.getTimeStamp().after(newProvenance.getTimeStamp()) ? provenance : newProvenance);
-        lastModified.getAndUpdate(n -> n < newProvenance.getTimeStamp().getTime() ? newProvenance.getTimeStamp().getTime() : n); // think that logic is correct for thread safety
+        mostRecentProvenance.getAndUpdate(provenance -> provenance != null && provenance.getTimeStamp().isAfter(newProvenance.getTimeStamp()) ? provenance : newProvenance);
     }
 
+    // practically speaking could the last provenance ever be null when this is called? I guess be safe.
     public long getLastModifiedTimeStamp() {
-        return lastModified.get();
+        return mostRecentProvenance.get() != null ? mostRecentProvenance.get().getTimeStamp().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() : 0;
     }
 
     public Provenance getMostRecentProvenance() {
@@ -326,10 +324,10 @@ public final class AzquoMemoryDB {
     }
 
     private void removeOldLocks(int minutesAllowed) {
-        for (String user : valueLockTimes.keySet()) {
-            final LocalDateTime lockTime = valueLockTimes.get(user);
+        for (Map.Entry<String, LocalDateTime> userLock : valueLockTimes.entrySet()) {
+            final LocalDateTime lockTime = userLock.getValue();
             if (ChronoUnit.MINUTES.between(lockTime, LocalDateTime.now()) > minutesAllowed) {
-                removeValuesLockForUser(user);
+                removeValuesLockForUser(userLock.getKey());
             }
         }
     }

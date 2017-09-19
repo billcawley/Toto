@@ -1,11 +1,14 @@
 package com.azquo.memorydb.core;
 
+import com.azquo.DateUtils;
 import com.azquo.memorydb.Constants;
 import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.log4j.Logger;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 
 /**
@@ -31,7 +34,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
     static String PERSIST_TABLE = "provenance";
 
     private final String user;
-    private final Date timeStamp; // should I be using local date time or another class?
+    private final LocalDateTime timeStamp; // should I be using local date time or another class?
     private final String method;
     private final String name; // name of the report or upload file? A bit vague!
     private final String context;
@@ -45,7 +48,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
             , final String context) throws Exception {
         super(azquoMemoryDB, 0);
         this.user = user;
-        this.timeStamp = new Date();
+        this.timeStamp = LocalDateTime.now();
         this.method = method;
         this.name = name;
         this.context = context;
@@ -58,7 +61,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
         super(azquoMemoryDB, id);
         JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
         this.user = transport.user;
-        this.timeStamp = transport.timeStamp != null ? transport.timeStamp : new Date(0);
+        this.timeStamp = transport.timeStamp != null ? DateUtils.getLocalDateTimeFromDate(transport.timeStamp) : LocalDateTime.now();
         this.method = transport.method;
         this.name = transport.name;
         this.context = transport.context;
@@ -69,7 +72,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
         return user;
     }
 
-    public Date getTimeStamp() {
+    public LocalDateTime getTimeStamp() {
         return timeStamp;
     }
 
@@ -126,7 +129,7 @@ public final class Provenance extends AzquoMemoryDBEntity {
     @Override
     public String getAsJson() {
         try {
-            return jacksonMapper.writeValueAsString(new JsonTransport(user, timeStamp, method, name, context));
+            return jacksonMapper.writeValueAsString(new JsonTransport(user,  DateUtils.getDateFromLocalDateTime(timeStamp), method, name, context));
         } catch (Exception e) {
             logger.error("can't get a provenance as json", e);
         }

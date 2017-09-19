@@ -36,10 +36,8 @@ public class CommandLineCalls {
 
         // new bit . .
         if (input != null) {
-            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(proc.getOutputStream()));
-            try {
+            try (BufferedWriter out = new BufferedWriter(new OutputStreamWriter(proc.getOutputStream()))) {
                 out.write(input);
-                out.close();
             } catch (IOException io) {
                 System.out.println("Exception at write! " + io.getMessage());
                 return false;

@@ -103,12 +103,12 @@ public class SpreadsheetService {
         UserChoice userChoice = UserChoiceDAO.findForUserIdAndChoice(userId, choiceName);
         if (choiceValue != null && choiceValue.length() > 0) {
             if (userChoice == null) {
-                userChoice = new UserChoice(0, userId, choiceName, choiceValue, new Date());
+                userChoice = new UserChoice(0, userId, choiceName, choiceValue, LocalDateTime.now());
                 UserChoiceDAO.store(userChoice);
             } else {
                 if (!choiceValue.equals(userChoice.getChoiceValue())) {
                     userChoice.setChoiceValue(choiceValue);
-                    userChoice.setTime(new Date());
+                    userChoice.setTime(LocalDateTime.now());
                     UserChoiceDAO.store(userChoice);
                 }
             }

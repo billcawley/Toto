@@ -143,7 +143,7 @@ public class BatchImporter implements Callable<Void> {
                         break; // no point continuing, we found one
                     }
                 }
-                if (!cellOk){
+                if (!cellOk) {
                     return false; // none found break the line
                 }
             }
@@ -346,7 +346,7 @@ public class BatchImporter implements Callable<Void> {
                 if (identityCell.getLineNames() == null) {
                     linesRejected.add(lineNo); // well just mark that the line was no good, should be ok for the moment
                 } else {
-                    for (Name name : identityCell.getLineNames()){
+                    for (Name name : identityCell.getLineNames()) {
                         name.setAttributeWillBePersisted(cell.getImmutableImportHeading().attribute, cell.getLineValue());
                     }
                 }
@@ -421,17 +421,17 @@ public class BatchImporter implements Callable<Void> {
         // nothing in the heading has changed except the split char but we need to detect it here
         // split before checking for quotes etc. IF THE SPLIT CHAR IS IN QUOTES WE DON'T CURRENTLY SUPPORT THAT! e.g. ,
         String[] nameNames;
-        if (cellWithHeading.getImmutableImportHeading().splitChar == null){
+        if (cellWithHeading.getImmutableImportHeading().splitChar == null) {
             nameNames = new String[]{cellWithHeading.getLineValue()};
         } else {
             nameNames = cellWithHeading.getLineValue().split(cellWithHeading.getImmutableImportHeading().splitChar);
         }
         if (cellWithHeading.getLineNames() == null) { // then create it, this will take care of the parents ("child of") while creating
-                //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
-                for (String nameName : nameNames) {
-                    cellWithHeading.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, nameName.trim()
-                            , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(localLanguage, attributeNames)));
-                }
+            //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
+            for (String nameName : nameNames) {
+                cellWithHeading.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, nameName.trim()
+                        , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(localLanguage, attributeNames)));
+            }
         } else { // it existed (created below as child name(s))
             for (Name child : cellWithHeading.getLineNames()) {
                 for (Name parent : cellWithHeading.getImmutableImportHeading().parentNames) { // apparently there can be multiple child ofs, put the name for the line in the appropriate sets, pretty vanilla based off the parents set up
@@ -450,20 +450,21 @@ public class BatchImporter implements Callable<Void> {
             if (childCell.getLineNames() == null) {
                 // child cell needs to support
                 String[] childNames;
-                if (childCell.getImmutableImportHeading().splitChar == null){
+                if (childCell.getImmutableImportHeading().splitChar == null) {
                     childNames = new String[]{childCell.getLineValue()};
                 } else {
                     childNames = childCell.getLineValue().split(childCell.getImmutableImportHeading().splitChar);
                 }
-                for (String childName : childNames){
-                    for (Name thisCellsName : cellWithHeading.getLineNames()){
+                for (String childName : childNames) {
+                    for (Name thisCellsName : cellWithHeading.getLineNames()) {
                         childCell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childName, thisCellsName
                                 , cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(childCell.getImmutableImportHeading().attribute, attributeNames)));
                     }
                 }
             }
+            // TODO SORT THIS OUT!!!!!
             // note! Exclusive can't work if THIS column is multiple names
-            if (cellWithHeading.getLineNames().size() != 1){
+            if (cellWithHeading.getLineNames().size() == 1) {
                 Name parent = cellWithHeading.getLineNames().iterator().next();
                 //the 'parent' above is the current cell name, not its parent
                 // check exclusive to remove the child from some other parents if necessary - this replaces the old "remove from" functionality
@@ -494,7 +495,7 @@ public class BatchImporter implements Callable<Void> {
                       might well have been built using the composite functionality above so it's possible another azquo upload could have jammed "White Poplin Shirt"
                       somewhere under "All Categories" many levels below. */
                     // given that we now have multiple names on a line we run through the child ones checking as necessary
-                    for (Name childCellName : childCell.getLineNames()){
+                    for (Name childCellName : childCell.getLineNames()) {
                         boolean needsAdding = true; // defaults to true
                         for (Name childCellParent : childCellName.getParents()) {
                             if (childCellParent == parent) {
@@ -507,6 +508,10 @@ public class BatchImporter implements Callable<Void> {
                         if (needsAdding) {
                             parent.addChildWillBePersisted(childCellName);
                         }
+                    }
+                } else {
+                    for (Name childCellName : childCell.getLineNames()) {
+                        parent.addChildWillBePersisted(childCellName);
                     }
                 }
             }

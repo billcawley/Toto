@@ -125,9 +125,6 @@ public class DSAdminService {
     public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
         AzquoMemoryDBConnection sourceConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(source);
         AzquoMemoryDBConnection targetConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(target);
-        if (targetConnection == null) {
-            throw new Exception("cannot log in to " + target.getPersistenceName());
-        }
         targetConnection.setProvenance("generic admin", "transfer from", source.getPersistenceName(), "");
         //can't use 'nameService.decodeString as this may have multiple values in each list
         List<Set<Name>> namesToTransfer = NameQueryParser.decodeString(sourceConnection, nameList, readLanguages);

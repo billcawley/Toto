@@ -1,5 +1,6 @@
 package com.azquo.admin.business;
 
+import com.azquo.DateUtils;
 import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -30,13 +31,13 @@ public final class InvoiceSentDAO  {
         toReturn.put(InvoiceDetailsDAO.UNITCOST, invoiceSent.getUnitCost());
         toReturn.put(InvoiceDetailsDAO.PAYMENTTERMS, invoiceSent.getPaymentTerms());
         toReturn.put(InvoiceDetailsDAO.POREFERENCE, invoiceSent.getPoReference());
-        toReturn.put(InvoiceDetailsDAO.INVOICEDATE, Date.from(invoiceSent.getInvoiceDate().atStartOfDay().atZone(ZoneId.systemDefault()).toInstant())); // new date classes and old date ones used by jdbc don't seem to play nice
+        toReturn.put(InvoiceDetailsDAO.INVOICEDATE, DateUtils.getDateFromLocalDateTime(invoiceSent.getInvoiceDate().atStartOfDay())); // new date classes and old date ones used by jdbc don't seem to play nice
         toReturn.put(InvoiceDetailsDAO.INVOICEPERIOD, invoiceSent.getInvoicePeriod());
         toReturn.put(InvoiceDetailsDAO.INVOICENO, invoiceSent.getInvoiceNo());
         toReturn.put(InvoiceDetailsDAO.INVOICEADDRESS, invoiceSent.getInvoiceAddress());
         toReturn.put(InvoiceDetailsDAO.NOVAT, invoiceSent.getNoVat());
         toReturn.put(InvoiceDetailsDAO.SENDTO, invoiceSent.getSendTo());
-        toReturn.put(DATETIMESENT, Date.from(invoiceSent.getDateTimeSent().atZone(ZoneId.systemDefault()).toInstant()));
+        toReturn.put(DATETIMESENT, DateUtils.getDateFromLocalDateTime(invoiceSent.getDateTimeSent()));
         return toReturn;
     }
 
@@ -51,13 +52,13 @@ public final class InvoiceSentDAO  {
                         , rs.getInt(InvoiceDetailsDAO.UNITCOST)
                         , rs.getInt(InvoiceDetailsDAO.PAYMENTTERMS)
                         , rs.getString(InvoiceDetailsDAO.POREFERENCE)
-                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(InvoiceDetailsDAO.INVOICEDATE)).toLocalDate()
+                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(InvoiceDetailsDAO.INVOICEDATE)).toLocalDate()
                         , rs.getString(InvoiceDetailsDAO.INVOICEPERIOD)
                         , rs.getString(InvoiceDetailsDAO.INVOICENO)
                         , rs.getString(InvoiceDetailsDAO.INVOICEADDRESS)
                         , rs.getBoolean(InvoiceDetailsDAO.NOVAT)
                         , rs.getString(InvoiceDetailsDAO.SENDTO)
-                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(InvoiceDetailsDAO.INVOICEDATE))
+                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(InvoiceDetailsDAO.INVOICEDATE))
                 );
             } catch (Exception e) {
                 e.printStackTrace();

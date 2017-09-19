@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.DateUtils;
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
@@ -24,6 +25,9 @@ import org.zkoss.zss.model.*;
 import org.zkoss.zss.ui.Spreadsheet;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -124,7 +128,7 @@ public class ReportService {
         }
     }
 
-    private static final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+    private static final DateTimeFormatter df = DateTimeFormatter.ofPattern ("yyyy-MM-dd");
 
     // make ZK resolve formulae and the, assuming not fast save check for formulae changing data. Finally snap the charts.
     static boolean checkDataChangeAndSnapCharts(LoggedInUser loggedInUser, int reportId, Book book, Sheet sheet, boolean skipSaveCheck, boolean useSavedValuesOnFormulae) {
@@ -169,7 +173,7 @@ public class ReportService {
                                                 }
                                             }
                                             if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
-                                                cellForDisplay.setNewStringValue(df.format(sCell.getDateValue()));//set a string value as our date for saving purposes
+                                                cellForDisplay.setNewStringValue(df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue())));//set a string value as our date for saving purposes
                                             }
                                         } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
                                             if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {

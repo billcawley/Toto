@@ -5,6 +5,8 @@ import com.azquo.TypedPair;
 import java.io.Serializable;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
@@ -21,12 +23,12 @@ public class ProvenanceForDisplay implements Serializable {
     private String method;
     private String name;
     private String context;
-    private final Date date;
+    private final LocalDateTime date;
     // now what can be attached to each provenance in this context?
     private List<TypedPair<Integer, List<String>>> valuesWithIdsAndNames;
     private List<String> names;
 
-    public ProvenanceForDisplay(boolean inSpreadsheet, String user, String method, String name, String context, Date date) {
+    public ProvenanceForDisplay(boolean inSpreadsheet, String user, String method, String name, String context, LocalDateTime date) {
         this.inSpreadsheet = inSpreadsheet;
         this.user = user;
         this.method = method;
@@ -89,7 +91,7 @@ public class ProvenanceForDisplay implements Serializable {
         this.valuesWithIdsAndNames = valuesWithIdsAndNames;
     }
 
-    private final static DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
+    private final static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm");
 
     @Override
     public String toString() {

@@ -1,5 +1,6 @@
 package com.azquo.admin.user;
 
+import com.azquo.DateUtils;
 import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -39,7 +40,7 @@ public class UserDAO {
     public static Map<String, Object> getColumnNameValueMap(final User user) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(StandardDAO.ID, user.getId());
-        toReturn.put(ENDDATE, Date.from(user.getEndDate().atZone(ZoneId.systemDefault()).toInstant()));
+        toReturn.put(ENDDATE, DateUtils.getDateFromLocalDateTime(user.getEndDate()));
         toReturn.put(BUSINESSID, user.getBusinessId());
         toReturn.put(EMAIL, user.getEmail());
         toReturn.put(NAME, user.getName());
@@ -57,7 +58,7 @@ public class UserDAO {
         public User mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 return new User(rs.getInt(StandardDAO.ID)
-                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(ENDDATE))
+                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(ENDDATE))
                         , rs.getInt(BUSINESSID)
                         , rs.getString(EMAIL)
                         , rs.getString(NAME)

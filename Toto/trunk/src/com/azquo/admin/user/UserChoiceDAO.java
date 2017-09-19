@@ -1,11 +1,14 @@
 package com.azquo.admin.user;
 
+import com.azquo.DateUtils;
 import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +38,7 @@ public final class UserChoiceDAO {
         toReturn.put(USERID, ucr.getUserId());
         toReturn.put(CHOICENAME, ucr.getChoiceName());
         toReturn.put(CHOICEVALUE, ucr.getChoiceValue());
-        toReturn.put(TIME, ucr.getTime());
+        toReturn.put(TIME, DateUtils.getDateFromLocalDateTime(ucr.getTime()));
         return toReturn;
     }
 
@@ -48,7 +51,7 @@ public final class UserChoiceDAO {
                         , rs.getInt(USERID)
                         , rs.getString(CHOICENAME)
                         , rs.getString(CHOICEVALUE)
-                        , rs.getDate(TIME));
+                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(TIME)));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

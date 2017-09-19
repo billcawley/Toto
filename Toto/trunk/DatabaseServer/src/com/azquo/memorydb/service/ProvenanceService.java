@@ -23,6 +23,8 @@ import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -97,13 +99,13 @@ public class ProvenanceService {
     // might need to rewrite this and/or check variable names
     // todo make generic for the expression provenance but what should it show???
     private static ProvenanceDetailsForDisplay nameCountProvenance(AzquoCell azquoCell) {
-        String provString = "";
+        StringBuilder provString = new StringBuilder();
         Set<Name> cellNames = new HashSet<>();
         Name nameCountHeading = null;
         for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()) {
             if (rowHeading != null){ // apparently it can be . . . is this a concern? Well NPE is no good, could error maggage on the else if this is a problem
                 if (rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
-                    provString += "namecount(" + rowHeading.getDescription();
+                    provString.append("namecount(").append(rowHeading.getDescription());
                     nameCountHeading = rowHeading.getName();
                 }
                 if (rowHeading.getName() != null) {
@@ -113,7 +115,7 @@ public class ProvenanceService {
         }
         for (DataRegionHeading colHeading : azquoCell.getColumnHeadings()) {
             if (colHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
-                provString += "namecount(" + colHeading.getDescription();
+                provString.append("namecount(").append(colHeading.getDescription());
                 nameCountHeading = colHeading.getName();
                 break;
             }
@@ -122,10 +124,10 @@ public class ProvenanceService {
             }
         }
         if (nameCountHeading != null) {
-            provString = "total" + provString;
+            provString.insert(0, "total");
         }
         Name cellName = cellNames.iterator().next();
-        provString += " * " + cellName.getDefaultDisplayName() + ")";
+        provString.append(" * ").append(cellName.getDefaultDisplayName()).append(")");
 
         Provenance p = cellName.getProvenance();
         final ProvenanceForDisplay provenanceForDisplay = p.getProvenanceForDisplay();
@@ -148,7 +150,7 @@ public class ProvenanceService {
         }
         if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
         node.setHeading(source + " " + method);*/
-        return new ProvenanceDetailsForDisplay(provString,Collections.singletonList(provenanceForDisplay));
+        return new ProvenanceDetailsForDisplay(provString.toString(),Collections.singletonList(provenanceForDisplay));
     }
 
     /* logic will be changed for new object ProvenanceDetailsForDisplay
@@ -363,7 +365,7 @@ public class ProvenanceService {
     }
 
 
-    private static DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
+    private static DateTimeFormatter df = DateTimeFormatter.ofPattern ("dd/MM/yy HH:mm");
 
     private static ProvenanceDetailsForDisplay attributeProvenance(Name name, String attribute) {
         attribute = attribute.substring(1).replace("`", "");
@@ -539,7 +541,7 @@ public class ProvenanceService {
         if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
             values.sort((o1, o2) -> (o2.getProvenance().getTimeStamp()).compareTo(o1.getProvenance().getTimeStamp()));
             //simply sending out values is a mess - hence this ruse: extract the most persistent names as headings
-            Date provdate = values.get(0).getProvenance().getTimeStamp();
+            LocalDateTime provdate = values.get(0).getProvenance().getTimeStamp();
             Set<Value> oneUpdate = new HashSet<>();
             Provenance p = null;
             for (Value value : values) {

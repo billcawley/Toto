@@ -105,11 +105,11 @@ this may now not work at all, perhaps delete?
     }*/
 
     public static String getSQLDatabaseName(final DatabaseServer databaseServer, Business b, final String databaseName) throws Exception{
-        String candidate =  getBusinessPrefix(b) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase();
-        while (RMIClient.getServerInterface(databaseServer.getIp()).databaseWithNameExists(candidate)){
-            candidate += "Z";
+        StringBuilder candidate = new StringBuilder(getBusinessPrefix(b) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase());
+        while (RMIClient.getServerInterface(databaseServer.getIp()).databaseWithNameExists(candidate.toString())){
+            candidate.append("Z");
         }
-        return candidate;
+        return candidate.toString();
     }
 
     private static String getBusinessPrefix(Business b) {

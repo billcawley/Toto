@@ -96,35 +96,37 @@ public class DSImportService {
     // typically used to create the basic name structure, an Excel set up workbook with many sheets would have a sets sheet
 
     private static String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String filePath, String fileName, List<String> attributeNames) throws Exception {
-        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filePath)));
-        // the filename can override the attribute for name creation/search. Seems a bit hacky but can make sense if the set up is a series of workbooks.
-        if (fileName.length() > 4 && fileName.charAt(4) == '-') { // see if you can derive a language from the file name
-            String sheetLanguage = fileName.substring(5);
-            if (sheetLanguage.contains(".")) { // knock off the suffix if it's there. Used to be removed client side, makes more sense here
-                sheetLanguage = sheetLanguage.substring(0, sheetLanguage.lastIndexOf("."));
+        int lines;
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filePath)))) {
+            // the filename can override the attribute for name creation/search. Seems a bit hacky but can make sense if the set up is a series of workbooks.
+            if (fileName.length() > 4 && fileName.charAt(4) == '-') { // see if you can derive a language from the file name
+                String sheetLanguage = fileName.substring(5);
+                if (sheetLanguage.contains(".")) { // knock off the suffix if it's there. Used to be removed client side, makes more sense here
+                    sheetLanguage = sheetLanguage.substring(0, sheetLanguage.lastIndexOf("."));
+                }
+                attributeNames = Collections.singletonList(sheetLanguage);
             }
-            attributeNames = Collections.singletonList(sheetLanguage);
-        }
-        String line;
-        int lines = 0;
-        // should we be using a CSV reader?
-        while ((line = br.readLine()) != null) {
-            String[] cells = line.split("\t"); // split does NOT return empty cells so to speak but it might return "" or a blank space
-            Name set = null;
-            for (String cell : cells) {
-                cell = cell.replace("\"", "").trim();
-                if (!cell.isEmpty()) { // why we're not just grabbing the first cell for the set, might be blank
-                    if (set == null) { // assign it - I'm not just grabbing the first cell since there may be cells with spaces or "" at the beginning
-                        set = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, null, false, attributeNames);
-                        // empty it in case it existed and had children
-                        set.setChildrenWillBePersisted(Collections.emptyList());
-                    } else { // set is created or found, so start gathering children
-                        set.addChildWillBePersisted(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, set, false, attributeNames));
+            String line;
+            lines = 0;
+            // should we be using a CSV reader?
+            while ((line = br.readLine()) != null) {
+                String[] cells = line.split("\t"); // split does NOT return empty cells so to speak but it might return "" or a blank space
+                Name set = null;
+                for (String cell : cells) {
+                    cell = cell.replace("\"", "").trim();
+                    if (!cell.isEmpty()) { // why we're not just grabbing the first cell for the set, might be blank
+                        if (set == null) { // assign it - I'm not just grabbing the first cell since there may be cells with spaces or "" at the beginning
+                            set = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, null, false, attributeNames);
+                            // empty it in case it existed and had children
+                            set.setChildrenWillBePersisted(Collections.emptyList());
+                        } else { // set is created or found, so start gathering children
+                            set.addChildWillBePersisted(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, set, false, attributeNames));
+                        }
                     }
                 }
             }
+            lines++;
         }
-        lines++;
         return fileName + " imported. " + lines + " line(s) of a set file.<br/>";  // HTML in DB code! Will let it slide for the mo.
     }
 

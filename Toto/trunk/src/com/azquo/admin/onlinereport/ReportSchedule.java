@@ -14,7 +14,7 @@ import java.time.format.DateTimeFormatter;
  */
 public class ReportSchedule extends StandardEntity {
 
-    public static DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    public static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private String period;
     private String recipients;

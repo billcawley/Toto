@@ -1,5 +1,6 @@
 package com.azquo.admin.onlinereport;
 
+import com.azquo.DateUtils;
 import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -36,7 +37,7 @@ public class ReportScheduleDAO {
         toReturn.put(StandardDAO.ID, reportSchedule.getId());
         toReturn.put(PERIOD, reportSchedule.getPeriod());
         toReturn.put(RECIPIENTS, reportSchedule.getRecipients());
-        toReturn.put(NEXTDUE, Date.from(reportSchedule.getNextDue().atZone(ZoneId.systemDefault()).toInstant()));
+        toReturn.put(NEXTDUE, DateUtils.getDateFromLocalDateTime(reportSchedule.getNextDue()));
         toReturn.put(DATABASEID, reportSchedule.getDatabaseId());
         toReturn.put(REPORTID, reportSchedule.getReportId());
         toReturn.put(TYPE, reportSchedule.getType());
@@ -52,7 +53,7 @@ public class ReportScheduleDAO {
                 return new ReportSchedule(rs.getInt(StandardDAO.ID)
                         , rs.getString(PERIOD)
                         , rs.getString(RECIPIENTS)
-                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(NEXTDUE))
+                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(NEXTDUE))
                         , rs.getInt(DATABASEID)
                         , rs.getInt(REPORTID)
                         , rs.getString(TYPE)
@@ -82,7 +83,7 @@ public class ReportScheduleDAO {
 
     public static List<ReportSchedule> findWhereDueBefore(LocalDateTime due) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(NEXTDUE, Date.from(due.atZone(ZoneId.systemDefault()).toInstant()));
+        namedParams.addValue(NEXTDUE, DateUtils.getDateFromLocalDateTime(due));
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + NEXTDUE + " <= :" + NEXTDUE, TABLENAME, reportScheduleRowMapper, namedParams);
     }
 

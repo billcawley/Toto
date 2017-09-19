@@ -8,6 +8,8 @@ import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 //import org.apache.log4j.Logger;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -123,9 +125,8 @@ public class AzquoMemoryDBConnection {
         Provenance latest = azquoMemoryDB.getMostRecentProvenance();
         // not sure how latest and method cen get set as null but best to be careful with it
         if (latest != null && latest.getUser().equals(user)) {
-            long elapsed = new Date().getTime() - latest.getTimeStamp().getTime();
             if (latest.getMethod() != null && latest.getMethod().equals(method) && latest.getName() != null && latest.getName().equals(name) &&
-                    latest.getContext() != null && latest.getContext().equals(context) && elapsed < 30000) {// thirty seconds
+                    latest.getContext() != null && latest.getContext().equals(context) && latest.getTimeStamp().plusSeconds(30).isAfter(LocalDateTime.now())) {
                 this.provenance = latest;
                 return;
             }

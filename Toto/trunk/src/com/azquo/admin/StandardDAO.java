@@ -11,10 +11,7 @@ import java.net.InetAddress;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -55,32 +52,34 @@ public class StandardDAO {
     private static <T extends StandardEntity> void updateById(final T entity, final String tableName, final Map<String, Object> columnNameValueMap) throws DataAccessException {
 //        final NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplateFactory.getJDBCTemplateForEntity(entity);
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        String updateSql = "UPDATE `" + MASTER_DB + "`.`" + tableName + "` set ";
-        for (String columnName : columnNameValueMap.keySet()) {
+        StringBuilder updateSql = new StringBuilder("UPDATE `" + MASTER_DB + "`.`" + tableName + "` set ");
+        for (Map.Entry<String, Object> columnNameValue : columnNameValueMap.entrySet()) {
+            String columnName = columnNameValue.getKey();
             if (!columnName.equals(ID)) {
-                updateSql += "`" + columnName + "` = :" + columnName + ", ";
-                namedParams.addValue(columnName, columnNameValueMap.get(columnName));
+                updateSql.append("`").append(columnName).append("` = :").append(columnName).append(", ");
+                namedParams.addValue(columnName, columnNameValue.getValue());
             }
         }
-        updateSql = updateSql.substring(0, updateSql.length() - 2); //trim the last ", "
-        updateSql += " where " + ID + " = :" + ID;
+        updateSql.setLength(updateSql.length() - 2);//trim the last ", "
+        updateSql.append(" where " + ID + " = :" + ID);
         namedParams.addValue("id", entity.getId());
-        jdbcTemplate.update(updateSql, namedParams);
+        jdbcTemplate.update(updateSql.toString(), namedParams);
     }
 
     private static <T extends StandardEntity> void insert(final T entity, final String tableName, final Map<String, Object> columnNameValueMap) throws DataAccessException {
-        String columnsCommaList = "";
-        String valuesCommaList = "";
+        StringBuilder columnsCommaList = new StringBuilder();
+        StringBuilder valuesCommaList = new StringBuilder();
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        for (String columnName : columnNameValueMap.keySet()) {
+        for (Map.Entry<String, Object> columnNameValue : columnNameValueMap.entrySet()) {
+            String columnName = columnNameValue.getKey();
             if (!columnName.equals(ID)) { // skip id on insert
-                columnsCommaList += "`" + columnName + "`" + ", "; // build the comma separated list for use in the sql
-                valuesCommaList += ":" + columnName + ", "; // build the comma separated list for use in the sql
-                namedParams.addValue(columnName, columnNameValueMap.get(columnName));
+                columnsCommaList.append("`").append(columnName).append("`").append(", "); // build the comma separated list for use in the sql
+                valuesCommaList.append(":").append(columnName).append(", "); // build the comma separated list for use in the sql
+                namedParams.addValue(columnName, columnNameValue.getValue());
             }
         }
-        columnsCommaList = columnsCommaList.substring(0, columnsCommaList.length() - 2); //trim the last ", "
-        valuesCommaList = valuesCommaList.substring(0, valuesCommaList.length() - 2); //trim the last ", "
+        columnsCommaList.setLength(columnsCommaList.length() - 2);//trim the last ", "
+        valuesCommaList.setLength(valuesCommaList.length() - 2); //trim the last ", "
         final String insertSql = "INSERT INTO `" + MASTER_DB + "`.`" + tableName + "` (" + columnsCommaList + ") VALUES (" + valuesCommaList + ")";
         final GeneratedKeyHolder keyHolder = new GeneratedKeyHolder(); // to get the id back
         jdbcTemplate.update(insertSql, namedParams, keyHolder, new String[]{ID});
@@ -143,15 +142,6 @@ public class StandardDAO {
     public static void update(final String setclause, final MapSqlParameterSource namedParams, final String tableName) throws DataAccessException {
         final String SQL_UPDATE = "update `" + MASTER_DB + "`.`" + tableName + "` " + setclause;
         jdbcTemplate.update(SQL_UPDATE, namedParams);
-    }
-
-    // bottom two lines off the net, needed as result sets don't use the new date classes
-    public static LocalDateTime getLocalDateTimeFromDate(Date date) {
-        if (date == null) {
-            return null;
-        }
-        Instant instant = Instant.ofEpochMilli(date.getTime());
-        return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
     }
 
     public static int findMaxId(final String tableName) throws DataAccessException {

@@ -3,6 +3,10 @@ package com.azquo.admin.database;
 import com.azquo.admin.StandardEntity;
 
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 /**
@@ -13,7 +17,7 @@ import java.util.Date;
  */
 public final class UploadRecord extends StandardEntity {
 
-    final private Date date;
+    final private LocalDateTime date;
     final private int businessId;
     final private int databaseId;
     final private int userId;
@@ -22,7 +26,7 @@ public final class UploadRecord extends StandardEntity {
     final private String comments;
     private String tempPath;// where the file might still be!
 
-    public UploadRecord(int id, Date date, int businessId, int databaseId, int userId, String fileName, String fileType, String comments, String tempPath) {
+    public UploadRecord(int id, LocalDateTime date, int businessId, int databaseId, int userId, String fileName, String fileType, String comments, String tempPath) {
         this.id = id;
         this.date = date;
         this.businessId = businessId;
@@ -34,7 +38,7 @@ public final class UploadRecord extends StandardEntity {
         this.tempPath = tempPath;
     }
 
-    public Date getDate() {
+    public LocalDateTime getDate() {
         return date;
     }
 
@@ -89,7 +93,7 @@ public final class UploadRecord extends StandardEntity {
 
     public static class UploadRecordForDisplay {
         public final int id;
-        public final Date date;
+        public final LocalDateTime date;
         final String businessName;
         final String databaseName;
         final String userName;
@@ -112,11 +116,11 @@ public final class UploadRecord extends StandardEntity {
             this.setup = setup;
         }
 
-        public Date getDate() {
+        public LocalDateTime getDate() {
             return date;
         }
 
-        static SimpleDateFormat df = new SimpleDateFormat("dd/MM/yy-HH:mm");
+        static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy-HH:mm");
 
         public String getFormattedDate() {
             return df.format(date);

@@ -124,12 +124,10 @@ public final class ValueService {
     public static boolean overWriteExistingValue(final AzquoMemoryDBConnection azquoMemoryDBConnection, final Value existingValue, String newValueString) throws Exception {
         overWriteExistingValueCount.incrementAndGet();
         if (newValueString.contains(",")) {
-            if (newValueString.contains(",")) {
-                String replaced = newValueString.replace(",", "");
-                if (NumberUtils.isNumber(replaced)) { // think that's fine
-                    // so without "," it IS a valid number, take commas out of valueString
-                    newValueString = replaced;
-                }
+            String replaced = newValueString.replace(",", "");
+            if (NumberUtils.isNumber(replaced)) { // think that's fine
+                // so without "," it IS a valid number, take commas out of valueString
+                newValueString = replaced;
             }
         }
         if (StringUtils.compareStringValues(existingValue.getText(), newValueString)) { // converted to use compare string values rather than simple replace
@@ -222,7 +220,7 @@ public final class ValueService {
             setsToCheck[1] = names.get(names.size() - 1).findValuesIncludingChildren(payAttentionToAdditive);*/
             setsToCheck = new Set[1];
             // Edd note - I'm not particularly happy about this
-            if (exactName != null && names.get(names.size() - 1) == exactName){
+            if (exactName != null && names.get(names.size() - 1) == exactName) {
                 setsToCheck[0] = HashObjSets.newImmutableSet(names.get(names.size() - 1).getValues());
             } else {
                 setsToCheck[0] = names.get(names.size() - 1).findValuesIncludingChildren();
@@ -234,7 +232,7 @@ public final class ValueService {
             for (Name name : names) {
                 int setSizeIncludingChildren = 0;
 
-                if (name == exactName){
+                if (name == exactName) {
                     setSizeIncludingChildren = name.getValues().size();
                 } else {
                     setSizeIncludingChildren = name.findValuesIncludingChildren().size();
@@ -252,12 +250,12 @@ public final class ValueService {
             point = System.nanoTime();
             assert smallestName != null; // make intellij happy
 
-            if (smallestName == exactName){
+            if (smallestName == exactName) {
                 smallestValuesSet = HashObjSets.newImmutableSet(smallestName.getValues());
             } else {
                 smallestValuesSet = smallestName.findValuesIncludingChildren();
             }
-             part2NanoCallTime1.addAndGet(System.nanoTime() - point);
+            part2NanoCallTime1.addAndGet(System.nanoTime() - point);
             point = System.nanoTime();
             // ok from testing a new list using contains against values seems to be the thing, double the speed at least I think!
             setsToCheck = new Set[names.size() - 1]; // I don't want to be creating iterators when checking. Iterator * millions = garbage (in the Java sense!). No problems losing typing, I just need the contains.
@@ -265,7 +263,7 @@ public final class ValueService {
             for (Name name : names) {
                 // note if smallest name is in there twice (duplicate names) then setsToCheck will hav e mull elements at the end, I check for this later in the big loop, should probably zap that. Or get rid of the smallest names before?
                 if (name != smallestName) { // a little cheaper than making a new name set and knocking this one off I think
-                    if (name == exactName){
+                    if (name == exactName) {
                         setsToCheck[arrayIndex] = HashObjSets.newImmutableSet(name.getValues());
                     } else {
                         setsToCheck[arrayIndex] = name.findValuesIncludingChildren();
@@ -385,7 +383,7 @@ public final class ValueService {
             final List<List<Name>> permutationOfLists = MultidimensionalListUtils.get2DPermutationOfLists(toPermute);
             double toReturn = 0;
             for (List<Name> lowLevelCalcNames : permutationOfLists) { // it's lowLevelCalcNames that we were after
-                if (valuesHook.calcValues == null){
+                if (valuesHook.calcValues == null) {
                     valuesHook.calcValues = new ArrayList<>();
                 }
                 double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, lowLevelCalcNames, locked, valuesHook, attributeNames, functionHeading, nameComboValueCache, debugInfo);
@@ -415,14 +413,14 @@ public final class ValueService {
             // no reverse polish converted formula, just sum
             if (calcString == null) {
                 // I'll not debug in here for the moment. We should know names and function by now
-                if (functionHeading!=null && functionHeading.getFunction() == DataRegionHeading.FUNCTION.ALLEXACT){ // match only the values that correspond to the names exactly
+                if (functionHeading != null && functionHeading.getFunction() == DataRegionHeading.FUNCTION.ALLEXACT) { // match only the values that correspond to the names exactly
                     final List<Value> forNames = findForNames(names);
                     // need to check we don't have values with extra names
                     forNames.removeIf(value -> value.getNames().size() > names.size()); // new syntax! Dunno about efficiency but this will be very rarely used
                     return ValueCalculationService.resolveValues(forNames, valuesHook, functionHeading, locked);
                 } else {
                     Name exactName = null;
-                    if (functionHeading!=null && functionHeading.getFunction() == DataRegionHeading.FUNCTION.EXACT){
+                    if (functionHeading != null && functionHeading.getFunction() == DataRegionHeading.FUNCTION.EXACT) {
                         exactName = functionHeading.getName();
                     }
 
@@ -435,7 +433,7 @@ public final class ValueService {
                 double toReturn = 0;
                 for (Name appliesToName : outerLoopNames) { // in normal use just a single
                     calcnames.add(appliesToName);
-                    if (valuesHook.calcValues == null){
+                    if (valuesHook.calcValues == null) {
                         valuesHook.calcValues = new ArrayList<>();
                     }
                     double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, calcnames, locked, valuesHook, attributeNames, functionHeading, nameComboValueCache, debugInfo);

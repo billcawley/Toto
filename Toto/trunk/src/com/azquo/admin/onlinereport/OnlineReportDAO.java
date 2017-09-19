@@ -1,12 +1,12 @@
 package com.azquo.admin.onlinereport;
 
+import com.azquo.DateUtils;
 import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -34,7 +34,7 @@ public class OnlineReportDAO {
     public static Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(StandardDAO.ID, onlineReport.getId());
-        toReturn.put(DATECREATED, Date.from(onlineReport.getDateCreated().atZone(ZoneId.systemDefault()).toInstant()));
+        toReturn.put(DATECREATED, DateUtils.getDateFromLocalDateTime(onlineReport.getDateCreated()));
         toReturn.put(BUSINESSID, onlineReport.getBusinessId());
         toReturn.put(USERID, onlineReport.getUserId());
         toReturn.put(REPORTNAME, onlineReport.getReportName());
@@ -49,7 +49,7 @@ public class OnlineReportDAO {
         public OnlineReport mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 return new OnlineReport(rs.getInt(StandardDAO.ID)
-                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(DATECREATED))
+                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(DATECREATED))
                         , rs.getInt(BUSINESSID)
                         , rs.getInt(USERID)
                         , ""

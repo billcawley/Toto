@@ -46,6 +46,7 @@ import java.util.Map;
 public class RemoteController {
     private final Runtime runtime = Runtime.getRuntime();
     private final int mb = 1024 * 1024;
+
     // note : I'm now thinking dao objects are acceptable in controllers if moving the call to the service would just be a proxy
     /* Parameters are sent as Json . . . posted via https should be secure enough for the moment */
     private static class JsonParameters {
@@ -148,11 +149,11 @@ public class RemoteController {
                 // database switching should be done by being logged in
 
                 OnlineReport onlineReport = null;
-                if (jsonParameters.reportName.length()==0){
+                if (jsonParameters.reportName.length() == 0) {
                     onlineReport = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
                     onlineReport.setDatabase(loggedInUser.getDatabase().getName());
-                }else {
-                    if (jsonParameters.reportName != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+                } else {
+                    if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                         //report id is assumed to be integer - sent from the website
                         onlineReport = OnlineReportDAO.findForNameAndBusinessId(jsonParameters.reportName, loggedInUser.getUser().getBusinessId());
                         onlineReport.setDatabase(jsonParameters.database);
@@ -183,7 +184,7 @@ public class RemoteController {
                     List<JsonRegion> jsonRegions = new ArrayList<>();
                     List<JsonChoice> jsonChoices = new ArrayList<>();
                     final List<SName> names = book.getInternalBook().getNames();
-                         for (SName name : names) {
+                    for (SName name : names) {
                         final Sheet sheet = book.getSheet(name.getRefersToSheetName());
                         final CellRegion refersToCellRegion = name.getRefersToCellRegion();
                         if (name.getName().toLowerCase().startsWith("az_web")) {
@@ -191,14 +192,14 @@ public class RemoteController {
                             for (int i = refersToCellRegion.getRow(); i <= refersToCellRegion.getLastRow(); i++) {
                                 List<String> row = new ArrayList<>();
                                 for (int j = refersToCellRegion.getColumn(); j <= refersToCellRegion.getLastColumn(); j++) {
-                                    row.add(getCellValue(sheet,i,j));
+                                    row.add(getCellValue(sheet, i, j));
                                 }
                                 data.add(row);
                             }
                             jsonRegions.add(new JsonRegion(name.getName(), (refersToCellRegion.getLastRow() - refersToCellRegion.getRow()) + 1, (refersToCellRegion.getLastColumn() - refersToCellRegion.getColumn()) + 1, data));
                         } else {
                             if (name.getName().toLowerCase().endsWith("chosen")) {
-                                String value = getCellValue( sheet,refersToCellRegion.getRow(), refersToCellRegion.getColumn());
+                                String value = getCellValue(sheet, refersToCellRegion.getRow(), refersToCellRegion.getColumn());
                                 List<String> options = new ArrayList<>();
                                 Range range = Ranges.range(book.getSheet(name.getRefersToSheetName()), refersToCellRegion.getRow(), refersToCellRegion.getColumn(), refersToCellRegion.getRow(), refersToCellRegion.getColumn());
                                 List<Validation> validations = range.getValidations();
@@ -210,7 +211,7 @@ public class RemoteController {
                                     String localListRange = listRangeString.substring(endSheetName + 1);
                                     Range listRange = Ranges.range(listSheet, localListRange);
                                     for (int row = 0; row < listRange.getRowCount(); row++) {
-                                        options.add(getCellValue(listSheet,listRange.getRow() + row, listRange.getColumn()));
+                                        options.add(getCellValue(listSheet, listRange.getRow() + row, listRange.getColumn()));
 
                                     }
                                 }
@@ -218,20 +219,20 @@ public class RemoteController {
                             }
                         }
                     }
-                    result =  jacksonMapper.writeValueAsString(new JsonReturn("ok", loggedInUser.getDatabase().getName(), onlineReport.getReportName(), jsonChoices, jsonRegions));
-             } catch (Exception e) { // changed to overall exception handling
+                    result = jacksonMapper.writeValueAsString(new JsonReturn("ok", loggedInUser.getDatabase().getName(), onlineReport.getReportName(), jsonChoices, jsonRegions));
+                } catch (Exception e) { // changed to overall exception handling
                     e.printStackTrace(); // Could be when importing the book, just log it
-                    result =e.getMessage(); // put it here to puck up instead of the report
+                    result = e.getMessage(); // put it here to puck up instead of the report
                 }
             } catch (Exception e) {
                 logger.error("online controller error", e);
                 result = e.getMessage();
             }
         } catch (NullPointerException npe) {
-            result =  "null pointer, json passed?";
+            result = "null pointer, json passed?";
         } catch (Exception e) {
             e.printStackTrace();
-            result  = e.getMessage();
+            result = e.getMessage();
         }
         response.setHeader("Access-Control-Allow-Origin", "*");
         response.setHeader("Content-type", "application/json");
@@ -276,7 +277,7 @@ public class RemoteController {
             }
             returnString = stringValue;
         }
-        return  returnString;
+        return returnString;
     }
 
 

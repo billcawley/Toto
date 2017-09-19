@@ -146,16 +146,16 @@ public class ZKComposer extends SelectorComposer<Component> {
                     && event.getColumn() >= saveName.getRefersToCellRegion().getColumn()
                     && event.getColumn() <= saveName.getRefersToCellRegion().getLastColumn()
                     ) {
-                try{
+                try {
                     String saveResult = ReportService.save(myzss, loggedInUser);
-                    if (saveResult.startsWith("Success")){
+                    if (saveResult.startsWith("Success")) {
                         // todo - processing warning here? The button isn't used much . . .
                         ZKComposerUtils.reloadBook(myzss, book);
                         // think this wil;l do it
                         Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"none\";document.getElementById(\"restoreDataButton\").style.display=\"none\";");
-                        Clients.evalJavaScript("alert(\""+saveResult + "\")");
+                        Clients.evalJavaScript("alert(\"" + saveResult + "\")");
                     }
-                } catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
@@ -254,7 +254,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         public final int row;
         public final int col;
 
-        RegionRowCol(String sheetName ,String region, int row, int col) {
+        RegionRowCol(String sheetName, String region, int row, int col) {
             this.sheetName = sheetName;
             this.region = region;
             this.row = row;
@@ -300,32 +300,27 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = event.getSheet().getBook();
         List<SName> names = BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet());
         List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE);
-        if (names == null && repeatRegionNames == null) return;
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         checkRegionSizes(event.getSheet(), loggedInUser, reportId);
         // regions may overlap - update all EXCEPT where there are repeat regions, in which case just do that as repeat regions will have overlap by their nature
         List<RegionRowCol> regionRowColsToSave = new ArrayList<>(); // a list to save - list due to the possibility of overlapping data regions
         List<RegionRowCol> headingRowColsToSave = new ArrayList<>();
-        if (repeatRegionNames != null) {
-            for (SName name : repeatRegionNames) {
-                final RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(book, row, col, name);
-                if (regionRowColForRepeatRegion != null) {
-                    regionRowColsToSave.add(regionRowColForRepeatRegion);
-                }
+        for (SName name : repeatRegionNames) {
+            final RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(book, row, col, name);
+            if (regionRowColForRepeatRegion != null) {
+                regionRowColsToSave.add(regionRowColForRepeatRegion);
             }
         }
-        if (regionRowColsToSave.isEmpty() && names != null) { // no repeat regions but there are normal ones
+        if (regionRowColsToSave.isEmpty() && !names.isEmpty()) { // no repeat regions but there are normal ones
             for (SName name : names) {
                 String regionName = name.getName().substring(ReportRenderer.AZDATAREGION.length());
                 regionRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), regionName, row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
             }
         }
-        List<SName> headingNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(),ReportRenderer.AZDISPLAYROWHEADINGS);
-        if (headingNames!=null){
-            for (SName name:headingNames){
-                  headingRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length()),row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
-             }
+        List<SName> headingNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ReportRenderer.AZDISPLAYROWHEADINGS);
+        for (SName name : headingNames) {
+            headingRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length()), row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
         }
         for (RegionRowCol regionRowCol : regionRowColsToSave) {
             final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, regionRowCol.sheetName, regionRowCol.region);
@@ -363,7 +358,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             if (sentCells != null) { // a good start!
                 if (headingRowCol.row >= 0 && headingRowCol.col >= 0 &&
                         sentCells.getRowHeadings().size() > headingRowCol.row && sentCells.getRowHeadings().get(headingRowCol.row).size() > headingRowCol.col) {
-                    sentCells.setRowHeading(headingRowCol.row,headingRowCol.col,chosen);
+                    sentCells.setRowHeading(headingRowCol.row, headingRowCol.col, chosen);
                 }
             }
         }
@@ -430,15 +425,14 @@ public class ZKComposer extends SelectorComposer<Component> {
                     }
 
                 }
-            }catch (Exception e){
+            } catch (Exception e) {
                 //bad name
             }
         }
     }
 
 
-
-            // to deal with provenance
+    // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
         showAzquoContextMenu(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty(), myzss.getBook());

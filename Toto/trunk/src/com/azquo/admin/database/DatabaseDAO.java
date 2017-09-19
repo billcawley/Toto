@@ -1,13 +1,12 @@
 package com.azquo.admin.database;
 
+import com.azquo.DateUtils;
 import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +45,7 @@ public final class DatabaseDAO {
         toReturn.put(VALUECOUNT, database.getValueCount());
         toReturn.put(DATABASESERVERID, database.getDatabaseServerId());
         toReturn.put(DATABASESERVERID, database.getDatabaseServerId());
-        toReturn.put(CREATED, Date.from(database.getCreated().atZone(ZoneId.systemDefault()).toInstant()));
+        toReturn.put(CREATED, DateUtils.getDateFromLocalDateTime(database.getCreated()));
         return toReturn;
     }
 
@@ -63,7 +62,7 @@ public final class DatabaseDAO {
                         , rs.getInt(NAMECOUNT)
                         , rs.getInt(VALUECOUNT)
                         , rs.getInt(DATABASESERVERID),
-                        StandardDAO.getLocalDateTimeFromDate(rs.getDate(CREATED)));
+                        DateUtils.getLocalDateTimeFromDate(rs.getDate(CREATED)));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

@@ -61,7 +61,7 @@ public class ExcelController {
 
     public static final Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
 
-    public static String SESSIONMARKER = "¬";
+    public static final String SESSIONMARKER = "¬";
     @RequestMapping(produces = "text/json;charset=UTF-8")
     @ResponseBody
     public String handleRequest(HttpServletRequest request, @RequestParam(value = "logon", required = false, defaultValue = "") String logon

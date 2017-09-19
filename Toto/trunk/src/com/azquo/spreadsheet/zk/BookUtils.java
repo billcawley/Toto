@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
+import com.azquo.DateUtils;
 import com.azquo.TypedPair;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
@@ -172,7 +173,7 @@ public class BookUtils {
         if (format.toLowerCase().contains("m")) {//allow users to format their own dates.  All dates on file as values are yyyy-MM-dd
             LocalDate date = ReportUtils.isADate(sValue);
             if (date != null) {
-                sCell.setDateValue(Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant()));
+                sCell.setDateValue(DateUtils.getDateFromLocalDateTime(date.atStartOfDay()));
                 return;
             }
         }

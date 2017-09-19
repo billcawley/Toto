@@ -2,6 +2,7 @@ package com.azquo.admin.user;
 
 import com.azquo.admin.StandardEntity;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -16,9 +17,9 @@ public class UserChoice extends StandardEntity {
     private final int userId;
     private final String choiceName;
     private String choiceValue;
-    private Date time;
+    private LocalDateTime time;
 
-    public UserChoice(int id, int userId, String choiceName, String choiceValue, Date time) {
+    public UserChoice(int id, int userId, String choiceName, String choiceValue, LocalDateTime time) {
         this.id = id;
         this.userId = userId;
         this.choiceName = choiceName;
@@ -52,11 +53,11 @@ public class UserChoice extends StandardEntity {
         this.choiceValue = choiceValue;
     }
 
-    public Date getTime() {
+    public LocalDateTime getTime() {
         return time;
     }
 
-    public void setTime(Date time) {
+    public void setTime(LocalDateTime time) {
         this.time = time;
     }
 }

@@ -132,12 +132,11 @@ public class AzquoMemoryDBIndex {
         if (map == null) return null;
         int dupCount = 0;
         int testCount = 0;
-        for (String string : map.keySet()) {
+        for (Collection<Name> names : map.values()) {
             if (testCount++ % 50000 == 0) {
                 System.out.println("testing for duplicates - count " + testCount + " dups found " + dupCount);
             }
-            if (map.get(string).size() > 1) {
-                Collection<Name> names = map.get(string);
+            if (names.size() > 1) {
                 boolean nameadded = false;
                 for (Name name : names) {
                     for (String attribute : name.getAttributeKeys()) {
@@ -286,8 +285,11 @@ public class AzquoMemoryDBIndex {
         Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.get(attribute);
         if (namesForThisAttribute == null) return null;
         Collection<Name> toReturn = new HashSet<>();
-        for (String key : namesForThisAttribute.keySet()) {
+/*        for (String key : namesForThisAttribute.keySet()) {
             toReturn.addAll(namesForThisAttribute.get(key));
+        }*/
+        for (Collection<Name> names : namesForThisAttribute.values()) {
+            toReturn.addAll(names);
         }
         return toReturn;
     }
@@ -388,20 +390,18 @@ public class AzquoMemoryDBIndex {
     void printIndexStats() {
         NumberFormat nf = NumberFormat.getInstance();
 
-        List<TypedPair<String, Map<String, Collection<Name>>>> topAttributes = new ArrayList<>();
-        for (String attName : nameByAttributeMap.keySet()) {
-            topAttributes.add(new TypedPair<>(attName, nameByAttributeMap.get(attName)));
-        }
-        topAttributes.sort((o1, o2) -> (Integer.compare(o2.getSecond().size(), o1.getSecond().size())));
+        List<Map.Entry<String, Map<String, Collection<Name>>>> topAttributes = new ArrayList<>();
+        topAttributes.addAll(nameByAttributeMap.entrySet());
+        topAttributes.sort((o1, o2) -> (Integer.compare(o2.getValue().size(), o1.getValue().size())));
         System.out.println("Attribute Name                          Number of values");
-        for (TypedPair<String, Map<String, Collection<Name>>> attEntry : topAttributes) {
-            System.out.print(attEntry.getFirst());
-            if (attEntry.getFirst().length() < 40) {
-                for (int i = 0; i < 40 - attEntry.getFirst().length(); i++) {
+        for (Map.Entry<String, Map<String, Collection<Name>>> attEntry : topAttributes) {
+            System.out.print(attEntry.getKey());
+            if (attEntry.getKey().length() < 40) {
+                for (int i = 0; i < 40 - attEntry.getKey().length(); i++) {
                     System.out.print(" ");
                 }
             }
-            System.out.println(nf.format(attEntry.getSecond().size()));
+            System.out.println(nf.format(attEntry.getValue().size()));
         }
         // now try to work out how many entries for each attribute have
         Map<Integer, AtomicInteger> counts = new HashMap<>();

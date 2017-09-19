@@ -500,7 +500,7 @@ class AzquoCellService {
                                     System.out.println("provenance null for " + value); // bit of a hack but lets log it
                                     //break;
                                 } else {
-                                    LocalDateTime provdate = LocalDateTime.ofInstant(value.getProvenance().getTimeStamp().toInstant(), ZoneId.systemDefault());
+                                    LocalDateTime provdate = value.getProvenance().getTimeStamp();
                                     long cellAge = provdate.until(LocalDateTime.now(), ChronoUnit.HOURS);
                                     if (cellAge < age) {
                                         age = cellAge;

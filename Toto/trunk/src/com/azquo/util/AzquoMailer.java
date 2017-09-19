@@ -9,6 +9,7 @@ import javax.mail.*;
 import javax.mail.internet.MimeBodyPart;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -155,7 +156,7 @@ public class AzquoMailer {
                 System.out.println("MESSAGE " + (i + 1) + ":");
                 System.out.println("Subject: " + subject);
                 System.out.println("From: " + msg.getFrom()[0]);
-                System.out.println("To: " + msg.getAllRecipients());
+                System.out.println("To: " + Arrays.toString(msg.getAllRecipients()));
                 System.out.println("Date: " + msg.getReceivedDate());
                 System.out.println("Size: " + msg.getSize());
                 System.out.println(msg.getFlags());

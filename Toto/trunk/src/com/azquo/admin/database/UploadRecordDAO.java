@@ -1,5 +1,6 @@
 package com.azquo.admin.database;
 
+import com.azquo.DateUtils;
 import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -34,7 +35,7 @@ public final class UploadRecordDAO {
     public static Map<String, Object> getColumnNameValueMap(final UploadRecord uploadRecord) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(StandardDAO.ID, uploadRecord.getId());
-        toReturn.put(DATE, uploadRecord.getDate());
+        toReturn.put(DATE, DateUtils.getDateFromLocalDateTime(uploadRecord.getDate()));
         toReturn.put(BUSINESSID, uploadRecord.getBusinessId());
         toReturn.put(DATABASEID, uploadRecord.getDatabaseId());
         toReturn.put(USERID, uploadRecord.getUserId());
@@ -51,7 +52,7 @@ public final class UploadRecordDAO {
             // not pretty, just make it work for the moment
             try {
                 return new UploadRecord(rs.getInt(StandardDAO.ID)
-                        , rs.getDate(DATE)
+                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(DATE))
                         , rs.getInt(BUSINESSID)
                         , rs.getInt(DATABASEID)
                         , rs.getInt(USERID)

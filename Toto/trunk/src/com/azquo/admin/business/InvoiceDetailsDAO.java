@@ -1,12 +1,11 @@
 package com.azquo.admin.business;
 
+import com.azquo.DateUtils;
 import com.azquo.admin.StandardDAO;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +41,7 @@ public final class InvoiceDetailsDAO {
         toReturn.put(UNITCOST, invoiceDetails.getUnitCost());
         toReturn.put(PAYMENTTERMS, invoiceDetails.getPaymentTerms());
         toReturn.put(POREFERENCE, invoiceDetails.getPoReference());
-        toReturn.put(INVOICEDATE, Date.from(invoiceDetails.getInvoiceDate().atStartOfDay().atZone(ZoneId.systemDefault()).toInstant())); // new date classes and old date ones used by jdbc don't seem to play nice
+        toReturn.put(INVOICEDATE, DateUtils.getDateFromLocalDateTime(invoiceDetails.getInvoiceDate().atStartOfDay())); // new date classes and old date ones used by jdbc don't seem to play nice
         toReturn.put(INVOICEPERIOD, invoiceDetails.getInvoicePeriod());
         toReturn.put(INVOICENO, invoiceDetails.getInvoiceNo());
         toReturn.put(INVOICEADDRESS, invoiceDetails.getInvoiceAddress());
@@ -62,7 +61,7 @@ public final class InvoiceDetailsDAO {
                         , rs.getInt(UNITCOST)
                         , rs.getInt(PAYMENTTERMS)
                         , rs.getString(POREFERENCE)
-                        , StandardDAO.getLocalDateTimeFromDate(rs.getDate(INVOICEDATE)).toLocalDate()
+                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(INVOICEDATE)).toLocalDate()
                         , rs.getString(INVOICEPERIOD)
                         , rs.getString(INVOICENO)
                         , rs.getString(INVOICEADDRESS)

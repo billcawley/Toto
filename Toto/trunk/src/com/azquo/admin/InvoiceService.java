@@ -67,15 +67,12 @@ public class InvoiceService {
         Transformer transformer = tFactory.newTransformer();
         StringBuilder template = new StringBuilder();
         String inputLine;
-        try {
-            DataInputStream in = new DataInputStream(InvoiceService.class.getClassLoader().getResourceAsStream("azquoinvoice.fop"));// used to have a hard coded link, now it's moved to /src this should be better
+        try (DataInputStream in = new DataInputStream(InvoiceService.class.getClassLoader().getResourceAsStream("azquoinvoice.fop"))) {
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
             while ((inputLine = br.readLine()) != null) {
                 // Print the content on the console
                 template.append(inputLine);
             }
-            //Close the input stream
-            in.close();
         } catch (Exception e) {//Catch exception if any
             System.out.println("Error reading azquoinvoice.fop: " + e.getMessage());
         }
