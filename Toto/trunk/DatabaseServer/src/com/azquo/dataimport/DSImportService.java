@@ -14,6 +14,8 @@ import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -97,7 +99,7 @@ public class DSImportService {
 
     private static String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String filePath, String fileName, List<String> attributeNames) throws Exception {
         int lines;
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filePath)))) {
+        try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath))) {
             // the filename can override the attribute for name creation/search. Seems a bit hacky but can make sense if the set up is a series of workbooks.
             if (fileName.length() > 4 && fileName.charAt(4) == '-') { // see if you can derive a language from the file name
                 String sheetLanguage = fileName.substring(5);

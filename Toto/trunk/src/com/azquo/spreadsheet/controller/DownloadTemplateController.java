@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /*
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -44,29 +46,13 @@ public class DownloadTemplateController {
                 } else { //any for the business for admin
                     onlineReport = OnlineReportDAO.findForIdAndBusinessId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
                 }
-                OutputStream out = response.getOutputStream();
-                byte[] bucket = new byte[32 * 1024];
-                String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
+                Path bookPath = Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk());
                 response.setContentType("application/vnd.ms-excel"); // Set up mime type
-                response.setHeader("Content-Disposition", "inline; filename=\"" + onlineReport.getFilename() + "\"");
                 try {
-                    // new java 8 syntax, a little odd but I'll leave here for the moment
-                    try (InputStream input = new BufferedInputStream(new FileInputStream(bookPath))) {
-                        int bytesRead = 0;
-                        while (bytesRead != -1) {
-                            //aInput.read() returns -1, 0, or more :
-                            bytesRead = input.read(bucket);
-                            if (bytesRead > 0) {
-                                out.write(bucket, 0, bytesRead);
-                            }
-                        }
-                    }
-                    out.flush();
-                    return;
+                    DownloadController.streamFileToBrowser(bookPath, response);
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
-                out.flush();
             }
         }
     }

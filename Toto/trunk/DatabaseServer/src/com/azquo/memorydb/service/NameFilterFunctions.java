@@ -1,7 +1,7 @@
 package com.azquo.memorydb.service;
 
+import com.azquo.DateUtils;
 import com.azquo.StringLiterals;
-import com.azquo.dataimport.BatchImporter;
 import com.azquo.memorydb.core.Name;
 import com.azquo.spreadsheet.StringUtils;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
@@ -54,7 +54,7 @@ class NameFilterFunctions {
                     valRhs = strings.get(Integer.parseInt(clauseRhs.substring(1, 3)));// anything left in quotes is referenced in the strings list
                     fixed = true;
                     //assume here that date will be of the form yyyy-mm-dd
-                    if (BatchImporter.isADate(valRhs) != null) {
+                    if (DateUtils.isADate(valRhs) != null) {
                         isADate = true;
                     }
                 }

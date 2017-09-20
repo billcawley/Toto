@@ -260,47 +260,6 @@ ALTER TABLE `user_region_options`
 ADD PRIMARY KEY (`id`);
 
 
-CREATE TABLE IF NOT EXISTS `invoice_details` (
-  `id` int(11) NOT NULL,
-  `customer_reference` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `service_description` text COLLATE utf8_unicode_ci,
-  `quantity` int(11) NOT NULL default '0',
-  `unit_cost` int(11) NOT NULL default '0',
-  `payment_terms` int(11) NOT NULL default '0',
-  `po_reference` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `invoice_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `invoice_period` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `invoice_no` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `invoice_address` text COLLATE utf8_unicode_ci,
-  `no_vat` TINYINT(1) NOT NULL DEFAULT '0',
-  `send_to` varchar(255) COLLATE utf8_unicode_ci NOT NULL default ''
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
-ALTER TABLE `invoice_details`
-ADD PRIMARY KEY (`id`),
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1;
-
-CREATE TABLE IF NOT EXISTS `invoice_sent` (
-  `id` int(11) NOT NULL,
-  `customer_reference` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `service_description` text COLLATE utf8_unicode_ci,
-  `quantity` int(11) NOT NULL default '0',
-  `unit_cost` int(11) NOT NULL default '0',
-  `payment_terms` int(11) NOT NULL default '0',
-  `po_reference` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `invoice_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `invoice_period` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `invoice_no` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `invoice_address` text COLLATE utf8_unicode_ci,
-  `no_vat` TINYINT(1) NOT NULL DEFAULT '0',
-  `send_to` varchar(255) COLLATE utf8_unicode_ci NOT NULL default '',
-  `date_time_sent` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
-ALTER TABLE `invoice_sent`
-ADD PRIMARY KEY (`id`),
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1;
-
 
 --
 -- AUTO_INCREMENT for dumped tables

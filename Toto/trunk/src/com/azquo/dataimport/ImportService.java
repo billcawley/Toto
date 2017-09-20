@@ -26,6 +26,9 @@ import org.zkoss.zss.model.*;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -59,33 +62,32 @@ public final class ImportService {
         String toReturn;
         if (fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
             //fileName = fileName.substring(0, fileName.length() - 4); // not sure why that was!
-            List<File> files = ImportFileUtilities.unZip(tempFile);
+            List<Path> files = ImportFileUtilities.unZip(tempFile);
             // should be sorting by xls first then size ascending
             files.sort((f1, f2) -> {
-                if ((f1.getName().endsWith(".xls") || f1.getName().endsWith(".xlsx")) && (!f2.getName().endsWith(".xls") && !f2.getName().endsWith(".xlsx"))) { // one is xls, the otehr is not
+                if ((f1.getFileName().endsWith(".xls") || f1.getFileName().endsWith(".xlsx")) && (!f2.getFileName().endsWith(".xls") && !f2.getFileName().endsWith(".xlsx"))) { // one is xls, the other is not
                     return -1;
                 }
-                if ((f2.getName().endsWith(".xls") || f2.getName().endsWith(".xlsx")) && (!f1.getName().endsWith(".xls") && !f1.getName().endsWith(".xlsx"))) { // otehr way round
+                if ((f2.getFileName().endsWith(".xls") || f2.getFileName().endsWith(".xlsx")) && (!f1.getFileName().endsWith(".xls") && !f1.getFileName().endsWith(".xlsx"))) { // otehr way round
                     return 1;
                 }
                 // fall back to file size among the same types
-                if (f1.length() < f2.length()) {
+                if (f1.toFile().length() < f2.toFile().length()) {
                     return -1;
                 }
-                if (f1.length() > f2.length()) {
+                if (f1.toFile().length() > f2.toFile().length()) {
                     return 1;
                 }
                 return 0;
             });
-            // todo - sort the files, small to large xls and xlsx as a group first
             StringBuilder sb = new StringBuilder();
-            Iterator<File> fileIterator = files.iterator();
+            Iterator<Path> fileIterator = files.iterator();
             while (fileIterator.hasNext()) {
-                File f = fileIterator.next();
+                Path p = fileIterator.next();
                 if (fileIterator.hasNext()) {
-                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, false, isData, false)).append("\n");
+                    sb.append(readBookOrFile(loggedInUser, p.getFileName().toString(), p.toString(), attributeNames, false, isData, false)).append("\n");
                 } else {
-                    sb.append(readBookOrFile(loggedInUser, f.getName(), f.getPath(), attributeNames, true, isData, false)); // persist on the last one
+                    sb.append(readBookOrFile(loggedInUser, p.getFileName().toString(), p.toString(), attributeNames, true, isData, false)); // persist on the last one
                 }
             }
             toReturn = sb.toString();
@@ -262,9 +264,7 @@ public final class ImportService {
         if (or != null) {
             // zap the old one first
             try {
-                String oldPath = SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk();
-                File old = new File(oldPath);
-                old.delete();
+                Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk()));
             } catch (Exception e) {
                 System.out.println("problem deleting old report");
                 e.printStackTrace();
@@ -275,12 +275,9 @@ public final class ImportService {
             or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, fileName, "", identityCell); // default to ZK now
         }
         OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
-        String fullPath = SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk();
-        File file = new File(fullPath);
-        file.getParentFile().mkdirs();
-        FileOutputStream out = new FileOutputStream(fullPath);
-        org.apache.commons.io.FileUtils.copyFile(new File(filePath), out);// straight copy of the source
-        out.close();
+        Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
+        Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
+        Files.copy(Paths.get(filePath), fullPath); // and copy
         DatabaseReportLinkDAO.link(databaseId, or.getId());
     }
 
@@ -432,20 +429,21 @@ public final class ImportService {
                         if (name.getName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
                             SName dataRegion = getNameByName(ReportRenderer.AZDATAREGION + name.getName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()),template);
                             if (dataRegion!=null){
-                                File temp = File.createTempFile(tempFileName, ".csv");
-                                String tempPath = temp.getPath();
-                                temp.deleteOnExit();
-                                //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
-                                FileOutputStream fos = new FileOutputStream(tempPath);
-                                CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
+                                Path tempFilePath = Paths.get(tempFileName); // where it was dumped after upload
+                                Path newTempFile = Files.createTempFile(tempFilePath.getParent(), "from" + tempFilePath.getFileName(), ".csv"); // now in the same place make teh csvs from that file
+//                                File temp = File.createTempFile(tempFileName, ".csv");
+//                                String tempPath = temp.getPath();
+//                                temp.deleteOnExit();
+//                                FileOutputStream fos = new FileOutputStream(tempPath);
+                                // will it be ok with the file created already?
+                                CsvWriter csvW = new CsvWriter(newTempFile.toString(), '\t', Charset.forName("UTF-8"));
                                 csvW.setUseTextQualifier(false);
                                 rangeToCSV(template,name.getRefersToCellRegion(),knownValues,csvW);
                                 rangeToCSV(sheet,dataRegion.getRefersToCellRegion(),null, csvW);
                                 csvW.close();
-                                fos.close();
-                                toReturn += readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, attributeNames, persistAfter, true);
-                                temp.delete();
-
+//                                fos.close();
+                                toReturn += readPreparedFile(loggedInUser, newTempFile.toString(), fileName + ":" + sheetName, attributeNames, persistAfter, true);
+                                Files.delete(newTempFile);
                             }
                         }
                     }
@@ -457,17 +455,13 @@ public final class ImportService {
 
 
 
-        File temp = File.createTempFile(tempFileName, ".csv");
-        String tempPath = temp.getPath();
-        temp.deleteOnExit();
-        //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
-        FileOutputStream fos = new FileOutputStream(tempPath);
-        CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
+        Path tempFilePath = Paths.get(tempFileName); // where it was dumped after upload
+        Path newTempFile = Files.createTempFile(tempFilePath.getParent(), "from" + tempFilePath.getFileName(), ".csv"); // now in the same place make teh csvs from that file
+        CsvWriter csvW = new CsvWriter(newTempFile.toString(), '\t', Charset.forName("UTF-8"));
         csvW.setUseTextQualifier(false);
         ImportFileUtilities.convertRangeToCSV(sheet, csvW, transpose);
         csvW.close();
-        fos.close();
-        return readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, attributeNames, persistAfter, true);
+        return readPreparedFile(loggedInUser, newTempFile.toString(), fileName + ":" + sheetName, attributeNames, persistAfter, true);
        }
 
         private static String LOCALIP = "127.0.0.1";
@@ -490,9 +484,9 @@ public final class ImportService {
         String pathOffset = loggedInUser.getDatabase().getPersistenceName() + "/images/" + fileName + suffix;
         String destinationPath = SpreadsheetService.getHomeDir() + dbPath + pathOffset;
         if (databaseServer.getIp().equals(LOCALIP)) {
-            File destination = new File(destinationPath);
-            destination.getParentFile().mkdirs();
-            sourceFile.transferTo(destination);
+            Path fullPath = Paths.get(destinationPath);
+            Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
+            Files.copy(sourceFile.getInputStream(), fullPath); // and copy
         } else {
             destinationPath = databaseServer.getSftpUrl() + pathOffset;
             ImportFileUtilities.copyFileToDatabaseServer(sourceFile.getInputStream(), destinationPath);

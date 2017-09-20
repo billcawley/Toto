@@ -13,6 +13,9 @@ import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -117,7 +120,7 @@ public class DSDataLoadService {
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         azquoMemoryDBConnection.setProvenance(user, "imported from Magento", "", "");
         Map<String, List<Map<String, String>>> tableMap = HashObjObjMaps.newMutableMap();
-        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filePath), "UTF8"));//changed for Windows.....
+        BufferedReader br = Files.newBufferedReader(Paths.get(filePath), Charset.forName("UTF-8"));//changed for Windows.....
         long marker = System.currentTimeMillis();
         String line;
         List<Map<String, String>> currentTableDataMap = null;

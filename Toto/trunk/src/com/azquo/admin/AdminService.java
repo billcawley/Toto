@@ -14,7 +14,9 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import sun.misc.BASE64Encoder;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
@@ -400,14 +402,17 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static void removeReportById(LoggedInUser loggedInUser, int reportId) {
+    public static void removeReportById(LoggedInUser loggedInUser, int reportId)  {
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         if (onlineReport != null && ((loggedInUser.getUser().isAdministrator() && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId())
                 || (loggedInUser.getUser().isDeveloper() && onlineReport.getBusinessId() == loggedInUser.getUser().getId()))) {
-            String fullPath = SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + onlineReportsDir + onlineReport.getFilenameForDisk();
-            File file = new File(fullPath);
-            if (file.exists()) {
-                file.delete();
+            Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + onlineReportsDir + onlineReport.getFilenameForDisk());
+            if (Files.exists(fullPath) || Files.isDirectory(fullPath)){
+                try {
+                    Files.deleteIfExists(fullPath);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
             OnlineReportDAO.removeById(onlineReport);
             // and the schedules
@@ -496,9 +501,9 @@ this may now not work at all, perhaps delete?
         UploadRecord ur = UploadRecordDAO.findById(uploadRecordId);
         if (ur != null && ur.getBusinessId() == loggedInUser.getUser().getBusinessId()){
             if (ur.getTempPath() != null && !ur.getTempPath().isEmpty()) {
-                File test = new File(ur.getTempPath());
-                if (test.exists() && test.isFile()) {
-                    test.delete();
+                Path path = Paths.get(ur.getTempPath());
+                if (!Files.isDirectory(path) && Files.exists(path)) {
+                    Files.delete(path);
                 }
             }
             UploadRecordDAO.removeById(ur);

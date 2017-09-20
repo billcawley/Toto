@@ -1,8 +1,8 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.DateUtils;
 import com.azquo.MultidimensionalListUtils;
 import com.azquo.StringLiterals;
-import com.azquo.dataimport.BatchImporter;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
@@ -632,7 +632,7 @@ public class DSSpreadsheetService {
         if (a1.equals(a2)) {
             return true;
         }
-        if (BatchImporter.isADate(a1) != null && BatchImporter.isADate(a1) == BatchImporter.isADate(a2)) {
+        if (DateUtils.isADate(a1) != null && DateUtils.isADate(a1) == DateUtils.isADate(a2)) {
             return true;
         }
         return false;

@@ -14,6 +14,7 @@ import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
@@ -91,9 +92,14 @@ public class LoggedInUser {
         dbNames = "";
         jsTreeLookupMap = new ConcurrentHashMap<>();
         // make log files dir if required
-        File test = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + userLogsPath);
-        if (!test.exists()) {
-            test.mkdirs();
+
+        Path test = Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + userLogsPath);
+        if (!Files.exists(test)){
+            try {
+                Files.createDirectories(test); // in case it doesn't exist
+            } catch (IOException e) {
+                e.printStackTrace(); // fine to just dump the stack
+            }
         }
     }
 

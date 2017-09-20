@@ -105,7 +105,7 @@ class NameEditFunctions {
                     changed = true;
                 }else{
                     if (childNames.size() > 0) {
-                        List<Name> childList = (ArrayList) set.getChildren();
+                        List<Name> childList = new ArrayList<>(set.getChildren());
                         for (int childNo = 0; childNo < childNames.size(); childNo++) {
                             if (!childList.get(childNo).getDefaultDisplayName().equals(children.get(childNo))) {
                                 changed = true;

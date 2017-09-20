@@ -1,6 +1,6 @@
 package com.azquo.dataimport;
 
-import com.azquo.StringLiterals;
+import com.azquo.DateUtils;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
@@ -9,8 +9,6 @@ import com.azquo.memorydb.service.ValueService;
 
 import java.text.DecimalFormat;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -64,9 +62,9 @@ public class BatchImporter implements Callable<Void> {
                             interpret the date and change to standard form
                             todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
                             */
-                            LocalDate date = isADate(importCellWithHeading.getLineValue());
+                            LocalDate date = DateUtils.isADate(importCellWithHeading.getLineValue());
                             if (date != null) {
-                                importCellWithHeading.setLineValue(dateTimeFormatter.format(date));
+                                importCellWithHeading.setLineValue(DateUtils.dateTimeFormatter.format(date));
                             }
                         }
                     }
@@ -360,31 +358,7 @@ public class BatchImporter implements Callable<Void> {
         return valueCount;
     }
 
-    private static LocalDate tryDate(String maybeDate, DateTimeFormatter dateTimeFormatter) {
-        try {
-            return LocalDate.parse(maybeDate, dateTimeFormatter);
-        } catch (DateTimeParseException e) {
-            return null;
-        }
-    }
-
-    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd-MM-yy");
-    private static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
-    private static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-
     // todo accessed outside, move it out?
-
-    public static LocalDate isADate(String maybeDate) {
-        String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
-        LocalDate date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, dateTimeFormatter);
-        if (date != null) return date;
-        date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, ukdf4);
-        if (date != null) return date;
-        date = tryDate(dateToTest.length() > 11 ? dateToTest.substring(0, 11) : dateToTest, ukdf3);
-        if (date != null) return date;
-        return tryDate(dateToTest.length() > 8 ? dateToTest.substring(0, 8) : dateToTest, ukdf2);
-    }
 
     private static boolean isZero(String text) {
         try {
@@ -462,9 +436,8 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
             }
-            // TODO SORT THIS OUT!!!!!
             // note! Exclusive can't work if THIS column is multiple names
-            if (cellWithHeading.getLineNames().size() == 1) {
+            if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusive != null) {
                 Name parent = cellWithHeading.getLineNames().iterator().next();
                 //the 'parent' above is the current cell name, not its parent
                 // check exclusive to remove the child from some other parents if necessary - this replaces the old "remove from" functionality
@@ -477,12 +450,12 @@ public class BatchImporter implements Callable<Void> {
                 get rid of any parents "White Poplin Shirt" has that are in (or are!) "Name Specified By Exclusive" that are NOT "Shirts"
                  */
                 // Exclusive is being dealt with as a single name, when defined explicitly it is and if we're deriving it from "child of" we just grab the first.
-                Name exclusiveName = null;
+                Name exclusiveName;
                 if ("".equals(cellWithHeading.getImmutableImportHeading().exclusive)) {
                     // blank exclusive clause, use "child of" clause - currently this only looks at the first name to be exclusive of, more than one makes little sense
                     // (check all the way down. all children, necessary due due to composite option name1->name2->name3->etc
                     exclusiveName = cellWithHeading.getImmutableImportHeading().parentNames.iterator().next();
-                } else if (cellWithHeading.getImmutableImportHeading().exclusive != null) { // exclusive is referring to a higher name
+                } else { // exclusive has a value, not null or blank, is referring to a higher name
                     exclusiveName = NameService.findByName(azquoMemoryDBConnection, cellWithHeading.getImmutableImportHeading().exclusive);
                 }
                 if (exclusiveName != null) {
@@ -509,7 +482,10 @@ public class BatchImporter implements Callable<Void> {
                             parent.addChildWillBePersisted(childCellName);
                         }
                     }
-                } else {
+                }
+            } else {
+                // in theory this column could be multiple parents and the column "parent of" refers to could be multiple children, permute over the combinations
+                for (Name parent : cellWithHeading.getLineNames()){
                     for (Name childCellName : childCell.getLineNames()) {
                         parent.addChildWillBePersisted(childCellName);
                     }

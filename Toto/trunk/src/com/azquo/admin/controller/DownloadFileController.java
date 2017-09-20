@@ -3,6 +3,7 @@ package com.azquo.admin.controller;
 import com.azquo.admin.database.UploadRecord;
 import com.azquo.admin.database.UploadRecordDAO;
 import com.azquo.spreadsheet.LoggedInUser;
+import com.azquo.spreadsheet.controller.DownloadController;
 import com.azquo.spreadsheet.controller.LoginController;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * Created by edward on 25/05/16.
@@ -47,30 +50,12 @@ public class DownloadFileController {
                     if (brackedPos > 0){
                         fileName = fileName.substring(0,brackedPos).trim();
                     }
-                    response.setHeader("Content-Disposition", "inline; filename=\"" + fileName + "\"");
-                    File f = new File(byId.getTempPath());
-                    response.setHeader("Content-Length", String.valueOf(f.length()));
-                    // maybe add a few more later
-                    OutputStream out = response.getOutputStream();
-                    byte[] bucket = new byte[32 * 1024];
+                    Path filePath = Paths.get(byId.getTempPath());
                     try {
-                        // new java 8 syntax, a little odd but I'll leave here for the moment
-                        try (InputStream input = new BufferedInputStream(new FileInputStream(f))) {
-                            int bytesRead = 0;
-                            while (bytesRead != -1) {
-                                //aInput.read() returns -1, 0, or more :
-                                bytesRead = input.read(bucket);
-                                if (bytesRead > 0) {
-                                    out.write(bucket, 0, bytesRead);
-                                }
-                            }
-                        }
-                        out.flush();
-                        return;
+                        DownloadController.streamFileToBrowser(filePath, response, fileName);
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }
-                    out.flush();
                 }
             }
         }

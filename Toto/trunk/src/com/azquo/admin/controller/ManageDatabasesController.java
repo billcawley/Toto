@@ -21,6 +21,9 @@ import javax.servlet.http.HttpSession;
 import javax.swing.text.DateFormatter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
@@ -249,12 +252,9 @@ public class ManageDatabasesController {
                         // if flagged as setup we simply park the file to be reloaded each time regardless of checking it
                         if ("true".equals(setup)){
                             String extension = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".")) : "";
-                            String fullPath = SpreadsheetService.getHomeDir() +  ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + "Setup" + loggedInUser.getDatabase().getName() + extension;
-                            File file = new File(fullPath);
-                            file.getParentFile().mkdirs();
-                            FileOutputStream out = new FileOutputStream(fullPath);
-                            org.apache.commons.io.FileUtils.copyFile(moved, out);// straight copy of the source
-                            out.close();
+                            Path fullPath = Paths.get(SpreadsheetService.getHomeDir() +  ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + "Setup" + loggedInUser.getDatabase().getName() + extension);
+                            Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
+                            Files.copy(Paths.get(moved.getPath()), fullPath);
                         }
                         // need to add in code similar to report loading to give feedback on imports
                         new Thread(() -> {

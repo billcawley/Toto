@@ -16,6 +16,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -80,21 +82,11 @@ public class ExcelInterfaceController {
 //                    String sessionId =  java.util.Base64.getEncoder().encodeToString(BigInteger.valueOf(loggedInUser.hashCode()).toByteArray()); // chop it down to size
                     String sessionId = Integer.toHexString(loggedInUser.hashCode());
                     ExcelController.excelConnections.put(sessionId, loggedInUser); // could be repeatedly putting, do we care?
-                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
+                    Path bookPath = Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk());
                     response.setContentType("application/vnd.ms-excel"); // Set up mime type
                     String extension = onlineReport.getFilenameForDisk().substring(onlineReport.getFilenameForDisk().lastIndexOf("."));
                     // todo, encode the report id? Do we care?
-                    response.addHeader("Content-Disposition", "attachment; filename=\"" + onlineReport.getReportName() + ExcelController.SESSIONMARKER + sessionId + ExcelController.SESSIONMARKER + onlineReport.getId() + extension + "\""); // doenbs't need url encoding??
-                    OutputStream out = response.getOutputStream();
-                    try (FileInputStream in = new FileInputStream(bookPath)) {
-                        byte[] buffer = new byte[4096];
-                        int length;
-                        while ((length = in.read(buffer)) > 0) {
-                            out.write(buffer, 0, length);
-                        }
-                        in.close();
-                    }
-                    out.flush();
+                    DownloadController.streamFileToBrowser(bookPath, response, onlineReport.getReportName() + ExcelController.SESSIONMARKER + sessionId + ExcelController.SESSIONMARKER + onlineReport.getId() + extension);
                 }
             }
         } catch (Exception e) {

@@ -10,6 +10,7 @@ import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.SRow;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -22,20 +23,23 @@ import java.util.zip.ZipInputStream;
  */
 class ImportFileUtilities {
 
-    static List<File> unZip(String zipFile) {
+    static List<Path> unZip(String zipFile) {
         String outputFolder;
         if (!zipFile.contains("/")) {
             outputFolder = zipFile.substring(0, zipFile.lastIndexOf("\\"));// same dir
         } else { // normal
             outputFolder = zipFile.substring(0, zipFile.lastIndexOf("/"));// same dir
         }
-        byte[] buffer = new byte[1024];
-        List<File> toReturn = new ArrayList<>();
+        List<Path> toReturn = new ArrayList<>();
+        String suffix = Paths.get(zipFile).getFileName().toString();
+        if (suffix.contains(".")){
+            suffix = suffix.substring(0, suffix.lastIndexOf("."));
+        }
         try {
             //create output directory is not exists
-            File folder = new File(outputFolder);
-            if (!folder.exists()) {
-                folder.mkdir();
+            Path folder = Paths.get(outputFolder);
+            if (!Files.exists(folder)) {
+                Files.createDirectory(folder);
             }
             //get the zip file content
             ZipInputStream zis =
@@ -44,21 +48,21 @@ class ImportFileUtilities {
             ZipEntry ze = zis.getNextEntry();
             while (ze != null) {
                 String fileName = ze.getName();
-                File newFile = new File(outputFolder + File.separator + fileName);
-                System.out.println("file unzip : " + newFile.getAbsoluteFile());
+                Path path = Paths.get(outputFolder + File.separator + fileName);
+                System.out.println("file unzip : " + path);
                 //create all non exists folders
                 //else you will hit FileNotFoundException for compressed folder
-                if (ze.isDirectory()) {
-                    newFile.mkdirs();
+                if (Files.isDirectory(path)) {
+                    Files.createDirectory(path);
                 } else {
-                    toReturn.add(newFile);
-                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
-                        int len;
-                        while ((len = zis.read(buffer)) > 0) {
-                            fos.write(buffer, 0, len);
-                        }
-                        fos.close();
+                    // to defend against problems with concurrent uploads
+                    if (fileName.contains(".")){
+                        path = Paths.get(outputFolder + File.separator + fileName.substring(0, fileName.lastIndexOf(".")) + suffix + fileName.substring(fileName.lastIndexOf(".")));
+                    } else {
+                        path = Paths.get(outputFolder + File.separator + fileName + suffix);
                     }
+                    toReturn.add(path);
+                    Files.copy(zis, path, StandardCopyOption.REPLACE_EXISTING);
                 }
                 ze = zis.getNextEntry();
             }
@@ -72,7 +76,7 @@ class ImportFileUtilities {
     }
 
     // as in drop the import stream into a temp file and return its path
-
+    // todo, better api calls, perhaps making the function redundant
     static String tempFileWithoutDecoding(final InputStream data, final String fileName) {
         try {
             File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
@@ -233,7 +237,8 @@ class ImportFileUtilities {
 
     private static void writeCell(Sheet sheet, int r, int c, CsvWriter csvW) throws Exception {
         final TypedPair<Double, String> cellValue = getCellValue(sheet, r, c);
-        csvW.write(cellValue.getSecond().replace("\n", "\\\\n").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+        csvW.write(cellValue.getSecond().replace("\n", "\\\\n").replace("\r", "")
+                .replace("\t", "\\\\t"));
     }
 
     // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO
