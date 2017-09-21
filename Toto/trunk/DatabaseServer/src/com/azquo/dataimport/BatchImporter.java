@@ -53,7 +53,7 @@ public class BatchImporter implements Callable<Void> {
             /* skip any line that has a blank in the first column unless the first column had no header or it's composite
             happy for the check to remain in here - more stuff for the multi threaded bit */
                 ImportCellWithHeading first = lineToLoad.get(0);
-                if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null || first.getImmutableImportHeading().compositionPattern != null) {
+                if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null || first.getImmutableImportHeading().compositionPattern != null || first.getImmutableImportHeading().attribute!=null) {
                     //check dates before resolving composite values
                     for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
                         // this basic value checking was outside, I see no reason it shouldn't be in here
@@ -282,8 +282,20 @@ public class BatchImporter implements Callable<Void> {
         // initial pass to deal with defaults and local parents
         // set defaults before dealing with local parent/child
         for (ImportCellWithHeading importCellWithHeading : cells) {
-            if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && importCellWithHeading.getLineValue().trim().length() == 0) {
-                importCellWithHeading.setLineValue(importCellWithHeading.getImmutableImportHeading().defaultValue);
+                if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && importCellWithHeading.getLineValue().trim().length() == 0) {
+                    String defaultValue = importCellWithHeading.getImmutableImportHeading().defaultValue;
+                    if (importCellWithHeading.getImmutableImportHeading().lineNameRequired){
+                        for (ImportCellWithHeading cell : cells) {
+                            // attribute hack, need to check with WFC (todo). If one of the other cells is referring to this as it's attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Cutomer.Address1 and set the language to Address1
+                            // So keep the line imported if there's data missing I guess
+                            if (cell != importCellWithHeading && cell.getImmutableImportHeading().indexForAttribute == cells.indexOf(importCellWithHeading) && cell.getLineValue().length() > 0) {
+                                defaultValue = cell.getLineValue();
+                                break;
+                            }
+                        }
+
+                    }
+                    importCellWithHeading.setLineValue(defaultValue);
             }
         }
         for (ImportCellWithHeading importCellWithHeading : cells) {
@@ -374,23 +386,7 @@ public class BatchImporter implements Callable<Void> {
     // it tests to see if the current line name is null or not as it may have been set by a call to resolveLineNamesParentsChildrenRemove on a different cell setting the child name
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
                                                               ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
-        String localLanguage = cellWithHeading.getImmutableImportHeading().attribute;
-        if (cellWithHeading.getLineValue().length() == 0 || (cellWithHeading.getImmutableImportHeading().defaultValue != null && cellWithHeading.getLineValue().equals(cellWithHeading.getImmutableImportHeading().defaultValue))) { // it's blank/default
-            for (ImportCellWithHeading cell : cells) {
-                // attribute hack, need to check with WFC (todo). If one of the other cells is referring to this as it's attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Cutomer.Address1 and set the language to Address1
-                // So keep the line imported if there's data missing I guess
-                if (cell != cellWithHeading && cell.getImmutableImportHeading().indexForAttribute == cells.indexOf(cellWithHeading) && cell.getLineValue().length() > 0) {
-                    localLanguage = cell.getImmutableImportHeading().attribute;
-                    cellWithHeading.setLineValue(cell.getLineValue());
-                    break;
-                }
-            }
-            // if blank we're done but notably default will still get through, I think that's fair, again confirm
-            if (cellWithHeading.getLineValue().length() == 0) {
-                return;
-            }
-        }
-        // in simple terms if a line cell value refers to a name it can now refer to a set of names
+          // in simple terms if a line cell value refers to a name it can now refer to a set of names
         // to make a set parent of more than one thing e.g. parent of set a, set b, set c
         // nothing in the heading has changed except the split char but we need to detect it here
         // split before checking for quotes etc. IF THE SPLIT CHAR IS IN QUOTES WE DON'T CURRENTLY SUPPORT THAT! e.g. ,
@@ -404,7 +400,7 @@ public class BatchImporter implements Callable<Void> {
             //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
             for (String nameName : nameNames) {
                 cellWithHeading.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, nameName.trim()
-                        , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(localLanguage, attributeNames)));
+                        , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading().attribute, attributeNames)));
             }
         } else { // it existed (created below as child name(s))
             for (Name child : cellWithHeading.getLineNames()) {
