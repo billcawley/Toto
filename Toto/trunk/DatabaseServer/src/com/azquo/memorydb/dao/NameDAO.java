@@ -39,7 +39,8 @@ public class NameDAO {
         @Override
         public Name mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
-                return new Name(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(ATTRIBUTES), rs.getBytes(CHILDREN), rs.getInt(NOPARENTS), rs.getInt(NOVALUES));
+                azquoMemoryDB.nameChildrenLoadingCache.put(rs.getInt(FastDAO.ID), rs.getBytes(CHILDREN));
+                return new Name(azquoMemoryDB, rs.getInt(FastDAO.ID), rs.getInt(PROVENANCEID), rs.getString(ATTRIBUTES), rs.getInt(NOPARENTS), rs.getInt(NOVALUES));
             } catch (Exception e) {
                 e.printStackTrace();
             }

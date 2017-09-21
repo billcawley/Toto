@@ -13,7 +13,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -77,6 +76,10 @@ public final class AzquoMemoryDB {
     private final Map<Integer, Value> valueByIdMap;
     private final Map<Integer, Provenance> provenanceByIdMap;
 
+    // while the names are loading they can't link their children so cache the ids until all names are loaded. This used to be held against each name.
+    // public here as a utility really - to be accesses by NameDAO and AzquoMemoryDBTransport
+    public final Map<Integer, byte[]> nameChildrenLoadingCache;
+
     private final AzquoMemoryDBTransport azquoMemoryDBTransport;
 
     // to manage value locking, first says when a given user last put on a lock
@@ -121,6 +124,7 @@ public final class AzquoMemoryDB {
         nameByIdMap = new ConcurrentHashMap<>();
         valueByIdMap = new ConcurrentHashMap<>();
         provenanceByIdMap = new ConcurrentHashMap<>();
+        nameChildrenLoadingCache = new ConcurrentHashMap<>();
         valueLockTimes = new ConcurrentHashMap<>();
         valueLocks = new ConcurrentHashMap<>();
         boolean memoryTrack = "true".equals(azquoProperties.getProperty("memorytrack"));

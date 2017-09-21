@@ -390,18 +390,21 @@ public class AzquoMemoryDBIndex {
     void printIndexStats() {
         NumberFormat nf = NumberFormat.getInstance();
 
-        List<Map.Entry<String, Map<String, Collection<Name>>>> topAttributes = new ArrayList<>();
-        topAttributes.addAll(nameByAttributeMap.entrySet());
-        topAttributes.sort((o1, o2) -> (Integer.compare(o2.getValue().size(), o1.getValue().size())));
+        // temptation to use the Map.Entry here is apparently wrong as the entry object is mutable and may be changed when iterator.next is called
+        List<TypedPair<String, Map<String, Collection<Name>>>> topAttributes = new ArrayList<>();
+        for (Map.Entry<String, Map<String, Collection<Name>>> stringMapEntry : nameByAttributeMap.entrySet()) {
+            topAttributes.add(new TypedPair<>(stringMapEntry.getKey(), stringMapEntry.getValue()));
+        }
+        topAttributes.sort((o1, o2) -> (Integer.compare(o2.getSecond().size(), o1.getSecond().size())));
         System.out.println("Attribute Name                          Number of values");
-        for (Map.Entry<String, Map<String, Collection<Name>>> attEntry : topAttributes) {
-            System.out.print(attEntry.getKey());
-            if (attEntry.getKey().length() < 40) {
-                for (int i = 0; i < 40 - attEntry.getKey().length(); i++) {
+        for (TypedPair<String, Map<String, Collection<Name>>> attEntry : topAttributes) {
+            System.out.print(attEntry.getFirst());
+            if (attEntry.getFirst().length() < 40) {
+                for (int i = 0; i < 40 - attEntry.getFirst().length(); i++) {
                     System.out.print(" ");
                 }
             }
-            System.out.println(nf.format(attEntry.getValue().size()));
+            System.out.println(nf.format(attEntry.getSecond().size()));
         }
         // now try to work out how many entries for each attribute have
         Map<Integer, AtomicInteger> counts = new HashMap<>();

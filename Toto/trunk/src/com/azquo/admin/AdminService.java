@@ -468,6 +468,7 @@ this may now not work at all, perhaps delete?
         File dir = new File(SpreadsheetService.getHomeDir() +  dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir);
 //        File file = new File(nearlyfullPath.substring(nearlyfullPath.lastIndexOf("/")));
         // feedback on this?
+        // todo - new apis . . .
         File f = null;
         if (dir.isDirectory()){
             for (File file : dir.listFiles()){

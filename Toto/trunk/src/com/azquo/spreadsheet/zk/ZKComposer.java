@@ -368,7 +368,6 @@ public class ZKComposer extends SelectorComposer<Component> {
         //we do not seem to be able to detect insertion or deletion of rows, so this routine detects row insertion/deletion after the event
         SBook book = sheet.getInternalSheet().getBook();
         for (SName name : book.getNames()) {
-            try {
                 if (name.getRefersToSheetName().equals(sheet.getSheetName()) && name.getName().toLowerCase().startsWith(ReportRenderer.AZDISPLAYROWHEADINGS)) {
                     String region = name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length());
                     int size = name.getRefersToCellRegion().getRowCount();
@@ -425,9 +424,6 @@ public class ZKComposer extends SelectorComposer<Component> {
                     }
 
                 }
-            } catch (Exception e) {
-                //bad name
-            }
         }
     }
 

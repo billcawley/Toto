@@ -49,12 +49,6 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static final int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
 
-    // just a cache while the names by id map is being populated. I experimented with various ideas e.g. a parent cache also, this seemed the best compromise
-    // it may be possible with some kind of hack to take this pointer out of name if we're really pushing memory limits and want to save 8 bytes
-    // also this would extract the linking code I think
-
-    private byte[] childrenCache = null;
-
 //    private static final Logger logger = Logger.getLogger(Name.class);
 
     private Provenance provenance; // should be volatile? Don't care about being completely up to date but could a partially constructed object get in here?
@@ -103,10 +97,9 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger newName3Count = new AtomicInteger(0);
 
-    public Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, byte[] chidrenCache, int noParents, int noValues) throws Exception {
+    public Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, int noParents, int noValues) throws Exception {
         super(azquoMemoryDB, id);
         newName3Count.incrementAndGet();
-        this.childrenCache = chidrenCache;
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId); // see no reason not to do this here now
         //this.attributes = transport.attributes;
         String[] attsArray = attributes.split(StringLiterals.ATTRIBUTEDIVIDER);
@@ -140,6 +133,7 @@ public final class Name extends AzquoMemoryDBEntity {
         return nameAttributes.getAttribute(Constants.DEFAULT_DISPLAY_NAME);
     }
 
+    // todo what was this for, aagh, I know there was something!
     private static AtomicInteger hasDefaultDisplayNameCount = new AtomicInteger(0);
 
     public boolean hasDefaultDisplayName() {
@@ -282,7 +276,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 }
             }
         }
-        setNeedsPersisting(); // will be ignored on loading. Best to put in here to be safe. COuld maybe check it's actually necessary above if performance an issue.
+        setNeedsPersisting(); // will be ignored on loading. Best to put in here to be safe. Could maybe check it's actually necessary above if performance an issue.
     }
 
     private static AtomicInteger removeFromValuesCount = new AtomicInteger(0);
@@ -339,7 +333,7 @@ public final class Name extends AzquoMemoryDBEntity {
     /* don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
     this is absolutely hammered on loading, saving bits of logic or bytes of garbage generated is worth it!
     for notes about the pattern here see addToValues. I'm going to set needs persisting on parent modifications regardless
-    so no_parents in the db is kept correct. Could check to see if teh parents actually changed before setNeedsPersisting
+    so no_parents in the db is kept correct. Could check to see if the parents actually changed before setNeedsPersisting
     but due to where these functions are called internally I think there would be little gain, these two functions only tend to be
      called after it is confirmed that changed to children actually happened*/
 
@@ -1004,7 +998,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger linkCount = new AtomicInteger(0);
 
-    void link() throws Exception {
+    void link(byte[] childrenCache) throws Exception {
         linkCount.incrementAndGet();
         if (getAzquoMemoryDB().getNeedsLoading() && childrenCache != null) { // if called and these conditions are not true then there's a problem
             synchronized (this) {
@@ -1023,7 +1017,6 @@ public final class Name extends AzquoMemoryDBEntity {
                     }
                     this.children = newChildren;
                 }
-                childrenCache = null;// free the memory
             }
         } else {
             throw new Exception("Trying to link with no children cache or after loading?"); // children cache could be empty but should not be null!

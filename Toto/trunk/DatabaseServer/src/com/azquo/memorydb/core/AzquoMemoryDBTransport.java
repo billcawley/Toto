@@ -166,7 +166,7 @@ class AzquoMemoryDBTransport {
         @Override
         public Void call() throws Exception { // well this is what's going to truly test concurrent modification of a database
             for (Name name : batchToLink) {
-                name.link();
+                name.link(azquoMemoryDB.nameChildrenLoadingCache.get(name.getId()));
             }
             logInSessionLogAndSystem("Linked : " + loadTracker.addAndGet(batchToLink.size()));
             return null;
@@ -316,6 +316,7 @@ class AzquoMemoryDBTransport {
         for (Future linkFuture : linkFutures) {
             linkFuture.get(1, TimeUnit.HOURS);
         }
+        azquoMemoryDB.nameChildrenLoadingCache.clear(); // free the memory. If it was really tight we could clear as we went along I suppose.
         int counter = 0;
         long marker = System.currentTimeMillis();
         for (Name name : azquoMemoryDB.getAllNames()) {
@@ -470,7 +471,7 @@ class AzquoMemoryDBTransport {
                 jsonToStore = true;
             }
         }
-        if (jsonToStore || !namesToPersist.isEmpty() | !valuesToPersist.isEmpty()){
+        if (jsonToStore || !namesToPersist.isEmpty() || !valuesToPersist.isEmpty()){
             System.out.println("=========Further entities to persist, persisting again");
             persistDatabase();
         } else {

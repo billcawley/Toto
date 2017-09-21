@@ -128,6 +128,12 @@ class NameEditFunctions {
             }
             return toReturn;
         }
+
+        if (setFormula.startsWith("check")) {
+            // check db if required . . .
+            return new ArrayList<>();
+        }
+
         throw new Exception(setFormula + " not understood");
     }
 
