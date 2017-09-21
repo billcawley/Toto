@@ -63,7 +63,7 @@ class HeadingReader {
         for (String header : headers) {
             // on some spreadsheets, pseudo headers are created because there is text in more than one line.  The Dividor must also be accompanied by a 'peers' clause
             int dividerPos = header.lastIndexOf(headingDivider); // is there context defined here?
-            if (header.trim().length() > 0 && (dividerPos < 0 || header.indexOf(PEERS)>0)) { // miss out blanks also.
+            if (header.trim().length() > 0 && (dividerPos < 0 || header.toLowerCase().indexOf(PEERS)>0)) { // miss out blanks also.
                 // works backwards simply for convenience to chop off the context headings until only the heading is left, there is nothing significant about the ordering in contextHeadings
                 if (dividerPos > 0 || header.indexOf(";")>0) {//any further clauses void context headings
                     contextHeadings = new ArrayList<>(); // reset/build the context headings
