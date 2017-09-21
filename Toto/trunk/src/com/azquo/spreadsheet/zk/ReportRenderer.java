@@ -658,7 +658,7 @@ public class ReportRenderer {
             }
             Range insertRange = Ranges.range(sheet, topRow, insertCol, maxRow, insertCol + colsToAdd - 1); // insert just before the last col, except for permuted headings
             CellOperationUtil.insertColumn(insertRange);
-            if (columnsFormattingPatternWidth > 1) {
+            if (columnsFormattingPatternWidth > 1 && columnsFormattingPatternWidth < colsToShow) {
                 //cut back the last column to it's original position, and shift the insert range one column to the right
                 CellOperationUtil.cut(Ranges.range(sheet, topRow, insertCol + colsToAdd, maxRow, insertCol + colsToAdd), Ranges.range(sheet, topRow, insertCol, maxRow, insertCol));
                 insertRange = Ranges.range(sheet, topRow, insertCol + 1, maxRow, insertCol + colsToAdd);
