@@ -483,12 +483,13 @@ public class DSImportService {
         BufferedReader br = new BufferedReader(new FileReader(filePath));
         // grab the first line to check on delimiters
         String firstLine = br.readLine();
-        if (firstLine == null) {
+        if (firstLine == null || firstLine.length()==0) {
             br.close();
             return null;
         }
         String secondLine = br.readLine();
-        long linesGuess = fileLength / (secondLine != null ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
+
+        long linesGuess = fileLength / (secondLine != null || secondLine.length()==0 ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
         System.out.println("Lines guessed at : " + linesGuess);
         int batchSize = 100_000;
         if (linesGuess < 100_000) {
