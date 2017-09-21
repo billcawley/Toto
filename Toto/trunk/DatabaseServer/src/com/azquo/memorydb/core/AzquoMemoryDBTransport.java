@@ -451,7 +451,7 @@ class AzquoMemoryDBTransport {
         // same pattern as with name
         System.out.println("value store : " + valuesToPersist.size());
         List<Value> valuesToStore = new ArrayList<>(valuesToPersist);
-        for (Value value : valuesToPersist) {
+        for (Value value : valuesToStore) {
             valuesToPersist.remove(value);
         }
         try {
@@ -459,9 +459,22 @@ class AzquoMemoryDBTransport {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        for (Value value : valuesToPersist) {
+        for (Value value : valuesToStore) {
             value.setNeedsInsertingFalse();
         }
-        System.out.println("persist done.");
+        // Edd adding new defensive logic - if something changed in teh eman time fire another persist
+        boolean jsonToStore = false;
+        for (String tableName : jsonEntitiesToPersist.keySet()) {
+            Set<AzquoMemoryDBEntity> entities = jsonEntitiesToPersist.get(tableName);
+            if (!entities.isEmpty()) {
+                jsonToStore = true;
+            }
+        }
+        if (jsonToStore || !namesToPersist.isEmpty() | !valuesToPersist.isEmpty()){
+            System.out.println("=========Further entities to persist, persisting again");
+            persistDatabase();
+        } else {
+            System.out.println("persist done.");
+        }
     }
 }

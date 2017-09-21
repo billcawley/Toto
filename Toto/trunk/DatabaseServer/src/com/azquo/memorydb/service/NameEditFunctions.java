@@ -135,7 +135,7 @@ class NameEditFunctions {
         if (attribute == null || attribute.isEmpty()){
             return Collections.emptyList();
         }
-        // first order of business is to create/find the attribtue name at the top level and delete all children
+        // first order of business is to create/find the attribute name at the top level and delete all children
         Name attributeName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, attribute, null, false);
         // clear children
         for (Name child : attributeName.getChildren()){

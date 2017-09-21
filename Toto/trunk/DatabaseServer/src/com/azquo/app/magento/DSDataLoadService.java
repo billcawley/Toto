@@ -1002,7 +1002,7 @@ public class DSDataLoadService {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         ordersName.setAttributeWillBePersisted(LATEST_UPDATE + " " + remoteAddress, sdf.format(new Date()));
         if (azquoMemoryDBConnection.getAzquoMemoryDB() != null) {
-            azquoMemoryDBConnection.persistInBackground();// aim to return to them quickly, this is whre we get into multi threading . . .
+            azquoMemoryDBConnection.persistInBackground();// aim to return to them quickly, this is where we get into multi threading . . .
         }
     }
 

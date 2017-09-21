@@ -722,6 +722,7 @@ public class DSSpreadsheetService {
         return null; // no headings match the row/col passed
     }
 
+    // doesn't persist - should it??
     // note : could be issues with reports which use this running concurrently - as in zap temporary names while they're being used. TODO
     public static void clearTemporaryNames(DatabaseAccessToken databaseAccessToken) throws Exception {
         final Name temporaryNames = NameService.findByName(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), StringLiterals.TEMPORARYNAMES);

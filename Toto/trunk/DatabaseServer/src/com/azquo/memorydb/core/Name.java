@@ -59,7 +59,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private Provenance provenance; // should be volatile? Don't care about being completely up to date but could a partially constructed object get in here?
 
-    private NameAttributes nameAttributes; // since NameAttributes is immutable there's no need for this to be volatile I don't think. Could test performance, I suppose volatile is slightly preferable? Happens before?
+    private volatile NameAttributes nameAttributes; // since NameAttributes is immutable there's no need for this to be volatile I don't think. Could test performance, I suppose volatile is slightly preferable? Happens before?
 
     /* memory db structure bits. There may be better ways to do this but we'll leave it here for the mo
      Values, parent are for quick lookup, must be modified appropriately
@@ -853,8 +853,8 @@ public final class Name extends AzquoMemoryDBEntity {
             attributeKeys.remove(index);
             attributeValues.remove(index);
             nameAttributes = new NameAttributes(attributeKeys, attributeValues);
+            setNeedsPersisting();
         }
-        setNeedsPersisting();
     }
 
     // convenience - plain clearing of this object won't change the indexes in the memory db. Hence remove on each one.
@@ -934,7 +934,6 @@ public final class Name extends AzquoMemoryDBEntity {
     public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked) {
         return getAttribute(attributeName, parentCheck, checked, this, 0);
     }
-
 
     public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked, Name origName, int level) {
         attributeName = attributeName.toUpperCase(); // edd adding (back?) in, need to do this since all attributes are uppercase internally - check there are not redundant uppercases in other places TODO
@@ -1052,12 +1051,27 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public void delete() throws Exception {
         deleteCount.incrementAndGet();
+//        List<Value> values;
+//        List<Name> parents;
         Collection<Value> values;
         Collection<Name> parents;
 
         // ok we want a thread safe snapshot really of things that are synchronized on other objects
         synchronized (this) {
-            values = getValues();
+            /*
+            todo : not copying values wasn't clever but what about parents? It doesn't need a copy . . . how can it get screwed up?
+
+            I wasn't copying the parents and values here (my making a new ArrayList) which was a big mistake. Since these are "derived"
+            then they will change as a result of the actions after the synchronized block.
+            v.delete() will remove that value from values and parent.removeFromChildrenWillBePersisted will similarly remove that parent
+            from parents. Notably the Iterator never threw a concurrent modification exception as underlying was either a thread safe set
+            backed by ConcurrentHashMap or a simple array behind Arrays.AsList which can be modified and seemingly won't cause throw a
+            wobbler if the same thread that's iterating removes the element.
+
+            Although I now wonder - the set might change behind but the arrays are switched out - so surely if reduced then it wouldn't matter? Going to test
+             */
+            values = new ArrayList<>(getValues());
+            //parents = new ArrayList<>(getParents());
             parents = getParents();
             // the basics are done here in the synchronized block
             getAzquoMemoryDB().removeNameFromDb(this);
