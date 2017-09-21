@@ -489,7 +489,7 @@ public class DSImportService {
         }
         String secondLine = br.readLine();
 
-        long linesGuess = fileLength / (secondLine != null || secondLine.length()==0 ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
+        long linesGuess = fileLength / ((secondLine != null && secondLine.length() >20) ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
         System.out.println("Lines guessed at : " + linesGuess);
         int batchSize = 100_000;
         if (linesGuess < 100_000) {
