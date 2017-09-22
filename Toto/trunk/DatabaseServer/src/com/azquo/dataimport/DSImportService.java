@@ -159,9 +159,11 @@ public class DSImportService {
                 List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
                 int columnIndex = 0;
                 boolean corrupt = false;
+                boolean blankLine = true;
                 for (ImmutableImportHeading immutableImportHeading : headingsWithIteratorAndBatchSize.headings) {
                     // Intern may save a little memory if strings are repeated a lot. Column Index could point past line values for things like composite.
                     String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern() : "";
+                    if (lineValue.length() > 0) blankLine = false;
                     if (lineValue.equals("\"")) {// was a problem, might be worth checking if it is still
                         corrupt = true;
                         break;
@@ -176,7 +178,7 @@ public class DSImportService {
                     importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue));
                     columnIndex++;
                 }
-                if (!corrupt) {
+                if (!corrupt && !blankLine) {
                     linesBatched.add(importCellsWithHeading);
                     // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
                     if (linesBatched.size() == headingsWithIteratorAndBatchSize.batchSize) {
