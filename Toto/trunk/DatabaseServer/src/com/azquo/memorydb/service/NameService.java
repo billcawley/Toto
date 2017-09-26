@@ -233,6 +233,7 @@ public final class NameService {
     private static void includeInSet(Name name, Name set) throws Exception {
         includeInSetCount.incrementAndGet();
         set.addChildWillBePersisted(name);//ok add as asked
+        /*  REMOVING THIS CONDITION - CAUSED PROBLEMS IN SETTING UP `Order Entities->Shipping` then `Order Entities->Invoice Total->Shipping` in Magento
         Collection<Name> setParents = set.findAllParents();
         for (Name parent : name.getParents()) { // now check the direct parents and see that none are in the parents of the set we just put it in.
             // e.g the name was Ludlow in in places. We decided to add Ludlow to Shropshire which is all well and good.
@@ -242,6 +243,7 @@ public final class NameService {
                 break;
             }
         }
+        */
     }
 
     private static AtomicInteger findOrCreateNameInParentCount = new AtomicInteger(0);
@@ -337,7 +339,7 @@ public final class NameService {
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent5", marker);
             return existing;
         } else {
-            logger.debug("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
+              logger.debug("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
             // I think provenance from connection is correct, we should be looking to make a useful provenance when making the connection from the data access token
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance());
             if (!attributeNames.get(0).equals(Constants.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
