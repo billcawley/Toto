@@ -36,7 +36,7 @@ public class ManageDatabaseBackupsController {
 
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
-    public class DisplayBackup {
+    public static class DisplayBackup {
         private final String name;
         private final String date;
 

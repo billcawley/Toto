@@ -443,8 +443,8 @@ public class ChoicesService {
 
     static void setChoices(LoggedInUser loggedInUser, String context) {
         Map<String, String> stringStringMap = parseChoicesFromDrillDownContextString(context);
-        for (String key : stringStringMap.keySet()){
-            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), key, stringStringMap.get(key));
+        for (Map.Entry<String, String> choiceChosen : stringStringMap.entrySet()){
+            SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceChosen.getKey(), choiceChosen.getValue());
         }
     }
 }

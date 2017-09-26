@@ -418,9 +418,9 @@ public class SpreadsheetService {
             }
         }
         // now send
-        for (String email : filesToSendForEachEmail.keySet()) {
+        for (Map.Entry<String, List<File>> emailFiles : filesToSendForEachEmail.entrySet()) {
             // might need to tweak subject, body and file names
-            AzquoMailer.sendEMail(email, email, "Azquo Reports", "Attached", filesToSendForEachEmail.get(email), null);
+            AzquoMailer.sendEMail(emailFiles.getKey(), emailFiles.getKey(), "Azquo Reports", "Attached", emailFiles.getValue(), null);
         }
     }
 

@@ -47,7 +47,7 @@ public class ManageDatabasesController {
     private static DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yy-HH:mm");
 
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
-    public class DisplayDataBase {
+    public static class DisplayDataBase {
         private final boolean loaded;
         private final Database database;
 

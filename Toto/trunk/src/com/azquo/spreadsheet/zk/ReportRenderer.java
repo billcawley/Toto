@@ -314,9 +314,10 @@ public class ReportRenderer {
                 ChoicesService.resolveDependentChoiceOptions(sheet.getSheetName().replace(" ", ""), dependentRanges, book, loggedInUser);
             }
         }
-        for (Sheet sheet : sheetsToRename.keySet()) {
+        for (Map.Entry<Sheet, String> sheetNewName : sheetsToRename.entrySet()) {
+            Sheet sheet = sheetNewName.getKey();
+            String newName = sheetNewName.getValue();
             String oldName = sheet.getSheetName();
-            String newName = sheetsToRename.get(sheet);
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
             book.getInternalBook().setSheetName(sheet.getInternalSheet(), suggestSheetName(book, newName));
             // and we need to sort the names

@@ -13,6 +13,7 @@ import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -155,9 +156,9 @@ public class LoggedInUser {
 
     public List<CellsAndHeadingsForDisplay> getSentForReport(final int reportId) {
         List<CellsAndHeadingsForDisplay> toReturn = new ArrayList<>();
-        for (String key : sentCellsMaps.keySet()) {
-            if (key.startsWith(reportId + "-")) {
-                toReturn.add(sentCellsMaps.get(key));
+        for (Map.Entry<String, CellsAndHeadingsForDisplay> keyCells : sentCellsMaps.entrySet()) {
+            if (keyCells.getKey().startsWith(reportId + "-")) {
+                toReturn.add(keyCells.getValue());
             }
         }
         return toReturn;
@@ -168,9 +169,9 @@ public class LoggedInUser {
             sheetName = defaultSheet;
         }
         List<CellsAndHeadingsForDisplay> toReturn = new ArrayList<>();
-        for (String key : sentCellsMaps.keySet()) {
-            if (key.startsWith(reportId + "-" + sheetName + "-")) {
-                toReturn.add(sentCellsMaps.get(key));
+        for (Map.Entry<String, CellsAndHeadingsForDisplay> keyCells : sentCellsMaps.entrySet()) {
+            if (keyCells.getKey().startsWith(reportId + "-" + sheetName + "-")) {
+                toReturn.add(keyCells.getValue());
             }
         }
         return toReturn;
@@ -249,7 +250,7 @@ public class LoggedInUser {
     public void userLog(String message) {
         try {
             Files.write(Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + userLogsPath + user.getEmail() + "-" + df.format(LocalDateTime.now()) + ".log"),
-                    (df2.format(LocalDateTime.now()) + "\t" + message + "\n").getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                    (df2.format(LocalDateTime.now()) + "\t" + message + "\n").getBytes(Charset.forName("UTF-8")), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException e) {
             e.printStackTrace();
         }

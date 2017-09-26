@@ -11,16 +11,17 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
-import sun.misc.BASE64Encoder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.azquo.dataimport.ImportService.dbPath;
 import static com.azquo.dataimport.ImportService.onlineReportsDir;
@@ -212,8 +213,8 @@ this may now not work at all, perhaps delete?
     public static String encrypt(final String password, String salt) throws Exception {
         // WARNING! DO NOT MODIFY THE reference to "scapbadopbebedop"  bit in the code below or existing passwords will stop working! This is the extra bit on the salt or the number of hash cycles! stay at 3296
         salt += "scapbadopbebedop";
-        byte[] passBytes = password.getBytes();
-        byte[] saltBytes = salt.getBytes();
+        byte[] passBytes = password.getBytes(Charset.forName("UTF-8"));
+        byte[] saltBytes = salt.getBytes(Charset.forName("UTF-8"));
         int hashCycles = 3296;
         MessageDigest md = MessageDigest.getInstance("SHA");
         for (int i = 0; i < hashCycles; i++) {
@@ -225,12 +226,12 @@ this may now not work at all, perhaps delete?
             md.update(combined);
             passBytes = md.digest();
         }
-        return (new BASE64Encoder()).encode(passBytes);
+        return Base64.getEncoder().encodeToString(passBytes);
     }
 
     public static String shaHash(final String toHash) throws Exception {   // for making a password salt
         java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
-        byte[] hash = md.digest(toHash.getBytes());
+        byte[] hash = md.digest(toHash.getBytes(Charset.forName("UTF-8")));
         Formatter formatter = new Formatter();
         for (byte b : hash) {
             formatter.format("%02x", b);
@@ -465,20 +466,23 @@ this may now not work at all, perhaps delete?
 
     private static void checkDBSetupFile(LoggedInUser loggedInUser, Database db) throws Exception{
 //        String nearlyfullPath = SpreadsheetService.getHomeDir() +  ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + ;
-        File dir = new File(SpreadsheetService.getHomeDir() +  dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir);
-//        File file = new File(nearlyfullPath.substring(nearlyfullPath.lastIndexOf("/")));
-        // feedback on this?
         // todo - new apis . . .
-        File f = null;
-        if (dir.isDirectory()){
-            for (File file : dir.listFiles()){
-                if (file.getName().startsWith("Setup" + db.getName()) && (f == null || f.lastModified() < file.lastModified())){
-                    f = file;
+        Path setupFile = null;
+        Path dir = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir);
+        if (Files.isDirectory(dir)){
+            for (Path path : Files.list(dir).collect(Collectors.toList())){
+                if (path != null &&  path.getFileName() != null && db != null && path.getFileName().startsWith("Setup" + db.getName())
+                        && (setupFile == null
+                        || Files.getLastModifiedTime(path).toMillis() > Files.getLastModifiedTime(setupFile).toMillis())){
+                    setupFile = path;
                 }
             }
         }
-        if (f != null){
-            ImportService.importTheFile(loggedInUser, f.getName(), f.getAbsolutePath(), loggedInUser.getLanguages(), false);
+//        setupFile.getFileName().toString();
+        if (setupFile != null && setupFile.getFileName() != null){
+            ImportService.importTheFile(loggedInUser,
+                    setupFile.getFileName() + ""
+                    , setupFile.toString(), loggedInUser.getLanguages(), false);
         }
     }
 

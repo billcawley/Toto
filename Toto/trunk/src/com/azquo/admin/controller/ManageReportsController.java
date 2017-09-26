@@ -30,7 +30,7 @@ public class ManageReportsController {
 
     //private static final Logger logger = Logger.getLogger(ManageReportsController.class);
 
-    public class DatabaseSelected {
+    public static class DatabaseSelected {
         private final boolean selected;
         private final Database database;
 

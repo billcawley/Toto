@@ -42,8 +42,8 @@ public class JSTreeService {
             throw new Exception("Name not found for id " + nameId);
         }
         name.clearAttributes(); // and just re set them below
-        for (String attName : attributes.keySet()) {
-            name.setAttributeWillBePersisted(attName, attributes.get(attName));
+        for (Map.Entry<String, String> attNameValue : attributes.entrySet()) {
+            name.setAttributeWillBePersisted(attNameValue.getKey(), attNameValue.getValue());
         }
         azquoMemoryDBConnection.persist();
     }

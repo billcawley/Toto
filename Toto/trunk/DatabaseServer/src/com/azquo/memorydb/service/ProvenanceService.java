@@ -492,29 +492,29 @@ public class ProvenanceService {
     // find the most used name by a set of values, used by printBatch to derive headings
 
     private static Name getMostUsedName(Set<DummyValue> values, Name topParent) {
-        Map<Name, Integer> nameCount = new HashMap<>();
+        Map<Name, Integer> nameCounts = new HashMap<>();
         for (DummyValue value : values) {
             for (Name name : value.getNames()) {
                 if (topParent == null || name.findATopParent() == topParent) {
-                    Integer origCount = nameCount.get(name);
+                    Integer origCount = nameCounts.get(name);
                     if (origCount == null) {
-                        nameCount.put(name, 1);
+                        nameCounts.put(name, 1);
                     } else {
-                        nameCount.put(name, origCount + 1);
+                        nameCounts.put(name, origCount + 1);
                     }
                 }
             }
         }
-        if (nameCount.size() == 0) {
+        if (nameCounts.size() == 0) {
             return getMostUsedName(values, null);
         }
         int maxCount = 0;
         Name maxName = null;
-        for (Name name : nameCount.keySet()) {
-            int count = nameCount.get(name);
+        for (Map.Entry<Name, Integer> nameCount : nameCounts.entrySet()) {
+            int count = nameCount.getValue();
             if (count > maxCount) {
                 maxCount = count;
-                maxName = name;
+                maxName = nameCount.getKey();
             }
         }
         return maxName;

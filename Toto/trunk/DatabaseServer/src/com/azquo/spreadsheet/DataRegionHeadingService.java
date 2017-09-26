@@ -233,11 +233,11 @@ class DataRegionHeadingService {
         }
         position++;
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
-        for (int key : sortMap.keySet()) { // so now we run through the groups of sorted names
+        for (Set<List<Name>> names : sortMap.values()) { // so now we run through the groups of sorted names
             if (position == sortLists.size()) { // we're on the last one
                 // according to the logic of the function I'd be very surprised if this ever had more than one combo at this point as it should be
                 // sorted on the last and there are no duplicate foundCombinations
-                for (List<Name> entry : sortMap.get(key)) {
+                for (List<Name> entry : names) {
                     List<DataRegionHeading> drhEntry = new ArrayList<>();
                     // now for that combo build the headings
                     for (Name name : entry) {
@@ -247,7 +247,7 @@ class DataRegionHeadingService {
                 }
                 // if it's not the last grab this clump of combos and run them through this function again to sort on the next level down
             } else {
-                toReturn.addAll(sortCombos(listToPermute, sortMap.get(key), position, sortLists, noPermuteTotals));
+                toReturn.addAll(sortCombos(listToPermute, names, position, sortLists, noPermuteTotals));
             }
         }
         // now add totals - remember this is recursive - this will happen leaving each level

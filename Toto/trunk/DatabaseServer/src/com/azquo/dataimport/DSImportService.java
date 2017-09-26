@@ -14,6 +14,7 @@ import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -375,21 +376,22 @@ public class DSImportService {
 
     private static boolean maybeHasHeadings(String filePath) throws Exception {
         // checks the first few lines of a spreadsheet file to discover evidence of headings.  ten lines without a blank line, and without clauses in the top line indicates no headings
-        BufferedReader br = new BufferedReader(new FileReader(filePath));
-        String lineData = br.readLine();
-        if (lineData == null || lineData.contains(".") || lineData.contains(";")) {
-            br.close();
-            return true;
-        }
-        int lineCount = 10;
-        while (lineCount-- > 0) {
-            lineData = br.readLine();
-            if (lineData == null || lineData.replace("\t", "").replace(" ", "").length() == 0) {
+        try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath), Charset.forName("UTF-8"))) {
+            String lineData = br.readLine();
+            if (lineData == null || lineData.contains(".") || lineData.contains(";")) {
                 br.close();
                 return true;
             }
+            int lineCount = 10;
+            while (lineCount-- > 0) {
+                lineData = br.readLine();
+                if (lineData == null || lineData.replace("\t", "").replace(" ", "").length() == 0) {
+                    br.close();
+                    return true;
+                }
+            }
+            br.close();
         }
-        br.close();
         return false;
     }
 
@@ -480,34 +482,33 @@ public class DSImportService {
     // Getting some simple info about the file to set up the csv reader and determine batch size
     // Makes the HeadingsWithIteratorAndBatchSize but without the ImmutableImportHeadings
     private static HeadingsWithIteratorAndBatchSize getLineIteratorAndBatchSize(String filePath, Name importInterpreter) throws Exception {
+        int batchSize = 100_000;
+        char delimiter = ',';
         File sizeTest = new File(filePath);
         final long fileLength = sizeTest.length();
-        BufferedReader br = new BufferedReader(new FileReader(filePath));
-        // grab the first line to check on delimiters
-        String firstLine = br.readLine();
-        if (firstLine == null || firstLine.length()==0) {
-            br.close();
-            return null;
-        }
-        String secondLine = br.readLine();
-
-        long linesGuess = fileLength / ((secondLine != null && secondLine.length() >20) ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
-        System.out.println("Lines guessed at : " + linesGuess);
-        int batchSize = 100_000;
-        if (linesGuess < 100_000) {
-            System.out.println("less than 100,000, dropping batch size to 5k");
-            batchSize = 5_000;
-        } else if (linesGuess < 1_000_000) {
-            System.out.println("less than 1,000,000, dropping batch size to 10k");
-            batchSize = 10_000;
-        }
-        br.close();
-        char delimiter = ',';
-        if (firstLine.contains("|")) {
-            delimiter = '|';
-        }
-        if (firstLine.contains("\t")) {
-            delimiter = '\t';
+        try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath), Charset.forName("UTF-8"))) {
+            // grab the first line to check on delimiters
+            String firstLine = br.readLine();
+            if (firstLine == null || firstLine.length() == 0) {
+                br.close();
+                return null;
+            }
+            String secondLine = br.readLine();
+            long linesGuess = fileLength / ((secondLine != null && secondLine.length() > 20) ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
+            System.out.println("Lines guessed at : " + linesGuess);
+            if (linesGuess < 100_000) {
+                System.out.println("less than 100,000, dropping batch size to 5k");
+                batchSize = 5_000;
+            } else if (linesGuess < 1_000_000) {
+                System.out.println("less than 1,000,000, dropping batch size to 10k");
+                batchSize = 10_000;
+            }
+            if (firstLine.contains("|")) {
+                delimiter = '|';
+            }
+            if (firstLine.contains("\t")) {
+                delimiter = '\t';
+            }
         }
         // now we know the delimiter can CSV read, I've read jackson is pretty quick
         CsvMapper csvMapper = new CsvMapper();

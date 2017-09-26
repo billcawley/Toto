@@ -219,19 +219,19 @@ class AzquoMemoryDBTransport {
             int maxIdForTable;
             List<Future<?>> futureBatches;
             // currently just provenance
-            for (String tableName : jsonTablesAndInitializers.keySet()) {
+            for (Map.Entry<String, JsonSerializableEntityInitializer> tableNameEntities : jsonTablesAndInitializers.entrySet()) {
                 jsonRecordsLoaded.set(0);
                 from = 0;
-                maxIdForTable = JsonRecordDAO.findMaxId(persistenceName, tableName);
+                maxIdForTable = JsonRecordDAO.findMaxId(persistenceName, tableNameEntities.getKey());
                 futureBatches = new ArrayList<>();
                 while (from < maxIdForTable) {
-                    futureBatches.add(ThreadPools.getSqlThreadPool().submit(new SQLBatchLoader(tableName, jsonTablesAndInitializers.get(tableName), from, from + step, tableName.equals(Provenance.PERSIST_TABLE) ? provenanceLoaded : jsonRecordsLoaded)));
+                    futureBatches.add(ThreadPools.getSqlThreadPool().submit(new SQLBatchLoader(tableNameEntities.getKey(), tableNameEntities.getValue(), from, from + step, tableNameEntities.getKey().equals(Provenance.PERSIST_TABLE) ? provenanceLoaded : jsonRecordsLoaded)));
                     from += step;
                 }
                 for (Future future : futureBatches) {
                     future.get(1, TimeUnit.HOURS);
                 }
-                logInSessionLogAndSystem(tableName + ", " + jsonRecordsLoaded + " records loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
+                logInSessionLogAndSystem(tableNameEntities.getKey() + ", " + jsonRecordsLoaded + " records loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
             }
             marker = System.currentTimeMillis();
             from = 0;
@@ -389,11 +389,11 @@ class AzquoMemoryDBTransport {
     void persistDatabase() {
         System.out.println("PERSIST STARTING");
         // ok first do the json bits, currently this is just provenance, may well be others
-        for (String tableName : jsonEntitiesToPersist.keySet()) {
-            Set<AzquoMemoryDBEntity> entities = jsonEntitiesToPersist.get(tableName);
+        for (Map.Entry<String, Set<AzquoMemoryDBEntity>> tableNameEntites : jsonEntitiesToPersist.entrySet()) {
+            Set<AzquoMemoryDBEntity> entities = tableNameEntites.getValue();
             if (!entities.isEmpty()) {
                 // multi thread this chunk? It can slow things down a little . . .
-                System.out.println("Json entities to put in " + tableName + " : " + entities.size());
+                System.out.println("Json entities to put in " + tableNameEntites.getKey() + " : " + entities.size());
                 List<JsonRecordTransport> recordsToStore = new ArrayList<>(entities.size()); // it's now bothering me a fair bit that I didn't used to initialise such lists!
                 // new logic, use an iterator, I don't see why not? ConcurrentHashMap should handle changes behind the scenes effectively.
                 // if more are added in the background this is fine, persist needs to be started again which it should be anyway by whatever logic was modifying the object
@@ -420,7 +420,7 @@ class AzquoMemoryDBTransport {
                 }
                 // and end here
                 try {
-                    JsonRecordDAO.persistJsonRecords(persistenceName, tableName, recordsToStore);// note this is multi threaded internally
+                    JsonRecordDAO.persistJsonRecords(persistenceName, tableNameEntites.getKey(), recordsToStore);// note this is multi threaded internally
                 } catch (Exception e) {
                     // currently I'll just stack trace this, not sure of what would be the best strategy
                     e.printStackTrace();
@@ -465,8 +465,7 @@ class AzquoMemoryDBTransport {
         }
         // Edd adding new defensive logic - if something changed in teh eman time fire another persist
         boolean jsonToStore = false;
-        for (String tableName : jsonEntitiesToPersist.keySet()) {
-            Set<AzquoMemoryDBEntity> entities = jsonEntitiesToPersist.get(tableName);
+        for (Set<AzquoMemoryDBEntity> entities : jsonEntitiesToPersist.values()) {
             if (!entities.isEmpty()) {
                 jsonToStore = true;
             }

@@ -32,6 +32,7 @@ public class DSAdminService {
         }
     }
 
+    // todo - add code to check relationships so that all parents have matching hildren and vice versa
     public static void checkDatabase(String persistenceName) throws Exception {
         final AzquoMemoryDB azquoMemoryDB = AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null);
         System.out.println("Database check for : " + persistenceName);
@@ -154,13 +155,13 @@ public class DSAdminService {
             }
 
         }
-        for (Set<Name> nameValues : showValues.keySet()) {
+        for (Map.Entry<Set<Name>, Set<Value>> nameValues : showValues.entrySet()) {
             Set<Name> names2 = new HashSet<>();
-            for (Name name : nameValues) {
+            for (Name name : nameValues.getKey()) {
                 names2.add(dictionary.get(name));
 
             }
-            ValueService.storeValueWithProvenanceAndNames(targetConnection, addValues(showValues.get(nameValues)), names2);
+            ValueService.storeValueWithProvenanceAndNames(targetConnection, addValues(nameValues.getValue()), names2);
         }
         targetConnection.persist();
     }

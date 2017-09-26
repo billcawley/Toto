@@ -239,10 +239,9 @@ class NameEditFunctions {
                 nameMap.putIfAbsent(nameString, new HashSet<>());
                 nameMap.get(nameString).add(name);
             }
-            for (String nameString : nameMap.keySet()) {
-                if (nameMap.get(nameString).size() > 1) {
-                    Set<Name> dups = nameMap.get(nameString);
-                    dedupeOne(dups.iterator().next(), dups, rubbishBin);
+            for (Set<Name> dupeNames : nameMap.values()) {
+                if (dupeNames.size() > 1) {
+                    dedupeOne(dupeNames.iterator().next(), dupeNames, rubbishBin);
                 }
             }
             toReturn.add(rubbishBin);
