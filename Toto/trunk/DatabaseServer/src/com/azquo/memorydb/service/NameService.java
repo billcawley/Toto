@@ -313,6 +313,8 @@ public final class NameService {
                     marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
             } else {// so we ignore parent if not local, we'll grab what we can to move it into the right parent set
                 try {
+                    existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, parent);
+                    if (existing!=null)return existing;
                     existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, null);
                 } catch (Exception ignored) { // ignore the Found more than one name exception
                     existing = null;
