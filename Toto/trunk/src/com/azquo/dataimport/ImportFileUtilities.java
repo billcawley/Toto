@@ -35,6 +35,9 @@ class ImportFileUtilities {
         if (suffix.contains(".")){
             suffix = suffix.substring(0, suffix.lastIndexOf("."));
         }
+        if (suffix.contains("_")){
+            suffix = suffix.substring(suffix.indexOf("_"));
+        }
         try {
             //create output directory is not exists
             Path folder = Paths.get(outputFolder);
