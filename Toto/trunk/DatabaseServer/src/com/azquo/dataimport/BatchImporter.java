@@ -513,7 +513,7 @@ public class BatchImporter implements Callable<Void> {
             return found;
         }
         found = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, name, parent, local, attributeNames);
-        if (found != null){
+        if (found == null){
             System.out.println("found null in findOrCreateNameStructureWithCache");
             System.out.println("name = " + name);
             System.out.println("parent = " + parent);

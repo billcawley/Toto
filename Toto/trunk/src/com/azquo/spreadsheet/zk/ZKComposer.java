@@ -7,7 +7,6 @@ import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.*;
 import org.zkoss.chart.ChartsEvent;
 import org.zkoss.zk.ui.*;
-import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Listen;
 import org.zkoss.zk.ui.select.annotation.Wire;
@@ -115,7 +114,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             }
         }
         if (selectionList != null) {
-            showMultiSelectionList(loggedInUser, book, selectionName, selectionList, event.getPageX(), event.getPageY());
+            showMultiSelectionList(loggedInUser, selectionName, selectionList, event.getPageX(), event.getPageY());
         } else { // if not a multi check for a clickable report name
             SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS);
             if (allowableReports != null) {
@@ -431,15 +430,15 @@ public class ZKComposer extends SelectorComposer<Component> {
     // to deal with provenance
     @Listen("onCellRightClick = #myzss")
     public void onCellRightClick(CellMouseEvent cellMouseEvent) {
-        showAzquoContextMenu(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty(), myzss.getBook());
+        showAzquoContextMenu(cellMouseEvent.getRow(), cellMouseEvent.getColumn(), cellMouseEvent.getClientx(), cellMouseEvent.getClienty());
     }
 
 
-    private void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY, Book book) {
+    private void showAzquoContextMenu(int cellRow, int cellCol, int mouseX, int mouseY) {
         zkContextMenu.showAzquoContextMenu(cellRow, cellCol, mouseX, mouseY, null, myzss);
     }
 
-    private void showAzquoContextMenu(int cellRow, int cellCol, Component ref, Book book) {
+    private void showAzquoContextMenu(int cellRow, int cellCol, Component ref) {
         zkContextMenu.showAzquoContextMenu(cellRow, cellCol, 0, 0, ref, myzss);
     }
 
@@ -473,10 +472,10 @@ public class ZKComposer extends SelectorComposer<Component> {
                                         int pointIndex = chartsEvent.getPointIndex();
                                         if (range.getRowCount() == 1) {
                                             //myzss.focusTo(range.getRow(), range.getColumn() + pointIndex);
-                                            showAzquoContextMenu(range.getRow(), range.getColumn() + pointIndex, chartsEvent.getTarget(), myzss.getBook());
+                                            showAzquoContextMenu(range.getRow(), range.getColumn() + pointIndex, chartsEvent.getTarget());
                                         } else {
                                             //myzss.focusTo(range.getRow() + pointIndex, range.getColumn());
-                                            showAzquoContextMenu(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getTarget(), myzss.getBook());
+                                            showAzquoContextMenu(range.getRow() + pointIndex, range.getColumn(), chartsEvent.getTarget());
                                         }
                                     } catch (Exception e) {
                                         e.printStackTrace();
@@ -491,7 +490,7 @@ public class ZKComposer extends SelectorComposer<Component> {
     }
 
     // as it says, show the multi selection list used by pivots and multi selections
-    private void showMultiSelectionList(LoggedInUser loggedInUser, Book book, final String selectionName, final String selectionList,
+    private void showMultiSelectionList(LoggedInUser loggedInUser, final String selectionName, final String selectionList,
                                         int pageX, int pageY) {
         while (filterPopup.getChildren().size() > 0) { // clear it out
             filterPopup.removeChild(filterPopup.getLastChild());
