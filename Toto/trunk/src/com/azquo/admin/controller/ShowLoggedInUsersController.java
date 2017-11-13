@@ -43,5 +43,4 @@ public class ShowLoggedInUsersController {
             return "redirect:/api/Login";
         }
     }
-
 }

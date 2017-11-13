@@ -22,7 +22,6 @@
           <element id="library" level="project" name="org.springframework.security:spring-security-config:4.0.0.RELEASE" />
           <element id="library" level="project" name="org.springframework:spring-webmvc:4.1.6.RELEASE" />
           <element id="library" level="project" name="org.springframework.security:spring-security-web:4.0.0.RELEASE" />
-          <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.5.2" />
           <element id="library" level="project" name="org.apache.servicemix.bundles:org.apache.servicemix.bundles.spring-context-support:4.1.6.RELEASE_1" />
           <element id="library" level="project" name="org.apache.pdfbox:pdfbox:1.8.10" />
           <element id="library" level="project" name="org.apache.commons:commons-vfs2:2.0" />
@@ -30,6 +29,7 @@
           <element id="library" level="project" name="org.apache.httpcomponents:httpclient:4.5.1" />
           <element id="library" level="project" name="org.mariadb.jdbc:mariadb-java-client:1.4.3" />
           <element id="library" level="project" name="com.springsource.javax.servlet.jsp.jstl-1.2.0" />
+          <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.2" />
         </element>
       </element>
     </root>

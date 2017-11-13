@@ -30,7 +30,6 @@
     <orderEntry type="library" scope="PROVIDED" name="Tomcat 8.0.21" level="application_server_libraries" />
     <orderEntry type="library" name="org.springframework:spring-jdbc:4.1.6.RELEASE" level="project" />
     <orderEntry type="library" name="log4j:log4j:1.2.17" level="project" />
-    <orderEntry type="library" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.5.2" level="project" />
     <orderEntry type="module" module-name="shared" />
     <orderEntry type="library" name="org.apache.directory.studio:org.apache.commons.lang:2.6" level="project" />
     <orderEntry type="library" name="org.springframework:spring-webmvc:4.1.6.RELEASE" level="project" />
