@@ -24,11 +24,11 @@ public class ProvenanceForDisplay implements Serializable {
     private String name;
     private String context;
     private final LocalDateTime date;
-    // now what can be attached to each provenance in this context?
+     // now what can be attached to each provenance in this context?
     private List<TypedPair<Integer, List<String>>> valuesWithIdsAndNames;
     private List<String> names;
 
-    public ProvenanceForDisplay(boolean inSpreadsheet, String user, String method, String name, String context, LocalDateTime date) {
+    public ProvenanceForDisplay(boolean inSpreadsheet, String user, String method, String name, String context, LocalDateTime date ) {
         this.inSpreadsheet = inSpreadsheet;
         this.user = user;
         this.method = method;
@@ -70,6 +70,8 @@ public class ProvenanceForDisplay implements Serializable {
     public String getName() {
         return name;
     }
+
+    public LocalDateTime getDate() {return date; }
 
     public String getContext() {
         return context;
