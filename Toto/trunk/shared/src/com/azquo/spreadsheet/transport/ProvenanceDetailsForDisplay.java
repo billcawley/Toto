@@ -13,17 +13,17 @@ public class ProvenanceDetailsForDisplay implements Serializable {
     // if the cell is from a function say what it is
     final String function;
 
-    final List<ProvenanceForDisplay> procenanceForDisplayList;
-    public ProvenanceDetailsForDisplay(String function, List<ProvenanceForDisplay> procenanceForDisplayList) {
+    final List<ProvenanceForDisplay> auditForDisplayList;
+    public ProvenanceDetailsForDisplay(String function, List<ProvenanceForDisplay> auditForDisplayList) {
         this.function = function;
-        this.procenanceForDisplayList = procenanceForDisplayList;
+        this.auditForDisplayList = auditForDisplayList;
     }
 
     public String getFunction() {
         return function;
     }
 
-    public List<ProvenanceForDisplay> getProcenanceForDisplayList() {
-        return procenanceForDisplayList;
+    public List<ProvenanceForDisplay> getAuditForDisplayList() {
+        return auditForDisplayList;
     }
 }
