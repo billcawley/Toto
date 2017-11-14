@@ -48,6 +48,7 @@ public class LoggedInUser {
     private List<String> languages;
 
     private Database database;
+    private OnlineReport onlineReport;
 
     // I'm a little unsure about this being separate but it will work for the moment
     private DatabaseServer databaseServer;
@@ -84,6 +85,7 @@ public class LoggedInUser {
         languages.add(user.getEmail());
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         this.database = database;
+        this.onlineReport = null;
         this.databaseServer = databaseServer;
         //this.readPermissions = readPermissions;
         //this.writePermissions = writePermissions;
@@ -117,6 +119,7 @@ public class LoggedInUser {
         languages.add(Constants.DEFAULT_DISPLAY_NAME);
         languages.add(originalUser.user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
         this.database = originalUser.database;
+        this.onlineReport = originalUser.onlineReport;
         this.databaseServer = originalUser.databaseServer;
         //this.readPermissions = originalUser.readPermissions;
         //this.writePermissions = originalUser.writePermissions;
@@ -199,6 +202,14 @@ public class LoggedInUser {
 
     public Database getDatabase() {
         return database;
+    }
+
+    public OnlineReport getOnlineReport() {
+        return onlineReport;
+    }
+
+    public void setOnlineReport(OnlineReport onlineReport){
+        this.onlineReport = onlineReport;
     }
 
     public void setDatabaseWithServer(DatabaseServer databaseServer, Database database) {
