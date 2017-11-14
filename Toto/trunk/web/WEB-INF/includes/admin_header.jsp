@@ -43,12 +43,12 @@
 	<ul>
 <!--		<li><span  class="tickspan">Excel<input name="excel" type="checkbox" id="excelinterface" <c:if test="${sessionScope.excelToggle}"> checked</c:if> onchange="pingExcelInterfaceFlag(this.checked)"></span></li> -->
 		<li><a href="/api/ManageReports"${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReports') ? ' class="on"' : ''}>Reports</a></li>
-		<c:if test="${!developer}">
-		<li><a href="/api/ManageReportSchedules"${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReportSchedules') ? ' class="on"' : ''}>Schedules</a></li>
-		</c:if>
 		<li><a href="/api/ManageDatabases"${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageDatabases') ? ' class="on"' : ''}>Databases</a></li>
 		<c:if test="${!developer}">
 		<li><a href="/api/ManageUsers"${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageUsers') ? ' class="on"' : ''}>Users</a></li>
+		</c:if>
+		<c:if test="${!developer}">
+			<li><a href="/api/ManageReportSchedules"${fn:startsWith(requestScope['javax.servlet.forward.path_info'], '/ManageReportSchedules') ? ' class="on"' : ''}>Schedules</a></li>
 		</c:if>
 		<li><a href="/api/Login?logoff=true">Log Off</a></li>
 	</ul>
