@@ -190,7 +190,7 @@ class ZKContextMenu {
                 UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
                 try {
                     final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn, 1000);
-                    if (provenanceDetailsForDisplay.getProcenanceForDisplayList() != null && !provenanceDetailsForDisplay.getProcenanceForDisplayList().isEmpty()) {
+                    if (provenanceDetailsForDisplay.getAuditForDisplayList() != null && !provenanceDetailsForDisplay.getAuditForDisplayList().isEmpty()) {
                         buildContextMenuProvenance(provenanceDetailsForDisplay, myzss);
                         buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
                         Menuitem auditItem = new Menuitem("Audit");
@@ -289,7 +289,7 @@ class ZKContextMenu {
             provenancePopup.appendChild(provenanceLabel);
         }
         int count = 0;
-        for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()) {
+        for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getAuditForDisplayList()) {
             boolean breakLoop = false;
             provenanceLabel = new Label();
             provenanceLabel.setMultiline(true);
@@ -438,7 +438,7 @@ class ZKContextMenu {
                             }
                             if (sName.getName().equalsIgnoreCase("Data")) {
                                 int yOffset = 0;
-                                for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getProcenanceForDisplayList()) {
+                                for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getAuditForDisplayList()) {
                                     int xOffset = 0;
                                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(provenanceForDisplay.toString());
                                     yOffset++;
