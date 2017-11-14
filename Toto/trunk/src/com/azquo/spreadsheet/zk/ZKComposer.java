@@ -400,8 +400,10 @@ public class ZKComposer extends SelectorComposer<Component> {
                                 }
                                 inserted = true;
                             }
-                            revisedData.add(oldData.get(rowNo - added));
-                            revisedHeadings.add(oldHeadings.get(rowNo - added));
+                            if (rowNo - added < oldData.size()) {
+                                revisedData.add(oldData.get(rowNo - added));
+                                revisedHeadings.add(oldHeadings.get(rowNo - added));
+                            }
 
                         }
                     } else {
