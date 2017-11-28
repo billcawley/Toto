@@ -245,6 +245,6 @@ table.edit td label{min-width:100px;}
 #namedetails .namedetailsinner .namedetailssubmit{padding-top:20px; text-align:center; font-weight:bold;}
 
 .contextDate {color:#ff0000;}
-.contextUser {color:#00ff00;}
+.contextUser {color:#770000;}
 .context     {color:#0000ff;}
-.contextValues {color:#ddeeff;}
+.contextValues {color:#ddeeff; font-size:10px}
