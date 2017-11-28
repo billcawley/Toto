@@ -6,6 +6,7 @@ import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.controller.ExcelController;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.CommonReportUtils;
 import org.apache.commons.lang.math.NumberUtils;
@@ -113,11 +114,19 @@ public class ManageDatabasesController {
             , @RequestParam(value = "fileSearch", required = false) String fileSearch
             , @RequestParam(value = "deleteUploadRecordId", required = false) String deleteUploadRecordId
             , @RequestParam(value = "uploadAnyway", required = false) String uploadAnyway
+            , @RequestParam(value = "sessionid", required = false) String sessionId
     )
 
     {
-        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        LoggedInUser possibleUser = null;
+        if (sessionId != null){
+            possibleUser = ExcelController.excelConnections.get(sessionId);
+        }
+        if (possibleUser == null){
+            possibleUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+        }
         // I assume secure until we move to proper spring security
+        final LoggedInUser loggedInUser = possibleUser;
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             if (uploadAnyway != null){
                 // todo - factor?
