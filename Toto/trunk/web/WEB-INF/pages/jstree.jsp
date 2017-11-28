@@ -152,7 +152,7 @@
                                         url += "&parents=true";
                                     }
                                     if (window != window.top){
-                                        window.parent.$.inspectOverlay().tab(url, 'Parent');
+                                        window.parent.$['inspectOverlay']().tab(url, 'Parent');
                                     }else{
                                         //window.open(url, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
                                         window.open(url,"_blank","")
@@ -206,7 +206,7 @@
 
         function changeLanguage(){
             if (window!=window.top){
-                window.parent.$.inspectOverlay().tab("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", document.getElementById("attributeChosen").value);
+                window.parent.$['inspectOverlay']().tab("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", document.getElementById("attributeChosen").value);
             }else{
                 //window.open("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
                 window.open("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", "_blank", "")
@@ -231,12 +231,12 @@
 
             if (dataFlag) {
                 if (window != window.top) {
-                    window.parent.$.inspectOverlay().tab("/api/Showdata?chosen=" + itemsChosen, 'Show Data');
+                    window.parent.$['inspectOverlay']().tab("/api/Showdata?chosen=" + itemsChosen, 'Show Data');
                 } else {
                     window.open("/api/Showdata?chosen=" + itemsChosen, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600");
                 }
             }else {
-                window.parent.$.inspectOverlay().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
+                window.parent.$['inspectOverlay']().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
 
             }
         }
