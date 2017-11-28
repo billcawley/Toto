@@ -1,9 +1,38 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.TypedPair;
+import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
+import com.azquo.dataimport.ImportService;
+import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
+import com.azquo.spreadsheet.zk.BookUtils;
+import com.azquo.spreadsheet.zk.ReportRenderer;
+import com.sun.deploy.net.HttpRequest;
+import org.apache.commons.lang.math.NumberUtils;
+import org.zkoss.zk.ui.Sessions;
+import org.zkoss.zss.api.Exporter;
+import org.zkoss.zss.api.Exporters;
+import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.Sheet;
+import org.zkoss.zss.model.SCell;
+import org.zkoss.zss.model.SName;
+
+import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.util.List;
+
+
 
 public class ExcelService {
+
+    public static final String BOOK_PATH = "BOOK_PATH";
+    public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
+    public static final String REPORT_ID = "REPORT_ID";
+
 
     public static UserRegionOptions getUserRegionOptions(LoggedInUser loggedInUser, String optionsSource, int reportId, String region) {
         UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, optionsSource);
@@ -26,8 +55,70 @@ public class ExcelService {
     }
 
 
+    public static File listReports(HttpServletRequest request, List<OnlineReport> reports) throws Exception{
 
+        Book book = Importers.getImporter().imports(request.getServletContext().getResourceAsStream("/WEB-INF/DebugAudit.xlsx"), "Report name");
+        Sheet sheet = book.getSheetAt(0);
+        List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
+        for (SName sName : namesForSheet) {
+            if (sName.getName().equalsIgnoreCase("Title")) {
+                final SCell cell = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
+                cell.setStringValue("Reports available");
+            }
+            if (sName.getName().equalsIgnoreCase("Data")) {
+                int yOffset = 0;
+                for (OnlineReport or : reports) {
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()).setStringValue("Template");
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+1).setStringValue(or.getDatabase() + " :   " + or.getReportName());
+                    //sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + 1).setStringValue(or.getReportName());
+                    yOffset++;
+                }
+            }
+        }
+        Exporter exporter = Exporters.getExporter();
+        File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(file);
+            exporter.export(book, fos);
+        } finally {
+            if (fos != null) {
+                fos.close();
+            }
+        }
+        return file;
+    }
 
+    public static File createReport(LoggedInUser loggedInUser, OnlineReport onlineReport, boolean template )throws Exception{
+        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
+        final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+        book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
+        book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
+        // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
+        book.getInternalBook().setAttribute(REPORT_ID, onlineReport.getId());
+        if (!template){
+            ReportRenderer.populateBook(book, 0);
+        }
+        Exporter exporter = Exporters.getExporter();
+        File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(file);
+            exporter.export(book, fos);
+        } finally {
+            if (fos != null) {
+                fos.close();
+            }
+        }
 
-
+        return file;
+    }
 }
+
+
+
+
+
+
+
+
