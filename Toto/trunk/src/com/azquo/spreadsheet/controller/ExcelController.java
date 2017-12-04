@@ -2,21 +2,15 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
-import com.azquo.admin.controller.ManageDatabasesController;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
-import com.azquo.dataimport.ImportService;
-import com.azquo.spreadsheet.ExcelService;
-import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.LoginService;
-import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.rmi.RMIClient;
+import com.azquo.spreadsheet.*;
+import com.azquo.spreadsheet.transport.FilterTriple;
 import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
-import com.azquo.spreadsheet.zk.ReportRenderer;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -26,32 +20,14 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.zkoss.util.media.AMedia;
-import org.zkoss.zss.api.*;
-import org.zkoss.zss.api.model.Book;
-import org.zkoss.zss.api.model.CellData;
-import org.zkoss.zss.api.model.Sheet;
-import org.zkoss.zss.api.model.Validation;
-import org.zkoss.zss.model.CellRegion;
-import org.zkoss.zss.model.SCell;
-import org.zkoss.zss.model.SName;
-import org.zkoss.zss.model.SSheet;
-import org.zkoss.zul.Filedownload;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.azquo.spreadsheet.controller.LoginController.LOGGED_IN_USER_SESSION;
@@ -97,6 +73,17 @@ public class ExcelController {
             this.userType = userType;
         }
      }
+    public static class MultiChoice{
+        public String choice;
+        public boolean chosen;
+        public int id;
+
+        public MultiChoice(String choice, boolean chosen){
+            this.choice = choice;
+            this.id = id;
+            this.chosen = chosen;
+        }
+    }
 
 
     private static final Logger logger = Logger.getLogger(OnlineController.class);
@@ -205,7 +192,18 @@ public class ExcelController {
                     return(jsonError("no details"));
                         //buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
                 }
+                if (op.equals("getchoices")){
+                    List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                            .getFilterListForQuery(loggedInUser.getDataAccessToken(), choice, chosen, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());//choice is the name of the range, chosen= the value from the 'choice' cell
+                    return jacksonMapper.writeValueAsString(filterOptions);
+                }
 
+                if (op.equals("setchoices")){
+                    List<Integer>childIds = jacksonMapper.readValue(chosen,jacksonMapper.getTypeFactory().constructCollectionType(List.class, Integer.class));
+                    RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), choice, loggedInUser.getUser().getEmail(), childIds);
+                    return jsonError("done");
+
+                }
                 if (op.equals("setchoice")) {
                          SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
                          return jsonError("done");
@@ -339,53 +337,4 @@ public class ExcelController {
 
     }
 
-    static String getCellValue(Sheet sheet, int r, int c) {
-        //this is a copy of the same function in ReportUtilities - but unavailable in this class
-        String returnString = null;
-        Range range = Ranges.range(sheet, r, c);
-        CellData cellData = range.getCellData();
-        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
-        //if (colCount++ > 0) bw.write('\t');
-        if (cellData != null) {
-            String stringValue = "";
-            try {
-                stringValue = cellData.getFormatText();// I assume means formatted text
-                if (r > 0 && dataFormat.toLowerCase().contains("mm-") && (stringValue.length() == 8 || stringValue.length() == 6)) {//fix a ZK bug
-                    stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
-                }
-            } catch (Exception ignored) {
-            }
-            if (!dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
-                //if it's a number, remove all formatting
-                try {
-                    double d = cellData.getDoubleValue();
-                    String newStringValue = d + "";
-                    if (!newStringValue.contains("E")) {
-                        if (newStringValue.endsWith(".0")) {
-                            stringValue = newStringValue.substring(0, newStringValue.length() - 2);
-                        } else {
-                            stringValue = newStringValue;
-                        }
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-            if (stringValue.contains("\"\"") && stringValue.startsWith("\"") && stringValue.endsWith("\"")) {
-                //remove spuriouse quote marks
-                stringValue = stringValue.substring(1, stringValue.length() - 1).replace("\"\"", "\"");
-            }
-            returnString = stringValue;
-        }
-        return returnString;
-    }
-
-
-    private boolean inSet(String toTest, String[] set) {
-        for (String element : set) {
-            if (element.trim().equalsIgnoreCase(toTest)) {
-                return true;
-            }
-        }
-        return false;
-    }
-}
+  }
