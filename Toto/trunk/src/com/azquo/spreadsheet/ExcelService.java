@@ -1,17 +1,11 @@
 package com.azquo.spreadsheet;
 
-import com.azquo.TypedPair;
 import com.azquo.admin.onlinereport.OnlineReport;
-import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
-import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportRenderer;
-import com.sun.deploy.net.HttpRequest;
-import org.apache.commons.lang.math.NumberUtils;
-import org.zkoss.zk.ui.Sessions;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
@@ -57,7 +51,7 @@ public class ExcelService {
 
     public static File listReports(HttpServletRequest request, List<OnlineReport> reports) throws Exception{
 
-        Book book = Importers.getImporter().imports(request.getServletContext().getResourceAsStream("/WEB-INF/DebugAudit.xlsx"), "Report name");
+       Book book = Importers.getImporter().imports(request.getServletContext().getResourceAsStream("/WEB-INF/ReportMenu.xlsx"), "Report name");
         Sheet sheet = book.getSheetAt(0);
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         for (SName sName : namesForSheet) {
@@ -66,10 +60,27 @@ public class ExcelService {
                 cell.setStringValue("Reports available");
             }
             if (sName.getName().equalsIgnoreCase("Data")) {
-                int yOffset = 0;
+                int yOffset = -1;
+                char firstChar = 0;
+                String dbName = "";
+
                 for (OnlineReport or : reports) {
+                    if (!or.getDatabase().equals(dbName)){
+                        firstChar = 0;
+                        dbName = or.getDatabase();
+                        yOffset++;
+                    }
+                    if (or.getExplanation()!= null && or.getExplanation().length() > 0 && or.getExplanation().charAt(0) > firstChar){
+                        firstChar = or.getExplanation().charAt(0);
+                        yOffset++;
+                    }
+                    if (firstChar > 0 && (or.getExplanation()== null||or.getExplanation().length()==0)){
+                        firstChar = 0;
+                        yOffset++;
+                    }
                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()).setStringValue("Template");
                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+1).setStringValue(or.getDatabase() + " :   " + or.getReportName());
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+2).setStringValue(or.getExplanation().trim());
                     //sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + 1).setStringValue(or.getReportName());
                     yOffset++;
                 }
