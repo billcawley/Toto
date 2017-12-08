@@ -266,7 +266,21 @@ this may now not work at all, perhaps delete?
     }
 
     public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
+
         List<OnlineReport> reportList = new ArrayList<>();
+        if (!loggedInUser.getUser().isAdministrator()&&!loggedInUser.getUser().isDeveloper()) {
+            int reportId = loggedInUser.getUser().getReportId();
+            int dbId = loggedInUser.getUser().getDatabaseId();
+            if (reportId > 0 && dbId > 0) {
+                OnlineReport or = OnlineReportDAO.findById(reportId);
+                if (or!=null) {
+                    or.setDatabase(DatabaseDAO.findById(dbId).getName());
+                    reportList.add(or);
+                    return reportList;
+                }
+            }
+        }
+
         List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         for (Database database : databases) {
             if (loggedInUser.getUser().isAdministrator()) {// admin gets all
@@ -283,8 +297,9 @@ this may now not work at all, perhaps delete?
                 reportList.addAll(reports);
             }
         }
-        // was setting the database name for each report, this will be irrelevant
+          // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {
+
             OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, 0, "", "No reports found", "", "",null);
             reportList.add(notFound);
         } else {
@@ -297,19 +312,11 @@ this may now not work at all, perhaps delete?
         }
         reportList.sort((o1, o2) -> {
             // adding isempty here as empty is the same as null for our sorting purposes
-            boolean n1Null = o1 == null || o1.getExplanation() == null || o1.getExplanation().isEmpty();
-            boolean n2Null = o2 == null || o2.getExplanation() == null || o2.getExplanation().isEmpty();
-            if (n1Null && n2Null) {
-                return 0;
-            }
-            // reversing default - blank or null at the end - if someone adds an explanation to a load of blanks send them to the top
-            if (n1Null) {
-                return 1;
-            }
-            if (n2Null) {
-                return -1;
-            }
-            return o1.getExplanation().compareTo(o2.getExplanation());
+            String o1Explanation = o1.getExplanation();
+            if (o1Explanation==null|| o1Explanation.isEmpty()) o1Explanation = "zzz";
+            String o2Explanation = o2.getExplanation();
+            if (o2Explanation==null || o2Explanation.isEmpty()) o2Explanation = "zzz";
+            return (o1.getDatabase() + o1Explanation).compareTo(o2.getDatabase()+o2Explanation);
         });
         return reportList;
     }
