@@ -3,6 +3,8 @@ package com.azquo.spreadsheet.controller;
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
@@ -236,8 +238,7 @@ public class ExcelController {
                          File file = null;
                          OnlineReport onlineReport = null;
                          if ((reportName==null || reportName.length()==0) && (database==null||database.length()==0)){
-
-                             //get initial menu
+                              //get initial menu
                              List<OnlineReport> reports = AdminService.getReportList(loggedInUser);
                              if (reports.size()==1){
                                  onlineReport = reports.get(0);
@@ -268,7 +269,23 @@ public class ExcelController {
                                      //report id is assumed to be integer - sent from the website
                                      onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                                      onlineReport.setDatabase(database);
+                                 }else{
+                                      Database db = DatabaseDAO.findForNameAndBusinessId(database,loggedInUser.getUser().getBusinessId());
+                                      onlineReport = OnlineReportDAO.findForDatabaseIdAndName(db.getId(),reportName);
+                                      boolean allowed = false;
+                                      for (String key:loggedInUser.getPermissionsFromReport().keySet() ){
+                                          TypedPair<OnlineReport,Database> dbreport = loggedInUser.getPermissionsFromReport().get(key);
+                                          if (dbreport.getFirst().getId()==onlineReport.getId() && dbreport.getSecond().getId()==db.getId()){
+                                              allowed = true;
+                                              onlineReport.setDatabase(db.getName());
+                                              break;
+                                          }
+                                      }
+                                      if (!allowed){
+                                          onlineReport = null;
+                                      }
                                  }
+
                              }
                              if (onlineReport!=null){
                                  downloadName = onlineReport.getReportName();
