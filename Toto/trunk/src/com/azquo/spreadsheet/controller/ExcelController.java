@@ -297,7 +297,10 @@ public class ExcelController {
                              return jsonError("incorrect report name"); // probably need to add json
                          }
                          boolean isTemplate = false;
-                         if (template!=null && template.equals("true")) isTemplate = true;
+                         if (template!=null && template.equals("true")){
+                             isTemplate = true;
+                             downloadName += " Template";
+                         }
                          if (file==null){
                              file = ExcelService.createReport(loggedInUser,onlineReport, isTemplate);
                          }
