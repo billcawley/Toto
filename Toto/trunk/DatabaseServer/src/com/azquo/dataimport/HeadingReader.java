@@ -360,7 +360,7 @@ class HeadingReader {
                     // so if it's Customer,Address1 we need to find customer.
                     mutableImportHeading.indexForAttribute = findMutableHeadingIndex(mutableImportHeading.heading, headings);
                     if (mutableImportHeading.indexForAttribute < 0) {
-                        throw new Exception("cannot find column " + mutableImportHeading.attribute + " for attribute of " + mutableImportHeading.heading);
+                        throw new Exception("cannot find column " + mutableImportHeading.heading + " for attribute of " + mutableImportHeading.heading);
                     }
                 }
                 // Resolve parent of. Parent of in the context of columns in this upload not the Azquo Name sense.
@@ -418,7 +418,7 @@ class HeadingReader {
             //checking the name itself, then the name as part of a comma separated string
             if (heading.heading != null
                     && (heading.heading.equalsIgnoreCase(nameToFind) || heading.heading.toLowerCase().startsWith(nameToFind.toLowerCase() + ","))
-                    && (heading.isAttributeSubject || heading.attribute == null || heading.attribute.equals(DATELANG))) {
+                    && (heading.isAttributeSubject || heading.attribute == null || (heading.attribute.equals(DATELANG) && heading.isDate))) {
                 if (heading.isAttributeSubject) {
                     return headingNo;
                 }
