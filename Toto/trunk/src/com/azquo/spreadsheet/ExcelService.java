@@ -102,15 +102,17 @@ public class ExcelService {
 
     public static File createReport(LoggedInUser loggedInUser, OnlineReport onlineReport, boolean template )throws Exception{
         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
+        if (template){
+            return new File(bookPath);
+        }
+
         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
         book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
         book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
         // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
         book.getInternalBook().setAttribute(REPORT_ID, onlineReport.getId());
-        if (!template){
-            ReportRenderer.populateBook(book, 0);
-        }
-        Exporter exporter = Exporters.getExporter();
+        ReportRenderer.populateBook(book, 0);
+         Exporter exporter = Exporters.getExporter();
         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
         FileOutputStream fos = null;
         try {
