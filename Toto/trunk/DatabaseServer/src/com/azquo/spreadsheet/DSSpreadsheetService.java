@@ -449,7 +449,7 @@ public class DSSpreadsheetService {
                                             final Value theValue = valuesForCell.getValues().get(0);
                                             if (cell.getNewStringValue() != null && cell.getNewStringValue().length() > 0) {
                                                 //sometimes non-existent original values are stored as '0'
-                                                if (!cell.getNewStringValue().equals(theValue.getText())) {
+                                                if (!isEqual(cell.getNewStringValue(),theValue.getText())) {
                                                     ValueService.overWriteExistingValue(azquoMemoryDBConnection, theValue, cell.getNewStringValue());
                                                     numberOfValuesModified++;
                                                 }
@@ -536,6 +536,18 @@ public class DSSpreadsheetService {
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         if (redundantNames == null) return "true " + numberOfValuesModified;
         return "true " + numberOfValuesModified + " " + redundantNames;
+    }
+
+    static boolean isEqual(String string1, String string2){
+        if (string1.equals(string2)) return true;
+        //deal with minor calculation differences
+        try {
+            double diff = Double.parseDouble(string1) - Double.parseDouble(string2);
+            if ( diff < .000000001 && diff > -.000000001) return true;
+        }catch(Exception e){
+
+        }
+        return false;
     }
 
 
