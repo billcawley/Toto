@@ -18,4 +18,7 @@ public class ExcelJsonRequest implements Serializable {
     public List<List<String>> rowHeadings;
     public List<List<String>> columnHeadings;
     public List<List<String>> context;
+    public String userContext;
+    public List<List<String>> data;
+    public List<List<String>> comments;
 }
