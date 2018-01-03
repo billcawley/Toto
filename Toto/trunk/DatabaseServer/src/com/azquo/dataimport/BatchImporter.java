@@ -444,10 +444,11 @@ public class BatchImporter implements Callable<Void> {
                 }
             }
             // note! Exclusive can't work if THIS column is multiple names
-            if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusive != null) {
-                Name parent = cellWithHeading.getLineNames().iterator().next();
-                //the 'parent' above is the current cell name, not its parent
-                // check exclusive to remove the child from some other parents if necessary - this replaces the old "remove from" functionality
+            if (cellWithHeading.getLineNames() != null){
+                if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusive != null) {
+                    Name parent = cellWithHeading.getLineNames().iterator().next();
+                    //the 'parent' above is the current cell name, not its parent
+                    // check exclusive to remove the child from some other parents if necessary - this replaces the old "remove from" functionality
                 /*
                 Exclusive merits explanation. Let us assume cellWithHeading's heading is "Category" (a heading which may have no Name though its cells will)
                 which is "child of" "All Categories" (a Name in the database) and "parent of" "Product", another heading. Cells in the "Product" column have Names, childCell.getLineNames().
@@ -456,16 +457,16 @@ public class BatchImporter implements Callable<Void> {
                 If exclusive has a value then whatever it specifies replaces the set defined by "child of" ("All Categories in this example") to remove from so :
                 get rid of any parents "White Poplin Shirt" has that are in (or are!) "Name Specified By Exclusive" that are NOT "Shirts"
                  */
-                // Exclusive is being dealt with as a single name, when defined explicitly it is and if we're deriving it from "child of" we just grab the first.
-                Name exclusiveName;
-                if ("".equals(cellWithHeading.getImmutableImportHeading().exclusive)) {
-                    // blank exclusive clause, use "child of" clause - currently this only looks at the first name to be exclusive of, more than one makes little sense
-                    // (check all the way down. all children, necessary due due to composite option name1->name2->name3->etc
-                    exclusiveName = cellWithHeading.getImmutableImportHeading().parentNames.iterator().next();
-                } else { // exclusive has a value, not null or blank, is referring to a higher name
-                    exclusiveName = NameService.findByName(azquoMemoryDBConnection, cellWithHeading.getImmutableImportHeading().exclusive);
-                }
-                if (exclusiveName != null) {
+                    // Exclusive is being dealt with as a single name, when defined explicitly it is and if we're deriving it from "child of" we just grab the first.
+                    Name exclusiveName;
+                    if ("".equals(cellWithHeading.getImmutableImportHeading().exclusive)) {
+                        // blank exclusive clause, use "child of" clause - currently this only looks at the first name to be exclusive of, more than one makes little sense
+                        // (check all the way down. all children, necessary due due to composite option name1->name2->name3->etc
+                        exclusiveName = cellWithHeading.getImmutableImportHeading().parentNames.iterator().next();
+                    } else { // exclusive has a value, not null or blank, is referring to a higher name
+                        exclusiveName = NameService.findByName(azquoMemoryDBConnection, cellWithHeading.getImmutableImportHeading().exclusive);
+                    }
+                    if (exclusiveName != null) {
                     /* To follow the example above run through the parents of "White Poplin Shirt".
                     Firstly check that the parent is "Shirts", if it is we of course leave it there and note to not re-add (needsAdding = false).
                       If the parent is NOT "Shirts" we check to see if it's the exclusive set itself ("White Poplin Shirt" was directly in "All Categories")
@@ -474,27 +475,28 @@ public class BatchImporter implements Callable<Void> {
                       "All Categories-Swimwear->Mens" for example. Notable that nested name syntax (with "->") is allowed in the cells and
                       might well have been built using the composite functionality above so it's possible another azquo upload could have jammed "White Poplin Shirt"
                       somewhere under "All Categories" many levels below. */
-                    // given that we now have multiple names on a line we run through the child ones checking as necessary
-                    for (Name childCellName : childCell.getLineNames()) {
-                        boolean needsAdding = true; // defaults to true
-                        for (Name childCellParent : childCellName.getParents()) {
-                            if (childCellParent == parent) {
-                                needsAdding = false;
-                            } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
-                                childCellParent.removeFromChildrenWillBePersisted(childCellName);
+                        // given that we now have multiple names on a line we run through the child ones checking as necessary
+                        for (Name childCellName : childCell.getLineNames()) {
+                            boolean needsAdding = true; // defaults to true
+                            for (Name childCellParent : childCellName.getParents()) {
+                                if (childCellParent == parent) {
+                                    needsAdding = false;
+                                } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
+                                    childCellParent.removeFromChildrenWillBePersisted(childCellName);
+                                }
+                            }
+                            // having hopefully sorted a new name or exclusive add the child
+                            if (needsAdding) {
+                                parent.addChildWillBePersisted(childCellName);
                             }
                         }
-                        // having hopefully sorted a new name or exclusive add the child
-                        if (needsAdding) {
+                    }
+                } else {
+                    // in theory this column could be multiple parents and the column "parent of" refers to could be multiple children, permute over the combinations
+                    for (Name parent : cellWithHeading.getLineNames()) {
+                        for (Name childCellName : childCell.getLineNames()) {
                             parent.addChildWillBePersisted(childCellName);
                         }
-                    }
-                }
-            } else {
-                // in theory this column could be multiple parents and the column "parent of" refers to could be multiple children, permute over the combinations
-                for (Name parent : cellWithHeading.getLineNames()) {
-                    for (Name childCellName : childCell.getLineNames()) {
-                        parent.addChildWillBePersisted(childCellName);
                     }
                 }
             }
