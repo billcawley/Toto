@@ -11,8 +11,9 @@ import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
-import com.azquo.spreadsheet.transport.FilterTriple;
-import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
+import com.azquo.spreadsheet.transport.*;
+import com.azquo.spreadsheet.transport.json.CellsAndHeadingsForExcel;
+import com.azquo.spreadsheet.transport.json.ExcelJsonRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -110,6 +111,7 @@ public class ExcelController {
             , @RequestParam(value = "regioncol", required = false) String regioncol
             , @RequestParam(value = "choice", required = false) String choice
             , @RequestParam(value = "chosen", required = false) String chosen
+            , @RequestParam(value = "json", required = false) String json
             , @RequestParam(value = "template", required = false) String template
 
     ) {
@@ -119,7 +121,7 @@ public class ExcelController {
         response.setHeader("Access-Control-Allow-Origin", "*");
         response.setHeader("Content-type", "application/json");
         final ObjectMapper jacksonMapper = new ObjectMapper();
-
+        op = op.toLowerCase();
         try {
 
              try {
@@ -206,12 +208,21 @@ public class ExcelController {
                     return jsonError("done");
 
                 }
+                 if (op.equals("createfilterset")){
+                     RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), choice, loggedInUser.getUser().getEmail(), chosen);
+                     return jsonError("done");
+
+                 }
+                 if (op.equals("userchoices")) {
+                     return jacksonMapper.writeValueAsString(CommonReportUtils.getUserChoicesMap(loggedInUser));
+                 }
                 if (op.equals("setchoice")) {
                          SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
                          return jsonError("done");
                 }
                  if (op.equals("sethighlight")) {
                     int hDays = 0;
+                    if(chosen.equals("1 hour")) chosen = "2 days"; //horrible!
                     if (chosen.toLowerCase().contains(" day")){
                         hDays = Integer.parseInt(chosen.substring(0,chosen.toLowerCase().indexOf(" day")));
                     }
@@ -230,6 +241,17 @@ public class ExcelController {
                      }
                      return jsonError("done");
                  }
+                 if (op.equals("resolvequery")) {
+                     return CommonReportUtils.resolveQuery(loggedInUser, chosen);
+                 }
+                 if (op.equals("getdropdownlistforquery")) {
+                     return jacksonMapper.writeValueAsString(CommonReportUtils.getDropdownListForQuery(loggedInUser, choice));
+                 }
+
+                 if (op.equals("userchoices")) {
+                     return jacksonMapper.writeValueAsString(CommonReportUtils.getUserChoicesMap(loggedInUser));
+                 }
+
                  // database switching should be done by being logged in
                  String downloadName = "";
 
@@ -260,6 +282,7 @@ public class ExcelController {
                                  onlineReport = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
                                  if (onlineReport != null) {
                                      onlineReport.setDatabase(loggedInUser.getDatabase().getName());
+                                     loggedInUser.getUser().setReportId(onlineReport.getId());
                                  }
                              } else {
                                   if (database==null || database.length()==0){
@@ -269,6 +292,7 @@ public class ExcelController {
                                      //report id is assumed to be integer - sent from the website
                                      onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                                      onlineReport.setDatabase(database);
+                                     loggedInUser.getUser().setReportId(onlineReport.getId());
                                  }else{
                                       Database db = DatabaseDAO.findForNameAndBusinessId(database,loggedInUser.getUser().getBusinessId());
                                       onlineReport = OnlineReportDAO.findForDatabaseIdAndName(db.getId(),reportName);
@@ -304,11 +328,15 @@ public class ExcelController {
                          if (file==null){
                              file = ExcelService.createReport(loggedInUser,onlineReport, isTemplate);
                          }
-
+                         String suffix = ".xlsx";
+                         int dotPos = file.getPath().lastIndexOf(".");
+                         if (dotPos > 0 && file.getPath().length()-dotPos < 6){
+                             suffix = file.getPath().substring(dotPos);
+                         }
                          SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh.mm.ss");
                          response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); // Set up mime type
                          try {
-                             DownloadController.streamFileToBrowser(file.toPath(), response, downloadName + " " + df.format(new Date()) + ".xlsx");
+                             DownloadController.streamFileToBrowser(file.toPath(), response, downloadName + " " + df.format(new Date()) + suffix);
                          } catch (IOException ex) {
                              ex.printStackTrace();
                          }
@@ -338,6 +366,76 @@ public class ExcelController {
                      }
                      return jacksonMapper.writeValueAsString(databaseReports);
                  }
+                 if (op.equals("loadregion")) {
+                           // ok this will have to be moved
+                     ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json, ExcelJsonRequest.class);
+                     String optionsSource = excelJsonRequest.optionsSource != null ? excelJsonRequest.optionsSource : "";
+
+                     UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), loggedInUser.getUser().getReportId(), excelJsonRequest.region, optionsSource);
+                     // UserRegionOptions from MySQL will have limited fields filled
+                     UserRegionOptions userRegionOptions2 = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), loggedInUser.getUser().getReportId(), excelJsonRequest.region);
+                     // only these five fields are taken from the table
+                     if (userRegionOptions2 != null) {
+                         if (userRegionOptions.getSortColumn() == null) {
+                             userRegionOptions.setSortColumn(userRegionOptions2.getSortColumn());
+                             userRegionOptions.setSortColumnAsc(userRegionOptions2.getSortColumnAsc());
+                         }
+                         if (userRegionOptions.getSortRow() == null) {
+                             userRegionOptions.setSortRow(userRegionOptions2.getSortRow());
+                             userRegionOptions.setSortRowAsc(userRegionOptions2.getSortRowAsc());
+                         }
+                         userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
+                     }
+                     if (excelJsonRequest.rowHeadings == null || excelJsonRequest.rowHeadings.isEmpty()) { // no row headings is an import region - assign an empty sent cells. Todo - could this be factored?
+                         List<List<String>> colHeadings = excelJsonRequest.columnHeadings;
+                         // ok change from the logic used in ZK. In ZK we had to prepare a blank set of data cells to be modified
+                         // as the user changed them but it's difficult to prepare them here as we don't know the data region size and luckily it's not necessary
+                         // as the data is sent in a block from Excel. It might have changed size in the mean time (as in someone changed the data region size and now the headings don't match) but I'm nto that bothered by this for the mo
+                         // put an empty data set here as the reference is final, fill it out below with the data sent size from the user
+                         // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings, parsed into an array in Excel
+                         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(excelJsonRequest.region, colHeadings, null, null, null, new ArrayList<>(), null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);
+                         loggedInUser.setSentCells(loggedInUser.getUser().getReportId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
+                         return "Empty space set to ad hoc data : " + excelJsonRequest.region;
+                     } else {
+                         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), excelJsonRequest.region, 0, excelJsonRequest.rowHeadings, excelJsonRequest.columnHeadings,
+                                 excelJsonRequest.context, userRegionOptions, true);
+                         RegionOptions holdOptions = cellsAndHeadingsForDisplay.getOptions();//don't want to send these to Excel
+                         cellsAndHeadingsForDisplay.setOptions(null);
+                         loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
+                         result =  jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(cellsAndHeadingsForDisplay));
+                         cellsAndHeadingsForDisplay.setOptions(holdOptions);
+                         return result;
+                     }
+                 }
+                 if (op.equals("saveregion")){
+
+                     ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json,ExcelJsonRequest.class);
+                     loggedInUser.setContext(excelJsonRequest.userContext);
+                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(loggedInUser.getUser().getReportId(),excelJsonRequest.sheetName,excelJsonRequest.region);
+                     List<List<String>>data = excelJsonRequest.data;
+                     List<List<CellForDisplay>> oldData = cellsAndHeadingsForDisplay.getData();
+
+                     if (data.size()<oldData.size() || (data !=null && oldData!=null && data.get(0)!=null && oldData.get(0)!=null && data.get(0).size()!= oldData.get(0).size()))
+                         return "error: data region " + region + " on " + excelJsonRequest.sheetName + " has changed size.";
+                     Iterator rowIt = data.iterator();
+                     for  (List<CellForDisplay> oldRow: oldData) {//for the moment, ignore any lines below old data - assume to be blank.....
+                         List<String> row = (List<String>) rowIt.next();
+                         Iterator cellIt = oldRow.iterator();
+                         for (String cell : row) {
+                             CellForDisplay oldCell = (CellForDisplay) cellIt.next();
+                             if (!isEqual(oldCell.getStringValue(),cell)){
+                                 oldCell.setNewStringValue(cell);
+                                 oldCell.setChanged();
+                             }
+
+                         }//no persisting
+                     }
+                     int reportId = loggedInUser.getUser().getReportId();
+                     reportName = OnlineReportDAO.findById(reportId).getReportName();
+                     result = SpreadsheetService.saveData(loggedInUser, reportId,reportName, excelJsonRequest.sheetName,excelJsonRequest.region, false);
+                 }
+
+
              } catch (Exception e) {
                  logger.error("online controller error", e);
                  result = e.getMessage();
@@ -352,7 +450,21 @@ public class ExcelController {
 
     }
 
-    String jsonError(String error){
+    boolean isEqual(String s1, String s2) {
+        if (s1.equals(s2)) return true;
+        try {
+            double d1 = Double.parseDouble(s1);
+            double d2 = Double.parseDouble(s2);
+            double diff = (d1 - d2);
+            if (diff < .0000000001 && diff > -.0000000001) return true;
+        } catch (Exception e) {
+
+        }
+        return false;
+    }
+
+
+        String jsonError(String error){
         return "{\"error\":\""+error+"\"}";
 
     }
