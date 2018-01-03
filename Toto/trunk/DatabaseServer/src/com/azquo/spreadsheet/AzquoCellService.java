@@ -509,7 +509,7 @@ class AzquoCellService {
                             }
                         }
                     }
-                    if (highlightHours >= age) {
+                    if (highlightHours > age) {
                         azquoCell.setHighlighted(true);
                     }
                 }
