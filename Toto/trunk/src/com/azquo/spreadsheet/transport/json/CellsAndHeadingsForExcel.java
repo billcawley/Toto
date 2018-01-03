@@ -19,34 +19,52 @@ import java.util.List;
  */
 public class CellsAndHeadingsForExcel implements Serializable {
 
+    private final List<List<String>> columnHeadingsSource;
+    private final List<List<String>> rowHeadingsSource;
     private final List<List<String>> columnHeadings;
     private final List<List<String>> rowHeadings;
+    private final List<List<String>> context;
     private final List<List<String>> data;
+    private final List<List<Boolean>> highlight;
     private final List<List<String>> comments;
-    private final RegionOptions options; // hybrid between DB settings and from the spreadsheet, leave it here for the mo
+    private final String options;
     private final String lockResult;
 
     public CellsAndHeadingsForExcel(CellsAndHeadingsForDisplay source) {
+        this.rowHeadingsSource = null;
+        this.columnHeadingsSource = null;
         this.columnHeadings = source.getColumnHeadings();
         this.rowHeadings = source.getRowHeadings();
-        data = new ArrayList<>();
+        this.context = source.getContextSource();
+        this.data = new ArrayList<>();
+        this.highlight = new ArrayList<>();
+        this.options = null;
         List<List<String>> tempComments = new ArrayList<>();
+
         boolean comments = false;
         for (List<CellForDisplay> row : source.getData()) {
+
             List<String> dataRow = new ArrayList<>();
-            data.add(dataRow);
+            this.data.add(dataRow);
+
+            List<Boolean> highlightRow = new ArrayList<>();
+            this.highlight.add(highlightRow);
+
             List<String> commentRow = new ArrayList<>();
             tempComments.add(commentRow);
+
             for (CellForDisplay cell : row) {
                 dataRow.add(cell.getStringValue()); // should be fine
                 if (cell.getComment() != null) {
                     comments = true;
                 }
                 commentRow.add(cell.getComment());
+                highlightRow.add(cell.isHighlighted());
+
             }
         }
+
         this.comments = comments ? tempComments : null; // maybe check those variable names . . .
-        this.options = source.getOptions();
         this.lockResult = source.getLockResult();
     }
 
@@ -58,13 +76,13 @@ public class CellsAndHeadingsForExcel implements Serializable {
         return rowHeadings;
     }
 
+    public List<List<String>> getContext() {return context; }
+
     public List<List<String>> getData() {
         return data;
     }
 
-    public RegionOptions getOptions() {
-        return options;
-    }
+    public List<List<Boolean>> getHighlight() { return highlight; };
 
     public String getLockResult() {
         return lockResult;
@@ -73,4 +91,6 @@ public class CellsAndHeadingsForExcel implements Serializable {
     public List<List<String>> getComments() {
         return comments;
     }
+
+
 }
