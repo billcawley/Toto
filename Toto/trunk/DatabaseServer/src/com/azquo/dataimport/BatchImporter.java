@@ -408,8 +408,10 @@ public class BatchImporter implements Callable<Void> {
         if (cellWithHeading.getLineNames() == null) { // then create it, this will take care of the parents ("child of") while creating
             //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
             for (String nameName : nameNames) {
-                cellWithHeading.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, nameName.trim()
-                        , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading().attribute, attributeNames)));
+                if (nameName.trim().length() > 0){
+                    cellWithHeading.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, nameName.trim()
+                            , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading().attribute, attributeNames)));
+                }
             }
         } else { // it existed (created below as child name(s))
             for (Name child : cellWithHeading.getLineNames()) {
