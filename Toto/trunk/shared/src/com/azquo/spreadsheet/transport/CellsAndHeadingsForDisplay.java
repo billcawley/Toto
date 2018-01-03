@@ -29,7 +29,7 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     private final List<List<String>> colHeadingsSource;
     private final List<List<String>> contextSource;
     private final long timeStamp;
-    private final RegionOptions options;
+    private RegionOptions options;
     private final String lockResult;
 
     public CellsAndHeadingsForDisplay(String region, List<List<String>> columnHeadings, List<List<String>> rowHeadings, Set<Integer> zeroSavedColumnIndexes, Set<Integer> zeroSavedRowIndexes, List<List<CellForDisplay>> data
@@ -99,6 +99,8 @@ public class CellsAndHeadingsForDisplay implements Serializable {
     public RegionOptions getOptions() {
         return options;
     }
+
+    public void setOptions(RegionOptions regionOptions){ this.options = regionOptions; };
 
     public String getLockResult() {
         return lockResult;
