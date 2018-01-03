@@ -269,8 +269,8 @@ public class ChoicesService {
                     }
                         query = choiceCell.getStringValue();
                     if (!query.toLowerCase().contains(CONTENTS)) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
-                        if (query.toLowerCase().contains("default")) {
-                            query = query.substring(0, query.toLowerCase().indexOf("default"));
+                        if (query.toLowerCase().contains(" default")) {
+                            query = query.substring(0, query.toLowerCase().indexOf(" default"));
                         }
                         try {
                             if (query.startsWith("\"") || query.startsWith("“")) {
