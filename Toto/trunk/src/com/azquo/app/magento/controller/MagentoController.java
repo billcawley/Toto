@@ -111,6 +111,7 @@ public class MagentoController {
                     request.getServletContext().setAttribute(tempConnectionId, loggedInUser);
                     return tempConnectionId;
                 } else {
+                    System.out.println("==================== error: no data posted");
                     return "error: no data posted";
                 }
             }
