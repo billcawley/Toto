@@ -112,7 +112,7 @@ public class MagentoController {
                     return tempConnectionId;
                 } else {
                     System.out.println("==================== error: no data posted");
-                    return "error: no data posted";
+                    return "error: no data posted. Is the temp directory writable? Also check the PHP logs for errors.";
                 }
             }
             if (op.equals("reports")) {
