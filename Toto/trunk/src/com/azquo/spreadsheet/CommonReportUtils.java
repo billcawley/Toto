@@ -20,6 +20,7 @@ public class CommonReportUtils {
 
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
         //hack to discover a database name
+        query = replaceUserChoicesInQuery(loggedInUser, query);
         int arrowsPos = query.indexOf(">>");
         try {
             if (arrowsPos > 0) {
@@ -66,7 +67,36 @@ public class CommonReportUtils {
         return userChoices;
     }
 
+    private static String replaceUserChoicesInQuery(LoggedInUser loggedInUser, String query){
+        if (query.contains("[")) {//items in [] will be replaced by user choices
+            Map<String,String> userChoices = getUserChoicesMap(loggedInUser);
+            int pos=query.indexOf("[");
+
+            while (pos > 0) {
+                int endPos = query.indexOf("]", pos);
+                if (endPos < 0) break;
+                String userChoice = query.substring(pos + 1, endPos);
+                String replacement = userChoices.get(userChoice.toLowerCase());
+                if (replacement != null){
+                    query = query.substring(0,pos) + replacement + query.substring(endPos + 1);
+                    pos = pos + replacement.length();
+
+                }else{
+                    pos = endPos + 1;
+                }
+                pos = query.indexOf("[", pos);
+
+
+            }
+
+        }
+        return query;
+
+
+    }
+
     public static String resolveQuery(LoggedInUser loggedInUser, String query) {
+        query = replaceUserChoicesInQuery(loggedInUser, query);
         try {
             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                     .resolveQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
