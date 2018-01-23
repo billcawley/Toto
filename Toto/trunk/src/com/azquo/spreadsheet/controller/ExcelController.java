@@ -415,8 +415,8 @@ public class ExcelController {
                      List<List<String>>data = excelJsonRequest.data;
                      List<List<CellForDisplay>> oldData = cellsAndHeadingsForDisplay.getData();
 
-                     if (data.size()<oldData.size() || (data !=null && oldData!=null && data.get(0)!=null && oldData.get(0)!=null && data.get(0).size()!= oldData.get(0).size()))
-                         return "error: data region " + region + " on " + excelJsonRequest.sheetName + " has changed size.";
+                     if (data.size()<oldData.size() || (data !=null && oldData!=null && data.size() > 0 && oldData.size() > 0 && data.get(0).size()!= oldData.get(0).size()))
+                         return "error: data region " + excelJsonRequest.region + " on " + excelJsonRequest.sheetName + " has changed size.";
                      Iterator rowIt = data.iterator();
                      for  (List<CellForDisplay> oldRow: oldData) {//for the moment, ignore any lines below old data - assume to be blank.....
                          List<String> row = (List<String>) rowIt.next();
