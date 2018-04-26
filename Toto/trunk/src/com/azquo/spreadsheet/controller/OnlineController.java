@@ -1,5 +1,7 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.admin.AdminService;
+import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
@@ -46,6 +48,40 @@ import java.util.Map;
 @Controller
 @RequestMapping("/Online")
 public class OnlineController {
+
+
+    public static class DisplayHeading {
+        private final String id;
+         private final String name;
+        private final String type;
+        private final boolean isset;
+        private final boolean hasGrandchildren;
+
+        public DisplayHeading(String id,String name, String type, boolean isset, boolean hasGrandchildren) {
+            this.id = id;
+              this.name = name;
+            this.type = type;
+            this.isset = isset;
+            this.hasGrandchildren = hasGrandchildren;
+
+        }
+
+        public String getId() {return id; }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getType() { return type; }
+
+        public boolean getIsset() {return isset; }
+
+        public boolean getHasGrandchildren() { return hasGrandchildren; }
+
+
+    }
+
+
     private final Runtime runtime = Runtime.getRuntime();
     private final int mb = 1024 * 1024;
     // break up into separate functions? I'm not sure it's that important while the class is under 500 lines. I suppose one could move uploading for example.
@@ -107,14 +143,32 @@ public class OnlineController {
                     if (loggedInUser.getUser().isDeveloper()) { // for the user
                         onlineReport = OnlineReportDAO.findForIdAndUserId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
                     } else { //any for the business for admin
-                        onlineReport = OnlineReportDAO.findForIdAndBusinessId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
+                        if (reportId.equals("ADHOC")){
+                            List<String> databases = new ArrayList<>();
+                            List<Database> databaseList = AdminService.getDatabaseListForBusiness(loggedInUser);
+                           for (Database db : databaseList) {
+                                databases.add(db.getName());
+                           }
+                            model.put("databases",databases);
+                            List<DisplayHeading> displayHeadings = new ArrayList<DisplayHeading>();
+                            for (int i=0;i<10;i++){
+                                displayHeadings.add(new DisplayHeading("heading" +i,"","",false,false));
+
+                            }
+                            model.put("headings", displayHeadings);
+                            model.put("reportDatabase","");
+                            return "adHocReport";
+
+                        }else{
+                            onlineReport = OnlineReportDAO.findForIdAndBusinessId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
+                        }
                     }
                     // todo - decide which method to switch databases
                     if (databaseId != null && databaseId.length() > 0) {
                         final List<Integer> databaseIdsForReportId = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
                         for (int dbId : databaseIdsForReportId) {
                             if (dbId == Integer.parseInt(databaseId)) {
-                                LoginService.switchDatabase(loggedInUser, DatabaseDAO.findById(dbId));
+                                 LoginService.switchDatabase(loggedInUser, DatabaseDAO.findById(dbId));
                             }
                         }
                     }
