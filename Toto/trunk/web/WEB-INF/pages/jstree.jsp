@@ -47,7 +47,7 @@
 
             <div>
                 <label for="itemschosen">Select items:</label>
-                <input class="itemselect" type="text" value="" id="itemschosen" name="itemschosen"/>
+                <input class="itemselect" type="text" value="${itemsChosen}" id="itemschosen" name="itemschosen"/>
             </div>
 
             <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="showData(); return false;" class="button" value="Show data"></p></div>
@@ -228,6 +228,7 @@
             } else {
                 itemsChosen = encodeURIComponent(document.getElementById("itemschosen").value);
             }
+            localStorage.setItem("itemsChosen", selected);//for ad-hoc reports
 
             if (dataFlag) {
                 if (window != window.top) {
