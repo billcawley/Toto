@@ -67,12 +67,12 @@ public class CommonReportUtils {
         return userChoices;
     }
 
-    private static String replaceUserChoicesInQuery(LoggedInUser loggedInUser, String query){
+    public static String replaceUserChoicesInQuery(LoggedInUser loggedInUser, String query){
         if (query.contains("[")) {//items in [] will be replaced by user choices
             Map<String,String> userChoices = getUserChoicesMap(loggedInUser);
             int pos=query.indexOf("[");
 
-            while (pos > 0) {
+            while (pos >= 0) {
                 int endPos = query.indexOf("]", pos);
                 if (endPos < 0) break;
                 String userChoice = query.substring(pos + 1, endPos);
