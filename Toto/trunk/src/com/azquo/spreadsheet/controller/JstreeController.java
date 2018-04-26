@@ -120,6 +120,10 @@ public class JstreeController {
                             LoginService.switchDatabase(loggedInUser, newDB);
                         }
                         if (itemsChosen == null) itemsChosen = "";
+                        if (itemsChosen.lastIndexOf(",") > 0){
+                            //not sure why itemsChosen has become a list, but removing the list!
+                            itemsChosen = itemsChosen.substring(itemsChosen.lastIndexOf(",") + 1).trim();
+                        }
                         model.addAttribute("parents", parents);
                         model.addAttribute("rootid", rootId);
                         if (itemsChosen.length() > 0){
@@ -128,6 +132,7 @@ public class JstreeController {
                             model.addAttribute("searchnames",itemsChosen);
                         }
                         model.addAttribute("attributeChosen", attribute);
+                        model.addAttribute("itemsChosen", itemsChosen);
                         List<String> attributes = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getAttributeList(loggedInUser.getDataAccessToken());
                         model.addAttribute("attributes", attributes);
                         return "jstree";
@@ -143,7 +148,7 @@ public class JstreeController {
 
                         // the return type JsonChildren is designed to produce javascript that js tree understands
                         final JsonChildren jsonChildren = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                                .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"), itemsChosen, attribute, hundredsMoreInt);
+                                .getJsonChildren(loggedInUser.getDataAccessToken(), Integer.parseInt(jsTreeId), currentNode.nameId, parents.equals("true"),CommonReportUtils.replaceUserChoicesInQuery(loggedInUser,itemsChosen), attribute, hundredsMoreInt);
                         // Now, the node id management is no longer done server side, need to do it here, let logged in user assign each node id
                         jsonChildren.children.forEach(loggedInUser::assignIdForJsTreeNode);
                         result = jacksonMapper.writeValueAsString(jsonChildren);
