@@ -14,6 +14,7 @@ import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.*;
 import com.azquo.spreadsheet.transport.json.CellsAndHeadingsForExcel;
 import com.azquo.spreadsheet.transport.json.ExcelJsonRequest;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -29,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,6 +69,14 @@ public class ExcelController {
      }
 
 
+     public class Base64Return{
+        public List<String>slices;
+
+        public Base64Return(){
+            slices = new ArrayList<>();
+        }
+     }
+
      public static class LoginInfo{
         public String sessionId;
         public String userType;
@@ -74,8 +84,19 @@ public class ExcelController {
         public LoginInfo(String sessionId, String userType){
             this.sessionId = sessionId;
             this.userType = userType;
+         }
+     }
+
+     public static class ReportlistInfo{
+        List<String> databases;
+        List<String> reports;
+
+        public ReportlistInfo(List<String> databases, List<String> reports){
+            this.databases = databases;
+            this.reports = reports;
         }
      }
+
     public static class MultiChoice{
         public String choice;
         public boolean chosen;
@@ -85,6 +106,7 @@ public class ExcelController {
             this.choice = choice;
             this.id = id;
             this.chosen = chosen;
+
         }
     }
 
@@ -97,8 +119,8 @@ public class ExcelController {
 
 
 
-    @RequestMapping
     @ResponseBody
+    @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "op", required = false) String op
@@ -120,7 +142,7 @@ public class ExcelController {
         String result = "no action taken";
         response.setHeader("Access-Control-Allow-Origin", "*");
         response.setHeader("Content-type", "application/json");
-        final ObjectMapper jacksonMapper = new ObjectMapper();
+        final ObjectMapper jacksonMapper =  new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         op = op.toLowerCase();
         try {
 
@@ -134,6 +156,7 @@ public class ExcelController {
                 if (loggedInUser == null) {
                     loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, password, false);
                     if (loggedInUser == null) {
+                        System.out.println("login attempt by " + logon + " password " + password);
                         return jsonError("incorrect login details");
                     }else {
                          //find existing if already logged in, and remember the current report, database, server
@@ -146,6 +169,8 @@ public class ExcelController {
                                     excelConnections.remove(existingSessionId);
                                 }
                                 loggedInUser = existingUser;
+
+
                                 newUser = false;
                             }
                         }
@@ -154,20 +179,11 @@ public class ExcelController {
 
                             excelConnections.put(request.getSession().getId() + "", loggedInUser);
                         }
-                        if (op.equals("logon")) {
-                            /*
-                            List<OnlineReport> reports = AdminService.getReportList(loggedInUser);
-                            List<JsonReturn> reportList = new ArrayList<>();
-                            for (OnlineReport report:reports){
-                                reportList.add(new JsonReturn(null,report.getDatabase(),report.getReportName(), null,null));
-                            }
-                            String returnString = "{\"error\":\"\",\"sessionid\":\"" + request.getSession().getId() + "\",\"reports\":" + jacksonMapper.writeValueAsString(reportList) + "}";
-                            return returnString;
-                            */
-                            LoginInfo li = new LoginInfo(request.getSession().getId(), loggedInUser.getUser().getStatus());
+                        if (op.equals("logon")){
+                            LoginInfo li= new LoginInfo(request.getSession().getId(),loggedInUser.getUser().getStatus());
                             return jacksonMapper.writeValueAsString(li);
                         }
-                    }
+                     }
                 }
                 if (database!=null && database.length() > 0){
                     LoginService.switchDatabase(loggedInUser,database);
@@ -220,6 +236,10 @@ public class ExcelController {
                          SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
                          return jsonError("done");
                 }
+                if (op.equals("getcount")){
+                     int choices = CommonReportUtils.getNameQueryCount(loggedInUser, choice);
+                    return choices + "";
+                 }
                  if (op.equals("sethighlight")) {
                     int hDays = 0;
                     if(chosen.equals("1 hour")) chosen = "2 days"; //horrible!
@@ -254,6 +274,11 @@ public class ExcelController {
 
                  // database switching should be done by being logged in
                  String downloadName = "";
+                 boolean base64 = false;
+                 if (op.equals("download64")){
+                     op="download";
+                     base64=true;
+                 }
 
                  if (op.equals("download")) {
                      try{
@@ -262,7 +287,7 @@ public class ExcelController {
                          if ((reportName==null || reportName.length()==0) && (database==null||database.length()==0)){
                               //get initial menu
                              List<OnlineReport> reports = AdminService.getReportList(loggedInUser);
-                             if (reports.size()==1){
+                             if (reports.size()==1 && !reports.get(0).getReportName().equals("No reports found")){
                                  onlineReport = reports.get(0);
                                  downloadName = onlineReport.getReportName();
                              }else{
@@ -321,7 +346,7 @@ public class ExcelController {
                              return jsonError("incorrect report name"); // probably need to add json
                          }
                          boolean isTemplate = false;
-                         if (template!=null && template.equals("true")){
+                         if (base64 || (template!=null && template.equals("true"))){
                              isTemplate = true;
                              downloadName += " Template";
                          }
@@ -332,6 +357,28 @@ public class ExcelController {
                          int dotPos = file.getPath().lastIndexOf(".");
                          if (dotPos > 0 && file.getPath().length()-dotPos < 6){
                              suffix = file.getPath().substring(dotPos);
+                         }
+                         if (base64){
+                             byte[] bytes = Files.readAllBytes(file.toPath());
+                             byte[] encodedBytes = Base64.getEncoder().encode(bytes);
+                             String string64 = new String(encodedBytes);
+                             int sliceSize = 8000;
+
+                             Base64Return base64Return = new Base64Return();
+                             List<String> slices = new ArrayList<>();
+                             int startPos = 0;
+                             while (startPos < encodedBytes.length){
+                                 int thisSlice = sliceSize;
+                                 if (startPos + sliceSize > encodedBytes.length){
+                                     thisSlice = encodedBytes.length - startPos;
+                                 }
+                                 base64Return.slices.add(string64.substring(startPos, startPos + thisSlice));
+                                 startPos += sliceSize;
+
+
+                             }
+                             return jacksonMapper.writeValueAsString(base64Return);
+
                          }
                          SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh.mm.ss");
                          response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); // Set up mime type
@@ -348,7 +395,7 @@ public class ExcelController {
                          result = e.getMessage(); // put it here to puck up instead of the report
                      }
                  }
-                 if (op.equals("allowedreports")){
+                  if (op.equals("allowedreports")){
 
                      List<DatabaseReport> databaseReports = new ArrayList<>();
                      if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()){
@@ -368,7 +415,7 @@ public class ExcelController {
                  }
                  if (op.equals("loadregion")) {
                            // ok this will have to be moved
-                     ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json, ExcelJsonRequest.class);
+                     ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json.replace("\\\"","\""), ExcelJsonRequest.class);
                      String optionsSource = excelJsonRequest.optionsSource != null ? excelJsonRequest.optionsSource : "";
 
                      UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), loggedInUser.getUser().getReportId(), excelJsonRequest.region, optionsSource);
@@ -450,6 +497,10 @@ public class ExcelController {
 
     }
 
+
+
+
+
     boolean isEqual(String s1, String s2) {
         if (s1.equals(s2)) return true;
         try {
@@ -469,4 +520,26 @@ public class ExcelController {
 
     }
 
-  }
+    // when not multipart - this is a bit annoying, hopefully can find a way around it later
+    @RequestMapping
+    public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
+            , @RequestParam(value = "sessionid", required = false) String sessionId
+            , @RequestParam(value = "op", required = false) String op
+            , @RequestParam(value = "database", required = false) String database
+            , @RequestParam(value = "reportname", required = false) String reportName
+            , @RequestParam(value = "logon", required = false) String logon
+            , @RequestParam(value = "password", required = false) String password
+            , @RequestParam(value = "region", required = false) String region
+            , @RequestParam(value = "regionrow", required = false) String regionrow
+            , @RequestParam(value = "regioncol", required = false) String regioncol
+            , @RequestParam(value = "choice", required = false) String choice
+            , @RequestParam(value = "chosen", required = false) String chosen
+            , @RequestParam(value = "json", required = false) String json
+
+    ) {
+        return handleRequest(model,  request, response, sessionId, op, database,reportName, logon, password, region, regionrow, regioncol, choice, chosen, json, "true");
+    }
+
+
+
+}
