@@ -22,9 +22,7 @@ import javax.servlet.http.HttpSession;
 import javax.swing.text.DateFormatter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
@@ -263,7 +261,7 @@ public class ManageDatabasesController {
                             String extension = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".")) : "";
                             Path fullPath = Paths.get(SpreadsheetService.getHomeDir() +  ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + "Setup" + loggedInUser.getDatabase().getName() + extension);
                             Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
-                            Files.copy(Paths.get(moved.getPath()), fullPath);
+                            Files.copy(Paths.get(moved.getPath()), fullPath, StandardCopyOption.REPLACE_EXISTING);
                         }
                         // need to add in code similar to report loading to give feedback on imports
                         new Thread(() -> {

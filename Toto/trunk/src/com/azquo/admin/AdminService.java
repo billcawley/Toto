@@ -478,13 +478,14 @@ this may now not work at all, perhaps delete?
         Path dir = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir);
         if (Files.isDirectory(dir)){
             for (Path path : Files.list(dir).collect(Collectors.toList())){
-                if (path != null &&  path.getFileName() != null && db != null && path.getFileName().startsWith("Setup" + db.getName())
-                        && (setupFile == null
-                        || Files.getLastModifiedTime(path).toMillis() > Files.getLastModifiedTime(setupFile).toMillis())){
+                if (path != null &&  path.getFileName() != null && db != null && path.getFileName().toString().startsWith("Setup" + db.getName()) // note the toString here!
+                        && (setupFile == null || Files.getLastModifiedTime(path).toMillis() > Files.getLastModifiedTime(setupFile).toMillis())){
                     setupFile = path;
                 }
             }
         }
+        System.out.println("setup file : " + setupFile);
+
 //        setupFile.getFileName().toString();
         if (setupFile != null && setupFile.getFileName() != null){
             List<String> languages = loggedInUser.getLanguages();
