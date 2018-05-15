@@ -33,13 +33,15 @@ public class JsonChildren implements Serializable {
     public final Map<String, Boolean> state;
     public final String text;
     public final List<Node> children;
+    public final int nameId;
     public final String type;
 
-    public JsonChildren(int id, Map<String, Boolean> state, String text, List<Node> children, String type) {
+    public JsonChildren(int id, Map<String, Boolean> state, String text, List<Node> children, int nameId, String type) {
         this.id = id;
         this.state = state;
         this.text = text;
         this.children = children;
+        this.nameId = nameId;
         this.type = type;
     }
 }
