@@ -23,15 +23,33 @@ Created by IntelliJ IDEA.
         <%@ include file="../includes/admin_header.jsp" %>
 
         <script  type="text/javascript">
+             function createJson() {
+                 debugger;
+                 var json = '{"headings":["'
+                 var headingNo = 0;
+                while (document.getElementById("heading" + headingNo).value > "") {
+
+                    var headingNameId = document.getElementById("heading" + headingNo + "id").value;
+                    var headingType = document.getElementById("heading" + headingNo + "select").value;
+                    json += '{"id":"' + headingNameId + '","type":"' + headingType + '"},';
+                    headingNo++;
+                }
+                json =json.substring(0,json.length-1) + "]}";
+                alert("json: " + json);
+                return false;
+            }
+
+
             function chooseHeading(heading){
                 var headingVal = document.getElementById(heading).value;
                 //var w = $['inspectOverlay']("Inspect").tab("/api/Jstree?op=new&database=" + document.getElementById("database").value, "inspect");
-                var w = window.open("/api/Jstree?op=new&database=" + document.getElementById("database").value, "Choose a name","height=400, width=600, left=100,menubar=no, status=no,titlebar=no");
+                var w = window.open("/api/Jstree?op=new&mode=choosename&database=" + document.getElementById("database").value, "Choose a name","height=400, width=600, left=100,menubar=no, status=no,titlebar=no");
                 w.onbeforeunload = function() {
                     var itemChosen = localStorage.getItem("itemsChosen");
-                    document.getElementById(heading).value = itemChosen;
-                    alert("window closed");
-                }
+                      var colonPos = itemChosen.indexOf(":");
+                    document.getElementById(heading).value = itemChosen.substring(colonPos + 1);
+                    document.getElementById(heading + "id").value = itemChosen.substring(0,colonPos);
+                 }
                 return false;
             }
 
@@ -73,22 +91,21 @@ Created by IntelliJ IDEA.
                         <c:forEach items="${headings}" var="heading">
                             <tr>
                                 <td>
-                                    <input type="text" name="${heading.id}" id="${heading.id}" value=""${heading.name}"/>
-                                    <a onclick="chooseHeading('${heading.id}')" class="button small" title="Choose ${heading.id}"><span class="fa fa-edit" title="Unload"></span></a></td>
+                                    <input type="text" name="${heading.id}" id="${heading.id}" value="${heading.name}"/>
+                                    <input type="hidden" name="${heading.id}id" id="${heading.id}id" value="">
+                                    <a onclick="chooseHeading('${heading.id}')" class="button" title="Choose ${heading.id}"><span class="fa fa-edit" title="Unload"></span></a></td>
 
 
                                 </td>
                                 <td>
+                                    <select name="${heading.id}select" id="${heading.id}select">
+                                        <option value="name" <c:if test="${heading.type=='name'}">selected</c:if>>name</option>
+                                        <option value="value" <c:if test="${heading.type=='value'}">selected</c:if>>value</option>
+                                        <option value="children" <c:if test="${heading.type=='children'}">selected</c:if>>children</option>
+                                        <option value="grandchildren" <c:if test="${heading.type=='grandchildren'}">selected</c:if>>grandchildren</option>
+                                        <option value="detailed" <c:if test="${heading.type=='detailed'}">selected</c:if>>detailed</option>
+                                    </select>
 
-                                    <input type="radio" name="${heading.type}" value="Name" <c:if test="${heading.type== 'name'}">CHECKED</c:if>/> Name
-                                    <input type="radio" name="${heading.type}" value="Value" <c:if test="${heading.type== 'value'}">CHECKED</c:if>/> Value
-                                    <c:if test="${heading.isset}">
-                                        <input type="radio" name="${heading.type}" value="Detailed" <c:if test="${heading.type== 'detailed'}">CHECKED</c:if>/> Detailed
-                                    </c:if>
-                                    <c:if test="${heading.hasGrandchildren}">
-                                        <input type="radio" name="${heading.type}" value="Children" <c:if test="${heading.type== 'children'}">CHECKED</c:if>/> Value
-                                        <input type="radio" name="${heading.type}" value="Grandchildren" <c:if test="${heading.type== 'grandchildren'}">CHECKED</c:if>/> Value
-                                    </c:if>
 
 
 
@@ -97,6 +114,7 @@ Created by IntelliJ IDEA.
                         </c:forEach>
                         </tbody>
                     </table>
+                     <a href="#" onclick="createJson()">Create report" </a>
                 </form>
                 <!-- Headings List -->
          </main>
