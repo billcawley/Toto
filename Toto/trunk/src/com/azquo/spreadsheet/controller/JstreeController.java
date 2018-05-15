@@ -45,6 +45,7 @@ public class JstreeController {
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "op", required = false) String op
+            , @RequestParam(value = "mode", required = false) String jsTreeMode
             , @RequestParam(value = "id", required = false) String jsTreeId
             , @RequestParam(value = "hundredsmore", required = false) String hundredsmore
             , @RequestParam(value = "database", required = false) String database
@@ -84,6 +85,7 @@ public class JstreeController {
                     NameJsonRequest nameJsonRequest = jacksonMapper.readValue(json, NameJsonRequest.class); // still going to leave this as Json as the attribute parsing might be a pain otherwise
                     JsonChildren.Node currentNode = loggedInUser.getFromJsTreeLookupMap(nameJsonRequest.id); // we assume it is there, the code did before
                     if (currentNode.nameId != -1) {
+                        nameJsonRequest.id = currentNode.nameId;//convert from jstree id to the name id
                         nameJsonRequest.id = currentNode.nameId;//convert from jstree id to the name id
                         RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).editAttributes(loggedInUser.getDataAccessToken(), nameJsonRequest.id, nameJsonRequest.attributes); // Now we pass through to the back end
                         result = "true";
@@ -133,6 +135,12 @@ public class JstreeController {
                         }
                         model.addAttribute("attributeChosen", attribute);
                         model.addAttribute("itemsChosen", itemsChosen);
+                        if (jsTreeMode==null) {
+                            jsTreeMode = "";
+                        }
+                        model.addAttribute("mode",jsTreeMode);
+
+
                         List<String> attributes = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getAttributeList(loggedInUser.getDataAccessToken());
                         model.addAttribute("attributes", attributes);
                         return "jstree";
