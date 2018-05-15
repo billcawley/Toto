@@ -49,8 +49,16 @@
                 <label for="itemschosen">Select items:</label>
                 <input class="itemselect" type="text" value="${itemsChosen}" id="itemschosen" name="itemschosen"/>
             </div>
+            <c:choose>
+            <c:when test="${mode == 'choosename'}">
+                <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="submitName(); return false;" class="button" value="Choose name"></p></div>
 
+            </c:when>
+
+            <c:otherwise>
             <div class="choicesubmit" style="margin-top:10px;"><p><input type="submit" onclick="showData(); return false;" class="button" value="Show data"></p></div>
+            </c:otherwise>
+            </c:choose>
         </div>
     </form>
     <div class="namedetails" id="namedetails" style="display:none">
@@ -213,22 +221,30 @@
             }
         }
 
+        function submitName(){
+            var selected = $('#js-container').jstree("get_selected", true);
+            localStorage.setItem("itemsChosen", selected[0].original.nameId + ":" + selected[0].text);//for ad-hoc reports
+            window.opener = self;
+            window.close();
+
+        }
+
         function showData() {
             var itemsChosen = "";
             var dataFlag = false;
             if (document.getElementById("itemschosen").value == "") {
-                var selected = $('#js-container').jstree("get_selected");
+                var selected = $('#js-container').jstree("get_selected", true);
                 itemsChosen = "jstreeids:";
                 /*                for (item in selected) {
                  itemsChosen += selected[item] + ",";
                  }*/
                 // edd changing the above 3 lines to this which seems to be more compatible with IE
-                itemsChosen += selected;
+                itemsChosen += selected[0].id;
                 dataFlag = true;
             } else {
                 itemsChosen = encodeURIComponent(document.getElementById("itemschosen").value);
             }
-            localStorage.setItem("itemsChosen", selected);//for ad-hoc reports
+            localStorage.setItem("itemsChosen", selected[0].text + ":" +  selected[0].original.nameId);//for ad-hoc reports
 
             if (dataFlag) {
                 if (window != window.top) {
