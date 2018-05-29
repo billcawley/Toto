@@ -489,7 +489,12 @@ But can use a library?
                             }
                             // was isnumber test here to add a double to the
                         } else if (valuesHook.values.size() > 0) {
-                            stringValue = doubleValue + "";
+                            if (function==null && valuesHook.values.size() == 1){
+                                stringValue = valuesHook.values.get(0).getText();
+                            }else{
+                                 stringValue = doubleValue + "";
+
+                            }
                         }
                     } else {
                         stringValue = "";
