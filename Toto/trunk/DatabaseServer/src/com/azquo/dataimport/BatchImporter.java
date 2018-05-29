@@ -383,7 +383,7 @@ public class BatchImporter implements Callable<Void> {
 
     private static boolean isZero(String text) {
         try {
-            double d = Double.parseDouble(text);
+            double d = Double.parseDouble(text.replace(",",""));
             return d == 0.0;
         } catch (Exception e) {
             return true;
