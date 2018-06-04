@@ -4,6 +4,7 @@ import com.azquo.DateUtils;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 
@@ -174,6 +175,11 @@ public class BatchImporter implements Callable<Void> {
                     result = result.replace(LINENO, lineNo + "");
                     int headingMarker = result.indexOf("`");
                     while (headingMarker >= 0) {
+                        boolean doublequotes = false;
+                        if (headingMarker< result.length() && result.charAt(headingMarker + 1)=='`'){
+                            doublequotes = true;
+                            headingMarker++;
+                        }
                         int headingEnd = result.indexOf("`", headingMarker + 1);
                         if (headingEnd > 0) {
                             // fairly standard replace name of column with column value but with string manipulation left right mid
@@ -224,7 +230,10 @@ public class BatchImporter implements Callable<Void> {
                                     }
                                 }
                                 result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
+                                headingMarker = headingMarker + sourceVal.length();
+                                if (doublequotes) headingMarker ++;
                             }
+
                         }
                         // try to find the start of the next column referenced
                         headingMarker = result.indexOf("`", headingMarker + 1);
@@ -328,7 +337,7 @@ public class BatchImporter implements Callable<Void> {
         long tooLong = 2; // now ms
         long time = System.currentTimeMillis();
         for (ImportCellWithHeading cell : cells) {
-            boolean peersOk = true;
+             boolean peersOk = true;
             // now do the peers
             final Set<Name> namesForValue = new HashSet<>(); // the names we're going to look for for this value
             // The heading reader has now improved to hand over one set of peer names and indexes, this class need not know if they came from context or not
@@ -367,6 +376,11 @@ public class BatchImporter implements Callable<Void> {
                 } else {
                     for (Name name : identityCell.getLineNames()) {
                         name.setAttributeWillBePersisted(cell.getImmutableImportHeading().attribute, cell.getLineValue());
+                        if (cell.getImmutableImportHeading().attribute.toLowerCase().equals("definition")) {
+                            //work it out now!
+                            name.setChildrenWillBePersisted(NameQueryParser.parseQuery(azquoMemoryDBConnection, cell.getLineValue()));
+                        }
+
                     }
                 }
             }
@@ -376,7 +390,7 @@ public class BatchImporter implements Callable<Void> {
             }
             time = System.currentTimeMillis();
         }
-        return valueCount;
+            return valueCount;
     }
 
     // todo accessed outside, move it out?
