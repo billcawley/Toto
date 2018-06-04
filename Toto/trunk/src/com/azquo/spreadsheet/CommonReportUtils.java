@@ -43,6 +43,9 @@ public class CommonReportUtils {
     }
 
     public static int getNameQueryCount(LoggedInUser loggedInUser, String query) {
+        if (query.toLowerCase().startsWith("count(")){
+            return 1;
+        }
         try {
             return RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getNameQueryCount(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
         } catch (Exception e){
