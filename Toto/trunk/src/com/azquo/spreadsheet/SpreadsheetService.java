@@ -172,8 +172,21 @@ public class SpreadsheetService {
         return saveData(loggedInUser, reportId, reportName, sheetName, region,  true); // default to persist server side
     }
 
+    public static void sendEmail(String emailInfo){
+        String[] emailParts = emailInfo.split("|");
+        String emailAddress = emailParts[0];
+        String emailSubject = emailParts[1];
+        String emailText = emailParts[2];
+        AzquoMailer.sendEMail(emailAddress, null, emailSubject, emailText, null, null);
+
+    }
+
     public static String saveData(LoggedInUser loggedInUser, int reportId, String reportName, String sheetName, String region, boolean persist) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
+        String emailInfo =cellsAndHeadingsForDisplay.getEmailInfo();
+        if (emailInfo != null){
+            sendEmail(emailInfo);
+        }
         if (cellsAndHeadingsForDisplay != null) {
             // maybe go back to this later, currently it will be tripped up by a spreadsheet querying from more than one DB
             //if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
