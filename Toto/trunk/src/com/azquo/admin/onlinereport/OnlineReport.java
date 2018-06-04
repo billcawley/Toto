@@ -80,6 +80,7 @@ public class OnlineReport extends StandardEntity {
         return reportName;
     }
 
+
     public void setReportName(String reportName) {
         this.reportName = reportName;
     }
@@ -110,6 +111,18 @@ public class OnlineReport extends StandardEntity {
     public String getIdentityCell() { return identityCell; }
 
     public void setIdentityCell(String identityCell) {this.identityCell = identityCell; }
+
+      public String getUntaggedReportName(){
+        int pos = reportName.indexOf(" uploaded by ");
+        if (pos < 0) return reportName;
+        return reportName.substring(0,pos);
+    }
+
+    public String getAuthor(){
+        int pos = reportName.indexOf(" uploaded by");
+        if (pos < 0) return "";
+        return reportName.substring(pos  + " uploaded by ".length());
+    }
 
     @Override
     public String toString() {
