@@ -43,10 +43,12 @@ class RegionFillerService {
                 if (heading != null && !heading.equals(".") && (sheet.getInternalSheet().getCell(row, col).getType() != SCell.CellType.STRING || sheet.getInternalSheet().getCell(row, col).getStringValue().isEmpty())) { // as with AzquoBook don't overwrite existing cells when it comes to headings
                     SCell cell = sheet.getInternalSheet().getCell(row, col);
                     cell.setValue(heading);
-                    if (lineNo > 0 && lastRowHeadings.get(col - startCol) != null && lastRowHeadings.get(col - startCol).equals(heading)) {
-                        //disguise the heading by making foreground colour = background colour
-                        Range selection = Ranges.range(sheet, row, col, row, col);
-                        CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row, col).getCellStyle().getBackColor().getHtmlColor());
+                    if (!userRegionOptions.getNoPermuteTotals()) {
+                        if (lineNo > 0 && lastRowHeadings.get(col - startCol) != null && lastRowHeadings.get(col - startCol).equals(heading)) {
+                            //disguise the heading by making foreground colour = background colour
+                            Range selection = Ranges.range(sheet, row, col, row, col);
+                            CellOperationUtil.applyFontColor(selection, sheet.getInternalSheet().getCell(row, col).getCellStyle().getBackColor().getHtmlColor());
+                        }
                     }
                 }
                 col++;
