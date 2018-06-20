@@ -109,6 +109,11 @@ public class BatchImporter implements Callable<Void> {
 
     private static boolean checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
         for (ImportCellWithHeading cell : cells) {
+            if (cell.getImmutableImportHeading().ignoreList!=null){
+                if (Arrays.asList(cell.getImmutableImportHeading().ignoreList).contains(cell.getLineValue().toLowerCase())){
+                    return false;
+                }
+            }
             if (cell.getImmutableImportHeading().only != null) {
                 //`only' can have wildcards  '*xxx*'
                 String only = cell.getImmutableImportHeading().only.toLowerCase();
@@ -230,13 +235,15 @@ public class BatchImporter implements Callable<Void> {
                                     }
                                 }
                                 result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
-                                headingMarker = headingMarker + sourceVal.length();
+                                headingMarker = headingMarker + sourceVal.length()-1;//is increaed before two lines below
                                 if (doublequotes) headingMarker ++;
+                            }else{
+                                headingMarker = headingEnd;
                             }
 
                         }
                         // try to find the start of the next column referenced
-                        headingMarker = result.indexOf("`", headingMarker + 1);
+                        headingMarker = result.indexOf("`", ++headingMarker);
                     }
                     // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
                     if (result.toLowerCase().startsWith("calc")) {
