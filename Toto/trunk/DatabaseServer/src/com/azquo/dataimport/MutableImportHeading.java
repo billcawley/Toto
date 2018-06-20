@@ -61,8 +61,10 @@ class MutableImportHeading {
     String compositionPattern = null;
     // a default value if the line value is blank
     String defaultValue = null;
+    String[] ignoreList = null;
     // don't import zero values
     boolean blankZeroes = false;
+    boolean required = false;
     // is this a column representing names (as opposed to values or attributes). Derived from parent of child of and being referenced by other headings, it's saying : does name, the field above, need to be populated?
     boolean lineNameRequired = false;
     /* used in context of "parent of". Can be blank in which case it means that the child can't have two siblings as parents, this heading will override existing parents

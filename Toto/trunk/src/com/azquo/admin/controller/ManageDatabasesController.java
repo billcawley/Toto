@@ -270,7 +270,7 @@ public class ManageDatabasesController {
                                 List<String> languages = new ArrayList<>(loggedInUser.getLanguages());
                                 languages.remove(loggedInUser.getUser().getEmail());
                                 session.setAttribute("importResult",
-                                        ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false)
+                                        ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false).replace("\n","<br/>")
                                 );
                             } catch (Exception e) {
                                 session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));

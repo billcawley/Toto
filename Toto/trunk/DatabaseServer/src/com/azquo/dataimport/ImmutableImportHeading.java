@@ -28,6 +28,7 @@ class ImmutableImportHeading {
     final String only;
     final String compositionPattern;
     final String defaultValue;
+    final String[] ignoreList;
     final boolean blankZeroes;
     final boolean lineNameRequired;
     final String exclusive;
@@ -47,6 +48,7 @@ class ImmutableImportHeading {
         this.only = mutableImportHeading.only;
         this.compositionPattern = mutableImportHeading.compositionPattern;
         this.defaultValue = mutableImportHeading.defaultValue;
+        this.ignoreList = mutableImportHeading.ignoreList;
         this.blankZeroes = mutableImportHeading.blankZeroes;
         this.lineNameRequired = mutableImportHeading.lineNameRequired;
         this.exclusive = mutableImportHeading.exclusive;

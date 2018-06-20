@@ -12,6 +12,7 @@ import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import groovy.lang.GroovyRuntimeException;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
+import org.springframework.util.StringUtils;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -56,7 +57,7 @@ public class DSImportService {
     An entry point to the class functionality.
     */
 
-    public static String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, List<String> attributeNames, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
+    public static String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String zipName, List<String> languages, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         System.out.println("Reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an XLSX import, a different thing from a data entry area.
@@ -64,12 +65,12 @@ public class DSImportService {
         if (fileName.contains(":")) {
             fileName = fileName.substring(fileName.indexOf(":") + 1);//remove the workbook name.  sent only for the provenance.
         }
-        return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, attributeNames, persistAfter, isSpreadsheet, new AtomicInteger());
+        return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, zipName,languages, persistAfter, isSpreadsheet, new AtomicInteger());
     }
 
     // Other entry point into the class functionality, called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     // I wonder if the valuesModifiedCounter is a bit hacky, will maybe revisit this later
-    public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, List<String> attributeNames, boolean persistAfter, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
+    public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, List<String> languages, boolean persistAfter, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
         // of course this doesn't currently stop the opposite, a persist being started while an import is going on.
         azquoMemoryDBConnection.lockTest();
@@ -77,11 +78,11 @@ public class DSImportService {
         String toReturn;
         if (fileName.toLowerCase().startsWith("sets")) { // typically from a sheet with that name in a book
             // not currently paying attention to isSpreadsheet - only possible issue is the replacing of \\\n with \n required based off writeCell in ImportFileUtilities
-            toReturn = setsImport(azquoMemoryDBConnection, filePath, fileName, attributeNames);
+            toReturn = setsImport(azquoMemoryDBConnection, filePath, fileName, languages);
         } else {
-            toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileName, attributeNames, isSpreadsheet, valuesModifiedCounter);
+            toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileName, zipName, languages, isSpreadsheet, valuesModifiedCounter);
             //now look to see if there's a need to execute after import
-            Name importInterpreter = findInterpreter(azquoMemoryDBConnection, fileName, attributeNames);
+            Name importInterpreter = findInterpreter(azquoMemoryDBConnection, fileName, languages);
             if (importInterpreter != null) {
                 String execute = importInterpreter.getAttribute("EXECUTE");
                 if (execute != null && execute.length() > 0) {
@@ -98,7 +99,7 @@ public class DSImportService {
 
     // typically used to create the basic name structure, an Excel set up workbook with many sheets would have a sets sheet
 
-    private static String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String filePath, String fileName, List<String> attributeNames) throws Exception {
+    private static String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String filePath, String fileName, List<String> languages) throws Exception {
         int lines;
         try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath))) {
             // the filename can override the attribute for name creation/search. Seems a bit hacky but can make sense if the set up is a series of workbooks.
@@ -107,7 +108,7 @@ public class DSImportService {
                 if (sheetLanguage.contains(".")) { // knock off the suffix if it's there. Used to be removed client side, makes more sense here
                     sheetLanguage = sheetLanguage.substring(0, sheetLanguage.lastIndexOf("."));
                 }
-                attributeNames = Collections.singletonList(sheetLanguage);
+                languages = Collections.singletonList(sheetLanguage);
             }
             String line;
             lines = 0;
@@ -119,18 +120,18 @@ public class DSImportService {
                     cell = cell.replace("\"", "").trim();
                     if (!cell.isEmpty()) { // why we're not just grabbing the first cell for the set, might be blank
                         if (set == null) { // assign it - I'm not just grabbing the first cell since there may be cells with spaces or "" at the beginning
-                            set = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, null, false, attributeNames);
+                            set = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, null, false, languages);
                             // empty it in case it existed and had children
                             set.setChildrenWillBePersisted(Collections.emptyList());
                         } else { // set is created or found, so start gathering children
-                            set.addChildWillBePersisted(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, set, false, attributeNames));
+                            set.addChildWillBePersisted(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, set, false, languages));
                         }
                     }
                 }
             }
             lines++;
         }
-        return fileName + " imported. " + lines + " line(s) of a set file.<br/>";  // HTML in DB code! Will let it slide for the mo.
+        return fileName + " imported. " + lines + " line(s) of a set file.";  // HTML in DB code! Will let it slide for the mo.
     }
 
     /* Calls header validation and batches up the data with headers ready for batch importing. Get headings first,
@@ -138,14 +139,14 @@ public class DSImportService {
     The key is to set up info in names so a file can be uploaded from a client "as is". Function a little longer than I'd like.
     */
 
-    private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, List<String> attributeNames, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
+    private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, List<String> languages, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         try {
             long track = System.currentTimeMillis();
             // A fair amount is going on in here checking various upload options and parsing the headers. It delivers the
             // parsed headings, the iterator for the data lines and how many lines should be processed by each task in the thread pool
-            HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize = getHeadersWithIteratorAndBatchSize(azquoMemoryDBConnection, fileName, isSpreadsheet, filePath, attributeNames);
+            HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize = getHeadersWithIteratorAndBatchSize(azquoMemoryDBConnection, fileName, zipName, isSpreadsheet, filePath, languages);
             if (headingsWithIteratorAndBatchSize == null) {
-                return fileName + " No data that can be read<br/>"; //most likely cause of it being null
+                return fileName + " No data that can be read"; //most likely cause of it being null
             }
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
             ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
@@ -183,14 +184,14 @@ public class DSImportService {
                     linesBatched.add(importCellsWithHeading);
                     // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
                     if (linesBatched.size() == headingsWithIteratorAndBatchSize.batchSize) {
-                        futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valuesModifiedCounter, linesBatched, namesFoundCache, attributeNames, lineNo - headingsWithIteratorAndBatchSize.batchSize, linesRejected)));// line no should be the start
+                        futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valuesModifiedCounter, linesBatched, namesFoundCache, languages, lineNo - headingsWithIteratorAndBatchSize.batchSize, linesRejected)));// line no should be the start
                         linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
                     }
                 }
             }
             // load leftovers
             int loadLine = lineNo - linesBatched.size(); // NOT batch size! A problem here isn't a functional problem but it makes logging incorrect.
-            futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valuesModifiedCounter, linesBatched, namesFoundCache, attributeNames, loadLine, linesRejected)));
+            futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valuesModifiedCounter, linesBatched, namesFoundCache, languages, loadLine, linesRejected)));
             // check all work is done and memory is in sync
             for (Future<?> futureBatch : futureBatches) {
                 futureBatch.get(1, TimeUnit.HOURS);
@@ -212,11 +213,11 @@ public class DSImportService {
                     .append((System.currentTimeMillis() - track) / 1000)
                     .append(" second(s) for ")
                     .append(lineNo - 1)
-                    .append(" lines").append(", ").append(valuesModifiedCounter).append(" values adjusted<br/>\n");
+                    .append(" lines").append(", ").append(valuesModifiedCounter).append(" values adjusted");
 
             // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
             if (!linesRejected.isEmpty()) {
-                toReturn.append("Line numbers with rejected cells : <br/>\n");
+                toReturn.append("Line numbers with rejected cells : ");
                 int col = 0;
                 ArrayList<Integer> lineNumbersList = new ArrayList<>(linesRejected);
                 Collections.sort(lineNumbersList); // should do the basic sort
@@ -228,13 +229,13 @@ public class DSImportService {
                     col++;
                     if (col == 20) {
                         col = 0;
-                        toReturn.append("<br/>\n");
+                        //toReturn.append("<br/>\n");
                     }
                 }
                 if (linesRejected.size() == 1_000) { // it was full - factor the size?
                     toReturn.append("etc.");
                 }
-                toReturn.append("<br/>\n");
+                //toReturn.append("<br/>\n");
             }
             azquoMemoryDBConnection.addToUserLogNoException(toReturn.toString(), true);
             System.out.println("---------- names found cache size " + namesFoundCache.size());
@@ -246,7 +247,8 @@ public class DSImportService {
             if (t.getCause() != null) { // once should do it, unwrap to reduce java.lang.exception being shown to the user
                 t = t.getCause();
             }
-            throw new Exception(fileName + " : " + t.getMessage());
+            //throw new Exception(fileName + " : " + t.getMessage());
+            return "Import error: " + t.getMessage();
         }
     }
 
@@ -268,14 +270,14 @@ public class DSImportService {
     // The function to make the an instance of HeadingsWithIteratorAndBatchSize. It will itself call a few utility functions as well as the HeadingReader class.
     // This function is mainly concerned with possible sources of the headers either in the database as attributes or in the uploaded file
 
-    public static Name findInterpreter(AzquoMemoryDBConnection azquoMemoryDBConnection, String importInterpreterLookup, List<String> attributeNames) throws Exception {
+    public static Name findInterpreter(AzquoMemoryDBConnection azquoMemoryDBConnection, String importInterpreterLookup, List<String> languages) throws Exception {
         if (importInterpreterLookup.contains(".")) {
             importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
         }
         // this distinction was previously dealt with by fileType and fileName, we still support the filename being replaced
         // in the headings and it expects this (filename without extension), importInterpreterLookup is no good as it may be mangled further
         // try to find a name which might have the headings in its attributes
-        Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
+        Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, languages);
         //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.
         while (importInterpreter == null && (importInterpreterLookup.contains(" ") || importInterpreterLookup.contains("_"))) {
             //There may, though, be separate interpreters for A_B_xxx and A_xxx, so we try A_B first
@@ -284,16 +286,27 @@ public class DSImportService {
             } else {
                 importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("_"));
             }
-            importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
+            importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, languages);
         }
         return importInterpreter;
 
     }
 
     private static HeadingsWithIteratorAndBatchSize getHeadersWithIteratorAndBatchSize(AzquoMemoryDBConnection azquoMemoryDBConnection
-            , String importInterpreterLookup, boolean isSpreadsheet, String filePath, List<String> attributeNames) throws Exception {
+            , String importInterpreterLookup, String zipName, boolean isSpreadsheet, String filePath, List<String> languages) throws Exception {
         String fileNameForReplace = importInterpreterLookup;
-        Name importInterpreter = findInterpreter(azquoMemoryDBConnection, importInterpreterLookup, attributeNames);
+
+        String importAttribute = null;
+        if (zipName!=null) {
+            importAttribute = "HEADINGS " + zipName;
+        }
+        Name importInterpreter = null;
+        if (zipName != null){
+            importInterpreter = NameService.findByName(azquoMemoryDBConnection,"dataimport " + zipName);
+        }
+        if (importInterpreter == null){
+            importInterpreter = findInterpreter(azquoMemoryDBConnection, importInterpreterLookup, languages);
+         }
         // check if that name (assuming it's not null!) has groovy in an attribute
         filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
         if (importInterpreter != null && !maybeHasHeadings(filePath))
@@ -303,7 +316,7 @@ public class DSImportService {
         if (lineIteratorAndBatchSize == null) {
             return null;
         }
-        String[] headers = null;
+        List<String> headers = new ArrayList<>();
         int skipLines = 0;
         if (!isSpreadsheet && importInterpreter != null) {
             // transpose the file and reassign the line iterator if required, this was for spark response, we'll leave it in for the moment
@@ -319,16 +332,79 @@ public class DSImportService {
                     }
                 }
                 System.out.println("has headers " + importHeaders);
-                headers = importHeaders.split("¬"); // delimiter a bit arbitrary, would like a better solution if I can think of one.
+                headers = Arrays.asList(importHeaders.split("¬")); // delimiter a bit arbitrary, would like a better solution if I can think of one.
+            }
+        }
+        int headingLineCount = 1;
+        Set<Name> topHeadingNames = new HashSet<>();
+        Map<String,String> topHeadings = new HashMap<>();
+        if (importInterpreter != null && importInterpreter.hasChildren()){//check for top headers
+            for (Name name:importInterpreter.getChildren()){
+
+                String interpretation = name.getAttribute(importAttribute);
+                String languageName = name.getAttribute(languages.get(0));
+                if (languages.size() == 2) {
+                    if (languageName != null) {
+                        int thisHeadingLineCount = StringUtils.countOccurrencesOf(languageName, "|");
+
+                        if (thisHeadingLineCount + 1 > headingLineCount) {
+                            headingLineCount = thisHeadingLineCount + 1;
+                        }
+                    }
+                    String localInterpretation = name.getAttribute(importAttribute + " " + languages.get(0));
+                    if (localInterpretation != null) {
+                        if (interpretation==null){
+                            interpretation = localInterpretation;
+                        }
+                        interpretation += ";" + localInterpretation;
+                    }
+                }
+                if (interpretation!= null && interpretation.toLowerCase().contains(HeadingReader.TOPHEADING)){
+                    topHeadingNames.add(name);
+                 }
+            }
+            int lineNo = 0;
+            while(topHeadingNames.size() > 0 && lineNo < 20 && lineIteratorAndBatchSize.lineIterator.hasNext()){
+                String lastHeading = null;
+                headers = getNextLine(lineIteratorAndBatchSize);
+                for (String header:headers){
+                    if (lastHeading!=null){
+                        Name headingName = NameService.findByName(azquoMemoryDBConnection, lastHeading, languages);
+                        if (headingName!=null && topHeadingNames.contains(headingName)){
+                            MutableImportHeading newMHeading = new MutableImportHeading();
+                            topHeadings.put(lastHeading, header);
+
+                            topHeadingNames.remove(headingName);
+                        }
+                    }
+                    lastHeading = header;
+                }
+                lineNo++;
+            }
+            if (lineNo++ < 20 && lineIteratorAndBatchSize.lineIterator.hasNext()){
+                headers = getNextLine(lineIteratorAndBatchSize);
+
+            }
+            while (lineNo < 20 && (headers.size()==0 || headers.get(0).length()== 0)&& lineIteratorAndBatchSize.lineIterator.hasNext()){ //looking for something in column A
+                headers = getNextLine(lineIteratorAndBatchSize);
+
+            }
+            if (headingLineCount >1){
+                buildHeadersFromVerticallyListedNames(headers, lineIteratorAndBatchSize.lineIterator, headingLineCount -1);
+
+            }
+
+            if (lineNo==20 || !lineIteratorAndBatchSize.lineIterator.hasNext()){
+                return  null;//TODO   notify that headings are not found.
             }
         }
         // We might use the headers on the data file, this is notably used when setting up the headers themselves.
-        if (headers == null) {
-            headers = lineIteratorAndBatchSize.lineIterator.next();
-            for (int i = 0; i < headers.length; i++) {
+        if (headers.size() == 0) {
+            headers = getNextLine(lineIteratorAndBatchSize);
+            for (int i = 0; i < headers.size(); i++) {
                 // might have gotten in there if generating a csv from an Excel sheet, writeCell from ImportFileUtilities, undo it! Since this is just for headers no need to check based off a flag.
                 //.replace("\n", "\\\\n").replace("\t", "\\\\t")
-                headers[i] = headers[i].replace("\\\\n", "\n").replace("\\\\t", "\t");
+                headers.set(i, headers.get(i).replace("\\\\n", "\n").replace("\\\\t", "\t"));
             }
             boolean hasClauses = false;
             for (String header : headers) {
@@ -341,15 +417,12 @@ public class DSImportService {
                     throw new Exception("Invalid headers on import file - is this a report that required az_ReportName?");
                 }
                 // option to stack the clauses vertically
-                String oldHeaders[] = new String[headers.length];
-                System.arraycopy(headers, 0, oldHeaders, 0, headers.length);
+                List<String> oldHeaders = new ArrayList<>(headers);
                 if (!buildHeadersFromVerticallyListedClauses(headers, lineIteratorAndBatchSize.lineIterator)) {
-                    // NO NO NO NO NO, do not return null!! otherwise vanilla headings just won't work!!! TODO - address what was going on here
-                    //return null;
                     headers = oldHeaders;
                 }
             }
-            if (isSpreadsheet) { // it's saying really is it a template (isSpreadsheet = yes)
+            if (isSpreadsheet && zipName == null) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
                 // as in add the headings to the first upload then upload again without headings (assuming the file name is the same!)
                 Name importSheets = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, ALLIMPORTSHEETS, null, false);
@@ -367,10 +440,74 @@ public class DSImportService {
                 lineIteratorAndBatchSize.lineIterator.next();
             }
         }
+        int topHeadingPos = headers.size();
+        if (topHeadings!=null){
+
+            headers.addAll(topHeadings.keySet());
+        }
+        checkRequiredHeadings(azquoMemoryDBConnection,headers,importInterpreter, languages);
         // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
-        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, new ArrayList<>(attributeNames), headers, importInterpreterLookup, fileNameForReplace);//attribute names may have additions when language is in the context
-        lineIteratorAndBatchSize.headings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, attributeNames);
+        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, headers,  importInterpreter, fileNameForReplace, languages);//attribute names may have additions when language is in the context
+        if (topHeadings !=null){
+            for (String topHeading:topHeadings.keySet()){
+                headers.set(topHeadingPos, headers.get(topHeadingPos++) + ";default " + topHeadings.get(topHeading));
+            }
+        }
+         lineIteratorAndBatchSize.headings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, languages);
         return lineIteratorAndBatchSize;
+    }
+
+    private static List<String>getNextLine(HeadingsWithIteratorAndBatchSize lineIterator){
+        List<String> toReturn = new ArrayList<>();
+        toReturn.addAll(Arrays.asList(lineIterator.lineIterator.next()));
+        return toReturn;
+    }
+    private static void checkRequiredHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, List<String> languages) throws Exception {
+        if (importInterpreter!=null && importInterpreter.hasChildren()) {
+            List<String> defaultNames = new ArrayList<>();
+            for (String header : headers) {
+                Name name = NameService.findByName(azquoMemoryDBConnection, header, languages);
+                if (name != null) {
+                    defaultNames.add(name.getDefaultDisplayName());
+                } else
+                    defaultNames.add(header);
+            }
+            String importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS");
+            for (Name name : importInterpreter.getChildren()) {
+                String attribute = NameService.getCompositeAttributes(name,importAttribute,importAttribute + " " + languages.get(0));
+
+                if (attribute != null) {
+                    boolean required = false;
+                    boolean composition = false;
+                    String[] clauses = attribute.split(";");
+                    for (String clause : clauses) {
+                        if (clause.toLowerCase().startsWith("required")) {
+                            required = true;
+                        }
+                        if (clause.toLowerCase().startsWith("composition")) {
+                            composition = true;
+                        }
+                        if (required && composition) {
+                            headers.add(name.getDefaultDisplayName());
+                            defaultNames.add(name.getDefaultDisplayName());
+                        }
+                        if (required) {
+                            if (!defaultNames.contains(name.getDefaultDisplayName())) {
+                                //check both the general and specific import attributes
+                                String attribute2 = NameService.getCompositeAttributes(name, importAttribute, importAttribute + " " + languages.get(0));
+                                if (attribute2 == null || (!attribute2.toLowerCase().contains("default") && !attribute2.toLowerCase().contains("composition"))) {
+                                    throw new Exception("headers missing required header: " + name.getDefaultDisplayName());
+                                } else {
+                                    headers.add(name.getDefaultDisplayName());//maybe a problem if there is another name in the given language
+                                    defaultNames.add(name.getDefaultDisplayName());
+
+                                }
+                             }
+                        }
+                    }
+                }
+            }
+        }
     }
 
 
@@ -396,7 +533,7 @@ public class DSImportService {
     }
 
     // the idea is that a header could be followed by successive clauses on cells below and this might be easier to read
-    private static boolean buildHeadersFromVerticallyListedClauses(String[] headers, Iterator<String[]> lineIterator) {
+    private static boolean buildHeadersFromVerticallyListedClauses(List<String> headers, Iterator<String[]> lineIterator) {
         String[] nextLine = lineIterator.next();
         int headingCount = 1;
         boolean lastfilled;
@@ -405,17 +542,17 @@ public class DSImportService {
             lastfilled = false;
             // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
             for (String heading : nextLine) {
-                if (heading.length() > 0 && !heading.equals("--") && colNo < headers.length) { //ignore "--", can be used to give space below the headers
+                if (heading.length() > 0 && !heading.equals("--") && colNo < headers.size()) { //ignore "--", can be used to give space below the headers
                     if (heading.startsWith(".")) {
-                        headers[colNo] += heading;
+                        headers.set(colNo, headers.get(colNo)+ heading);
                     } else {
-                        if (headers[colNo].length() == 0) {
-                            headers[colNo] = heading;
+                        if (headers.get(colNo).length() == 0) {
+                            headers.set(colNo, heading);
                         } else {
                             if (findReservedWord(heading)) {
-                                headers[colNo] += ";" + heading;
+                                headers.set(colNo, headers.get(colNo) + ";" + heading);
                             } else {
-                                headers[colNo] = heading + "|" + headers[colNo];
+                                headers.set(colNo,  heading + "|" + headers.get(colNo));
                             }
                         }
                     }
@@ -432,6 +569,47 @@ public class DSImportService {
         return headingCount != 11;
     }
 
+
+    private static boolean buildHeadersFromVerticallyListedNames(List<String> headers, Iterator<String[]> lineIterator, int lineCount) {
+        String[] nextLine = lineIterator.next();
+        boolean lastfilled;
+        while (nextLine != null &&  lineCount-- > 0) {
+            int colNo = 0;
+            lastfilled = false;
+            // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
+            String lastHeading = null;
+            for (String heading : nextLine) {
+                if (heading.length() > 0 && !heading.equals("--") && colNo < headers.size()) { //ignore "--", can be used to give space below the headers
+                    if (heading.startsWith(".")) {
+                        headers.set(colNo, headers.get(colNo) + heading);
+                    } else {
+                        if (headers.get(colNo).length() == 0) {
+                                  int lastSplit = lastHeading.lastIndexOf("|");
+                                if (lastSplit > 0){
+                                    headers.set(colNo, lastHeading.substring(0,lastSplit + 1) + heading);
+                                }else{
+                                    headers.set(colNo, lastHeading + "|" + heading);
+                                }
+                        } else {
+                                headers.set(colNo, headers.get(colNo) + "|" + heading);
+                         }
+                    }
+                    lastfilled = true;
+                }
+                lastHeading = headers.get(colNo);
+                colNo++;
+            }
+            if (lineIterator.hasNext() && lastfilled) {
+                nextLine = lineIterator.next();
+            } else {
+                nextLine = null;
+            }
+        }
+        return lineCount ==  0;
+    }
+
+
+
     private static boolean findReservedWord(String heading) {
         heading = heading.toLowerCase();
         return heading.startsWith(HeadingReader.CHILDOF)
@@ -441,6 +619,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.PEERS)
                 || heading.startsWith(HeadingReader.LOCAL)
                 || heading.startsWith(HeadingReader.COMPOSITION)
+                || heading.startsWith(HeadingReader.IGNORE)
                 || heading.startsWith(HeadingReader.DEFAULT)
                 || heading.startsWith(HeadingReader.NONZERO)
                 || heading.startsWith(HeadingReader.DATELANG)
@@ -486,7 +665,7 @@ public class DSImportService {
         char delimiter = ',';
         File sizeTest = new File(filePath);
         final long fileLength = sizeTest.length();
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath), Charset.forName("UTF-8"))) {
+         try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath), Charset.forName("UTF-8"))) {
             // grab the first line to check on delimiters
             String firstLine = br.readLine();
             if (firstLine == null || firstLine.length() == 0) {

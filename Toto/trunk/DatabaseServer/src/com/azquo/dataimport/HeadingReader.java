@@ -43,8 +43,11 @@ class HeadingReader {
     static final String COMPOSITION = "composition";
     static final String DEFAULT = "default";
     static final String NONZERO = "nonzero";
+    static final String REQUIRED = "required";
     static final String DATELANG = "date";
     static final String ONLY = "only";
+    static final String TOPHEADING = "topheading";
+    static final String IGNORE = "ignore";
     static final String EXCLUSIVE = "exclusive";
     static final String CLEAR = "clear";
     static final String COMMENT = "comment";
@@ -57,11 +60,11 @@ class HeadingReader {
 
     // Manages the context being assigned automatically to subsequent headers. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.
-    static List<ImmutableImportHeading> readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, String[] headers, List<String> attributeNames) throws Exception {
+    static List<ImmutableImportHeading> readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, List<String> attributeNames) throws Exception {
         List<MutableImportHeading> headings = new ArrayList<>();
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
         for (String header : headers) {
-            // on some spreadsheets, pseudo headers are created because there is text in more than one line.  The Dividor must also be accompanied by a 'peers' clause
+              // on some spreadsheets, pseudo headers are created because there is text in more than one line.  The Dividor must also be accompanied by a 'peers' clause
             int dividerPos = header.lastIndexOf(headingDivider); // is there context defined here?
             if (header.trim().length() > 0 && (dividerPos < 0 || header.toLowerCase().indexOf(PEERS)>0)) { // miss out blanks also.
                 // works backwards simply for convenience to chop off the context headings until only the heading is left, there is nothing significant about the ordering in contextHeadings
@@ -97,26 +100,42 @@ class HeadingReader {
 
     // deal with attribute short hand and pivot stuff, essentially pre processing that can be done before making any MutableImportHeadings
 
-    static String[] preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames, String[] headers, String importInterpreterLookup, String fileName) throws Exception {
-        //  if the file is of type (e.g.) 'sales' and there is a name 'dataimport sales', this is used as an interpreter. Attributes with the header's name override the header.
-        Name importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, attributeNames);
+    static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, String fileName, List<String>languages) throws Exception {
         // option for extra composite headings - I think for PwC, a little odd but harmless.
+        String importAttribute = null;
+        if (importInterpreter!=null){
+             importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS");
+        }
         if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null) {
-            String[] extraCompositeHeadings = importInterpreter.getAttribute(COMPOSITEHEADINGS).split("¬"); // delimiter match the other headings string
-            String[] headersWithExtras = new String[headers.length + extraCompositeHeadings.length];
-            System.arraycopy(headers, 0, headersWithExtras, 0, headers.length);
-            System.arraycopy(extraCompositeHeadings, 0, headersWithExtras, headers.length, extraCompositeHeadings.length);
-            headers = headersWithExtras;
+            List<String> extraCompositeHeadings = Arrays.asList(importInterpreter.getAttribute(COMPOSITEHEADINGS).split("¬")); // delimiter match the other headings string
+            headers.addAll(extraCompositeHeadings);
         }
 
         String lastHeading = "";
         boolean pivot = false;
-        for (int i = 0; i < headers.length; i++) {
-            String header = headers[i];
+        Set<Name> namesUsed = new HashSet<>();
+        for (int i = 0; i < headers.size(); i++) {
+            String header = headers.get(i);
             if (header.trim().length() > 0) {
+
                 // stored header overrides one on the file
                 if (importInterpreter != null && importInterpreter.getAttribute(header) != null) {
                     header = importInterpreter.getAttribute(header);
+                }
+                if (importInterpreter!= null && importInterpreter.getAttribute(header)==null && importInterpreter.getChildren()!=null){//PROCESS FOR ZIP FILE
+                    Name headerName = NameService.findByName(azquoMemoryDBConnection,header,languages);
+                    if (headerName !=null){
+                         String attribute = NameService.getCompositeAttributes(headerName,importAttribute, importAttribute + " " + languages.get(0));
+                         header = headerName.getDefaultDisplayName();
+                         if (attribute != null) {
+                            if (attribute.contains(".")){
+                                header = attribute;
+                            }else{
+                                header = header + ";" + attribute;
+                            }
+                        }
+                        namesUsed.add(headerName);
+                    }
                 }
                 // attribute headings can start with . shorthand for the last heading followed by .
                 // of course starting the first header with a . causes a problem here but it would make no sense to do so!
@@ -177,38 +196,43 @@ class HeadingReader {
                     pivot = true;
                     String headname = header.substring(0, header.indexOf(";"));
                     Name alldataset = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All data", null, false);
-                    Name thisDataSet = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, importInterpreterLookup + " data", alldataset, false);
+                    Name thisDataSet = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, importInterpreter.getDefaultDisplayName() + " data", alldataset, false);
                     // create the set the line data name will go in
                     NameService.findOrCreateNameInParent(azquoMemoryDBConnection, headname.replace("_", " "), thisDataSet, false);
                     header = header.replace(LINEDATA, "peers {LINENO}").replace("_", " ");
                 }
             }
-            headers[i] = header;
+            headers.set(i,header);
         }
         if (pivot) {
             Name allLines = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All lines", null, false);
             // create the name based on this file name where we put the names generated to deal with pivot tables. Note this means uploading a file with the same name and different data causes havok!
-            NameService.findOrCreateNameInParent(azquoMemoryDBConnection, importInterpreterLookup + " lines", allLines, false);
-            // need to add a new header, hence new array. A bit clunky but of course this happens inside ArrayList all the time. We're using arrays here as it's what split and the line iterator return.
-            String[] toReturn = new String[headers.length + 1];
-            System.arraycopy(headers, 0, toReturn, 0, headers.length);
-            toReturn[headers.length] = "LINENO;composition LINENO;language " + importInterpreterLookup + ";child of " + importInterpreterLookup + " lines|"; // pipe on the end, clear context if there was any
-            return toReturn;
-        } else {
-            return headers;
-        }
+            NameService.findOrCreateNameInParent(azquoMemoryDBConnection, importInterpreter.getDefaultDisplayName() + " lines", allLines, false);
+            headers.add("LINENO;composition LINENO;language " + importInterpreter.getDefaultDisplayName() + ";child of " + importInterpreter.getDefaultDisplayName() + " lines|"); // pipe on the end, clear context if there was any
+         }
+         return headers;
     }
 
     //headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading
     private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames) throws Exception {
         MutableImportHeading heading = new MutableImportHeading();
-        String[] clauses = headingString.split(";");
-        heading.heading = clauses[0].replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
+        List<String> clauses = new ArrayList<>();
+        clauses.addAll(Arrays.asList(headingString.split(";")));
+        Iterator clauseIt = clauses.iterator();
+        heading.heading = ((String)clauseIt.next()).replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
         heading.name = NameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames); // at this stage, look for a name, but don't create it unless necessary
         // loop over the clauses making sense and modifying the heading object as you go
-        for (int i = 1; i < clauses.length; i++) {
-            interpretClause(azquoMemoryDBConnection, heading, clauses[i].trim());
+
+        while (clauseIt.hasNext()){
+            String clause =  ((String)clauseIt.next()).trim();
+            int classificationPos = clause.toLowerCase().indexOf(" classification");
+            if (classificationPos > 0){
+               interpretClause(azquoMemoryDBConnection,heading, "parent of " + clause.substring(0,classificationPos));
+               interpretClause(azquoMemoryDBConnection,heading, "child of " + heading.heading);
+            }else{
+                interpretClause(azquoMemoryDBConnection, heading, clause);
+            }
         }
         // exclusive error checks
         if ("".equals(heading.exclusive) && heading.parentNames.isEmpty()) { // then exclusive what is the name exclusive of?
@@ -233,7 +257,7 @@ class HeadingReader {
                 firstWord = firstWord.substring(0, firstWord.indexOf(" "));
             }
         }
-        if (clause.length() == firstWord.length() && !firstWord.equals(COMPOSITION) && !firstWord.equals(LOCAL) && !firstWord.equals(NONZERO) && !firstWord.equals(EXCLUSIVE) && !firstWord.equals(CLEAR) && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
+        if (clause.length() == firstWord.length() && !firstWord.equals(TOPHEADING) && !firstWord.equals(COMPOSITION) && !firstWord.equals(LOCAL) && !firstWord.equals(REQUIRED) && !firstWord.equals(NONZERO) && !firstWord.equals(EXCLUSIVE) && !firstWord.equals(CLEAR) && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading + " in headings"); // other clauses cannot be blank!
         }
         String result = clause.substring(firstWord.length()).trim();
@@ -274,6 +298,14 @@ class HeadingReader {
             case COMPOSITION:// combine more than one column
                 heading.compositionPattern = result;
                 break;
+            case IGNORE:
+                heading.ignoreList = result.split(",");
+                for (int i = 0;i<heading.ignoreList.length;i++){
+                    heading.ignoreList[i] = heading.ignoreList[i].toLowerCase().trim();
+                }
+                break;
+
+
             case SPLIT:// character to use to split the line values of this column, so that if referring to a name instead it's a list of names
                 heading.splitChar = result.trim();
                 break;
@@ -302,6 +334,9 @@ class HeadingReader {
             case NONZERO: // Ignore zero values. This and local will just ignore values after e.g. "nonzero something" I see no harm in this
                 heading.blankZeroes = true;
                 break;
+            case REQUIRED:
+                heading.required = true;
+                break;
             case EXCLUSIVE:
                 heading.exclusive = result;
                 break;
@@ -315,8 +350,11 @@ class HeadingReader {
                     }
                 }
                 break;
+            case TOPHEADING:
+                //used elsewhere
+                break;
             default:
-                throw new Exception(firstWord + " not understood in headings");
+                throw new Exception(firstWord + " not understood in heading '" + heading.heading + "'");
         }
     }
 
