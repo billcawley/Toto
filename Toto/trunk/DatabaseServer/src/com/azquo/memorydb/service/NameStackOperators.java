@@ -72,16 +72,15 @@ class NameStackOperators {
         if (lastName.size() == 1) {
             Name setName = lastName.iterator().next();
             lastName = setName.findAllChildren();
-            if (lastName.size() == 0 && setName.getDefaultDisplayName()!=null && setName.getDefaultDisplayName().startsWith("az_")) {
+            if (lastName.size() == 0 && setName.getDefaultDisplayName() != null && setName.getDefaultDisplayName().startsWith("az_")) {
                 setName = NameService.findByName(azquoMemoryDBConnection, setName.getDefaultDisplayName().substring(3));
                 if (setName != null) {
                     lastName = setName.getChildren();
                 }
             }
-        }
-        else{
+        } else {
             Set<Name> bottomNames = new HashSet<Name>();
-            for (Name element:lastName){
+            for (Name element : lastName) {
                 bottomNames.addAll(element.findAllChildren());
 
             }
@@ -197,9 +196,9 @@ class NameStackOperators {
                 totalName = userSpecificSet; // switch the new one in, it will be used as normal
             }
         }
-        if (nameStack.get(stackCount-1).list != null){
-            totalName.setChildrenWillBePersisted(nameStack.get(stackCount-1).list);
-        }else{
+        if (nameStack.get(stackCount - 1).list != null) {
+            totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).list);
+        } else {
             totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection());
         }
         nameStack.remove(stackCount);

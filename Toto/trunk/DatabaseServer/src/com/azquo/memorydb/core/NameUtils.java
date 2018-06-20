@@ -19,7 +19,7 @@ public class NameUtils {
 
     static Name[] nameArrayAppend(Name[] source, Name toAppend) {
         Name[] newArray = new Name[source.length + 1];
-        System.arraycopy(source, 0, newArray, 0, source.length); // intellij simplified it to this, should be fine
+        System.arraycopy(source, 0, newArray, 0, source.length); // intellij simplified it to this, should be fine. TODO - saw a warning about this on twitter, maybe double check performance implications?
         newArray[source.length] = toAppend;
         return newArray;
     }
