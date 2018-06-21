@@ -217,7 +217,7 @@ public class DSImportService {
 
             // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
             if (!linesRejected.isEmpty()) {
-                toReturn.append("Line numbers with rejected cells : ");
+                toReturn.append(" - No. lines rejected: " + linesRejected.size() + " - Line numbers with rejected cells : ");
                 int col = 0;
                 ArrayList<Integer> lineNumbersList = new ArrayList<>(linesRejected);
                 Collections.sort(lineNumbersList); // should do the basic sort
@@ -339,6 +339,9 @@ public class DSImportService {
         Set<Name> topHeadingNames = new HashSet<>();
         Map<String,String> topHeadings = new HashMap<>();
         if (importInterpreter != null && importInterpreter.hasChildren()){//check for top headers
+            //CHECK FOR CONVERSION :   PERMISSIBLE IN '.<language name> is <header name> additional header info
+            // this converts to header name in this attribute (without brackets), together with additional header info in the attribute (importInterpreter.getDefaultDisplayName() + " " + <language>
+            checkImportChildrenForConversion(importInterpreter, languages.get(0));
             for (Name name:importInterpreter.getChildren()){
 
                 String interpretation = name.getAttribute(importAttribute);
@@ -733,4 +736,37 @@ public class DSImportService {
         }
         return filePath;
     }
+
+    private static void checkImportChildrenForConversion(Name importInterpreter,  String language)throws Exception{
+        boolean toBeConverted = false;
+        for (Name importField:importInterpreter.getChildren()){
+            String existingName = importField.getAttribute(language);
+            if (existingName!=null && existingName.startsWith("<") && existingName.contains(">")){
+                toBeConverted = true;
+                break;
+            }
+        }
+        if (toBeConverted){
+            String importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS") + " " + language;
+            for (Name importField:importInterpreter.getChildren()){
+                String existingName = importField.getAttribute(language);
+                if (existingName!=null){
+                    String newName = "";
+                    String newHeadingAttributes = existingName;
+                    if (existingName.startsWith("<")) {
+                        int nameEndPos = existingName.indexOf(">");
+                        if (nameEndPos > 0) {
+                            newName = existingName.substring(1, nameEndPos).trim();
+                            newHeadingAttributes = existingName.substring(nameEndPos + 1).trim();
+                        }
+                    }
+                    importField.setAttributeWillBePersisted(language, newName);
+                    importField.setAttributeWillBePersisted(importAttribute, newHeadingAttributes);
+                }
+            }
+        }
+    }
+
+
+
 }
