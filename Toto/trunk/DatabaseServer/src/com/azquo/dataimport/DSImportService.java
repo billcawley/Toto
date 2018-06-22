@@ -139,11 +139,18 @@ public class DSImportService {
     The key is to set up info in names so a file can be uploaded from a client "as is". Function a little longer than I'd like.
     */
 
-    private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, List<String> languages, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
+    private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, List<String> origLanguages, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         try {
             long track = System.currentTimeMillis();
             // A fair amount is going on in here checking various upload options and parsing the headers. It delivers the
             // parsed headings, the iterator for the data lines and how many lines should be processed by each task in the thread pool
+            // if there is a text file imported, there may still only be one language when there should be two....but the name of the language will be in fileName
+
+            List<String> languages = new ArrayList<>();
+            if (zipName != null && origLanguages.size()==1) {
+                languages.add(fileName.substring(0, fileName.indexOf(" ")));
+            }
+            languages.addAll(origLanguages);
             HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize = getHeadersWithIteratorAndBatchSize(azquoMemoryDBConnection, fileName, zipName, isSpreadsheet, filePath, languages);
             if (headingsWithIteratorAndBatchSize == null) {
                 return fileName + " No data that can be read"; //most likely cause of it being null
@@ -187,6 +194,8 @@ public class DSImportService {
                         futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(azquoMemoryDBConnection, valuesModifiedCounter, linesBatched, namesFoundCache, languages, lineNo - headingsWithIteratorAndBatchSize.batchSize, linesRejected)));// line no should be the start
                         linesBatched = new ArrayList<>(headingsWithIteratorAndBatchSize.batchSize);
                     }
+                }else{
+                    lineNo--;
                 }
             }
             // load leftovers
@@ -466,46 +475,45 @@ public class DSImportService {
         return toReturn;
     }
     private static void checkRequiredHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, List<String> languages) throws Exception {
-        if (importInterpreter!=null && importInterpreter.hasChildren()) {
-            List<String> defaultNames = new ArrayList<>();
-            for (String header : headers) {
-                Name name = NameService.findByName(azquoMemoryDBConnection, header, languages);
-                if (name != null) {
-                    defaultNames.add(name.getDefaultDisplayName());
-                } else
-                    defaultNames.add(header);
-            }
-            String importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS");
-            for (Name name : importInterpreter.getChildren()) {
-                String attribute = NameService.getCompositeAttributes(name,importAttribute,importAttribute + " " + languages.get(0));
+        if (importInterpreter==null || !importInterpreter.hasChildren())  return;
 
-                if (attribute != null) {
-                    boolean required = false;
-                    boolean composition = false;
-                    String[] clauses = attribute.split(";");
-                    for (String clause : clauses) {
-                        if (clause.toLowerCase().startsWith("required")) {
-                            required = true;
-                        }
-                        if (clause.toLowerCase().startsWith("composition")) {
-                            composition = true;
-                        }
-                        if (required && composition) {
+        List<String> defaultNames = new ArrayList<>();
+        for (String header : headers) {
+            Name name = NameService.findByName(azquoMemoryDBConnection, header, languages);
+            if (name != null) {
+                defaultNames.add(name.getDefaultDisplayName());
+            } else
+                defaultNames.add(header);
+        }
+        String importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS");
+        for (Name name : importInterpreter.getChildren()) {
+            String attribute = NameService.getCompositeAttributes(name,importAttribute,importAttribute + " " + languages.get(0));
+
+            if (attribute != null) {
+                boolean required = false;
+                boolean composition = false;
+                String[] clauses = attribute.split(";");
+                for (String clause : clauses) {
+                    if (clause.toLowerCase().startsWith("required")) {
+                        required = true;
+                    }
+                    if (clause.toLowerCase().startsWith("composition")) {
+                        composition = true;
+                    }
+                    if (!defaultNames.contains(name.getDefaultDisplayName()) && required) {
+                        if ( composition) {
                             headers.add(name.getDefaultDisplayName());
                             defaultNames.add(name.getDefaultDisplayName());
-                        }
-                        if (required) {
-                            if (!defaultNames.contains(name.getDefaultDisplayName())) {
-                                //check both the general and specific import attributes
-                                String attribute2 = NameService.getCompositeAttributes(name, importAttribute, importAttribute + " " + languages.get(0));
-                                if (attribute2 == null || (!attribute2.toLowerCase().contains("default") && !attribute2.toLowerCase().contains("composition"))) {
-                                    throw new Exception("headers missing required header: " + name.getDefaultDisplayName());
-                                } else {
-                                    headers.add(name.getDefaultDisplayName());//maybe a problem if there is another name in the given language
-                                    defaultNames.add(name.getDefaultDisplayName());
+                        }else{
+                            //check both the general and specific import attributes
+                            String attribute2 = NameService.getCompositeAttributes(name, importAttribute, importAttribute + " " + languages.get(0));
+                            if (attribute2 == null || (!attribute2.toLowerCase().contains("default") && !attribute2.toLowerCase().contains("composition"))) {
+                                throw new Exception("headers missing required header: " + name.getDefaultDisplayName());
+                            } else {
+                                headers.add(name.getDefaultDisplayName());//maybe a problem if there is another name in the given language
+                                defaultNames.add(name.getDefaultDisplayName());
 
-                                }
-                             }
+                            }
                         }
                     }
                 }
