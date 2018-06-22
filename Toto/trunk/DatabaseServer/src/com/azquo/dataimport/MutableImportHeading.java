@@ -36,7 +36,7 @@ class MutableImportHeading {
     // result of the attribute clause. Notable that "." is replaced with ;attribute
     String attribute = null;
     //should we try to treat the cell as a date?
-    boolean isDate = false;
+    int dateForm = 0;
     /* the results of the peers clause are jammed in peers but then we need to know which headings those peers refer to. The heading with the clause can immediately be resolved as a name
     * as can peers referenced in the context, the others come from other columns referred to by their indexes. Peers can be defined in the main heading or context,
     * there's no difference to how they're used but I'm going to throw an error if they're defined in both as you can't have more than one set of peers defined.*/
@@ -61,6 +61,7 @@ class MutableImportHeading {
     String compositionPattern = null;
     // a default value if the line value is blank
     String defaultValue = null;
+    //ignore is the opposite of 'only'
     String[] ignoreList = null;
     // don't import zero values
     boolean blankZeroes = false;
