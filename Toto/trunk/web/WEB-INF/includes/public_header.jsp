@@ -53,10 +53,10 @@
 
 <body>
 
-<header class="public">
+<header class="public"  style="background-color:${bannerColor}" >
 	<div class="headerContainer">
 	<div class="logo">
-		<a href="/api/Online?reportid=1"><img src="/images/logo_alt.png" alt="azquo"></a>
+		<a href="/api/Online?reportid=1"><img src="/images/${logo}" alt="azquo"></a>
 	</div>
 		<c:if test="${requirezss}">
 			<c:if test="${images.size() > 0}">

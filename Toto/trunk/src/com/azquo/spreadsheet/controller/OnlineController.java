@@ -1,6 +1,8 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
@@ -273,6 +275,13 @@ public class OnlineController {
                         model.put("images", images);
                         model.addAttribute("pdfMerges", pdfMerges);
                         model.addAttribute("databaseName", loggedInUser.getDatabase().getName());
+                        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+                        String bannerColor = business.getBannerColor();
+                        if (bannerColor==null || bannerColor.length()==0) bannerColor = "#F58030";
+                        String logo = business.getLogo();
+                        if (logo==null || logo.length()==0) logo = "logo_alt.png";
+                        model.addAttribute("bannerColor", bannerColor);
+                        model.addAttribute("logo", logo);
                         return "zsshowsheet";// show the sheet
                     }
                     // ok now I need to set the sheet loading but on a new thread

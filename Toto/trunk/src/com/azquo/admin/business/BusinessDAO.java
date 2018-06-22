@@ -25,6 +25,8 @@ public final class BusinessDAO {
 
     private static final String BUSINESSNAME = "business_name";
     private static final String BUSINESSDETAILS = "business_details";
+    private static final String BANNERCOLOR = "banner_color";
+    private static final String LOGO = "logo";
 
     public static Map<String, Object> getColumnNameValueMap(final Business business) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -35,6 +37,8 @@ public final class BusinessDAO {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        toReturn.put(BANNERCOLOR, business.getBannerColor());
+        toReturn.put(LOGO, business.getLogo());
         return toReturn;
     }
 
@@ -45,7 +49,9 @@ public final class BusinessDAO {
                 return new Business(rs.getInt(StandardDAO.ID)
                         , rs.getString(BUSINESSNAME)
                         , jacksonMapper.readValue(rs.getString(BUSINESSDETAILS)
-                        , Business.BusinessDetails.class));
+                        , Business.BusinessDetails.class)
+                        , rs.getString(BANNERCOLOR)
+                        , rs.getString(LOGO));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

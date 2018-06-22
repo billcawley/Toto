@@ -15,13 +15,21 @@ public final class Business extends StandardEntity {
 
     private String businessName;
     private BusinessDetails businessDetails;
+    private String bannerColor;
+    private String logo;
 
     public Business(int id
             , String businessName
-            , BusinessDetails businessDetails) {
+            , BusinessDetails businessDetails
+            , String bannerColor
+            , String logo  ) {
         this.id = id;
         this.businessName = businessName;
         this.businessDetails = businessDetails;
+        this.bannerColor = bannerColor;
+        this.logo = logo;
+
+
     }
 
     public String getBusinessName() {
@@ -39,6 +47,14 @@ public final class Business extends StandardEntity {
     public void setBusinessDetails(BusinessDetails businessDetails) {
         this.businessDetails = businessDetails;
     }
+
+    public String getBannerColor() {return bannerColor; }
+
+    public void setBannerColor(String bannerColor){ this.bannerColor = bannerColor; }
+
+    public String getLogo() {return  logo; }
+
+    public void setLogo(String logo){ this.logo = logo; }
 
     @Override
     public String toString() {
