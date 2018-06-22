@@ -10,4 +10,6 @@ package com.azquo.memorydb;
 public class Constants {
     public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
     public static String IN_SPREADSHEET = "in spreadsheet"; // We'll do this by string literal for the moment - might reconsider later. This is shared as currently it's part of the drilldown syntax and provenance, I'm not sure about this!
+    public static int UKDATE = 1;
+    public static int USDATE = 2;
 }

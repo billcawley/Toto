@@ -64,12 +64,18 @@ public class BatchImporter implements Callable<Void> {
                     for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
                         // this basic value checking was outside, I see no reason it shouldn't be in here
                         // attempt to standardise date formats
-                        if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().isDate) {
+                        if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().dateForm > 0) {
                             /*
                             interpret the date and change to standard form
                             todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
                             */
-                            LocalDate date = DateUtils.isADate(importCellWithHeading.getLineValue());
+                            LocalDate date = null;
+                            if (importCellWithHeading.getImmutableImportHeading().dateForm == Constants.UKDATE){
+                                 date = DateUtils.isADate(importCellWithHeading.getLineValue());
+                            }else{
+                                date = DateUtils.isUSDate(importCellWithHeading.getLineValue());
+
+                            }
                             if (date != null) {
                                 importCellWithHeading.setLineValue(DateUtils.dateTimeFormatter.format(date));
                             }
@@ -218,7 +224,12 @@ public class BatchImporter implements Callable<Void> {
                             }
                             // if there was a function its name and parameters have been extracted and expression should now be a column name (trim?)
                             // so resolve the column name and run the function if there was one
-                            ImportCellWithHeading compCell = findCellWithHeadingForComposite(expression, cells);
+                            ImportCellWithHeading compCell = null;
+                            try{
+                                compCell = cells.get(Integer.parseInt(expression));//findCellWithHeadingForComposite(expression, cells);
+                            }catch (Exception e){
+
+                            }
                             if (compCell != null) {
                                 String sourceVal = compCell.getLineValue();
                                 // the two ints need to be as they are used in excel
