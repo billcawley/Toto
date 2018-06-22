@@ -21,6 +21,9 @@ public class DateUtils {
     private static final DateTimeFormatter ukdf2 = DateTimeFormatter.ofPattern("dd-MM-yy");
     private static final DateTimeFormatter ukdf3 = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
     private static final DateTimeFormatter ukdf4 = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+    private static final DateTimeFormatter usdf2 = DateTimeFormatter.ofPattern("MM-dd-yy");
+    private static final DateTimeFormatter usdf3 = DateTimeFormatter.ofPattern("MMM-dd-yyyy");
+    private static final DateTimeFormatter usdf4 = DateTimeFormatter.ofPattern("MM-dd-yyyy");
 
     // bottom two lines off the net, needed as result sets don't use the new date classes
     public static LocalDateTime getLocalDateTimeFromDate(Date date) {
@@ -56,4 +59,16 @@ public class DateUtils {
         if (date != null) return date;
         return tryDate(dateToTest.length() > 8 ? dateToTest.substring(0, 8) : dateToTest, ukdf2);
     }
+
+    public static LocalDate isUSDate(String maybeDate) {
+        String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
+        LocalDate date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, dateTimeFormatter);
+        if (date != null) return date;
+        date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, usdf4);
+        if (date != null) return date;
+        date = tryDate(dateToTest.length() > 11 ? dateToTest.substring(0, 11) : dateToTest, usdf3);
+        if (date != null) return date;
+        return tryDate(dateToTest.length() > 8 ? dateToTest.substring(0, 8) : dateToTest, usdf2);
+    }
+
 }
