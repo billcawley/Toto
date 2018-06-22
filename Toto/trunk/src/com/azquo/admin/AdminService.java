@@ -58,7 +58,7 @@ public class AdminService {
         // we need to check for existing businesses
         final String key = shaHash(System.currentTimeMillis() + "");
         final Business.BusinessDetails bd = new Business.BusinessDetails(address1, address2, address3, address4, postcode, telephone, website, key);
-        final Business business = new Business(0, businessName, bd);
+        final Business business = new Business(0, businessName, bd, null,null);
         final Business existing = BusinessDAO.findByName(businessName);
         if (existing != null) {
             throw new Exception(businessName + " already registered");
