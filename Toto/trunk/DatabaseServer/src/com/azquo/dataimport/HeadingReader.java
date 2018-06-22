@@ -46,6 +46,7 @@ class HeadingReader {
     static final String NONZERO = "nonzero";
     static final String REQUIRED = "required";
     static final String DATELANG = "date";
+    static final String USDATELANG = "us date";
     static final String ONLY = "only";
     static final String TOPHEADING = "topheading";
     static final String IGNORE = "ignore";
@@ -112,6 +113,7 @@ class HeadingReader {
             headers.addAll(extraCompositeHeadings);
         }
 
+        List<String> origHeaders = new ArrayList<>(headers);
         String lastHeading = "";
         boolean pivot = false;
         Set<Name> namesUsed = new HashSet<>();
@@ -128,6 +130,7 @@ class HeadingReader {
                     if (headerName !=null){
                          String attribute = NameService.getCompositeAttributes(headerName,importAttribute, importAttribute + " " + languages.get(0));
                          header = headerName.getDefaultDisplayName();
+                         origHeaders.set(i,header);
                          if (attribute != null) {
                             if (attribute.contains(".")){
                                 header = attribute;
@@ -136,6 +139,8 @@ class HeadingReader {
                             }
                         }
                         namesUsed.add(headerName);
+                      }else{
+                        header = "";
                     }
                 }
                 // attribute headings can start with . shorthand for the last heading followed by .
@@ -179,6 +184,7 @@ class HeadingReader {
                         }
                     }
                 }
+                header = header.replace("IMPORTLANGUAGE", languages.get(0));
                 header = header.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
                 /* line heading and data
                 Line heading means that the cell data on the line will be a name that is a parent of the line no
@@ -211,9 +217,54 @@ class HeadingReader {
             NameService.findOrCreateNameInParent(azquoMemoryDBConnection, importInterpreter.getDefaultDisplayName() + " lines", allLines, false);
             headers.add("LINENO;composition LINENO;language " + importInterpreter.getDefaultDisplayName() + ";child of " + importInterpreter.getDefaultDisplayName() + " lines|"); // pipe on the end, clear context if there was any
          }
-         return headers;
+
+         return replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders,headers);
     }
 
+    private static List<String> replaceFieldNamesWithNumbersInCompositeHeadings(List<String> origHeaders, List<String> headers){
+        List<String> headerNames = new ArrayList<>();
+        for (String header:origHeaders){
+            String[]clauses = header.split(";");
+            headerNames.add(clauses[0]);
+
+        }
+        int headerNo = 0;
+        for (String header:headers){
+            String newHeader = "";
+            String[] clauses = header.split(";");
+            boolean adjusted = false;
+             for (String clause:clauses){
+                if (clause.toLowerCase().startsWith(COMPOSITION)){
+                      int startFieldPos = clause.indexOf("`");
+                    while(startFieldPos > 0){
+                        int endFieldPos = clause.indexOf("`", ++startFieldPos);
+                        if (endFieldPos < 0){
+                            startFieldPos = endFieldPos;
+                        }else{
+                            String component = clause.substring(startFieldPos,endFieldPos);
+                            if (headerNames.contains(component)){
+                                String fieldNo = headerNames.indexOf(component) + "";
+                                clause = clause.replace(component, fieldNo);
+                                adjusted = true;
+                                startFieldPos += fieldNo.length() + 1;
+                            }else{
+                                startFieldPos = endFieldPos + 1;
+                            }
+                            startFieldPos = clause.indexOf("`",startFieldPos);
+                        }
+                    }
+
+                }
+                 newHeader += clause + ";";
+
+            }
+            if (adjusted){
+                headers.set(headerNo, newHeader.substring(0,newHeader.length()-1));
+            }
+            headerNo++;
+        }
+        return headers;
+    }
 
     //headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading
@@ -276,15 +327,19 @@ class HeadingReader {
                 }
                 break;
             case LANGUAGE: // language being attribute
-                if (result.equalsIgnoreCase(DATELANG)) {
-                    heading.isDate = true;
+                if (result.equalsIgnoreCase(DATELANG) || result.equalsIgnoreCase(USDATELANG)) {
+                    if (result.equalsIgnoreCase(DATELANG)){
+                        heading.dateForm = Constants.UKDATE;
+                    }else{
+                        heading.dateForm = Constants.USDATE;
+                    }
                     if (heading.attribute == null) {
                         heading.isAttributeSubject = true;
                     }
                 } else {
                     heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
                 }
-                if (heading.attribute == null || !heading.isDate) {
+                if (heading.attribute == null || heading.dateForm == 0) {
                     heading.attribute = result;
                 }
                 break;
@@ -462,7 +517,7 @@ class HeadingReader {
             //checking the name itself, then the name as part of a comma separated string
             if (heading.heading != null
                     && (heading.heading.equalsIgnoreCase(nameToFind) || heading.heading.toLowerCase().startsWith(nameToFind.toLowerCase() + ","))
-                    && (heading.isAttributeSubject || heading.attribute == null || (heading.attribute.equals(DATELANG) && heading.isDate))) {
+                    && (heading.isAttributeSubject || heading.attribute == null || (heading.attribute.equals(DATELANG) && heading.dateForm > 0))) {
                 if (heading.isAttributeSubject) {
                     return headingNo;
                 }
