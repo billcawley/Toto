@@ -387,14 +387,19 @@ public class BatchImporter implements Callable<Void> {
             // ok that's the peer/value stuff done I think, now onto attribute, highly unlikely a cell would be both value and attribute but we'll allow it
             if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null
                     && cell.getLineValue().length() > 0) {
+                String attribute = cell.getImmutableImportHeading().attribute;
+                if (cell.getImmutableImportHeading().attributeColumn>=0){//attribute name refers to the value in another column - so find it
+                    attribute = cells.get(cell.getImmutableImportHeading().attributeColumn).getLineValue();
+                }
+
                 // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
                 ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our source cell
                 if (identityCell.getLineNames() == null) {
                     linesRejected.add(lineNo); // well just mark that the line was no good, should be ok for the moment
                 } else {
                     for (Name name : identityCell.getLineNames()) {
-                        name.setAttributeWillBePersisted(cell.getImmutableImportHeading().attribute, cell.getLineValue());
-                        if (cell.getImmutableImportHeading().attribute.toLowerCase().equals("definition")) {
+                        name.setAttributeWillBePersisted(attribute, cell.getLineValue());
+                        if (attribute.toLowerCase().equals("definition")) {
                             //work it out now!
                             name.setChildrenWillBePersisted(NameQueryParser.parseQuery(azquoMemoryDBConnection, cell.getLineValue()));
                         }

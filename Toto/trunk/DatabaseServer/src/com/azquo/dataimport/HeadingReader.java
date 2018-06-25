@@ -60,6 +60,8 @@ class HeadingReader {
     static final String LINEDATA = "linedata";
     static final String SPLIT = "split";
 
+    static final int FINDATTRIBUTECOLUMN = -2;
+
     // Manages the context being assigned automatically to subsequent headers. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.
     static List<ImmutableImportHeading> readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, List<String> attributeNames) throws Exception {
@@ -279,9 +281,8 @@ class HeadingReader {
 
         while (clauseIt.hasNext()){
             String clause =  ((String)clauseIt.next()).trim();
-            int classificationPos = clause.toLowerCase().indexOf(" classification");
-            if (classificationPos > 0){
-               interpretClause(azquoMemoryDBConnection,heading, "parent of " + clause.substring(0,classificationPos));
+            if (clause.toLowerCase().startsWith("classification ")){
+               interpretClause(azquoMemoryDBConnection,heading, "parent of " + clause.substring("classification ".length()));
                interpretClause(azquoMemoryDBConnection,heading, "child of " + heading.heading);
             }else{
                 interpretClause(azquoMemoryDBConnection, heading, clause);
@@ -344,6 +345,9 @@ class HeadingReader {
                 }
                 break;
             case ATTRIBUTE: // same as language really but .Name is special - it means default display name. Watch out for this.
+                if (result.startsWith("`") && result.endsWith(("`"))){// indicating that the attribute NAME is to be taken from another column of the import.
+                    heading.attributeColumn = FINDATTRIBUTECOLUMN;
+                }
                 heading.attribute = result.replace(StringLiterals.QUOTE + "", "");
                 if (heading.attribute.equalsIgnoreCase("name")) {
                     heading.attribute = Constants.DEFAULT_DISPLAY_NAME;
@@ -461,6 +465,13 @@ class HeadingReader {
                     if (mutableImportHeading.indexForAttribute < 0) {
                         throw new Exception("cannot find column " + mutableImportHeading.heading + " for attribute of " + mutableImportHeading.heading);
                     }
+                }
+                if (mutableImportHeading.attributeColumn == FINDATTRIBUTECOLUMN){
+                    mutableImportHeading.attributeColumn = findMutableHeadingIndex(mutableImportHeading.attribute, headings);
+                    if (mutableImportHeading.attributeColumn < 0) {
+                        throw new Exception("cannot find column " + mutableImportHeading.attribute + " for attribute name of " + mutableImportHeading.heading);
+                    }
+
                 }
                 // Resolve parent of. Parent of in the context of columns in this upload not the Azquo Name sense.
                 if (mutableImportHeading.parentOfClause != null) {

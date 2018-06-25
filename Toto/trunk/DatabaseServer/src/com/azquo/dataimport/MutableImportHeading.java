@@ -35,6 +35,8 @@ class MutableImportHeading {
     Set<Name> parentNames = new HashSet<>();
     // result of the attribute clause. Notable that "." is replaced with ;attribute
     String attribute = null;
+    //used where the attribute name is taken from another column
+    int attributeColumn = -1;
     //should we try to treat the cell as a date?
     int dateForm = 0;
     /* the results of the peers clause are jammed in peers but then we need to know which headings those peers refer to. The heading with the clause can immediately be resolved as a name

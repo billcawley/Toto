@@ -21,6 +21,7 @@ class ImmutableImportHeading {
     // ok the set will be fixed, I suppose names can be modified but they should be thread safe
     final Set<Name> parentNames;
     final String attribute;
+    final int attributeColumn;
     final int dateForm;
     final Set<Name> peerNames;
     final Set<Integer> peerIndexes;
@@ -41,6 +42,7 @@ class ImmutableImportHeading {
         this.indexForChild = mutableImportHeading.indexForChild;
         this.parentNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.parentNames)); // copying the sets in a perhaps paranoid way
         this.attribute = mutableImportHeading.attribute;
+        this.attributeColumn = mutableImportHeading.attributeColumn;
         this.dateForm = mutableImportHeading.dateForm;
         this.peerNames = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.peerNames));
         this.peerIndexes = Collections.unmodifiableSet(new HashSet<>(mutableImportHeading.peerIndexes));
