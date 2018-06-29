@@ -239,9 +239,9 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public void resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
+    public boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
         try {
-            UserChoiceService.resolveQuery(databaseAccessToken,query,languages);
+            return UserChoiceService.resolveQuery(databaseAccessToken,query,languages);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
