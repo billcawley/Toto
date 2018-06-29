@@ -149,9 +149,10 @@ public class NameQueryParser {
             throw e;
         }
         setFormula = setFormula.replace(StringLiterals.ASGLOBAL, StringLiterals.ASGLOBALSYMBOL + "");
-        setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "");
+        setFormula = setFormula.replace(StringLiterals.AS, StringLiterals.ASSYMBOL + "").replace(StringLiterals.CONTAINS, StringLiterals.CONTAINSSYMBOL+"");
+
         setFormula = StringUtils.shuntingYardAlgorithm(setFormula);
-        Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
+        Pattern p = Pattern.compile("[\\+\\-\\*/" + StringLiterals.NAMEMARKER + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL +StringLiterals.CONTAINSSYMBOL + "&]");//recognises + - * / NAMEMARKER  NOTE THAT - NEEDS BACKSLASHES (not mentioned in the regex tutorial on line
         String resetDefs = null;
         boolean global = false;
         logger.debug("Set formula after SYA " + setFormula);
@@ -194,6 +195,13 @@ public class NameQueryParser {
                 NameStackOperators.removeFromSet(nameStack, stackCount);
             } else if (op == '+') {
                 NameStackOperators.addSets(nameStack, stackCount);
+            }else if (op==StringLiterals.CONTAINSSYMBOL){
+                //swap the last two elements on the stack, then use op = '-'
+                NameSetList topList = nameStack.get(stackCount);
+                nameStack.set(stackCount,nameStack.get(stackCount-1));
+                nameStack.set(stackCount-1, topList);
+                NameStackOperators.removeFromSet(nameStack,stackCount);
+
             } else if (op == StringLiterals.ASSYMBOL) {
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
                 if (totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME) != null){
@@ -309,6 +317,7 @@ public class NameQueryParser {
         String countString = StringUtils.getInstruction(setTerm, StringLiterals.COUNT);
         final String compareWithString = StringUtils.getInstruction(setTerm, StringLiterals.COMPAREWITH);
         String selectString = StringUtils.getInstruction(setTerm, StringLiterals.SELECT);
+        String containsString = StringUtils.getInstruction(setTerm, StringLiterals.CONTAINS);
         // now attribute set goes in here
         final String attributeSetString = StringUtils.getInstruction(setTerm, StringLiterals.ATTRIBUTESET);
 
