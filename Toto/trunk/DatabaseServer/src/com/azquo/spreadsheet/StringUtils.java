@@ -83,6 +83,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
 
     public static String prepareStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
         // sort the name quotes - will be replaces with !01 !02 etc.
+        statement = statement.replace(" " + StringLiterals.ASGLOBAL2 + " ", " " + StringLiterals.ASGLOBAL + " ");
         StringBuilder modifiedStatement = new StringBuilder();
         Pattern p = Pattern.compile("" + StringLiterals.QUOTE + ".*?" + StringLiterals.QUOTE + ""); // don't need escaping here I don't think. Possible to add though.
         Matcher matcher = p.matcher(statement);
@@ -229,7 +230,7 @@ I should be ok for StringTokenizer at this point
                 || term.equalsIgnoreCase(StringLiterals.AS) || term.equalsIgnoreCase(StringLiterals.ASGLOBAL)
                 || term.equalsIgnoreCase(StringLiterals.BACKSTEP) || term.equalsIgnoreCase(StringLiterals.CREATE)
                 || term.equalsIgnoreCase(StringLiterals.EDIT) || term.equalsIgnoreCase(StringLiterals.NEW)
-                || term.equalsIgnoreCase(StringLiterals.SELECT)
+                || term.equalsIgnoreCase(StringLiterals.SELECT) || term.equalsIgnoreCase(StringLiterals.CONTAINS)
                 || term.equalsIgnoreCase(StringLiterals.DELETE) || term.equalsIgnoreCase(StringLiterals.WHERE)
                 || term.equalsIgnoreCase(StringLiterals.EXP);
     }
@@ -241,11 +242,12 @@ I should be ok for StringTokenizer at this point
     */
 
     public static String shuntingYardAlgorithm(String calc) {
-        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + StringLiterals.MATHFUNCTION + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + StringLiterals.MATHFUNCTION + StringLiterals.CONTAINSSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
         int startPos = 0;
+        final String funcOrder = StringLiterals.CONTAINSSYMBOL + "+-/*" + StringLiterals.MATHFUNCTION ;//if a CONTAINS b  then result is  b - a, so CONTAINSSYMBOL has higher priority than + or -)
         while (m.find()) {
             String opfound = m.group();
             char thisOp = opfound.charAt(0);
@@ -255,7 +257,7 @@ I should be ok for StringTokenizer at this point
                 sb.append(namefound).append(" ");
             }
             char lastOffStack = ' ';
-            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && (")+-/*" + StringLiterals.MATHFUNCTION + "(").indexOf(thisOp) <= ("(+-/*" + StringLiterals.MATHFUNCTION).indexOf(stack.charAt(0)))) {
+            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && (")" +funcOrder + "(").indexOf(thisOp) <= ("(" + funcOrder).indexOf(stack.charAt(0)))) {
                 if (stack.charAt(0) != '(') {
                     sb.append(stack.charAt(0)).append(" ");
                 }
