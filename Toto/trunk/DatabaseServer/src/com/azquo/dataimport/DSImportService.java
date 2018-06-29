@@ -306,12 +306,21 @@ public class DSImportService {
         String fileNameForReplace = importInterpreterLookup;
 
         String importAttribute = null;
-        if (zipName!=null) {
-            importAttribute = "HEADINGS " + zipName;
-        }
         Name importInterpreter = null;
-        if (zipName != null){
-            importInterpreter = NameService.findByName(azquoMemoryDBConnection,"dataimport " + zipName);
+        Name assumptions = null;
+        if (zipName != null && zipName.length() > 0){
+            importInterpreter = NameService.findByName(azquoMemoryDBConnection,"dataimport " + zipName.substring(0,zipName.indexOf(" ")));
+            importAttribute = "HEADINGS " + zipName.substring(0,zipName.indexOf(" "));
+            String importFile = null;
+            if (filePath.contains("/")) {
+                importFile = filePath.substring(filePath.lastIndexOf("/")+1);
+            }else{
+                importFile = filePath.substring(filePath.lastIndexOf("\\")+1);
+            }
+            int blankPos = importFile.indexOf(" ");
+            if (blankPos > 0){
+                assumptions = NameService.findByName(azquoMemoryDBConnection,zipName + " assumptions " + importFile.substring(0,blankPos));
+            }
         }
         if (importInterpreter == null){
             importInterpreter = findInterpreter(azquoMemoryDBConnection, importInterpreterLookup, languages);
@@ -457,7 +466,7 @@ public class DSImportService {
 
             headers.addAll(topHeadings.keySet());
         }
-        checkRequiredHeadings(azquoMemoryDBConnection,headers,importInterpreter, languages);
+        checkRequiredHeadings(azquoMemoryDBConnection,headers,importInterpreter,  assumptions, languages);
         // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
         headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, headers,  importInterpreter, fileNameForReplace, languages);//attribute names may have additions when language is in the context
         if (topHeadings !=null){
@@ -465,8 +474,19 @@ public class DSImportService {
                 headers.set(topHeadingPos, headers.get(topHeadingPos++) + ";default " + topHeadings.get(topHeading));
             }
         }
-         lineIteratorAndBatchSize.headings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, languages);
-        return lineIteratorAndBatchSize;
+        if (assumptions!=null){
+            for (int i=0;i<headers.size();i++){
+                String header = headers.get(i);
+                String[] clauses = header.split(";");
+                String assumption = assumptions.getAttribute(clauses[0]);
+                if (assumption!=null) {
+                    headers.set(i, header + ";default " + assumption);
+                }
+            }
+        }
+
+        lineIteratorAndBatchSize.headings = HeadingReader.readHeaders(azquoMemoryDBConnection, headers, languages);
+         return lineIteratorAndBatchSize;
     }
 
     private static List<String>getNextLine(HeadingsWithIteratorAndBatchSize lineIterator){
@@ -474,7 +494,7 @@ public class DSImportService {
         toReturn.addAll(Arrays.asList(lineIterator.lineIterator.next()));
         return toReturn;
     }
-    private static void checkRequiredHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, List<String> languages) throws Exception {
+    private static void checkRequiredHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, Name assumptions, List<String> languages) throws Exception {
         if (importInterpreter==null || !importInterpreter.hasChildren())  return;
 
         List<String> defaultNames = new ArrayList<>();
@@ -488,9 +508,8 @@ public class DSImportService {
         String importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS");
         for (Name name : importInterpreter.getChildren()) {
             String attribute = NameService.getCompositeAttributes(name,importAttribute,importAttribute + " " + languages.get(0));
-
-            if (attribute != null) {
-                boolean required = false;
+            if ((assumptions==null || assumptions.getAttribute(name.getDefaultDisplayName())==null)&& attribute!=null){ //if there's an assumption then no need to check required.
+                 boolean required = false;
                 boolean composition = false;
                 String[] clauses = attribute.split(";");
                 for (String clause : clauses) {
@@ -507,7 +526,7 @@ public class DSImportService {
                         }else{
                             //check both the general and specific import attributes
                             String attribute2 = NameService.getCompositeAttributes(name, importAttribute, importAttribute + " " + languages.get(0));
-                            if (attribute2 == null || (!attribute2.toLowerCase().contains("default") && !attribute2.toLowerCase().contains("composition"))) {
+                            if (attribute2 == null || (!attribute2.toLowerCase().contains(HeadingReader.DEFAULT) && !attribute2.toLowerCase().contains(HeadingReader.COMPOSITION) && !attribute2.toLowerCase().contains(HeadingReader.TOPHEADING))) {
                                 throw new Exception("headers missing required header: " + name.getDefaultDisplayName());
                             } else {
                                 headers.add(name.getDefaultDisplayName());//maybe a problem if there is another name in the given language
