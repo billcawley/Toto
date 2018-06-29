@@ -100,7 +100,8 @@ public final class NameService {
 
     private static AtomicInteger findByName2Count = new AtomicInteger(0);
 
-    private static Name findParentAttributesName(Name child, String attributeName, Set<Name> checked) {
+    private static Name findParentAttributesName(AzquoMemoryDBConnection azquoMemoryDBConnection, Name child, String attributeName, Set<Name> checked, List<String> languages)throws Exception {
+
         attributeName = attributeName.trim().toUpperCase();
         for (Name parent : child.getParents()) {
             if (!checked.contains(parent)) {
@@ -108,22 +109,27 @@ public final class NameService {
                 if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
                     return child;
                 }
-                Name attribute = findParentAttributesName(parent, attributeName, checked);
+                Name attribute = findParentAttributesName(azquoMemoryDBConnection,parent, attributeName, checked, languages);
                 if (attribute != null) {
                     return attribute;
                 }
             }
         }
-        return null;
+        //it's not a set attribute, so get the string, and look that up as a name
+        String attName = child.getAttribute(attributeName);
+        if (attName==null) return null;
+        return findByName(azquoMemoryDBConnection,attName, languages);
+
     }
 
-    static Name findNameAndAttribute(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String> attributeNames) throws Exception {
+    static Name findNameAndAttribute(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String> languages) throws Exception {
         int attPos = qualifiedName.lastIndexOf("`.`");
         if (attPos > 0) {
-            Name parentFound = findNameAndAttribute(azquoMemoryDBConnection, qualifiedName.substring(0, attPos + 1), attributeNames);
+            // e.g   child = `2018-06-29`.`WEEKDAY` returns 'FRIDAY' as a name
+            Name parentFound = findNameAndAttribute(azquoMemoryDBConnection, qualifiedName.substring(0, attPos + 1), languages);
             if (parentFound == null) return null;
             String attribute = qualifiedName.substring(attPos + 2).replace("`", "");
-            Name attName = findParentAttributesName(parentFound, attribute, HashObjSets.newMutableSet());
+            Name attName = findParentAttributesName(azquoMemoryDBConnection, parentFound, attribute, HashObjSets.newMutableSet(), languages);
             if (attName == null) {//see if we can find a name from the string value
                 String attVal = parentFound.getAttribute(attribute);
                 if (attVal != null) {
@@ -132,7 +138,7 @@ public final class NameService {
             }
             return attName;
         } else {
-            return findByName(azquoMemoryDBConnection, qualifiedName, attributeNames);
+            return findByName(azquoMemoryDBConnection, qualifiedName, languages);
         }
     }
 
