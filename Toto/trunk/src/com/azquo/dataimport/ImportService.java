@@ -60,11 +60,11 @@ public final class ImportService {
         String tempFile = ImportFileUtilities.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
         uploadFile.close(); // windows requires this (though windows should not be used in production), perhaps not a bad idea anyway
         String toReturn;
-        String zipName = "";
+        String zipName = null;
         if (fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
             //fileName = fileName.substring(0, fileName.length() - 4); // not sure why that was!
             if (fileName.indexOf(" ") > 0){
-                zipName = fileName.substring(0,fileName.indexOf(" "));
+                zipName = fileName.substring(0,fileName.indexOf("."));
             }
             List<Path> files = ImportFileUtilities.unZip(tempFile);
             // should be sorting by xls first then size ascending
