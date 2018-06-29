@@ -25,6 +25,7 @@ public class StringLiterals {
     public static final String CHILDREN = "children";
     public static final String ATTRIBUTESET = "attributeset";
     public static final String SELECT = "select";
+    public static final String CONTAINS = "contains";
     public static final String TEMPORARYNAMES  = "temporary names";
     //public static final String LOWEST = "lowest";
     //public static final String ALL = "all";
@@ -37,11 +38,12 @@ public class StringLiterals {
     public static final String COMPAREWITH = "comparewith";
     public static final String AS = "as";
     public static final String ASGLOBAL = "asglobal";
+    public static final String ASGLOBAL2 = "->";
     public static final char ASSYMBOL = '@';
+    public static final char CONTAINSSYMBOL = 127;
     public static final char ASGLOBALSYMBOL = '¬';//searching for symbols!
     public static final String WHERE = "where";
     public static final String languageIndicator = "<-";
-
     public static final String HIERARCHY = "hierarchy";
     public static final String EDITABLE = " editable"; // why the space before?
 
