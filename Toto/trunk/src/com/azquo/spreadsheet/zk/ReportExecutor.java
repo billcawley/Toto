@@ -119,8 +119,12 @@ public class ReportExecutor {
                     }
                     lineNo = onwardLineNo - 1; // put line back to where it is now
                     if (!subCommands.isEmpty()) { // then we have something to run for the for each!
-                        String choiceName = trimmedLine.substring("for each".length(), trimmedLine.indexOf(" in ")).trim();
-                        String choiceQuery = trimmedLine.substring(trimmedLine.indexOf(" in ") + " in ".length()).trim();
+                        int inPos = findString(trimmedLine," in ");
+                        String choiceName = trimmedLine.substring("for each".length(), inPos). trim();
+                        if (choiceName.startsWith("`") || choiceName.startsWith("[")){
+                            choiceName = choiceName.substring(1,choiceName.length()-1);
+                        }
+                        String choiceQuery = trimmedLine.substring(inPos + 4).trim();
                         loopsLog.append(choiceName).append(" : ").append(choiceQuery).append("\r\n");
                         final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery);
                         for (String choiceValue : dropdownListForQuery) { // run the for :)
@@ -285,6 +289,54 @@ public class ReportExecutor {
                   RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
                             .getJsonChildren(loggedInUser.getDataAccessToken(),0, 0, false, "edit:zapdata " + trimmedLine.substring(7), Constants.DEFAULT_DISPLAY_NAME, 0);
 
+                } else if (trimmedLine.toLowerCase().startsWith("set ")) {
+                    String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
+                    if (result.toLowerCase().startsWith("error")) {
+                        throw (new Exception(result));
+                    }
+                }else if (trimmedLine.toLowerCase().startsWith("if ")) {
+                    String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
+                    if (result.toLowerCase().startsWith("error")) {
+                        throw (new Exception(result));
+                    }
+                    String lastLine = "";
+                    lineNo++;
+                    List<String> subCommands = new ArrayList<>();
+                    while (lineNo < commands.size() && getIndent(commands.get(lineNo)) > startingIndent) {
+                        lastLine = commands.get(lineNo);
+                        subCommands.add(lastLine);
+                        lineNo++;
+                    }
+                    lineNo--; // put line back to where it is now
+
+                    if (result.equals("true")) {
+                        if (!subCommands.isEmpty()) {
+                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count);
+
+                        }
+                        if (lastLine.toLowerCase().equals("else")) {
+                            while (lineNo < commands.size() && getIndent(commands.get(lineNo)) > startingIndent) {
+                                lineNo++;
+                            }
+                        }
+                        lineNo--;
+
+                    }else{
+                        subCommands = new ArrayList<>();
+                        while (lineNo < commands.size() && getIndent(commands.get(lineNo)) > startingIndent) {
+                            lastLine = commands.get(lineNo);
+                            subCommands.add(lastLine);
+                            lineNo++;
+                        }
+                        lineNo--; // put line back to where it is now
+                        if (!subCommands.isEmpty()) {
+                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count);
+
+                        }
+
+                    }
+
+
                 }else{
                         loopsLog.append("badly formed execute line  : ").append(trimmedLine);
                 }
@@ -293,6 +345,30 @@ public class ReportExecutor {
         loopsLog.append("\r\n");
         return toReturn;
     }
+
+    private static int findString(String line, String toFind)throws Exception{
+        //checks whether string to find is part of a name enclosed in ``
+        int quotePos = 0;
+        int foundPos = line.indexOf(toFind);
+        if (foundPos > 0 ) {
+            while (quotePos >= 0) {
+                quotePos = line.indexOf("`", quotePos + 1);
+                if (quotePos > 0) {
+                    if (quotePos > foundPos)  return foundPos;
+                    int endPos = line.indexOf("`", quotePos + 1);
+                    if (endPos < 0) quotePos = endPos;
+                    else {
+                        if (foundPos < endPos) {
+                            foundPos = line.indexOf(toFind, endPos);
+                            if (foundPos < 0) endPos = -2;
+                        }
+                        quotePos = endPos + 1;
+                    }
+                }
+            }
+        }
+        throw(new Exception("not understood: " + line));
+     };
 
     private static int getIndent(String s) {
         int indent = 0;
