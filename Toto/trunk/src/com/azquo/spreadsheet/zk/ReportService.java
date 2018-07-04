@@ -119,9 +119,12 @@ public class ReportService {
                             if (queryCell.getType() == SCell.CellType.FORMULA && queryCell.getFormulaResultType() == SCell.CellType.NUMBER){
                                 queryCell.clearFormulaResultCache();;
                             }
-                            BookUtils.setValue(queryCell, CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue()));
-                            Ranges.range(sheet, queryCell.getRowIndex(), queryCell.getColumnIndex()).notifyChange(); //
-                        }
+                            String queryResult = CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue());
+                            if (queryResult.toLowerCase().startsWith("error")){
+                                BookUtils.setValue(queryCell,queryCell.getStringValue() + " - " + queryResult);
+                                Ranges.range(sheet, queryCell.getRowIndex(), queryCell.getColumnIndex()).notifyChange(); //
+                            }
+                         }
                     }
                 }
             }
