@@ -308,7 +308,10 @@ public class DSImportService {
         String importAttribute = null;
         Name importInterpreter = null;
         Name assumptions = null;
-        if (zipName != null && zipName.length() > 0){
+        String zipVersion = null;
+        if (zipName != null && zipName.length() > 0 && zipName.indexOf(" ") > 0){
+            zipVersion = zipName.substring(zipName.indexOf(" ")).trim();
+
             importInterpreter = NameService.findByName(azquoMemoryDBConnection,"dataimport " + zipName.substring(0,zipName.indexOf(" ")));
             importAttribute = "HEADINGS " + zipName.substring(0,zipName.indexOf(" "));
             String importFile = null;
@@ -468,7 +471,7 @@ public class DSImportService {
         }
         checkRequiredHeadings(azquoMemoryDBConnection,headers,importInterpreter,  assumptions, languages);
         // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
-        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, headers,  importInterpreter, fileNameForReplace, languages);//attribute names may have additions when language is in the context
+        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, headers, importInterpreter, zipVersion, fileNameForReplace, languages);//attribute names may have additions when language is in the context
         if (topHeadings !=null){
             for (String topHeading:topHeadings.keySet()){
                 headers.set(topHeadingPos, headers.get(topHeadingPos++) + ";default " + topHeadings.get(topHeading));
