@@ -3,17 +3,20 @@
   User: Bill
   Date: 27/03/2018
   Time: 14:22
+  Time: 14:22
   To change this template use File | Settings | File Templates.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <html>
 <head>
-    <title><%--
+    <title>Azquo Report List</title>
+   <%--
 Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
 
 Created by IntelliJ IDEA.
   User: cawley
   Date: 24/04/15
+  Time: 15:48
   Time: 15:48
   To change this template use File | Settings | File Templates.
 --%>
@@ -27,7 +30,7 @@ Created by IntelliJ IDEA.
                  debugger;
                  var json = '{"headings":["'
                  var headingNo = 0;
-                while (document.getElementById("heading" + headingNo).value > "") {
+                while (headingNo < 10 && document.getElementById("heading" + headingNo).value > "") {
 
                     var headingNameId = document.getElementById("heading" + headingNo + "id").value;
                     var headingType = document.getElementById("heading" + headingNo + "select").value;
@@ -35,7 +38,7 @@ Created by IntelliJ IDEA.
                     headingNo++;
                 }
                 json =json.substring(0,json.length-1) + "]}";
-                alert("json: " + json);
+                document.getElementById("reportid").value = json;
                 return false;
             }
 
@@ -53,13 +56,15 @@ Created by IntelliJ IDEA.
                 return false;
             }
 
+
         </script>
-        <main class="databases">
+    </head>
+    <body>
         <main class="databases">
             <h1>Ad-hoc Report</h1>
             <div class="error">${error}</div>
             <!-- Uploads -->
-                 <form action="/api/AdhocReport" method="post">
+                 <form action="/api/Online?opcode=adhocreport" method="post">
                     <div class="well">
                         <table>
                             <tr>
@@ -74,7 +79,8 @@ Created by IntelliJ IDEA.
                                 </td>
                                 <td><label for="reportname">Report Name:</label> <input name="reportname" id="reportname" value = "${reportname}"/></td>
                                 <td>
-                                    <input type="submit" name="Create Report" value="Create Report" class="button"/>
+                                    <input type="hidden" name = "reportid" value="">
+                                    <input type="submit" onClick = CreateJson() value="Create Report" class="button"/>
                                 </td>
                             </tr>
                         </table>
@@ -114,7 +120,6 @@ Created by IntelliJ IDEA.
                         </c:forEach>
                         </tbody>
                     </table>
-                     <a href="#" onclick="createJson()">Create report" </a>
                 </form>
                 <!-- Headings List -->
          </main>
@@ -128,8 +133,6 @@ Created by IntelliJ IDEA.
 
         <%@ include file="../includes/admin_footer.jsp" %>
     </title>
-</head>
-<body>
 
 </body>
 </html>

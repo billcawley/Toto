@@ -104,7 +104,7 @@ class HeadingReader {
 
     // deal with attribute short hand and pivot stuff, essentially pre processing that can be done before making any MutableImportHeadings
 
-    static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, String fileName, List<String>languages) throws Exception {
+    static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter,  String zipVersion, String fileName, List<String>languages) throws Exception {
         // option for extra composite headings - I think for PwC, a little odd but harmless.
         String importAttribute = null;
         if (importInterpreter!=null){
@@ -127,14 +127,17 @@ class HeadingReader {
                 if (importInterpreter != null && importInterpreter.getAttribute(header) != null) {
                     header = importInterpreter.getAttribute(header);
                 }
-                if (importInterpreter!= null && importInterpreter.getAttribute(header)==null && importInterpreter.getChildren()!=null){//PROCESS FOR ZIP FILE
+                if (importInterpreter!= null && importInterpreter.getAttribute(header)==null && importInterpreter.getChildren()!=null && importInterpreter.getChildren().size()>0){//PROCESS FOR ZIP FILE
                     Name headerName = NameService.findByName(azquoMemoryDBConnection,header,languages);
                     if (headerName !=null){
                          String attribute = NameService.getCompositeAttributes(headerName,importAttribute, importAttribute + " " + languages.get(0));
                          header = headerName.getDefaultDisplayName();
                          origHeaders.set(i,header);
                          if (attribute != null) {
-                            if (attribute.contains(".")){
+                             if (zipVersion!=null){
+                                 attribute = attribute.replace("ZIPVERSION", zipVersion);
+                             }
+                             if (attribute.contains(".")){
                                 header = attribute;
                             }else{
                                 header = header + ";" + attribute;
@@ -469,7 +472,7 @@ class HeadingReader {
                 if (mutableImportHeading.attributeColumn == FINDATTRIBUTECOLUMN){
                     mutableImportHeading.attributeColumn = findMutableHeadingIndex(mutableImportHeading.attribute, headings);
                     if (mutableImportHeading.attributeColumn < 0) {
-                        throw new Exception("cannot find column " + mutableImportHeading.attribute + " for attribute name of " + mutableImportHeading.heading);
+                        throw new Exception("cannot find column " + mutableImportHeading.attribute + " for attribute name of " + mutableImportHeading.heading + "." + mutableImportHeading.attribute);
                     }
 
                 }
