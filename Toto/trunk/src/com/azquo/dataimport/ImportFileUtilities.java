@@ -292,6 +292,7 @@ class ImportFileUtilities {
             }
             returnString = stringValue;
         }
+        if (returnString.startsWith("'") && returnString.indexOf("'",1) <0) returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
         return new TypedPair<>(returnNumber, returnString);
     }
 }
