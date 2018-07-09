@@ -591,6 +591,9 @@ public class ReportRenderer {
             // only look for the pattern if we're not using hide rows
             if (userRegionOptions.getHideRows() == 0){
                 rowsFormattingPatternHeight = ReportUtils.guessColumnsFormattingPatternWidth(loggedInUser, MultidimensionalListUtils.transpose2DList(cellsAndHeadingsForDisplay.getRowHeadingsSource()));
+                if (rowsToAdd < rowsFormattingPatternHeight){
+                    rowsFormattingPatternHeight = 1;
+                }
             }
             // make it up to a multiple of the pattern if it isn't
             if (rowsFormattingPatternHeight > 1 && rowsFormattingPatternHeight < cellsAndHeadingsForDisplay.getRowHeadings().size()) {
