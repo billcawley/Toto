@@ -266,7 +266,7 @@ class ImportFileUtilities {
                 }
             } catch (Exception ignored) {
             }
-            if (!dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
+            if ((stringValue.contains(".") || !stringValue.startsWith("0")) && !dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
                 //if it's a number, remove all formatting
                 try {
                     double d = cellData.getDoubleValue();

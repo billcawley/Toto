@@ -4,6 +4,7 @@ import com.azquo.memorydb.core.Name;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -35,6 +36,7 @@ class ImmutableImportHeading {
     final String exclusive;
     final boolean existing;
     final String splitChar;
+    final List<Integer> parentIndexes;
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -56,5 +58,6 @@ class ImmutableImportHeading {
         this.exclusive = mutableImportHeading.exclusive;
         this.existing = mutableImportHeading.existing;
         this.splitChar = mutableImportHeading.splitChar;
+        this.parentIndexes = mutableImportHeading.parentIndexes;
     }
 }
