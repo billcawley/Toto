@@ -40,6 +40,12 @@ public class LoginController {
             , @RequestParam(value = "logoff", required = false) String logoff
             , @RequestParam(value = "connectionid", required = false) String connectionid // only for the magento plugin and Javascript (connectionId = "javascript")
     ) throws Exception {
+        String url = request.getRequestURL().toString();
+        String page = "login";
+        if (url.contains("edbroking")){
+            page = "edbroking_login";
+        }
+
         if ("true".equals(logoff)) {
             if (request.getSession().getAttribute(LOGGED_IN_USER_SESSION) != null) {
                 if (!SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
@@ -124,6 +130,6 @@ public class LoginController {
                 }
             }
         }
-        return "login";
+        return page;
     }
 }
