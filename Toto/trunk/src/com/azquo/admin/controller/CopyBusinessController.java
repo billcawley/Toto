@@ -75,6 +75,7 @@ public class CopyBusinessController {
                                 DatabaseReportLinkDAO.link(oldDBIdNewDBId.get(oldDbId), newReport.getId()); // so make a new link with the new ids
                             }
                         }
+                        AdminService.setBanner(model,loggedInUser);
                         return "redirect:/api/Login?logoff=true";
                     }
                 }
@@ -86,6 +87,7 @@ public class CopyBusinessController {
                 String exceptionError = error.toString();
                 model.put("error", exceptionError);
             }
+            AdminService.setBanner(model, loggedInUser);
             return "copybusiness";
         } else {
             return "redirect:/api/Login";

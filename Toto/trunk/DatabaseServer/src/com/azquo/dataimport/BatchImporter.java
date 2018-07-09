@@ -427,21 +427,45 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
+
+
     // namesFound is a cache. Then the heading we care about then the list of all headings.
     // This used to be called handle parent and deal only with parents and children but it also resolved line names. Should be called for local first then non local
     // it tests to see if the current line name is null or not as it may have been set by a call to resolveLineNamesParentsChildrenRemove on a different cell setting the child name
+
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
                                                               ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
+         resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cellWithHeading,  cells,  attributeNames, lineNo, 0);
+
+        }
+
+
+
+            private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
+                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo, int recursionLevel) throws Exception {
         // in simple terms if a line cell value refers to a name it can now refer to a set of names
         // to make a set parent of more than one thing e.g. parent of set a, set b, set c
         // nothing in the heading has changed except the split char but we need to detect it here
         // split before checking for quotes etc. IF THE SPLIT CHAR IS IN QUOTES WE DON'T CURRENTLY SUPPORT THAT! e.g. ,
+         for (int parentIndex:cellWithHeading.getImmutableImportHeading().parentIndexes){
+
+            ImportCellWithHeading parentHeading =cells.get(parentIndex);
+            if (parentHeading.getLineNames() ==null || parentHeading.getLineNames().size() == 0){
+                if (recursionLevel++ == 8){
+                    throw new Exception("recursion loop on heading " + cellWithHeading.getImmutableImportHeading().heading);
+                }
+                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection,namesFoundCache,parentHeading, cells,attributeNames,lineNo, recursionLevel);
+
+            }
+
+        }
         String[] nameNames;
         if (cellWithHeading.getImmutableImportHeading().splitChar == null) {
             nameNames = new String[]{cellWithHeading.getLineValue()};
         } else {
             nameNames = cellWithHeading.getLineValue().split(cellWithHeading.getImmutableImportHeading().splitChar);
         }
+
         if (cellWithHeading.getLineNames() == null) { // then create it, this will take care of the parents ("child of") while creating
             //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
             for (String nameName : nameNames) {
@@ -546,6 +570,9 @@ public class BatchImporter implements Callable<Void> {
 
     private static Name findOrCreateNameStructureWithCache(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
         //namesFound is a quick lookup to avoid going to findOrCreateNameInParent - note it will fail if the name was changed e.g. parents removed by exclusive but that's not a problem
+        if (name.toLowerCase().equals("jacksonville")){
+            int j=1;
+        }
         String np = name + ",";
         if (parent != null) {
             np += parent.getId();

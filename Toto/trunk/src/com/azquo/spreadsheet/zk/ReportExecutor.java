@@ -353,17 +353,15 @@ public class ReportExecutor {
         if (foundPos > 0 ) {
             while (quotePos >= 0) {
                 quotePos = line.indexOf("`", quotePos + 1);
-                if (quotePos > 0) {
-                    if (quotePos > foundPos)  return foundPos;
-                    int endPos = line.indexOf("`", quotePos + 1);
-                    if (endPos < 0) quotePos = endPos;
-                    else {
-                        if (foundPos < endPos) {
-                            foundPos = line.indexOf(toFind, endPos);
-                            if (foundPos < 0) endPos = -2;
-                        }
-                        quotePos = endPos + 1;
+                if (quotePos < 0 || quotePos > foundPos)  return foundPos;
+                int endPos = line.indexOf("`", quotePos + 1);
+                if (endPos < 0) quotePos = endPos;
+                else {
+                    if (foundPos < endPos) {
+                        foundPos = line.indexOf(toFind, endPos);
+                        if (foundPos < 0) endPos = -2;
                     }
+                    quotePos = endPos + 1;
                 }
             }
         }

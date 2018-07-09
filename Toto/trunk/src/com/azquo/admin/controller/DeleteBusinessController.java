@@ -84,6 +84,7 @@ public class DeleteBusinessController {
                 model.put("error", exceptionError);
             }
             model.put("businessname", b.getBusinessName());
+            AdminService.setBanner(model,loggedInUser);
             return "deletebusiness";
         } else {
             return "redirect:/api/Login";

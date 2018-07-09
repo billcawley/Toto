@@ -79,6 +79,7 @@ public class ManageReportsController {
                         theReport.setExplanation(explanation);
                         OnlineReportDAO.store(theReport);
                         model.put("reports", AdminService.getReportList(loggedInUser));
+                        AdminService.setBanner(model,loggedInUser);
                         return "managereports";
                     }
                     final List<Integer> databaseIdsForReportId = DatabaseReportLinkDAO.getDatabaseIdsForReportId(theReport.getId());
@@ -95,12 +96,14 @@ public class ManageReportsController {
                     model.put("name", theReport.getReportName());
                     model.put("file", theReport.getFilename());
                     model.put("explanation", theReport.getExplanation() != null ? theReport.getExplanation() : "");
+                    AdminService.setBanner(model,loggedInUser);
                     return "editreport";
                 }
             }
             // if not editing then very simple
             model.put("reports", AdminService.getReportList(loggedInUser));
             model.put("developer", loggedInUser.getUser().isDeveloper());
+            AdminService.setBanner(model,loggedInUser);
             return "managereports";
         } else {
             return "redirect:/api/Login";

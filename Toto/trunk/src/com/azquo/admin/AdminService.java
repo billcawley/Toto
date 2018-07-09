@@ -11,6 +11,7 @@ import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
+import org.springframework.ui.ModelMap;
 
 import java.io.File;
 import java.io.IOException;
@@ -549,4 +550,16 @@ this may now not work at all, perhaps delete?
         }
         return 0;
     }
+
+    public static void setBanner(ModelMap model, LoggedInUser loggedInUser){
+        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+        String bannerColor = business.getBannerColor();
+        if (bannerColor==null || bannerColor.length()==0) bannerColor = "#F58030";
+        String logo = business.getLogo();
+        if (logo==null || logo.length()==0) logo = "logo_alt.png";
+        model.addAttribute("bannerColor", bannerColor);
+        model.addAttribute("logo", logo);
+
+    }
+
 }

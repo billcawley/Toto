@@ -61,7 +61,9 @@ public class DSImportService {
         System.out.println("Reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an XLSX import, a different thing from a data entry area.
-        azquoMemoryDBConnection.setProvenance(user, "imported", fileName, "");
+        String auditTrail = "imported";
+        if (fileName.contains("duplicates")) auditTrail = "imported with duplicates";
+        azquoMemoryDBConnection.setProvenance(user, auditTrail, fileName, "");
         if (fileName.contains(":")) {
             fileName = fileName.substring(fileName.indexOf(":") + 1);//remove the workbook name.  sent only for the provenance.
         }
@@ -181,6 +183,9 @@ public class DSImportService {
                         lineValue = lineValue.substring(1, lineValue.length() - 1).replace("\"\"", "\"");//strip spurious quote marks inserted by Excel
                     // if generated from a spreadsheet this is a danger, fix now before any interpreting
                     //.replace("\n", "\\\\n").replace("\t", "\\\\t") is what that function did on the report server.
+                    if (lineValue.startsWith("'") && lineValue.indexOf("'",1)<0){
+                        lineValue = lineValue.substring(1);//in Excel insertion of an initial ' means it is a string.
+                    }
                     if (isSpreadsheet) {
                         lineValue = lineValue.replace("\\\\t", "\t").replace("\\\\n", "\n");
                     }

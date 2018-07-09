@@ -143,6 +143,7 @@ public class ManageDatabaseBackupsController {
                 model.put("error", exceptionError);
             }
             model.put("developer", loggedInUser.getUser().isDeveloper());
+            AdminService.setBanner(model,loggedInUser);
             return "managedatabasebackups";
         } else {
             return "redirect:/api/Login";

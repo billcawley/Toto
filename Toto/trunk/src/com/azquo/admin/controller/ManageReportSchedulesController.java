@@ -125,6 +125,7 @@ public class ManageReportSchedulesController {
             }
             model.put("reports", AdminService.getReportList(loggedInUser));
             model.put("databases", databaseListForBusiness);
+            AdminService.setBanner(model,loggedInUser);
             return "managereportschedules";
         }
     }

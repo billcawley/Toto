@@ -105,6 +105,7 @@ public class ManageUsersController {
                             UserDAO.store(toEdit);
                         }
                         model.put("users", AdminService.getUserListForBusiness(loggedInUser));
+                        AdminService.setBanner(model,loggedInUser);
                         return "manageusers";
                     } else {
                         model.put("error", error.toString());
@@ -128,6 +129,7 @@ public class ManageUsersController {
                 }
                 model.put("databases", AdminService.getDatabaseListForBusiness(loggedInUser));
                 model.put("reports", AdminService.getReportList(loggedInUser));
+                AdminService.setBanner(model,loggedInUser);
                 return "edituser";
             }
             final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);
@@ -135,6 +137,7 @@ public class ManageUsersController {
             if (userListForBusiness != null && userListForBusiness.size() > 1) {
                 model.put("showDownload", true);
             }
+            AdminService.setBanner(model,loggedInUser);
             return "manageusers";
         }
     }

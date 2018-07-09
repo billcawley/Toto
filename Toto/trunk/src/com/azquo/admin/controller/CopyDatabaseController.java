@@ -61,6 +61,7 @@ public class CopyDatabaseController {
                 model.put("error", exceptionError);
             }
             model.put("developer", loggedInUser.getUser().isDeveloper());
+            AdminService.setBanner(model,loggedInUser);
             return "copydatabase";
         } else {
             return "redirect:/api/Login";

@@ -223,6 +223,7 @@ public class ManageDatabasesController {
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser, fileSearch));
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("developer", loggedInUser.getUser().isDeveloper());
+            AdminService.setBanner(model,loggedInUser);
             return "managedatabases";
         } else {
             return "redirect:/api/Login";
@@ -310,6 +311,7 @@ public class ManageDatabasesController {
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser, null));
             model.put("developer", loggedInUser.getUser().isDeveloper());
+            AdminService.setBanner(model,loggedInUser);
             return "managedatabases";
         } else {
             return "redirect:/api/Login";
