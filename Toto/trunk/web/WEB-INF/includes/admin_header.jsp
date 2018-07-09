@@ -30,6 +30,13 @@
 
 	<link href="https://code.jquery.com/ui/1.11.4/themes/black-tie/jquery-ui.css" rel="stylesheet" type="text/css">
 	<link href="/css/style.css" rel="stylesheet" type="text/css">
+	<style>
+		header .nav ul li a.on {background-color:${bannerColor}}
+		.ui-widget .ui-widget-header li.ui-state-active {background-color:${bannerColor}}
+		.button {background-color:${bannerColor}}
+		a:link {color:${bannerColor}}
+		a:visited {color:${bannerColor}}
+	</style>
 </head>
 
 <body>
@@ -37,7 +44,7 @@
 <header>
 	<div class="headerContainer">
 	<div class="logo">
-		<img src="/images/logo.png" alt="azquo">
+		<img src="/images/${logo}" alt="azquo">
 	</div>
 	<nav class="nav">
 	<ul>
