@@ -125,12 +125,12 @@ public class NameQueryParser {
             return toReturn;
         }
         boolean sorted = false;
-        if (setFormula.toLowerCase().endsWith(" " + StringLiterals.SORTED)) {
+
+        setFormula = StringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
+        if (!setFormula.contains(" + ") && setFormula.toLowerCase().endsWith(" " + StringLiterals.SORTED)) {
             sorted = true;
             setFormula = setFormula.substring(0, setFormula.length() - StringLiterals.SORTED.length() - 1);
         }
-
-        setFormula = StringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         List<Name> referencedNames;
         try {
             referencedNames = getNameListFromStringList(nameStrings, azquoMemoryDBConnection, languages);
