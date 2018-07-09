@@ -230,7 +230,7 @@ class HeadingReader {
         List<String> headerNames = new ArrayList<>();
         for (String header:origHeaders){
             String[]clauses = header.split(";");
-            headerNames.add(clauses[0]);
+            headerNames.add(clauses[0].toLowerCase().trim());
 
         }
         int headerNo = 0;
@@ -247,8 +247,8 @@ class HeadingReader {
                             startFieldPos = endFieldPos;
                         }else{
                             String component = clause.substring(startFieldPos,endFieldPos);
-                            if (headerNames.contains(component)){
-                                String fieldNo = headerNames.indexOf(component) + "";
+                            if (headerNames.contains(component.toLowerCase())){
+                                String fieldNo = headerNames.indexOf(component.toLowerCase()) + "";
                                 clause = clause.replace(component, fieldNo);
                                 adjusted = true;
                                 startFieldPos += fieldNo.length() + 1;
@@ -337,9 +337,10 @@ class HeadingReader {
                     }else{
                         heading.dateForm = Constants.USDATE;
                     }
-                    if (heading.attribute == null) {
-                        heading.isAttributeSubject = true;
-                    }
+                    //just because this is a date does not mean that you have to create a name..,.
+                    //if (heading.attribute == null) {
+                    //    heading.isAttributeSubject = true;
+                    //}
                 } else {
                     heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
                 }
@@ -431,7 +432,8 @@ class HeadingReader {
     private static void resolvePeersAttributesAndParentOf(AzquoMemoryDBConnection azquoMemoryDBConnection, List<MutableImportHeading> headings) throws Exception {
         // while looping collect column indexes that indicate that the cell value in that column needs to be resolved to a name
         Set<Integer> indexesNeedingNames = new HashSet<>();
-        for (MutableImportHeading mutableImportHeading : headings) {
+        for (int headingNo = 0; headingNo<headings.size();headingNo++){
+            MutableImportHeading mutableImportHeading = headings.get(headingNo);
             if (mutableImportHeading.heading != null) { // could be null in the case of an empty heading
                 // Resolve context names. Context names are used by peers.
                 for (MutableImportHeading contextCheck : mutableImportHeading.contextHeadings) {
@@ -462,11 +464,11 @@ class HeadingReader {
                 }
                 // Resolve Attributes. Having an attribute means the content of this column relates to a name in another column,
                 // need to find that column's index. Fairly simple stuff, it's using findMutableHeadingIndex to find the subject of attributes and parents
-                if (mutableImportHeading.attribute != null) {
+                if (mutableImportHeading.attribute != null && !mutableImportHeading.attribute.equalsIgnoreCase("date") && !mutableImportHeading.attribute.equalsIgnoreCase("usdate")) {
                     // so if it's Customer,Address1 we need to find customer.
                     mutableImportHeading.indexForAttribute = findMutableHeadingIndex(mutableImportHeading.heading, headings);
                     if (mutableImportHeading.indexForAttribute < 0) {
-                        throw new Exception("cannot find column " + mutableImportHeading.heading + " for attribute of " + mutableImportHeading.heading);
+                        throw new Exception("cannot find column " + mutableImportHeading.heading + " for attribute of " + mutableImportHeading.heading + "." + mutableImportHeading.attribute);
                     }
                 }
                 if (mutableImportHeading.attributeColumn == FINDATTRIBUTECOLUMN){
@@ -482,6 +484,7 @@ class HeadingReader {
                     if (mutableImportHeading.indexForChild < 0) {
                         throw new Exception("cannot find column " + mutableImportHeading.parentOfClause + " for child of " + mutableImportHeading.heading);
                     }
+                    headings.get(mutableImportHeading.indexForChild).parentIndexes.add(headingNo);
                 }
                 // Mark column indexes where the line cells will be resolved to names
                 indexesNeedingNames.addAll(mutableImportHeading.peerIndexes);
