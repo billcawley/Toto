@@ -483,7 +483,7 @@ public class BatchImporter implements Callable<Void> {
         }
         // ok that's "child of" (as in for names) done
         // now for "parent of", the child of this line
-        if (cellWithHeading.getImmutableImportHeading().indexForChild != -1) {
+        if (cellWithHeading.getImmutableImportHeading().indexForChild != -1 && cellWithHeading.getLineValue().length() >0) {
             ImportCellWithHeading childCell = cells.get(cellWithHeading.getImmutableImportHeading().indexForChild);
             if (childCell.getLineValue().length() == 0) {
                 throw new Exception("Line " + lineNo + ": blank value for child of " + cellWithHeading.getLineValue() + " " + cellWithHeading.getImmutableImportHeading().heading);
