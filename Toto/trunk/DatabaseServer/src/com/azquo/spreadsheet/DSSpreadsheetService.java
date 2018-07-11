@@ -712,7 +712,7 @@ public class DSSpreadsheetService {
             languages.add(regionOptionsForTransport.rowLanguage);
         }
         final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(
-                azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix, false); // don't surpress errors, will this be a problem?
+                azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix, true); // [don't] surpress errors, will this be a problem? YES - couldn't audit cells further down the region
         languages = defaultLanguages;
         final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames, regionOptionsForTransport.noPermuteTotals);
         if (regionOptionsForTransport.columnLanguage != null && regionOptionsForTransport.columnLanguage.length() > 0) {
