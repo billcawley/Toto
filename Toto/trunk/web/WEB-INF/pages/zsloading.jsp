@@ -58,9 +58,10 @@
 
 <main class="basicDialog">
 	<div class="basic-box-container">
-		<div class="basic-head">
+
+		<div class="basic-head"  style="background-color:${bannerColor}" >
 			<div class="logo">
-				<a href="/api/Online?reportid=1"><img src="/images/logo_alt.png" alt="azquo"></a>
+				<a href="/api/Online?reportid=1"><img src="/images/${logo}" alt="azquo"></a>
 			</div>
 		</div>
 		<div class="basic-box">
@@ -69,7 +70,7 @@
 				<span class="fa fa-spin fa-cog"></span>
 			</div>
 			<div id="serverStatus"></div>
-            <a href="javascript:void(0)" id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)' class="button alt small"><span class="fa fa-times-circle"></span> Abort Load</a>
+			<a href="javascript:void(0)" id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)' class="button alt small"><span class="fa fa-times-circle"></span> Abort Load</a>
 
 		</div>
 	</div>
