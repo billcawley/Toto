@@ -119,6 +119,8 @@ class HeadingReader {
         String lastHeading = "";
         boolean pivot = false;
         Set<Name> namesUsed = new HashSet<>();
+        headers = replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders,headers);
+        boolean headersReplaced = true;
         for (int i = 0; i < headers.size(); i++) {
             String header = headers.get(i);
             if (header.trim().length() > 0) {
@@ -128,6 +130,7 @@ class HeadingReader {
                     header = importInterpreter.getAttribute(header);
                 }
                 if (importInterpreter!= null && importInterpreter.getAttribute(header)==null && importInterpreter.getChildren()!=null && importInterpreter.getChildren().size()>0){//PROCESS FOR ZIP FILE
+                    headersReplaced = false;
                     Name headerName = NameService.findByName(azquoMemoryDBConnection,header,languages);
                     if (headerName !=null){
                          String attribute = NameService.getCompositeAttributes(headerName,importAttribute, importAttribute + " " + languages.get(0));
@@ -189,6 +192,7 @@ class HeadingReader {
                         }
                     }
                 }
+
                 header = header.replace("IMPORTLANGUAGE", languages.get(0));
                 header = header.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
                 /* line heading and data
@@ -223,7 +227,8 @@ class HeadingReader {
             headers.add("LINENO;composition LINENO;language " + importInterpreter.getDefaultDisplayName() + ";child of " + importInterpreter.getDefaultDisplayName() + " lines|"); // pipe on the end, clear context if there was any
          }
 
-         return replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders,headers);
+         if (!headersReplaced) return replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders, headers);
+         return headers;
     }
 
     private static List<String> replaceFieldNamesWithNumbersInCompositeHeadings(List<String> origHeaders, List<String> headers){
