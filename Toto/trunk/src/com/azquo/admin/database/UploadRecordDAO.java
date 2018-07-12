@@ -52,7 +52,7 @@ public final class UploadRecordDAO {
             // not pretty, just make it work for the moment
             try {
                 return new UploadRecord(rs.getInt(StandardDAO.ID)
-                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(DATE))
+                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(DATE))
                         , rs.getInt(BUSINESSID)
                         , rs.getInt(DATABASEID)
                         , rs.getInt(USERID)

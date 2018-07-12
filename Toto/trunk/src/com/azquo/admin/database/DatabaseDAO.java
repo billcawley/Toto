@@ -62,7 +62,7 @@ public final class DatabaseDAO {
                         , rs.getInt(NAMECOUNT)
                         , rs.getInt(VALUECOUNT)
                         , rs.getInt(DATABASESERVERID),
-                        DateUtils.getLocalDateTimeFromDate(rs.getDate(CREATED)));
+                        DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(CREATED)));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

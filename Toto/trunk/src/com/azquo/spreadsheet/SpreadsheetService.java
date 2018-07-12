@@ -43,7 +43,7 @@ public class SpreadsheetService {
 
     private static final Properties azquoProperties = new Properties();
 
-    private static final String host;
+    public static final String host;
 
     static {
         System.out.println("attempting properties load from classpath");

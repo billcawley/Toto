@@ -49,7 +49,7 @@ public class OnlineReportDAO {
         public OnlineReport mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 return new OnlineReport(rs.getInt(StandardDAO.ID)
-                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(DATECREATED))
+                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(DATECREATED))
                         , rs.getInt(BUSINESSID)
                         , rs.getInt(USERID)
                         , ""

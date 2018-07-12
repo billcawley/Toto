@@ -23,10 +23,9 @@ SET time_zone = "+00:00";
 CREATE TABLE IF NOT EXISTS `business` (
   `id` int(11) NOT NULL,
   `business_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `business_details` text COLLATE utf8_unicode_ci NOT NULL
+  `business_details` text COLLATE utf8_unicode_ci NOT NULL,
   `banner_color` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `logo` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-
+  `logo` varchar(255) COLLATE utf8_unicode_ci NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------

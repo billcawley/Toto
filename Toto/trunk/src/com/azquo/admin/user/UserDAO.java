@@ -58,7 +58,7 @@ public class UserDAO {
         public User mapRow(final ResultSet rs, final int row) throws SQLException {
             try {
                 return new User(rs.getInt(StandardDAO.ID)
-                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(ENDDATE))
+                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(ENDDATE))
                         , rs.getInt(BUSINESSID)
                         , rs.getString(EMAIL)
                         , rs.getString(NAME)

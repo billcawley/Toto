@@ -51,7 +51,7 @@ public final class UserChoiceDAO {
                         , rs.getInt(USERID)
                         , rs.getString(CHOICENAME)
                         , rs.getString(CHOICEVALUE)
-                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(TIME)));
+                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(TIME)));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

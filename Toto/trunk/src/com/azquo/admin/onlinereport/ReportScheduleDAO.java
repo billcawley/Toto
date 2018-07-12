@@ -53,7 +53,7 @@ public class ReportScheduleDAO {
                 return new ReportSchedule(rs.getInt(StandardDAO.ID)
                         , rs.getString(PERIOD)
                         , rs.getString(RECIPIENTS)
-                        , DateUtils.getLocalDateTimeFromDate(rs.getDate(NEXTDUE))
+                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(NEXTDUE))
                         , rs.getInt(DATABASEID)
                         , rs.getInt(REPORTID)
                         , rs.getString(TYPE)
