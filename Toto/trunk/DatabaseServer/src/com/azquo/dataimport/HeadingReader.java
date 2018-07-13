@@ -342,10 +342,10 @@ class HeadingReader {
                     }else{
                         heading.dateForm = Constants.USDATE;
                     }
-                    //just because this is a date does not mean that you have to create a name..,.
-                    //if (heading.attribute == null) {
-                    //    heading.isAttributeSubject = true;
-                    //}
+                    //Bill had commented these three lines, Edd uncommenting 13/07/2018 as it broke DG import
+                    if (heading.attribute == null) {
+                        heading.isAttributeSubject = true;
+                    }
                 } else {
                     heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
                 }

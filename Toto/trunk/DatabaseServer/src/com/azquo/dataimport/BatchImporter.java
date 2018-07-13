@@ -70,9 +70,9 @@ public class BatchImporter implements Callable<Void> {
                             todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
                             */
                             LocalDate date = null;
-                            if (importCellWithHeading.getImmutableImportHeading().dateForm == Constants.UKDATE){
-                                 date = DateUtils.isADate(importCellWithHeading.getLineValue());
-                            }else{
+                            if (importCellWithHeading.getImmutableImportHeading().dateForm == Constants.UKDATE) {
+                                date = DateUtils.isADate(importCellWithHeading.getLineValue());
+                            } else {
                                 date = DateUtils.isUSDate(importCellWithHeading.getLineValue());
 
                             }
@@ -115,8 +115,8 @@ public class BatchImporter implements Callable<Void> {
 
     private static boolean checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
         for (ImportCellWithHeading cell : cells) {
-            if (cell.getImmutableImportHeading().ignoreList!=null){
-                if (Arrays.asList(cell.getImmutableImportHeading().ignoreList).contains(cell.getLineValue().toLowerCase())){
+            if (cell.getImmutableImportHeading().ignoreList != null) {
+                if (Arrays.asList(cell.getImmutableImportHeading().ignoreList).contains(cell.getLineValue().toLowerCase())) {
                     return false;
                 }
             }
@@ -187,7 +187,7 @@ public class BatchImporter implements Callable<Void> {
                     int headingMarker = result.indexOf("`");
                     while (headingMarker >= 0) {
                         boolean doublequotes = false;
-                        if (headingMarker< result.length() && result.charAt(headingMarker + 1)=='`'){
+                        if (headingMarker < result.length() && result.charAt(headingMarker + 1) == '`') {
                             doublequotes = true;
                             headingMarker++;
                         }
@@ -225,9 +225,9 @@ public class BatchImporter implements Callable<Void> {
                             // if there was a function its name and parameters have been extracted and expression should now be a column name (trim?)
                             // so resolve the column name and run the function if there was one
                             ImportCellWithHeading compCell = null;
-                            try{
+                            try {
                                 compCell = cells.get(Integer.parseInt(expression));//findCellWithHeadingForComposite(expression, cells);
-                            }catch (Exception e){
+                            } catch (Exception e) {
 
                             }
                             if (compCell != null) {
@@ -246,9 +246,9 @@ public class BatchImporter implements Callable<Void> {
                                     }
                                 }
                                 result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
-                                headingMarker = headingMarker + sourceVal.length()-1;//is increaed before two lines below
-                                if (doublequotes) headingMarker ++;
-                            }else{
+                                headingMarker = headingMarker + sourceVal.length() - 1;//is increaed before two lines below
+                                if (doublequotes) headingMarker++;
+                            } else {
                                 headingMarker = headingEnd;
                             }
 
@@ -296,7 +296,7 @@ public class BatchImporter implements Callable<Void> {
             }
             counter++;
         }
-        if (counter == 10){
+        if (counter == 10) {
             throw new Exception("circular composite references in headers!");
         }
     }
@@ -355,7 +355,7 @@ public class BatchImporter implements Callable<Void> {
         long tooLong = 2; // now ms
         long time = System.currentTimeMillis();
         for (ImportCellWithHeading cell : cells) {
-             boolean peersOk = true;
+            boolean peersOk = true;
             // now do the peers
             final Set<Name> namesForValue = new HashSet<>(); // the names we're going to look for for this value
             // The heading reader has now improved to hand over one set of peer names and indexes, this class need not know if they came from context or not
@@ -388,7 +388,7 @@ public class BatchImporter implements Callable<Void> {
             if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null
                     && cell.getLineValue().length() > 0) {
                 String attribute = cell.getImmutableImportHeading().attribute;
-                if (cell.getImmutableImportHeading().attributeColumn>=0){//attribute name refers to the value in another column - so find it
+                if (cell.getImmutableImportHeading().attributeColumn >= 0) {//attribute name refers to the value in another column - so find it
                     attribute = cells.get(cell.getImmutableImportHeading().attributeColumn).getLineValue();
                 }
 
@@ -413,14 +413,14 @@ public class BatchImporter implements Callable<Void> {
             }
             time = System.currentTimeMillis();
         }
-            return valueCount;
+        return valueCount;
     }
 
     // todo accessed outside, move it out?
 
     private static boolean isZero(String text) {
         try {
-            double d = Double.parseDouble(text.replace(",",""));
+            double d = Double.parseDouble(text.replace(",", ""));
             return d == 0.0;
         } catch (Exception e) {
             return true;
@@ -428,37 +428,37 @@ public class BatchImporter implements Callable<Void> {
     }
 
 
-
     // namesFound is a cache. Then the heading we care about then the list of all headings.
     // This used to be called handle parent and deal only with parents and children but it also resolved line names. Should be called for local first then non local
     // it tests to see if the current line name is null or not as it may have been set by a call to resolveLineNamesParentsChildrenRemove on a different cell setting the child name
 
+        /* Edd commenting this 13/07/2018, it has broken DG importing.
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
                                                               ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
-         resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cellWithHeading,  cells,  attributeNames, lineNo, 0);
+        resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cellWithHeading, cells, attributeNames, lineNo, 0);
 
-        }
+    }*/
 
 
+    private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
+                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo/*, int recursionLevel*/) throws Exception {
+        /* Edd commenting this 13/07/2018, it has broken DG importing.
+        for (int parentIndex : cellWithHeading.getImmutableImportHeading().parentIndexes) {
 
-            private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
-                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo, int recursionLevel) throws Exception {
+            ImportCellWithHeading parentHeading = cells.get(parentIndex);
+            if (parentHeading.getLineNames() == null || parentHeading.getLineNames().size() == 0) {
+                if (recursionLevel++ == 8) {
+                    throw new Exception("recursion loop on heading " + cellWithHeading.getImmutableImportHeading().heading);
+                }
+                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, parentHeading, cells, attributeNames, lineNo, recursionLevel);
+
+            }
+
+        }*/
         // in simple terms if a line cell value refers to a name it can now refer to a set of names
         // to make a set parent of more than one thing e.g. parent of set a, set b, set c
         // nothing in the heading has changed except the split char but we need to detect it here
         // split before checking for quotes etc. IF THE SPLIT CHAR IS IN QUOTES WE DON'T CURRENTLY SUPPORT THAT! e.g. ,
-         for (int parentIndex:cellWithHeading.getImmutableImportHeading().parentIndexes){
-
-            ImportCellWithHeading parentHeading =cells.get(parentIndex);
-            if (parentHeading.getLineNames() ==null || parentHeading.getLineNames().size() == 0){
-                if (recursionLevel++ == 8){
-                    throw new Exception("recursion loop on heading " + cellWithHeading.getImmutableImportHeading().heading);
-                }
-                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection,namesFoundCache,parentHeading, cells,attributeNames,lineNo, recursionLevel);
-
-            }
-
-        }
         String[] nameNames;
         if (cellWithHeading.getImmutableImportHeading().splitChar == null) {
             nameNames = new String[]{cellWithHeading.getLineValue()};
@@ -469,7 +469,7 @@ public class BatchImporter implements Callable<Void> {
         if (cellWithHeading.getLineNames() == null) { // then create it, this will take care of the parents ("child of") while creating
             //sometimes there is a list of parents here (e.g. company industry segments   Retail Grocery/Wholesale Grocery/Newsagent) where we want to insert the child into all sets
             for (String nameName : nameNames) {
-                if (nameName.trim().length() > 0){
+                if (nameName.trim().length() > 0) {
                     cellWithHeading.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, nameName.trim()
                             , cellWithHeading.getImmutableImportHeading().parentNames, cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(cellWithHeading.getImmutableImportHeading().attribute, attributeNames)));
                 }
@@ -483,7 +483,7 @@ public class BatchImporter implements Callable<Void> {
         }
         // ok that's "child of" (as in for names) done
         // now for "parent of", the child of this line
-        if (cellWithHeading.getImmutableImportHeading().indexForChild != -1 && cellWithHeading.getLineValue().length() >0) {
+        if (cellWithHeading.getImmutableImportHeading().indexForChild != -1 && cellWithHeading.getLineValue().length() > 0) {
             ImportCellWithHeading childCell = cells.get(cellWithHeading.getImmutableImportHeading().indexForChild);
             if (childCell.getLineValue().length() == 0) {
                 throw new Exception("Line " + lineNo + ": blank value for child of " + cellWithHeading.getLineValue() + " " + cellWithHeading.getImmutableImportHeading().heading);
@@ -498,7 +498,7 @@ public class BatchImporter implements Callable<Void> {
                     childNames = childCell.getLineValue().split(childCell.getImmutableImportHeading().splitChar);
                 }
                 for (String childName : childNames) {
-                    if (cellWithHeading.getLineNames() != null){
+                    if (cellWithHeading.getLineNames() != null) {
                         for (Name thisCellsName : cellWithHeading.getLineNames()) {
                             childCell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childName, thisCellsName
                                     , cellWithHeading.getImmutableImportHeading().isLocal, setLocalLanguage(childCell.getImmutableImportHeading().attribute, attributeNames)));
@@ -507,7 +507,7 @@ public class BatchImporter implements Callable<Void> {
                 }
             }
             // note! Exclusive can't work if THIS column is multiple names
-            if (cellWithHeading.getLineNames() != null){
+            if (cellWithHeading.getLineNames() != null) {
                 if (cellWithHeading.getLineNames().size() == 1 && cellWithHeading.getImmutableImportHeading().exclusive != null) {
                     Name parent = cellWithHeading.getLineNames().iterator().next();
                     //the 'parent' above is the current cell name, not its parent
@@ -570,8 +570,8 @@ public class BatchImporter implements Callable<Void> {
 
     private static Name findOrCreateNameStructureWithCache(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
         //namesFound is a quick lookup to avoid going to findOrCreateNameInParent - note it will fail if the name was changed e.g. parents removed by exclusive but that's not a problem
-        if (name.toLowerCase().equals("jacksonville")){
-            int j=1;
+        if (name.toLowerCase().equals("jacksonville")) {
+            int j = 1;
         }
         String np = name + ",";
         if (parent != null) {
@@ -583,7 +583,7 @@ public class BatchImporter implements Callable<Void> {
             return found;
         }
         found = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, name, parent, local, attributeNames);
-        if (found == null){
+        if (found == null) {
             System.out.println("found null in findOrCreateNameStructureWithCache");
             System.out.println("name = " + name);
             System.out.println("parent = " + parent);
