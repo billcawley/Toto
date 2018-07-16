@@ -301,6 +301,7 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
+    // EFC - this is made redundant by HeadingReader.replaceFieldNamesWithNumbersInCompositeHeadings but I'm not sure why
     // more simple than the column index look up - we just want a match, don't care about attributes etc.
     private static ImportCellWithHeading findCellWithHeadingForComposite(String nameToFind, List<ImportCellWithHeading> importCellWithHeadings) {
         for (ImportCellWithHeading importCellWithHeading : importCellWithHeadings) {
@@ -432,29 +433,24 @@ public class BatchImporter implements Callable<Void> {
     // This used to be called handle parent and deal only with parents and children but it also resolved line names. Should be called for local first then non local
     // it tests to see if the current line name is null or not as it may have been set by a call to resolveLineNamesParentsChildrenRemove on a different cell setting the child name
 
-        /* Edd commenting this 13/07/2018, it has broken DG importing.
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
                                                               ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
         resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cellWithHeading, cells, attributeNames, lineNo, 0);
-
-    }*/
+    }
 
 
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
-                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo/*, int recursionLevel*/) throws Exception {
-        /* Edd commenting this 13/07/2018, it has broken DG importing.
+                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo, int recursionLevel) throws Exception {
+        recursionLevel++;
         for (int parentIndex : cellWithHeading.getImmutableImportHeading().parentIndexes) {
-
             ImportCellWithHeading parentHeading = cells.get(parentIndex);
             if (parentHeading.getLineNames() == null || parentHeading.getLineNames().size() == 0) {
-                if (recursionLevel++ == 8) {
+                if (recursionLevel == 8) { // arbitrary but not unreasonable
                     throw new Exception("recursion loop on heading " + cellWithHeading.getImmutableImportHeading().heading);
                 }
                 resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, parentHeading, cells, attributeNames, lineNo, recursionLevel);
-
             }
-
-        }*/
+        }
         // in simple terms if a line cell value refers to a name it can now refer to a set of names
         // to make a set parent of more than one thing e.g. parent of set a, set b, set c
         // nothing in the heading has changed except the split char but we need to detect it here
