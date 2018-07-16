@@ -342,6 +342,14 @@ public class OnlineController {
                         }).start();
                     }
                     model.addAttribute("reportid", reportId); // why not? should block on refreshes then
+                    // edd pasting in here to get the banner colour working
+                    Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+                    String bannerColor = business.getBannerColor();
+                    if (bannerColor==null || bannerColor.length()==0) bannerColor = "#F58030";
+                    String logo = business.getLogo();
+                    if (logo==null || logo.length()==0) logo = "logo_alt.png";
+                    model.addAttribute("bannerColor", bannerColor);
+                    model.addAttribute("logo", logo);
                     return "zsloading";
                     // was provenance setting here,
                 }

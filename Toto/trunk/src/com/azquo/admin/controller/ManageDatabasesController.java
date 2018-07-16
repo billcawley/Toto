@@ -1,6 +1,8 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -144,6 +146,14 @@ public class ManageDatabasesController {
                                 session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
                             }
                         }).start();
+                        // edd pasting in here to get the banner colour working
+                        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+                        String bannerColor = business.getBannerColor();
+                        if (bannerColor==null || bannerColor.length()==0) bannerColor = "#F58030";
+                        String logo = business.getLogo();
+                        if (logo==null || logo.length()==0) logo = "logo_alt.png";
+                        model.addAttribute("bannerColor", bannerColor);
+                        model.addAttribute("logo", logo);
                         return "importrunning";
                     }
                 } catch (Exception e) { // now the import has it's on exception catching
@@ -277,6 +287,14 @@ public class ManageDatabasesController {
                                 session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
                             }
                         }).start();
+                        // edd pasting in here to get the banner colour working
+                        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+                        String bannerColor = business.getBannerColor();
+                        if (bannerColor==null || bannerColor.length()==0) bannerColor = "#F58030";
+                        String logo = business.getLogo();
+                        if (logo==null || logo.length()==0) logo = "logo_alt.png";
+                        model.addAttribute("bannerColor", bannerColor);
+                        model.addAttribute("logo", logo);
                         return "importrunning";
                     } catch (Exception e) { // now the import has it's on exception catching
                         String exceptionError = e.getMessage();
