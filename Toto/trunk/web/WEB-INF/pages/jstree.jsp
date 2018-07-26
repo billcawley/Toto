@@ -234,10 +234,11 @@
             var dataFlag = false;
             if (document.getElementById("itemschosen").value == "") {
                 var selected = $('#js-container').jstree("get_selected", true);
+
                 itemsChosen = "jstreeids:";
-                /*                for (item in selected) {
+                for (item in selected) {
                  itemsChosen += selected[item] + ",";
-                 }*/
+               }
                 // edd changing the above 3 lines to this which seems to be more compatible with IE
                 itemsChosen += selected[0].id;
                 dataFlag = true;
