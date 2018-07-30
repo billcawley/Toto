@@ -341,9 +341,11 @@ class HeadingReader {
                         heading.dateForm = Constants.USDATE;
                     }
                     //Bill had commented these three lines, Edd uncommenting 13/07/2018 as it broke DG import
+                    /*
                     if (heading.attribute == null) {
                         heading.isAttributeSubject = true;
                     }
+                    */
                 } else {
                     heading.isAttributeSubject = true; // language is important so we'll default it as the attribute subject if attributes are used later - I might need to check this
                 }
@@ -537,7 +539,7 @@ class HeadingReader {
             //checking the name itself, then the name as part of a comma separated string
             if (heading.heading != null
                     && (heading.heading.equalsIgnoreCase(nameToFind) || heading.heading.toLowerCase().startsWith(nameToFind.toLowerCase() + ","))
-                    && (heading.isAttributeSubject || heading.attribute == null || (heading.attribute.equals(DATELANG) && heading.dateForm > 0))) {
+                    && (heading.isAttributeSubject || heading.attribute == null || (heading.attribute.toLowerCase().equals(DATELANG) && heading.dateForm > 0))) {
                 if (heading.isAttributeSubject) {
                     return headingNo;
                 }
