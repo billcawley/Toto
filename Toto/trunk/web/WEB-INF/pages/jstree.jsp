@@ -237,10 +237,10 @@
 
                 itemsChosen = "jstreeids:";
                 for (item in selected) {
-                 itemsChosen += selected[item] + ",";
+                 itemsChosen += selected[item].id + ",";
                }
                 // edd changing the above 3 lines to this which seems to be more compatible with IE
-                itemsChosen += selected[0].id;
+                //itemsChosen += selected[0].id;
                 dataFlag = true;
             } else {
                 itemsChosen = encodeURIComponent(document.getElementById("itemschosen").value);
