@@ -68,11 +68,11 @@ class HeadingReader {
         List<MutableImportHeading> headings = new ArrayList<>();
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
         for (String header : headers) {
-              // on some spreadsheets, pseudo headers are created because there is text in more than one line.  The Dividor must also be accompanied by a 'peers' clause
+            // on some spreadsheets, pseudo headers are created because there is text in more than one line.  The Dividor must also be accompanied by a 'peers' clause
             int dividerPos = header.lastIndexOf(headingDivider); // is there context defined here?
-            if (header.trim().length() > 0 && (dividerPos < 0 || header.toLowerCase().indexOf(PEERS)>0)) { // miss out blanks also.
+            if (header.trim().length() > 0 && (dividerPos < 0 || header.toLowerCase().indexOf(PEERS) > 0)) { // miss out blanks also.
                 // works backwards simply for convenience to chop off the context headings until only the heading is left, there is nothing significant about the ordering in contextHeadings
-                if (dividerPos > 0 || header.indexOf(";")>0) {//any further clauses void context headings
+                if (dividerPos > 0 || header.indexOf(";") > 0) {//any further clauses void context headings
                     contextHeadings = new ArrayList<>(); // reset/build the context headings
                 }
                 while (dividerPos >= 0) {
@@ -104,12 +104,12 @@ class HeadingReader {
 
     // deal with attribute short hand and pivot stuff, essentially pre processing that can be done before making any MutableImportHeadings
 
-    static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter,  String zipVersion, String fileName, List<String>languages) throws Exception {
-        // option for extra composite headings - I think for PwC, a little odd but harmless.
+    static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, String zipVersion, String fileName, List<String> languages) throws Exception {
         String importAttribute = null;
-        if (importInterpreter!=null){
-             importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS");
+        if (importInterpreter != null) {
+            importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS"); // this again, factor - todo
         }
+        // option for extra composite headings - I think for PwC, a little odd but harmless.
         if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null) {
             List<String> extraCompositeHeadings = Arrays.asList(importInterpreter.getAttribute(COMPOSITEHEADINGS).split("¬")); // delimiter match the other headings string
             headers.addAll(extraCompositeHeadings);
@@ -118,36 +118,33 @@ class HeadingReader {
         List<String> origHeaders = new ArrayList<>(headers);
         String lastHeading = "";
         boolean pivot = false;
-        Set<Name> namesUsed = new HashSet<>();
-        headers = replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders,headers);
+        headers = replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders, headers);
         boolean headersReplaced = true;
         for (int i = 0; i < headers.size(); i++) {
             String header = headers.get(i);
             if (header.trim().length() > 0) {
-
                 // stored header overrides one on the file
                 if (importInterpreter != null && importInterpreter.getAttribute(header) != null) {
                     header = importInterpreter.getAttribute(header);
                 }
-                if (importInterpreter!= null && importInterpreter.getAttribute(header)==null && importInterpreter.getChildren()!=null && importInterpreter.getChildren().size()>0){//PROCESS FOR ZIP FILE
+                if (importInterpreter != null && importInterpreter.getAttribute(header) == null && importInterpreter.getChildren() != null && importInterpreter.getChildren().size() > 0) {//PROCESS FOR ZIP FILE
                     headersReplaced = false;
-                    Name headerName = NameService.findByName(azquoMemoryDBConnection,header,languages);
-                    if (headerName !=null){
-                         String attribute = NameService.getCompositeAttributes(headerName,importAttribute, importAttribute + " " + languages.get(0));
-                         header = headerName.getDefaultDisplayName();
-                         origHeaders.set(i,header);
-                         if (attribute != null) {
-                             if (zipVersion!=null){
-                                 attribute = attribute.replace("ZIPVERSION", zipVersion);
-                             }
-                             if (attribute.contains(".")){
+                    Name headerName = NameService.findByName(azquoMemoryDBConnection, header, languages);
+                    if (headerName != null) {
+                        String attribute = NameService.getCompositeAttributes(headerName, importAttribute, importAttribute + " " + languages.get(0));
+                        header = headerName.getDefaultDisplayName();
+                        origHeaders.set(i, header);
+                        if (attribute != null) {
+                            if (zipVersion != null) {
+                                attribute = attribute.replace("ZIPVERSION", zipVersion);
+                            }
+                            if (attribute.contains(".")) {
                                 header = attribute;
-                            }else{
+                            } else {
                                 header = header + ";" + attribute;
                             }
                         }
-                        namesUsed.add(headerName);
-                      }else{
+                    } else {
                         header = "";
                     }
                 }
@@ -218,58 +215,59 @@ class HeadingReader {
                     header = header.replace(LINEDATA, "peers {LINENO}").replace("_", " ");
                 }
             }
-            headers.set(i,header);
+            headers.set(i, header);
         }
         if (pivot) {
             Name allLines = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All lines", null, false);
             // create the name based on this file name where we put the names generated to deal with pivot tables. Note this means uploading a file with the same name and different data causes havok!
             NameService.findOrCreateNameInParent(azquoMemoryDBConnection, importInterpreter.getDefaultDisplayName() + " lines", allLines, false);
             headers.add("LINENO;composition LINENO;language " + importInterpreter.getDefaultDisplayName() + ";child of " + importInterpreter.getDefaultDisplayName() + " lines|"); // pipe on the end, clear context if there was any
-         }
+        }
 
-         if (!headersReplaced) return replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders, headers);
-         return headers;
+        if (!headersReplaced) return replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders, headers);
+        return headers;
     }
 
-    private static List<String> replaceFieldNamesWithNumbersInCompositeHeadings(List<String> origHeaders, List<String> headers){
+    // EFC - seems to resolve column indexes of parts of the composition in advance but I'm not sure why . . .
+    // need to understand why both lists are passed
+    private static List<String> replaceFieldNamesWithNumbersInCompositeHeadings(List<String> origHeaders, List<String> headers) {
         List<String> headerNames = new ArrayList<>();
-        for (String header:origHeaders){
-            String[]clauses = header.split(";");
+        for (String header : origHeaders) {
+            String[] clauses = header.split(";");
             headerNames.add(clauses[0].toLowerCase().trim());
-
         }
         int headerNo = 0;
-        for (String header:headers){
+        for (String header : headers) {
             String newHeader = "";
             String[] clauses = header.split(";");
             boolean adjusted = false;
-             for (String clause:clauses){
-                if (clause.toLowerCase().startsWith(COMPOSITION)){
-                      int startFieldPos = clause.indexOf("`");
-                    while(startFieldPos > 0){
+            for (String clause : clauses) {
+                if (clause.toLowerCase().startsWith(COMPOSITION)) {
+                    int startFieldPos = clause.indexOf("`");
+                    while (startFieldPos > 0) {
                         int endFieldPos = clause.indexOf("`", ++startFieldPos);
-                        if (endFieldPos < 0){
+                        if (endFieldPos < 0) {
                             startFieldPos = endFieldPos;
-                        }else{
-                            String component = clause.substring(startFieldPos,endFieldPos);
-                            if (headerNames.contains(component.toLowerCase())){
+                        } else {
+                            String component = clause.substring(startFieldPos, endFieldPos);
+                            if (headerNames.contains(component.toLowerCase())) {
                                 String fieldNo = headerNames.indexOf(component.toLowerCase()) + "";
                                 clause = clause.replace(component, fieldNo);
                                 adjusted = true;
                                 startFieldPos += fieldNo.length() + 1;
-                            }else{
+                            } else {
                                 startFieldPos = endFieldPos + 1;
                             }
-                            startFieldPos = clause.indexOf("`",startFieldPos);
+                            startFieldPos = clause.indexOf("`", startFieldPos);
                         }
                     }
 
                 }
-                 newHeader += clause + ";";
+                newHeader += clause + ";";
 
             }
-            if (adjusted){
-                headers.set(headerNo, newHeader.substring(0,newHeader.length()-1));
+            if (adjusted) {
+                headers.set(headerNo, newHeader.substring(0, newHeader.length() - 1));
             }
             headerNo++;
         }
@@ -283,16 +281,16 @@ class HeadingReader {
         List<String> clauses = new ArrayList<>();
         clauses.addAll(Arrays.asList(headingString.split(";")));
         Iterator clauseIt = clauses.iterator();
-        heading.heading = ((String)clauseIt.next()).replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
+        heading.heading = ((String) clauseIt.next()).replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
         heading.name = NameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames); // at this stage, look for a name, but don't create it unless necessary
         // loop over the clauses making sense and modifying the heading object as you go
 
-        while (clauseIt.hasNext()){
-            String clause =  ((String)clauseIt.next()).trim();
-            if (clause.toLowerCase().startsWith("classification ")){
-               interpretClause(azquoMemoryDBConnection,heading, "parent of " + clause.substring("classification ".length()));
-               interpretClause(azquoMemoryDBConnection,heading, "child of " + heading.heading);
-            }else{
+        while (clauseIt.hasNext()) {
+            String clause = ((String) clauseIt.next()).trim();
+            if (clause.toLowerCase().startsWith("classification ")) {
+                interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring("classification ".length()));
+                interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading);
+            } else {
                 interpretClause(azquoMemoryDBConnection, heading, clause);
             }
         }
@@ -337,9 +335,9 @@ class HeadingReader {
                 break;
             case LANGUAGE: // language being attribute
                 if (result.equalsIgnoreCase(DATELANG) || result.equalsIgnoreCase(USDATELANG)) {
-                    if (result.equalsIgnoreCase(DATELANG)){
+                    if (result.equalsIgnoreCase(DATELANG)) {
                         heading.dateForm = Constants.UKDATE;
-                    }else{
+                    } else {
                         heading.dateForm = Constants.USDATE;
                     }
                     //Bill had commented these three lines, Edd uncommenting 13/07/2018 as it broke DG import
@@ -354,7 +352,7 @@ class HeadingReader {
                 }
                 break;
             case ATTRIBUTE: // same as language really but .Name is special - it means default display name. Watch out for this.
-                if (result.startsWith("`") && result.endsWith(("`"))){// indicating that the attribute NAME is to be taken from another column of the import.
+                if (result.startsWith("`") && result.endsWith(("`"))) {// indicating that the attribute NAME is to be taken from another column of the import.
                     heading.attributeColumn = FINDATTRIBUTECOLUMN;
                 }
                 heading.attribute = result.replace(StringLiterals.QUOTE + "", "");
@@ -370,7 +368,7 @@ class HeadingReader {
                 break;
             case IGNORE:
                 heading.ignoreList = result.split(",");
-                for (int i = 0;i<heading.ignoreList.length;i++){
+                for (int i = 0; i < heading.ignoreList.length; i++) {
                     heading.ignoreList[i] = heading.ignoreList[i].toLowerCase().trim();
                 }
                 break;
@@ -383,9 +381,9 @@ class HeadingReader {
                 break;
             case DEFAULT: // if there's no value on the line a default
                 if (result.length() > 0) {
-                    if (result.equals("NOW")){
-                        heading.defaultValue = LocalDateTime.now()  + "";
-                    }else{
+                    if (result.equals("NOW")) {
+                        heading.defaultValue = LocalDateTime.now() + "";
+                    } else {
                         heading.defaultValue = result;
                     }
                 }
@@ -437,7 +435,7 @@ class HeadingReader {
     private static void resolvePeersAttributesAndParentOf(AzquoMemoryDBConnection azquoMemoryDBConnection, List<MutableImportHeading> headings) throws Exception {
         // while looping collect column indexes that indicate that the cell value in that column needs to be resolved to a name
         Set<Integer> indexesNeedingNames = new HashSet<>();
-        for (int headingNo = 0; headingNo<headings.size();headingNo++){
+        for (int headingNo = 0; headingNo < headings.size(); headingNo++) {
             MutableImportHeading mutableImportHeading = headings.get(headingNo);
             if (mutableImportHeading.heading != null) { // could be null in the case of an empty heading
                 // Resolve context names. Context names are used by peers.
@@ -476,7 +474,7 @@ class HeadingReader {
                         throw new Exception("cannot find column " + mutableImportHeading.heading + " for attribute of " + mutableImportHeading.heading + "." + mutableImportHeading.attribute);
                     }
                 }
-                if (mutableImportHeading.attributeColumn == FINDATTRIBUTECOLUMN){
+                if (mutableImportHeading.attributeColumn == FINDATTRIBUTECOLUMN) {
                     mutableImportHeading.attributeColumn = findMutableHeadingIndex(mutableImportHeading.attribute, headings);
                     if (mutableImportHeading.attributeColumn < 0) {
                         throw new Exception("cannot find column " + mutableImportHeading.attribute + " for attribute name of " + mutableImportHeading.heading + "." + mutableImportHeading.attribute);

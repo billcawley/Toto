@@ -57,6 +57,7 @@ public class DSImportService {
     An entry point to the class functionality.
     */
 
+    // EFC note while trying to understand new code - zip name is as it says, the name of the zip file (excluding the extension) if the file was originally part of a zip file. Whether this should be used is another matter . . .
     public static String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String zipName, List<String> languages, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         System.out.println("Reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
@@ -72,6 +73,7 @@ public class DSImportService {
 
     // Other entry point into the class functionality, called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     // I wonder if the valuesModifiedCounter is a bit hacky, will maybe revisit this later
+    // EFC - parameters going up, should a configuration object be passed?
     public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, List<String> languages, boolean persistAfter, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
         // of course this doesn't currently stop the opposite, a persist being started while an import is going on.
@@ -147,9 +149,10 @@ public class DSImportService {
             // A fair amount is going on in here checking various upload options and parsing the headers. It delivers the
             // parsed headings, the iterator for the data lines and how many lines should be processed by each task in the thread pool
             // if there is a text file imported, there may still only be one language when there should be two....but the name of the language will be in fileName
-
+            // EFC - seems arbitrary - are all existing zip file uploads now adding the file name language?? Need to double chck how this is used presuambly attempts in looking up and saving
             List<String> languages = new ArrayList<>();
-            if (zipName != null && origLanguages.size()==1) {
+            if (zipName != null && origLanguages.size()==1) { // there's a check for language sizes being 1 so I guess they can't be in places.
+                // Typically languages are two, the user email and default with the user typically being stripped out before getting here so you're just left with default . . .
                 languages.add(fileName.substring(0, fileName.indexOf(" ")));
             }
             languages.addAll(origLanguages);
@@ -303,23 +306,67 @@ public class DSImportService {
             importInterpreter = NameService.findByName(azquoMemoryDBConnection, "dataimport " + importInterpreterLookup, languages);
         }
         return importInterpreter;
-
     }
+
+    /*
+    Info from WFC e-mail about changes to this function :
+
+     The main change in the import process is to allow the import headings to be stored against a 'name' with the same name as the heading,
+      these headings being stored as children of the 'Dataimport' name.
+
+i.e.   instead of
+
+'dataimport <importname>' having an attribute 'HEADINGS': <heading1>;<heading1 clauses>¬<heading2>;<heading2 clauses> ....
+
+we have
+     'dataimport <importname>
+            <heading1> .<importname> HEADING <heading1 clauses>
+            <heading2>. <importname> HEADING <heading2 clauses>
+
+This is complicated, from necessity.  The purpose is to allow the same data to be imported from many different sources
+(different attributes stored against the individual heading names) so that a new source will be relatively easy to script
+
+You can check this by looking at the 'dataimport' variables on the 'risk' database in edbroking.
+
+There is a couple of new keywords
+
+<heading> classification <other heading>
+        =  parent of <other heading>;child of <heading>
+
+<heading> ignore <string list>
+    omit any lines where this field consists of any element of the string list
+
+<heading>  topheading
+
+this heading will appears as a field pair above the usual heading line
+
+e.g.   Month Jul-18
+
+Heading1   Heading2   Heading3 ....
+
+
+EFC note . . . it seems code is being added to support Ed Broking. If this code is too specific it should be done by groovy perhaps . . .
+The issue here it seems is that Ed Broking import the same data from different sources, the data might have different column names in some cases
+So to clarify, we might have a name in "All Import Sheets", "DATAIMPORT Risk". But instead of this having an attribute with the headers it has children.
+For example "Contract Reference". "Contract Reference" has attributes. "HEADINGS RISK" is the default but there may also be "RLD" or "HISCOX" or another derived from the zip file name.
+The value of this attribute is equivalent to the old heading - it is a name followed by clauses. Maybe just the name e.g. "Carrier" (meaning in the actual import file the heading is "Carrier")
+or a name of the heading in the import file followed by semi-colons and clauses or composition where there is no data,in the import file, the column in generated
+     */
 
     private static HeadingsWithIteratorAndBatchSize getHeadersWithIteratorAndBatchSize(AzquoMemoryDBConnection azquoMemoryDBConnection
             , String importInterpreterLookup, String zipName, boolean isSpreadsheet, String filePath, List<String> languages) throws Exception {
-        String fileNameForReplace = importInterpreterLookup;
-
         String importAttribute = null;
         Name importInterpreter = null;
         Name assumptions = null;
         String zipVersion = null;
-        if (zipName != null && zipName.length() > 0 && zipName.indexOf(" ") > 0){
-            zipVersion = zipName.substring(zipName.indexOf(" ")).trim();
-
-            importInterpreter = NameService.findByName(azquoMemoryDBConnection,"dataimport " + zipName.substring(0,zipName.indexOf(" ")));
-            importAttribute = "HEADINGS " + zipName.substring(0,zipName.indexOf(" "));
-            String importFile = null;
+        // prepares for the more complex "headings as children with attributes" method of importing
+        if (zipName != null && zipName.length() > 0 && zipName.indexOf(" ") > 0){// EFC - so if say it was "Risk Apr-18.zip" we have Apr-18 as the zipVersion.
+            zipVersion = zipName.substring(zipName.indexOf(" ")).trim(); // this is passed through to preProcessHeadersAndCreatePivotSetsIfRequired
+            String zipPrefix = zipName.substring(0,zipName.indexOf(" ")); // e.g. RIsk
+            importInterpreter = NameService.findByName(azquoMemoryDBConnection,"dataimport " + zipPrefix);
+            // so the attribute might be "HEADINGS RISK" assuming the file was "Risk Apr-18.zip"
+            importAttribute = "HEADINGS " + zipPrefix;
+            String importFile;
             if (filePath.contains("/")) {
                 importFile = filePath.substring(filePath.lastIndexOf("/")+1);
             }else{
@@ -327,17 +374,27 @@ public class DSImportService {
             }
             int blankPos = importFile.indexOf(" ");
             if (blankPos > 0){
+                /* EFC - this looks hacky. more string literals, So it's something like "zip file name assumptions firstbitofimportfilename"
+                it turns out assumptions is a sheet in a workbook - it gets put into All Import Sheets as usual
+                BUT there's also this name e.g. "Risk test2 Assumptions RLD" which is in Risk test2 Assumptions which is in Import Assumptions
+                notably this isn't set as part of any code, it's created when the assumptions file is uploaded, that it should match is based on the headings in tha file
+                matching. Rather fragile I'd say.
+                Assumptions in the example simply has the attribute "COVERHOLDER NAME" which has the value "Unknown Coverholder"
+                */
                 assumptions = NameService.findByName(azquoMemoryDBConnection,zipName + " assumptions " + importFile.substring(0,blankPos));
             }
         }
+        // so we got the import attribute based off the beginning of the zip name, same for he import interpreter, the former starts HEADINGS, the latter dataimport
+        // assumptions is a name found if created by an import file in the normal way. zip version is the end of the zip file name, at the moment a date e.g. Feb-18
+        // now standard import interpreter check
         if (importInterpreter == null){
             importInterpreter = findInterpreter(azquoMemoryDBConnection, importInterpreterLookup, languages);
          }
         // check if that name (assuming it's not null!) has groovy in an attribute
         filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
         if (importInterpreter != null && !maybeHasHeadings(filePath))
-            isSpreadsheet = false;//allow data uploaded in a spreadsheet to use pre-configured headings
-        // checks the first few lines to sort batch size and get a hopefully correctly configured line iterator
+            isSpreadsheet = false;//allow data uploaded in a spreadsheet to use pre-configured headings. isSpreadsheet could also be seen as data with the headings attached
+        // checks the first few lines to sort batch size and get a hopefully correctly configured line iterator. Nothing to do with heading interpretation
         final HeadingsWithIteratorAndBatchSize lineIteratorAndBatchSize = getLineIteratorAndBatchSize(filePath, importInterpreter); // created here but it has no headers
         if (lineIteratorAndBatchSize == null) {
             return null;
@@ -361,48 +418,68 @@ public class DSImportService {
                 headers = Arrays.asList(importHeaders.split("¬")); // delimiter a bit arbitrary, would like a better solution if I can think of one.
             }
         }
+        // ok so we may have headings as simply saved in the database. Now check more compled definition added fro Ed Broking.
+        // rather than a simple attribute against the import interpreter it may have children
         int headingLineCount = 1;
         Set<Name> topHeadingNames = new HashSet<>();
         Map<String,String> topHeadings = new HashMap<>();
         if (importInterpreter != null && importInterpreter.hasChildren()){//check for top headers
             //CHECK FOR CONVERSION :   PERMISSIBLE IN '.<language name> is <header name> additional header info
             // this converts to header name in this attribute (without brackets), together with additional header info in the attribute (importInterpreter.getDefaultDisplayName() + " " + <language>
-            checkImportChildrenForConversion(importInterpreter, languages.get(0));
+            // EFC note - it does but I don't yet know why!
+            checkImportChildrenForConversion(importInterpreter, importAttribute, languages.get(0));
+            // so now go through the names, this is like a pre scan, find the line count and look for HeadingReader.TOPHEADING though I need to know what that means
             for (Name name:importInterpreter.getChildren()){
-
+                // if we take policy no as an example, there's "HEADINGS RISK" (the importAttribute) which is "required" and "RLD" (an example of a language) as "Policy #"
+                // of course the language might not have any entry, languageName being null
                 String interpretation = name.getAttribute(importAttribute);
                 String languageName = name.getAttribute(languages.get(0));
-                if (languages.size() == 2) {
+                if (languages.size() == 2) { // so zip prefix e.g. Risk and the default name
                     if (languageName != null) {
-                        int thisHeadingLineCount = StringUtils.countOccurrencesOf(languageName, "|");
-
-                        if (thisHeadingLineCount + 1 > headingLineCount) {
-                            headingLineCount = thisHeadingLineCount + 1;
+                        // so the pipe . . . it might be as in the case of "WS Limit" in Hiscox "Wind|Limit"
+                        int thisHeadingLineCount = StringUtils.countOccurrencesOf(languageName, "|") + 1; // there's one more than the number of pipes
+                        if (thisHeadingLineCount > headingLineCount) {
+                            headingLineCount = thisHeadingLineCount;
                         }
                     }
-                    String localInterpretation = name.getAttribute(importAttribute + " " + languages.get(0));
+                    String localInterpretation = name.getAttribute(importAttribute + " " + languages.get(0)); // so this was the extra bit that might have been added
                     if (localInterpretation != null) {
-                        if (interpretation==null){
+                        if (interpretation==null){ // meaning it will be local interpretation twice?? Check with WFC todo
                             interpretation = localInterpretation;
                         }
                         interpretation += ";" + localInterpretation;
                     }
                 }
+                // it seems to be only about gathering the topheadings though whatever they are
                 if (interpretation!= null && interpretation.toLowerCase().contains(HeadingReader.TOPHEADING)){
                     topHeadingNames.add(name);
                  }
             }
             int lineNo = 0;
+            /* ok so go through the first 20 lines of the file assuming some top headings were found (only relevant for the Ed Broking style names)
+             the key to this is that the tio names are apparently in pairs, if this is always so then the code here shuld be changed to be clearer
+             so you have
+             key1 value3
+             key2 value3
+             key3 value3
+             And these keys are added as headings with the values being the default values an example is  <Coverholder:> topheading
+
+             OK, I now understand the purpose
+
+             Some import files will have things like
+             Coverholder: Joe Bloggs
+             Contract ref: ABC123
+
+            This jams them as columns at the end with a default value
+             */
             while(topHeadingNames.size() > 0 && lineNo < 20 && lineIteratorAndBatchSize.lineIterator.hasNext()){
                 String lastHeading = null;
                 headers = getNextLine(lineIteratorAndBatchSize);
                 for (String header:headers){
-                    if (lastHeading!=null){
+                    if (lastHeading!=null){ // so only if there was a previous heading which is in the db and top headings then add this heading as a value with the previous heading as a key in the map and zap the last heading from the topHeadingNames . .
                         Name headingName = NameService.findByName(azquoMemoryDBConnection, lastHeading, languages);
                         if (headingName!=null && topHeadingNames.contains(headingName)){
-                            MutableImportHeading newMHeading = new MutableImportHeading();
                             topHeadings.put(lastHeading, header);
-
                             topHeadingNames.remove(headingName);
                         }
                     }
@@ -414,13 +491,12 @@ public class DSImportService {
                 headers = getNextLine(lineIteratorAndBatchSize);
 
             }
-            while (lineNo < 20 && (headers.size()==0 || headers.get(0).length()== 0)&& lineIteratorAndBatchSize.lineIterator.hasNext()){ //looking for something in column A
+            //looking for something in column A, there may be a gap after things like Coverholder: Joe Bloggs
+            while (lineNo < 20 && (headers.size()==0 || headers.get(0).length()== 0)&& lineIteratorAndBatchSize.lineIterator.hasNext()){
                 headers = getNextLine(lineIteratorAndBatchSize);
-
             }
             if (headingLineCount >1){
                 buildHeadersFromVerticallyListedNames(headers, lineIteratorAndBatchSize.lineIterator, headingLineCount -1);
-
             }
 
             if (lineNo==20 || !lineIteratorAndBatchSize.lineIterator.hasNext()){
@@ -469,14 +545,15 @@ public class DSImportService {
                 lineIteratorAndBatchSize.lineIterator.next();
             }
         }
+        // so we record the original size then jam all the top headings on to the end . . .
+        // is there a reason this and the adding of default isn't done above? Does it need the checkRequiredHeadings and preProcessHeadersAndCreatePivotSetsIfRequired
         int topHeadingPos = headers.size();
         if (topHeadings!=null){
-
             headers.addAll(topHeadings.keySet());
         }
         checkRequiredHeadings(azquoMemoryDBConnection,headers,importInterpreter,  assumptions, languages);
         // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
-        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, headers, importInterpreter, zipVersion, fileNameForReplace, languages);//attribute names may have additions when language is in the context
+        headers = HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(azquoMemoryDBConnection, headers, importInterpreter, zipVersion, importInterpreterLookup, languages);//attribute names may have additions when language is in the context
         if (topHeadings !=null){
             for (String topHeading:topHeadings.keySet()){
                 headers.set(topHeadingPos, headers.get(topHeadingPos++) + ";default " + topHeadings.get(topHeading));
@@ -497,24 +574,32 @@ public class DSImportService {
          return lineIteratorAndBatchSize;
     }
 
+    // two new functions added by WFC, need to check them
     private static List<String>getNextLine(HeadingsWithIteratorAndBatchSize lineIterator){
         List<String> toReturn = new ArrayList<>();
         toReturn.addAll(Arrays.asList(lineIterator.lineIterator.next()));
         return toReturn;
     }
+
+    // new WFC function relevant to Ed Broking and import headings by child names
+    // a syntax check that if something says required it must have a fallback of composition or topheading or default?
+
     private static void checkRequiredHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, Name assumptions, List<String> languages) throws Exception {
         if (importInterpreter==null || !importInterpreter.hasChildren())  return;
-
         List<String> defaultNames = new ArrayList<>();
         for (String header : headers) {
             Name name = NameService.findByName(azquoMemoryDBConnection, header, languages);
             if (name != null) {
                 defaultNames.add(name.getDefaultDisplayName());
-            } else
+            } else {
                 defaultNames.add(header);
+            }
         }
-        String importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS");
+        String importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS"); // this keeps being done! Factor properly, todo
         for (Name name : importInterpreter.getChildren()) {
+            // not attribute but composite attributes. So it will look for the "base" and the second as created by checkImportChildrenForConversion e.g. "HEADINGS RISK RLD".
+            // I can't see any of the second which might be relevant with "required" but I imagine there will be some from the first
+            // for example Policy Reference.Contract Reference;required
             String attribute = NameService.getCompositeAttributes(name,importAttribute,importAttribute + " " + languages.get(0));
             if ((assumptions==null || assumptions.getAttribute(name.getDefaultDisplayName())==null)&& attribute!=null){ //if there's an assumption then no need to check required.
                  boolean required = false;
@@ -528,18 +613,21 @@ public class DSImportService {
                         composition = true;
                     }
                     if (!defaultNames.contains(name.getDefaultDisplayName()) && required) {
-                        if ( composition) {
+                        if (composition) {
                             headers.add(name.getDefaultDisplayName());
                             defaultNames.add(name.getDefaultDisplayName());
-                        }else{
+                        } else {
                             //check both the general and specific import attributes
-                            String attribute2 = NameService.getCompositeAttributes(name, importAttribute, importAttribute + " " + languages.get(0));
-                            if (attribute2 == null || (!attribute2.toLowerCase().contains(HeadingReader.DEFAULT) && !attribute2.toLowerCase().contains(HeadingReader.COMPOSITION) && !attribute2.toLowerCase().contains(HeadingReader.TOPHEADING))) {
+                            // edd commented attribute2, it's the same as attribute
+                            //String attribute2 = NameService.getCompositeAttributes(name, importAttribute, importAttribute + " " + languages.get(0));
+                            if (/* cannot be null! attribute2 == null || (*/
+                                    !attribute.toLowerCase().contains(HeadingReader.DEFAULT)
+                                            && !attribute.toLowerCase().contains(HeadingReader.COMPOSITION)
+                                            && !attribute.toLowerCase().contains(HeadingReader.TOPHEADING)) {
                                 throw new Exception("headers missing required header: " + name.getDefaultDisplayName());
                             } else {
                                 headers.add(name.getDefaultDisplayName());//maybe a problem if there is another name in the given language
                                 defaultNames.add(name.getDefaultDisplayName());
-
                             }
                         }
                     }
@@ -622,15 +710,15 @@ public class DSImportService {
                         headers.set(colNo, headers.get(colNo) + heading);
                     } else {
                         if (headers.get(colNo).length() == 0) {
-                                  int lastSplit = lastHeading.lastIndexOf("|");
-                                if (lastSplit > 0){
-                                    headers.set(colNo, lastHeading.substring(0,lastSplit + 1) + heading);
-                                }else{
-                                    headers.set(colNo, lastHeading + "|" + heading);
-                                }
+                            int lastSplit = lastHeading.lastIndexOf("|");
+                            if (lastSplit > 0){
+                                headers.set(colNo, lastHeading.substring(0,lastSplit + 1) + heading);
+                            }else{
+                                headers.set(colNo, lastHeading + "|" + heading);
+                            }
                         } else {
-                                headers.set(colNo, headers.get(colNo) + "|" + heading);
-                         }
+                            headers.set(colNo, headers.get(colNo) + "|" + heading);
+                        }
                     }
                     lastfilled = true;
                 }
@@ -645,8 +733,6 @@ public class DSImportService {
         }
         return lineCount ==  0;
     }
-
-
 
     private static boolean findReservedWord(String heading) {
         heading = heading.toLowerCase();
@@ -671,6 +757,7 @@ public class DSImportService {
                 || heading.startsWith(HeadingReader.SPLIT);
     }
 
+    // todo - can we just get rid of this? I don't think anyone is using it
     private static void checkTranspose(Name importInterpreter, HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize) {
         if ("true".equalsIgnoreCase(importInterpreter.getAttribute("transpose"))) {
             final List<String[]> sourceList = new ArrayList<>();
@@ -716,7 +803,6 @@ public class DSImportService {
             if (linesGuess < 100_000 && fileLength > 1_000_000) {
                batchSize = 5_000;
                System.out.println("less than 100,000, dropping batch size to " + batchSize);
-
             } else if (linesGuess < 1_000_000 && fileLength > 1_000_000) {
                 System.out.println("less than 1,000,000, dropping batch size to 10k");
                 batchSize = 10_000;
@@ -772,17 +858,24 @@ public class DSImportService {
         return filePath;
     }
 
-    private static void checkImportChildrenForConversion(Name importInterpreter,  String language)throws Exception{
+    // for the more complex import header resolution for Ed Broking, children of importInterpreter rather than a single attribute
+    // if it's a simple <Policy #> for example it simply gets set back in without the <> it seems BUT
+    // if there's something after > e,g, "<Policy Type> language NEWRENEWAL" being the value of "RLD" attribute  in the name "Transaction Type" then
+    // "RLD" is set to "Policy Type" and a new attribute "HEADINGS RISK RLD" is set with the value "language NEWRENEWAL". Yikes.
+
+    private static void checkImportChildrenForConversion(Name importInterpreter, String importAttribute, String language)throws Exception{
         boolean toBeConverted = false;
         for (Name importField:importInterpreter.getChildren()){
             String existingName = importField.getAttribute(language);
+            // so in the language of this file name (probably set due to the zip file's name . . .) we have an attribute of teh format <something> . . . we want to convert this
             if (existingName!=null && existingName.startsWith("<") && existingName.contains(">")){
                 toBeConverted = true;
                 break;
             }
         }
         if (toBeConverted){
-            String importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS") + " " + language;
+            // EFC -the local version as referenced in other bits of the code. Still not completely sure what that means!
+            importAttribute = importAttribute + " " + language;
             for (Name importField:importInterpreter.getChildren()){
                 String existingName = importField.getAttribute(language);
                 if (existingName!=null){
@@ -796,6 +889,7 @@ public class DSImportService {
                         }
                     }
                     importField.setAttributeWillBePersisted(language, newName);
+                    // often it seems newHeadingAttributes will be empty and hence no attribute will be created
                     importField.setAttributeWillBePersisted(importAttribute, newHeadingAttributes);
                 }
             }
