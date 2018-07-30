@@ -266,9 +266,9 @@ class ImportFileUtilities {
                 }
             } catch (Exception ignored) {
             }
-            if ((stringValue.contains(".") || !stringValue.startsWith("0")) && !dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
+            if (stringValue.endsWith("%") || (stringValue.contains(".") || !stringValue.startsWith("0")) && !dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
                 //if it's a number, remove all formatting
-                try {
+               try {
                     double d = cellData.getDoubleValue();
                     returnNumber = d;
                     String newStringValue = d + "";
