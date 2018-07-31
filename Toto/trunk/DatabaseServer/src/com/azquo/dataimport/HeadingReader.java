@@ -131,7 +131,7 @@ class HeadingReader {
                     headersReplaced = false;
                     Name headerName = NameService.findByName(azquoMemoryDBConnection, header, languages);
                     if (headerName != null) {
-                        String attribute = NameService.getCompositeAttributes(headerName, importAttribute, importAttribute + " " + languages.get(0));
+                        String attribute = getCompositeAttributes(headerName, importAttribute, importAttribute + " " + languages.get(0));
                         header = headerName.getDefaultDisplayName();
                         origHeaders.set(i, header);
                         if (attribute != null) {
@@ -551,5 +551,13 @@ class HeadingReader {
             }
         }
         return headingFound;
+    }
+
+    static String getCompositeAttributes(Name name, String attributeName1, String attributeName2){
+        String attribute1 = name.getAttribute(attributeName1);
+        String attribute2 = name.getAttribute(attributeName2);
+        if (attribute1==null) return attribute2;
+        if (attribute2==null) return attribute1;
+        return attribute1 + ";" + attribute2;
     }
 }

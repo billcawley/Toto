@@ -26,147 +26,58 @@ public class LoginService {
 
     private static final Logger logger = Logger.getLogger(LoginService.class);
 
-    public static LoggedInUser loginLoggedInUser(final String sessionId, final String databaseName, final String userEmail, final String password, boolean loggedIn) throws Exception {
-        return loginLoggedInUser(sessionId, databaseName, userEmail, password, null, loggedIn);
-    }
-
-
-    public static LoggedInUser loginLoggedInUser(final String sessionId, String databaseName, final String userEmail, final String password, final String reportName, boolean loggedIn) throws Exception {
-        User user;
-
-        StringBuilder databaseList = new StringBuilder();
-        //for demo users, a new User id is made for each user.
-        if (userEmail.startsWith("demo@user.com")) {
-            user = UserDAO.findByEmail(userEmail);
-            if (user == null) {
-                user = UserDAO.findByEmail("demo@user.com");
-                if (user != null) {
-                    user.setEmail(userEmail);
-                    user.setId(0);
-                    UserDAO.store(user);
-                }
-            }
-        } else {
-            user = UserDAO.findByEmail(userEmail);
-        }
-        if (user != null) {
-            if (!user.isAdministrator() && !user.isDeveloper()) {
-                if (reportName == null || reportName.length() > 0) {
-                    List<Database> dbs = DatabaseDAO.findForUserId(user.getId());
-                    if (dbs.size() > 0) {
-                        for (Database db : dbs) {
-                            databaseList.append(db.getName()).append(",");
-                        }
-                    }
-                } else {
-                    OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, user.getBusinessId());
-                    if (onlineReport != null) {
-                        List<Integer> dblist = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
-                        if (dblist.size() > 0) {
-                            for (Integer dbNo : dblist) {
-                                databaseList.append(DatabaseDAO.findById(dbNo).getName()).append(",");
-                            }
-                        }
-                    }
-                }
-            } else {
-                List<Integer> reportDBs = null;
-                if (reportName != null && reportName.length() > 0) {
-                    OnlineReport onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportName, user.getBusinessId());
-                    if (onlineReport != null) {
-                        reportDBs = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
-
-                    }
-                }
-                List<Database> dbs;
-                if (user.isDeveloper()) {
-                    dbs = DatabaseDAO.findForUserId(user.getId());
-                } else {
-                    dbs = DatabaseDAO.findForBusinessId(user.getBusinessId());
-                }
-                if (dbs.size() > 0) {
-                    String firstDB = null;
-                    for (Database db : dbs) {
-                        if (reportDBs != null && reportDBs.size() > 0 && db.getId() == reportDBs.get(0)) {
-                            firstDB = db.getName();
-
-                        } else {
-                            databaseList.append(db.getName()).append(",");
-                        }
-
-                    }
-                    if (firstDB != null) databaseList.insert(0, firstDB + ",");
-                }
-            }
-        }
-
-        //boolean temporary = false;
-        // Bill changed something which meand that database name could be lost by this point which has broken magento uploads by admins which I use locally.
-        // Am adding it back in here - I don't think it's a security risk
-        if (databaseList.length() == 0 && databaseName != null && databaseName.length() > 0) {
-            databaseList = new StringBuilder(databaseName + ","); // hacky!!
-        }
+    public static LoggedInUser loginLoggedInUser(final String sessionId, String databaseName, final String userEmail, final String password, boolean loggedIn) throws Exception {
+        User user = UserDAO.findByEmail(userEmail);
         if (user != null && (loggedIn || AdminService.encrypt(password.trim(), user.getSalt()).equals(user.getPassword()))) {
-            return loginLoggedInUser(sessionId, databaseList.toString(), user);
+            Database database = null;
+            if (databaseName == null){
+                databaseName = "";
+            }
+            // new logic run regardless of whether we were passed a db as we want to default if there's only one DB (this was lost and it knackered some magento uploads)
+            if (user.isAdministrator()) {
+                final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(user.getBusinessId());
+                if (forBusinessId.size() == 1) {
+                    database = forBusinessId.get(0);
+                } else {
+                    for (Database database1 : forBusinessId) {
+                        if (database1.getName().equalsIgnoreCase(databaseName)) {
+                            database = database1;
+                            break;
+                        }
+                    }
+                }
+            } else if (user.isDeveloper()) {// a bit wordy? can perhaps be factored later
+                final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(user.getBusinessId());
+                if (forBusinessId.size() == 1 && forBusinessId.get(0).getUserId() == user.getId()) {
+                    database = forBusinessId.get(0);
+                } else {
+                    for (Database database1 : forBusinessId) {
+                        if (database1.getName().equalsIgnoreCase(databaseName) && database1.getUserId() == user.getId()) {
+                            database = database1;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (database == null) { // now we have a DB against the user we could perhaps remove the defaults to a single one above? Perhaps different for admin or developer
+                database = DatabaseDAO.findById(user.getDatabaseId());
+            }
+
+            DatabaseServer databaseServer = null;
+            if (database != null) {
+                databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
+            }
+
+            Business b = BusinessDAO.findById(user.getBusinessId());
+            if (b == null) {
+                throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
+            }
+            String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
+            return new LoggedInUser(sessionId, user, databaseServer, database, null, businessDirectory);// null the read/write list for the mo
         }
         return null;
     }
 
-    // todo - what to do about database here, it's not ideal and based on the old model. Also inline the function?
-
-    private static LoggedInUser loginLoggedInUser(final String sessionId, String databaseNames, final User user) throws Exception {
-        Database database = null;
-        String databaseName = "";
-        // ok user should be ok :)
-        if (databaseNames != null && databaseNames.length() > 0) {
-            databaseName = databaseNames.substring(0, databaseNames.indexOf(","));
-        }
-
-        // new logic run regardless of whether we were passed a db as we want to default if there's only one DB (this was lost and it knackered some magento uploads)
-        if (user.isAdministrator()) {
-            final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(user.getBusinessId());
-            if (forBusinessId.size() == 1) {
-                database = forBusinessId.get(0);
-            } else {
-                for (Database database1 : forBusinessId) {
-                    if (database1.getName().equalsIgnoreCase(databaseName)) {
-                        database = database1;
-                        break;
-                    }
-                }
-            }
-        } else if (user.isDeveloper()) {// a bit wordy? can perhaps be factored later
-            final List<Database> forBusinessId = DatabaseDAO.findForBusinessId(user.getBusinessId());
-            if (forBusinessId.size() == 1 && forBusinessId.get(0).getUserId() == user.getId()) {
-                database = forBusinessId.get(0);
-            } else {
-                for (Database database1 : forBusinessId) {
-                    if (database1.getName().equalsIgnoreCase(databaseName) && database1.getUserId() == user.getId()) {
-                        database = database1;
-                        break;
-                    }
-                }
-            }
-        }
-        if (database == null) { // now we have a DB against the user we could perhaps remove the defaults to a single one above? Perhaps different for admin or developer
-            database = DatabaseDAO.findById(user.getDatabaseId());
-        }
-
-        DatabaseServer databaseServer = null;
-        if (database != null) {
-            databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
-        }
-
-        Business b = BusinessDAO.findById(user.getBusinessId());
-        if (b == null) {
-            throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
-        }
-        String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-        LoggedInUser loggedInUser = new LoggedInUser(sessionId, user, databaseServer, database, null, businessDirectory);// null the read/write list for the mo
-        loggedInUser.setDbNames(databaseNames);
-        // I zapped something to do with anonymising here, don't know if it's still relevant
-        return loggedInUser;
-    }
 
     // basic business match check on these functions
     // todo address insecurity on these two, problem is that some non admin or developer user stuff is ad hoc based off reports. Hence if I try and do security here it won't work . . .

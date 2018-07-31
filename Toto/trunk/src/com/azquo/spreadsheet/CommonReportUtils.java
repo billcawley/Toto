@@ -43,6 +43,7 @@ public class CommonReportUtils {
     }
 
     public static int getNameQueryCount(LoggedInUser loggedInUser, String query) {
+        // todo comment that this means there's one figure
         if (query.toLowerCase().startsWith("count(")){
             return 1;
         }

@@ -47,9 +47,9 @@ public class DSImportService {
     private static final String FILEENCODING = "FILEENCODING";
     // is there a groovy pre processor?
     private static final String GROOVYPROCESSOR = "GROOVYPROCESSOR";
-
     // where we store import specs for different file types
     public static final String ALLIMPORTSHEETS = "All import sheets";
+
     /*
     Currently only two types of import supported and detection on file name (best idea?). Run the import and persist.
     Generally speaking creating the import headers and basic set structure is what is required to ready a database to load data.
@@ -57,7 +57,8 @@ public class DSImportService {
     An entry point to the class functionality.
     */
 
-    // EFC note while trying to understand new code - zip name is as it says, the name of the zip file (excluding the extension) if the file was originally part of a zip file. Whether this should be used is another matter . . .
+    // EFC note while trying to understand new code - zip name is as it says, the name of the zip file (excluding the extension)
+    // if the file was originally part of a zip file. Whether this should be used is another matter . . .
     public static String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String zipName, List<String> languages, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         System.out.println("Reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
@@ -86,6 +87,7 @@ public class DSImportService {
         } else {
             toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileName, zipName, languages, isSpreadsheet, valuesModifiedCounter);
             //now look to see if there's a need to execute after import
+            // find interpreter being called again - a way not to do this?
             Name importInterpreter = findInterpreter(azquoMemoryDBConnection, fileName, languages);
             if (importInterpreter != null) {
                 String execute = importInterpreter.getAttribute("EXECUTE");
@@ -140,16 +142,24 @@ public class DSImportService {
 
     /* Calls header validation and batches up the data with headers ready for batch importing. Get headings first,
     they can be in a name or in the file, if in a file then they will be set on a name after for future reference.
-    The key is to set up info in names so a file can be uploaded from a client "as is". Function a little longer than I'd like.
+    The key is to set up info in names so a file can be uploaded from a client "as is".
+
+    This function itself is relatively simple but the functions it calls getHeadersWithIteratorAndBatchSize and BatchImporter contain some complex logic.
     */
 
     private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, List<String> origLanguages, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         try {
             long track = System.currentTimeMillis();
-            // A fair amount is going on in here checking various upload options and parsing the headers. It delivers the
-            // parsed headings, the iterator for the data lines and how many lines should be processed by each task in the thread pool
-            // if there is a text file imported, there may still only be one language when there should be two....but the name of the language will be in fileName
-            // EFC - seems arbitrary - are all existing zip file uploads now adding the file name language?? Need to double chck how this is used presuambly attempts in looking up and saving
+            /* A fair amount is going on in here checking various upload options and parsing the headers. It delivers the
+            parsed headings, the iterator for the data lines and how many lines should be processed by each task in the thread pool
+
+            Languages note : Azquo tends to have the user email then DEFAULT_DISPLAY_NAME as the language list but the user name is knocked off before importing.
+
+            Not sure it could get here with anything other than one but not 100% on that (todo?)
+
+            New Ed Broking logic wants to do a combination of lookup initially based on the first half of the zip name then using the first half of the file name
+            in language as a way of "versioning" the headers. The second half of the zip name is held to the side to perhaps be repalced in headers later too.
+            */
             List<String> languages = new ArrayList<>();
             if (zipName != null && origLanguages.size()==1) { // there's a check for language sizes being 1 so I guess they can't be in places.
                 // Typically languages are two, the user email and default with the user typically being stripped out before getting here so you're just left with default . . .
@@ -360,9 +370,15 @@ or a name of the heading in the import file followed by semi-colons and clauses 
         Name assumptions = null;
         String zipVersion = null;
         // prepares for the more complex "headings as children with attributes" method of importing
+        // a bunch of files in a zip file,
         if (zipName != null && zipName.length() > 0 && zipName.indexOf(" ") > 0){// EFC - so if say it was "Risk Apr-18.zip" we have Apr-18 as the zipVersion.
-            zipVersion = zipName.substring(zipName.indexOf(" ")).trim(); // this is passed through to preProcessHeadersAndCreatePivotSetsIfRequired
-            String zipPrefix = zipName.substring(0,zipName.indexOf(" ")); // e.g. RIsk
+            // this is passed through to preProcessHeadersAndCreatePivotSetsIfRequired
+            // it isused as a straight replacement e.g. that Apr-18 in something like
+            // composition `Policy No` `Policy Issuance Date`;parent of Policy Line;child of ZIPVERSION;required
+            // EFC note - this seems a bit hacky, specific to Ed Broking
+            zipVersion = zipName.substring(zipName.indexOf(" ")).trim();
+
+            String zipPrefix = zipName.substring(0,zipName.indexOf(" ")); // e.g. Risk
             importInterpreter = NameService.findByName(azquoMemoryDBConnection,"dataimport " + zipPrefix);
             // so the attribute might be "HEADINGS RISK" assuming the file was "Risk Apr-18.zip"
             importAttribute = "HEADINGS " + zipPrefix;
@@ -380,16 +396,18 @@ or a name of the heading in the import file followed by semi-colons and clauses 
                 notably this isn't set as part of any code, it's created when the assumptions file is uploaded, that it should match is based on the headings in tha file
                 matching. Rather fragile I'd say.
                 Assumptions in the example simply has the attribute "COVERHOLDER NAME" which has the value "Unknown Coverholder"
+
+                Note : assumptions unsued at the moment - todo - clarify the situation and maybe remove?
                 */
                 assumptions = NameService.findByName(azquoMemoryDBConnection,zipName + " assumptions " + importFile.substring(0,blankPos));
             }
         }
         // so we got the import attribute based off the beginning of the zip name, same for he import interpreter, the former starts HEADINGS, the latter dataimport
         // assumptions is a name found if created by an import file in the normal way. zip version is the end of the zip file name, at the moment a date e.g. Feb-18
-        // now standard import interpreter check
+        // now standard import interpreter check - EFC note - should this look at zip name too?
         if (importInterpreter == null){
             importInterpreter = findInterpreter(azquoMemoryDBConnection, importInterpreterLookup, languages);
-         }
+        }
         // check if that name (assuming it's not null!) has groovy in an attribute
         filePath = checkGroovy(azquoMemoryDBConnection, filePath, importInterpreter);
         if (importInterpreter != null && !maybeHasHeadings(filePath))
@@ -600,7 +618,7 @@ or a name of the heading in the import file followed by semi-colons and clauses 
             // not attribute but composite attributes. So it will look for the "base" and the second as created by checkImportChildrenForConversion e.g. "HEADINGS RISK RLD".
             // I can't see any of the second which might be relevant with "required" but I imagine there will be some from the first
             // for example Policy Reference.Contract Reference;required
-            String attribute = NameService.getCompositeAttributes(name,importAttribute,importAttribute + " " + languages.get(0));
+            String attribute = HeadingReader.getCompositeAttributes(name,importAttribute,importAttribute + " " + languages.get(0));
             if ((assumptions==null || assumptions.getAttribute(name.getDefaultDisplayName())==null)&& attribute!=null){ //if there's an assumption then no need to check required.
                  boolean required = false;
                 boolean composition = false;
@@ -895,7 +913,4 @@ or a name of the heading in the import file followed by semi-colons and clauses 
             }
         }
     }
-
-
-
 }

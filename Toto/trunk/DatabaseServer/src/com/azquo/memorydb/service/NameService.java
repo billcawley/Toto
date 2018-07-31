@@ -50,7 +50,7 @@ public final class NameService {
     private static AtomicInteger sortCaseInsensitiveCount = new AtomicInteger(0);
 
     public static void sortCaseInsensitive(List<Name> namesList) throws Exception {
-        Collections.sort(namesList, defaultLanguageCaseInsensitiveNameComparator);
+        namesList.sort(defaultLanguageCaseInsensitiveNameComparator);
     }
 
     /* renaming this function to match the memory DB one - it's a straight proxy through except for trying for all
@@ -69,7 +69,7 @@ public final class NameService {
         if (namesList.size() == 0 && attribute.length() > 0) {
             namesList = getNamesWithAttributeContaining(azquoMemoryDBConnection, "", searchString);//try all the attributes
         }
-        Collections.sort(namesList, defaultLanguageCaseInsensitiveNameComparator);
+        namesList.sort(defaultLanguageCaseInsensitiveNameComparator);
         return namesList;
     }
 
@@ -100,8 +100,7 @@ public final class NameService {
 
     private static AtomicInteger findByName2Count = new AtomicInteger(0);
 
-    private static Name findParentAttributesName(AzquoMemoryDBConnection azquoMemoryDBConnection, Name child, String attributeName, Set<Name> checked, List<String> languages)throws Exception {
-
+    private static Name findParentAttributesName(Name child, String attributeName, Set<Name> checked) {
         attributeName = attributeName.trim().toUpperCase();
         for (Name parent : child.getParents()) {
             if (!checked.contains(parent)) {
@@ -109,27 +108,22 @@ public final class NameService {
                 if (parent.getDefaultDisplayName() != null && parent.getDefaultDisplayName().equalsIgnoreCase(attributeName)) {
                     return child;
                 }
-                Name attribute = findParentAttributesName(azquoMemoryDBConnection,parent, attributeName, checked, languages);
+                Name attribute = findParentAttributesName(parent, attributeName, checked);
                 if (attribute != null) {
                     return attribute;
                 }
             }
         }
-        //it's not a set attribute, so get the string, and look that up as a name
-        String attName = child.getAttribute(attributeName);
-        if (attName==null) return null;
-        return findByName(azquoMemoryDBConnection,attName, languages);
-
+        return null;
     }
 
-    static Name findNameAndAttribute(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String> languages) throws Exception {
+    static Name findNameAndAttribute(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String qualifiedName, final List<String> attributeNames) throws Exception {
         int attPos = qualifiedName.lastIndexOf("`.`");
         if (attPos > 0) {
-            // e.g   child = `2018-06-29`.`WEEKDAY` returns 'FRIDAY' as a name
-            Name parentFound = findNameAndAttribute(azquoMemoryDBConnection, qualifiedName.substring(0, attPos + 1), languages);
+            Name parentFound = findNameAndAttribute(azquoMemoryDBConnection, qualifiedName.substring(0, attPos + 1), attributeNames);
             if (parentFound == null) return null;
             String attribute = qualifiedName.substring(attPos + 2).replace("`", "");
-            Name attName = findParentAttributesName(azquoMemoryDBConnection, parentFound, attribute, HashObjSets.newMutableSet(), languages);
+            Name attName = findParentAttributesName(parentFound, attribute, HashObjSets.newMutableSet());
             if (attName == null) {//see if we can find a name from the string value
                 String attVal = parentFound.getAttribute(attribute);
                 if (attVal != null) {
@@ -138,7 +132,7 @@ public final class NameService {
             }
             return attName;
         } else {
-            return findByName(azquoMemoryDBConnection, qualifiedName, languages);
+            return findByName(azquoMemoryDBConnection, qualifiedName, attributeNames);
         }
     }
 
@@ -217,32 +211,28 @@ public final class NameService {
         // note a null/empty qualifiedName will end up returning topParent
 
         List<String> nameAndParents = StringUtils.parseNameQualifiedWithParents(qualifiedName); // should never return an empty array given the check just now on qualified name
-        //if (nameAndParents.size() == 1) { // no structure just the name, pass on through
+        if (nameAndParents.size() == 1) { // no structure just the name, pass on through
             return findOrCreateNameInParent(azquoMemoryDBConnection, qualifiedName, topParent, local, attributeNames);
-       // }
+        }
        /*
-       CHANGED BY WFC -  if we are inserting father->Son into 'Scouts' we do not want to put 'father' into 'scouts'!
-
-
         ok the key here is to step through the parent -> child list as defined in the name string creating the hierarchy as you go along
         the top parent is used for the first one - inside findOrCreateNameInParent local will make the distinction internally to allow names
          with the same name in different places or to move the name from where it was. Moving the parsing to parseNameQualifiedWithParents has mad this a lot simpler
         hopefully it's all still sound.
-        #
+        */
         Name nameOrParent = topParent;
         // given the separated parsing this is much more simple, creating down the chain but starting with the very top parent. Could have left the
         for (String nameParentString : nameAndParents) {
             nameOrParent = findOrCreateNameInParent(azquoMemoryDBConnection, nameParentString, nameOrParent, local, attributeNames);
         }
         return nameOrParent; // the last one created is what we want
-        */
     }
 
     private static AtomicInteger includeInSetCount = new AtomicInteger(0);
 
     private static void includeInSet(Name name, Name set) throws Exception {
         includeInSetCount.incrementAndGet();
-         set.addChildWillBePersisted(name);//ok add as asked
+        set.addChildWillBePersisted(name);//ok add as asked
         /*  REMOVING THIS CONDITION - CAUSED PROBLEMS IN SETTING UP `Order Entities->Shipping` then `Order Entities->Invoice Total->Shipping` in Magento
         Collection<Name> setParents = set.findAllParents();
         for (Name parent : name.getParents()) { // now check the direct parents and see that none are in the parents of the set we just put it in.
@@ -302,51 +292,43 @@ public final class NameService {
         }
 
         String storeName = name.replace(StringLiterals.QUOTE, ' ').trim();
-        Name existing=null;
-        if (storeName.contains(StringLiterals.MEMBEROF) && attributeNames.get(0).equals(Constants.DEFAULT_DISPLAY_NAME)){//In case there are MEMBEROF symbols in storeName
-            existing = findByName(azquoMemoryDBConnection, storeName);
-        }
+        Name existing;
 
         if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent1", marker);
-        if (existing==null) {
-            if (parent != null) { // ok try to find it in that parent
-                //try for an existing name already with the same parent
-                if (local) {// ok looking only below that parent or just in it's whole set or top parent.
-                    existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, parent);
-                    if (existing == null) { // couldn't find local - try for one which has no parents or children, that's allowable for local (to be moved)
-                        try {
-                            existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, null);
-                        } catch (Exception ignored) { // ignore the Found more than one name exception
-                            existing = null;
-                        }
-                        if (existing != null && (existing.hasParents() || existing.hasChildren())) {
-                            existing = null;
-                        }
-                    }
-                    if (profile)
-                        marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
-                } else {// so we ignore parent if not local, we'll grab what we can to move it into the right parent set
+        if (parent != null) { // ok try to find it in that parent
+            //try for an existing name already with the same parent
+            if (local) {// ok looking only below that parent or just in it's whole set or top parent.
+                existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, parent);
+                if (existing == null) { // couldn't find local - try for one which has no parents or children, that's allowable for local (to be moved)
                     try {
-                        if (existing == null) {
-                            existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, parent);
-                            if (existing != null) return existing;
-                            existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, null);
-                        }
+                        existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, null);
                     } catch (Exception ignored) { // ignore the Found more than one name exception
+                        existing = null;
+                    }
+                    if (existing != null && (existing.hasParents() || existing.hasChildren())) {
                         existing = null;
                     }
                 }
                 if (profile)
-                    marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent3", marker);
-            } else { // no parent passed go for a vanilla lookup
+                    marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent2", marker);
+            } else {// so we ignore parent if not local, we'll grab what we can to move it into the right parent set
                 try {
+                    existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, parent);
+                    if (existing!=null)return existing;
+                    // to clarify the logic here - if we have a name but in no set then grab it as it will be put in the set later. Todo - clean logic?
                     existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, null);
                 } catch (Exception ignored) { // ignore the Found more than one name exception
                     existing = null;
                 }
-                if (profile)
-                    marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent4", marker);
             }
+            if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent3", marker);
+        } else { // no parent passed go for a vanilla lookup
+            try {
+                existing = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(attributeNames, storeName, null);
+            } catch (Exception ignored) { // ignore the Found more than one name exception
+                existing = null;
+            }
+            if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent4", marker);
         }
         if (existing != null) {
             // direct parents may be moved up the hierarchy (e.g. if existing parent is 'Europe' and new parent is 'London', which is in 'Europe' then
@@ -362,14 +344,10 @@ public final class NameService {
         } else {
               logger.debug("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
             // I think provenance from connection is correct, we should be looking to make a useful provenance when making the connection from the data access token
-            if (storeName.contains("->")){
-                int j=1;
-            }
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance());
             if (!attributeNames.get(0).equals(Constants.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
                 newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
             }
-
             newName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, storeName); // and set the default regardless
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent6", marker);
             if (parent != null) {
@@ -494,15 +472,6 @@ public final class NameService {
         }
         return null;
     }
-
-    public static String getCompositeAttributes(Name name, String attributeName1, String attributeName2){
-        String attribute1 = name.getAttribute(attributeName1);
-        String attribute2 = name.getAttribute(attributeName2);
-        if (attribute1==null) return attribute2;
-        if (attribute2==null) return attribute1;
-        return attribute1 + ";" + attribute2;
-    }
-
 
     public static void printFunctionCountStats() {
         System.out.println("######### NAME SERVICE FUNCTION COUNTS");

@@ -480,7 +480,10 @@ But can use a library?
                             doubleValue = sd.evaluate(forSD);
                         }
                         //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                        if (valuesHook.values.size() == 1 && (!locked.isTrue|| function==DataRegionHeading.FUNCTION.MAX || function == DataRegionHeading.FUNCTION.MIN)) { // locked conditional added back in by Edd, required or counts of one for example won't work.
+                        if (valuesHook.values.size() == 1 && (!locked.isTrue
+                                || function == DataRegionHeading.FUNCTION.MAX
+                                || function == DataRegionHeading.FUNCTION.MIN
+                                || function == null)) { // locked conditional added back in by Edd, required or counts of one for example won't work. Also allowing null function to be a string now, logic added up here as a small refactor from a WFC change
                             Value value = valuesHook.values.get(0);
                             selected = valueToTestFor == value; // I think this is the right logic - is the value the one drilled down from?
                             stringValue = value.getText();
@@ -489,12 +492,7 @@ But can use a library?
                             }
                             // was isnumber test here to add a double to the
                         } else if (valuesHook.values.size() > 0) {
-                            if (function==null && valuesHook.values.size() == 1){
-                                stringValue = valuesHook.values.get(0).getText();
-                            }else{
-                                 stringValue = doubleValue + "";
-
-                            }
+                            stringValue = doubleValue + "";
                         }
                     } else {
                         stringValue = "";

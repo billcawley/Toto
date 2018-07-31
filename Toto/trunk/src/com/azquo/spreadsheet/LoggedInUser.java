@@ -11,14 +11,12 @@ import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -45,7 +43,7 @@ public class LoggedInUser {
     // in theory the concantation of strings for keys could trip up, maybe make more robust? TODO
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
 
-    private List<String> languages;
+    private final List<String> languages;
 
     private Database database;
     private OnlineReport onlineReport;
@@ -69,7 +67,6 @@ public class LoggedInUser {
     // moved back in here now (was on the db server for a bit)
 
     private AtomicInteger lastJSTreeNodeId;
-    private String dbNames;
 
     private final Map<Integer, JsonChildren.Node> jsTreeLookupMap;
 
@@ -81,9 +78,10 @@ public class LoggedInUser {
         this.user = user;
         this.businessDirectory = businessDirectory;
         sentCellsMaps = new HashMap<>();
-        languages = new ArrayList<>(2);
-        languages.add(user.getEmail());
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        List<String> languages1 = new ArrayList<>(2);
+        languages1.add(user.getEmail());
+        languages1.add(Constants.DEFAULT_DISPLAY_NAME);
+        languages = Collections.unmodifiableList(languages1); // it shouldn't change!
         this.database = database;
         this.onlineReport = null;
         this.databaseServer = databaseServer;
@@ -92,7 +90,6 @@ public class LoggedInUser {
         this.imageStoreName = imageStoreName;
         this.context = null;
         lastJSTreeNodeId = new AtomicInteger();
-        dbNames = "";
         jsTreeLookupMap = new ConcurrentHashMap<>();
         // make log files dir if required
 
@@ -111,25 +108,6 @@ public class LoggedInUser {
     }
 
     // ok we need to keep a session map of jstree ids which are created incrementally against the actual name ids, passing the nodes here seems fine
-    public LoggedInUser(LoggedInUser originalUser) {
-        this.sessionId = originalUser.sessionId;
-        this.user = originalUser.user;
-        sentCellsMaps = new HashMap<>();
-        languages = new ArrayList<>();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
-        languages.add(originalUser.user.getEmail()); // ok this is part of a new idea to deal with names created by "as" and otehr names that might be assigned for a user. Needs testing.
-        this.database = originalUser.database;
-        this.onlineReport = originalUser.onlineReport;
-        this.databaseServer = originalUser.databaseServer;
-        //this.readPermissions = originalUser.readPermissions;
-        //this.writePermissions = originalUser.writePermissions;
-        this.context = null;
-        this.dbNames = "";
-        lastJSTreeNodeId = new AtomicInteger();
-        jsTreeLookupMap = new ConcurrentHashMap<>();
-        this.businessDirectory = originalUser.businessDirectory;
-    }
-
     public void assignIdForJsTreeNode(JsonChildren.Node node) {
         node.id = lastJSTreeNodeId.incrementAndGet();
         jsTreeLookupMap.put(node.id, node);
@@ -180,24 +158,16 @@ public class LoggedInUser {
         return toReturn;
     }
 
-    // todo a version that includes the email and one that doesn't
     public List<String> getLanguages() {
         return languages;
     }
 
-    public void setLanguages(List<String> languages) {
-        if (languages != null) { // should not be!
-            languages.add(0, user.getEmail()); // make it first
-        }
-        this.languages = languages;
+    public List<String> getLanguagesWithoutUserName() {
+        return languages;
     }
 
     public User getUser() {
         return user;
-    }
-
-    public String getDatabaseType() {
-        return database.getDatabaseType();
     }
 
     public Database getDatabase() {
@@ -224,10 +194,6 @@ public class LoggedInUser {
     public void setImageStoreName(String imageStoreName) {
         this.imageStoreName = imageStoreName;
     }
-
-    public String getDbNames() {return dbNames; }
-
-    public void setDbNames(String dbNames) { this.dbNames = dbNames; }
 
     public String getContext() {
         return context;
