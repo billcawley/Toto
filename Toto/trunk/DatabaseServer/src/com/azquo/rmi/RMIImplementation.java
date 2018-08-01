@@ -198,7 +198,7 @@ class RMIImplementation implements RMIInterface {
         try {
             return UserChoiceService.getDropDownListForQuery(databaseAccessToken, query, languages);
         } catch (Exception e) {
-            throw new RemoteException("Database Server Exception", e);
+            throw new RemoteException(e.getMessage(), e);
         }
     }
 

@@ -37,7 +37,7 @@ public class CommonReportUtils {
         } catch (Exception e) {
             e.printStackTrace();
             List<String> error = new ArrayList<>();
-            error.add("Error : " + e.getMessage());
+            error.add("Error : " + e.getMessage().substring(e.getMessage().lastIndexOf("Exception:")).trim());
             return error;
         }
     }
