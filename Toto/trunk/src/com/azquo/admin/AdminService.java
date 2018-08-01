@@ -154,8 +154,8 @@ this may now not work at all, perhaps delete?
         checkDBSetupFile(loggedInUser, loggedInUser.getDatabase());
     }
 
-    public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
-        RMIClient.getServerInterface(source.getServerIp()).copyDatabase(source, target, nameList, readLanguages);
+    public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, String user) throws Exception {
+        RMIClient.getServerInterface(source.getServerIp()).copyDatabase(source, target, nameList, user);
     }
 
     public static void copyDatabase(LoggedInUser loggedInUser, Database source, String newName) throws Exception {

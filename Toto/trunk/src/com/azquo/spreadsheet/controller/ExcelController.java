@@ -217,7 +217,7 @@ public class ExcelController {
             }
             if (op.equals("getchoices")){
                 List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                        .getFilterListForQuery(loggedInUser.getDataAccessToken(), choice, chosen, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());//choice is the name of the range, chosen= the value from the 'choice' cell
+                        .getFilterListForQuery(loggedInUser.getDataAccessToken(), choice, chosen, loggedInUser.getUser().getEmail());//choice is the name of the range, chosen= the value from the 'choice' cell
                 return jacksonMapper.writeValueAsString(filterOptions);
             }
 

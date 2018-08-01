@@ -54,11 +54,11 @@ public class DSSpreadsheetService {
       todo - factor parameters into a passed object?
      */
 
-    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<String> languages, String regionName, int valueId, List<List<String>> rowHeadingsSource
+    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = AzquoCellService.getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
-                , regionOptions, languages, valueId, quiet);
+                , regionOptions, user, valueId, quiet);
         if (data.size() == 0) {
             //when contextSource = null there is an error on attempting to save
             return new CellsAndHeadingsForDisplay(regionName, colHeadingsSource, null, null, null, new ArrayList<>(), rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
@@ -165,18 +165,18 @@ public class DSSpreadsheetService {
             }
             index++;
         }
-        return new CellsAndHeadingsForDisplay(regionName, DataRegionHeadingService.convertDataRegionHeadingsToStrings(columnHeadingsAsArray, languages)
-                , DataRegionHeadingService.convertDataRegionHeadingsToStrings(rowHeadingsAsArray, languages), zeroSavedColumnIndexes, zeroSavedRowIndexes, displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, lockCheckResultString);
+        return new CellsAndHeadingsForDisplay(regionName, DataRegionHeadingService.convertDataRegionHeadingsToStrings(columnHeadingsAsArray, user)
+                , DataRegionHeadingService.convertDataRegionHeadingsToStrings(rowHeadingsAsArray, user), zeroSavedColumnIndexes, zeroSavedRowIndexes, displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, lockCheckResultString);
     }
 
 
     // like above to find the relevant cell BUT in this case we want as much detail about how the cell was made. I'm just going to return a string here
-    public static String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<String> languages, List<List<String>> rowHeadingsSource
+    public static String getDebugForCell(DatabaseAccessToken databaseAccessToken, String user, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol) throws Exception {
         int maxDebugLength = 2_000_000; // two million, a bit arbritrary for the moment
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         StringBuilder debugInfo = new StringBuilder();
-        getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, languages, debugInfo);
+        getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, user, debugInfo);
         if (debugInfo.length() > maxDebugLength) {
             return debugInfo.substring(0, maxDebugLength);
         } else {
@@ -252,7 +252,7 @@ public class DSSpreadsheetService {
 
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
     // could I derive context from cells and headings for display? Also region. Worth considering . . .
-    public static String saveData(DatabaseAccessToken databaseAccessToken, List<String> languages, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
+    public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         boolean changedAtAll = false;
         for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
@@ -295,7 +295,7 @@ public class DSSpreadsheetService {
             // new logic - get this out here and use it for the cells. Means the region is re resolved regardless but we're getting bottlenecks resolving every cell in this
             // function, executes are slowing it down
             List<List<AzquoCell>> currentData = AzquoCellService.getDataRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getRowHeadingsSource(), cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
-                    , cellsAndHeadingsForDisplay.getOptions(), languages, 0, true);
+                    , cellsAndHeadingsForDisplay.getOptions(), user, 0, true);
             if (modifiedInTheMeanTime) { // then we need to compare data as sent to what it is now before trying to save - assuming this is not relevant to the import style above
                 List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
                 if (currentData.size() != sentData.size()&& redundantNames==null) {// overlapping editable ranges change size if there are redundant names
@@ -697,8 +697,11 @@ public class DSSpreadsheetService {
     // when doing things like debug/provenance the client needs to say "here's a region description and original position" to locate a cell server side
     public static AzquoCell getSingleCellFromRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, List<String> languages, StringBuilder debugInfo) throws Exception {
+            , RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, String user, StringBuilder debugInfo) throws Exception {
         // these 25 lines or so are used elsewhere, maybe normalise?
+        List<String> languages = new ArrayList<>();
+        languages.add(user);
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
         final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBCOnnection, contextSource, languages);
         DataRegionHeading.SUFFIX contextSuffix = null;
         for (DataRegionHeading contextHeading : contextHeadings) {

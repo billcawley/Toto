@@ -2,6 +2,7 @@ package com.azquo.spreadsheet;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameQueryParser;
@@ -27,7 +28,7 @@ public class UserChoiceService {
         justUserNameLanguages.add(userName);
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
-        if (childrenIds != null){ // it may be if we're just confirming sets exist, in that case don't modify contents
+        if (childrenIds != null) { // it may be if we're just confirming sets exist, in that case don't modify contents
             set.setChildrenWillBePersisted(Collections.emptyList()); // easiest way to clear them
             for (Integer childId : childrenIds) {
                 Name childName = NameService.findById(connectionFromAccessToken, childId);
@@ -138,7 +139,7 @@ public class UserChoiceService {
         return names.stream().map(uniqueName -> new FilterTriple(uniqueName.bottomName.getId(), uniqueName.description, filterSet.getChildren().contains(uniqueName.bottomName))).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
     }
 
-    public static List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
+    public static List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser) throws Exception {
         //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
         int dotPos = query.indexOf(".");
         if (dotPos > 0) {//todo check that it's not part of a name
@@ -155,28 +156,36 @@ public class UserChoiceService {
             query = query.substring(0, query.indexOf("showparents"));
             forceFirstLevel = true;
         }
+        List<String> languages = new ArrayList<>();
+        languages.add(user);
+        if (!justUser){
+            languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        }
         Collection<Name> names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, false);
-        if (names.size() > 500){ // don't even try, you're not getting the dropdown or multi select = SHOW THE FIRST 500!!!!!!!
+        if (names.size() > 500) { // don't even try, you're not getting the dropdown or multi select = SHOW THE FIRST 500!!!!!!!
             List<Name> newNames = new ArrayList<>();
             Iterator it = names.iterator();
-            for (int i = 0;i<500;i++) newNames.add((Name)it.next());
+            for (int i = 0; i < 500; i++) newNames.add((Name) it.next());
             names = newNames;
         }
         return getUniqueNameStrings(getUniqueNames(names, forceFirstLevel));
     }
 
-    public static List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws Exception {
+    public static List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName) throws Exception {
         //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
         boolean forceFirstLevel = false;
         if (query.toLowerCase().trim().endsWith("showparents")) { // a hack to force simple showing of parents regardless
             query = query.substring(0, query.indexOf("showparents"));
             forceFirstLevel = true;
         }
-        List<String> justUserNameLanguages = new ArrayList<>();
-        justUserNameLanguages.add(userName);
+        List<String> languages = new ArrayList<>();
+        languages.add(userName); // start with just the username in the languages
         final AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
-        Name filterSet = NameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
+        //must be a local name in 'Filter sets' and be for this user,  start with just the username in the languages
+        Name filterSet = NameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, languages);
+        // now add in the default display name for a more typical languages list
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
         if (filterSet.getChildren() == null || filterSet.getChildren().size() == 0) {
             Collection<Name> possibleNames = NameQueryParser.parseQuery(connectionFromAccessToken, query, languages, true);
             for (Name possibleName : possibleNames) {
@@ -198,11 +207,11 @@ public class UserChoiceService {
     }
 
     // it doesn't return anything, for things like setting up "as" criteria
-    public static boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws Exception {
-         Collection<Name> names =NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, true);
-         if (names==null || names.size()==0){
-             return false;
-        }
-        return true;
+    public static boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws Exception {
+        List<String> languages = new ArrayList<>();
+        languages.add(user);
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        Collection<Name> names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, true);
+        return names != null && names.size() != 0;
     }
 }

@@ -4,6 +4,7 @@ import com.azquo.MultidimensionalListUtils;
 import com.azquo.ThreadPools;
 import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.ValueCalculationService;
@@ -98,10 +99,14 @@ class AzquoCellService {
     }
 
     static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, List<String> languages, int valueId, boolean quiet) throws Exception {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, String user, int valueId, boolean quiet) throws Exception {
         if (!quiet) {
             azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
         }
+        // make what was done report server side. Could be done at a lowe level maybe but
+        List<String> languages = new ArrayList<>();
+        languages.add(user);
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
         long track = System.currentTimeMillis();
         long start = track;
         long threshold = 1000;

@@ -4,6 +4,7 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserChoiceDAO;
+import com.azquo.memorydb.Constants;
 import com.azquo.rmi.RMIClient;
 
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ import java.util.Map;
  */
 public class CommonReportUtils {
 
-    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, List<String> languages) {
+    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, String user, boolean justUser) {
         //hack to discover a database name
         query = replaceUserChoicesInQuery(loggedInUser, query);
         int arrowsPos = query.indexOf(">>");
@@ -28,12 +29,12 @@ public class CommonReportUtils {
                 DatabaseServer origDatabaseServer = loggedInUser.getDatabaseServer();
                 LoginService.switchDatabase(loggedInUser, query.substring(0, arrowsPos));
                 List<String> toReturn = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query.substring(arrowsPos + 2), languages);
+                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query.substring(arrowsPos + 2), user, justUser);
                 loggedInUser.setDatabaseWithServer(origDatabaseServer, origDatabase);
                 return toReturn;
             }
             return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, languages);
+                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, user, justUser);
         } catch (Exception e) {
             e.printStackTrace();
             List<String> error = new ArrayList<>();
@@ -48,7 +49,7 @@ public class CommonReportUtils {
             return 1;
         }
         try {
-            return RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getNameQueryCount(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());
+            return RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getNameQueryCount(loggedInUser.getDataAccessToken(), query, loggedInUser.getUser().getEmail());
         } catch (Exception e){
             // for the moment be "quiet", this function used to help formatting
             e.printStackTrace();
@@ -57,7 +58,7 @@ public class CommonReportUtils {
     }
 
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query) {
-        return getDropdownListForQuery(loggedInUser, query, loggedInUser.getLanguages());
+        return getDropdownListForQuery(loggedInUser, query, loggedInUser.getUser().getEmail(), false);
     }
 
     public static Map<String, String> getUserChoicesMap(LoggedInUser loggedInUser) {
@@ -103,7 +104,7 @@ public class CommonReportUtils {
         query = replaceUserChoicesInQuery(loggedInUser, query);
         try {
             boolean result =  RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .resolveQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getLanguages());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
+                    .resolveQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getUser().getEmail());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
             if (result) return "true";
             return "false";
         } catch (Exception e) {

@@ -382,11 +382,10 @@ public class ChoicesService {
 
     static String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
         try {
-            List<String> languages = new ArrayList<>();
-            languages.add(loggedInUser.getUser().getEmail());
             List<String> allOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, sourceSet);
-            List<String> chosenOptions = null;
-            chosenOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`" + filterName + "` children", languages);
+            List<String> chosenOptions;
+            // justUser = true meaning server side JUST use the user email in languages. Not 100% sure how important this but as I refactored I wanted to keep the logic
+            chosenOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`" + filterName + "` children", loggedInUser.getUser().getEmail(), true);
             if (chosenOptions.size()==1 && chosenOptions.get(0).startsWith("Error")){ // this stops the error on making the drop down list
                 chosenOptions = allOptions;
                 // and create the set server side, it will no doubt be referenced

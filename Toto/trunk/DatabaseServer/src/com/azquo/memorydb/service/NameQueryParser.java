@@ -26,7 +26,10 @@ public class NameQueryParser {
     private static final Logger logger = Logger.getLogger(NameQueryParser.class);
 
     // get names from a comma separated list. Well expressions describing names - only used for read and write permissions at the moment.
-    public static List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, List<String> attributeNames) throws Exception {
+    public static List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, String user) throws Exception {
+        List<String> attributeNames = new ArrayList<>();
+        attributeNames.add(user);
+        attributeNames.add(Constants.DEFAULT_DISPLAY_NAME);
         final List<Set<Name>> toReturn = new ArrayList<>();
         List<String> formulaStrings = new ArrayList<>();
         List<String> nameStrings = new ArrayList<>();
@@ -44,7 +47,7 @@ public class NameQueryParser {
         return toReturn;
     }
 
-    // for deduplicate, inspect search and definition. This is teh same as below and
+    // for deduplicate, inspect search and definition.
     private static AtomicInteger parseQueryCount = new AtomicInteger(0);
 
     public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {

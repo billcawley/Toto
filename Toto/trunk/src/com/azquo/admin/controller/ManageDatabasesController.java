@@ -188,7 +188,7 @@ public class ManageDatabasesController {
                 }
                 if (backupTarget != null) {
                     LoggedInUser loggedInUserTarget = LoginService.loginLoggedInUser(request.getSession().getId(), backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB
-                    AdminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getLanguages());// re languages I should just be followign what was there before . . .
+                    AdminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getUser().getEmail());// re languages I should just be followign what was there before . . .
                 }
                 if (deleteUploadRecordId != null && NumberUtils.isNumber(deleteUploadRecordId)) {
                     AdminService.deleteUploadRecord(loggedInUser, Integer.parseInt(deleteUploadRecordId));
@@ -276,8 +276,6 @@ public class ManageDatabasesController {
                         new Thread(() -> {
                             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
                             try {
-                                List<String> languages = new ArrayList<>(loggedInUser.getLanguages());
-                                languages.remove(loggedInUser.getUser().getEmail());
                                 session.setAttribute("importResult",
                                         ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), false).replace("\n","<br/>")
                                 );

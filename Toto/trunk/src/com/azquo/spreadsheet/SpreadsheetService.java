@@ -125,22 +125,22 @@ public class SpreadsheetService {
     public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(LoggedInUser loggedInUser, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , UserRegionOptions userRegionOptions, boolean quiet) throws Exception {
-        return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), loggedInUser.getLanguages(), regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
+        return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), loggedInUser.getUser().getEmail(), regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
                 userRegionOptions.getRegionOptionsForTransport(), quiet);
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
     public static ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(LoggedInUser loggedInUser, int reportId, String sheetName, String region, UserRegionOptions userRegionOptions, int rowInt, int colInt, int maxSize) throws Exception {
-        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId,sheetName, region);
+        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
         if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).size() > colInt
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getProvenanceDetailsForDisplay(databaseAccessToken, loggedInUser.getLanguages(), cellsAndHeadingsForDisplay.getRowHeadingsSource()
+            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getProvenanceDetailsForDisplay(databaseAccessToken, loggedInUser.getUser().getEmail(), cellsAndHeadingsForDisplay.getRowHeadingsSource()
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource(), userRegionOptions.getRegionOptionsForTransport()
-                    , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(),  maxSize);
+                    , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(), maxSize);
         }
         return new ProvenanceDetailsForDisplay(null, null); // maybe "not found"?
     }
@@ -148,7 +148,7 @@ public class SpreadsheetService {
     // some code duplication with above, a way to factor?
 
     public static String getDebugForCell(LoggedInUser loggedInUser, int reportId, String sheetName, String region, UserRegionOptions userRegionOptions, int rowInt, int colInt) throws Exception {
-        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId,sheetName, region);
+        final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
         if (cellsAndHeadingsForDisplay != null
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
                 && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
@@ -156,7 +156,7 @@ public class SpreadsheetService {
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getDebugForCell(databaseAccessToken, loggedInUser.getLanguages(), cellsAndHeadingsForDisplay.getRowHeadingsSource()
+            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getDebugForCell(databaseAccessToken, loggedInUser.getUser().getEmail(), cellsAndHeadingsForDisplay.getRowHeadingsSource()
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource(), userRegionOptions.getRegionOptionsForTransport()
                     , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol());
         }
@@ -168,11 +168,11 @@ public class SpreadsheetService {
         RMIClient.getServerInterface(databaseAccessToken.getServerIp()).persistDatabase(databaseAccessToken);
     }
 
-    public static String saveData(LoggedInUser loggedInUser, int reportId, String reportName, String sheetName,  String region) throws Exception {
-        return saveData(loggedInUser, reportId, reportName, sheetName, region,  true); // default to persist server side
+    public static String saveData(LoggedInUser loggedInUser, int reportId, String reportName, String sheetName, String region) throws Exception {
+        return saveData(loggedInUser, reportId, reportName, sheetName, region, true); // default to persist server side
     }
 
-    public static void sendEmail(String emailInfo){
+    public static void sendEmail(String emailInfo) {
         String[] emailParts = emailInfo.split("|");
         String emailAddress = emailParts[0];
         String emailSubject = emailParts[1];
@@ -183,15 +183,15 @@ public class SpreadsheetService {
 
     public static String saveData(LoggedInUser loggedInUser, int reportId, String reportName, String sheetName, String region, boolean persist) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
-        String emailInfo =cellsAndHeadingsForDisplay.getEmailInfo();
-        if (emailInfo != null){
-            sendEmail(emailInfo);
-        }
         if (cellsAndHeadingsForDisplay != null) {
+            String emailInfo = cellsAndHeadingsForDisplay.getEmailInfo();
+            if (emailInfo != null) {
+                sendEmail(emailInfo);
+            }
             // maybe go back to this later, currently it will be tripped up by a spreadsheet querying from more than one DB
             //if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, loggedInUser.getLanguages(), cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
+            final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
             if (result.startsWith("true")) { // then reset the cells and headings object to reflect the changed state
                 for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
                     for (CellForDisplay cell : row) {

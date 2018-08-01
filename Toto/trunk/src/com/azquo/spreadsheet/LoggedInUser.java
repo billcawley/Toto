@@ -6,7 +6,6 @@ import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.user.User;
 import com.azquo.dataimport.ImportService;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
@@ -43,8 +42,6 @@ public class LoggedInUser {
     // in theory the concantation of strings for keys could trip up, maybe make more robust? TODO
     private final Map<String, CellsAndHeadingsForDisplay> sentCellsMaps; // returned display data for each region
 
-    private final List<String> languages;
-
     private Database database;
     private OnlineReport onlineReport;
 
@@ -78,10 +75,6 @@ public class LoggedInUser {
         this.user = user;
         this.businessDirectory = businessDirectory;
         sentCellsMaps = new HashMap<>();
-        List<String> languages1 = new ArrayList<>(2);
-        languages1.add(user.getEmail());
-        languages1.add(Constants.DEFAULT_DISPLAY_NAME);
-        languages = Collections.unmodifiableList(languages1); // it shouldn't change!
         this.database = database;
         this.onlineReport = null;
         this.databaseServer = databaseServer;
@@ -156,10 +149,6 @@ public class LoggedInUser {
             }
         }
         return toReturn;
-    }
-
-    public List<String> getLanguages() {
-        return languages;
     }
 
     public User getUser() {

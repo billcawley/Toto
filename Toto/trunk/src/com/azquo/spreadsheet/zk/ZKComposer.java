@@ -521,7 +521,7 @@ public class ZKComposer extends SelectorComposer<Component> {
         listbox.appendChild(listhead);
         try {
             List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .getFilterListForQuery(loggedInUser.getDataAccessToken(), selectionList, selectionName, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
+                    .getFilterListForQuery(loggedInUser.getDataAccessToken(), selectionList, selectionName, loggedInUser.getUser().getEmail());
             Set<Listitem> selectedItems = new HashSet<>();
             int index = 0;
             for (FilterTriple filterTriple : filterOptions) {

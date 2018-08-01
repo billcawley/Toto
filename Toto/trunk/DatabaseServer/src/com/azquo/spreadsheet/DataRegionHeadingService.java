@@ -640,7 +640,7 @@ class DataRegionHeadingService {
     }
 
     // return headings as strings for display, I'm going to put blanks in here if null. Called after permuting/expanding
-    static List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, List<String> languagesSent) {
+    static List<List<String>> convertDataRegionHeadingsToStrings(List<List<DataRegionHeading>> source, String user) {
         // first I need to check max offsets for each column - need to check on whether the 2d arrays are the same orientation for row or column headings or not todo
         List<Integer> maxColOffsets = new ArrayList<>();
         for (List<DataRegionHeading> row : source) {
@@ -664,7 +664,7 @@ class DataRegionHeadingService {
 
         List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);//for displaying headings always look for DEFAULT_DISPLAY_NAME first - otherwise may look up the chain for local names
-        languages.addAll(languagesSent);
+        languages.add(user);
         List<List<String>> toReturn = new ArrayList<>(source.size());
         for (List<DataRegionHeading> row : source) {
             List<String> returnRow = new ArrayList<>(row.size() + extraColsFromOffsets);

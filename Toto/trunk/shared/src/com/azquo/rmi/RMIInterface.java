@@ -43,29 +43,29 @@ public interface RMIInterface extends Remote {
 
     String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String zipName, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException;
 
-    CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<String> languages, String regionName, int valueId, List<List<String>> rowHeadingsSource
+    CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws RemoteException;
 
     JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) throws RemoteException;
 
     List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
-    List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
+    List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser) throws RemoteException;
 
-    int getNameQueryCount(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
+    int getNameQueryCount(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException;
 
-    List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws RemoteException;
+    List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName) throws RemoteException;
 
     void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, List<Integer> childrenIds) throws RemoteException;
 
     void createFilterSet(DatabaseAccessToken databaseAccessToken, String setName, String userName, String query) throws RemoteException;
 
-    boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
+    boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException;
 
-    ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, List<String> languages, List<List<String>> rowHeadingsSource
+    ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, String user, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException;
 
-    String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<String> languages, List<List<String>> rowHeadingsSource
+    String getDebugForCell(DatabaseAccessToken databaseAccessToken, String user, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol) throws RemoteException;
 
     TreeNode getJstreeDataForOutputUsingNames(DatabaseAccessToken databaseAccessToken, Set<String> nameNames, int maxSize) throws RemoteException;
@@ -82,7 +82,7 @@ public interface RMIInterface extends Remote {
 
     void unloadDatabase(String persistenceName) throws RemoteException;
 
-    String saveData(DatabaseAccessToken databaseAccessToken, List<String> languages, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws RemoteException;
+    String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws RemoteException;
 
     void unlockData(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
@@ -106,7 +106,7 @@ public interface RMIInterface extends Remote {
 
     void deleteNode(DatabaseAccessToken dataAccessToken, int nameId) throws RemoteException;
 
-    void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws RemoteException;
+    void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, String user) throws RemoteException;
 
     String getNameAttribute(DatabaseAccessToken dataAccessToken, String nameString, String attribute) throws RemoteException;
 

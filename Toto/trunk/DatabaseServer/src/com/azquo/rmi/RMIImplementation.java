@@ -3,6 +3,7 @@ package com.azquo.rmi;
 import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.AzquoMemoryDB;
@@ -21,17 +22,17 @@ import com.azquo.spreadsheet.transport.RegionOptions;
 
 import java.rmi.RemoteException;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 20/05/15.
- *
+ * <p>
  * Proxying through. I wonder if there should be multiple implementations, much point?
- *
  */
 class RMIImplementation implements RMIInterface {
 
@@ -118,6 +119,7 @@ class RMIImplementation implements RMIInterface {
             throw new RemoteException("Database Server Exception", e);
         }
     }
+
     // import
     @Override
     public String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileNameWithoutSuffix, String zipName, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException {
@@ -127,12 +129,13 @@ class RMIImplementation implements RMIInterface {
             throw new RemoteException("Database Server Exception", e);
         }
     }
+
     // spreadsheet service
     @Override
-    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<String> languages,  String regionName, int valueId, List<List<String>> rowHeadingsSource
+    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws RemoteException {
         try {
-            return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, languages, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions, quiet);
+            return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, user, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions, quiet);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -141,7 +144,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) throws RemoteException {
         try {
-            return JSTreeService.getJsonChildren(databaseAccessToken,jsTreeId,nameId,parents,searchTerm,language, hundredMore);
+            return JSTreeService.getJsonChildren(databaseAccessToken, jsTreeId, nameId, parents, searchTerm, language, hundredMore);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -150,7 +153,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) throws RemoteException {
         try {
-            return JSTreeService.getNameDetailsJson(databaseAccessToken,nameId);
+            return JSTreeService.getNameDetailsJson(databaseAccessToken, nameId);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -159,7 +162,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public void editAttributes(DatabaseAccessToken databaseAccessToken, int nameId, Map<String, String> attributes) throws RemoteException {
         try {
-            JSTreeService.editAttributes(databaseAccessToken,nameId,attributes);
+            JSTreeService.editAttributes(databaseAccessToken, nameId, attributes);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -184,27 +187,29 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public List<String> getAttributeList(DatabaseAccessToken databaseAccessToken)throws RemoteException{
+    public List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws RemoteException {
         try {
             return JSTreeService.getAttributeList(databaseAccessToken);
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
-
     @Override
-    public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
+    public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser) throws RemoteException {
         try {
-            return UserChoiceService.getDropDownListForQuery(databaseAccessToken, query, languages);
+            return UserChoiceService.getDropDownListForQuery(databaseAccessToken, query, user, justUser);
         } catch (Exception e) {
             throw new RemoteException(e.getMessage(), e);
         }
     }
 
     @Override
-    public int getNameQueryCount(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
-        try{
+    public int getNameQueryCount(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException {
+        try {
+            List<String> languages = new ArrayList<>();
+            languages.add(user);
+            languages.add(Constants.DEFAULT_DISPLAY_NAME);
             return NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, true).size();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
@@ -212,9 +217,9 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws RemoteException {
+    public List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName) throws RemoteException {
         try {
-            return UserChoiceService.getFilterListForQuery(databaseAccessToken, query, filterName, userName, languages);
+            return UserChoiceService.getFilterListForQuery(databaseAccessToken, query, filterName, userName);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -239,9 +244,9 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException {
+    public boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException {
         try {
-            return UserChoiceService.resolveQuery(databaseAccessToken,query,languages);
+            return UserChoiceService.resolveQuery(databaseAccessToken, query, user);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -264,27 +269,27 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, List<String> languages, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
+    public ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, String user, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
         try {
-            return ProvenanceService.getDataRegionProvenance(databaseAccessToken, languages, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, maxSize);
+            return ProvenanceService.getDataRegionProvenance(databaseAccessToken, user, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<String> languages, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol) throws RemoteException {
+    public String getDebugForCell(DatabaseAccessToken databaseAccessToken, String user, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol) throws RemoteException {
         try {
-            return DSSpreadsheetService.getDebugForCell(databaseAccessToken, languages, rowHeadingsSource,colHeadingsSource,contextSource, regionOptionsForTransport,unsortedRow,unsortedCol);
+            return DSSpreadsheetService.getDebugForCell(databaseAccessToken, user, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public String saveData(DatabaseAccessToken databaseAccessToken, List<String> languages, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws RemoteException {
+    public String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws RemoteException {
         try {
-            return DSSpreadsheetService.saveData(databaseAccessToken, languages, cellsAndHeadingsForDisplay, user, reportName, context, persist);
+            return DSSpreadsheetService.saveData(databaseAccessToken, cellsAndHeadingsForDisplay, user, reportName, context, persist);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -338,14 +343,14 @@ class RMIImplementation implements RMIInterface {
 
     @Override
     public String getMemoryReport(boolean suggestGc) throws RemoteException {
-        if (suggestGc){
+        if (suggestGc) {
             // note : on Azquo recommended production JVM settings this will be ignored!
             System.gc();
         }
         StringBuilder toReturn = new StringBuilder();
         final Runtime runtime = Runtime.getRuntime();
         final int mb = 1024 * 1024;
-        if (suggestGc){
+        if (suggestGc) {
             toReturn.append("##### Garbage Collection Suggested #####<br/>");
         }
         NumberFormat nf = NumberFormat.getInstance();
@@ -410,16 +415,16 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws RemoteException {
+    public void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, String user) throws RemoteException {
         try {
-            DSAdminService.copyDatabase(source,target,nameList,readLanguages);
+            DSAdminService.copyDatabase(source, target, nameList, user);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute)throws RemoteException {
+    public String getNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute) throws RemoteException {
         try {
             return JSTreeService.getNameAttribute(databaseAccessToken, nameString, attribute);
         } catch (Exception e) {
@@ -428,7 +433,7 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public void setNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute, String attVal)throws RemoteException {
+    public void setNameAttribute(DatabaseAccessToken databaseAccessToken, String nameString, String attribute, String attVal) throws RemoteException {
         try {
             JSTreeService.setNameAttribute(databaseAccessToken, nameString, attribute, attVal);
         } catch (Exception e) {
@@ -439,7 +444,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public List<String> nameAutoComplete(DatabaseAccessToken dataAccessToken, String nameString, int limit) throws RemoteException {
         try {
-            return DSSpreadsheetService.nameAutoComplete(dataAccessToken,nameString,limit);
+            return DSSpreadsheetService.nameAutoComplete(dataAccessToken, nameString, limit);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -448,7 +453,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public boolean databaseWithNameExists(String nameCheck) throws RemoteException {
         try {
-        return DSAdminService.databaseWithNameExists(nameCheck);
+            return DSAdminService.databaseWithNameExists(nameCheck);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

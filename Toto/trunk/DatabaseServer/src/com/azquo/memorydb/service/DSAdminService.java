@@ -123,12 +123,12 @@ public class DSAdminService {
 
     // The remaining functions are related to database copying, It's more complex than a simple copy due to the ability to copy at a level
     // EFC note : I'm re-enabling this code but I'm not going to look too closely until it's being used again
-    public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, List<String> readLanguages) throws Exception {
+    public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, String user) throws Exception {
         AzquoMemoryDBConnection sourceConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(source);
         AzquoMemoryDBConnection targetConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(target);
         targetConnection.setProvenance("generic admin", "transfer from", source.getPersistenceName(), "");
         //can't use 'nameService.decodeString as this may have multiple values in each list
-        List<Set<Name>> namesToTransfer = NameQueryParser.decodeString(sourceConnection, nameList, readLanguages);
+        List<Set<Name>> namesToTransfer = NameQueryParser.decodeString(sourceConnection, nameList, user);
         //find the data to transfer
         Map<Set<Name>, Set<Value>> showValues = getSearchValues(namesToTransfer);
 

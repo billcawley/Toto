@@ -465,7 +465,7 @@ public class ReportRenderer {
                             if (choiceOptions.size() == 1 && choiceOptions.get(0).startsWith("Error")) {
                                 //THis should create the required bits server side . . .
                                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                                        .getFilterListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "` children", "az_" + filter, loggedInUser.getUser().getEmail(), loggedInUser.getLanguages());
+                                        .getFilterListForQuery(loggedInUser.getDataAccessToken(), "`" + filter + "` children", "az_" + filter, loggedInUser.getUser().getEmail());
                                 choiceOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`az_" + filter + "` children");
 
                             }
