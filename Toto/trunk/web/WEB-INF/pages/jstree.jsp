@@ -253,6 +253,7 @@
                 } else {
                     window.open("/api/Showdata?chosen=" + itemsChosen, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600");
                 }
+
             }else {
                 window.parent.$['inspectOverlay']().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
 

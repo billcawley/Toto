@@ -54,17 +54,20 @@ public class ExcelController {
 
     public static class DatabaseReport implements Serializable{
         public String sheetName;
-        public String reportName;
+        public String author;
+        public String untaggedReportName;
         public String database;
 
-        public DatabaseReport(String sheetName, String reportName, String database){
+        public DatabaseReport(String sheetName, String author, String untaggedReportName, String database){
             this.sheetName = sheetName;
-            this.reportName = reportName;
+            this.author = author;
+            this.untaggedReportName = untaggedReportName;
             this.database = database;
         }
 
-        public String getSheetName(){return this.sheetName;};
-        public String getReportName(){return this.reportName;};
+        public String getSheetName(){return this.sheetName;}
+        public String getAuthor() {return this.author;}
+        public String getUntaggedReportName(){return this.untaggedReportName;}
         public String getDatabase(){return this.database;}
      }
 
@@ -153,7 +156,7 @@ public class ExcelController {
 
             }
             if (loggedInUser == null) {
-                loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, password, false);
+                loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, java.net.URLDecoder.decode(password), false);
                 if (loggedInUser == null) {
                     System.out.println("login attempt by " + logon + " password " + password);
                     return jsonError("incorrect login details");
@@ -188,6 +191,7 @@ public class ExcelController {
                 LoginService.switchDatabase(loggedInUser,database);
             }
             if (reportName!=null && reportName.length() > 0){
+                reportName = java.net.URLDecoder.decode(reportName);
                 loggedInUser.setOnlineReport(OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(),reportName.trim()));
             }
             if (op.equals("admin")){
@@ -400,14 +404,14 @@ public class ExcelController {
                 if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()){
                     List<OnlineReport>reports = AdminService.getReportList(loggedInUser);
                     for (OnlineReport or:reports){
-                        databaseReports.add(new DatabaseReport(or.getDatabase()+ " :   "+or.getReportName(), or.getReportName(),or.getDatabase()));
+                        databaseReports.add(new DatabaseReport(or.getDatabase()+ " :   "+or.getUntaggedReportName(), or.getAuthor(), or.getReportName(),or.getDatabase()));
                     }
 
                 }else{
                     Map<String,TypedPair<OnlineReport, Database>> permitted = loggedInUser.getPermissionsFromReport();
                     for (String st:permitted.keySet()){
                         TypedPair<OnlineReport,Database> tp = permitted.get(st);
-                        databaseReports.add(new DatabaseReport(st, tp.getFirst().getReportName(), tp.getSecond().getName()));
+                        databaseReports.add(new DatabaseReport(st, tp.getFirst().getAuthor(),tp.getFirst().getUntaggedReportName(), tp.getSecond().getName()));
                     }
                 }
                 return jacksonMapper.writeValueAsString(databaseReports);

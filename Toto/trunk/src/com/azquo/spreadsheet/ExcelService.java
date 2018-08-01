@@ -79,8 +79,10 @@ public class ExcelService {
                         yOffset++;
                     }
                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()).setStringValue("Template");
-                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+1).setStringValue(or.getDatabase() + " :   " + or.getReportName());
-                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+2).setStringValue(or.getExplanation().trim());
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+1).setStringValue(or.getAuthor());
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+2).setStringValue(or.getDatabase());
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+3).setStringValue(or.getReportName());
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+4).setStringValue(or.getExplanation().trim());
                     //sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + 1).setStringValue(or.getReportName());
                     yOffset++;
                 }
