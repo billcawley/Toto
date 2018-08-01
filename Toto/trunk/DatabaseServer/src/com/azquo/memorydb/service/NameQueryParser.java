@@ -49,7 +49,7 @@ public class NameQueryParser {
 
     public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
         parseQueryCount.incrementAndGet();
-        return parseQuery(azquoMemoryDBConnection, setFormula, azquoMemoryDBConnection.getLanguages(), null, false);
+        return parseQuery(azquoMemoryDBConnection, setFormula, Constants.DEFAULT_DISPLAY_NAME_AS_LIST, null, false);
     }
 
     private static AtomicInteger parseQuery2Count = new AtomicInteger(0);

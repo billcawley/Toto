@@ -122,10 +122,10 @@ public class SpreadsheetService {
     // function that can be called by the front end to deliver the data and headings
     // this is sort of a proxy but the number of parameters changes a fair bit, I'll leave it for the mo
 
-    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
+    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(LoggedInUser loggedInUser, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , UserRegionOptions userRegionOptions, boolean quiet) throws Exception {
-        return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
+        return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), loggedInUser.getLanguages(), regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
                 userRegionOptions.getRegionOptionsForTransport(), quiet);
     }
 
@@ -138,7 +138,7 @@ public class SpreadsheetService {
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getProvenanceDetailsForDisplay(databaseAccessToken, cellsAndHeadingsForDisplay.getRowHeadingsSource()
+            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getProvenanceDetailsForDisplay(databaseAccessToken, loggedInUser.getLanguages(), cellsAndHeadingsForDisplay.getRowHeadingsSource()
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource(), userRegionOptions.getRegionOptionsForTransport()
                     , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol(),  maxSize);
         }
@@ -156,7 +156,7 @@ public class SpreadsheetService {
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {
             final CellForDisplay cellForDisplay = cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt);
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getDebugForCell(databaseAccessToken, cellsAndHeadingsForDisplay.getRowHeadingsSource()
+            return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getDebugForCell(databaseAccessToken, loggedInUser.getLanguages(), cellsAndHeadingsForDisplay.getRowHeadingsSource()
                     , cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource(), userRegionOptions.getRegionOptionsForTransport()
                     , cellForDisplay.getUnsortedRow(), cellForDisplay.getUnsortedCol());
         }
@@ -191,7 +191,7 @@ public class SpreadsheetService {
             // maybe go back to this later, currently it will be tripped up by a spreadsheet querying from more than one DB
             //if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-            final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
+            final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, loggedInUser.getLanguages(), cellsAndHeadingsForDisplay, loggedInUser.getUser().getName(), reportName, loggedInUser.getContext(), persist);
             if (result.startsWith("true")) { // then reset the cells and headings object to reflect the changed state
                 for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
                     for (CellForDisplay cell : row) {

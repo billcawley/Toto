@@ -17,11 +17,10 @@ import java.util.Set;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 20/05/15.
- *
+ * <p>
  * I decided to use RMI to communicate between the servers. I simply want communication between two JVMs I have control over, it seems to work fine.
- *
  */
 public interface RMIInterface extends Remote {
     String serviceName = "AzquoRMI";
@@ -42,9 +41,9 @@ public interface RMIInterface extends Remote {
 
     String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws RemoteException;
 
-    String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String zipName, List<String> languages, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException;
+    String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String zipName, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException;
 
-    CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
+    CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<String> languages, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws RemoteException;
 
     JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) throws RemoteException;
@@ -53,7 +52,7 @@ public interface RMIInterface extends Remote {
 
     List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 
-    public int getNameQueryCount(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
+    int getNameQueryCount(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 
     List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName, List<String> languages) throws RemoteException;
 
@@ -63,10 +62,10 @@ public interface RMIInterface extends Remote {
 
     boolean resolveQuery(DatabaseAccessToken databaseAccessToken, String query, List<String> languages) throws RemoteException;
 
-    ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+    ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, List<String> languages, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException;
 
-    String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+    String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<String> languages, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol) throws RemoteException;
 
     TreeNode getJstreeDataForOutputUsingNames(DatabaseAccessToken databaseAccessToken, Set<String> nameNames, int maxSize) throws RemoteException;
@@ -83,7 +82,7 @@ public interface RMIInterface extends Remote {
 
     void unloadDatabase(String persistenceName) throws RemoteException;
 
-    String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws RemoteException;
+    String saveData(DatabaseAccessToken databaseAccessToken, List<String> languages, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws RemoteException;
 
     void unlockData(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 

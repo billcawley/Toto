@@ -137,10 +137,8 @@ public class ManageDatabasesController {
                         new Thread(() -> {
                             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
                             try {
-                                List<String> languages = new ArrayList<>(loggedInUser.getLanguages());
-                                languages.remove(loggedInUser.getUser().getEmail());
                                 session.setAttribute("importResult",
-                                        ImportService.importTheFile(loggedInUser, ur.getFileName(), ur.getTempPath(), languages, false, false, true)
+                                        ImportService.importTheFile(loggedInUser, ur.getFileName(), ur.getTempPath(), false, false, true)
                                 );
                             } catch (Exception e) {
                                 session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
@@ -281,7 +279,7 @@ public class ManageDatabasesController {
                                 List<String> languages = new ArrayList<>(loggedInUser.getLanguages());
                                 languages.remove(loggedInUser.getUser().getEmail());
                                 session.setAttribute("importResult",
-                                        ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), languages, false).replace("\n","<br/>")
+                                        ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), false).replace("\n","<br/>")
                                 );
                             } catch (Exception e) {
                                 session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));

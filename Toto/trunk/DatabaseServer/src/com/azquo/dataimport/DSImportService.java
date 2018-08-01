@@ -2,6 +2,7 @@ package com.azquo.dataimport;
 
 import com.azquo.ThreadPools;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
@@ -23,7 +24,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
+ * Copyright (C) 2018 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  * <p>
  * Created by Edd on 20/05/15.
  * <p>
@@ -59,23 +60,22 @@ public class DSImportService {
 
     // EFC note while trying to understand new code - zip name is as it says, the name of the zip file (excluding the extension)
     // if the file was originally part of a zip file. Whether this should be used is another matter . . .
-    public static String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String zipName, List<String> languages, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
+    // further note - languages was always the same, just DEFAULT_DISPLAY_NAME, hence zapping it
+    public static String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String zipName, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         System.out.println("Reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an XLSX import, a different thing from a data entry area.
-        String auditTrail = "imported";
-        if (fileName.contains("duplicates")) auditTrail = "imported with duplicates";
-        azquoMemoryDBConnection.setProvenance(user, auditTrail, fileName, "");
+        azquoMemoryDBConnection.setProvenance(user, fileName.contains("duplicates") ? "imported with duplicates" : "imported", fileName, "");
         if (fileName.contains(":")) {
             fileName = fileName.substring(fileName.indexOf(":") + 1);//remove the workbook name.  sent only for the provenance.
         }
-        return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, zipName,languages, persistAfter, isSpreadsheet, new AtomicInteger());
+        return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, zipName, persistAfter, isSpreadsheet, new AtomicInteger());
     }
 
     // Other entry point into the class functionality, called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     // I wonder if the valuesModifiedCounter is a bit hacky, will maybe revisit this later
     // EFC - parameters going up, should a configuration object be passed?
-    public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, List<String> languages, boolean persistAfter, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
+    public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, boolean persistAfter, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
         // of course this doesn't currently stop the opposite, a persist being started while an import is going on.
         azquoMemoryDBConnection.lockTest();
@@ -83,12 +83,12 @@ public class DSImportService {
         String toReturn;
         if (fileName.toLowerCase().startsWith("sets")) { // typically from a sheet with that name in a book
             // not currently paying attention to isSpreadsheet - only possible issue is the replacing of \\\n with \n required based off writeCell in ImportFileUtilities
-            toReturn = setsImport(azquoMemoryDBConnection, filePath, fileName, languages);
+            toReturn = setsImport(azquoMemoryDBConnection, filePath, fileName);
         } else {
-            toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileName, zipName, languages, isSpreadsheet, valuesModifiedCounter);
+            toReturn = valuesImport(azquoMemoryDBConnection, filePath, fileName, zipName, isSpreadsheet, valuesModifiedCounter);
             //now look to see if there's a need to execute after import
             // find interpreter being called again - a way not to do this?
-            Name importInterpreter = findInterpreter(azquoMemoryDBConnection, fileName, languages);
+            Name importInterpreter = findInterpreter(azquoMemoryDBConnection, fileName, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
             if (importInterpreter != null) {
                 String execute = importInterpreter.getAttribute("EXECUTE");
                 if (execute != null && execute.length() > 0) {
@@ -105,10 +105,11 @@ public class DSImportService {
 
     // typically used to create the basic name structure, an Excel set up workbook with many sheets would have a sets sheet
 
-    private static String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String filePath, String fileName, List<String> languages) throws Exception {
+    private static String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String filePath, String fileName) throws Exception {
         int lines;
         try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath))) {
             // the filename can override the attribute for name creation/search. Seems a bit hacky but can make sense if the set up is a series of workbooks.
+            List<String> languages = Constants.DEFAULT_DISPLAY_NAME_AS_LIST;
             if (fileName.length() > 4 && fileName.charAt(4) == '-') { // see if you can derive a language from the file name
                 String sheetLanguage = fileName.substring(5);
                 if (sheetLanguage.contains(".")) { // knock off the suffix if it's there. Used to be removed client side, makes more sense here
@@ -147,7 +148,7 @@ public class DSImportService {
     This function itself is relatively simple but the functions it calls getHeadersWithIteratorAndBatchSize and BatchImporter contain some complex logic.
     */
 
-    private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, List<String> origLanguages, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
+    private static String valuesImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         try {
             long track = System.currentTimeMillis();
             /* A fair amount is going on in here checking various upload options and parsing the headers. It delivers the
@@ -158,14 +159,13 @@ public class DSImportService {
             Not sure it could get here with anything other than one but not 100% on that (todo?)
 
             New Ed Broking logic wants to do a combination of lookup initially based on the first half of the zip name then using the first half of the file name
-            in language as a way of "versioning" the headers. The second half of the zip name is held to the side to perhaps be repalced in headers later too.
+            in language as a way of "versioning" the headers. The second half of the zip name is held to the side to perhaps be replaced in headers later too.
             */
-            List<String> languages = new ArrayList<>();
-            if (zipName != null && origLanguages.size()==1) { // there's a check for language sizes being 1 so I guess they can't be in places.
-                // Typically languages are two, the user email and default with the user typically being stripped out before getting here so you're just left with default . . .
+            List<String> languages = Constants.DEFAULT_DISPLAY_NAME_AS_LIST;
+            if (zipName != null) {
+                languages = new ArrayList<>();
                 languages.add(fileName.substring(0, fileName.indexOf(" ")));
             }
-            languages.addAll(origLanguages);
             HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize = getHeadersWithIteratorAndBatchSize(azquoMemoryDBConnection, fileName, zipName, isSpreadsheet, filePath, languages);
             if (headingsWithIteratorAndBatchSize == null) {
                 return fileName + " No data that can be read"; //most likely cause of it being null

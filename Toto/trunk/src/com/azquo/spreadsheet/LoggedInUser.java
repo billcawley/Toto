@@ -162,10 +162,6 @@ public class LoggedInUser {
         return languages;
     }
 
-    public List<String> getLanguagesWithoutUserName() {
-        return languages;
-    }
-
     public User getUser() {
         return user;
     }
@@ -208,7 +204,7 @@ public class LoggedInUser {
     }
 
     public DatabaseAccessToken getDataAccessToken() {
-        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), database.getPersistenceName(), languages);
+        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), database.getPersistenceName());
     }
 
     public String getBusinessDirectory() {

@@ -47,12 +47,13 @@ public final class ImportService {
     public static final String databaseSetupSheetsDir = "/databasesetupsheets/";
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> languages, boolean isData) throws Exception {
-        return importTheFile(loggedInUser, fileName, filePath, languages, isData, false, false);
+    // EFC - 01/08/2018
+    public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, boolean isData) throws Exception {
+        return importTheFile(loggedInUser, fileName, filePath, isData, false, false);
     }
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, List<String> languages, boolean isData, boolean setup, boolean forceReportUpload) throws Exception { // setup just to flag it
+    public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, boolean isData, boolean setup, boolean forceReportUpload) throws Exception { // setup just to flag it
         InputStream uploadFile = new FileInputStream(filePath);
         // todo : address provenance on an import
         if (loggedInUser.getDatabase() == null) {
@@ -89,14 +90,14 @@ public final class ImportService {
             while (fileIterator.hasNext()) {
                 Path p = fileIterator.next();
                 if (fileIterator.hasNext()) {
-                    sb.append(readBookOrFile(loggedInUser, p.getFileName().toString(), zipName, p.toString(), languages, false, isData, false));
+                    sb.append(readBookOrFile(loggedInUser, p.getFileName().toString(), zipName, p.toString(), false, isData, false));
                 } else {
-                    sb.append(fileName + ": " + readBookOrFile(loggedInUser, p.getFileName().toString(), zipName, p.toString(), languages, true, isData, false)); // persist on the last one
+                    sb.append(fileName + ": " + readBookOrFile(loggedInUser, p.getFileName().toString(), zipName, p.toString(), true, isData, false)); // persist on the last one
                 }
             }
             toReturn = sb.toString();
         } else { // vanilla
-            toReturn = readBookOrFile(loggedInUser, fileName, null, tempFile, languages, true, isData, forceReportUpload);
+            toReturn = readBookOrFile(loggedInUser, fileName, null, tempFile, true, isData, forceReportUpload);
         }
         // hacky way to get the report name so it can be seen on the list. I wonder if this should be removed . . .
         String reportName = null;
@@ -123,7 +124,7 @@ public final class ImportService {
         return toReturn;
     }
 
-    private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String zipName, String filePath, List<String> attributeNames, boolean persistAfter, boolean isData, boolean forceReportUpload) throws Exception {
+    private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String zipName, String filePath, boolean persistAfter, boolean isData, boolean forceReportUpload) throws Exception {
         if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(filePath), "Report name");
             List<String> notAllowed = new ArrayList<>();
@@ -254,9 +255,9 @@ public final class ImportService {
             }
             return "Report schedules file uploaded"; // I hope that's what it is looking for.
         } else if (fileName.contains(".xls")) { // normal. I'm not entirely sure the code for users etc above should be in this file, maybe a different importer?
-            return readBook(loggedInUser, fileName, zipName, filePath, attributeNames, persistAfter, isData, forceReportUpload);
+            return readBook(loggedInUser, fileName, zipName, filePath, persistAfter, isData, forceReportUpload);
         } else {
-            return readPreparedFile(loggedInUser, filePath, fileName, zipName, attributeNames, persistAfter, false);
+            return readPreparedFile(loggedInUser, filePath, fileName, zipName, persistAfter, false);
         }
     }
 
@@ -287,7 +288,7 @@ public final class ImportService {
 
     public static final String UPLOADEDBYANOTHERUSER = "A report with that name has been uploaded by another user.";
 
-    private static String readBook(LoggedInUser loggedInUser, final String fileName, final String zipName, final String tempPath, List<String> attributeNames, boolean persistAfter, boolean isData, boolean forceReportUpload) throws Exception {
+    private static String readBook(LoggedInUser loggedInUser, final String fileName, final String zipName, final String tempPath, boolean persistAfter, boolean isData, boolean forceReportUpload) throws Exception {
         Book book = null;
         try {
             book = Importers.getImporter().imports(new File(tempPath), "Imported");
@@ -345,7 +346,7 @@ public final class ImportService {
         Map<String, String> knownValues = new HashMap<String, String>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            toReturn.append(readSheet(loggedInUser, fileName, zipName, sheet, tempPath, attributeNames, knownValues, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
+            toReturn.append(readSheet(loggedInUser, fileName, zipName, sheet, tempPath, knownValues, sheetNo == book.getNumberOfSheets() - 1 && persistAfter)); // that last conditional means persist on the last one through (if we've been told to persist)
             toReturn.append("\n");
         }
         return toReturn.toString();
@@ -402,23 +403,12 @@ public final class ImportService {
     }
 
 
-    private static String readSheet(LoggedInUser loggedInUser, String fileName, String zipName, Sheet sheet, final String tempFileName, List<String> attributeNames, Map<String, String> knownValues, boolean persistAfter) throws Exception {
+    private static String readSheet(LoggedInUser loggedInUser, String fileName, String zipName, Sheet sheet, final String tempFileName, Map<String, String> knownValues, boolean persistAfter) throws Exception {
         boolean transpose = false;
         String sheetName = sheet.getInternalSheet().getSheetName();
         if (sheetName.toLowerCase().contains("transpose")) {
             transpose = true;
         }
-        List<String> languages = new ArrayList<>();
-        if (zipName != null) {
-
-            int blankPos = fileName.indexOf(" ");
-            if (blankPos > 0) {//set up a second language
-                languages.add(fileName.substring(0, blankPos));
-
-            }
-
-        }
-        languages.addAll(attributeNames);
         String toReturn = "";
         try {
             List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(loggedInUser.getDatabase().getId());
@@ -464,7 +454,7 @@ public final class ImportService {
                                     csvW.close();
 //                                fos.close();
                                     try {
-                                        toReturn += fileName + ": " + readPreparedFile(loggedInUser, newTempFile.toString(), fileName + ":" + sheetName, zipName, languages, persistAfter, true);
+                                        toReturn += fileName + ": " + readPreparedFile(loggedInUser, newTempFile.toString(), fileName + ":" + sheetName, zipName, persistAfter, true);
                                     } catch (Exception e) {
                                         throw e;
                                     }
@@ -489,7 +479,7 @@ public final class ImportService {
             ImportFileUtilities.convertRangeToCSV(sheet, csvW, transpose);
             csvW.close();
             fos.close();
-            return fileName + ": " + readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, zipName, languages, persistAfter, true);
+            return fileName + ": " + readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, zipName, persistAfter, true);
         } catch (Exception e) {
             return e.getMessage();
         }
@@ -498,14 +488,14 @@ public final class ImportService {
 
     private static String LOCALIP = "127.0.0.1";
 
-    private static String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileName, String zipName, List<String> languages, boolean persistAfter, boolean isSpreadsheet) throws Exception {
+    private static String readPreparedFile(LoggedInUser loggedInUser, String filePath, String fileName, String zipName, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         // right - here we're going to have to move the file if the DB server is not local.
         if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is hte same the question is whether the path refers to this machine or another
             filePath = ImportFileUtilities.copyFileToDatabaseServer(new FileInputStream(filePath), databaseServer.getSftpUrl());
         }
-        return RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileName, zipName, languages, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
+        return RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileName, zipName, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
     }
 
     public static String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName) throws Exception {

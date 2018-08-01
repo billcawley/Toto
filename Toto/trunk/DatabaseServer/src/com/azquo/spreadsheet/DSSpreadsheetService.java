@@ -51,13 +51,14 @@ public class DSSpreadsheetService {
     /* function that can be called by the front end to deliver the data and headings
     Region name as defined in the Excel. valueId if it's to be the default selected cell. Row and Column headings and context as parsed straight off the sheet (2d array of cells).
       Filtercount is to remove sets of blank rows, what size chunks we look for. Highlightdays means highlight data where the provenance is less than x days old.
+      todo - factor parameters into a passed object?
      */
 
-    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
+    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<String> languages, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = AzquoCellService.getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
-                , regionOptions, databaseAccessToken.getLanguages(), valueId, quiet);
+                , regionOptions, languages, valueId, quiet);
         if (data.size() == 0) {
             //when contextSource = null there is an error on attempting to save
             return new CellsAndHeadingsForDisplay(regionName, colHeadingsSource, null, null, null, new ArrayList<>(), rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
@@ -164,18 +165,18 @@ public class DSSpreadsheetService {
             }
             index++;
         }
-        return new CellsAndHeadingsForDisplay(regionName, DataRegionHeadingService.convertDataRegionHeadingsToStrings(columnHeadingsAsArray, databaseAccessToken.getLanguages())
-                , DataRegionHeadingService.convertDataRegionHeadingsToStrings(rowHeadingsAsArray, databaseAccessToken.getLanguages()), zeroSavedColumnIndexes, zeroSavedRowIndexes, displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, lockCheckResultString);
+        return new CellsAndHeadingsForDisplay(regionName, DataRegionHeadingService.convertDataRegionHeadingsToStrings(columnHeadingsAsArray, languages)
+                , DataRegionHeadingService.convertDataRegionHeadingsToStrings(rowHeadingsAsArray, languages), zeroSavedColumnIndexes, zeroSavedRowIndexes, displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, lockCheckResultString);
     }
 
 
     // like above to find the relevant cell BUT in this case we want as much detail about how the cell was made. I'm just going to return a string here
-    public static String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource
+    public static String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<String> languages, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol) throws Exception {
         int maxDebugLength = 2_000_000; // two million, a bit arbritrary for the moment
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         StringBuilder debugInfo = new StringBuilder();
-        getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, databaseAccessToken.getLanguages(), debugInfo);
+        getSingleCellFromRegion(azquoMemoryDBConnection, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, languages, debugInfo);
         if (debugInfo.length() > maxDebugLength) {
             return debugInfo.substring(0, maxDebugLength);
         } else {
@@ -230,7 +231,7 @@ public class DSSpreadsheetService {
         bw.flush();
         bw.close();
         AtomicInteger valuesModifiedCounter = new AtomicInteger();
-        DSImportService.readPreparedFile(azquoMemoryDBConnection, tempPath, "csv", null,Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), true, true, valuesModifiedCounter);
+        DSImportService.readPreparedFile(azquoMemoryDBConnection, tempPath, "csv", null, true, true, valuesModifiedCounter);
         if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
         }
@@ -251,7 +252,7 @@ public class DSSpreadsheetService {
 
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
     // could I derive context from cells and headings for display? Also region. Worth considering . . .
-    public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
+    public static String saveData(DatabaseAccessToken databaseAccessToken, List<String> languages, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         boolean changedAtAll = false;
         for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
@@ -294,7 +295,7 @@ public class DSSpreadsheetService {
             // new logic - get this out here and use it for the cells. Means the region is re resolved regardless but we're getting bottlenecks resolving every cell in this
             // function, executes are slowing it down
             List<List<AzquoCell>> currentData = AzquoCellService.getDataRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getRowHeadingsSource(), cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
-                    , cellsAndHeadingsForDisplay.getOptions(), databaseAccessToken.getLanguages(), 0, true);
+                    , cellsAndHeadingsForDisplay.getOptions(), languages, 0, true);
             if (modifiedInTheMeanTime) { // then we need to compare data as sent to what it is now before trying to save - assuming this is not relevant to the import style above
                 List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
                 if (currentData.size() != sentData.size()&& redundantNames==null) {// overlapping editable ranges change size if there are redundant names

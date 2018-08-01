@@ -17,18 +17,12 @@ public class DatabaseAccessToken implements Serializable {
     private final String userId; // ideally the database would know of no such things but it needs to for locking values. Could be email or name or an id, the DB doesn't care as long as it is unique
     private final String serverIp; // not strictly part of the access token but I think it should probably be in here
     private final String persistenceName;
-    //private final String readPermissions;
-    //private final String writePermissions;
-    private final List<String> languages;
 
-    public DatabaseAccessToken(String userSessionId, String userId, String serverIp, String persistenceName, List<String> languages) {
+    public DatabaseAccessToken(String userSessionId, String userId, String serverIp, String persistenceName) {
         this.userSessionId = userSessionId;
         this.userId = userId;
         this.serverIp = serverIp;
         this.persistenceName = persistenceName;
-        //this.readPermissions = readPermissions;
-        //this.writePermissions = writePermissions;
-        this.languages = languages;
     }
 
     public String getUserSessionId() {
@@ -46,18 +40,6 @@ public class DatabaseAccessToken implements Serializable {
     public String getPersistenceName() {
         return persistenceName;
     }
-/*
-    String getReadPermissions() {
-        return readPermissions;
-    }
-
-    String getWritePermissions() {
-        return writePermissions;
-    }
-*/
-    public List<String> getLanguages() {
-        return languages;
-    }
 
     @Override
     public String toString() {
@@ -66,9 +48,6 @@ public class DatabaseAccessToken implements Serializable {
                 ", userId='" + userId + '\'' +
                 ", serverIp='" + serverIp + '\'' +
                 ", persistenceName='" + persistenceName + '\'' +
-                //", readPermissions='" + readPermissions + '\'' +
-                //", writePermissions='" + writePermissions + '\'' +
-                ", languages=" + languages +
                 '}';
     }
 }

@@ -120,19 +120,19 @@ class RMIImplementation implements RMIInterface {
     }
     // import
     @Override
-    public String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileNameWithoutSuffix, String zipName, List<String> languages, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException {
+    public String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileNameWithoutSuffix, String zipName, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException {
         try {
-            return DSImportService.readPreparedFile(databaseAccessToken, filePath, fileNameWithoutSuffix, zipName, languages, user, persistAfter, isSpreadsheet);
+            return DSImportService.readPreparedFile(databaseAccessToken, filePath, fileNameWithoutSuffix, zipName, user, persistAfter, isSpreadsheet);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
     // spreadsheet service
     @Override
-    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String regionName, int valueId, List<List<String>> rowHeadingsSource
+    public CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, List<String> languages,  String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws RemoteException {
         try {
-            return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions, quiet);
+            return DSSpreadsheetService.getCellsAndHeadingsForDisplay(databaseAccessToken, languages, regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource, regionOptions, quiet);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -264,27 +264,27 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
+    public ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(DatabaseAccessToken databaseAccessToken, List<String> languages, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, int maxSize) throws RemoteException {
         try {
-            return ProvenanceService.getDataRegionProvenance(databaseAccessToken, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, maxSize);
+            return ProvenanceService.getDataRegionProvenance(databaseAccessToken, languages, rowHeadingsSource, colHeadingsSource, contextSource, regionOptionsForTransport, unsortedRow, unsortedCol, maxSize);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol) throws RemoteException {
+    public String getDebugForCell(DatabaseAccessToken databaseAccessToken, List<String> languages, List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol) throws RemoteException {
         try {
-            return DSSpreadsheetService.getDebugForCell(databaseAccessToken,rowHeadingsSource,colHeadingsSource,contextSource, regionOptionsForTransport,unsortedRow,unsortedCol);
+            return DSSpreadsheetService.getDebugForCell(databaseAccessToken, languages, rowHeadingsSource,colHeadingsSource,contextSource, regionOptionsForTransport,unsortedRow,unsortedCol);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
 
     @Override
-    public String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws RemoteException {
+    public String saveData(DatabaseAccessToken databaseAccessToken, List<String> languages, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws RemoteException {
         try {
-            return DSSpreadsheetService.saveData(databaseAccessToken, cellsAndHeadingsForDisplay, user, reportName, context, persist);
+            return DSSpreadsheetService.saveData(databaseAccessToken, languages, cellsAndHeadingsForDisplay, user, reportName, context, persist);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

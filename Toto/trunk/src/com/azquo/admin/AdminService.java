@@ -489,11 +489,9 @@ this may now not work at all, perhaps delete?
 
 //        setupFile.getFileName().toString();
         if (setupFile != null && setupFile.getFileName() != null){
-            List<String> languages = loggedInUser.getLanguages();
-            languages.remove(loggedInUser.getUser().getEmail());
             ImportService.importTheFile(loggedInUser,
                     setupFile.getFileName() + ""
-                    , setupFile.toString(), languages, false);
+                    , setupFile.toString(), false);
         }
     }
 

@@ -28,8 +28,6 @@ public class AzquoMemoryDBConnection {
 
     private final AzquoMemoryDBIndex azquoMemoryDBIndex; // just shorthand - always set to the memoryDB's index
 
-    private final List<String> languages;
-
     //private final List<Set<Name>> readPermissions;
 
    // private final List<Set<Name>> writePermissions;
@@ -42,7 +40,7 @@ public class AzquoMemoryDBConnection {
     // A bit involved but it makes this object immutable, think that's worth it - note
     // new logic here : we'll say that top test that have no permissions are added as allowed - if someone has added a department for example they should still have access to all dates
 
-    private AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, DatabaseAccessToken databaseAccessToken, List<String> languages, StringBuffer userLog) throws Exception {
+    private AzquoMemoryDBConnection(AzquoMemoryDB azquoMemoryDB, DatabaseAccessToken databaseAccessToken, StringBuffer userLog) throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
         this.azquoMemoryDBIndex = azquoMemoryDB.getIndex();
         /*
@@ -60,8 +58,6 @@ public class AzquoMemoryDBConnection {
         }
         */
         this.userLog = userLog;
-
-        this.languages = databaseAccessToken.getLanguages();
     }
 
     // todo, clean this up when sessions are expired, maybe a last accessed time?
@@ -75,7 +71,7 @@ public class AzquoMemoryDBConnection {
         StringBuffer sessionLog = sessionLogs.computeIfAbsent(databaseAccessToken.getUserSessionId(), t -> new StringBuffer()); // computeIfAbsent is such a wonderful thread safe call
         AzquoMemoryDB memoryDB = AzquoMemoryDB.getAzquoMemoryDB(databaseAccessToken.getPersistenceName(), sessionLog);
         // we can't do the lookup for permissions out here as it requires the connection, hence pass things through
-        return new AzquoMemoryDBConnection(memoryDB, databaseAccessToken, databaseAccessToken.getLanguages(), sessionLog);
+        return new AzquoMemoryDBConnection(memoryDB, databaseAccessToken, sessionLog);
     }
 
     public static String getSessionLog(DatabaseAccessToken databaseAccessToken) throws Exception {
@@ -227,8 +223,6 @@ public class AzquoMemoryDBConnection {
             throw new Exception("Execution interrupted by user");
         }
     }
-
-    public List<String>getLanguages(){ return languages;}
 
     public void addToUserLogNoException(String toAdd, boolean newline) {
         if (newline) {
