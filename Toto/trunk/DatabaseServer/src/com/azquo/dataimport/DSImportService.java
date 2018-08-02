@@ -154,10 +154,6 @@ public class DSImportService {
             /* A fair amount is going on in here checking various upload options and parsing the headers. It delivers the
             parsed headings, the iterator for the data lines and how many lines should be processed by each task in the thread pool
 
-            Languages note : Azquo tends to have the user email then DEFAULT_DISPLAY_NAME as the language list but the user name is knocked off before importing.
-
-            Not sure it could get here with anything other than one but not 100% on that (todo?)
-
             New Ed Broking logic wants to do a combination of lookup initially based on the first half of the zip name then using the first half of the file name
             in language as a way of "versioning" the headers. The second half of the zip name is held to the side to perhaps be replaced in headers later too.
             */
@@ -165,6 +161,7 @@ public class DSImportService {
             if (zipName != null) {
                 languages = new ArrayList<>();
                 languages.add(fileName.substring(0, fileName.indexOf(" ")));
+                languages.add(Constants.DEFAULT_DISPLAY_NAME);
             }
             HeadingsWithIteratorAndBatchSize headingsWithIteratorAndBatchSize = getHeadersWithIteratorAndBatchSize(azquoMemoryDBConnection, fileName, zipName, isSpreadsheet, filePath, languages);
             if (headingsWithIteratorAndBatchSize == null) {
