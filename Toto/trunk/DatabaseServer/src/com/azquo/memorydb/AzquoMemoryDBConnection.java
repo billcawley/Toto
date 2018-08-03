@@ -1,9 +1,6 @@
 package com.azquo.memorydb;
 
-import com.azquo.memorydb.core.AzquoMemoryDB;
-import com.azquo.memorydb.core.AzquoMemoryDBIndex;
-import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.Provenance;
+import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 //import org.apache.log4j.Logger;
@@ -122,19 +119,19 @@ public class AzquoMemoryDBConnection {
         // not sure how latest and method cen get set as null but best to be careful with it
         if (latest != null && latest.getUser().equals(user)) {
             //check to remove a timestamp
-            int xlsPos = name.indexOf(".xls");
-            if (xlsPos > 0){
-                int underscorePos = name.substring(0,xlsPos).lastIndexOf("_");
-                if (xlsPos - underscorePos > 14){
+            int dotPos = name.lastIndexOf(".");
+            if (dotPos > 0){
+                int underscorePos = name.substring(0,dotPos).lastIndexOf("_");
+                if (dotPos - underscorePos > 14){
                     boolean istimestamp = true;
-                    for (int i=underscorePos + 1;i<xlsPos;i++){
+                    for (int i=underscorePos + 1;i<dotPos;i++){
                         if (name.charAt(i) < '0' || name.charAt(i) > '9'){
                             istimestamp = false;
                             break;
                         }
                     }
                     if (istimestamp){
-                        name = name.substring(0,underscorePos) + name.substring(xlsPos);
+                        name = name.substring(0,underscorePos) + name.substring(dotPos);
                     }
                 }
             }
@@ -182,6 +179,10 @@ public class AzquoMemoryDBConnection {
     */
     public void persist() {
         azquoMemoryDB.persistToDataStore();
+    }
+
+    public List<Value> getValuesChanged(){
+        return azquoMemoryDB.getValuesChanged();
     }
 
     public void lockTest() {
