@@ -59,7 +59,6 @@ public class DSImportService {
             if (!valuesImportConfig.isOk()) {
                 return fileName + " No data that can be read"; // maybe could be a better error but this is fairly rare that it's just ""
             }
-
             // when it is done we assume we're ready to batch up lines with headers and import with BatchImporter
             toReturn = ValuesImport.valuesImport(valuesImportConfig);
             // now look to see if there's a need to execute after import
