@@ -7,6 +7,7 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
+import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueCalculationService;
 import com.azquo.memorydb.service.ValueService;
 import com.azquo.spreadsheet.transport.RegionOptions;
@@ -103,10 +104,7 @@ class AzquoCellService {
         if (!quiet) {
             azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
         }
-        // make what was done report server side. Could be done at a lowe level maybe but
-        List<String> languages = new ArrayList<>();
-        languages.add(user);
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        List<String> languages = NameService.getDefaultLanguagesList(user);
         long track = System.currentTimeMillis();
         long start = track;
         long threshold = 1000;

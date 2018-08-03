@@ -62,6 +62,12 @@ class HeadingReader {
 
     static final int FINDATTRIBUTECOLUMN = -2;
 
+    /*
+    <heading> classification <other heading>
+        =  parent of <other heading>;child of <heading>
+todo - add classification here
+     */
+
     // Manages the context being assigned automatically to subsequent headers. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.
     static List<ImmutableImportHeading> readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, List<String> attributeNames) throws Exception {

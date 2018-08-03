@@ -9,6 +9,7 @@ import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.memorydb.service.NameQueryParser;
+import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ProvenanceService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
@@ -207,9 +208,7 @@ class RMIImplementation implements RMIInterface {
     @Override
     public int getNameQueryCount(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException {
         try {
-            List<String> languages = new ArrayList<>();
-            languages.add(user);
-            languages.add(Constants.DEFAULT_DISPLAY_NAME);
+            List<String> languages = NameService.getDefaultLanguagesList(user);
             return NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, true).size();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);

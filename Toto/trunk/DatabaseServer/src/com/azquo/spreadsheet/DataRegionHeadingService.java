@@ -661,7 +661,7 @@ class DataRegionHeadingService {
         for (int offset : maxColOffsets) {
             extraColsFromOffsets += offset;
         }
-
+        // note, custom languages - the wrong way around!
         List<String> languages = new ArrayList<>();
         languages.add(Constants.DEFAULT_DISPLAY_NAME);//for displaying headings always look for DEFAULT_DISPLAY_NAME first - otherwise may look up the chain for local names
         languages.add(user);

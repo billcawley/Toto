@@ -248,11 +248,9 @@ class NameEditFunctions {
             return toReturn;
         }
         Name name = names.iterator().next();
-        List<String> languages = new ArrayList<>();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
         for (Name child : name.findAllChildren()) {
             if (!rubbishBin.getChildren().contains(child)) {
-                Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, child.getDefaultDisplayName(), name);
+                Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(Constants.DEFAULT_DISPLAY_NAME_AS_LIST, child.getDefaultDisplayName(), name);
                 if (possibles.size() > 1) {
                     dedupeOne(child, possibles, rubbishBin);
                 }

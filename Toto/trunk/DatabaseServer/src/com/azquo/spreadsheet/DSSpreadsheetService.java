@@ -699,9 +699,7 @@ public class DSSpreadsheetService {
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
             , RegionOptions regionOptionsForTransport, int unsortedRow, int unsortedCol, String user, StringBuilder debugInfo) throws Exception {
         // these 25 lines or so are used elsewhere, maybe normalise?
-        List<String> languages = new ArrayList<>();
-        languages.add(user);
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        List<String> languages = NameService.getDefaultLanguagesList(user);
         final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBCOnnection, contextSource, languages);
         DataRegionHeading.SUFFIX contextSuffix = null;
         for (DataRegionHeading contextHeading : contextHeadings) {

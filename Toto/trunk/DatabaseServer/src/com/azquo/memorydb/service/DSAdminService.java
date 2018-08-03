@@ -139,9 +139,6 @@ public class DSAdminService {
                 namesFound.add(name);
             }
         }
-        // todo, check why we have a different language lists, can't we use the same?
-        List<String> languages = new ArrayList<>();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
         //transfer each name and its parents.
         Map<Name, Name> dictionary = new HashMap<>();
         for (Name name : namesFound) {
@@ -150,7 +147,7 @@ public class DSAdminService {
             for (Name parent : name.findAllParents()) {
                 if (parent.getParents() == null) {//we need to start from the top
                     //copyname copies all allowed children, and avoids endless loops.
-                    copyName(targetConnection, parent, null, languages, allowed, dictionary);
+                    copyName(targetConnection, parent, null, Constants.DEFAULT_DISPLAY_NAME_AS_LIST, allowed, dictionary);
                 }
             }
 

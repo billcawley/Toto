@@ -76,6 +76,15 @@ public class BookUtils {
                                 if (numberGuess.equals("0")) numberGuess = "";
                                 row.add(numberGuess);
                             } catch (Exception e2) {
+                                /*
+                                todo, sort this
+java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
+        at org.zkoss.zss.model.impl.AbstractCellAdv.checkFormulaResultType(AbstractCellAdv.java:71)
+        at org.zkoss.zss.model.impl.AbstractCellAdv.getStringValue(AbstractCellAdv.java:92)
+        at com.azquo.spreadsheet.zk.BookUtils.nameToStringLists(BookUtils.java:79)
+        at com.azquo.spreadsheet.zk.BookUtils.nameToStringLists(BookUtils.java:32)
+
+                                 */
                                 row.add(cell.getStringValue());
                             }
                         } else {

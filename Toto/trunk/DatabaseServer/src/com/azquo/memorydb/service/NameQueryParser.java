@@ -27,9 +27,7 @@ public class NameQueryParser {
 
     // get names from a comma separated list. Well expressions describing names - only used for read and write permissions at the moment.
     public static List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, String user) throws Exception {
-        List<String> attributeNames = new ArrayList<>();
-        attributeNames.add(user);
-        attributeNames.add(Constants.DEFAULT_DISPLAY_NAME);
+        List<String> attributeNames = NameService.getDefaultLanguagesList(user);
         final List<Set<Name>> toReturn = new ArrayList<>();
         List<String> formulaStrings = new ArrayList<>();
         List<String> nameStrings = new ArrayList<>();

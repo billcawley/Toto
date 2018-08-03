@@ -63,7 +63,7 @@ class MutableImportHeading {
     String compositionPattern = null;
     // a default value if the line value is blank
     String defaultValue = null;
-    //ignore is the opposite of 'only'
+    //ignore is the opposite of 'only', omit any lines where this field consists of any element of the string list
     String[] ignoreList = null;
     // don't import zero values
     boolean blankZeroes = false;

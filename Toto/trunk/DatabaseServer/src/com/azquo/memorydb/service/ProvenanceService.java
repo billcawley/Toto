@@ -2,6 +2,7 @@ package com.azquo.memorydb.service;
 
 import com.azquo.TypedPair;
 import com.azquo.dataimport.DSImportService;
+import com.azquo.dataimport.ValuesImport;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -208,7 +209,7 @@ public class ProvenanceService {
         if ("imported".equals(provenanceForDisplay.getMethod())){
             if (provenanceForDisplay.getName().contains(":")){
                 String toSearch = provenanceForDisplay.getName().substring(provenanceForDisplay.getName().lastIndexOf(":") + 1); // so we've got our Mailouts or equivalent
-                Name allImportSheets = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), DSImportService.ALLIMPORTSHEETS, null);
+                Name allImportSheets = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), ValuesImport.ALLIMPORTSHEETS, null);
                 // just check the children, more simple
                 if (allImportSheets != null){
                     for (Name child : allImportSheets.getChildren()){

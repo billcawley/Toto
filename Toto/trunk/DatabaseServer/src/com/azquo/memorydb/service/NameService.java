@@ -473,6 +473,16 @@ public final class NameService {
         return null;
     }
 
+    private static AtomicInteger getDefaultLanguagesListCount = new AtomicInteger(0);
+
+    public static List<String> getDefaultLanguagesList(String user) {
+        getDefaultLanguagesListCount.incrementAndGet();
+        List<String> languages = new ArrayList<>();
+        languages.add(user);
+        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        return languages;
+    }
+
     public static void printFunctionCountStats() {
         System.out.println("######### NAME SERVICE FUNCTION COUNTS");
         System.out.println("nameCompareCount\t\t\t\t\t\t\t\t" + nameCompareCount.get());
