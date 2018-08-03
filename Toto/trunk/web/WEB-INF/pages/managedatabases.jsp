@@ -42,6 +42,9 @@ Created by IntelliJ IDEA.
 			</td>
 			<td><label for="useType">Use as setup? (Reload after database cleared)</label> <input id="useType" type="checkbox" name="setup" value="true"/></td>
 			<td><input type="submit" name="Upload" value="Upload" class="button "/></td>
+            <c:if test="${fn:contains(error,'values ')}">
+                      <td><a href="/api/Showdata?chosen=changed" class="button small" title="Download"><span class="fa fa-search" title="View changed data"></span> </a></td>
+            </c:if>
 			</tr>
 		</tbody>
 	</table>	
