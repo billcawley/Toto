@@ -158,6 +158,11 @@ public class ProvenanceService {
      TODO - as mentioned, value history!
      */
 
+    public static ProvenanceDetailsForDisplay getListOfChangedValues(AzquoMemoryDBConnection azquoMemoryDBConnection, int maxSize)throws  Exception{
+        return valuesProvenance(azquoMemoryDBConnection,azquoMemoryDBConnection.getValuesChanged(),maxSize);
+    }
+
+
     private static ProvenanceDetailsForDisplay valuesProvenance(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, int maxSize) throws Exception{
         List<ProvenanceForDisplay> provenanceForDisplays = new ArrayList<>();
         if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
@@ -318,6 +323,8 @@ public class ProvenanceService {
         }
     }
 
+
+
     // first string is the value, then the names . . .
     // needs the connection to check for historic values
     private static List<TypedPair<Integer, List<String>>> getIdValuesWithIdsAndNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values){
@@ -331,7 +338,7 @@ public class ProvenanceService {
             }
         }
         List<Name> commonNamesList = new ArrayList<>(commonNamesSet);
-        commonNamesList.sort(Comparator.comparing(Name::getDefaultDisplayName));
+        commonNamesList.sort(Comparator.comparingInt(Name::getValueCount));
         boolean oneNameChanging = true;
         for (Value v : values){
             if (v.getNames().size() - commonNamesSet.size() != 1){

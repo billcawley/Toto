@@ -457,4 +457,13 @@ class RMIImplementation implements RMIInterface {
             throw new RemoteException("Database Server Exception", e);
         }
     }
+
+    @Override
+    public ProvenanceDetailsForDisplay getListOfChangedValues(DatabaseAccessToken databaseAccessToken, int limit) throws RemoteException {
+        try {
+            return ProvenanceService.getListOfChangedValues(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken),limit);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
 }

@@ -117,4 +117,6 @@ public interface RMIInterface extends Remote {
     void copyDatabase(String from, String to) throws RemoteException;
 
     boolean databaseWithNameExists(String nameCheck) throws RemoteException;
+
+    ProvenanceDetailsForDisplay getListOfChangedValues(DatabaseAccessToken databaseAccessToken, int limit) throws RemoteException;
 }
