@@ -23,7 +23,7 @@ public class DSImportService {
     Currently only two types of import supported and detection on file name (best idea?). Run the import and persist.
     Generally speaking creating the import headers and basic set structure is what is required to ready a database to load data.
 
-    EFC -Zip name is as it says, the name of the zip file (excluding the extension) if the file was originally part of a zip file.
+    EFC - Zip name is as it says, the name of the zip file (excluding the extension) if the file was originally part of a zip file.
     Whether this should be used is another matter.
 
     */
@@ -31,7 +31,7 @@ public class DSImportService {
             , String zipName, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         System.out.println("Reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
-        // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an XLSX import, a different thing from a data entry area.
+        // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an Excel file import, a different thing from a data entry area.
         azquoMemoryDBConnection.setProvenance(user, fileName.contains("duplicates") ? "imported with duplicates" : "imported", fileName, "");
         if (fileName.contains(":")) {
             fileName = fileName.substring(fileName.indexOf(":") + 1);//remove the workbook name.  sent only for the provenance.
@@ -53,12 +53,19 @@ public class DSImportService {
             // not currently paying attention to isSpreadsheet - only possible issue is the replacing of \\\n with \n required based off writeCell in ImportFileUtilities
             toReturn = SetsImport.setsImport(azquoMemoryDBConnection, filePath, fileName);
         } else {
-            toReturn = ValuesImport.valuesImport(azquoMemoryDBConnection, filePath, fileName, zipName, isSpreadsheet, valuesModifiedCounter);
-            //now look to see if there's a need to execute after import
+            ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection,filePath,fileName,zipName,isSpreadsheet,valuesModifiedCounter);
+            // a lot goes on in this function to do with checking the file, finding import configuration, resolving headings etc.
+            ValuesImportConfigProcessor.prepareValuesImportConfig(valuesImportConfig);
+            if (!valuesImportConfig.isOk()) {
+                return fileName + " No data that can be read"; // maybe could be a better error but this is fairly rare that it's just ""
+            }
+
+            // when it is done we assume we're ready to batch up lines with headers and import with BatchImporter
+            toReturn = ValuesImport.valuesImport(valuesImportConfig);
+            // now look to see if there's a need to execute after import
             // find interpreter being called again - a way not to do this?
-            Name importInterpreter = ValuesImport.findInterpreter(azquoMemoryDBConnection, fileName, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
-            if (importInterpreter != null) {
-                String execute = importInterpreter.getAttribute("EXECUTE");
+            if (valuesImportConfig.getImportInterpreter() != null) {
+                String execute = valuesImportConfig.getImportInterpreter().getAttribute("EXECUTE");
                 if (execute != null && execute.length() > 0) {
                     toReturn += "EXECUTE:" + execute + "EXECUTEEND";
                 }

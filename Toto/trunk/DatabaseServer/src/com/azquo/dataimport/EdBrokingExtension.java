@@ -1,11 +1,19 @@
 package com.azquo.dataimport;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+
+/*
+
+Code written by WFC for Ed Broking, extracted/factored to here by EFC, modified to use the ValuesImportConfig object
+
+ */
+
 
 class EdBrokingExtension {
 
@@ -49,8 +57,11 @@ additional note - having discussed with WFC whether this more complex system is 
      */
 
 
-    static List<String> checkForImportNameChildren(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headersIn, Name importInterpreter, String importAttribute, List<String> languages, HeadingsWithIteratorAndBatchSize lineIteratorAndBatchSize, Map<String, String> topHeadings) throws Exception {
-        List<String> headersOut = headersIn; // at least initially!
+    static void checkForImportNameChildren(ValuesImportConfig valuesImportConfig) throws Exception {
+        Name importInterpreter = valuesImportConfig.getImportInterpreter();
+        String importAttribute = valuesImportConfig.getImportAttribute();
+        List<String> languages = valuesImportConfig.getLanguages();
+        List<String> headersOut = null;
         // ok so we may have headings as simply saved in the database. Now check more complicated definition added for Ed Broking.
         // rather than a simple attribute against the import interpreter it may have children
         int headingLineCount = 1;
@@ -104,14 +115,14 @@ additional note - having discussed with WFC whether this more complex system is 
 
             This jams them as columns at the end with a default value
              */
-            while (topHeadingNames.size() > 0 && lineNo < 20 && lineIteratorAndBatchSize.lineIterator.hasNext()) {
+            while (topHeadingNames.size() > 0 && lineNo < 20 && valuesImportConfig.getLineIterator().hasNext()) {
                 String lastHeading = null;
-                headersOut = getNextLine(lineIteratorAndBatchSize);
+                headersOut = ValuesImportConfigProcessor.getNextLine(valuesImportConfig);
                 for (String header : headersOut) {
                     if (lastHeading != null) { // so only if there was a previous heading which is in the db and top headings then add this heading as a value with the previous heading as a key in the map and zap the last heading from the topHeadingNames . .
-                        Name headingName = NameService.findByName(azquoMemoryDBConnection, lastHeading, languages);
+                        Name headingName = NameService.findByName(valuesImportConfig.getAzquoMemoryDBConnection(), lastHeading, languages);
                         if (headingName != null && topHeadingNames.contains(headingName)) {
-                            topHeadings.put(lastHeading, header);
+                            valuesImportConfig.getTopHeadings().put(lastHeading, header);
                             topHeadingNames.remove(headingName);
                         }
                     }
@@ -119,23 +130,24 @@ additional note - having discussed with WFC whether this more complex system is 
                 }
                 lineNo++;
             }
-            if (lineNo++ < 20 && lineIteratorAndBatchSize.lineIterator.hasNext()) {
-                headersOut = getNextLine(lineIteratorAndBatchSize);
-
+            if (lineNo++ < 20 && valuesImportConfig.getLineIterator().hasNext()) {
+                headersOut = ValuesImportConfigProcessor.getNextLine(valuesImportConfig);
             }
             //looking for something in column A, there may be a gap after things like Coverholder: Joe Bloggs
-            while (lineNo < 20 && (headersOut.size() == 0 || headersOut.get(0).length() == 0) && lineIteratorAndBatchSize.lineIterator.hasNext()) {
-                headersOut = getNextLine(lineIteratorAndBatchSize);
+            while (lineNo < 20 && (headersOut.size() == 0 || headersOut.get(0).length() == 0) && valuesImportConfig.getLineIterator().hasNext()) {
+                headersOut = ValuesImportConfigProcessor.getNextLine(valuesImportConfig);
             }
             if (headingLineCount > 1) {
-                buildHeadersFromVerticallyListedNames(headersOut, lineIteratorAndBatchSize.lineIterator, headingLineCount - 1);
+                buildHeadersFromVerticallyListedNames(headersOut, valuesImportConfig.getLineIterator(), headingLineCount - 1);
             }
 
-            if (lineNo == 20 || !lineIteratorAndBatchSize.lineIterator.hasNext()) {
-                return null;//TODO   notify that headings are not found.
+            if (lineNo == 20 || !valuesImportConfig.getLineIterator().hasNext()) {
+                return;//TODO   notify that headings are not found.
             }
         }
-        return headersOut;
+        if (headersOut != null){
+            valuesImportConfig.setHeaders(headersOut);
+        }
     }
 
     // for the more complex import header resolution for Ed Broking, children of importInterpreter rather than a single attribute
@@ -176,21 +188,22 @@ additional note - having discussed with WFC whether this more complex system is 
         }
     }
 
-    // two new functions added by WFC, need to check them
-    static List<String> getNextLine(HeadingsWithIteratorAndBatchSize lineIterator) {
-        List<String> toReturn = new ArrayList<>();
-        toReturn.addAll(Arrays.asList(lineIterator.lineIterator.next()));
-        return toReturn;
-    }
-
     // new WFC function relevant to Ed Broking and import headings by child names
     // a syntax check that if something says required it must have a fallback of composition or topheading or default?
 
-    static void checkRequiredHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, Name assumptions, List<String> languages) throws Exception {
+    static void checkRequiredHeadings(ValuesImportConfig valuesImportConfig) throws Exception {
+        Name importInterpreter = valuesImportConfig.getImportInterpreter();
+        List<String> headers = valuesImportConfig.getHeaders();
+        List<String> languages = valuesImportConfig.getLanguages();
+        // so we record the original size then jam all the top headings on to the end . . .
+        // is there a reason this and the adding of default isn't done above? Does it need the checkRequiredHeadings and preProcessHeadersAndCreatePivotSetsIfRequired
+        for (String topHeadingKey : valuesImportConfig.getTopHeadings().keySet()){
+            headers.add(topHeadingKey + ";default " + valuesImportConfig.getTopHeadings().get(topHeadingKey));
+        }
         if (importInterpreter == null || !importInterpreter.hasChildren()) return;
         List<String> defaultNames = new ArrayList<>();
         for (String header : headers) {
-            Name name = NameService.findByName(azquoMemoryDBConnection, header, languages);
+            Name name = NameService.findByName(valuesImportConfig.getAzquoMemoryDBConnection(), header, languages);
             if (name != null) {
                 defaultNames.add(name.getDefaultDisplayName());
             } else {
@@ -203,7 +216,7 @@ additional note - having discussed with WFC whether this more complex system is 
             // I can't see any of the second which might be relevant with "required" but I imagine there will be some from the first
             // for example Policy Reference.Contract Reference;required
             String attribute = HeadingReader.getCompositeAttributes(name, importAttribute, importAttribute + " " + languages.get(0));
-            if ((assumptions == null || assumptions.getAttribute(name.getDefaultDisplayName()) == null) && attribute != null) { //if there's an assumption then no need to check required.
+            if ((valuesImportConfig.getAssumptions() == null || valuesImportConfig.getAssumptions().getAttribute(name.getDefaultDisplayName()) == null) && attribute != null) { //if there's an assumption then no need to check required.
                 boolean required = false;
                 boolean composition = false;
                 String[] clauses = attribute.split(";");
@@ -276,4 +289,72 @@ additional note - having discussed with WFC whether this more complex system is 
 //        return lineCount ==  0;
     }
 
+    static void addZipNameToLanguages(ValuesImportConfig valuesImportConfig) {
+                    /*
+            New Ed Broking logic wants to do a combination of lookup initially based on the first half of the zip name then using the first half of the file name
+            in language as a way of "versioning" the headers. The second half of the zip name is held to the side to perhaps be replaced in headers later too.
+            */
+        if (valuesImportConfig.getZipName() != null) {
+            List<String> languages = new ArrayList<>();
+            languages.add(valuesImportConfig.getFileName().substring(0, valuesImportConfig.getFileName().indexOf(" ")));
+            languages.add(Constants.DEFAULT_DISPLAY_NAME);
+            valuesImportConfig.setLanguages(languages);
+        }
+
+    }
+
+    // so we got the import attribute based off the beginning of the zip name, same for the import interpreter, the former starts HEADINGS, the latter dataimport
+    // assumptions is a name found if created by an import file in the normal way. zip version is the end of the zip file name, at the moment a date e.g. Feb-18
+    static void checkForZipNameImportInterpreterAndAssumptions(ValuesImportConfig valuesImportConfig) throws Exception {
+        String zipName = valuesImportConfig.getZipName();
+        // prepares for the more complex "headings as children with attributes" method of importing
+        // a bunch of files in a zip file,
+        if (zipName != null && zipName.length() > 0 && zipName.indexOf(" ") > 0) {// EFC - so if say it was "Risk Apr-18.zip" we have Apr-18 as the zipVersion.
+            // this is passed through to preProcessHeadersAndCreatePivotSetsIfRequired
+            // it isused as a straight replacement e.g. that Apr-18 in something like
+            // composition `Policy No` `Policy Issuance Date`;parent of Policy Line;child of ZIPVERSION;required
+            // EFC note - this seems a bit hacky, specific to Ed Broking
+            valuesImportConfig.setZipVersion(zipName.substring(zipName.indexOf(" ")).trim());
+
+            String zipPrefix = zipName.substring(0, zipName.indexOf(" ")); // e.g. Risk
+            valuesImportConfig.setImportInterpreter(NameService.findByName(valuesImportConfig.getAzquoMemoryDBConnection(), "dataimport " + zipPrefix));
+            // so the attribute might be "HEADINGS RISK" assuming the file was "Risk Apr-18.zip"
+            valuesImportConfig.setImportAttribute("HEADINGS " + zipPrefix);
+            String importFile;
+            String filePath = valuesImportConfig.getFilePath();
+            if (filePath.contains("/")) {
+                importFile = filePath.substring(filePath.lastIndexOf("/") + 1);
+            } else {
+                importFile = filePath.substring(filePath.lastIndexOf("\\") + 1);
+            }
+            int blankPos = importFile.indexOf(" ");
+            if (blankPos > 0) {
+                /* EFC - this looks hacky. more string literals, So it's something like "zip file name assumptions firstbitofimportfilename"
+                it turns out assumptions is a sheet in a workbook - it gets put into All Import Sheets as usual
+                BUT there's also this name e.g. "Risk test2 Assumptions RLD" which is in Risk test2 Assumptions which is in Import Assumptions
+                notably this isn't set as part of any code, it's created when the assumptions file is uploaded, that it should match is based on the headings in tha file
+                matching. Rather fragile I'd say.
+                Assumptions in the example simply has the attribute "COVERHOLDER NAME" which has the value "Unknown Coverholder"
+
+                Note : assumptions unsued at the moment - todo - clarify the situation and maybe remove?
+                */
+                valuesImportConfig.setAssumptions(NameService.findByName(valuesImportConfig.getAzquoMemoryDBConnection(), zipName + " assumptions " + importFile.substring(0, blankPos)));
+            }
+        }
+    }
+
+    static void dealWithAssumptions(ValuesImportConfig valuesImportConfig) {
+        // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
+        if (valuesImportConfig.getAssumptions() != null) {
+            List<String> headers = valuesImportConfig.getHeaders();
+            for (int i = 0; i < headers.size(); i++) {
+                String header = headers.get(i);
+                String[] clauses = header.split(";");
+                String assumption = valuesImportConfig.getAssumptions().getAttribute(clauses[0]);
+                if (assumption != null) {
+                    headers.set(i, header + ";default " + assumption);
+                }
+            }
+        }
+    }
 }
