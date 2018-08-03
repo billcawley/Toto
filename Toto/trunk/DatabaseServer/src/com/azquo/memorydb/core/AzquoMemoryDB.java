@@ -238,6 +238,10 @@ public final class AzquoMemoryDB {
         return provenanceByIdMap.get(id);
     }
 
+    public Map<Integer, Provenance> getProvenanceByIdMap(){//to show data with a specific provenance...
+        return provenanceByIdMap;
+    }
+
     // would need to be synchronized if not on a concurrent map
 
     void addNameToDb(final Name newName) throws Exception {
@@ -294,6 +298,10 @@ public final class AzquoMemoryDB {
         if (!needsLoading) {
             azquoMemoryDBTransport.setValueNeedsPersisting(value);
         }
+    }
+
+    public List<Value> getValuesChanged(){
+        return azquoMemoryDBTransport.getValuesChanged();
     }
 
     void addValueToDb(final Value newValue) throws Exception {

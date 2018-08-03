@@ -38,6 +38,7 @@ class AzquoMemoryDBTransport {
     private final Map<String, Set<AzquoMemoryDBEntity>> jsonEntitiesToPersist;
     private final Set<Name> namesToPersist;
     private final Set<Value> valuesToPersist;
+    public List<Value> valuesToStore;
 
     private StringBuffer sessionLog;
 
@@ -379,6 +380,11 @@ class AzquoMemoryDBTransport {
         valuesToPersist.add(value);
     }
 
+    List<Value> getValuesChanged(){
+        return new ArrayList<Value>(valuesToStore);
+
+    }
+
     boolean hasNamesToPersist(){
         return !namesToPersist.isEmpty();
     }
@@ -386,7 +392,7 @@ class AzquoMemoryDBTransport {
     /* now, this is only called by the AzquoMemoryDB and is synchronized against that object so two can't run conncurrently
     BUT at the moment I'm allowing the database to be modified while persisting, this function should be robust to that
      */
-    void persistDatabase() {
+    List<Value> persistDatabase() {
         System.out.println("PERSIST STARTING");
         // ok first do the json bits, currently this is just provenance, may well be others
         for (Map.Entry<String, Set<AzquoMemoryDBEntity>> tableNameEntites : jsonEntitiesToPersist.entrySet()) {
@@ -451,7 +457,7 @@ class AzquoMemoryDBTransport {
         }
         // same pattern as with name
         System.out.println("value store : " + valuesToPersist.size());
-        List<Value> valuesToStore = new ArrayList<>(valuesToPersist);
+        valuesToStore = new ArrayList<>(valuesToPersist);
         for (Value value : valuesToStore) {
             valuesToPersist.remove(value);
         }
@@ -476,5 +482,6 @@ class AzquoMemoryDBTransport {
         } else {
             System.out.println("persist done.");
         }
+        return valuesToStore;
     }
 }
