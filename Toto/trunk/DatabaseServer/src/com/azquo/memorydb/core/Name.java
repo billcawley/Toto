@@ -177,6 +177,10 @@ public final class Name extends AzquoMemoryDBEntity {
         return valuesAsSet != null ? Collections.unmodifiableSet(valuesAsSet) : values.length > 0 ? Collections.unmodifiableList(Arrays.asList(values)) : Collections.emptyList();
     }
 
+    public int getValueCount(){
+        return getValues().size();
+    }
+
     public boolean hasValues() {
         return valuesAsSet != null || values.length > 0;
     }
