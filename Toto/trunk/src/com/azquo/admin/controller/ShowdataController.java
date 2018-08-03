@@ -1,10 +1,15 @@
 package com.azquo.admin.controller;
 
+import com.azquo.admin.database.UploadRecord;
+import com.azquo.admin.database.UploadRecordDAO;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -29,6 +34,9 @@ import java.util.Set;
 
 public class ShowdataController {
 
+    static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+
     @RequestMapping
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
             , @RequestParam(value = "chosen", required = false) String chosen
@@ -38,6 +46,15 @@ public class ShowdataController {
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             // ok we'll put the id parsing bits in here now, much better
             String[] namesString = chosen.split(",");
+            if (namesString[0].startsWith("changed") && loggedInUser.getDatabase()!=null){
+                ProvenanceDetailsForDisplay provenanceDetailsForDisplay = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getListOfChangedValues(loggedInUser.getDataAccessToken(),100);
+                if (provenanceDetailsForDisplay.getAuditForDisplayList() != null && !provenanceDetailsForDisplay.getAuditForDisplayList().isEmpty()) {
+                    modelMap.addAttribute("audit", jacksonMapper.writeValueAsString(provenanceDetailsForDisplay));
+                    modelMap.addAttribute("op", "audit");
+                    return ("Excel");
+                }
+                return "showdata";
+            }
             if (namesString[0].startsWith("jstreeids:")) {
                 Set<Integer> nameIds = new HashSet<>();
                 namesString[0] = namesString[0].substring("jstreeids:".length());
