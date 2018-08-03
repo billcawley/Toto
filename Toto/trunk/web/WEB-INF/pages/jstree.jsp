@@ -233,14 +233,13 @@
             var itemsChosen = "";
             var dataFlag = false;
             if (document.getElementById("itemschosen").value == "") {
-                var selected = $('#js-container').jstree("get_selected", true);
-
+                var selected = $('#js-container').jstree("get_selected");
                 itemsChosen = "jstreeids:";
                 for (item in selected) {
                  itemsChosen += selected[item].id + ",";
                }
                 // edd changing the above 3 lines to this which seems to be more compatible with IE
-                //itemsChosen += selected[0].id;
+                itemsChosen = selected;
                 dataFlag = true;
             } else {
                 itemsChosen = encodeURIComponent(document.getElementById("itemschosen").value);
@@ -255,9 +254,6 @@
                 window.parent.$['inspectOverlay']().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
 
             }
-            //this instruction seems to create an immediate exit!
-            localStorage.setItem("itemsChosen", selected[0].text + ":" +  selected[0].original.nameId);//for ad-hoc reports
-
         }
 
         function hideDetails(){
