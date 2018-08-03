@@ -306,6 +306,7 @@ class ValuesImportConfigProcessor {
                 valuesImportConfig.getLineIterator().next();
             }
         }
+        valuesImportConfig.setHeaders(headers);
     }
 
     // todo - confirm what this was before as it's used in a few places and I dont' remember it
