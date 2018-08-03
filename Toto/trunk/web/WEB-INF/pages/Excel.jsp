@@ -3,6 +3,9 @@
 <c:set var="title" scope="request" value="Manage Databases" />
 <%@ include file="../includes/public_header.jsp" %>
 
+<style>
+    td {width:100px}
+</style>
 
 
 <div id="dialog" title="Basic dialog" class="basicDialog">
@@ -52,10 +55,37 @@
         for (var afd = 0; afd < $audit.auditForDisplayList.length; afd++){
             var auditForDisplay = $audit.auditForDisplayList[afd];
             html += "<div class='context'><span class='contextDate'>" + new Date(auditForDisplay.date) + "</span> by <span class='contextUser'>" + auditForDisplay.user + "</span> : " + auditForDisplay.method + " : " + auditForDisplay.name + " : " + auditForDisplay.context  + "</div>";
+            html +="<table>";
+
             for (var v = 0; v < auditForDisplay.valuesWithIdsAndNames.length; v++){
                 var valuesEtc = auditForDisplay.valuesWithIdsAndNames[v];
-                html += "<div class=`contextvalues`>" +  valuesEtc.second + "</div>"
+                html += "<tr>";
+                var hasHistory = false;
+                var count = 0;
+                var valsList = String(valuesEtc.second);
+                var values = valsList.split(",");
+                for (var v2=0; v2 < values.length;v2++){
+                    if (values[v2]=="Value History : "){
+                        count = 0;
+                        hasHistory = true;
+                    }
+                    if (count==0){
+                        html+="<td><b>" + values[v2] + "</b></td>";
+                    }else{
+                        html+="<td>" + values[v2] + "</td>"
+                    }
+                    count++;
+                    if (values[v2]=="Value History : "){
+                        count = 0;
+
+                    }
+                    if (hasHistory && count==2){
+                        count = 0;
+                    }
+                }
+                html+="</tr>"
             }
+            html+="</table>"
 
         }
         document.getElementById("dialog").innerHTML = html;
