@@ -47,7 +47,7 @@
 
             <div>
                 <label for="itemschosen">Select items:</label>
-                <input class="itemselect" type="text" value="${itemsChosen}" id="itemschosen" name="itemschosen"/>
+                <input class="itemselect" type="text" value="" id="itemschosen" name="itemschosen"/>
             </div>
             <c:choose>
             <c:when test="${mode == 'choosename'}">
@@ -159,6 +159,7 @@
                                     if (!parents) {
                                         url += "&parents=true";
                                     }
+                                    window.alert("seeparents");
                                     if (window != window.top){
                                         window.parent.$['inspectOverlay']().tab(url, 'Parent');
                                     }else{
@@ -213,7 +214,7 @@
 
 
         function changeLanguage(){
-            if (window!=window.top){
+             if (window!=window.top){
                 window.parent.$['inspectOverlay']().tab("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", document.getElementById("attributeChosen").value);
             }else{
                 //window.open("/api/Jstree?op=new&attribute=" + document.getElementById("attributeChosen").value + "&id=0", "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600")
@@ -222,6 +223,7 @@
         }
 
         function submitName(){
+            window.alert("submitName");
             var selected = $('#js-container').jstree("get_selected", true);
             localStorage.setItem("itemsChosen", selected[0].original.nameId + ":" + selected[0].text);//for ad-hoc reports
             window.opener = self;
@@ -230,7 +232,7 @@
         }
 
         function showData() {
-            var itemsChosen = "";
+             var itemsChosen = "";
             var dataFlag = false;
             if (document.getElementById("itemschosen").value == "") {
                 var selected = $('#js-container').jstree("get_selected", true);
@@ -245,19 +247,20 @@
             } else {
                 itemsChosen = encodeURIComponent(document.getElementById("itemschosen").value);
             }
-            localStorage.setItem("itemsChosen", selected[0].text + ":" +  selected[0].original.nameId);//for ad-hoc reports
-
             if (dataFlag) {
-                if (window != window.top) {
+                  if (window != window.top) {
                     window.parent.$['inspectOverlay']().tab("/api/Showdata?chosen=" + itemsChosen, 'Show Data');
                 } else {
                     window.open("/api/Showdata?chosen=" + itemsChosen, "_blank", "toolbar=no, status=no,scrollbars=yes, resizable=yes, top=150, left=200, width=600, height=600");
                 }
 
             }else {
-                window.parent.$['inspectOverlay']().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
+                 window.parent.$['inspectOverlay']().tab(window.location + "&itemschosen=" + itemsChosen, 'Select Items');
 
             }
+            //this instruction seems to create an immediate exit!
+            localStorage.setItem("itemsChosen", selected[0].text + ":" +  selected[0].original.nameId);//for ad-hoc reports
+
         }
 
         function hideDetails(){
