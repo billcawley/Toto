@@ -45,6 +45,7 @@ class HeadingReader {
     static final String DEFAULT = "default";
     static final String NONZERO = "nonzero";
     static final String REQUIRED = "required";
+    static final String CLEARDATA = "cleardata";
     static final String DATELANG = "date";
     static final String USDATELANG = "us date";
     static final String ONLY = "only";
@@ -416,6 +417,9 @@ todo - add classification here
                 break;
             case REQUIRED:
                 heading.required = true;
+                break;
+            case CLEARDATA:
+                heading.clearData = true;
                 break;
             case EXCLUSIVE:
                 heading.exclusive = result;

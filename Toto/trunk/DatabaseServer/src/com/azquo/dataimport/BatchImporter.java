@@ -378,7 +378,7 @@ public class BatchImporter implements Callable<Void> {
             } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
                 // now we have the set of names for that name with peers get the value from that headingNo it's a header for
                 String value = cell.getLineValue();
-                if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
+                  if ((!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) ||cell.getImmutableImportHeading().clearData) { // don't store if blank or zero and blank zeroes or 'cleardata' is set
                     // finally store our value and names for it - only increnemt the value count if something actually changed in the DB
                     if (ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue)) {
                         valueCount++;

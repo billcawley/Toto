@@ -35,6 +35,7 @@ class ImmutableImportHeading {
     final boolean lineNameRequired;
     final String exclusive;
     final boolean existing;
+    final boolean clearData;
     final String splitChar;
     final List<Integer> parentIndexes;
 
@@ -57,6 +58,7 @@ class ImmutableImportHeading {
         this.lineNameRequired = mutableImportHeading.lineNameRequired;
         this.exclusive = mutableImportHeading.exclusive;
         this.existing = mutableImportHeading.existing;
+        this.clearData = mutableImportHeading.clearData;
         this.splitChar = mutableImportHeading.splitChar;
         this.parentIndexes = mutableImportHeading.parentIndexes;
     }
