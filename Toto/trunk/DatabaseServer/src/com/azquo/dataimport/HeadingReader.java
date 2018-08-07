@@ -237,6 +237,9 @@ todo - add classification here
 
     // EFC - seems to resolve column indexes of parts of the composition in advance but I'm not sure why . . .
     // need to understand why both lists are passed
+    // headings replaced by WFC into indexes as the headings were changing? by the interpreting system
+    // also headings shouldn't be resolved on every line when dealing with composite
+
     private static List<String> replaceFieldNamesWithNumbersInCompositeHeadings(List<String> origHeaders, List<String> headers) {
         List<String> headerNames = new ArrayList<>();
         for (String header : origHeaders) {
@@ -499,7 +502,11 @@ todo - add classification here
                     if (mutableImportHeading.indexForChild < 0) {
                         throw new Exception("cannot find column " + mutableImportHeading.parentOfClause + " for child of " + mutableImportHeading.heading);
                     }
-                    headings.get(mutableImportHeading.indexForChild).parentIndexes.add(headingNo);
+                    // see comments on localParentIndexes and in resolveLineNameParentsAndChildForCell in BatchImporter
+                    // when the column this is parent of is resolved it must first resolve THIS heading if this heading is it's parent with local set
+                    if (mutableImportHeading.isLocal){
+                        headings.get(mutableImportHeading.indexForChild).localParentIndexes.add(headingNo);
+                    }
                 }
                 // Mark column indexes where the line cells will be resolved to names
                 indexesNeedingNames.addAll(mutableImportHeading.peerIndexes);

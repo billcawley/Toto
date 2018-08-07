@@ -76,10 +76,6 @@ public final class ValueService {
         final List<Value> existingValues = findForNames(names);
         //addToTimesForConnection(azquoMemoryDBConnection, "storeValueWithProvenanceAndNames2", marker - System.currentTimeMillis());
         //marker = System.currentTimeMillis();
-        if (valueString.length()==0 && existingValues.size()==1){
-            existingValues.get(0).delete();
-            return true;
-        }
         boolean alreadyInDatabase = false;
         // there's new logic to add values to existing but this only applies to the same provenance and when importing (so same file)
         for (Value existingValue : existingValues) { // really should only be one

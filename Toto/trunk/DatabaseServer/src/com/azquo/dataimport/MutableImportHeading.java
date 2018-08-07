@@ -79,5 +79,7 @@ class MutableImportHeading {
     boolean clearData = false;
     // if line values had a comma separated list for example , would be the split char. Only used for PwC russia so far
     String splitChar = null;
-    List<Integer> parentIndexes = new ArrayList<>();
+    // local names are a p[otential problem if not resolved in the right order. Previously this was solved by resolving local first
+    // but this didn't deal with local in local. Not recommended but using this the system can support it. Code which resolves this along with comments in BatchImporter.
+    List<Integer> localParentIndexes = new ArrayList<>();
 }

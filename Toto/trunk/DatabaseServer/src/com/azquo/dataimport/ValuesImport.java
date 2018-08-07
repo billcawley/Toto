@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 Edd Aug 2018
 THe importing is becoming quite complex and opaque. I'm hoping that breaking things up will help to bring it under control.
 
-THis class batches up data to be loaded doing simple checks on cell values
+This class batches up data to be loaded doing simple checks on cell values
 The actual loading and complex header resolution should be done in other classes,
 
 The cell on a line can be a value or an attribute or a name - or a part of another cell via composite. Or, now, an attribute name.
@@ -24,7 +24,7 @@ public class ValuesImport {
     // where we store import specs for different file types
     public static final String ALLIMPORTSHEETS = "All import sheets";
 
-    static String valuesImport(ValuesImportConfig valuesImportConfig) throws Exception {
+    static String valuesImport(ValuesImportConfig valuesImportConfig) {
         try {
             long track = System.currentTimeMillis();
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
@@ -117,7 +117,7 @@ public class ValuesImport {
             // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
             // todo - lines blank or corrupt readout
             if (!linesRejected.isEmpty()) {
-                toReturn.append(" - No. lines rejected: " + linesRejected.size() + " - Line numbers with rejected cells : ");
+                toReturn.append(" - No. lines rejected: ").append(linesRejected.size()).append(" - Line numbers with rejected cells : ");
                 int col = 0;
                 ArrayList<Integer> lineNumbersList = new ArrayList<>(linesRejected);
                 Collections.sort(lineNumbersList); // should do the basic sort

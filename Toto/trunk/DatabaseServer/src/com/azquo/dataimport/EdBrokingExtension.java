@@ -1,6 +1,5 @@
 package com.azquo.dataimport;
 
-import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;

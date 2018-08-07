@@ -4,6 +4,7 @@ import com.azquo.DateUtils;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
@@ -69,12 +70,11 @@ public class BatchImporter implements Callable<Void> {
                             interpret the date and change to standard form
                             todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
                             */
-                            LocalDate date = null;
+                            LocalDate date;
                             if (importCellWithHeading.getImmutableImportHeading().dateForm == Constants.UKDATE) {
                                 date = DateUtils.isADate(importCellWithHeading.getLineValue());
                             } else {
                                 date = DateUtils.isUSDate(importCellWithHeading.getLineValue());
-
                             }
                             if (date != null) {
                                 importCellWithHeading.setLineValue(DateUtils.dateTimeFormatter.format(date));
@@ -227,7 +227,7 @@ public class BatchImporter implements Callable<Void> {
                             ImportCellWithHeading compCell = null;
                             try {
                                 compCell = cells.get(Integer.parseInt(expression));//findCellWithHeadingForComposite(expression, cells);
-                            } catch (Exception e) {
+                            } catch (Exception ignored) {
 
                             }
                             if (compCell != null) {
@@ -301,8 +301,8 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
-    // EFC - this is made redundant by HeadingReader.replaceFieldNamesWithNumbersInCompositeHeadings but I'm not sure why
-    // more simple than the column index look up - we just want a match, don't care about attributes etc.
+    /* EFC - this is made redundant by HeadingReader.replaceFieldNamesWithNumbersInCompositeHeadings but I'm not sure why
+    more simple than the column index look up - we just want a match, don't care about attributes etc.
     private static ImportCellWithHeading findCellWithHeadingForComposite(String nameToFind, List<ImportCellWithHeading> importCellWithHeadings) {
         for (ImportCellWithHeading importCellWithHeading : importCellWithHeadings) {
             ImmutableImportHeading heading = importCellWithHeading.getImmutableImportHeading();
@@ -311,7 +311,7 @@ public class BatchImporter implements Callable<Void> {
             }
         }
         return null;
-    }
+    }*/
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
     private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo, Set<Integer> linesRejected) throws Exception {
@@ -323,7 +323,8 @@ public class BatchImporter implements Callable<Void> {
                 String defaultValue = importCellWithHeading.getImmutableImportHeading().defaultValue;
                 if (importCellWithHeading.getImmutableImportHeading().lineNameRequired) {
                     for (ImportCellWithHeading cell : cells) {
-                        // attribute hack, need to check with WFC (todo). If one of the other cells is referring to this as it's attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Cutomer.Address1 and set the language to Address1
+                        // If one of the other cells is referring to this as its attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Customer.Address1 and set the language to Address1
+                        // of course this logic only is used where default is used so it's a question of whether there's a better option than default if the cell is empty
                         // So keep the line imported if there's data missing I guess
                         if (cell != importCellWithHeading && cell.getImmutableImportHeading().indexForAttribute == cells.indexOf(importCellWithHeading) && cell.getLineValue().length() > 0) {
                             defaultValue = cell.getLineValue();
@@ -335,20 +336,8 @@ public class BatchImporter implements Callable<Void> {
                 importCellWithHeading.setLineValue(defaultValue);
             }
         }
-        for (ImportCellWithHeading importCellWithHeading : cells) {
-             /* 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
-             the key here is that the resolveLineNameParentsAndChildForCell has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
-             both pedestrianized (ok) and street (NOT ok!) will have their line names resolved
-             whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
-             essentially sort all local names */
-            if (importCellWithHeading.getImmutableImportHeading().lineNameRequired && importCellWithHeading.getImmutableImportHeading().isLocal) {
-                // local and it is a parent of another heading (has child heading), inside this function it will use the child heading set up
-                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, importCellWithHeading, cells, attributeNames, lineNo);
-            }
-        }
-        // now sort non local names
         for (ImportCellWithHeading cell : cells) {
-            if (cell.getImmutableImportHeading().lineNameRequired && !cell.getImmutableImportHeading().isLocal) {
+            if (cell.getImmutableImportHeading().lineNameRequired) {
                 resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, lineNo);
             }
         }
@@ -378,33 +367,39 @@ public class BatchImporter implements Callable<Void> {
             } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
                 // now we have the set of names for that name with peers get the value from that headingNo it's a header for
                 String value = cell.getLineValue();
-                  if ((!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) ||cell.getImmutableImportHeading().clearData) { // don't store if blank or zero and blank zeroes or 'cleardata' is set
-                    // finally store our value and names for it - only increnemt the value count if something actually changed in the DB
+                if (!(cell.getImmutableImportHeading().blankZeroes && isZero(value)) && value.trim().length() > 0) { // don't store if blank or zero and blank zeroes
+                    // finally store our value and names for it - only increment the value count if something actually changed in the DB
                     if (ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue)) {
                         valueCount++;
                     }
-                }
-            }
-            // ok that's the peer/value stuff done I think, now onto attribute, highly unlikely a cell would be both value and attribute but we'll allow it
-            if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null
-                    && cell.getLineValue().length() > 0) {
-                String attribute = cell.getImmutableImportHeading().attribute;
-                if (cell.getImmutableImportHeading().attributeColumn >= 0) {//attribute name refers to the value in another column - so find it
-                    attribute = cells.get(cell.getImmutableImportHeading().attributeColumn).getLineValue();
-                }
+                } else if (cell.getImmutableImportHeading().clearData) { // only kicks in if the cell is blank
+                    // EFC extracted out of value service, cleaner out here
+                    final List<Value> existingValues = ValueService.findForNames(namesForValue);
+                    if (existingValues.size() == 1) {
+                        existingValues.get(0).delete();
+                    }
 
-                // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
-                ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our source cell
-                if (identityCell.getLineNames() == null) {
-                    linesRejected.add(lineNo); // well just mark that the line was no good, should be ok for the moment
-                } else {
-                    for (Name name : identityCell.getLineNames()) {
-                        name.setAttributeWillBePersisted(attribute, cell.getLineValue());
-                        if (attribute.toLowerCase().equals("definition")) {
-                            //work it out now!
-                            name.setChildrenWillBePersisted(NameQueryParser.parseQuery(azquoMemoryDBConnection, cell.getLineValue()));
+                }
+            } else { // now attribute - it did just run after as theoretically one could mix attributes and peers but this makes no sense so attributes are "else" after peer/value work
+                if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null
+                        && cell.getLineValue().length() > 0) {
+                    String attribute = cell.getImmutableImportHeading().attribute;
+                    if (cell.getImmutableImportHeading().attributeColumn >= 0) {//attribute name refers to the value in another column - so find it
+                        attribute = cells.get(cell.getImmutableImportHeading().attributeColumn).getLineValue();
+                    }
+
+                    // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
+                    ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our source cell
+                    if (identityCell.getLineNames() == null) {
+                        linesRejected.add(lineNo); // well just mark that the line was no good, should be ok for the moment
+                    } else {
+                        for (Name name : identityCell.getLineNames()) {
+                            name.setAttributeWillBePersisted(attribute, cell.getLineValue());
+                            if (attribute.toLowerCase().equals("definition")) {
+                                //work it out now!
+                                name.setChildrenWillBePersisted(NameQueryParser.parseQuery(azquoMemoryDBConnection, cell.getLineValue()));
+                            }
                         }
-
                     }
                 }
             }
@@ -417,12 +412,9 @@ public class BatchImporter implements Callable<Void> {
         return valueCount;
     }
 
-    // todo accessed outside, move it out?
-
     private static boolean isZero(String text) {
         try {
-            double d = Double.parseDouble(text.replace(",", ""));
-            return d == 0.0;
+            return Double.parseDouble(text.replace(",", "")) == 0.0;
         } catch (Exception e) {
             return true;
         }
@@ -438,13 +430,31 @@ public class BatchImporter implements Callable<Void> {
         resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cellWithHeading, cells, attributeNames, lineNo, 0);
     }
 
+    /*
+    Edd note - I'm not completely sure this function doesn't have redundant work in it. as in things being added again.
+
+    Todo - run through the logic and try to be sure.
+     */
 
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
                                                               ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo, int recursionLevel) throws Exception {
+        /*
+             Imagine 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
+             the key here is that the resolveLineNameParentsAndChildForCell has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
+             both pedestrianized (ok) and street (NOT ok!) will have their line names resolved
+             whereas resolving "Town parent of street local" first means that the street should be correct by the time we resolve "Pedestrianized parent of street".
+             essentially sort local names need to be sorted first.
+
+             EFC note August 2018 after modifying WFC code : the old method was just to run through cells that have isLocal first but that could be tripped up
+             by a local in a local which, while note recommended, is supported. The key here is that locals should be resolved in order starting at the top.
+
+             localParentIndexes enables this, recurse up to the top and go down meaning this cell will be safe to resolve if there are local names involved.
+
+              */
         recursionLevel++;
-        for (int parentIndex : cellWithHeading.getImmutableImportHeading().parentIndexes) {
-            ImportCellWithHeading parentHeading = cells.get(parentIndex);
-            if (parentHeading.getLineNames() == null || parentHeading.getLineNames().size() == 0) {
+        for (int localParentIndex : cellWithHeading.getImmutableImportHeading().localParentIndexes) {
+            ImportCellWithHeading parentHeading = cells.get(localParentIndex);
+            if (parentHeading.getLineNames() == null || parentHeading.getLineNames().size() == 0) { // so it has not been resolved yet!
                 if (recursionLevel == 8) { // arbitrary but not unreasonable
                     throw new Exception("recursion loop on heading " + cellWithHeading.getImmutableImportHeading().heading);
                 }
@@ -566,9 +576,6 @@ public class BatchImporter implements Callable<Void> {
 
     private static Name findOrCreateNameStructureWithCache(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, String name, Name parent, boolean local, List<String> attributeNames) throws Exception {
         //namesFound is a quick lookup to avoid going to findOrCreateNameInParent - note it will fail if the name was changed e.g. parents removed by exclusive but that's not a problem
-        if (name.toLowerCase().equals("jacksonville")) {
-            int j = 1;
-        }
         String np = name + ",";
         if (parent != null) {
             np += parent.getId();
@@ -585,6 +592,7 @@ public class BatchImporter implements Callable<Void> {
             System.out.println("parent = " + parent);
             System.out.println("local = " + local);
             System.out.println("attributenames = " + attributeNames);
+        } else {
             namesFoundCache.put(np, found);
         }
         return found;

@@ -79,7 +79,13 @@ class ValuesImportConfigProcessor {
                 );
                 EdBrokingExtension.dealWithAssumptions(valuesImportConfig);
                 // finally resolve them with the HeadingReader and we're good to go
-                valuesImportConfig.setHeadings(HeadingReader.readHeaders(valuesImportConfig.getAzquoMemoryDBConnection(), valuesImportConfig.getHeaders(), valuesImportConfig.getLanguages()));
+                valuesImportConfig.setHeadings(
+                        HeadingReader.readHeaders(
+                                valuesImportConfig.getAzquoMemoryDBConnection()
+                                , valuesImportConfig.getHeaders()
+                                , valuesImportConfig.getLanguages()
+                        )
+                );
             }
         }
     }

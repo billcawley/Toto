@@ -319,7 +319,7 @@ public class OnlineController {
                                     }
                                     // todo, lock check here like execute
                                     session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
-                                    loggedInUser.userLog("Load report : " + finalOnlineReport.getReportName());
+                                    loggedInUser.userLog(finalLoggedInUser.getUser().getEmail() + " Load report : " + finalOnlineReport.getReportName());
                                    session.setAttribute(finalReportId + SAVE_FLAG, ReportRenderer.populateBook(book, valueId));
                                     if (executeMode) {
                                         book = ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
@@ -330,7 +330,7 @@ public class OnlineController {
                                 }
                                 long newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 System.out.println();
-                                System.out.println(logDf.format(new Date()) + " Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
+                                System.out.println(logDf.format(new Date()) + " - " + finalLoggedInUser + " Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
                                 System.out.println();
                                 session.setAttribute(finalReportId, book);
                             } catch (Exception e) { // changed to overall exception handling

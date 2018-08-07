@@ -1,9 +1,7 @@
 package com.azquo.dataimport;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.memorydb.core.Name;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
