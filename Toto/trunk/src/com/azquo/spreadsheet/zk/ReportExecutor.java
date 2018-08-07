@@ -152,7 +152,7 @@ public class ReportExecutor {
                     if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
 
                         loopsLog.append("Run : ").append(onlineReport.getReportName());
-                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), count.incrementAndGet() + " Running  " + onlineReport.getReportName() + " ,");
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), count.incrementAndGet() + " " + loggedInUser.getUser().getName() + " Running  " + onlineReport.getReportName() + " ,");
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                         book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
