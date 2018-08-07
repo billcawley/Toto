@@ -64,8 +64,10 @@ public class ExcelPageController {
              if (database != null && database.length() > 0) {
                 LoginService.switchDatabase(loggedInUser, database);
             }else{
-                database = loggedInUser.getDatabase().getName();
+
+                database = getDatabaseName(loggedInUser);
              }
+             if (database.length()==-0) return "No database selected";
 
             if (reportName != null && reportName.length() > 0) {
                 loggedInUser.setOnlineReport(OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.trim()));
@@ -118,4 +120,13 @@ public class ExcelPageController {
 
 
     }
+
+
+    String getDatabaseName(LoggedInUser loggedInUser){
+        if(loggedInUser.getDatabase()!=null){
+            return loggedInUser.getDatabase().getName();
+        }
+        return "";
+    }
+
 }
