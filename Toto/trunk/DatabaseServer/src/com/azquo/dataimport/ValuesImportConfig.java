@@ -29,7 +29,6 @@ class ValuesImportConfig {
     private boolean isSpreadsheet;
     private final AtomicInteger valuesModifiedCounter;
     private List<String> languages;
-    private boolean ok;
     private String importAttribute;
     private Name importInterpreter;
     private Name assumptions;
@@ -41,7 +40,7 @@ class ValuesImportConfig {
 
 
     // exactly the same as is passed to valuesImport, no coincidence. Set these in this object then pass the object through various processes until it's ready to go
-    ValuesImportConfig(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter){
+    ValuesImportConfig(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
         this.filePath = filePath;
         this.fileName = fileName;
@@ -49,7 +48,6 @@ class ValuesImportConfig {
         this.valuesModifiedCounter = valuesModifiedCounter;
         this.isSpreadsheet = isSpreadsheet;
         languages = Constants.DEFAULT_DISPLAY_NAME_AS_LIST;
-        ok = true;
         importAttribute = null;
         importInterpreter = null;
         assumptions = null;
@@ -59,27 +57,27 @@ class ValuesImportConfig {
         topHeadings = new HashMap<>();
     }
 
-    public MappingIterator<String[]> getOriginalIterator() {
+    MappingIterator<String[]> getOriginalIterator() {
         return originalIterator;
     }
 
-    public void setOriginalIterator(MappingIterator<String[]> originalIterator) {
+    void setOriginalIterator(MappingIterator<String[]> originalIterator) {
         this.originalIterator = originalIterator;
     }
 
-    public Iterator<String[]> getLineIterator() {
+    Iterator<String[]> getLineIterator() {
         return lineIterator;
     }
 
-    public void setLineIterator(Iterator<String[]> lineIterator) {
+    void setLineIterator(Iterator<String[]> lineIterator) {
         this.lineIterator = lineIterator;
     }
 
-    public int getBatchSize() {
+    int getBatchSize() {
         return batchSize;
     }
 
-    public void setBatchSize(int batchSize) {
+    void setBatchSize(int batchSize) {
         this.batchSize = batchSize;
     }
 
@@ -95,19 +93,19 @@ class ValuesImportConfig {
         return azquoMemoryDBConnection;
     }
 
-    public String getFilePath() {
+    String getFilePath() {
         return filePath;
     }
 
-    public void setFilePath(String filePath) {
+    void setFilePath(String filePath) {
         this.filePath = filePath;
     }
 
-    public String getFileName() {
+    String getFileName() {
         return fileName;
     }
 
-    public String getZipName() {
+    String getZipName() {
         return zipName;
     }
 
@@ -119,7 +117,7 @@ class ValuesImportConfig {
         isSpreadsheet = spreadsheet;
     }
 
-    public AtomicInteger getValuesModifiedCounter() {
+    AtomicInteger getValuesModifiedCounter() {
         return valuesModifiedCounter;
     }
 
@@ -131,63 +129,55 @@ class ValuesImportConfig {
         this.languages = languages;
     }
 
-    public boolean isOk() {
-        return ok;
-    }
-
-    public void setOk(boolean ok) {
-        this.ok = ok;
-    }
-
-    public String getImportAttribute() {
+    String getImportAttribute() {
         return importAttribute;
     }
 
-    public void setImportAttribute(String importAttribute) {
+    void setImportAttribute(String importAttribute) {
         this.importAttribute = importAttribute;
     }
 
-    public Name getImportInterpreter() {
+    Name getImportInterpreter() {
         return importInterpreter;
     }
 
-    public void setImportInterpreter(Name importInterpreter) {
+    void setImportInterpreter(Name importInterpreter) {
         this.importInterpreter = importInterpreter;
     }
 
-    public Name getAssumptions() {
+    Name getAssumptions() {
         return assumptions;
     }
 
-    public void setAssumptions(Name assumptions) {
+    void setAssumptions(Name assumptions) {
         this.assumptions = assumptions;
     }
 
-    public String getZipVersion() {
+    String getZipVersion() {
         return zipVersion;
     }
 
-    public void setZipVersion(String zipVersion) {
+    void setZipVersion(String zipVersion) {
         this.zipVersion = zipVersion;
     }
 
-    public List<String> getHeaders() {
+    List<String> getHeaders() {
         return headers;
     }
 
-    public void setHeaders(List<String> headers) {
+    void setHeaders(List<String> headers) {
         this.headers = headers;
     }
 
-    public int getSkipLines() {
+    int getSkipLines() {
         return skipLines;
     }
 
-    public void setSkipLines(int skipLines) {
+    void setSkipLines(int skipLines) {
         this.skipLines = skipLines;
     }
 
-    public Map<String, String> getTopHeadings() {
+    Map<String, String> getTopHeadings() {
         return topHeadings;
     }
 }

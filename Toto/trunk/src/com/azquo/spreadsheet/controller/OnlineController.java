@@ -13,7 +13,6 @@ import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.spreadsheet.zk.BookUtils;
-import com.azquo.spreadsheet.zk.ReportService;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -291,17 +290,16 @@ public class OnlineController {
                         // this is a bit hacky, the new thread doesn't want them reassigned, fair enough
                         final String finalReportId = reportId;
                         final OnlineReport finalOnlineReport = onlineReport;
-                        final LoggedInUser finalLoggedInUser = loggedInUser;
                         final boolean templateMode = TEMPLATE.equalsIgnoreCase(opcode) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper());
                         final boolean executeMode = opcode.toUpperCase().startsWith(EXECUTE);//opcode seems to become execute.execute
                         new Thread(() -> {
                             // so in here the new thread we set up the loading as it was originally before
                             try {
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
-                                String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + finalLoggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
+                                String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
                                 Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                                 book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
-                                book.getInternalBook().setAttribute(LOGGED_IN_USER, finalLoggedInUser);
+                                book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                                 System.out.println("Loading report : " + finalOnlineReport.getReportName());
                                 book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
@@ -319,18 +317,18 @@ public class OnlineController {
                                     }
                                     // todo, lock check here like execute
                                     session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
-                                    loggedInUser.userLog(finalLoggedInUser.getUser().getEmail() + " Load report : " + finalOnlineReport.getReportName());
+                                    loggedInUser.userLog(loggedInUser.getUser().getEmail() + " Load report : " + finalOnlineReport.getReportName());
                                    session.setAttribute(finalReportId + SAVE_FLAG, ReportRenderer.populateBook(book, valueId));
                                     if (executeMode) {
                                         book = ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
                                         session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                     }
                                 } else {
-                                    finalLoggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
+                                    loggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
                                 }
                                 long newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 System.out.println();
-                                System.out.println(logDf.format(new Date()) + " - " + finalLoggedInUser + " Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
+                                System.out.println(logDf.format(new Date()) + " - " + loggedInUser.getUser().getEmail() + " Heap cost to populate book : " + (newHeapMarker - oldHeapMarker) / mb);
                                 System.out.println();
                                 session.setAttribute(finalReportId, book);
                             } catch (Exception e) { // changed to overall exception handling

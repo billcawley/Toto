@@ -57,37 +57,33 @@ class ValuesImportConfigProcessor {
         checkMaybeHasHeadings(valuesImportConfig);
         // checks the first few lines to sort batch size and get a hopefully correctly configured line iterator. Nothing to do with heading interpretation
         setLineIteratorAndBatchSize(valuesImportConfig);
-        if (valuesImportConfig.isOk()) { // the above might say it's not ok. Maybe should exception but for the moment carry on, duplicate the logic that was there before
-            // transpose the file and reassign the line iterator if required, this was for spark response, we'll leave it in for the moment
-            // The code below should be none the wiser that a transpose happened if it did.
-            checkTranspose(valuesImportConfig);
-            checkSkipLinesAndSimpleImportInterpreterHeaders(valuesImportConfig);
-            EdBrokingExtension.checkForImportNameChildren(valuesImportConfig);
-            if (valuesImportConfig.isOk()) {
-                checkHeadingsOnTheFileAndSkipLines(valuesImportConfig);
-                EdBrokingExtension.checkRequiredHeadings(valuesImportConfig);
-                //attribute names may have additions when language is in the context);
-                // I'm not currently making the heading reader deal with a ValuesImportConfig object
-                valuesImportConfig.setHeaders(
-                        HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(
+        // transpose the file and reassign the line iterator if required, this was for spark response, we'll leave it in for the moment
+        // The code below should be none the wiser that a transpose happened if it did.
+        checkTranspose(valuesImportConfig);
+        checkSkipLinesAndSimpleImportInterpreterHeaders(valuesImportConfig);
+        EdBrokingExtension.checkForImportNameChildren(valuesImportConfig);
+        checkHeadingsOnTheFileAndSkipLines(valuesImportConfig);
+        EdBrokingExtension.checkRequiredHeadings(valuesImportConfig);
+        //attribute names may have additions when language is in the context);
+        // I'm not currently making the heading reader deal with a ValuesImportConfig object
+        valuesImportConfig.setHeaders(
+                HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(
                         valuesImportConfig.getAzquoMemoryDBConnection(),
                         valuesImportConfig.getHeaders(),
                         valuesImportConfig.getImportInterpreter(),
                         valuesImportConfig.getZipVersion(),
                         valuesImportConfig.getFileName(),
                         valuesImportConfig.getLanguages())
-                );
-                EdBrokingExtension.dealWithAssumptions(valuesImportConfig);
-                // finally resolve them with the HeadingReader and we're good to go
-                valuesImportConfig.setHeadings(
-                        HeadingReader.readHeaders(
-                                valuesImportConfig.getAzquoMemoryDBConnection()
-                                , valuesImportConfig.getHeaders()
-                                , valuesImportConfig.getLanguages()
-                        )
-                );
-            }
-        }
+        );
+        EdBrokingExtension.dealWithAssumptions(valuesImportConfig);
+        // finally resolve them with the HeadingReader and we're good to go
+        valuesImportConfig.setHeadings(
+                HeadingReader.readHeaders(
+                        valuesImportConfig.getAzquoMemoryDBConnection()
+                        , valuesImportConfig.getHeaders()
+                        , valuesImportConfig.getLanguages()
+                )
+        );
     }
 
     // the standard way of finding some headings in teh database. Checks they're not set in case the new Ed Broking way set the interpreter
@@ -156,7 +152,6 @@ class ValuesImportConfigProcessor {
                         }
                     }
                 }
-                br.close();
             }
             if (!hasHeadings) {
                 valuesImportConfig.setSpreadsheet(false);//allow data uploaded in a spreadsheet to use pre-configured headings. isSpreadsheet could also be seen as data with the headings attached
@@ -175,8 +170,7 @@ class ValuesImportConfigProcessor {
             String firstLine = br.readLine();
             if (firstLine == null || firstLine.length() == 0) {
                 br.close();
-                valuesImportConfig.setOk(false);
-                return;
+                throw new Exception("Unable to read any data");
             }
             String secondLine = br.readLine();
             long linesGuess = fileLength / ((secondLine != null && secondLine.length() > 20) ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
@@ -271,7 +265,7 @@ class ValuesImportConfigProcessor {
         // We might use the headers on the data file, this is notably used when setting up the headers themselves.
         List<String> headers = valuesImportConfig.getHeaders();
         if (headers.size() == 0) {
-            headers = getNextLine(valuesImportConfig);
+            headers = new ArrayList<>(Arrays.asList(valuesImportConfig.getLineIterator().next()));
             for (int i = 0; i < headers.size(); i++) {
                 // might have gotten in there if generating a csv from an Excel sheet, writeCell from ImportFileUtilities, undo it! Since this is just for headers no need to check based off a flag.
                 //.replace("\n", "\\\\n").replace("\t", "\\\\t")
@@ -313,13 +307,6 @@ class ValuesImportConfigProcessor {
             }
         }
         valuesImportConfig.setHeaders(headers);
-    }
-
-    // todo - confirm what this was before as it's used in a few places and I dont' remember it
-    static List<String> getNextLine(ValuesImportConfig valuesImportConfig) {
-        List<String> toReturn = new ArrayList<>();
-        toReturn.addAll(Arrays.asList(valuesImportConfig.getLineIterator().next()));
-        return toReturn;
     }
 
     // the idea is that a header could be followed by successive clauses on cells below and this might be easier to read

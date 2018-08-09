@@ -51,12 +51,9 @@ public class DSImportService {
             // not currently paying attention to isSpreadsheet - only possible issue is the replacing of \\\n with \n required based off writeCell in ImportFileUtilities
             toReturn = SetsImport.setsImport(azquoMemoryDBConnection, filePath, fileName);
         } else {
-            ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection,filePath,fileName,zipName,isSpreadsheet,valuesModifiedCounter);
+            ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection, filePath, fileName, zipName, isSpreadsheet, valuesModifiedCounter);
             // a lot goes on in this function to do with checking the file, finding import configuration, resolving headings etc.
             ValuesImportConfigProcessor.prepareValuesImportConfig(valuesImportConfig);
-            if (!valuesImportConfig.isOk()) {
-                return fileName + " No data that can be read"; // maybe could be a better error but this is fairly rare that it's just ""
-            }
             // when it is done we assume we're ready to batch up lines with headers and import with BatchImporter
             toReturn = ValuesImport.valuesImport(valuesImportConfig);
             // now look to see if there's a need to execute after import

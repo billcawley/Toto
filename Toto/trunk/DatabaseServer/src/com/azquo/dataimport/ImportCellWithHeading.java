@@ -41,7 +41,7 @@ class ImportCellWithHeading {
 
     // NOT thread safe - I assume that one thread will deal with one line
     void addToLineNames(Name name) {
-        if (name != null){ // should it tolerate this?? todo - it was a hack for Darren I don't have time to sort properly
+        if (name != null) { // should it tolerate this?? todo - it was a hack for Darren I don't have time to sort properly
             if (lineNames == null) {
                 lineNames = HashObjSets.newMutableSet();
             }

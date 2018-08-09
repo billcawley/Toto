@@ -44,10 +44,10 @@ class HeadingReader {
     static final String COMPOSITION = "composition";
     static final String DEFAULT = "default";
     static final String NONZERO = "nonzero";
-    static final String REQUIRED = "required";
-    static final String CLEARDATA = "cleardata";
+    private static final String REQUIRED = "required";
+    private static final String CLEARDATA = "cleardata";
     static final String DATELANG = "date";
-    static final String USDATELANG = "us date";
+    private static final String USDATELANG = "us date";
     static final String ONLY = "only";
     static final String TOPHEADING = "topheading";
     static final String IGNORE = "ignore";
@@ -61,7 +61,7 @@ class HeadingReader {
     static final String LINEDATA = "linedata";
     static final String SPLIT = "split";
 
-    static final int FINDATTRIBUTECOLUMN = -2;
+    private static final int FINDATTRIBUTECOLUMN = -2;
 
     /*
     <heading> classification <other heading>
@@ -75,7 +75,7 @@ todo - add classification here
         List<MutableImportHeading> headings = new ArrayList<>();
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
         for (String header : headers) {
-            // on some spreadsheets, pseudo headers are created because there is text in more than one line.  The Dividor must also be accompanied by a 'peers' clause
+            // on some spreadsheets, pseudo headers are created because there is text in more than one line.  The divider must also be accompanied by a 'peers' clause
             int dividerPos = header.lastIndexOf(headingDivider); // is there context defined here?
             if (header.trim().length() > 0 && (dividerPos < 0 || header.toLowerCase().indexOf(PEERS) > 0)) { // miss out blanks also.
                 // works backwards simply for convenience to chop off the context headings until only the heading is left, there is nothing significant about the ordering in contextHeadings
@@ -109,51 +109,93 @@ todo - add classification here
         return headings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList());
     }
 
-    // deal with attribute short hand and pivot stuff, essentially pre processing that can be done before making any MutableImportHeadings
+    /* deal with attribute short hand and pivot stuff, essentially pre processing that can be done before making any MutableImportHeadings
+    a recent modification is indexing composite headings in advance - required for speed and because headers might be referenced by more than one name
+    as part of the Ed Broking functionality, One insurer might say "Policy No." the other "Policy Number". Using this Ed Broking Logic
+    on the way into this function the headers are as they will have been from the file it's here that, given a prepared structure,
+    these file name headings can be matched back to the names that define headings. As in the headings will be replaced,
+    resulting the indexing for composite issue described above
+
+    still too complex for INtellij to analyse - todo
+    */
 
     static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, String zipVersion, String fileName, List<String> languages) throws Exception {
-        String importAttribute = null;
-        if (importInterpreter != null) {
-            importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS"); // this again, factor - todo
-        }
         // option for extra composite headings - I think for PwC, a little odd but harmless.
         if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null) {
             List<String> extraCompositeHeadings = Arrays.asList(importInterpreter.getAttribute(COMPOSITEHEADINGS).split("¬")); // delimiter match the other headings string
             headers.addAll(extraCompositeHeadings);
         }
 
+        String importAttribute = null;
+        if (importInterpreter != null) {
+            importAttribute = importInterpreter.getDefaultDisplayName().replace("DATAIMPORT", "HEADINGS"); // this again, factor - todo
+        }
+
         List<String> origHeaders = new ArrayList<>(headers);
         String lastHeading = "";
         boolean pivot = false;
+        // a composite heading will refer to headings surrounded by sql like quotes e.g. `heading` `another heading`, this will simply be replaced with `1` `2` etc.
+        // The reason this function was called twice is that a composition command can reference either the name on the actual file OR the name of the child name
+        // it would be nice if this could be called once but I know why it is not. todo : fix
         headers = replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders, headers);
         boolean headersReplaced = true;
         for (int i = 0; i < headers.size(); i++) {
             String header = headers.get(i);
             if (header.trim().length() > 0) {
                 // stored header overrides one on the file
-                if (importInterpreter != null && importInterpreter.getAttribute(header) != null) {
-                    header = importInterpreter.getAttribute(header);
-                }
-                if (importInterpreter != null && importInterpreter.getAttribute(header) == null && importInterpreter.getChildren() != null && importInterpreter.getChildren().size() > 0) {//PROCESS FOR ZIP FILE
-                    headersReplaced = false;
-                    Name headerName = NameService.findByName(azquoMemoryDBConnection, header, languages);
-                    if (headerName != null) {
-                        String attribute = getCompositeAttributes(headerName, importAttribute, importAttribute + " " + languages.get(0));
-                        header = headerName.getDefaultDisplayName();
-                        origHeaders.set(i, header);
-                        if (attribute != null) {
-                            if (zipVersion != null) {
-                                attribute = attribute.replace("ZIPVERSION", zipVersion);
+                if (importInterpreter != null) {
+                    if (importInterpreter.getAttribute(header) != null) {
+                        header = importInterpreter.getAttribute(header);
+                    } else if (importInterpreter.getChildren() != null && importInterpreter.getChildren().size() > 0) {//PROCESS FOR ZIP FILE
+                        headersReplaced = false;
+                        // given preparation we should be able to find a name with this header in the correct language
+                        Name headerName = NameService.findByName(azquoMemoryDBConnection, header, languages);
+                        if (headerName != null) {
+                        /*
+
+                        Ok examining the risk database makes this clearer. There's "Transaction Type" under "Data Import Risk"
+                        When it was first put into the DB the attribute RLD had "<Policy Type> language NEWRENEWAL" which got broken into
+
+                        RLD: Policy Type
+                        HEADINGS RISK RLD: language RENEWAL
+
+                        there is also
+
+                        HEADINGS RISK: classification Policy Reference; required
+
+                        The header is overwritten with "Transaction Type" then a combination of HEADINGS RISK and HEADINGS RISK RLD
+                        are grabbed making "classification Policy Reference; required; language RENEWAL"
+
+                        replace ZIPVERSION in this if you can then add it to the main name, "Transaction Type"
+                         unless it contains "." in which case replace the header with the combined created attribute
+                         that "." business might come from HEADINGS RISK e.g. "Policy Reference.DateReceived;default NOW" in the name "Date Received"
+
+                         A note about "<Policy Type> language NEWRENEWAL", it's a little confusing as the beginning isn't definition, it's how to look
+                         the column up. The latter is clauses that will be jammed on the end for this variant (e.g. HISCOX or RLD)
+
+                         Since the heading (e.g. Date Received) can be mangled we do want to know what the original header is for composition purposes
+
+                         THis is very much Ed broking stuff, I'd like to put it in the EdBrokingExtension class but I'm not sure how to factor right now
+                         */
+                            header = headerName.getDefaultDisplayName();
+                            origHeaders.set(i, header);
+                            String attribute = getCompositeAttributes(headerName, importAttribute, importAttribute + " " + languages.get(0));
+                            if (attribute != null) {
+                                if (zipVersion != null) {
+                                    //  a bit arbitrary really
+                                    attribute = attribute.replace("ZIPVERSION", zipVersion);
+                                }
+                                if (attribute.contains(".")) {
+                                    header = attribute;
+                                } else {
+                                    header = header + ";" + attribute;
+                                }
                             }
-                            if (attribute.contains(".")) {
-                                header = attribute;
-                            } else {
-                                header = header + ";" + attribute;
-                            }
+                        } else {
+                            header = "";
                         }
-                    } else {
-                        header = "";
                     }
+
                 }
                 // attribute headings can start with . shorthand for the last heading followed by .
                 // of course starting the first header with a . causes a problem here but it would make no sense to do so!
@@ -202,7 +244,9 @@ todo - add classification here
                 /* line heading and data
                 Line heading means that the cell data on the line will be a name that is a parent of the line no
                 Line data means that the cell data on the line will be a value which is attached to the line number name (for when there's not for example an order reference to be a name on the line)
-                Line heading and data essentially are shorthand, this expands them and creates supporting names for the pivot if necessary.  */
+                Line heading and data essentially are shorthand, this expands them and creates supporting names for the pivot if necessary.
+                As the boolean shows, pivot stuff
+                */
                 if (header.contains(LINEHEADING) && header.indexOf(";") > 0) {
                     pivot = true;
                     String headname = header.substring(0, header.indexOf(";"));
@@ -235,10 +279,11 @@ todo - add classification here
         return headers;
     }
 
-    // EFC - seems to resolve column indexes of parts of the composition in advance but I'm not sure why . . .
-    // need to understand why both lists are passed
-    // headings replaced by WFC into indexes as the headings were changing? by the interpreting system
+    // headings replaced by WFC into indexes as the headings were changed by the new Ed Broking children of the data import name functionality
     // also headings shouldn't be resolved on every line when dealing with composite
+    // The first time this is called it doens't really need headers and original headers as they're the same but the second time
+    // the headers might have been changed so we need the originals for lookup
+    // I'm keen to try to workout how to stop this being called multiple times - just once won't do if we want flexible composition names
 
     private static List<String> replaceFieldNamesWithNumbersInCompositeHeadings(List<String> origHeaders, List<String> headers) {
         List<String> headerNames = new ArrayList<>();
@@ -248,7 +293,7 @@ todo - add classification here
         }
         int headerNo = 0;
         for (String header : headers) {
-            String newHeader = "";
+            StringBuilder newHeader = new StringBuilder();
             String[] clauses = header.split(";");
             boolean adjusted = false;
             for (String clause : clauses) {
@@ -262,7 +307,7 @@ todo - add classification here
                             String component = clause.substring(startFieldPos, endFieldPos);
                             if (headerNames.contains(component.toLowerCase())) {
                                 String fieldNo = headerNames.indexOf(component.toLowerCase()) + "";
-                                clause = clause.replace(component, fieldNo);
+                                clause = clause.replace("`" + component + "`", "`" + fieldNo + "`"); // EFC added the quotes or "field" counld interfere with "anoterfield"
                                 adjusted = true;
                                 startFieldPos += fieldNo.length() + 1;
                             } else {
@@ -273,8 +318,7 @@ todo - add classification here
                     }
 
                 }
-                newHeader += clause + ";";
-
+                newHeader.append(clause).append(";");
             }
             if (adjusted) {
                 headers.set(headerNo, newHeader.substring(0, newHeader.length() - 1));
@@ -288,8 +332,7 @@ todo - add classification here
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading
     private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames) throws Exception {
         MutableImportHeading heading = new MutableImportHeading();
-        List<String> clauses = new ArrayList<>();
-        clauses.addAll(Arrays.asList(headingString.split(";")));
+        List<String> clauses = new ArrayList<>(Arrays.asList(headingString.split(";")));
         Iterator clauseIt = clauses.iterator();
         heading.heading = ((String) clauseIt.next()).replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
         heading.name = NameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames); // at this stage, look for a name, but don't create it unless necessary
@@ -297,6 +340,8 @@ todo - add classification here
 
         while (clauseIt.hasNext()) {
             String clause = ((String) clauseIt.next()).trim();
+            // classification just being shorthand. According to this code it needs to be the first of the clauses
+            // should classificaltion go inside interpretClause?
             if (clause.toLowerCase().startsWith("classification ")) {
                 interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring("classification ".length()));
                 interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading);
@@ -314,7 +359,8 @@ todo - add classification here
     }
 
     /* This is called for all the ; separated clauses in a header e.g. Gender; parent of Customer; child of Genders
-    Called multiple times per header. I assume clause is trimmed! */
+    Called multiple times per header. I assume clause is trimmed!  Simple initial parsing, greater resolution happens
+    in resolvePeersAttributesAndParentOf where relationships between headings are handled*/
     private static void interpretClause(final AzquoMemoryDBConnection azquoMemoryDBConnection, final MutableImportHeading heading, final String clause) throws Exception {
         String firstWord = clause.toLowerCase(); // default, what it could legitimately be in the case of blank clauses (local, exclusive, non zero)
         // I have to add special cases for parent of and child of as they have spaces in them. A bit boring
@@ -327,7 +373,15 @@ todo - add classification here
                 firstWord = firstWord.substring(0, firstWord.indexOf(" "));
             }
         }
-        if (clause.length() == firstWord.length() && !firstWord.equals(TOPHEADING) && !firstWord.equals(COMPOSITION) && !firstWord.equals(LOCAL) && !firstWord.equals(REQUIRED) && !firstWord.equals(NONZERO) && !firstWord.equals(EXCLUSIVE) && !firstWord.equals(CLEAR) && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
+        if (clause.length() == firstWord.length()
+                && !firstWord.equals(TOPHEADING)
+                && !firstWord.equals(COMPOSITION)
+                && !firstWord.equals(LOCAL)
+                && !firstWord.equals(REQUIRED)
+                && !firstWord.equals(NONZERO)
+                && !firstWord.equals(EXCLUSIVE)
+                && !firstWord.equals(CLEAR)
+                && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading + " in headings"); // other clauses cannot be blank!
         }
         String result = clause.substring(firstWord.length()).trim();
@@ -384,8 +438,6 @@ todo - add classification here
                     heading.ignoreList[i] = heading.ignoreList[i].toLowerCase().trim();
                 }
                 break;
-
-
             case SPLIT:// character to use to split the line values of this column, so that if referring to a name instead it's a list of names
                 heading.splitChar = result.trim();
                 break;
@@ -489,6 +541,7 @@ todo - add classification here
                         throw new Exception("cannot find column " + mutableImportHeading.heading + " for attribute of " + mutableImportHeading.heading + "." + mutableImportHeading.attribute);
                     }
                 }
+                // read the attribute name from another column so will be done as lines are imported
                 if (mutableImportHeading.attributeColumn == FINDATTRIBUTECOLUMN) {
                     mutableImportHeading.attributeColumn = findMutableHeadingIndex(mutableImportHeading.attribute, headings);
                     if (mutableImportHeading.attributeColumn < 0) {
@@ -504,7 +557,8 @@ todo - add classification here
                     }
                     // see comments on localParentIndexes and in resolveLineNameParentsAndChildForCell in BatchImporter
                     // when the column this is parent of is resolved it must first resolve THIS heading if this heading is it's parent with local set
-                    if (mutableImportHeading.isLocal){
+                    // locals have to be resolved in order from the top first or the structure will not be correct
+                    if (mutableImportHeading.isLocal) {
                         headings.get(mutableImportHeading.indexForChild).localParentIndexes.add(headingNo);
                     }
                 }
@@ -570,11 +624,11 @@ todo - add classification here
         return headingFound;
     }
 
-    static String getCompositeAttributes(Name name, String attributeName1, String attributeName2){
+    static String getCompositeAttributes(Name name, String attributeName1, String attributeName2) {
         String attribute1 = name.getAttribute(attributeName1);
         String attribute2 = name.getAttribute(attributeName2);
-        if (attribute1==null) return attribute2;
-        if (attribute2==null) return attribute1;
+        if (attribute1 == null) return attribute2;
+        if (attribute2 == null) return attribute1;
         return attribute1 + ";" + attribute2;
     }
 }

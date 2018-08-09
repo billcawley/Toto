@@ -223,10 +223,11 @@ public class BatchImporter implements Callable<Void> {
                                 }
                             }
                             // if there was a function its name and parameters have been extracted and expression should now be a column name (trim?)
-                            // so resolve the column name and run the function if there was one
+                            // used to lookup column name each time but now it's been replaced with the index, required due to Ed Broking heading renaming that can happen earlier
+                            // this is probably a bit faster too
                             ImportCellWithHeading compCell = null;
                             try {
-                                compCell = cells.get(Integer.parseInt(expression));//findCellWithHeadingForComposite(expression, cells);
+                                compCell = cells.get(Integer.parseInt(expression));
                             } catch (Exception ignored) {
 
                             }
@@ -301,18 +302,6 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
-    /* EFC - this is made redundant by HeadingReader.replaceFieldNamesWithNumbersInCompositeHeadings but I'm not sure why
-    more simple than the column index look up - we just want a match, don't care about attributes etc.
-    private static ImportCellWithHeading findCellWithHeadingForComposite(String nameToFind, List<ImportCellWithHeading> importCellWithHeadings) {
-        for (ImportCellWithHeading importCellWithHeading : importCellWithHeadings) {
-            ImmutableImportHeading heading = importCellWithHeading.getImmutableImportHeading();
-            if (heading.heading != null && heading.heading.equalsIgnoreCase(nameToFind)) {
-                return importCellWithHeading;
-            }
-        }
-        return null;
-    }*/
-
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
     private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo, Set<Integer> linesRejected) throws Exception {
         int valueCount = 0;
@@ -338,7 +327,7 @@ public class BatchImporter implements Callable<Void> {
         }
         for (ImportCellWithHeading cell : cells) {
             if (cell.getImmutableImportHeading().lineNameRequired) {
-                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, lineNo);
+                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, lineNo, 0);
             }
         }
 
@@ -380,14 +369,13 @@ public class BatchImporter implements Callable<Void> {
                     }
 
                 }
-            } else { // now attribute - it did just run after as theoretically one could mix attributes and peers but this makes no sense so attributes are "else" after peer/value work
+            } else { // now attribute, not allowing attributes and peers to mix
                 if (cell.getImmutableImportHeading().indexForAttribute >= 0 && cell.getImmutableImportHeading().attribute != null
                         && cell.getLineValue().length() > 0) {
                     String attribute = cell.getImmutableImportHeading().attribute;
                     if (cell.getImmutableImportHeading().attributeColumn >= 0) {//attribute name refers to the value in another column - so find it
                         attribute = cells.get(cell.getImmutableImportHeading().attributeColumn).getLineValue();
                     }
-
                     // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
                     ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our source cell
                     if (identityCell.getLineNames() == null) {
@@ -395,6 +383,7 @@ public class BatchImporter implements Callable<Void> {
                     } else {
                         for (Name name : identityCell.getLineNames()) {
                             name.setAttributeWillBePersisted(attribute, cell.getLineValue());
+                            // EFC note - need to check on definition
                             if (attribute.toLowerCase().equals("definition")) {
                                 //work it out now!
                                 name.setChildrenWillBePersisted(NameQueryParser.parseQuery(azquoMemoryDBConnection, cell.getLineValue()));
@@ -421,20 +410,8 @@ public class BatchImporter implements Callable<Void> {
     }
 
 
-    // namesFound is a cache. Then the heading we care about then the list of all headings.
-    // This used to be called handle parent and deal only with parents and children but it also resolved line names. Should be called for local first then non local
-    // it tests to see if the current line name is null or not as it may have been set by a call to resolveLineNamesParentsChildrenRemove on a different cell setting the child name
-
-    private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
-                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo) throws Exception {
-        resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cellWithHeading, cells, attributeNames, lineNo, 0);
-    }
-
-    /*
-    Edd note - I'm not completely sure this function doesn't have redundant work in it. as in things being added again.
-
-    Todo - run through the logic and try to be sure.
-     */
+    /* namesFound is a cache. Then the heading we care about then the list of all headings.
+     * */
 
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
                                                               ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo, int recursionLevel) throws Exception {
@@ -504,6 +481,7 @@ public class BatchImporter implements Callable<Void> {
                     childNames = childCell.getLineValue().split(childCell.getImmutableImportHeading().splitChar);
                 }
                 for (String childName : childNames) {
+                    // can cellWithHeading.getLineNames() actually be null by this point? Maybe if the line was blank
                     if (cellWithHeading.getLineNames() != null) {
                         for (Name thisCellsName : cellWithHeading.getLineNames()) {
                             childCell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, childName, thisCellsName
@@ -562,6 +540,7 @@ public class BatchImporter implements Callable<Void> {
                     }
                 } else {
                     // in theory this column could be multiple parents and the column "parent of" refers to could be multiple children, permute over the combinations
+                    // if above childCell.getLineNames() == null was true then this work will have been done . . is this a concern, can it be put on the else above? TODO - work out if that would break exclusive after all similar would have been done before
                     for (Name parent : cellWithHeading.getLineNames()) {
                         for (Name childCellName : childCell.getLineNames()) {
                             parent.addChildWillBePersisted(childCellName);

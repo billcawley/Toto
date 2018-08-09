@@ -156,7 +156,7 @@ public class ExcelController {
 
             }
             if (loggedInUser == null) {
-                loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, java.net.URLDecoder.decode(password), false);
+                loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, java.net.URLDecoder.decode(password, "UTF-8"), false);
                 if (loggedInUser == null) {
                     System.out.println("login attempt by " + logon + " password " + password);
                     return jsonError("incorrect login details");
@@ -191,7 +191,7 @@ public class ExcelController {
                 LoginService.switchDatabase(loggedInUser,database);
             }
             if (reportName!=null && reportName.length() > 0){
-                reportName = java.net.URLDecoder.decode(reportName);
+                reportName = java.net.URLDecoder.decode(reportName, "UTF-8");
                 loggedInUser.setOnlineReport(OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(),reportName.trim()));
             }
             if (op.equals("admin")){
@@ -467,9 +467,9 @@ public class ExcelController {
 
                 if (data.size()<oldData.size() || (data !=null && oldData!=null && data.size() > 0 && oldData.size() > 0 && data.get(0).size()!= oldData.get(0).size()))
                     return "error: data region " + excelJsonRequest.region + " on " + excelJsonRequest.sheetName + " has changed size.";
-                Iterator rowIt = data.iterator();
+                Iterator<List<String>> rowIt = data.iterator();
                 for  (List<CellForDisplay> oldRow: oldData) {//for the moment, ignore any lines below old data - assume to be blank.....
-                    List<String> row = (List<String>) rowIt.next();
+                    List<String> row = rowIt.next();
                     Iterator cellIt = oldRow.iterator();
                     for (String cell : row) {
                         CellForDisplay oldCell = (CellForDisplay) cellIt.next();

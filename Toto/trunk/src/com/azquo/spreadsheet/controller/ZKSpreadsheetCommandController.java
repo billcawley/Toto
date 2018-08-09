@@ -166,16 +166,10 @@ public class ZKSpreadsheetCommandController {
                             }
                         }*/
                         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-                        FileOutputStream fos = null;
-                        try {
-                            fos = new FileOutputStream(file);
-//                            exporter.export(book, file);
+                        try (FileOutputStream fos = new FileOutputStream(file)) {
+                            //                            exporter.export(book, file);
                             // depreciated, why?
                             exporter.export(ss.getSelectedSheet(), fos);
-                        } finally {
-                            if (fos != null) {
-                                fos.close();
-                            }
                         }
                         loggedInUser.userLog("Download PDF : " + ss.getSelectedSheetName() + ".pdf");
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".pdf", "pdf", "application/pdf", file, true));
