@@ -489,6 +489,13 @@ public class BatchImporter implements Callable<Void> {
                         }
                     }
                 }
+            } else { // a simple include in sets if line names exists. Exclusive after is for taking stuff out if required
+                // in theory this column could be multiple parents and the column "parent of" refers to could be multiple children, permute over the combinations
+                for (Name parent : cellWithHeading.getLineNames()) {
+                    for (Name childCellName : childCell.getLineNames()) {
+                        parent.addChildWillBePersisted(childCellName);
+                    }
+                }
             }
             // note! Exclusive can't work if THIS column is multiple names
             if (cellWithHeading.getLineNames() != null) {
@@ -536,14 +543,6 @@ public class BatchImporter implements Callable<Void> {
                             if (needsAdding) {
                                 parent.addChildWillBePersisted(childCellName);
                             }
-                        }
-                    }
-                } else {
-                    // in theory this column could be multiple parents and the column "parent of" refers to could be multiple children, permute over the combinations
-                    // if above childCell.getLineNames() == null was true then this work will have been done . . is this a concern, can it be put on the else above? TODO - work out if that would break exclusive after all similar would have been done before
-                    for (Name parent : cellWithHeading.getLineNames()) {
-                        for (Name childCellName : childCell.getLineNames()) {
-                            parent.addChildWillBePersisted(childCellName);
                         }
                     }
                 }
