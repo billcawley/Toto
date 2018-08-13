@@ -403,6 +403,7 @@ todo - add classification here
                         heading.dateForm = Constants.UKDATE;
                     } else {
                         heading.dateForm = Constants.USDATE;
+                        result = DATELANG;
                     }
                     //Bill had commented these three lines, Edd uncommenting 13/07/2018 as it broke DG import
                     /*
@@ -534,7 +535,7 @@ todo - add classification here
                 }
                 // Resolve Attributes. Having an attribute means the content of this column relates to a name in another column,
                 // need to find that column's index. Fairly simple stuff, it's using findMutableHeadingIndex to find the subject of attributes and parents
-                if (mutableImportHeading.attribute != null && !mutableImportHeading.attribute.equalsIgnoreCase("date") && !mutableImportHeading.attribute.equalsIgnoreCase("usdate")) {
+                if (mutableImportHeading.attribute != null && !mutableImportHeading.attribute.equalsIgnoreCase(DATELANG) && !mutableImportHeading.attribute.equalsIgnoreCase(USDATELANG)) {
                     // so if it's Customer,Address1 we need to find customer.
                     mutableImportHeading.indexForAttribute = findMutableHeadingIndex(mutableImportHeading.heading, headings);
                     if (mutableImportHeading.indexForAttribute < 0) {
@@ -610,7 +611,7 @@ todo - add classification here
             //checking the name itself, then the name as part of a comma separated string
             if (heading.heading != null
                     && (heading.heading.equalsIgnoreCase(nameToFind) || heading.heading.toLowerCase().startsWith(nameToFind.toLowerCase() + ","))
-                    && (heading.isAttributeSubject || heading.attribute == null || (heading.attribute.toLowerCase().equals(DATELANG) && heading.dateForm > 0))) {
+                    && (heading.isAttributeSubject || heading.attribute == null || ((heading.attribute.toLowerCase().equals(USDATELANG) || heading.attribute.toLowerCase().equals(DATELANG)) && heading.dateForm > 0))) {
                 if (heading.isAttributeSubject) {
                     return headingNo;
                 }
