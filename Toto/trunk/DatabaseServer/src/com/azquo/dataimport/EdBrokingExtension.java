@@ -246,7 +246,7 @@ There would be some duplication but it would be less complex to make
              */
         importAttribute = importAttribute + " " + language;
         for (Name importField : importInterpreter.getChildren()) {
-            String existingName = importField.getAttribute(language);
+            String existingName = importField.getAttribute(importAttribute);
             if (existingName != null && existingName.startsWith("<") && existingName.contains(">")) {
                 String newName = "";
                 String newHeadingAttributes = existingName;
