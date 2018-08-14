@@ -185,11 +185,14 @@ todo - add classification here
                                     //  a bit arbitrary really
                                     attribute = attribute.replace("ZIPVERSION", zipVersion);
                                 }
+                                header = attribute;
+                                /*
                                 if (attribute.contains(".")) {
                                     header = attribute;
                                 } else {
                                     header = header + ";" + attribute;
                                 }
+                                */
                             }
                         } else {
                             header = "";
