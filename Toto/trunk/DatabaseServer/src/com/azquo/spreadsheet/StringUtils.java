@@ -390,4 +390,29 @@ I should be ok for StringTokenizer at this point
         }
         return -1;
     }
+
+    public static String stripTempSuffix(String name){
+        int dotPos = name.lastIndexOf(".");
+        boolean istimestamp = true;
+        while (istimestamp && dotPos > 0){
+            istimestamp = false;
+            int underscorePos = name.substring(0,dotPos).lastIndexOf("_");
+            if (dotPos - underscorePos > 14){
+                istimestamp = true;
+                for (int i=underscorePos + 1;i<dotPos;i++){
+                    if (name.charAt(i) < '0' || name.charAt(i) > '9'){
+                        istimestamp = false;
+                        break;
+                    }
+                }
+                if (istimestamp){
+                    name = name.substring(0,underscorePos) + name.substring(dotPos);
+                    dotPos = name.lastIndexOf(".");
+                }
+            }
+        }
+        return name;
+
+    }
+
 }

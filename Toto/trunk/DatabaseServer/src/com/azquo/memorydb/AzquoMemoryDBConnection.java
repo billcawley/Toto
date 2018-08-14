@@ -3,6 +3,7 @@ package com.azquo.memorydb;
 import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
+import com.azquo.spreadsheet.StringUtils;
 //import org.apache.log4j.Logger;
 
 import java.time.LocalDateTime;
@@ -119,22 +120,7 @@ public class AzquoMemoryDBConnection {
         // not sure how latest and method cen get set as null but best to be careful with it
         if (latest != null && latest.getUser().equals(user)) {
             //check to remove a timestamp
-            int dotPos = name.lastIndexOf(".");
-            if (dotPos > 0){
-                int underscorePos = name.substring(0,dotPos).lastIndexOf("_");
-                if (dotPos - underscorePos > 14){
-                    boolean istimestamp = true;
-                    for (int i=underscorePos + 1;i<dotPos;i++){
-                        if (name.charAt(i) < '0' || name.charAt(i) > '9'){
-                            istimestamp = false;
-                            break;
-                        }
-                    }
-                    if (istimestamp){
-                        name = name.substring(0,underscorePos) + name.substring(dotPos);
-                    }
-                }
-            }
+            name = StringUtils.stripTempSuffix(name);
             if (latest.getMethod() != null && latest.getMethod().equals(method) && latest.getName() != null && latest.getName().equals(name) &&
                     latest.getContext() != null && latest.getContext().equals(context) && latest.getTimeStamp().plusSeconds(30).isAfter(LocalDateTime.now())) {
                 this.provenance = latest;
@@ -234,4 +220,5 @@ public class AzquoMemoryDBConnection {
             userLog.append(toAdd);
         }
     }
+
 }

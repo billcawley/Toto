@@ -2,6 +2,7 @@ package com.azquo.dataimport;
 
 import com.azquo.ThreadPools;
 import com.azquo.memorydb.core.Name;
+import com.azquo.spreadsheet.StringUtils;
 
 import java.io.File;
 import java.util.*;
@@ -107,7 +108,7 @@ public class ValuesImport {
                 }
             }
             StringBuilder toReturn = new StringBuilder();
-            toReturn.append(valuesImportConfig.getFileName());
+            toReturn.append(StringUtils.stripTempSuffix(valuesImportConfig.getFileName()));
             toReturn.append(" imported. Dataimport took ")// I'm not sure I agree with intellij warning about non chained
                     .append((System.currentTimeMillis() - track) / 1000)
                     .append(" second(s) to import ")
