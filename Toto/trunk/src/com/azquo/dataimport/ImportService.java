@@ -49,11 +49,11 @@ public final class ImportService {
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     // EFC - 01/08/2018
     public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, boolean isData) throws Exception {
-        return importTheFile(loggedInUser, fileName, filePath, isData, false, false);
+        return importTheFile(loggedInUser, fileName, filePath, isData, false, false, true);
     }
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, boolean isData, boolean setup, boolean forceReportUpload) throws Exception { // setup just to flag it
+    public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, boolean isData, boolean setup, boolean forceReportUpload, boolean isLast) throws Exception { // setup just to flag it
         InputStream uploadFile = new FileInputStream(filePath);
         // todo : address provenance on an import
         if (loggedInUser.getDatabase() == null) {
@@ -61,15 +61,20 @@ public final class ImportService {
         }
         String tempFile = ImportFileUtilities.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
         uploadFile.close(); // windows requires this (though windows should not be used in production), perhaps not a bad idea anyway
+
         String toReturn;
+
         if (fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
             String zipName = null;
             if (fileName.indexOf(" ") > 0) {
-                zipName = fileName.substring(0, fileName.indexOf("."));
+                zipName = stripTempSuffix(fileName);
+                zipName = zipName.substring(0,zipName.indexOf("."));
             }
             List<Path> files = ImportFileUtilities.unZip(tempFile);
             // should be sorting by xls first then size ascending
             files.sort((f1, f2) -> {
+                //note - this does not sort zip files....
+
                 if ((f1.getFileName().endsWith(".xls") || f1.getFileName().endsWith(".xlsx")) && (!f2.getFileName().endsWith(".xls") && !f2.getFileName().endsWith(".xlsx"))) { // one is xls, the other is not
                     return -1;
                 }
@@ -89,10 +94,15 @@ public final class ImportService {
             Iterator<Path> fileIterator = files.iterator();
             while (fileIterator.hasNext()) {
                 Path p = fileIterator.next();
-                if (fileIterator.hasNext()) {
-                    sb.append(readBookOrFile(loggedInUser, p.getFileName().toString(), zipName, p.toString(), false, isData, false));
-                } else {
-                    sb.append(fileName + ": " + readBookOrFile(loggedInUser, p.getFileName().toString(), zipName, p.toString(), true, isData, false)); // persist on the last one
+                if (p.getFileName().toString().endsWith(".zip")){
+                    sb.append(importTheFile(loggedInUser, p.getFileName().toString(), p.toString(), isData, setup, forceReportUpload, !fileIterator.hasNext()));
+
+                }else {
+                    if (fileIterator.hasNext()) {
+                        sb.append(readBookOrFile(loggedInUser, p.getFileName().toString(), zipName, p.toString(), false, isData, false));
+                    } else {
+                        sb.append(stripTempSuffix(fileName) + ": " + readBookOrFile(loggedInUser, p.getFileName().toString(), zipName, p.toString(), isLast, isData, false)); // persist on the last one
+                    }
                 }
             }
             toReturn = sb.toString();
@@ -662,5 +672,29 @@ public final class ImportService {
             }
         }
         return choices;
+    }
+
+    private static String stripTempSuffix(String name){
+        int dotPos = name.lastIndexOf(".");
+        boolean istimestamp = true;
+        while (istimestamp && dotPos > 0){
+            istimestamp = false;
+            int underscorePos = name.substring(0,dotPos).lastIndexOf("_");
+            if (dotPos - underscorePos > 14){
+                istimestamp = true;
+                for (int i=underscorePos + 1;i<dotPos;i++){
+                    if (name.charAt(i) < '0' || name.charAt(i) > '9'){
+                        istimestamp = false;
+                        break;
+                    }
+                }
+                if (istimestamp){
+                    name = name.substring(0,underscorePos) + name.substring(dotPos);
+                    dotPos = name.lastIndexOf(".");
+                }
+            }
+        }
+        return name;
+
     }
 }

@@ -138,7 +138,7 @@ public class ManageDatabasesController {
                             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
                             try {
                                 session.setAttribute("importResult",
-                                        ImportService.importTheFile(loggedInUser, ur.getFileName(), ur.getTempPath(), false, false, true)
+                                        ImportService.importTheFile(loggedInUser, ur.getFileName(), ur.getTempPath(), false, false, true, true)
                                 );
                             } catch (Exception e) {
                                 session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
