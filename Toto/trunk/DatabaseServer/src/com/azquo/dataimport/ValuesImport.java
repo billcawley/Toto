@@ -33,12 +33,12 @@ public class ValuesImport {
             List<Future> futureBatches = new ArrayList<>();
             // Local cache of names just to speed things up, a name could be referenced millions of times in one file
             final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
-            final Set<Integer> linesRejected = Collections.newSetFromMap(new ConcurrentHashMap<>(0)); // track line numbers rejected
+            final Set<String> linesRejected = Collections.newSetFromMap(new ConcurrentHashMap<>(0)); // track line numbers rejected
             int linesImported = 0; // just for some feedback at the end
-            int lineNo = 1; // for error checking etc. Generally the first line of data is line 2, this is incremented at the beginning of the loop. Might be inaccurate if there are vertically stacked headers.
+            int importLine = 0; // for error checking etc. Generally the first line of data is line 2, this is incremented at the beginning of the loop. Might be inaccurate if there are vertically stacked headers.
             while (valuesImportConfig.getLineIterator().hasNext()) { // the main line reading loop
                 String[] lineValues = valuesImportConfig.getLineIterator().next();
-                lineNo++;
+                importLine++;
                 linesImported++;
                 List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
                 int columnIndex = 0;
@@ -79,7 +79,7 @@ public class ValuesImport {
                                 new BatchImporter(valuesImportConfig.getAzquoMemoryDBConnection()
                                         , valuesImportConfig.getValuesModifiedCounter(), linesBatched
                                         , namesFoundCache, valuesImportConfig.getLanguages()
-                                        , lineNo - valuesImportConfig.getBatchSize(), linesRejected))// line no should be the start
+                                        , importLine - valuesImportConfig.getBatchSize(), linesRejected))// line no should be the start
 
                         );
                         linesBatched = new ArrayList<>(valuesImportConfig.getBatchSize());
@@ -89,7 +89,7 @@ public class ValuesImport {
                 }
             }
             // load leftovers
-            int loadLine = lineNo - linesBatched.size(); // NOT batch size! A problem here isn't a functional problem but it makes logging incorrect.
+            int loadLine = importLine - linesBatched.size(); // NOT batch size! A problem here isn't a functional problem but it makes logging incorrect.
             futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(valuesImportConfig.getAzquoMemoryDBConnection()
                     , valuesImportConfig.getValuesModifiedCounter(), linesBatched, namesFoundCache, valuesImportConfig.getLanguages(), loadLine, linesRejected)));
             // check all work is done and memory is in sync
@@ -120,9 +120,9 @@ public class ValuesImport {
             if (!linesRejected.isEmpty()) {
                 toReturn.append(" - No. lines rejected: ").append(linesRejected.size()).append(" - Line numbers with rejected cells : ");
                 int col = 0;
-                ArrayList<Integer> lineNumbersList = new ArrayList<>(linesRejected);
+                ArrayList<String> lineNumbersList = new ArrayList<>(linesRejected);
                 Collections.sort(lineNumbersList); // should do the basic sort
-                for (int line : lineNumbersList) {
+                for (String line : lineNumbersList) {
                     if (col > 0) {
                         toReturn.append(", ");
                     }
