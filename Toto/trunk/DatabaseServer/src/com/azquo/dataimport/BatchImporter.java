@@ -31,19 +31,19 @@ public class BatchImporter implements Callable<Void> {
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
     // just to give a little feedback on the number imported
     private final AtomicInteger valuesModifiedCounter;
-    private int lineNo;
+    private int importLine;
     private final List<List<ImportCellWithHeading>> dataToLoad;
     private final Map<String, Name> namesFoundCache;
     private final List<String> attributeNames;
-    private final Set<Integer> linesRejected;
+    private final Set<String> linesRejected;
 
-    BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection, AtomicInteger valuesModifiedCounter, List<List<ImportCellWithHeading>> dataToLoad, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo, Set<Integer> linesRejected) {
+    BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection, AtomicInteger valuesModifiedCounter, List<List<ImportCellWithHeading>> dataToLoad, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Set<String> linesRejected) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
         this.valuesModifiedCounter = valuesModifiedCounter;
         this.dataToLoad = dataToLoad;
         this.namesFoundCache = namesFoundCache;
         this.attributeNames = attributeNames;
-        this.lineNo = lineNo;
+        this.importLine = importLine;
         this.linesRejected = linesRejected;
     }
 
@@ -82,27 +82,28 @@ public class BatchImporter implements Callable<Void> {
                         }
                     }
                     // composite might do things that affect only and existing hence do it before
-                    resolveCompositeValues(lineToLoad, lineNo);
-                    if (checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames)) {
+                    resolveCompositeValues(lineToLoad, importLine);
+                    String rejectionReason =  checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
+                    if (rejectionReason==null) {
                         try {
                             // valueTracker simply the number of values imported
-                            valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineNo, linesRejected));
+                            valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, importLine, linesRejected));
                         } catch (Exception e) {
                             azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
                             throw e;
                         }
                         Long now = System.currentTimeMillis();
                         if (now - time > 10) { // 10ms a bit arbitrary
-                            System.out.println("line no " + lineNo + " time = " + (now - time) + "ms");
+                            System.out.println("line no " + importLine + " time = " + (now - time) + "ms");
                         }
                         time = now;
                     } else if (linesRejected.size() < 1_000) {
-                        linesRejected.add(lineNo);
+                        linesRejected.add(importLine + ": " + rejectionReason);
                     }
                 }
-                lineNo++;
+                importLine++;
             }
-            azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(lineNo) + " imported.", true);
+            azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(importLine) + " imported.", true);
             azquoMemoryDBConnection.addToUserLogNoException("Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
             return null;
         } catch (Exception e) { // stacktrace first
@@ -113,11 +114,12 @@ public class BatchImporter implements Callable<Void> {
 
     // Checking only and existing means "should we import the line at all" based on these criteria
 
-    private static boolean checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
+    private static String checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
+        //returns the error
         for (ImportCellWithHeading cell : cells) {
             if (cell.getImmutableImportHeading().ignoreList != null) {
                 if (Arrays.asList(cell.getImmutableImportHeading().ignoreList).contains(cell.getLineValue().toLowerCase())) {
-                    return false;
+                    return "ignored";
                 }
             }
             if (cell.getImmutableImportHeading().only != null) {
@@ -127,18 +129,18 @@ public class BatchImporter implements Callable<Void> {
                 if (only.startsWith("*")) {
                     if (only.endsWith("*")) {
                         if (!lineValue.contains(only.substring(1, only.length() - 1))) {
-                            return false;
+                            return "not in '*only*'";
                         }
-                    } else if (!lineValue.startsWith(only.substring(1))) {
-                        return false;
+                    } else if (!lineValue.endsWith(only.substring(1))) {
+                        return "not in `*only'";
                     }
                 } else if (only.endsWith("*")) {
                     if (!lineValue.startsWith(only.substring(0, only.length() - 1))) {
-                        return false;
+                        return "not in 'only*'";
                     }
                 } else {
                     if (!lineValue.equals(only)) {
-                        return false;
+                        return "not in 'only'";
                     }
                 }
             }
@@ -160,18 +162,18 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
                 if (!cellOk) {
-                    return false; // none found break the line
+                    return cell.getLineValue() + " not existing"; // none found break the line
                 }
             }
         }
-        return true;
+        return null;
     }
 
     // replace things in quotes with values from the other columns. So `A column name`-`another column name` might be created as 123-235 if they were the values
     // Now supports basic excel like string operations, left right and mid, also simple single operator calculation on the results.
     // Calcs simple for the moment - if required could integrate the shunting yard algorithm
 
-    private static void resolveCompositeValues(List<ImportCellWithHeading> cells, int lineNo) throws Exception {
+    private static void resolveCompositeValues(List<ImportCellWithHeading> cells, int importLine) throws Exception {
         boolean adjusted = true;
         //loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
         // note : a circular reference could cause an infinite loop - hence the counter
@@ -183,7 +185,7 @@ public class BatchImporter implements Callable<Void> {
                     String result = cell.getImmutableImportHeading().compositionPattern;
                     // do line number first, I see no reason not to. Important for pivot.
                     String LINENO = "LINENO";
-                    result = result.replace(LINENO, lineNo + "");
+                    result = result.replace(LINENO, importLine + "");
                     int headingMarker = result.indexOf("`");
                     while (headingMarker >= 0) {
                         boolean doublequotes = false;
@@ -303,7 +305,7 @@ public class BatchImporter implements Callable<Void> {
     }
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
-    private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int lineNo, Set<Integer> linesRejected) throws Exception {
+    private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Set<String> linesRejected) throws Exception {
         int valueCount = 0;
         // initial pass to deal with defaults and local parents
         // set defaults before dealing with local parent/child
@@ -327,7 +329,7 @@ public class BatchImporter implements Callable<Void> {
         }
         for (ImportCellWithHeading cell : cells) {
             if (cell.getImmutableImportHeading().lineNameRequired) {
-                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, lineNo, 0);
+                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, importLine, 0);
             }
         }
 
@@ -352,7 +354,7 @@ public class BatchImporter implements Callable<Void> {
                 }
             }
             if (!peersOk) {
-                linesRejected.add(lineNo); // new logic to mark unstored values in the lines rejected
+                linesRejected.add(importLine + ":Missing peers for" + cell.getImmutableImportHeading().heading); // new logic to mark unstored values in the lines rejected
             } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
                 // now we have the set of names for that name with peers get the value from that headingNo it's a header for
                 String value = cell.getLineValue();
@@ -379,7 +381,8 @@ public class BatchImporter implements Callable<Void> {
                     // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
                     ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our source cell
                     if (identityCell.getLineNames() == null) {
-                        linesRejected.add(lineNo); // well just mark that the line was no good, should be ok for the moment
+                        linesRejected.add(importLine + " No name for attribute " + cell.getImmutableImportHeading().attribute + " of " + cell.getImmutableImportHeading().heading);
+                        break;
                     } else {
                         for (Name name : identityCell.getLineNames()) {
                             name.setAttributeWillBePersisted(attribute, cell.getLineValue());
@@ -414,7 +417,7 @@ public class BatchImporter implements Callable<Void> {
      * */
 
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
-                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int lineNo, int recursionLevel) throws Exception {
+                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int importLine, int recursionLevel) throws Exception {
         /*
              Imagine 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
              the key here is that the resolveLineNameParentsAndChildForCell has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
@@ -435,7 +438,7 @@ public class BatchImporter implements Callable<Void> {
                 if (recursionLevel == 8) { // arbitrary but not unreasonable
                     throw new Exception("recursion loop on heading " + cellWithHeading.getImmutableImportHeading().heading);
                 }
-                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, parentHeading, cells, attributeNames, lineNo, recursionLevel);
+                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, parentHeading, cells, attributeNames, importLine, recursionLevel);
             }
         }
         // in simple terms if a line cell value refers to a name it can now refer to a set of names
@@ -469,7 +472,7 @@ public class BatchImporter implements Callable<Void> {
         if (cellWithHeading.getImmutableImportHeading().indexForChild != -1 && cellWithHeading.getLineValue().length() > 0) {
             ImportCellWithHeading childCell = cells.get(cellWithHeading.getImmutableImportHeading().indexForChild);
             if (childCell.getLineValue().length() == 0) {
-                throw new Exception("Line " + lineNo + ": blank value for child of " + cellWithHeading.getLineValue() + " " + cellWithHeading.getImmutableImportHeading().heading);
+                throw new Exception("Line " + importLine + ": blank value for child of " + cellWithHeading.getLineValue() + " " + cellWithHeading.getImmutableImportHeading().heading);
             }
             // ok got the child cell, need to find the child cell name to add it to this cell's children
             if (childCell.getLineNames() == null) {
