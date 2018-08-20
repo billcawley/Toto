@@ -35,12 +35,13 @@ class ValuesImportConfig {
     private String zipVersion;
     private List<String> headers;
     private int skipLines;
+    private boolean clearData;
     // held for Ed broking stuff, might be factored in a mo
     private final Map<String, String> topHeadings;
 
 
     // exactly the same as is passed to valuesImport, no coincidence. Set these in this object then pass the object through various processes until it's ready to go
-    ValuesImportConfig(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) {
+    ValuesImportConfig(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter, boolean clearData) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
         this.filePath = filePath;
         this.fileName = fileName;
@@ -54,6 +55,7 @@ class ValuesImportConfig {
         zipVersion = null;
         headers = new ArrayList<>();
         skipLines = 0;
+        this.clearData = clearData;
         topHeadings = new HashMap<>();
     }
 
@@ -176,6 +178,9 @@ class ValuesImportConfig {
     void setSkipLines(int skipLines) {
         this.skipLines = skipLines;
     }
+
+    boolean getClearData() { return clearData; }
+
 
     Map<String, String> getTopHeadings() {
         return topHeadings;

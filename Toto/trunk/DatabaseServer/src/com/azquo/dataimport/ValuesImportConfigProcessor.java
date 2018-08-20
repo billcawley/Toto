@@ -82,6 +82,7 @@ class ValuesImportConfigProcessor {
                         valuesImportConfig.getAzquoMemoryDBConnection()
                         , valuesImportConfig.getHeaders()
                         , valuesImportConfig.getLanguages()
+                        , valuesImportConfig.getClearData()
                 )
         );
     }
@@ -366,6 +367,7 @@ class ValuesImportConfigProcessor {
                 || heading.startsWith(HeadingReader.EXISTING)
                 || heading.startsWith(HeadingReader.LINEHEADING)
                 || heading.startsWith(HeadingReader.LINEDATA)
+                || heading.startsWith(HeadingReader.CLASSIFICATION)
                 || heading.startsWith(HeadingReader.SPLIT);
     }
 }
