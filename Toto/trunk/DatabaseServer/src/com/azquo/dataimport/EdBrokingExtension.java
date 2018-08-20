@@ -16,12 +16,15 @@ Code written by WFC for Ed Broking, extracted/factored to here by EFC, modified 
 
 class EdBrokingExtension {
 
-    static void addZipNameToLanguages(ValuesImportConfig valuesImportConfig) {
+    static void addZipNameToLanguages(ValuesImportConfig valuesImportConfig) throws Exception{
                     /*
             New Ed Broking logic wants to do a combination of lookup initially based on the first half of the zip name then using the first half of the file name
             in language as a way of "versioning" the headers. The second half of the zip name is held to the side to perhaps be replaced in headers later too.
             */
         if (valuesImportConfig.getZipName() != null) {
+            if (!valuesImportConfig.getFileName().contains(" ")){
+               throw new Exception("the file/sheet name should contain a blank - the prefix indicates the interpretation method");
+            }
             List<String> languages = new ArrayList<>();
             languages.add(valuesImportConfig.getFileName().substring(0, valuesImportConfig.getFileName().indexOf(" ")));
             languages.add(Constants.DEFAULT_DISPLAY_NAME);
@@ -250,14 +253,10 @@ There would be some duplication but it would be less complex to make
             if (existingName != null && existingName.startsWith("<") && existingName.contains(">")) {
                 String newName = "";
                 String newHeadingAttributes = existingName;
-                if (existingName.startsWith("<")) {
-                    int nameEndPos = existingName.indexOf(">");
-                    if (nameEndPos > 0) {
-                        newName = existingName.substring(1, nameEndPos).trim();
-                        newHeadingAttributes = existingName.substring(nameEndPos + 1).trim();
-                    }
-                }
-                importField.setAttributeWillBePersisted(language, newName);
+                int nameEndPos = existingName.indexOf(">");
+                 newName = existingName.substring(1, nameEndPos).trim();
+                 newHeadingAttributes = existingName.substring(nameEndPos + 1).trim();
+                 importField.setAttributeWillBePersisted(language, newName);
                 // often it seems newHeadingAttributes will be empty and hence no attribute will be created
                 importField.setAttributeWillBePersisted(importAttribute, newHeadingAttributes);
             }
@@ -306,7 +305,7 @@ check that the headings that are required are there . . .
                     if (clause.toLowerCase().startsWith("composition")) {
                         composition = true;
                     }
-                    if (!defaultNames.contains(name.getDefaultDisplayName()) && required) { // so we don't already have this header and we need it
+                    if (required && !defaultNames.contains(name.getDefaultDisplayName()) && name.getAttribute(languages.get(0))==null) { // so we don't already have this header and we need it
                         if (composition) {// so a composition in one of the name children, add it to the headers
                             headers.add(name.getDefaultDisplayName());
                             defaultNames.add(name.getDefaultDisplayName());
