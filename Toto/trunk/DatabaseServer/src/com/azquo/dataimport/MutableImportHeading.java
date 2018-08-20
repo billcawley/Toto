@@ -64,7 +64,7 @@ class MutableImportHeading {
     // a default value if the line value is blank
     String defaultValue = null;
     //ignore is the opposite of 'only', omit any lines where this field consists of any element of the string list
-    String[] ignoreList = null;
+    List<String> ignoreList = null;
     // don't import zero values
     boolean blankZeroes = false;
     boolean required = false;

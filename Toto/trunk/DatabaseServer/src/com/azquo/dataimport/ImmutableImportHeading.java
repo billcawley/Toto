@@ -30,7 +30,7 @@ class ImmutableImportHeading {
     final String only;
     final String compositionPattern;
     final String defaultValue;
-    final String[] ignoreList;
+    final List<String> ignoreList;
     final boolean blankZeroes;
     final boolean lineNameRequired;
     final String exclusive;
