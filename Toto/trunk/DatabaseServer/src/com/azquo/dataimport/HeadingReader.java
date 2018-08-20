@@ -42,6 +42,7 @@ class HeadingReader {
     static final String PEERS = "peers";
     static final String LOCAL = "local";
     static final String COMPOSITION = "composition";
+    static final String CLASSIFICATION = "classification";
     static final String DEFAULT = "default";
     static final String NONZERO = "nonzero";
     private static final String REQUIRED = "required";
@@ -71,7 +72,7 @@ todo - add classification here
 
     // Manages the context being assigned automatically to subsequent headers. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.
-    static List<ImmutableImportHeading> readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, List<String> attributeNames) throws Exception {
+    static List<ImmutableImportHeading> readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, List<String> attributeNames, boolean clearData) throws Exception {
         List<MutableImportHeading> headings = new ArrayList<>();
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
         for (String header : headers) {
@@ -87,7 +88,7 @@ todo - add classification here
                     // if the heading ends with | the context heading will be blank, ignore it. A way to clear context if you just put a single | at the end of a heading
                     if (contextHeadingString.length() > 0) {
                         // context headings may not use many features but using the standard heading objects and interpreter is fine
-                        MutableImportHeading contextHeading = interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames);
+                        MutableImportHeading contextHeading = interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames, clearData);
                         if (contextHeading.attribute != null) {
                             attributeNames.add(contextHeading.attribute);//not sure when this should be removed.  It must apply until the context is changed THIS IS AN ADDITIONAL LANGUAGE USED TO UNDERSTAND THE HEADERS - NOT THE DATA!
                         }
@@ -96,12 +97,14 @@ todo - add classification here
                     header = header.substring(0, dividerPos);
                     dividerPos = header.lastIndexOf(headingDivider);
                 }
-                final MutableImportHeading heading = interpretHeading(azquoMemoryDBConnection, header, attributeNames);
+                final MutableImportHeading heading = interpretHeading(azquoMemoryDBConnection, header, attributeNames, clearData);
                 heading.contextHeadings = contextHeadings;
                 headings.add(heading);
             } else {// add an empty one, the headings ArrayList should match the number of headings even if that heading is empty
-                headings.add(new MutableImportHeading());
-            }
+                MutableImportHeading newHeading =new MutableImportHeading();
+                newHeading.clearData = clearData;
+                headings.add(newHeading);
+             }
         }
         // further processing of the Mutable headings - the bits where headings interact with each other
         resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
@@ -114,6 +117,7 @@ todo - add classification here
     as part of the Ed Broking functionality, One insurer might say "Policy No." the other "Policy Number". Using this Ed Broking Logic
     on the way into this function the headers are as they will have been from the file it's here that, given a prepared structure,
     these file name headings can be matched back to the names that define headings. As in the headings will be replaced,
+    resulting the indexing for composite issue described above
     resulting the indexing for composite issue described above
 
     still too complex for INtellij to analyse - todo
@@ -333,8 +337,9 @@ todo - add classification here
 
     //headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading
-    private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames) throws Exception {
+    private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames, boolean clearData) throws Exception {
         MutableImportHeading heading = new MutableImportHeading();
+        heading.clearData = clearData;
         List<String> clauses = new ArrayList<>(Arrays.asList(headingString.split(";")));
         Iterator clauseIt = clauses.iterator();
         heading.heading = ((String) clauseIt.next()).replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
@@ -345,8 +350,8 @@ todo - add classification here
             String clause = ((String) clauseIt.next()).trim();
             // classification just being shorthand. According to this code it needs to be the first of the clauses
             // should classificaltion go inside interpretClause?
-            if (clause.toLowerCase().startsWith("classification ")) {
-                interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring("classification ".length()));
+            if (clause.toLowerCase().startsWith(CLASSIFICATION)) {
+                interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring(CLASSIFICATION.length()));
                 interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading);
             } else {
                 interpretClause(azquoMemoryDBConnection, heading, clause);
@@ -437,9 +442,16 @@ todo - add classification here
                 heading.compositionPattern = result;
                 break;
             case IGNORE:
-                heading.ignoreList = result.split(",");
-                for (int i = 0; i < heading.ignoreList.length; i++) {
-                    heading.ignoreList[i] = heading.ignoreList[i].toLowerCase().trim();
+                heading.ignoreList = new ArrayList<>();
+                String[] ignores = result.split(",");
+                for (int i=0;i< ignores.length;i++){
+                    String ignoreItem = ignores[i].toLowerCase().trim();
+                    if (ignoreItem.equals("{blank")){
+                        heading.ignoreList.add("");
+                        heading.ignoreList.add("0");
+                    }else{
+                        heading.ignoreList.add(ignoreItem);
+                    }
                 }
                 break;
             case SPLIT:// character to use to split the line values of this column, so that if referring to a name instead it's a list of names
