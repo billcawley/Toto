@@ -135,6 +135,7 @@ public final class ImportService {
     }
 
     private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String zipName, String filePath, boolean persistAfter, boolean isData, boolean forceReportUpload) throws Exception {
+        String toReturn = "";
         if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(filePath), "Report name");
             List<String> notAllowed = new ArrayList<>();
@@ -265,10 +266,16 @@ public final class ImportService {
             }
             return "Report schedules file uploaded"; // I hope that's what it is looking for.
         } else if (fileName.contains(".xls")) { // normal. I'm not entirely sure the code for users etc above should be in this file, maybe a different importer?
-            return readBook(loggedInUser, fileName, zipName, filePath, persistAfter, isData, forceReportUpload);
+            toReturn = readBook(loggedInUser, fileName, zipName, filePath, persistAfter, isData, forceReportUpload);
         } else {
-            return readPreparedFile(loggedInUser, filePath, fileName, zipName, persistAfter, false);
+            toReturn =  readPreparedFile(loggedInUser, filePath, fileName, zipName, persistAfter, false);
         }
+        int errorPos = toReturn.toLowerCase().lastIndexOf("exception:");
+        if(errorPos > 0){
+            toReturn = toReturn.substring(errorPos + 10).trim();
+        }
+        return toReturn;
+
     }
 
     private static void uploadReport(LoggedInUser loggedInUser, String filePath, String fileName, String reportName, String identityCell) throws Exception {
