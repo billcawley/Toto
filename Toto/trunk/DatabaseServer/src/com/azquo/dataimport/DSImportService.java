@@ -51,7 +51,8 @@ public class DSImportService {
             // not currently paying attention to isSpreadsheet - only possible issue is the replacing of \\\n with \n required based off writeCell in ImportFileUtilities
             toReturn = SetsImport.setsImport(azquoMemoryDBConnection, filePath, fileName);
         } else {
-            ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection, filePath, fileName, zipName, isSpreadsheet, valuesModifiedCounter);
+            boolean clearData = fileName.toLowerCase().contains("cleardata");
+            ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection, filePath, fileName, zipName, isSpreadsheet, valuesModifiedCounter, clearData);
             // a lot goes on in this function to do with checking the file, finding import configuration, resolving headings etc.
             ValuesImportConfigProcessor.prepareValuesImportConfig(valuesImportConfig);
             // when it is done we assume we're ready to batch up lines with headers and import with BatchImporter
@@ -68,6 +69,6 @@ public class DSImportService {
         if (persistAfter) { // get back to the user straight away. Should not be a problem, multiple persists would be queued. The only issue is of changes while persisting, need to check this in the memory db.
             new Thread(azquoMemoryDBConnection::persist).start();
         }
-        return toReturn;
+         return toReturn;
     }
 }
