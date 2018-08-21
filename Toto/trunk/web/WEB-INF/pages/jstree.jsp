@@ -235,11 +235,7 @@
             if (document.getElementById("itemschosen").value == "") {
                 var selected = $('#js-container').jstree("get_selected");
                 itemsChosen = "jstreeids:";
-                for (item in selected) {
-                 itemsChosen += selected[item].id + ",";
-               }
-                // edd changing the above 3 lines to this which seems to be more compatible with IE
-                itemsChosen = selected;
+                itemsChosen += selected;
                 dataFlag = true;
             } else {
                 itemsChosen = encodeURIComponent(document.getElementById("itemschosen").value);
