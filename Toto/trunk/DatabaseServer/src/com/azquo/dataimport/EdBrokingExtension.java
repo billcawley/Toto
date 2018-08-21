@@ -137,6 +137,7 @@ There would be some duplication but it would be less complex to make
             checkImportChildrenForConversion(importInterpreter, importAttribute, languages.get(0));
             // so now go through the names, this is like a pre scan, find the line count (as in when multiple headings are sqaushed into one e.g. heading1|heading2|heading3)
             // and look for HeadingReader.TOPHEADING as referenced above topHeadingNames
+            String topline = null;  //topline is set when the topline can be detected by searching for this name
             for (Name name : importInterpreter.getChildren()) {
                 // if we take policy no as an example, there's "HEADINGS RISK" (the importAttribute) which is "required" and "RLD" (an example of a language) as "Policy #"
                 // of course the language might not have any entry, languageName being null
@@ -162,12 +163,19 @@ There would be some duplication but it would be less complex to make
                 if (interpretation != null && interpretation.toLowerCase().contains(HeadingReader.TOPHEADING)) {
                     topHeadingNames.add(name);
                 }
+                if (interpretation!=null && interpretation.toLowerCase().contains(HeadingReader.TOPLINE)){
+                    for (String language:languages){
+                        topline = name.getAttribute(language);
+                        if (topline!=null) break;
+                    }
+                }
             }
             int lineNo = 0;
             /* ok so go through the first 20 lines of the file assuming some top headings were found (only relevant for the Ed Broking style names)
              the key to this is that the tio names are apparently in pairs, if this is always so then the code here shuld be changed to be clearer
              so you have
              key1 value3
+
              key2 value3
              key3 value3
              And these keys are added as headings with the values being the default values an example is  <Coverholder:> topheading
@@ -203,7 +211,7 @@ There would be some duplication but it would be less complex to make
             }
             //looking for something in column A, there may be a gap after things like Coverholder: Joe Bloggs
             // so keep looking until we have headers
-            while (lineNo < 20 && (headersOut == null || headersOut.size() == 0 || headersOut.get(0).length() == 0) && valuesImportConfig.getLineIterator().hasNext()) {
+            while (lineNo < 20 && (headersOut == null || headersOut.size() == 0 || headersOut.get(0).length() == 0 || (topline!=null && !containsIgnoreCase(headersOut,topline))) && valuesImportConfig.getLineIterator().hasNext()) {
                 headersOut = new ArrayList<>(Arrays.asList(valuesImportConfig.getLineIterator().next()));
             }
             // finally we assume we have headers. If there more than a line of headers we'll have to squash them together. Heading1|Heading2|Heading3
@@ -218,7 +226,20 @@ There would be some duplication but it would be less complex to make
         if (headersOut != null) {
             valuesImportConfig.setHeaders(headersOut);
         }
+
+
     }
+
+    public static boolean containsIgnoreCase(List<String> list, String toTest){
+        toTest = toTest.toLowerCase();
+        for (String element:list){
+            if (element.toLowerCase().equals(toTest)){
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     /*
      EFC comments

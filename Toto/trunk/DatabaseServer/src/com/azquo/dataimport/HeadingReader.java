@@ -61,6 +61,7 @@ class HeadingReader {
     static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table, they are replaced before parsing starts properly
     static final String LINEDATA = "linedata";
     static final String SPLIT = "split";
+    static final String TOPLINE = "topline";
 
     private static final int FINDATTRIBUTECOLUMN = -2;
 
@@ -152,6 +153,8 @@ todo - add classification here
                         header = importInterpreter.getAttribute(header);
                     } else if (importInterpreter.getChildren() != null && importInterpreter.getChildren().size() > 0) {//PROCESS FOR ZIP FILE
                         headersReplaced = false;
+                        char c = 10;
+                        header = header.replace("\\\\n",c + "");
                         // given preparation we should be able to find a name with this header in the correct language
                         Name headerName = NameService.findByName(azquoMemoryDBConnection, header, languages);
                         if (headerName != null) {
@@ -389,6 +392,7 @@ todo - add classification here
                 && !firstWord.equals(NONZERO)
                 && !firstWord.equals(EXCLUSIVE)
                 && !firstWord.equals(CLEAR)
+                && !firstWord.equalsIgnoreCase(TOPLINE)
                 && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading + " in headings"); // other clauses cannot be blank!
         }
@@ -506,6 +510,9 @@ todo - add classification here
                 }
                 break;
             case TOPHEADING:
+                //used elsewhere
+                break;
+            case TOPLINE:
                 //used elsewhere
                 break;
             default:
