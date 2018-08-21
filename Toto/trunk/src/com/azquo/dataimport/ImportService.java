@@ -310,7 +310,7 @@ public final class ImportService {
         try {
             book = Importers.getImporter().imports(new File(tempPath), "Imported");
         } catch (Exception e) {
-            return fileName + ": Import error - " + e.getMessage();
+            return stripTempSuffix(fileName) + ": Import error - " + e.getMessage();
         }
         String reportName = null;
         boolean isImportTemplate = false;
@@ -496,7 +496,7 @@ public final class ImportService {
             ImportFileUtilities.convertRangeToCSV(sheet, csvW, transpose);
             csvW.close();
             fos.close();
-            return fileName + ": " + readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, zipName, persistAfter, true);
+            return stripTempSuffix(fileName) + ": " + readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, zipName, persistAfter, true);
         } catch (Exception e) {
             return e.getMessage();
         }
