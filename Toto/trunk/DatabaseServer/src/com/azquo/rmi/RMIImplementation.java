@@ -339,7 +339,7 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public String getMemoryReport(boolean suggestGc) throws RemoteException {
+    public String getMemoryReport(boolean suggestGc) {
         if (suggestGc) {
             // note : on Azquo recommended production JVM settings this will be ignored!
             System.gc();

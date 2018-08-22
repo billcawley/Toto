@@ -20,7 +20,6 @@ import java.io.FileOutputStream;
 import java.util.List;
 
 
-
 public class ExcelService {
 
     public static final String BOOK_PATH = "BOOK_PATH";
@@ -43,15 +42,12 @@ public class ExcelService {
                 userRegionOptions.setSortRowAsc(userRegionOptions2.getSortRowAsc());
             }
             userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
-
         }
         return userRegionOptions;
     }
 
-
-    public static File listReports(HttpServletRequest request, List<OnlineReport> reports) throws Exception{
-
-       Book book = Importers.getImporter().imports(request.getServletContext().getResourceAsStream("/WEB-INF/ReportMenu.xlsx"), "Report name");
+    public static File listReports(HttpServletRequest request, List<OnlineReport> reports) throws Exception {
+        Book book = Importers.getImporter().imports(request.getServletContext().getResourceAsStream("/WEB-INF/ReportMenu.xlsx"), "Report name");
         Sheet sheet = book.getSheetAt(0);
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         for (SName sName : namesForSheet) {
@@ -65,24 +61,24 @@ public class ExcelService {
                 String dbName = "";
 
                 for (OnlineReport or : reports) {
-                    if (!or.getDatabase().equals(dbName)){
+                    if (!or.getDatabase().equals(dbName)) {
                         firstChar = 0;
                         dbName = or.getDatabase();
                         yOffset++;
                     }
-                    if (or.getExplanation()!= null && or.getExplanation().length() > 0 && or.getExplanation().charAt(0) > firstChar){
+                    if (or.getExplanation() != null && or.getExplanation().length() > 0 && or.getExplanation().charAt(0) > firstChar) {
                         firstChar = or.getExplanation().charAt(0);
                         yOffset++;
                     }
-                    if (firstChar > 0 && (or.getExplanation()== null||or.getExplanation().length()==0)){
+                    if (firstChar > 0 && (or.getExplanation() == null || or.getExplanation().length() == 0)) {
                         firstChar = 0;
                         yOffset++;
                     }
                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()).setStringValue("Template");
-                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+1).setStringValue(or.getAuthor());
-                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+2).setStringValue(or.getDatabase());
-                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+3).setStringValue(or.getUntaggedReportName());
-                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn()+4).setStringValue(or.getExplanation().trim());
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + 1).setStringValue(or.getAuthor());
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + 2).setStringValue(or.getDatabase());
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + 3).setStringValue(or.getUntaggedReportName());
+                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + 4).setStringValue(or.getExplanation().trim());
                     //sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + 1).setStringValue(or.getReportName());
                     yOffset++;
                 }
@@ -102,30 +98,22 @@ public class ExcelService {
         return file;
     }
 
-    public static File createReport(LoggedInUser loggedInUser, OnlineReport onlineReport, boolean template )throws Exception{
+    public static File createReport(LoggedInUser loggedInUser, OnlineReport onlineReport, boolean template) throws Exception {
         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
-        if (template){
+        if (template) {
             return new File(bookPath);
         }
-
         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
         book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
         book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
         // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
         book.getInternalBook().setAttribute(REPORT_ID, onlineReport.getId());
         ReportRenderer.populateBook(book, 0);
-         Exporter exporter = Exporters.getExporter();
+        Exporter exporter = Exporters.getExporter();
         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(file);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
             exporter.export(book, fos);
-        } finally {
-            if (fos != null) {
-                fos.close();
-            }
         }
-
         return file;
     }
 }

@@ -4,7 +4,6 @@ import com.azquo.MultidimensionalListUtils;
 import com.azquo.ThreadPools;
 import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameService;
@@ -16,7 +15,6 @@ import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -168,8 +166,8 @@ class AzquoCellService {
         boolean permute = false;
         if (rowHeadingsSource.size() == 1 && rowHeadingsSource.get(0).get(0).toLowerCase().startsWith("permute("))
             permute = true;
-        dataToShow = sortAndFilterCells(dataToShow, rowHeadings, columnHeadings
-                , regionOptions, languages, permute);
+        dataToShow = sortAndFilterCells(dataToShow, rowHeadings
+                , regionOptions, permute);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data sort/filter in " + time + "ms");
         System.out.println("region delivered in " + (System.currentTimeMillis() - start) + "ms");
@@ -233,7 +231,7 @@ class AzquoCellService {
 
     // have removed non number support
 
-    private static int findPosition(List<List<DataRegionHeading>> headings, String toFind, List<String> languages) {
+    private static int findPosition(String toFind) {
         if (toFind == null || toFind.length() == 0) {
             return -1;
         }
@@ -275,8 +273,8 @@ class AzquoCellService {
     // I've tried to make parameter names useful but they can be a bit confusing as we have for example a column index to sort on but the values will be row values or totals for that row
 
 
-    private static List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings, List<List<DataRegionHeading>> columnHeadings
-            , RegionOptions regionOptions, List<String> languages, boolean permute) throws Exception {
+    private static List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings
+            , RegionOptions regionOptions, boolean permute) {
         List<List<AzquoCell>> toReturn = sourceData;
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
@@ -285,13 +283,13 @@ class AzquoCellService {
         List<Integer> sortOnColIndexes = new ArrayList<>();
         if (regionOptions.sortColumn != null) {
             for (String sc : regionOptions.sortColumn.split("&")) {
-                int sortColIndex = findPosition(columnHeadings, sc, languages);
+                int sortColIndex = findPosition(sc);
                 if (sortColIndex != -1) {
                     sortOnColIndexes.add(sortColIndex);
                 }
             }
         }
-        Integer sortOnRowIndex = findPosition(rowHeadings, regionOptions.sortRow, languages); // not used much I don't think but we'll allow a simple numeric left/right sort, possibly on totals
+        Integer sortOnRowIndex = findPosition(regionOptions.sortRow); // not used much I don't think but we'll allow a simple numeric left/right sort, possibly on totals
         // sorting on row or col totals only happens if a sort row or col hasn't been passed and there are more rows or cols than max rows or cols
         int totalRows = sourceData.size();
         int totalCols = sourceData.get(0).size();

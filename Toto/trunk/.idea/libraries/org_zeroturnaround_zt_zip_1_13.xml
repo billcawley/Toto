@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="org.zeroturnaround:zt-zip:1.13" type="repository">
+    <properties maven-id="org.zeroturnaround:zt-zip:1.13" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/zt-zip-1.13.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/slf4j-api-1.6.6.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

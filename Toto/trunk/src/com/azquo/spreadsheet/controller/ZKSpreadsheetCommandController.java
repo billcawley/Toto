@@ -155,21 +155,19 @@ public class ZKSpreadsheetCommandController {
                     if ("PDF".equals(action) || pdfDefault) {
                         Exporter exporter = Exporters.getExporter("pdf");
                         // I think these bits are commented as we're exporting the sheet not the book
-                        //Book book = ss.getBook();
+                        Book book = ss.getBook();
                         // zapping validation in this way throws an arror, it is annoying
-/*                        Sheet validationSheet = book.getSheet(ZKAzquoBookUtils.VALIDATION_SHEET);
+                        Sheet validationSheet = book.getSheet(ChoicesService.VALIDATION_SHEET);
                         if (validationSheet != null) {
                             try{
                                 book.getInternalBook().deleteSheet(validationSheet.getInternalSheet());
                             } catch (Exception ignored){
                                 // todo - bring this up with ZK?
                             }
-                        }*/
+                        }
                         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
                         try (FileOutputStream fos = new FileOutputStream(file)) {
-                            //                            exporter.export(book, file);
-                            // depreciated, why?
-                            exporter.export(ss.getSelectedSheet(), fos);
+                            exporter.export(book, file);
                         }
                         loggedInUser.userLog("Download PDF : " + ss.getSelectedSheetName() + ".pdf");
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".pdf", "pdf", "application/pdf", file, true));

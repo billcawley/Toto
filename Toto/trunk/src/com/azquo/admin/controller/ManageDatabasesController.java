@@ -29,6 +29,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -115,6 +117,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "deleteUploadRecordId", required = false) String deleteUploadRecordId
             , @RequestParam(value = "uploadAnyway", required = false) String uploadAnyway
             , @RequestParam(value = "sessionid", required = false) String sessionId
+            , @RequestParam(value = "sort", required = false) String sort
     )
 
     {
@@ -217,6 +220,7 @@ public class ManageDatabasesController {
                 e.printStackTrace();
                 error.append(e.getMessage());
             }
+
             if (error.length() > 0) {
                 String exceptionError = error.toString();
                 model.put("error", exceptionError);
@@ -228,7 +232,11 @@ public class ManageDatabasesController {
             } else {
                 model.put("serverList", false);
             }
-            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser, fileSearch));
+            List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser, fileSearch);
+            if ("database".equals(sort)){
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getDatabaseName().compareTo(o2.getDatabaseName())));
+            }
+            model.put("uploads", uploadRecordsForDisplayForBusiness);
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             AdminService.setBanner(model,loggedInUser);

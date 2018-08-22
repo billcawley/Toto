@@ -96,8 +96,6 @@ public class CommonReportUtils {
 
         }
         return query;
-
-
     }
 
     public static String resolveQuery(LoggedInUser loggedInUser, String query) {

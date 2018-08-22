@@ -1,7 +1,6 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.TypedPair;
-import com.azquo.dataimport.DSImportService;
 import com.azquo.dataimport.ValuesImport;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.Constants;
@@ -21,9 +20,7 @@ import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
 import com.azquo.spreadsheet.transport.RegionOptions;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
-import java.text.DateFormat;
 import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -94,7 +91,7 @@ public class ProvenanceService {
                 }
             }
         }
-        return new ProvenanceDetailsForDisplay(null,null); //just empty ok? null? Unsure
+        return new ProvenanceDetailsForDisplay(null, null); //just empty ok? null? Unsure
     }
 
     // might need to rewrite this and/or check variable names
@@ -104,7 +101,7 @@ public class ProvenanceService {
         Set<Name> cellNames = new HashSet<>();
         Name nameCountHeading = null;
         for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()) {
-            if (rowHeading != null){ // apparently it can be . . . is this a concern? Well NPE is no good, could error maggage on the else if this is a problem
+            if (rowHeading != null) { // apparently it can be . . . is this a concern? Well NPE is no good, could error maggage on the else if this is a problem
                 if (rowHeading.getFunction() == DataRegionHeading.FUNCTION.NAMECOUNT) {
                     provString.append("namecount(").append(rowHeading.getDescription());
                     nameCountHeading = rowHeading.getName();
@@ -133,8 +130,8 @@ public class ProvenanceService {
         Provenance p = cellName.getProvenance();
         final ProvenanceForDisplay provenanceForDisplay = p.getProvenanceForDisplay();
         List<String> names = new ArrayList<>();
-        if (azquoCell.getListOfValuesOrNamesAndAttributeName() != null && azquoCell.getListOfValuesOrNamesAndAttributeName().getNames() != null){
-            for (Name n : azquoCell.getListOfValuesOrNamesAndAttributeName().getNames()){
+        if (azquoCell.getListOfValuesOrNamesAndAttributeName() != null && azquoCell.getListOfValuesOrNamesAndAttributeName().getNames() != null) {
+            for (Name n : azquoCell.getListOfValuesOrNamesAndAttributeName().getNames()) {
                 // this is a point, should it be in a language?
                 names.add(n.getDefaultDisplayName());
             }
@@ -151,19 +148,19 @@ public class ProvenanceService {
         }
         if (p.getContext() != null && p.getContext().length() > 1) method += " with " + p.getContext();
         node.setHeading(source + " " + method);*/
-        return new ProvenanceDetailsForDisplay(provString.toString(),Collections.singletonList(provenanceForDisplay));
+        return new ProvenanceDetailsForDisplay(provString.toString(), Collections.singletonList(provenanceForDisplay));
     }
 
     /* logic will be changed for new object ProvenanceDetailsForDisplay
      TODO - as mentioned, value history!
      */
 
-    public static ProvenanceDetailsForDisplay getListOfChangedValues(AzquoMemoryDBConnection azquoMemoryDBConnection, int maxSize)throws  Exception{
-        return valuesProvenance(azquoMemoryDBConnection,azquoMemoryDBConnection.getValuesChanged(),maxSize);
+    public static ProvenanceDetailsForDisplay getListOfChangedValues(AzquoMemoryDBConnection azquoMemoryDBConnection, int maxSize) throws Exception {
+        return valuesProvenance(azquoMemoryDBConnection, azquoMemoryDBConnection.getValuesChanged(), maxSize);
     }
 
 
-    private static ProvenanceDetailsForDisplay valuesProvenance(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, int maxSize) throws Exception{
+    private static ProvenanceDetailsForDisplay valuesProvenance(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values, int maxSize) throws Exception {
         List<ProvenanceForDisplay> provenanceForDisplays = new ArrayList<>();
         if (values != null && (values.size() > 1 || (values.size() > 0 && values.get(0) != null))) {
             values.sort((o1, o2) -> (o2.getProvenance().getTimeStamp()).compareTo(o1.getProvenance().getTimeStamp()));
@@ -175,11 +172,11 @@ public class ProvenanceService {
                     oneUpdate.add(value);
                 } else {
                     ProvenanceForDisplay provenanceForDisplay = p.getProvenanceForDisplay();
-                    if (oneUpdate.size() > maxSize){
+                    if (oneUpdate.size() > maxSize) {
                         oneUpdate = oneUpdate.subList(0, maxSize);
                     }
                     provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(azquoMemoryDBConnection, oneUpdate));
-                    checkAuditSheet(azquoMemoryDBConnection,provenanceForDisplay,oneUpdate);
+                    checkAuditSheet(azquoMemoryDBConnection, provenanceForDisplay, oneUpdate);
                     provenanceForDisplays.add(provenanceForDisplay);
                     oneUpdate = new ArrayList<>();
                     oneUpdate.add(value);
@@ -187,11 +184,11 @@ public class ProvenanceService {
                 }
             }
             ProvenanceForDisplay provenanceForDisplay = p.getProvenanceForDisplay();
-            if (oneUpdate.size() > maxSize){
+            if (oneUpdate.size() > maxSize) {
                 oneUpdate = oneUpdate.subList(0, maxSize);
             }
-            provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(azquoMemoryDBConnection,oneUpdate));
-            checkAuditSheet(azquoMemoryDBConnection,provenanceForDisplay,oneUpdate);
+            provenanceForDisplay.setValuesWithIdsAndNames(getIdValuesWithIdsAndNames(azquoMemoryDBConnection, oneUpdate));
+            checkAuditSheet(azquoMemoryDBConnection, provenanceForDisplay, oneUpdate);
             provenanceForDisplays.add(provenanceForDisplay);
         }
         return new ProvenanceDetailsForDisplay(null, provenanceForDisplays);
@@ -210,18 +207,18 @@ public class ProvenanceService {
 
     e.g.  `Order Items chosen` with CHOSENSET = `Items chosen` CHOSEN FROM `All Order Items` children, Territory CHOSEN FROM `All countries` children, Month CHOSEN FROM `All months` children*/
 
-    private static void checkAuditSheet(AzquoMemoryDBConnection azquoMemoryDBConnection, ProvenanceForDisplay provenanceForDisplay, List<Value> values) throws Exception{
-        if ("imported".equals(provenanceForDisplay.getMethod())){
-            if (provenanceForDisplay.getName().contains(":")){
+    private static void checkAuditSheet(AzquoMemoryDBConnection azquoMemoryDBConnection, ProvenanceForDisplay provenanceForDisplay, List<Value> values) throws Exception {
+        if ("imported".equals(provenanceForDisplay.getMethod())) {
+            if (provenanceForDisplay.getName().contains(":")) {
                 String toSearch = provenanceForDisplay.getName().substring(provenanceForDisplay.getName().lastIndexOf(":") + 1); // so we've got our Mailouts or equivalent
                 Name allImportSheets = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME), ValuesImport.ALLIMPORTSHEETS, null);
                 // just check the children, more simple
-                if (allImportSheets != null){
-                    for (Name child : allImportSheets.getChildren()){
-                        if (child.getDefaultDisplayName().equals("DataImport " + toSearch)){ // todo - stop such use of string literals . . .
-                            if (child.getAttribute(AUDITSHEET) != null){ // then we have criteria
+                if (allImportSheets != null) {
+                    for (Name child : allImportSheets.getChildren()) {
+                        if (child.getDefaultDisplayName().equals("DataImport " + toSearch)) { // todo - stop such use of string literals . . .
+                            if (child.getAttribute(AUDITSHEET) != null) { // then we have criteria
                                 String auditSheetRule = child.getAttribute(AUDITSHEET);
-                                if (auditSheetRule.contains("with")){ // this parsing could be more robust, also could be factored a bit?
+                                if (auditSheetRule.contains("with")) { // this parsing could be more robust, also could be factored a bit?
                                     String reportName = auditSheetRule.substring(0, auditSheetRule.indexOf("with")).replaceAll("`", "").trim();
                                     provenanceForDisplay.setMethod("in spreadsheet");
                                     provenanceForDisplay.setInSpreadsheet(true);
@@ -230,7 +227,7 @@ public class ProvenanceService {
                                     // dammit have to deal with character escapes . . .
                                     String restOfRule = auditSheetRule.substring(auditSheetRule.indexOf("with") + 4).trim();
                                     String CHOSENFROM = "CHOSEN FROM";
-                                    if (restOfRule.toUpperCase().startsWith("CHOSENSET =")){
+                                    if (restOfRule.toUpperCase().startsWith("CHOSENSET =")) {
                                         restOfRule = restOfRule.substring("CHOSENSET =".length()).trim();
                                         String chosenSet;
                                         String chosenSetChosenFrom; // new addition - we're not going to try to derive the chosen set from a set of
@@ -252,7 +249,7 @@ public class ProvenanceService {
                                             }
                                         }*/
                                         // so now get the chosen from criteria - might be able to factor this with code below - this was added after
-                                        if (restOfRule.contains(CHOSENFROM)){
+                                        if (restOfRule.contains(CHOSENFROM)) {
                                             int chosenFromIndex = restOfRule.indexOf(CHOSENFROM);
                                             int commaPos = restOfRule.substring(0, chosenFromIndex).lastIndexOf(","); // required to stop picking up commas in quoted names
                                             chosenSetChosenFrom = restOfRule.substring(0, commaPos).trim();
@@ -266,14 +263,14 @@ public class ProvenanceService {
                                         // ok, make the chosen set which are the names shared across all the values
                                         Set<Name> sharedSet = HashObjSets.newMutableSet();
                                         Set<Name> chosenSetSet = HashObjSets.newMutableSet(); // no longet spare based off multiple names, we look for names attacehd to the values in this set
-                                        for (Value v : values){
-                                            if (sharedSet.isEmpty()){ // first one add them all
+                                        for (Value v : values) {
+                                            if (sharedSet.isEmpty()) { // first one add them all
                                                 sharedSet.addAll(v.getNames());
                                             } else {
                                                 sharedSet.retainAll(v.getNames());
                                             }
-                                            for (Name n : v.getNames()){
-                                                if (chosenSetChosenFromSet.contains(n)){
+                                            for (Name n : v.getNames()) {
+                                                if (chosenSetChosenFromSet.contains(n)) {
                                                     chosenSetSet.add(n);
                                                 }
                                             }
@@ -282,20 +279,20 @@ public class ProvenanceService {
                                         newSetForReport.setChildrenWillBePersisted(chosenSetSet);
 
                                         StringBuilder context = new StringBuilder();
-                                        if (restOfRule != null){
+                                        if (restOfRule != null) {
                                             // we want to create a context along the lines of something = something; somethingelse = somethingelse;
                                             // parsing shouldn't be too difficult except that I need to watch out for commas in escaped names. If I parse around "CHOSEN FROM", assuming that isn't in the strings of course, this should be fairly robust
                                             // , Territory CHOSEN FROM `All countries` children, Month CHOSEN FROM `All months` children
-                                            while (restOfRule.contains(CHOSENFROM)){
+                                            while (restOfRule.contains(CHOSENFROM)) {
                                                 int chosenFromIndex = restOfRule.indexOf(CHOSENFROM);
                                                 String choiceName = restOfRule.substring(0, chosenFromIndex);
                                                 choiceName = choiceName.trim();
-                                                if (choiceName.startsWith(",")){
+                                                if (choiceName.startsWith(",")) {
                                                     choiceName = choiceName.substring(1).trim();
                                                 }
                                                 String setToSelectFrom;
                                                 restOfRule = restOfRule.substring(chosenFromIndex + CHOSENFROM.length());
-                                                if (restOfRule.contains(CHOSENFROM)){
+                                                if (restOfRule.contains(CHOSENFROM)) {
                                                     int nextCommaPos = restOfRule.substring(0, restOfRule.indexOf(CHOSENFROM)).lastIndexOf(","); // the last comma before the next chosenFrom
                                                     setToSelectFrom = restOfRule.substring(0, nextCommaPos).trim();
                                                     restOfRule = restOfRule.substring(nextCommaPos);
@@ -306,7 +303,7 @@ public class ProvenanceService {
                                                 Collection<Name> setToSelectFromSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, setToSelectFrom);
                                                 // now, there should be ONE crossover between this set and the spare set
                                                 setToSelectFromSet.retainAll(sharedSet);
-                                                if (setToSelectFromSet.size() == 1){ // then we're in business!
+                                                if (setToSelectFromSet.size() == 1) { // then we're in business!
                                                     context.append(choiceName + " = " + setToSelectFromSet.iterator().next().getDefaultDisplayName() + ";");
                                                 }
                                             }
@@ -324,28 +321,25 @@ public class ProvenanceService {
     }
 
 
-
     // first string is the value, then the names . . .
     // needs the connection to check for historic values
-    private static List<TypedPair<Integer, List<String>>> getIdValuesWithIdsAndNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values){
+    private static List<TypedPair<Integer, List<String>>> getIdValuesWithIdsAndNames(AzquoMemoryDBConnection azquoMemoryDBConnection, List<Value> values) {
         List<TypedPair<Integer, List<String>>> toReturn = new ArrayList<>();
-        Set<Name> commonNamesSet = HashObjSets.newMutableSet();
-          boolean oneNameChanging = true;
-        for (Value v : values){
+        for (Value v : values) {
             List<Name> namesList = new ArrayList<>(v.getNames());
             namesList.sort(Comparator.comparingInt(Name::getValueCount));
             List<String> valueAndNames = new ArrayList<>();
             valueAndNames.add(v.getText());
-            for (Name n : namesList){
+            for (Name n : namesList) {
                 valueAndNames.add(n.getDefaultDisplayName());
             }
-               // now seartch for value history
+            // now seartch for value history
             final List<ValueHistory> historyForValue = ValueDAO.getHistoryForValue(azquoMemoryDBConnection.getAzquoMemoryDB(), v);
             // now add them as strings to the end? SHould be ok
-            if (!historyForValue.isEmpty()){
+            if (!historyForValue.isEmpty()) {
                 valueAndNames.add("Value History : ");
             }
-            for (ValueHistory valueHistory : historyForValue){
+            for (ValueHistory valueHistory : historyForValue) {
                 valueAndNames.add(valueHistory.getText() + ", " + valueHistory.getProvenance().getProvenanceForDisplay().toString());
             }
             toReturn.add(new TypedPair<>(v.getId(), valueAndNames));
@@ -354,7 +348,7 @@ public class ProvenanceService {
     }
 
 
-    private static DateTimeFormatter df = DateTimeFormatter.ofPattern ("dd/MM/yy HH:mm");
+    private static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm");
 
     private static ProvenanceDetailsForDisplay attributeProvenance(Name name, String attribute) {
         attribute = attribute.substring(1).replace("`", "");

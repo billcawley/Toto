@@ -91,9 +91,9 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
         List<String> quotedNameCache = new ArrayList<>();
         while (matcher.find()) {
             if (modifiedStatement.length() == 0) {
-                modifiedStatement.append(statement.substring(0, matcher.start()));
+                modifiedStatement.append(statement, 0, matcher.start());
             } else {
-                modifiedStatement.append(statement.substring(lastEnd, matcher.start()));
+                modifiedStatement.append(statement, lastEnd, matcher.start());
             }
             lastEnd = matcher.end();
             while (lastEnd < statement.length() - 2 && statement.substring(lastEnd - 1, lastEnd + 2).equals("`.`")) {
@@ -127,9 +127,9 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
         lastEnd = 0;
         while (matcher.find()) {
             if (modifiedStatement.length() == 0) {
-                modifiedStatement.append(statement.substring(0, matcher.start()));
+                modifiedStatement.append(statement, 0, matcher.start());
             } else {
-                modifiedStatement.append(statement.substring(lastEnd, matcher.start()));
+                modifiedStatement.append(statement, lastEnd, matcher.start());
             }
             lastEnd = matcher.end();
             // We do need the literals index here, filter which uses it
@@ -324,7 +324,7 @@ I should be ok for StringTokenizer at this point
         if (NumberUtils.isNumber(val3) && NumberUtils.isNumber(val4)) {
             Double n1 = Double.parseDouble(val3);
             Double n2 = Double.parseDouble(val4);
-            if (n1 - n2 == 0) return true;
+            return n1 - n2 == 0;
         }
         return false;
     }
@@ -338,7 +338,7 @@ I should be ok for StringTokenizer at this point
         return val;
     }
 
-    public static boolean isStringInQuotes(String sourceString, String searchString, char quoteChar){
+    static boolean isStringInQuotes(String sourceString, String searchString, char quoteChar){
         boolean inQuotes = false;
         int index = sourceString.indexOf(searchString);
         for (int i = 0; i < index; i++){

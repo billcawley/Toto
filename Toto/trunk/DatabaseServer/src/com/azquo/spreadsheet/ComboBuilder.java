@@ -31,7 +31,7 @@ class ComboBuilder implements Callable<Void> {
     }
 
     @Override
-    public Void call() throws Exception {
+    public Void call() {
         for (int i = sourceFrom; i < sourceTo; i++) {
             List<Name> foundCombination = new ArrayList<>(comboSize);
             for (Name pName : permuteNames) {

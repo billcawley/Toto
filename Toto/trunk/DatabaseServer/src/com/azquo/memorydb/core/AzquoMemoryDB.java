@@ -53,17 +53,17 @@ public final class AzquoMemoryDB {
     private static final ConcurrentHashMap<String, AzquoMemoryDB> memoryDatabaseMap = new ConcurrentHashMap<>(); // by data store name. Will be unique
 
     // vanilla use of ConcurrentHashMap, should be fine
-    public static AzquoMemoryDB getAzquoMemoryDB(String persistenceName, StringBuffer sessionLog) throws Exception {
+    public static AzquoMemoryDB getAzquoMemoryDB(String persistenceName, StringBuffer sessionLog)  {
         return memoryDatabaseMap.computeIfAbsent(persistenceName, t -> new AzquoMemoryDB(persistenceName, sessionLog));
         // open database logging could maybe be added back in client side
     }
 
     // worth being aware that if the db is still referenced somewhere then the garbage collector won't chuck it (which is what we want)
-    public static void removeDBFromMap(String persistenceName) throws Exception {
+    public static void removeDBFromMap(String persistenceName)  {
         memoryDatabaseMap.remove(persistenceName);
     }
 
-    public static boolean isDBLoaded(String persistenceName) throws Exception {
+    public static boolean isDBLoaded(String persistenceName)  {
         return memoryDatabaseMap.containsKey(persistenceName);
     }
 
@@ -236,10 +236,6 @@ public final class AzquoMemoryDB {
 
     Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);
-    }
-
-    public Map<Integer, Provenance> getProvenanceByIdMap(){//to show data with a specific provenance...
-        return provenanceByIdMap;
     }
 
     // would need to be synchronized if not on a concurrent map

@@ -38,7 +38,7 @@ class AzquoMemoryDBTransport {
     private final Map<String, Set<AzquoMemoryDBEntity>> jsonEntitiesToPersist;
     private final Set<Name> namesToPersist;
     private final Set<Value> valuesToPersist;
-    public List<Value> valuesToStore;
+    private List<Value> valuesToStore;
 
     private StringBuffer sessionLog;
 
@@ -321,40 +321,40 @@ class AzquoMemoryDBTransport {
         int counter = 0;
         long marker = System.currentTimeMillis();
         for (Name name : azquoMemoryDB.getAllNames()) {
-            if (name.hasParents() && name.getParents().get(name.getParents().size() - 1) == null){
+            if (name.hasParents() && name.getParents().get(name.getParents().size() - 1) == null) {
                 int number = 0;
-                for (Name parent : name.getParents()){
-                    if (parent == null){
+                for (Name parent : name.getParents()) {
+                    if (parent == null) {
                         break;
                     }
                     number++;
                 }
 //                System.out.print("update fast_name set no_parents = " + number + " where id = " + name.getId() + ";     ");
-                System.out.println("parent problem on : " + name.getDefaultDisplayName() +  " space = " + name.getParents().size() + ", number : " + number);
+                System.out.println("parent problem on : " + name.getDefaultDisplayName() + " space = " + name.getParents().size() + ", number : " + number);
                 counter++;
                 name.parentArrayCheck();
                 azquoMemoryDB.forceNameNeedsPersisting(name);
-                if (counter > 10000){
+                if (counter > 10000) {
                     System.out.println("10k breaking;");
                     break;
                 }
             }
         }
         for (Name name : azquoMemoryDB.getAllNames()) {
-            if (name.hasValues()){
+            if (name.hasValues()) {
                 int number = 0;
-                for (Value v : name.getValues()){
-                    if (v != null){
+                for (Value v : name.getValues()) {
+                    if (v != null) {
                         number++;
                     }
                 }
-                if (number != name.getValues().size()){
+                if (number != name.getValues().size()) {
 //                    System.out.print("update fast_name set no_values = " + number + " where id = " + name.getId() + ";      ");
-                    System.out.println("value problem on : " + name.getDefaultDisplayName() +  " space = " + name.getValues().size() + ", number : " + number);
+                    System.out.println("value problem on : " + name.getDefaultDisplayName() + " space = " + name.getValues().size() + ", number : " + number);
                     name.valueArrayCheck();
                     azquoMemoryDB.forceNameNeedsPersisting(name);
                     counter++;
-                    if (counter > 10000){
+                    if (counter > 10000) {
                         System.out.println("10k breaking;");
                         break;
                     }
@@ -380,19 +380,18 @@ class AzquoMemoryDBTransport {
         valuesToPersist.add(value);
     }
 
-    List<Value> getValuesChanged(){
-        return new ArrayList<Value>(valuesToStore);
-
+    List<Value> getValuesChanged() {
+        return new ArrayList<>(valuesToStore);
     }
 
-    boolean hasNamesToPersist(){
+    boolean hasNamesToPersist() {
         return !namesToPersist.isEmpty();
     }
 
     /* now, this is only called by the AzquoMemoryDB and is synchronized against that object so two can't run conncurrently
     BUT at the moment I'm allowing the database to be modified while persisting, this function should be robust to that
      */
-    List<Value> persistDatabase() {
+    void persistDatabase() {
         System.out.println("PERSIST STARTING");
         // ok first do the json bits, currently this is just provenance, may well be others
         for (Map.Entry<String, Set<AzquoMemoryDBEntity>> tableNameEntites : jsonEntitiesToPersist.entrySet()) {
@@ -407,8 +406,8 @@ class AzquoMemoryDBTransport {
                 while (it.hasNext()) {
                     AzquoMemoryDBEntity entity = it.next();
                     /* take off the source immediately - since the access to a set backed by ConcurrentHashMap remove/add for this entity is atomic
-                    * So in theory, yes there could be an entity stored in an inconsistent state if it's changing while being stored (during getAsJson for example) but it will be put back
-                    * into the entities set and stored again. */
+                     * So in theory, yes there could be an entity stored in an inconsistent state if it's changing while being stored (during getAsJson for example) but it will be put back
+                     * into the entities set and stored again. */
                     it.remove();
                     JsonRecordTransport.State state = JsonRecordTransport.State.UPDATE;
                     // this could be modified outside, a concern? If an entity is deleted there is no way to undelete - it would just be zapped twice.
@@ -457,6 +456,8 @@ class AzquoMemoryDBTransport {
         }
         // same pattern as with name
         System.out.println("value store : " + valuesToPersist.size());
+        // EFC note : for reporting purposes WFC has made valuesToStore a field in class. Dangerous? Probably not as it's reassigned here right before use.
+        // I'll mull this a bit. Perhaps it should be unmodifiable? Can two persists run simultaneously? They shouldn't anyway regardless of this field.
         valuesToStore = new ArrayList<>(valuesToPersist);
         for (Value value : valuesToStore) {
             valuesToPersist.remove(value);
@@ -476,12 +477,11 @@ class AzquoMemoryDBTransport {
                 jsonToStore = true;
             }
         }
-        if (jsonToStore || !namesToPersist.isEmpty() || !valuesToPersist.isEmpty()){
+        if (jsonToStore || !namesToPersist.isEmpty() || !valuesToPersist.isEmpty()) {
             System.out.println("=========Further entities to persist, persisting again");
             persistDatabase();
         } else {
             System.out.println("persist done.");
         }
-        return valuesToStore;
     }
 }

@@ -56,7 +56,7 @@ Created by IntelliJ IDEA.
 			<tr>
 				<td>Date</td>
 				<td>Business Name</td>
-				<td>Database Name</td>
+				<td><a href="/api/ManageDatabases?sort=database">Database Name</a></td>
 				<td>User Name</td>
 				<td><form method="post"> File Name <input size="20" name="fileSearch"></form></td>
 <!--				<td>File Type</td>

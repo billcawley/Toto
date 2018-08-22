@@ -4,7 +4,6 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
-import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.ExcelService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -17,19 +16,25 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.net.URLEncoder;
-import java.util.List;
 
 import static com.azquo.spreadsheet.controller.LoginController.LOGGED_IN_USER_SESSION;
+
+/*
+
+EFC - have had a quick look over but it's only used by the C# and at the moment the TypeScript is the priority plugin.
+
+ */
 
 @Controller
 @RequestMapping("/ExcelPage")
 public class ExcelPageController {
 
+    @ResponseBody
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "sessionid", required = false) String sessionId
@@ -40,34 +45,26 @@ public class ExcelPageController {
             , @RequestParam(value = "region", required = false) String region
             , @RequestParam(value = "regionrow", required = false) String regionrow
             , @RequestParam(value = "regioncol", required = false) String regioncol
-            , @RequestParam(value = "choice", required = false) String choice
-            , @RequestParam(value = "chosen", required = false) String chosen
-
     ) {
-
-
-        String result = "no action taken";
         response.setHeader("Access-Control-Allow-Origin", "*");
         response.setHeader("Content-type", "application/json");
         final ObjectMapper jacksonMapper = new ObjectMapper();
 
         try {
-
             LoggedInUser loggedInUser = null;
             if (sessionId != null) {
                 loggedInUser = ExcelController.excelConnections.get(sessionId);
-                if (loggedInUser==null){
+                if (loggedInUser == null) {
                     return "no session";
                 }
                 request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
-             }
-             if (database != null && database.length() > 0) {
+            }
+            if (database != null && database.length() > 0) {
                 LoginService.switchDatabase(loggedInUser, database);
-            }else{
-
+            } else {
                 database = getDatabaseName(loggedInUser);
-             }
-             if (database.length()==-0) return "No database selected";
+            }
+            if (database.length() == 0) return "No database selected";
 
             if (reportName != null && reportName.length() > 0) {
                 loggedInUser.setOnlineReport(OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.trim()));
@@ -79,7 +76,7 @@ public class ExcelPageController {
 
             }
 
-            if (op.equals("inspect")){
+            if (op.equals("inspect")) {
                 loggedInUser.userLog("Inspect DB : " + database);
 
                 if (database != null && database.length() > 0) {
@@ -87,20 +84,17 @@ public class ExcelPageController {
                     LoginService.switchDatabase(loggedInUser, newDB);
                     database = newDB.getName();
                 }
-                model.addAttribute("database",database);
-                model.addAttribute("op","inspect");
-                model.addAttribute("sessionid",sessionId);
-                model.addAttribute("audit","{}");
+                model.addAttribute("database", database);
+                model.addAttribute("op", "inspect");
+                model.addAttribute("sessionid", sessionId);
+                model.addAttribute("audit", "{}");
                 return "Excel";
-
             }
 
             if (op.equals("audit")) {
                 UserRegionOptions userRegionOptions = ExcelService.getUserRegionOptions(loggedInUser, "", loggedInUser.getOnlineReport().getId(), region);
                 jacksonMapper.registerModule(new JavaTimeModule());
                 jacksonMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-
                 //jacksonMapper.registerModule(new JavaTimeModule());
                 final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, loggedInUser.getOnlineReport().getId(), sheetName,
                         region, userRegionOptions, Integer.parseInt(regionrow), Integer.parseInt(regioncol), 1000);
@@ -117,16 +111,12 @@ public class ExcelPageController {
             return "online controller error";
         }
         return "";
-
-
     }
 
-
-    String getDatabaseName(LoggedInUser loggedInUser){
-        if(loggedInUser.getDatabase()!=null){
+    String getDatabaseName(LoggedInUser loggedInUser) {
+        if (loggedInUser.getDatabase() != null) {
             return loggedInUser.getDatabase().getName();
         }
         return "";
     }
-
 }
