@@ -56,8 +56,30 @@ public class CommonReportUtils {
             return 0;
         }
     }
+    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String querye) {
+        return getDropdownListForQuery(loggedInUser,querye,null);
+    }
 
-    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query) {
+
+
+        public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, String fieldName) {// WFC added fieldname taken from the spreadsheet (<fieldName>Choice) to pick chosen values from user selection list
+        if (fieldName!=null) {
+            String selectionList = loggedInUser.getUser().getSelections();
+            if (selectionList!=null) {
+                String[] selections = selectionList.split(";");
+                for (String selection : selections) {
+                    int equalPos = selection.indexOf("=");
+                    if (equalPos > 0) {
+                        if (selection.substring(0, equalPos).equalsIgnoreCase(fieldName)) {
+                            List<String> toReturn = new ArrayList<>();
+                            toReturn.add(selection.substring(equalPos + 1));
+                            return toReturn;
+                        }
+                    }
+                }
+            }
+        }
+
         return getDropdownListForQuery(loggedInUser, query, loggedInUser.getUser().getEmail(), false);
     }
 
