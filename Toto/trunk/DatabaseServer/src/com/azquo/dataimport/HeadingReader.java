@@ -406,6 +406,11 @@ todo - add classification here
                 // used to store the child of string here and interpret it later, I see no reason not to do it here.
                 String[] parents = childOfString.split(",");//TODO this does not take into account names with commas inside
                 for (String parent : parents) {
+                    int dotpos = parent.indexOf(".");//todo AS ABOVE, NAMES MAY HAVE . IN THEM
+                    if (dotpos >0){
+                        heading.categoryAttribute = parent.substring(dotpos + 1);
+                        parent = parent.substring(0, dotpos);
+                    }
                     heading.parentNames.add(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
                 }
                 break;

@@ -38,6 +38,8 @@ class ImmutableImportHeading {
     final boolean clearData;
     final String splitChar;
     final List<Integer> localParentIndexes;
+    Name category;
+    String categoryAttribute;
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -61,5 +63,6 @@ class ImmutableImportHeading {
         this.clearData = mutableImportHeading.clearData;
         this.splitChar = mutableImportHeading.splitChar;
         this.localParentIndexes = mutableImportHeading.localParentIndexes;
+        this.categoryAttribute = mutableImportHeading.categoryAttribute;
     }
 }

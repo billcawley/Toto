@@ -171,6 +171,7 @@ public final class ImportService {
                     if (!loggedInUser.getUser().getEmail().equals(email) && !notAllowed.contains(email)) { // leave the logged in user alone!
                         String salt = "";
                         String password = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
+                        String selections = userSheet.getInternalSheet().getCell(row,7).getStringValue();
                         if (password == null) {
                             password = "";
                         }
@@ -199,7 +200,7 @@ public final class ImportService {
                                 final Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport = loggedInUser.getPermissionsFromReport();
                                 for (TypedPair<OnlineReport, Database> allowedCombo : permissionsFromReport.values()) {
                                     if (allowedCombo.getFirst().getId() == or.getId() && allowedCombo.getSecond().getId() == d.getId()) { // then we can add the user with this info
-                                        User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId());
+                                        User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId(), selections);
                                         UserDAO.store(user1);
                                         stored = true;
                                         break;
@@ -208,11 +209,11 @@ public final class ImportService {
                             }
                             if (!stored) { // default to the current users home menu
                                 User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status,
-                                        password, salt, loggedInUser.getUser().getEmail(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getReportId());
+                                        password, salt, loggedInUser.getUser().getEmail(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getReportId(), selections);
                                 UserDAO.store(user1);
                             }
                         } else {
-                            User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d != null ? d.getId() : 0, or != null ? or.getId() : 0);
+                            User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d != null ? d.getId() : 0, or != null ? or.getId() : 0, selections);
                             UserDAO.store(user1);
                         }
                     }

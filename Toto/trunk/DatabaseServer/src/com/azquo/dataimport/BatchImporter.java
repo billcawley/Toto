@@ -83,9 +83,10 @@ public class BatchImporter implements Callable<Void> {
                     }
                     // composite might do things that affect only and existing hence do it before
                     resolveCompositeValues(lineToLoad, importLine);
-                    String rejectionReason =  checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
+                     String rejectionReason =  checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                     if (rejectionReason==null) {
                         try {
+                            resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad,importLine);
                             // valueTracker simply the number of values imported
                             valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, importLine, linesRejected));
                         } catch (Exception e) {
@@ -96,6 +97,7 @@ public class BatchImporter implements Callable<Void> {
                         if (now - time > 10) { // 10ms a bit arbitrary
                             System.out.println("line no " + importLine + " time = " + (now - time) + "ms");
                         }
+
                         time = now;
                     } else if (linesRejected.size() < 1_000) {
                         linesRejected.add(importLine + ": " + rejectionReason);
@@ -303,6 +305,156 @@ public class BatchImporter implements Callable<Void> {
             throw new Exception("circular composite references in headers!");
         }
     }
+
+
+    private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,List<ImportCellWithHeading> cells, int importLine) throws Exception {
+             for (ImportCellWithHeading cell : cells) {
+                 if (cell.getImmutableImportHeading().categoryAttribute != null) {
+                     String value = cell.getLineValue();
+                     if (value!=null && value.length() > 0){
+                         Name category = cell.getImmutableImportHeading().parentNames.iterator().next();
+                         for (Name cat:category.getChildren()){
+                             String compareList = cat.getAttribute(cell.getImmutableImportHeading().categoryAttribute);
+                             if (compareList != null){
+                                 String[] items = compareList.split(",");
+                                 boolean found = false;
+                                 for (String item:items){
+                                     if (item.startsWith("~")){
+                                         if (contains(value.toLowerCase(),item.toLowerCase().trim())) {
+                                             found = false;
+                                             break;
+                                         }
+                                     }else{
+                                         if (!found && contains(value.toLowerCase(),item.toLowerCase().trim())){
+                                             found = true;
+                                         }
+                                     }
+                                 }
+                                 if (found){
+                                     cell.addToLineNames(cat);
+                                     break;
+                                 }
+                             }
+                         }
+                         List<String>languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
+                         cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + category.getDefaultDisplayName(), category, false,languages ));
+                      }
+                     String result = cell.getImmutableImportHeading().compositionPattern;
+                     // do line number first, I see no reason not to. Important for pivot.
+                     String LINENO = "LINENO";
+                     result = result.replace(LINENO, importLine + "");
+                     int headingMarker = result.indexOf("`");
+                     while (headingMarker >= 0) {
+                         boolean doublequotes = false;
+                         if (headingMarker < result.length() && result.charAt(headingMarker + 1) == '`') {
+                             doublequotes = true;
+                             headingMarker++;
+                         }
+                         int headingEnd = result.indexOf("`", headingMarker + 1);
+                         if (headingEnd > 0) {
+                             // fairly standard replace name of column with column value but with string manipulation left right mid
+                             String expression = result.substring(headingMarker + 1, headingEnd);
+                             String function = null;
+                             int funcInt = 0;
+                             int funcInt2 = 0;
+                             // checking for things like right(A Column Name, 5). Mid has two numbers.
+                             if (expression.contains("(")) {
+                                 int bracketpos = expression.indexOf("(");
+                                 function = expression.substring(0, bracketpos);
+                                 int commaPos = expression.indexOf(",", bracketpos + 1);
+                                 int secondComma;
+                                 if (commaPos > 0) {
+                                     secondComma = expression.indexOf(",", commaPos + 1);
+                                     String countString;
+                                     try {
+                                         if (secondComma < 0) {
+                                             countString = expression.substring(commaPos + 1, expression.length() - 1);
+                                             funcInt = Integer.parseInt(countString.trim());
+                                         } else {
+                                             countString = expression.substring(commaPos + 1, secondComma);
+                                             funcInt = Integer.parseInt(countString.trim());
+                                             countString = expression.substring(secondComma + 1, expression.length() - 1);
+                                             funcInt2 = Integer.parseInt(countString);
+                                         }
+                                     } catch (Exception ignore) {
+                                     }
+                                     expression = expression.substring(bracketpos + 1, commaPos);
+                                 }
+                             }
+                             // if there was a function its name and parameters have been extracted and expression should now be a column name (trim?)
+                             // used to lookup column name each time but now it's been replaced with the index, required due to Ed Broking heading renaming that can happen earlier
+                             // this is probably a bit faster too
+                             ImportCellWithHeading compCell = null;
+                             try {
+                                 compCell = cells.get(Integer.parseInt(expression));
+                             } catch (Exception ignored) {
+
+                             }
+                             if (compCell != null) {
+                                 String sourceVal = compCell.getLineValue();
+                                 // the two ints need to be as they are used in excel
+                                 if (function != null && (funcInt > 0 || funcInt2 > 0) && sourceVal.length() > funcInt) {
+                                     if (function.equalsIgnoreCase("left")) {
+                                         sourceVal = sourceVal.substring(0, funcInt);
+                                     }
+                                     if (function.equalsIgnoreCase("right")) {
+                                         sourceVal = sourceVal.substring(sourceVal.length() - funcInt);
+                                     }
+                                     if (function.equalsIgnoreCase("mid")) {
+                                         //the second parameter of mid is the number of characters, not the end character
+                                         sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
+                                     }
+                                 }
+                                 result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
+                                 headingMarker = headingMarker + sourceVal.length() - 1;//is increaed before two lines below
+                                 if (doublequotes) headingMarker++;
+                             } else {
+                                 headingMarker = headingEnd;
+                             }
+
+                         }
+                         // try to find the start of the next column referenced
+                         headingMarker = result.indexOf("`", ++headingMarker);
+                     }
+                     // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
+                     if (result.toLowerCase().startsWith("calc")) {
+                         result = result.substring(5);
+                         // IntelliJ said escaping  was redundant I shall assume it's correct.
+                         Pattern p = Pattern.compile("[+\\-*/]");
+                         Matcher m = p.matcher(result);
+                         if (m.find()) {
+                             double dresult = 0.0;
+                             try {
+                                 double first = Double.parseDouble(result.substring(0, m.start()));
+                                 double second = Double.parseDouble(result.substring(m.end()));
+                                 char c = m.group().charAt(0);
+                                 switch (c) {
+                                     case '+':
+                                         dresult = first + second;
+                                         break;
+                                     case '-':
+                                         dresult = first - second;
+                                         break;
+                                     case '*':
+                                         dresult = first * second;
+                                         break;
+                                     case '/':
+                                         dresult = first / second;
+                                         break;
+
+                                 }
+                             } catch (Exception ignored) {
+                             }
+                             result = dresult + "";
+                         }
+                     }
+                     if (!result.equals(cell.getLineValue())) {
+                         cell.setLineValue(result);
+                     }
+                 }
+             }
+     }
+
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
     private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Set<String> linesRejected) throws Exception {
@@ -601,5 +753,20 @@ public class BatchImporter implements Callable<Void> {
             languages.addAll(defaultLanguages);
         }
         return languages;
+
+
+    }
+
+    private static boolean contains(String target, String element){
+        if (element.startsWith("'")){
+            if (element.endsWith("'")){
+                return target.equals(element.substring(1,element.length()-1));
+            }
+            return target.startsWith(element.substring(1));
+        }
+        if (element.endsWith("'")){
+            return target.endsWith(element.substring(0,element.length()-1));
+        }
+        return target.contains(element);
     }
 }
