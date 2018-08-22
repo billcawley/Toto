@@ -74,7 +74,7 @@ public class AdminService {
         }
         BusinessDAO.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0, 0);// Admin with
+        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0, 0,null);// Admin with
         UserDAO.store(user);
         /*
         azquoMailer.sendEMail(user.getEmail()
@@ -201,10 +201,12 @@ this may now not work at all, perhaps delete?
             , final String password
             , final LoggedInUser loggedInUser
             , int databaseId
-            , int userId) throws Exception {
+            , int userId
+            , String selections
+        ) throws Exception {
         if (loggedInUser.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail(), databaseId, userId);
+            final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail(), databaseId, userId, selections);
             UserDAO.store(user);
         } else {
             throw new Exception("You do not have permission to create a user");

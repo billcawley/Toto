@@ -41,6 +41,7 @@ public class ManageUsersController {
             , @RequestParam(value = "password", required = false) String password
             , @RequestParam(value = "databaseId", required = false) String databaseId
             , @RequestParam(value = "reportId", required = false) String reportId
+            , @RequestParam(value = "selections", required = false) String selections
             , @RequestParam(value = "submit", required = false) String submit
     ) throws Exception
 
@@ -89,7 +90,7 @@ public class ManageUsersController {
                             // Have to use  a LocalDate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
                             AdminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser
                                     , databaseId != null && NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0
-                                    , reportId != null && NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0);
+                                    , reportId != null && NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0, selections);
                         } else {
                             toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());
                             toEdit.setEmail(email);
@@ -102,6 +103,7 @@ public class ManageUsersController {
                                 toEdit.setSalt(salt);
                                 toEdit.setPassword(AdminService.encrypt(password, salt));
                             }
+                            toEdit.setSelections(selections);
                             UserDAO.store(toEdit);
                         }
                         model.put("users", AdminService.getUserListForBusiness(loggedInUser));
@@ -123,13 +125,14 @@ public class ManageUsersController {
                         model.put("name", toEdit.getName());
                         model.put("status", toEdit.getStatus());
                         model.put("user", toEdit);
+                        model.put("selections", toEdit.getSelections());
                     } else {
                         model.put("id", "0");
                     }
                 }
-                model.put("databases", AdminService.getDatabaseListForBusiness(loggedInUser));
+                 model.put("databases", AdminService.getDatabaseListForBusiness(loggedInUser));
                 model.put("reports", AdminService.getReportList(loggedInUser));
-                AdminService.setBanner(model,loggedInUser);
+                 AdminService.setBanner(model,loggedInUser);
                 return "edituser";
             }
             final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);

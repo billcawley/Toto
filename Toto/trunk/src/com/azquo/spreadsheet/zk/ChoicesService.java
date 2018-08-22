@@ -256,6 +256,7 @@ public class ChoicesService {
         for (SName name : names) {
             //check to create pivot filter choices.... TODO - is this a redundant comment, aren't the filters being sorted anyway?
             if (name.getName().endsWith("Choice") && name.getRefersToCellRegion() != null) {
+                String fieldName = name.getName().substring(0,name.getName().length()-6);
                 // ok I assume choice is a single cell
                 List<String> choiceOptions = new ArrayList<>(); // was null, see no help in that
                 // new lines from edd to try to resolve choice stuff
@@ -279,7 +280,7 @@ public class ChoicesService {
                                 String[] choices = query.split(",");
                                 Collections.addAll(choiceOptions, choices);
                             } else {
-                                choiceOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, query);
+                                choiceOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, fieldName);
                             }
                         } catch (Exception e) {
                             choiceOptions.add(e.getMessage());

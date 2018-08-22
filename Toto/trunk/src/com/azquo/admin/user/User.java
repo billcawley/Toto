@@ -33,8 +33,9 @@ public final class User extends StandardEntity {
     private String createdBy;
     private int databaseId;
     private int reportId;
+    private String selections;
 
-    public User(int id, LocalDateTime endDate, int businessId, String email, String name, String status, String password, String salt, String createdBy, int databaseId, int reportId) {
+    public User(int id, LocalDateTime endDate, int businessId, String email, String name, String status, String password, String salt, String createdBy, int databaseId, int reportId, String selections) {
         this.id = id;
         this.endDate = endDate;
         this.businessId = businessId;
@@ -46,6 +47,7 @@ public final class User extends StandardEntity {
         this.createdBy = createdBy;
         this.databaseId = databaseId;
         this.reportId = reportId;
+        this.selections = selections;
     }
 
     public boolean isAdministrator() {
@@ -152,6 +154,10 @@ public final class User extends StandardEntity {
         this.reportId = reportId;
     }
 
+    public String getSelections(){ return this.selections; }
+
+    public void setSelections(String selections){this.selections = selections; }
+
     @Override
     public String toString() {
         return "User{" +
@@ -166,6 +172,7 @@ public final class User extends StandardEntity {
                 ", createdBy='" + createdBy + '\'' +
                 ", databaseId=" + databaseId +
                 ", reportId=" + reportId +
+                ", selections=" + selections +
                 '}';
     }
 }

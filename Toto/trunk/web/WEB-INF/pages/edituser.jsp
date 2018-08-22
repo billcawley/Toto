@@ -65,6 +65,10 @@
 					<td width="33%">
 						<h3>Change Password</h3>
 						<div class="well">
+							<label for="selections">Selections</label>
+							<input name="selections" id="selections" value="${selections}">
+						</div>
+						<div class="well">
 							<div>
 								<label for="password">Password</label>
 								<input name="password" id="password" type="password">
