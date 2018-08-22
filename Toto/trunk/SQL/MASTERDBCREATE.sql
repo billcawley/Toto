@@ -157,7 +157,10 @@ CREATE TABLE IF NOT EXISTS `user` (
   `salt` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `created_by` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `database_id` int(11) NOT NULL,
-  `report_id` int(11) NOT NULL
+  `report_id` int(11) NOT NULL,
+  `selections` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL
+
+
 ) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
