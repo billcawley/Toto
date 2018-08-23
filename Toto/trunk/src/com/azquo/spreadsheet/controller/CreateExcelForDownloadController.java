@@ -76,6 +76,7 @@ public class CreateExcelForDownloadController {
                             userSheet.getInternalSheet().getCell(row, 5).setStringValue(databaseById != null ? databaseById.getName() : "");
                             final OnlineReport reportById = OnlineReportDAO.findById(user.getReportId());
                             userSheet.getInternalSheet().getCell(row, 6).setStringValue(reportById != null ? reportById.getReportName() : "");
+                            userSheet.getInternalSheet().getCell(row, 7).setStringValue(user.getSelections() != null ? user.getSelections() : "");
                             row++;
                         }
                     }
