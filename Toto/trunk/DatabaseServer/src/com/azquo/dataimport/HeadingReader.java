@@ -62,6 +62,7 @@ class HeadingReader {
     static final String LINEDATA = "linedata";
     static final String SPLIT = "split";
     static final String TOPLINE = "topline";
+    static final String DICTIONARY = "dictionary";
 
     private static final int FINDATTRIBUTECOLUMN = -2;
 
@@ -406,11 +407,6 @@ todo - add classification here
                 // used to store the child of string here and interpret it later, I see no reason not to do it here.
                 String[] parents = childOfString.split(",");//TODO this does not take into account names with commas inside
                 for (String parent : parents) {
-                    int dotpos = parent.indexOf(".");//todo AS ABOVE, NAMES MAY HAVE . IN THEM
-                    if (dotpos >0){
-                        heading.categoryAttribute = parent.substring(dotpos + 1);
-                        parent = parent.substring(0, dotpos);
-                    }
                     heading.parentNames.add(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, parent, null, false));
                 }
                 break;
@@ -519,6 +515,10 @@ todo - add classification here
                 break;
             case TOPLINE:
                 //used elsewhere
+                break;
+            case DICTIONARY:
+                heading.categoryAttribute = result;
+                heading.exclusive = "";
                 break;
             default:
                 throw new Exception(firstWord + " not understood in heading '" + heading.heading + "'");

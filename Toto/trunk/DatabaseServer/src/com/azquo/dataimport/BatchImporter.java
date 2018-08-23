@@ -312,12 +312,12 @@ public class BatchImporter implements Callable<Void> {
                  if (cell.getImmutableImportHeading().categoryAttribute != null) {
                      String value = cell.getLineValue();
                      if (value!=null && value.length() > 0){
+                         boolean found = false;
                          Name category = cell.getImmutableImportHeading().parentNames.iterator().next();
                          for (Name cat:category.getChildren()){
                              String compareList = cat.getAttribute(cell.getImmutableImportHeading().categoryAttribute);
                              if (compareList != null){
                                  String[] items = compareList.split(",");
-                                 boolean found = false;
                                  for (String item:items){
                                      if (item.startsWith("~")){
                                          if (contains(value.toLowerCase(),item.toLowerCase().trim())) {
@@ -336,8 +336,10 @@ public class BatchImporter implements Callable<Void> {
                                  }
                              }
                          }
-                         List<String>languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
-                         cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + category.getDefaultDisplayName(), category, false,languages ));
+                         if (!found) {
+                             List<String> languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
+                             cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + category.getDefaultDisplayName(), category, false, languages));
+                         }
                       }
                      String result = cell.getImmutableImportHeading().compositionPattern;
                      // do line number first, I see no reason not to. Important for pivot.
