@@ -488,6 +488,12 @@ public class NameQueryParser {
     // used to simply match on a string literal, now matches a given attribute across the database to a name set.
     // the initial use was the attribute unsubscribed which had a date in there and crossing that with a name query on dates
     private static NameSetList attributeSet(AzquoMemoryDBConnection azquoMemoryDBConnection, String attributeName, NameSetList toConvert) {
+        String setAttribute = attributeName;
+        int dotPos = attributeName.indexOf(".");
+        if (dotPos >0){
+            setAttribute = attributeName.substring(dotPos + 1);
+            attributeName = attributeName.substring(0,dotPos);
+        }
         Set<Name> result = HashObjSets.newMutableSet();
         for (Name source : toConvert.getAsCollection()) {
             // some collection wrapping in here, could be made more efficient if necessary
@@ -496,8 +502,8 @@ public class NameQueryParser {
             ...but remember to remove the source set from the result.
 
              */
-            if (source.getAttribute(attributeName) != null){
-                result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName,source.getAttribute(attributeName)));
+            if (source.getAttribute(setAttribute) != null){
+                result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName,source.getAttribute(setAttribute)));
             }
             result.addAll(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attributeName, source.getDefaultDisplayName()));
         }
