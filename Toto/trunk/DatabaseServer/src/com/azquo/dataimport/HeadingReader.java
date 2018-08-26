@@ -316,7 +316,25 @@ todo - add classification here
                             startFieldPos = endFieldPos;
                         } else {
                             String component = clause.substring(startFieldPos, endFieldPos);
-                            if (headerNames.contains(component.toLowerCase())) {
+                            String[] functions = {"left","middle","right"};
+                            boolean hasFunction = false;
+                            for (String function:functions){
+                                if (component.toLowerCase().startsWith(function + "(")){
+                                    int commaPos = component.indexOf(",",function.length() + 1);
+                                    if (commaPos > 0){
+                                        String element = component.substring(function.length() + 1,commaPos).toLowerCase();
+                                        if (headerNames.contains(element)){
+                                            String fieldNo = headerNames.indexOf(element) + "";
+                                            clause = clause.substring(0,startFieldPos) + component.substring(0,function.length() + 1) + fieldNo + component.substring(commaPos) + clause.substring(endFieldPos);
+                                            hasFunction = true;
+                                            adjusted = true;
+                                            startFieldPos = startFieldPos + function.length() + 1 + fieldNo.length();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            if (!hasFunction && headerNames.contains(component.toLowerCase())) {
                                 String fieldNo = headerNames.indexOf(component.toLowerCase()) + "";
                                 clause = clause.replace("`" + component + "`", "`" + fieldNo + "`"); // EFC added the quotes or "field" counld interfere with "anoterfield"
                                 adjusted = true;
