@@ -15,18 +15,12 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zss.api.CellOperationUtil;
-import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
-import org.zkoss.zss.api.model.Font;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.*;
 import org.zkoss.zss.ui.Spreadsheet;
 
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ReportService {
     // should functions like this be in another class? It's not really stateless or that low level
     static final String ALLOWABLE_REPORTS = "az_AllowableReports";
-    static final String REDUNDANT = "redundant";
+    private static final String REDUNDANT = "redundant";
 
     static void checkForPermissionsInSheet(LoggedInUser loggedInUser, Sheet sheet) {
         //have a look for "az_AllowableReports", it's read only, getting it here seems as reasonable as anything
@@ -176,7 +170,9 @@ public class ReportService {
                                                 }
                                             }
                                             if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
-                                                cellForDisplay.setNewStringValue(df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue())));//set a string value as our date for saving purposes
+                                                if (sCell.getNumberValue() > 0){
+                                                    cellForDisplay.setNewStringValue(df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue())));//set a string value as our date for saving purposes
+                                                }
                                             }
                                         } else if (sCell.getFormulaResultType() == SCell.CellType.STRING) {
                                             if (!sCell.getStringValue().equals(cellForDisplay.getStringValue())) {
