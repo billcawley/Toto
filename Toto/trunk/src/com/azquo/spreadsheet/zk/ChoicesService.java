@@ -233,7 +233,7 @@ public class ChoicesService {
             resolveChoices = false;
             // ok so we've set them but now derived choices may have changed, no real option except to resolve again and see if there's a difference
             Map<String, List<String>> newChoiceOptionsMap = resolveChoiceOptions(namesForSheet, loggedInUser);
-            if (!newChoiceOptionsMap.equals(choiceOptionsMap)) { // equals is fune as Java is sensible about these things unlike C# . . .
+            if (!newChoiceOptionsMap.equals(choiceOptionsMap)) { // equals is fine as Java is sensible about these things unlike C# . . .
                 System.out.println("choices changed as a result of chosen, resolving again");
                 resolveChoices = true;
                 choiceOptionsMap = newChoiceOptionsMap;
@@ -381,7 +381,9 @@ public class ChoicesService {
         }
     }
 
-    static String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
+    // filter name is what could be selected for this user and source set is the query of the possibilities
+
+    public static String multiList(LoggedInUser loggedInUser, String filterName, String sourceSet) {
         try {
             List<String> allOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, sourceSet);
             List<String> chosenOptions;

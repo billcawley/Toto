@@ -20,6 +20,8 @@ import java.util.zip.ZipInputStream;
  * Created by edward on 11/11/16.
  * <p>
  * Factoring off a few functions from ImportService.
+ *
+ * todo - use the new easier zip libraries as used by the xlsx manipulation in the ExcelController. import org.zeroturnaround.zip.ZipUtil;
  */
 class ImportFileUtilities {
 

@@ -292,6 +292,7 @@ class ZKContextMenu {
         for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getAuditForDisplayList()) {
             boolean breakLoop = false;
             provenanceLabel = new Label();
+            provenanceLabel.setStyle("color:#0000ff");
             provenanceLabel.setMultiline(true);
             provenanceLabel.setValue(provenanceForDisplay.toString() + "\n");
             provenancePopup.appendChild(provenanceLabel);
@@ -384,6 +385,7 @@ class ZKContextMenu {
                             provenancePopup.appendChild(provButton);
                         } else {
                             provenanceLabel = new Label();
+                            provenanceLabel.setStyle("color:#00ff00");
                             provenanceLabel.setMultiline(true);
                             provenanceLabel.setValue("\t" + it.next());
                             provenancePopup.appendChild(provenanceLabel);
@@ -396,11 +398,13 @@ class ZKContextMenu {
                                     names.append(", ");
                                 }
                                 names.append(s);
+                            } else {
+                                break; // stop after value history - I wasn't doing this!
                             }
                         }
                         provenanceLabel = new Label();
                         provenanceLabel.setMultiline(true);
-                        provenanceLabel.setValue("\t\t" + names.toString() + "\n");
+                        provenanceLabel.setValue("\t\t" + names.toString() + "\n"); // not sure the \n is useful here!
                         provenancePopup.appendChild(provenanceLabel);
                         count++;
                         if (count > 20) {

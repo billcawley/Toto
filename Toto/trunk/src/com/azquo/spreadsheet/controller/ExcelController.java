@@ -13,6 +13,7 @@ import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.*;
 import com.azquo.spreadsheet.transport.json.CellsAndHeadingsForExcel;
 import com.azquo.spreadsheet.transport.json.ExcelJsonRequest;
+import com.azquo.spreadsheet.zk.ChoicesService;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -21,6 +22,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.zeroturnaround.zip.ZipUtil;
@@ -28,16 +30,11 @@ import org.zeroturnaround.zip.ZipUtil;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 import static com.azquo.spreadsheet.controller.LoginController.LOGGED_IN_USER_SESSION;
 
@@ -109,7 +106,6 @@ public class ExcelController {
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
     public static final String REPORT_ID = "REPORT_ID";
 
-
     @ResponseBody
     @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(HttpServletRequest request, HttpServletResponse response
@@ -177,18 +173,22 @@ public class ExcelController {
                     }
                 }
             }
+
             if (database != null && database.length() > 0) {
                 LoginService.switchDatabase(loggedInUser, database);
             }
+
             if (reportName != null && reportName.length() > 0) {
                 reportName = java.net.URLDecoder.decode(reportName, "UTF-8");
                 loggedInUser.setOnlineReport(OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.trim()));
             }
+
             if (op.equals("admin")) {
                 //ManageDatabasesController.handleRequest(request);
                 response.sendRedirect("/api/ManageDatabases");
                 return "";
             }
+
             if (op.equals("audit")) {
                 UserRegionOptions userRegionOptions = ExcelService.getUserRegionOptions(loggedInUser, "", loggedInUser.getOnlineReport().getId(), region);
                 jacksonMapper.registerModule(new JavaTimeModule());
@@ -202,33 +202,50 @@ public class ExcelController {
                 return (jsonError("no details"));
                 //buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
             }
+
             if (op.equals("getchoices")) {
-                List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                        .getFilterListForQuery(loggedInUser.getDataAccessToken(), choice, chosen, loggedInUser.getUser().getEmail());//choice is the name of the range, chosen= the value from the 'choice' cell
-                return jacksonMapper.writeValueAsString(filterOptions);
+                // I'm going to surpress errors for the moment until I can work out how to display them in the Excel TS
+                try {
+                    List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+                            .getFilterListForQuery(loggedInUser.getDataAccessToken(), choice, chosen, loggedInUser.getUser().getEmail());//choice is the name of the range, chosen= the name of the choice cell (not its value as previously stated. I don't think anyway!)
+                    System.out.println("filter options size "  + filterOptions.size());
+                    return jacksonMapper.writeValueAsString(filterOptions);
+                } catch (Exception e){
+                    e.printStackTrace();
+                    return jacksonMapper.writeValueAsString(new ArrayList<FilterTriple>());
+                }
             }
 
             if (op.equals("setchoices")) {
                 List<Integer> childIds = jacksonMapper.readValue(chosen, jacksonMapper.getTypeFactory().constructCollectionType(List.class, Integer.class));
                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), choice, loggedInUser.getUser().getEmail(), childIds);
                 return jsonError("done");
-
             }
+
             if (op.equals("createfilterset")) {
                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), choice, loggedInUser.getUser().getEmail(), chosen);
                 return jsonError("done");
             }
+
+            // so this may be required to set the value in the multi cell e.g. [all] or [all but] etc. Occasionally this is used in formulae, perhaps it should not be
+            if (op.equals("getmulticellcontents")) {
+                return ChoicesService.multiList(loggedInUser, chosen, choice);
+            }
+
             if (op.equals("userchoices")) {
                 return jacksonMapper.writeValueAsString(CommonReportUtils.getUserChoicesMap(loggedInUser));
             }
+
             if (op.equals("setchoice")) {
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, chosen);
                 return jsonError("done");
             }
+
             if (op.equals("getcount")) {
                 int choices = CommonReportUtils.getNameQueryCount(loggedInUser, choice);
                 return choices + "";
             }
+
             if (op.equals("sethighlight")) {
                 int hDays = 0;
                 if (chosen.equals("1 hour")) chosen = "2 days"; //horrible!
@@ -394,7 +411,9 @@ public class ExcelController {
             if (op.equals("loadregion")) {
                 System.out.println("json : " + json);
                 // ok this will have to be moved
-                ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json.replace("\\\"", "\""), ExcelJsonRequest.class);
+                //ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json.replace("\\\"", "\""), ExcelJsonRequest.class);
+                // maybe it shouldn't be replaced!
+                ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json, ExcelJsonRequest.class);
                 String optionsSource = excelJsonRequest.optionsSource != null ? excelJsonRequest.optionsSource : "";
 
                 UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), loggedInUser.getUser().getReportId(), excelJsonRequest.region, optionsSource);
@@ -541,6 +560,7 @@ public class ExcelController {
             FileUtils.deleteDirectory(new File(sourceFile));
             //restore the backup
             FileUtils.copyFile(new File(sourceFile + ".bak"), new File(sourceFile));
+            FileUtils.deleteQuietly(new File(sourceFile + ".bak"));
             return sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf("."));
 
     }
@@ -583,4 +603,5 @@ public class ExcelController {
     ) {
         return handleRequest(request, response, sessionId, op, database, reportName, logon, password, region, regionrow, regioncol, choice, chosen, json, "true");
     }
+
 }
