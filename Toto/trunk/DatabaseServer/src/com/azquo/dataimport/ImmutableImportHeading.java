@@ -32,6 +32,7 @@ class ImmutableImportHeading {
     final String defaultValue;
     final List<String> ignoreList;
     final boolean blankZeroes;
+    final boolean removeSpaces;
     final boolean lineNameRequired;
     final String exclusive;
     final boolean existing;
@@ -57,6 +58,7 @@ class ImmutableImportHeading {
         this.defaultValue = mutableImportHeading.defaultValue;
         this.ignoreList = mutableImportHeading.ignoreList;
         this.blankZeroes = mutableImportHeading.blankZeroes;
+        this.removeSpaces = mutableImportHeading.removeSpaces;
         this.lineNameRequired = mutableImportHeading.lineNameRequired;
         this.exclusive = mutableImportHeading.exclusive;
         this.existing = mutableImportHeading.existing;

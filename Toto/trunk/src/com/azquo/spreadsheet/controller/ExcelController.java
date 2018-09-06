@@ -217,6 +217,7 @@ public class ExcelController {
             }
 
             if (op.equals("setchoices")) {
+                System.out.println("chosen for multi : " + chosen);
                 List<Integer> childIds = jacksonMapper.readValue(chosen, jacksonMapper.getTypeFactory().constructCollectionType(List.class, Integer.class));
                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), choice, loggedInUser.getUser().getEmail(), childIds);
                 return jsonError("done");
@@ -229,7 +230,9 @@ public class ExcelController {
 
             // so this may be required to set the value in the multi cell e.g. [all] or [all but] etc. Occasionally this is used in formulae, perhaps it should not be
             if (op.equals("getmulticellcontents")) {
-                return ChoicesService.multiList(loggedInUser, chosen, choice);
+                String check = ChoicesService.multiList(loggedInUser, chosen, choice);
+                System.out.println("getmulticellcontents check : " + check);
+                return check;
             }
 
             if (op.equals("userchoices")) {

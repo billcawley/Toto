@@ -461,7 +461,7 @@ public class BatchImporter implements Callable<Void> {
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
     private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Set<String> linesRejected) throws Exception {
         int valueCount = 0;
-        // initial pass to deal with defaults and local parents
+        // initial pass to deal with defaults, spaces that might need removing and local parents
         // set defaults before dealing with local parent/child
         for (ImportCellWithHeading importCellWithHeading : cells) {
             if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && importCellWithHeading.getLineValue().trim().length() == 0) {
@@ -479,6 +479,9 @@ public class BatchImporter implements Callable<Void> {
 
                 }
                 importCellWithHeading.setLineValue(defaultValue);
+            }
+            if (importCellWithHeading.getImmutableImportHeading().removeSpaces){
+                importCellWithHeading.setLineValue(importCellWithHeading.getLineValue().replace(" ", ""));
             }
         }
         for (ImportCellWithHeading cell : cells) {

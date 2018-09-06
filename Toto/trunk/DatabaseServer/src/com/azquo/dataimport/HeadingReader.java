@@ -45,6 +45,7 @@ class HeadingReader {
     static final String CLASSIFICATION = "classification";
     static final String DEFAULT = "default";
     static final String NONZERO = "nonzero";
+    static final String REMOVESPACES = "removespaces";
     private static final String REQUIRED = "required";
     private static final String CLEARDATA = "cleardata";
     static final String DATELANG = "date";
@@ -409,6 +410,7 @@ todo - add classification here
                 && !firstWord.equals(LOCAL)
                 && !firstWord.equals(REQUIRED)
                 && !firstWord.equals(NONZERO)
+                && !firstWord.equals(REMOVESPACES)
                 && !firstWord.equals(EXCLUSIVE)
                 && !firstWord.equals(CLEAR)
                 && !firstWord.equalsIgnoreCase(TOPLINE)
@@ -508,6 +510,9 @@ todo - add classification here
                 break;
             case NONZERO: // Ignore zero values. This and local will just ignore values after e.g. "nonzero something" I see no harm in this
                 heading.blankZeroes = true;
+                break;
+            case REMOVESPACES: // remove spaces from the cell
+                heading.removeSpaces = true;
                 break;
             case REQUIRED:
                 heading.required = true;

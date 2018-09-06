@@ -394,7 +394,7 @@ public class ChoicesService {
                 // and create the set server side, it will no doubt be referenced
                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), filterName, loggedInUser.getUser().getEmail(), sourceSet);
             }
-            if (allOptions.size() < 2) return null;
+            if (allOptions.size() < 2) return "[all]"; // EFC - this did return null which I think is inconsistent. If there's only one option should it maybe be all?
             if (chosenOptions.size() == 0 || chosenOptions.size() == allOptions.size()) return "[all]";
             if (chosenOptions.size() < 6) {
                 StringBuilder toReturn = new StringBuilder();

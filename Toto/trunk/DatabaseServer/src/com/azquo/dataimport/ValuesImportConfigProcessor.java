@@ -359,6 +359,7 @@ class ValuesImportConfigProcessor {
                 || heading.startsWith(HeadingReader.IGNORE)
                 || heading.startsWith(HeadingReader.DEFAULT)
                 || heading.startsWith(HeadingReader.NONZERO)
+                || heading.startsWith(HeadingReader.REMOVESPACES)
                 || heading.startsWith(HeadingReader.DATELANG)
                 || heading.startsWith(HeadingReader.ONLY)
                 || heading.startsWith(HeadingReader.EXCLUSIVE)

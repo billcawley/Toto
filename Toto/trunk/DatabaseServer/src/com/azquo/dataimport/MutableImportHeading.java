@@ -67,6 +67,8 @@ class MutableImportHeading {
     List<String> ignoreList = null;
     // don't import zero values
     boolean blankZeroes = false;
+    // remove spaces from the cell value
+    boolean removeSpaces = false;
     boolean required = false;
     // is this a column representing names (as opposed to values or attributes). Derived from parent of child of and being referenced by other headings, it's saying : does name, the field above, need to be populated?
     boolean lineNameRequired = false;
