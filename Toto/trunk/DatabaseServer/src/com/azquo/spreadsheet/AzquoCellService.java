@@ -62,24 +62,28 @@ class AzquoCellService {
         final List<Integer> sortedValues = new ArrayList<>(sortListsMap.size());
         List<Map.Entry<Integer, List<TypedPair<Double, String>>>> list = new ArrayList<>(sortListsMap.entrySet());
         // sort list based on the list of values in each entry
-        list.sort((o1, o2) -> {
-            int result = 0;
-            if (o1.getValue().size() != o2.getValue().size()) { // the really should match! I'll call it neutral for the moment
-                return 0;
-            }
-            for (int index = 0; index < sortCount; index++) {
-                if (doubleSort.get(index)) {
-                    result = o1.getValue().get(index).getFirst().compareTo(o2.getValue().get(index).getFirst());
-                } else {
-                    result = o1.getValue().get(index).getSecond().compareTo(o2.getValue().get(index).getSecond());
+        try {
+            list.sort((o1, o2) -> {
+                int result = 0;
+                if (o1.getValue().size() != o2.getValue().size()) { // the really should match! I'll call it neutral for the moment
+                    return 0;
                 }
-                if (result != 0) { // we found a difference
-                    break;
-                }
+                for (int index = 0; index < sortCount; index++) {
+                    if (doubleSort.get(index)) {
+                        result = o1.getValue().get(index).getFirst().compareTo(o2.getValue().get(index).getFirst());
+                    } else {
+                        result = o1.getValue().get(index).getSecond().compareTo(o2.getValue().get(index).getSecond());
+                    }
+                    if (result != 0) { // we found a difference
+                        break;
+                    }
 
-            }
-            return sortRowsUp ? result : -result;
-        });
+                }
+                return sortRowsUp ? result : -result;
+            });
+        }catch (Exception e){
+            //not sure what to do if there are null values in the list that needs to be sorted
+        }
         for (Map.Entry<Integer, List<TypedPair<Double, String>>> entry : list) {
             sortedValues.add(entry.getKey());
         }
