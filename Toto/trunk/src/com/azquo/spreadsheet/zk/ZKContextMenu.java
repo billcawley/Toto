@@ -64,30 +64,25 @@ class ZKContextMenu {
         editPopup = new Menupopup();
         // todo - check ZK to see if there's a better way to do this
         editPopup.setId("editPopup");
-        editPopup.setStyle("background-color:#ffffff");
-        editPopup.setStyle("border: 5px solid #F58030");
+        setPopupStyle(editPopup);
         provenancePopup = new Popup();
         provenancePopup.setId("provenancePopup");
         provenancePopup.setDraggable("true");
         provenancePopup.setDroppable("true");
-        provenancePopup.setStyle("background-color:#ffffff");
-        provenancePopup.setStyle("border: 5px solid #F58030");
+        setPopupStyle(provenancePopup);
         debugPopup = new Popup();
         debugPopup.setId("debugPopup");
         debugPopup.setDraggable("true");
         debugPopup.setDroppable("true");
-        debugPopup.setStyle("background-color:#ffffff");
-        debugPopup.setStyle("border: 5px solid #F58030");
+        setPopupStyle(debugPopup);
         instructionsLabel = new Label();
         instructionsPopup = new Popup();
         instructionsPopup.setId("instructionsPopup");
-        instructionsPopup.setStyle("background-color:#ffffff");
-        instructionsPopup.setStyle("border: 5px solid #F58030");
+        setPopupStyle(instructionsPopup);
         instructionsLabel.setMultiline(true);
         instructionsPopup.appendChild(instructionsLabel);
         highlightPopup = new Popup();
-        highlightPopup.setStyle("background-color:#ffffff");
-        highlightPopup.setStyle("border: 5px solid #F58030");
+        setPopupStyle(highlightPopup);
         highlightPopup.setId("highlightPopup");
 
         // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
@@ -638,5 +633,10 @@ class ZKContextMenu {
         Menuitem instructionsItem = new Menuitem("Region definition");
         editPopup.appendChild(instructionsItem);
         instructionsItem.setPopup(instructionsPopup);
+    }
+
+    public static void setPopupStyle(Popup popup){
+        popup.setStyle("background-color:#ffffff");
+        popup.setStyle("border:5px solit #f58030");
     }
 }

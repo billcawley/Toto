@@ -45,9 +45,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         zkContextMenu = new ZKContextMenu(myzss);
         filterPopup = new Popup();
         filterPopup.setId("filterPopup");
-        filterPopup.setStyle("background-color:#ffffff");
-        filterPopup.setStyle("border: 5px solid #F58030");
-        // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
+        ZKContextMenu.setPopupStyle(filterPopup);
+         // much hacking went into getting an appropriate object to hook into to make our extra contextual menu
         if (myzss.getFirstChild() != null) {
             myzss.getFirstChild().appendChild(filterPopup);
         } else { // it took some considerable time to work out this hack
