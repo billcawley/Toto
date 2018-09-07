@@ -6,6 +6,7 @@ import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 
+import java.lang.reflect.Array;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -540,7 +541,40 @@ todo - add classification here
                 //used elsewhere
                 break;
             case DICTIONARY:
-                heading.categoryAttribute = result;
+                if (heading.parentNames==null || heading.parentNames.size()==0){
+                    throw new Exception("dictionary terms must specify the parent first");
+
+                }
+                Name parent = heading.parentNames.iterator().next();
+                heading.dictionaryMap = new HashMap<>();
+                for (Name name:parent.getChildren()) {
+                    String term = name.getAttribute(result);
+                    if (term!=null) {
+                        List<DictionaryTerm> dictionaryTerms = new ArrayList<>();
+                        boolean exclude = false;
+                        while (term.startsWith("{")) {
+                            int endSet = term.indexOf("}");
+                            if (endSet < 0) break;
+                            String stringList = term.substring(1, endSet);
+                            dictionaryTerms.add(new DictionaryTerm(exclude, (List<String>) Arrays.asList(stringList.split(","))));
+                            term = term.substring(endSet + 1).trim();
+                            if (term.startsWith("+")) {
+                                exclude = false;
+                                term = term.substring(1).trim();
+                            } else if (term.startsWith("-")) {
+                                exclude = true;
+                                term = term.substring(1).trim();
+                            }
+                        }
+                        if (term.length() > 0) {
+                            dictionaryTerms.add(new DictionaryTerm(exclude, (List<String>) Arrays.asList(term.split(","))));
+                        }
+                        if (dictionaryTerms.size() > 0) {
+                            heading.dictionaryMap.put(name, dictionaryTerms);
+                        }
+                    }
+                }
+
                 heading.exclusive = "";
                 break;
             default:
