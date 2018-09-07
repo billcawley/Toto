@@ -2,10 +2,7 @@ package com.azquo.dataimport;
 
 import com.azquo.memorydb.core.Name;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by edward on 09/09/16.
@@ -84,10 +81,8 @@ class MutableImportHeading {
     // local names are a p[otential problem if not resolved in the right order. Previously this was solved by resolving local first
     // but this didn't deal with local in local. Not recommended but using this the system can support it. Code which resolves this along with comments in BatchImporter.
     List<Integer> localParentIndexes = new ArrayList<>();
-    /*category is used to bring order to unrestricted string input.   A table can be uploaded (categoryAttribute) against items in a list.  Each table element contains a comma-separated list of strings that may contain wildcards at beginning and end,
-    qne mqy also include '~' to indicate NOT.   The text in the field is checked against each element of the set, and allocated to the first element where the categoryTable contains a matching string.  Elements that are not categorised ara put in 'Uncategorised <categoryAttribute> at the end
-
-
+    /*dictionaryTerms used to try to bring order to unrestricted string input.   A table can be uploaded (dictionaryTerms) against items in a list.  Each term element contains a comma-separated list of strings
+    the terms are connected by + or - signs to indicate that elements from both sets must be present, or to exclude any item that contains elements from the list respectively.
     */
-    String categoryAttribute;
+    Map<Name,List<DictionaryTerm>> dictionaryMap = null;
 }

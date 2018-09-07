@@ -2,10 +2,7 @@ package com.azquo.dataimport;
 
 import com.azquo.memorydb.core.Name;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Extracted from DSImportService by edward on 09/09/16.
@@ -15,7 +12,23 @@ import java.util.Set;
  * From a purely pragmatic point of transport this class is not necessary but I'm very keen to make sure that heading info is fixed before data loading - possible errors resulting from modifying the mutable
  * headings could be a real pain, this will stop that.
  */
+
+
+class DictionaryTerm{
+    public boolean exclude;
+    public List<String> items;
+
+    DictionaryTerm(boolean exclude, List<String> items){
+        this.exclude = exclude;
+        this.items = items;
+    }
+}
+
+
 class ImmutableImportHeading {
+
+
+
     final String heading;
     final int indexForAttribute;
     final int indexForChild;
@@ -40,7 +53,7 @@ class ImmutableImportHeading {
     final String splitChar;
     final List<Integer> localParentIndexes;
     Name category;
-    String categoryAttribute;
+    Map<Name,List<DictionaryTerm>> dictionaryMap;
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -65,6 +78,6 @@ class ImmutableImportHeading {
         this.clearData = mutableImportHeading.clearData;
         this.splitChar = mutableImportHeading.splitChar;
         this.localParentIndexes = mutableImportHeading.localParentIndexes;
-        this.categoryAttribute = mutableImportHeading.categoryAttribute;
+        this.dictionaryMap = mutableImportHeading.dictionaryMap;
     }
 }
