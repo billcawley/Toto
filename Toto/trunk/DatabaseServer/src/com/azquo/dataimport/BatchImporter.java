@@ -293,7 +293,11 @@ public class BatchImporter implements Callable<Void> {
                             result = dresult + "";
                         }
                     }
+                    if (cell.getImmutableImportHeading().removeSpaces){
+                        result = result.replace(" ", "");
+                    }
                     if (!result.equals(cell.getLineValue())) {
+
                         cell.setLineValue(result);
                         adjusted = true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
                     }
@@ -309,36 +313,45 @@ public class BatchImporter implements Callable<Void> {
 
     private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,List<ImportCellWithHeading> cells, int importLine) throws Exception {
              for (ImportCellWithHeading cell : cells) {
-                 if (cell.getImmutableImportHeading().categoryAttribute != null) {
+                 if (cell.getImmutableImportHeading().dictionaryMap != null) {
                      String value = cell.getLineValue();
                      if (value!=null && value.length() > 0){
-                         boolean found = false;
-                         Name category = cell.getImmutableImportHeading().parentNames.iterator().next();
-                         for (Name cat:category.getChildren()){
-                             String compareList = cat.getAttribute(cell.getImmutableImportHeading().categoryAttribute);
-                             if (compareList != null){
-                                 String[] items = compareList.split(",");
-                                 for (String item:items){
-                                     if (item.startsWith("~")){
-                                         if (contains(value.toLowerCase(),item.toLowerCase().trim())) {
+                         boolean hasResult = false;
+                         Iterator it = cell.getImmutableImportHeading().dictionaryMap.keySet().iterator();
+                         while (it.hasNext()){
+                             boolean found = true;
+                             Name category = (Name)it.next();
+                             List<DictionaryTerm> dictionaryTerms = cell.getImmutableImportHeading().dictionaryMap.get(category);
+                             for (DictionaryTerm dictionaryTerm:dictionaryTerms) {
+                                 found= true; //the phrase now has to pass every one of the tests.  If it does so then the category is found.
+                                 for (String item : dictionaryTerm.items) {
+                                     if (dictionaryTerm.exclude) {
+                                         if (contains(value.toLowerCase(), item.toLowerCase().trim())) {
                                              found = false;
                                              break;
                                          }
-                                     }else{
-                                         if (!found && contains(value.toLowerCase(),item.toLowerCase().trim())){
-                                             found = true;
+                                     } else {
+                                        if (!contains(value.toLowerCase(), item.toLowerCase().trim())) {
+                                             found = false;
+                                             break;
                                          }
                                      }
+
                                  }
-                                 if (found){
-                                     cell.addToLineNames(cat);
-                                     break;
-                                 }
+                                 if (!found) break;
+
                              }
+                             if (found) {
+                                 cell.addToLineNames(category);
+                                 hasResult = true;
+                                 break;
+                             }
+
                          }
-                         if (!found) {
+                         if (!hasResult) {
+                             Name parent = cell.getImmutableImportHeading().parentNames.iterator().next();
                              List<String> languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
-                             cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + category.getDefaultDisplayName(), category, false, languages));
+                             cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + parent.getDefaultDisplayName(), parent, false, languages));
                          }
                       }
                      String result = cell.getImmutableImportHeading().compositionPattern;
