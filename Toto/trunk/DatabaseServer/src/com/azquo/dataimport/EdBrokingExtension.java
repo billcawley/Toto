@@ -205,6 +205,9 @@ There would be some duplication but it would be less complex to make
                 }
                 lineNo++;
             }
+            if (topHeadingNames.size() > 0){
+                throw new Exception("Cannot find topheading " + topHeadingNames.iterator().next().getDefaultDisplayName());
+            }
             // get the next line, that may just be the headers if there are no top headings
             if (lineNo++ < 20 && valuesImportConfig.getLineIterator().hasNext()) {
                 headersOut = new ArrayList<>(Arrays.asList(valuesImportConfig.getLineIterator().next()));
