@@ -52,8 +52,8 @@ class ImmutableImportHeading {
     final boolean clearData;
     final String splitChar;
     final List<Integer> localParentIndexes;
-    Name category;
-    Map<Name,List<DictionaryTerm>> dictionaryMap;
+     Map<Name,List<DictionaryTerm>> dictionaryMap;
+     Map<String, List<String>> synonyms;
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -79,5 +79,6 @@ class ImmutableImportHeading {
         this.splitChar = mutableImportHeading.splitChar;
         this.localParentIndexes = mutableImportHeading.localParentIndexes;
         this.dictionaryMap = mutableImportHeading.dictionaryMap;
+        this.synonyms = mutableImportHeading.synonyms;
     }
 }

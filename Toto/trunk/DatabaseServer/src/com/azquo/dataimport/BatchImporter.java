@@ -323,18 +323,17 @@ public class BatchImporter implements Callable<Void> {
                              Name category = (Name)it.next();
                              List<DictionaryTerm> dictionaryTerms = cell.getImmutableImportHeading().dictionaryMap.get(category);
                              for (DictionaryTerm dictionaryTerm:dictionaryTerms) {
-                                 found= true; //the phrase now has to pass every one of the tests.  If it does so then the category is found.
+                                 found= false; //the phrase now has to pass every one of the tests.  If it does so then the category is found.
                                  for (String item : dictionaryTerm.items) {
                                      if (dictionaryTerm.exclude) {
-                                         if (contains(value.toLowerCase(), item.toLowerCase().trim())) {
+                                         if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
                                              found = false;
                                              break;
                                          }
                                      } else {
-                                        if (!contains(value.toLowerCase(), item.toLowerCase().trim())) {
-                                             found = false;
-                                             break;
-                                         }
+                                        if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
+                                             found = true;
+                                        }
                                      }
 
                                  }
@@ -470,6 +469,24 @@ public class BatchImporter implements Callable<Void> {
              }
      }
 
+
+     private static boolean containsSynonym(Map<String,List<String>> synonymList, String term, String value){
+         if (value.contains(term)) {
+             return true;
+         }
+         if (synonymList!=null){
+             List<String> synonyms = synonymList.get(term);
+             if (synonyms!=null){
+                 for (String synonym:synonyms){
+                     if (value.contains(synonym.toLowerCase())){
+                         return true;
+                     }
+                 }
+             }
+         }
+         return false;
+
+    }
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
     private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Set<String> linesRejected) throws Exception {

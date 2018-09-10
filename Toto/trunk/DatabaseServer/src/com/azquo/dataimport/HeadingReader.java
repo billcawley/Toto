@@ -546,31 +546,52 @@ todo - add classification here
 
                 }
                 Name parent = heading.parentNames.iterator().next();
-                heading.dictionaryMap = new HashMap<>();
+                heading.dictionaryMap = new LinkedHashMap<>();
                 for (Name name:parent.getChildren()) {
                     String term = name.getAttribute(result);
                     if (term!=null) {
                         List<DictionaryTerm> dictionaryTerms = new ArrayList<>();
                         boolean exclude = false;
-                        while (term.startsWith("{")) {
-                            int endSet = term.indexOf("}");
-                            if (endSet < 0) break;
-                            String stringList = term.substring(1, endSet);
-                            dictionaryTerms.add(new DictionaryTerm(exclude, (List<String>) Arrays.asList(stringList.split(","))));
-                            term = term.substring(endSet + 1).trim();
-                            if (term.startsWith("+")) {
-                                exclude = false;
-                                term = term.substring(1).trim();
-                            } else if (term.startsWith("-")) {
-                                exclude = true;
-                                term = term.substring(1).trim();
+                        while (term.length() > 0) {
+                            if(term.startsWith("{")) {
+                                int endSet = term.indexOf("}");
+                                if (endSet < 0) break;
+                                String stringList = term.substring(1, endSet);
+                                dictionaryTerms.add(new DictionaryTerm(exclude, (List<String>) Arrays.asList(stringList.split(","))));
+                                term = term.substring(endSet + 1).trim();
+                            }else{
+                                int plusPos = (term + "+").indexOf("+");
+                                int minusPos = (term + "-").indexOf("-");
+                                int termEnd = plusPos;
+                                if (minusPos < plusPos) termEnd = minusPos;
+                                dictionaryTerms.add(new DictionaryTerm(exclude, (List<String>) Arrays.asList(term.substring(0,termEnd).split(","))));
+                                if (termEnd == term.length()){
+                                    term = "";
+                                }else{
+                                    term = term.substring(termEnd);
+                                }
                             }
-                        }
-                        if (term.length() > 0) {
-                            dictionaryTerms.add(new DictionaryTerm(exclude, (List<String>) Arrays.asList(term.split(","))));
-                        }
+                            if (term.startsWith("+")) {
+                                    exclude = false;
+                                    term = term.substring(1).trim();
+                                } else if (term.startsWith("-")) {
+                                    exclude = true;
+                                    term = term.substring(1).trim();
+                                }
+                            }
                         if (dictionaryTerms.size() > 0) {
                             heading.dictionaryMap.put(name, dictionaryTerms);
+                        }
+                    }
+                }
+                Name synonymList = NameService.findByName(azquoMemoryDBConnection,"synonyms");
+
+                if (synonymList!=null){
+                    heading.synonyms = new HashMap<>();
+                    for (Name synonym:synonymList.getChildren()){
+                        String synonyms = synonym.getAttribute("synonyms");
+                        if (synonyms!=null){
+                            heading.synonyms.put(synonym.getDefaultDisplayName(),Arrays.asList(synonyms.split(",")));
                         }
                     }
                 }

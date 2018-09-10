@@ -85,4 +85,5 @@ class MutableImportHeading {
     the terms are connected by + or - signs to indicate that elements from both sets must be present, or to exclude any item that contains elements from the list respectively.
     */
     Map<Name,List<DictionaryTerm>> dictionaryMap = null;
+    Map<String, List<String>> synonyms = null;
 }
