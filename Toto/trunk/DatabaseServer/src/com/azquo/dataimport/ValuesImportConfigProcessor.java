@@ -328,9 +328,9 @@ class ValuesImportConfigProcessor {
                             headers.set(colNo, heading);
                         } else {
                             if (findReservedWord(heading)) {
-                                headers.set(colNo, headers.get(colNo) + ";" + heading);
+                                headers.set(colNo, headers.get(colNo) + ";" + heading.trim());
                             } else {
-                                headers.set(colNo, heading + "|" + headers.get(colNo));
+                                headers.set(colNo, heading.trim() + "|" + headers.get(colNo));
                             }
                         }
                     }
