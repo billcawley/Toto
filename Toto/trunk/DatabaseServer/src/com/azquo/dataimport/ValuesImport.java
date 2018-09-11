@@ -66,6 +66,7 @@ public class ValuesImport {
                     if (valuesImportConfig.isSpreadsheet()) {
                         lineValue = lineValue.replace("\\\\t", "\t").replace("\\\\n", "\n");
                     }
+                    lineValue = checkNumeric(lineValue);
                     importCellsWithHeading.add(new ImportCellWithHeading(immutableImportHeading, lineValue));
                     columnIndex++;
                 }
@@ -152,5 +153,34 @@ public class ValuesImport {
             //throw new Exception(fileName + " : " + t.getMessage());
             return "Import error: " + t.getMessage();
         }
+    }
+
+    private static String checkNumeric(String lineValue){
+        //routine to catch data sent out in accountancy form - beware of data printed with ',' instead of '.'
+        lineValue = lineValue.trim();
+        if (lineValue.startsWith("0")) return lineValue;//don't bother with zip codes or 0.....
+        if (lineValue.startsWith("(") && lineValue.endsWith(")")){
+            String middle = lineValue.substring(1,lineValue.length() - 1);
+            try {
+                double d = Double.parseDouble(middle.replace(",",""));
+                lineValue = -d + "";
+                if (lineValue.endsWith(".0")){
+                    lineValue = lineValue.substring(0,lineValue.length() - 2);
+                }
+            }catch(Exception ignored){
+
+            }
+        }else{
+            try{
+                double d = Double.parseDouble(lineValue.replace(",",""));
+                lineValue = d + "";
+                if (lineValue.endsWith(".0")){
+                    lineValue = lineValue.substring(0,lineValue.length() - 2);
+                }
+            }catch(Exception ignored){
+
+            }
+        }
+        return lineValue;
     }
 }
