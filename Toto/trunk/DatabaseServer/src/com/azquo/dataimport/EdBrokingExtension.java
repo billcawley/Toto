@@ -206,7 +206,7 @@ There would be some duplication but it would be less complex to make
                 lineNo++;
             }
             if (topHeadingNames.size() > 0){
-                throw new Exception("Cannot find topheading " + topHeadingNames.iterator().next().getDefaultDisplayName());
+                throw new Exception("Cannot find topheading " + topHeadingNames.iterator().next());
             }
             // get the next line, that may just be the headers if there are no top headings
             if (lineNo++ < 20 && valuesImportConfig.getLineIterator().hasNext()) {
@@ -373,6 +373,7 @@ check that the headings that are required are there . . .
             // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
             String lastHeading = null;
             for (String heading : nextLine) {
+                heading = heading.trim();
                 if (heading.length() > 0 && !heading.equals("--") && colNo < headers.size()) { //ignore "--", can be used to give space below the headers
                     if (heading.startsWith(".")) {
                         headers.set(colNo, headers.get(colNo) + heading);
@@ -384,18 +385,18 @@ check that the headings that are required are there . . .
                                 if (lastSplit > 0) {
                                     headers.set(colNo, lastHeading.substring(0, lastSplit + 1) + heading);
                                 } else {
-                                    headers.set(colNo, lastHeading + "|" + heading);
+                                    headers.set(colNo, lastHeading.trim() + "|" + heading.trim());
                                 }
                             } else { // if there's no previous or above I guess just set it to the line value? Added by EFC due to legitimate NPE objection from intellij
-                                headers.set(colNo, heading);
+                                headers.set(colNo, heading.trim());
                             }
                         } else {
-                            headers.set(colNo, headers.get(colNo) + "|" + heading);
+                            headers.set(colNo, headers.get(colNo).trim() + "|" + heading.trim());
                         }
                     }
                     lastfilled = true;
                 }
-                lastHeading = headers.get(colNo);
+                lastHeading = headers.get(colNo).trim();
                 colNo++;
             }
             if (lineIterator.hasNext() && lastfilled) {
