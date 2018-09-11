@@ -108,7 +108,7 @@ public class BatchImporter implements Callable<Void> {
             azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(importLine) + " imported.", true);
             azquoMemoryDBConnection.addToUserLogNoException("Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
             return null;
-        } catch (Exception e) { // stacktrace first
+        } catch (Exception e) {
             e.printStackTrace();
             throw e;
         }
@@ -681,9 +681,11 @@ public class BatchImporter implements Callable<Void> {
                 }
             } else { // a simple include in sets if line names exists. Exclusive after is for taking stuff out if required
                 // in theory this column could be multiple parents and the column "parent of" refers to could be multiple children, permute over the combinations
-                for (Name parent : cellWithHeading.getLineNames()) {
-                    for (Name childCellName : childCell.getLineNames()) {
-                        parent.addChildWillBePersisted(childCellName);
+                if (cellWithHeading.getLineNames() != null){ // it can be null, not sure if it should be?? But it can be, stop NPE
+                    for (Name parent : cellWithHeading.getLineNames()) {
+                        for (Name childCellName : childCell.getLineNames()) {
+                            parent.addChildWillBePersisted(childCellName);
+                        }
                     }
                 }
             }
