@@ -347,10 +347,14 @@ public class BatchImporter implements Callable<Void> {
                              }
 
                          }
-                         if (!hasResult) {
-                             Name parent = cell.getImmutableImportHeading().parentNames.iterator().next();
-                             List<String> languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
-                             cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + parent.getDefaultDisplayName(), parent, false, languages));
+                         if (!hasResult){
+                             if(!cell.getImmutableImportHeading().blankZeroes) {
+                                 Name parent = cell.getImmutableImportHeading().parentNames.iterator().next();
+                                 List<String> languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
+                                 cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + parent.getDefaultDisplayName(), parent, false, languages));
+                             }else{
+                                 cell.setLineValue("");
+                             }
                          }
                       }
                      String result = cell.getImmutableImportHeading().compositionPattern;
