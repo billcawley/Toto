@@ -52,6 +52,8 @@ public class DateUtils {
 
     public static LocalDate isADate(String maybeDate) {
         String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
+        if (dateToTest.length() > 5 && dateToTest.charAt(1) == '-') dateToTest = "0" + dateToTest;
+        if (dateToTest.length() > 5 && dateToTest.charAt(2)=='-' && dateToTest.charAt(4) == '-') dateToTest = dateToTest.substring(0,3) + "0" + dateToTest.substring(3);
         LocalDate date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, dateTimeFormatter);
         if (date != null) return date;
         date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, ukdf4);
@@ -65,6 +67,8 @@ public class DateUtils {
 
     public static LocalDate isUSDate(String maybeDate) {
         String dateToTest = maybeDate.replace("/", "-").replace(" ", "-");
+        if (dateToTest.length() > 5 && dateToTest.charAt(1) == '-') dateToTest = "0" + dateToTest;
+        if (dateToTest.length() > 5 && dateToTest.charAt(2) == '-' && dateToTest.charAt(4) == '-') dateToTest = dateToTest.substring(0,3) + "0" + dateToTest.substring(3);
         LocalDate date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, dateTimeFormatter);
         if (date != null) return date;
         date = tryDate(dateToTest.length() > 10 ? dateToTest.substring(0, 10) : dateToTest, usdf4);
