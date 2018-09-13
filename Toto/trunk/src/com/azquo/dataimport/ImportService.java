@@ -70,6 +70,7 @@ public final class ImportService {
                 zipName = stripTempSuffix(fileName);
                 zipName = zipName.substring(0,zipName.indexOf("."));
             }
+            // todo - replace with ziputils explode?
             List<Path> files = ImportFileUtilities.unZip(tempFile);
             // should be sorting by xls first then size ascending
             files.sort((f1, f2) -> {

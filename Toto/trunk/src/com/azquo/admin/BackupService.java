@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+import org.apache.commons.lang.math.NumberUtils;
 import org.zeroturnaround.zip.ZipUtil;
 
 import java.io.*;
@@ -161,7 +162,12 @@ public class BackupService {
         // now reports
         for (File f : files) {
             if (!f.getName().endsWith(".db")) {
-                toReturn.append(ImportService.importTheFile(loggedInUser, f.getName(), f.getAbsolutePath(), false).replace("\n", "<br/>") + "<br/>");
+                // rename the xlsx file to get rid of the ID that will probably be in front in the backup zip
+                if (f.getName().contains("-") && NumberUtils.isNumber(f.getName().substring(0, f.getName().indexOf("-")))){
+                    toReturn.append(ImportService.importTheFile(loggedInUser, f.getName().substring(f.getName().indexOf("-") + 1), f.getAbsolutePath(), false).replace("\n", "<br/>") + "<br/>");
+                } else {
+                    toReturn.append(ImportService.importTheFile(loggedInUser, f.getName(), f.getAbsolutePath(), false).replace("\n", "<br/>") + "<br/>");
+                }
             }
         }
         return toReturn.toString();
