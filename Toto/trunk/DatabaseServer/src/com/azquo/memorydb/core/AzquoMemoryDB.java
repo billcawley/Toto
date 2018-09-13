@@ -82,6 +82,8 @@ public final class AzquoMemoryDB {
 
     private final AzquoMemoryDBTransport azquoMemoryDBTransport;
 
+    private final BackupTransport backupTransport;
+
     // to manage value locking, first says when a given user last put on a lock
     private final Map<String, LocalDateTime> valueLockTimes;
     // and the specific values which are locked
@@ -121,6 +123,7 @@ public final class AzquoMemoryDB {
         // is it dodgy letting "this" escape here? As a principle yes but these objects that use "this" are held against the instance this constructor is making
         // to put it another way - AzquoMemoryDBTransport could be an inner class but I'm trying to factor such stuff off.
         azquoMemoryDBTransport = new AzquoMemoryDBTransport(this, persistenceName, sessionLog);
+        backupTransport = new BackupTransport(this);
         nameByIdMap = new ConcurrentHashMap<>();
         valueByIdMap = new ConcurrentHashMap<>();
         provenanceByIdMap = new ConcurrentHashMap<>();
@@ -175,9 +178,9 @@ public final class AzquoMemoryDB {
     }
 
     // for debug purposes, is there a harm in being public??
-
-    /*public int getCurrentMaximumId() {
-        return nextId;
+/*(
+    public int getCurrentMaximumId() {
+        return nextId.get();
     }*/
 
     public Name getNameById(final int id) {
@@ -192,6 +195,13 @@ public final class AzquoMemoryDB {
         return nameByIdMap.values();
     }
 
+    Collection<Value> getAllValues() {
+        return Collections.unmodifiableCollection(valueByIdMap.values());
+    }
+
+    Collection<Provenance> getAllProvenances() {
+        return Collections.unmodifiableCollection(provenanceByIdMap.values());
+    }
     // these two for database integrity check
     public Collection<Integer> getAllNameIds() {
         return Collections.unmodifiableCollection(nameByIdMap.keySet());
@@ -298,6 +308,10 @@ public final class AzquoMemoryDB {
 
     public List<Value> getValuesChanged(){
         return azquoMemoryDBTransport.getValuesChanged();
+    }
+
+    public BackupTransport getBackupTransport(){
+        return backupTransport;
     }
 
     void addValueToDb(final Value newValue) throws Exception {

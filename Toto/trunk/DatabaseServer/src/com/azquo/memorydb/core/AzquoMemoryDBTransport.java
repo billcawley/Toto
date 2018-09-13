@@ -167,7 +167,7 @@ class AzquoMemoryDBTransport {
         @Override
         public Void call() throws Exception { // well this is what's going to truly test concurrent modification of a database
             for (Name name : batchToLink) {
-                name.link(azquoMemoryDB.nameChildrenLoadingCache.get(name.getId()));
+                name.link(azquoMemoryDB.nameChildrenLoadingCache.get(name.getId()), false);
             }
             logInSessionLogAndSystem("Linked : " + loadTracker.addAndGet(batchToLink.size()));
             return null;
@@ -215,7 +215,7 @@ class AzquoMemoryDBTransport {
             // going to set up for multiple json persisted entities even if it's only provenance for the mo
             Map<String, JsonSerializableEntityInitializer> jsonTablesAndInitializers = new HashMap<>();
             // add lines like this for loading other json entities. A note is table names repeated, might have a think about that
-            jsonTablesAndInitializers.put(Provenance.PERSIST_TABLE, (memoryDB, jsonRecordTransport) -> new Provenance(memoryDB, jsonRecordTransport.id, jsonRecordTransport.json));
+            jsonTablesAndInitializers.put(Provenance.PERSIST_TABLE, (memoryDB, jsonRecordTransport) -> new Provenance(memoryDB, jsonRecordTransport.id, jsonRecordTransport.json, false));
             int from;
             int maxIdForTable;
             List<Future<?>> futureBatches;

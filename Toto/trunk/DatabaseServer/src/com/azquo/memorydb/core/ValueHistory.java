@@ -1,5 +1,6 @@
 package com.azquo.memorydb.core;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -60,4 +61,29 @@ public class ValueHistory {
                 ", names=" + Arrays.toString(names) +
                 '}';
     }
+
+    // copied from Value, now required for backing up databases. Factor?
+    public byte[] getNameIdsAsBytes() {
+        return getNameIdsAsBytes(0);
+    }
+
+    private byte[] getNameIdsAsBytes(int tries) {
+        try {
+            ByteBuffer buffer = ByteBuffer.allocate(names.length * 4);
+            for (Name name : names) {
+                buffer.putInt(name.getId());
+            }
+            return buffer.array();
+        } catch (BufferOverflowException e) {
+            if (tries < 5) { // a bit arbitrary
+                tries++;
+                System.out.println("retrying after buffer overflow in getNameIdsAsBytes on value id " + getId() + " try number " + tries);
+                return getNameIdsAsBytes(tries);
+            } else {
+                throw e;
+            }
+        }
+    }
+
+
 }

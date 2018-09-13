@@ -39,8 +39,13 @@ public abstract class AzquoMemoryDBEntity {
     // flag for deletion, to be picked up by the persistence, can go from false to true but not the other way around
     private boolean needsDeleting;
 
-    //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
+    // had to look up that syntax :)
     AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id) throws Exception {
+        this(azquoMemoryDB, id, false);
+    }
+    //key with this is it makes the setting of an Id only in context of a memory db and hence one can only make one of these in this package (I think!)
+    // 12/09/2018 - I've added the option to force the ID for backup restore. Since constructors which use this will be package private I *think* that's ok
+    AzquoMemoryDBEntity(final AzquoMemoryDB azquoMemoryDB, final int id, boolean forceIdForBackupRestore) throws Exception {
         this.azquoMemoryDB = azquoMemoryDB;
         // This getNeedsLoading is important, an instance of AzquoMemoryDB should only be in needsLoading during the constructor and hence it will stop
         // other bits of code overriding the entities ID
@@ -49,10 +54,14 @@ public abstract class AzquoMemoryDBEntity {
             // does not need inserting
             needsInserting = false;
         } else { // normal create - as in a spreadsheet has made a new one
-            if (id != 0) {
-                throw new Exception("id is trying to be assigned to an entity after the database is loaded!");
+            if (forceIdForBackupRestore){ // in backup we force the id but we still want to say it needs inserting/persisting
+                this.id = id;
+            } else {
+                if (id != 0) {
+                    throw new Exception("id is trying to be assigned to an entity after the database is loaded!");
+                }
+                this.id = azquoMemoryDB.getNextId();
             }
-            this.id = azquoMemoryDB.getNextId();
             // point of this is attempt at lock down on entity constructors. Any entity that's instantiated is part of the
             // memory database and fair game for persistence
             // if it's not been built with an assigned ID then it needs to be persisted

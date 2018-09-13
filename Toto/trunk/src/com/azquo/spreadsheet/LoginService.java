@@ -66,6 +66,8 @@ public class LoginService {
             DatabaseServer databaseServer = null;
             if (database != null) {
                 databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
+            } else {
+                databaseServer = DatabaseServerDAO.findAll().get(0); // bit of a hack, currently we don't deal with selecting different servers
             }
 
             Business b = BusinessDAO.findById(user.getBusinessId());

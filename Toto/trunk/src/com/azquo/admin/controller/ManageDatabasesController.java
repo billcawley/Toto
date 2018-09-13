@@ -1,6 +1,7 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
@@ -20,18 +21,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.swing.text.DateFormatter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.nio.file.*;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -102,7 +97,7 @@ public class ManageDatabasesController {
     }
 
     @RequestMapping
-    public String handleRequest(ModelMap model, HttpServletRequest request
+    public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
             , @RequestParam(value = "createDatabase", required = false) String createDatabase
             , @RequestParam(value = "databaseType", required = false) String databaseType
             , @RequestParam(value = "databaseServerId", required = false) String databaseServerId
@@ -118,24 +113,22 @@ public class ManageDatabasesController {
             , @RequestParam(value = "uploadAnyway", required = false) String uploadAnyway
             , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "sort", required = false) String sort
-    )
-
-    {
+    ) {
         LoggedInUser possibleUser = null;
-        if (sessionId != null){
+        if (sessionId != null) {
             possibleUser = ExcelController.excelConnections.get(sessionId);
         }
-        if (possibleUser == null){
+        if (possibleUser == null) {
             possibleUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         }
         // I assume secure until we move to proper spring security
         final LoggedInUser loggedInUser = possibleUser;
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-            if (uploadAnyway != null){
+            if (uploadAnyway != null) {
                 // todo - factor?
-                try{
+                try {
                     UploadRecord ur = UploadRecordDAO.findById(Integer.parseInt(uploadAnyway));
-                    if (ur != null && ur.getUserId() == loggedInUser.getUser().getId()){
+                    if (ur != null && ur.getUserId() == loggedInUser.getUser().getId()) {
                         HttpSession session = request.getSession();
                         new Thread(() -> {
                             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
@@ -150,9 +143,9 @@ public class ManageDatabasesController {
                         // edd pasting in here to get the banner colour working
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                         String bannerColor = business.getBannerColor();
-                        if (bannerColor==null || bannerColor.length()==0) bannerColor = "#F58030";
+                        if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
                         String logo = business.getLogo();
-                        if (logo==null || logo.length()==0) logo = "logo_alt.png";
+                        if (logo == null || logo.length() == 0) logo = "logo_alt.png";
                         model.addAttribute("bannerColor", bannerColor);
                         model.addAttribute("logo", logo);
                         return "importrunning";
@@ -177,23 +170,23 @@ public class ManageDatabasesController {
                         AdminService.createDatabase(createDatabase, databaseType, loggedInUser, DatabaseServerDAO.findById(Integer.parseInt(databaseServerId)));
                     }
                 }
-                if (emptyId != null && NumberUtils.isNumber(emptyId)) {
+                if (NumberUtils.isNumber(emptyId)) {
                     AdminService.emptyDatabaseById(loggedInUser, Integer.parseInt(emptyId));
                 }
-                if (checkId != null && NumberUtils.isNumber(checkId)) {
+                if (NumberUtils.isNumber(checkId)) {
                     AdminService.checkDatabaseById(loggedInUser, Integer.parseInt(checkId));
                 }
-                if (deleteId != null && NumberUtils.isNumber(deleteId)) {
+                if (NumberUtils.isNumber(deleteId)) {
                     AdminService.removeDatabaseById(loggedInUser, Integer.parseInt(deleteId));
                 }
-                if (unloadId != null && NumberUtils.isNumber(unloadId)) {
+                if (NumberUtils.isNumber(unloadId)) {
                     AdminService.unloadDatabase(loggedInUser, Integer.parseInt(unloadId));
                 }
                 if (backupTarget != null) {
                     LoggedInUser loggedInUserTarget = LoginService.loginLoggedInUser(request.getSession().getId(), backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB
                     AdminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getUser().getEmail());// re languages I should just be followign what was there before . . .
                 }
-                if (deleteUploadRecordId != null && NumberUtils.isNumber(deleteUploadRecordId)) {
+                if (NumberUtils.isNumber(deleteUploadRecordId)) {
                     AdminService.deleteUploadRecord(loggedInUser, Integer.parseInt(deleteUploadRecordId));
                 }
             } catch (Exception e) {
@@ -233,13 +226,38 @@ public class ManageDatabasesController {
                 model.put("serverList", false);
             }
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser, fileSearch);
-            if ("database".equals(sort)){
+            if ("database".equals(sort)) {
                 uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getDatabaseName().compareTo(o2.getDatabaseName())));
             }
+            if ("databasedown".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDatabaseName().compareTo(o1.getDatabaseName())));
+            }
+            if ("date".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getDate().compareTo(o2.getDate())));
+            }
+            if ("datedown".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDate().compareTo(o1.getDate())));
+            }
+            if ("businessname".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getBusinessName().compareTo(o2.getBusinessName())));
+            }
+            if ("businessnamedown".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getBusinessName().compareTo(o1.getBusinessName())));
+            }
+            if ("username".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getUserName().compareTo(o2.getUserName())));
+            }
+            if ("usernamedown".equals(sort)) {
+                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getUserName().compareTo(o1.getUserName())));
+            }
+            model.put("dbsort", "database".equals(sort) ? "databasedown" : "database");
+            model.put("datesort", "date".equals(sort) ? "datedown" : "date");
+            model.put("businessnamesort", "businessname".equals(sort) ? "businessnamedown" : "businessname");
+            model.put("usernamesort", "username".equals(sort) ? "usernamedown" : "username");
             model.put("uploads", uploadRecordsForDisplayForBusiness);
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("developer", loggedInUser.getUser().isDeveloper());
-            AdminService.setBanner(model,loggedInUser);
+            AdminService.setBanner(model, loggedInUser);
             return "managedatabases";
         } else {
             return "redirect:/api/Login";
@@ -251,6 +269,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
             , @RequestParam(value = "setup", required = false) String setup
+            , @RequestParam(value = "backup", required = false) String backup
     ) {
         if (database != null) {
             request.getSession().setAttribute("lastSelected", database);
@@ -258,53 +277,62 @@ public class ManageDatabasesController {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-            if (database != null && uploadFile != null) {
-                if (database.isEmpty()) {
-                    model.put("error", "Please select a database");
-                } else if (uploadFile.isEmpty()) {
-                    model.put("error", "Please select a file to upload");
-                } else {
-                    try {
-                        HttpSession session = request.getSession();
-                        // todo - security hole here, a developer could hack a file onto a different db . . .
-                        LoginService.switchDatabase(loggedInUser, database); // could be blank now
+            if (uploadFile != null) {
+                try {
+                    if ("true".equals(backup)) {
+                        // duplicated fragment, could maybe be factored
                         String fileName = uploadFile.getOriginalFilename();
-                        loggedInUser.userLog("Upload file : " + fileName);
-                        // always move uplaoded files now, they'll need to be transferred to the DB server after code split
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
-                        // if flagged as setup we simply park the file to be reloaded each time regardless of checking it
-                        if ("true".equals(setup)){
-                            String extension = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".")) : "";
-                            Path fullPath = Paths.get(SpreadsheetService.getHomeDir() +  ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + "Setup" + loggedInUser.getDatabase().getName() + extension);
-                            Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
-                            Files.copy(Paths.get(moved.getPath()), fullPath, StandardCopyOption.REPLACE_EXISTING);
-                        }
-                        // need to add in code similar to report loading to give feedback on imports
-                        new Thread(() -> {
-                            // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
-                            try {
-                                session.setAttribute("importResult",
-                                        ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), false).replace("\n","<br/>")
-                                );
-                            } catch (Exception e) {
-                                session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
+                        // todo - like a normal import give feedback to the user . . .
+                        model.put("error", BackupService.loadBackup(loggedInUser, moved));
+                    } else if (database != null) {
+                        if (database.isEmpty()) {
+                            model.put("error", "Please select a database");
+                        } else if (uploadFile.isEmpty()) {
+                            model.put("error", "Please select a file to upload");
+                        } else {
+                            HttpSession session = request.getSession();
+                            // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
+                            LoginService.switchDatabase(loggedInUser, database); // could be blank now
+                            String fileName = uploadFile.getOriginalFilename();
+                            loggedInUser.userLog("Upload file : " + fileName);
+                            // always move uplaoded files now, they'll need to be transferred to the DB server after code split
+                            File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
+                            uploadFile.transferTo(moved);
+                            // if flagged as setup we simply park the file to be reloaded each time regardless of checking it
+                            if ("true".equals(setup)) {
+                                String extension = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".")) : "";
+                                Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + "Setup" + loggedInUser.getDatabase().getName() + extension);
+                                Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
+                                Files.copy(Paths.get(moved.getPath()), fullPath, StandardCopyOption.REPLACE_EXISTING);
                             }
-                        }).start();
-                        // edd pasting in here to get the banner colour working
-                        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                        String bannerColor = business.getBannerColor();
-                        if (bannerColor==null || bannerColor.length()==0) bannerColor = "#F58030";
-                        String logo = business.getLogo();
-                        if (logo==null || logo.length()==0) logo = "logo_alt.png";
-                        model.addAttribute("bannerColor", bannerColor);
-                        model.addAttribute("logo", logo);
-                        return "importrunning";
-                    } catch (Exception e) { // now the import has it's on exception catching
-                        String exceptionError = e.getMessage();
-                        e.printStackTrace();
-                        model.put("error", exceptionError);
+                            // need to add in code similar to report loading to give feedback on imports
+                            new Thread(() -> {
+                                // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
+                                try {
+                                    session.setAttribute("importResult",
+                                            ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), false).replace("\n", "<br/>")
+                                    );
+                                } catch (Exception e) {
+                                    session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
+                                }
+                            }).start();
+                            // edd pasting in here to get the banner colour working
+                            Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+                            String bannerColor = business.getBannerColor();
+                            if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
+                            String logo = business.getLogo();
+                            if (logo == null || logo.length() == 0) logo = "logo_alt.png";
+                            model.addAttribute("bannerColor", bannerColor);
+                            model.addAttribute("logo", logo);
+                            return "importrunning";
+                        }
                     }
+                } catch (Exception e) { // now the import has it's on exception catching
+                    String exceptionError = e.getMessage();
+                    e.printStackTrace();
+                    model.put("error", exceptionError);
                 }
             }
             List<Database> databaseList = AdminService.getDatabaseListForBusiness(loggedInUser);
@@ -333,7 +361,7 @@ public class ManageDatabasesController {
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser, null));
             model.put("developer", loggedInUser.getUser().isDeveloper());
-            AdminService.setBanner(model,loggedInUser);
+            AdminService.setBanner(model, loggedInUser);
             return "managedatabases";
         } else {
             return "redirect:/api/Login";

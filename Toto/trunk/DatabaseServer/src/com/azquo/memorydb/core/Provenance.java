@@ -57,8 +57,8 @@ public final class Provenance extends AzquoMemoryDBEntity {
 
     // protected as only to be called by AzquoMemoryDB, populates from JSON. If provenance had many instances maybe I'd intern strings but I don't think there's much point.
 
-    Provenance(final AzquoMemoryDB azquoMemoryDB, final int id, String jsonFromDB) throws Exception {
-        super(azquoMemoryDB, id);
+    Provenance(final AzquoMemoryDB azquoMemoryDB, final int id, String jsonFromDB, boolean forceIdForBackup) throws Exception {
+        super(azquoMemoryDB, id, forceIdForBackup);
         JsonTransport transport = jacksonMapper.readValue(jsonFromDB, JsonTransport.class);
         this.user = transport.user;
         this.timeStamp = transport.timeStamp != null ? DateUtils.getLocalDateTimeFromDate(transport.timeStamp) : LocalDateTime.now();

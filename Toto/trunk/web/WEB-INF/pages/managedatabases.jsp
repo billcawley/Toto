@@ -54,10 +54,10 @@ Created by IntelliJ IDEA.
 	<table>
 		<thead>
 			<tr>
-				<td>Date</td>
-				<td>Business Name</td>
-				<td><a href="/api/ManageDatabases?sort=database">Database Name</a></td>
-				<td>User Name</td>
+				<td><a href="/api/ManageDatabases?sort=${datesort}">Date</a></td>
+				<td><a href="/api/ManageDatabases?sort=${businessnamesort}">Business Name</a></td>
+				<td><a href="/api/ManageDatabases?sort=${dbsort}">Database Name</a></td>
+				<td><a href="/api/ManageDatabases?sort=${usernamesort}">User Name</a></td>
 				<td><form method="post"> File Name <input size="20" name="fileSearch"></form></td>
 <!--				<td>File Type</td>
 				<td>Comments</td>-->
@@ -146,31 +146,28 @@ Created by IntelliJ IDEA.
 					<td><a href="/api/Jstree?op=new&database=${database.urlEncodedName}" data-title="${database.urlEncodedName}" class="button small inspect" title="Inspect"><span class="fa fa-eye" title="Inspect ${database.name}"></span></a></td>
 					<td><a href="/api/ManageDatabases?emptyId=${database.id}" onclick="return confirm('Are you sure you want to Empty ${database.name}?')" class="button small" title="Empty ${database.name}"><span class="fa fa-bomb" title="Empty"></span></a></td>
 					<td><a href="/api/ManageDatabases?deleteId=${database.id}" onclick="return confirm('Are you sure you want to Delete ${database.name}?')" class="button small" title="Delete ${database.name}"><span class="fa fa-trash" title="Delete"></span> </a></td>
-					<td><a href="/api/ManageDatabaseBackups?databaseId=${database.id}" class="button small" title="Manage Backups for ${database.name}"><span class="fa fa-archive" title="Backups"></span> </a></td>
+					<td><a href="/api/DownloadBackup?id=${database.id}" class="button small" title="DOwnload Backup for ${database.name}"><span class="fa fa-archive" title="Backups"></span> </a></td>
 					<td><c:if test="${database.loaded}"><a href="/api/ManageDatabases?unloadId=${database.id}" class="button small" title="Unload ${database.name}"><span class="fa fa-eject" title="Unload"></span></a></c:if></td>
 					<td><a href="/api/CopyDatabase?databaseId=${database.id}" class="button small" title="Copy ${database.name}"><span class="fa fa-copy" title="Copy"></span> </a></td>
 				</tr>
 				</c:forEach>
 			</tbody>
 		</table>	
-		<!-- Database Backup -->
-		<div class="well" style="display:none;">
-			<form action="/api/ManageDatabases" method="post">
-			<table>	
-				<tbody>
-					<tr>
-						<td><label for="backupTarget">Target Database:</label> <input name="backupTarget" id="backupTarget"/></td>
-						<td><label for="summaryLevel">Summary Level:</label> <input name="summaryLevel" id="summaryLevel"/></td>
-						<td><input type="submit" name="Backup Database" value="Backup Database" class="button"/></td>
-					</tr>
-				</tbody>
-			</table>
-			</form>		
-		</div>
 	</div>
 <!-- END DB Management -->		
 <!-- Maintenance -->	
 	<div id="tab3" style="display:none">
+		<h3>Restore Backup. WARNING : a backup file will overwrite a database and its reports if one exists with the backup's name.</h3>
+		<form action="/api/ManageDatabases" method="post" enctype="multipart/form-data">
+			<table>
+				<tbody>
+				<tr>
+					<td><label for="uploadFile">Upload Backup File:</label> <input type="file" name="uploadFile"></td>
+					<td><input type="hidden" name="backup" value="true"/><input type="submit" name="Upload" value="Upload" class="button "/></td>
+				</tr>
+				</tbody>
+			</table>
+		</form>
 		<h3>Memory report for servers:</h3>
 		<div class="well">
 			<c:forEach items="${databaseServers}" var="databaseServer">

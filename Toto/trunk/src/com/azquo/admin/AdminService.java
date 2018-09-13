@@ -434,11 +434,11 @@ this may now not work at all, perhaps delete?
         }
     }
 
-    // code adapted from spreadsheet service which it wilol be removed from
+    // code adapted from spreadsheet
     public static void removeDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = DatabaseDAO.findById(databaseId);
         if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) { // business ID is user ID?? woah! todo
             // note, used to delete choices for the reports for this DB, won't do this now as
             // before unlinking get the reports to see if they need zapping
             final List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(db.getId());

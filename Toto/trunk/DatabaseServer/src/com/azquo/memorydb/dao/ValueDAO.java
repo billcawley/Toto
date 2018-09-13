@@ -1,6 +1,7 @@
 package com.azquo.memorydb.dao;
 
 import com.azquo.ThreadPools;
+import com.azquo.memorydb.ValueForBackup;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.core.ValueHistory;
@@ -215,9 +216,45 @@ public class ValueDAO {
         return FastDAO.findMaxId(persistenceName, FASTVALUE);
     }
 
+    public static List<ValueHistory> findValueHistoryForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
+        final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + VALUEHISTORY + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + VALUEHISTORY + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
+        return JdbcTemplateUtils.query(SQL_SELECT_ALL, new ValueHistoryRowMapper(azquoMemoryDB));
+    }
+
+    public static int findValueHistoryMaxId(final String persistenceName) throws DataAccessException {
+        return FastDAO.findMaxId(persistenceName, VALUEHISTORY);
+    }
+
     public static List<ValueHistory> getHistoryForValue(final AzquoMemoryDB azquoMemoryDB, Value value) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(NAMES, value.getNameIdsAsBytesSorted());
         return JdbcTemplateUtils.query("Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + VALUEHISTORY + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + VALUEHISTORY + "` where " + NAMES + " = :" + NAMES, namedParams, new ValueHistoryRowMapper(azquoMemoryDB));
+    }
+
+    public static void insertValuesHistoriesFromBackup(final AzquoMemoryDB azquoMemoryDB, List<ValueForBackup> valueHistories){
+        if (!valueHistories.isEmpty()) {
+            long track = System.currentTimeMillis();
+            final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+            final StringBuilder insertSql = new StringBuilder("INSERT INTO `" + azquoMemoryDB.getPersistenceName() + "`.`" + VALUEHISTORY + "` (`" + FastDAO.ID + "`,`" + PROVENANCEID + "`,`"
+                    + TEXT + "`,`" + NAMES + "`) VALUES ");
+            int count = 1;
+
+            for (ValueForBackup vh : valueHistories) {
+                insertSql.append("(:" + FastDAO.ID).append(count)
+                        .append(",:").append(PROVENANCEID).append(count)
+                        .append(",:").append(TEXT).append(count)
+                        .append(",:").append(NAMES).append(count)
+                        .append("), ");
+                namedParams.addValue(FastDAO.ID + count, vh.getId());
+                namedParams.addValue(PROVENANCEID + count, vh.getProvenanceId());
+                namedParams.addValue(TEXT + count, vh.getText());
+                    namedParams.addValue(NAMES + count, vh.getNames());
+                count++;
+            }
+            insertSql.delete(insertSql.length() - 2, insertSql.length());
+            //System.out.println(insertSql.toString());
+            JdbcTemplateUtils.update(insertSql.toString(), namedParams);
+            System.out.println("bulk inserted " + DecimalFormat.getInstance().format(valueHistories.size()) + " into " + VALUEHISTORY + " in " + (System.currentTimeMillis() - track));
+        }
     }
 }

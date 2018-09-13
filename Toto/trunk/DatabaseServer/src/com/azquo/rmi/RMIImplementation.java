@@ -2,10 +2,9 @@ package com.azquo.rmi;
 
 import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
-import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.memorydb.TreeNode;
+import com.azquo.memorydb.*;
 import com.azquo.memorydb.core.AzquoMemoryDB;
+import com.azquo.memorydb.core.BackupTransport;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
@@ -459,9 +458,76 @@ class RMIImplementation implements RMIInterface {
     @Override
     public ProvenanceDetailsForDisplay getListOfChangedValues(DatabaseAccessToken databaseAccessToken, int limit) throws RemoteException {
         try {
-            return ProvenanceService.getListOfChangedValues(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken),limit);
+            return ProvenanceService.getListOfChangedValues(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), limit);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
     }
+
+    @Override
+    public List<NameForBackup> getBatchOfNamesForBackup(DatabaseAccessToken databaseAccessToken, int batchNumber) {
+        return AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getBackupTransport().getBatchOfNamesForBackup(batchNumber);
+    }
+
+    @Override
+    public List<ValueForBackup> getBatchOfValuesForBackup(DatabaseAccessToken databaseAccessToken, int batchNumber) {
+        return AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getBackupTransport().getBatchOfValuesForBackup(batchNumber);
+    }
+
+    @Override
+    public List<ValueForBackup> getBatchOfValuesHistoryForBackup(DatabaseAccessToken databaseAccessToken, int batchNumber) {
+        return AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getBackupTransport().getBatchOfValuesHistoryForBackup(batchNumber);
+    }
+
+    @Override
+    public List<ProvenanceForBackup> getBatchOfProvenanceForBackup(DatabaseAccessToken databaseAccessToken, int batchNumber) {
+        return AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getBackupTransport().getBatchOfProvenanceForBackup(batchNumber);
+    }
+
+
+    @Override
+    public void sendBatchOfNamesFromBackup(DatabaseAccessToken dataAccessToken, List<NameForBackup> namesForBackup) throws RemoteException {
+        try {
+            AzquoMemoryDBConnection.getConnectionFromAccessToken(dataAccessToken).getAzquoMemoryDB().getBackupTransport().setBatchOfNamesFromBackup(namesForBackup);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public void linkNamesForBackupRestore(DatabaseAccessToken dataAccessToken) throws RemoteException {
+        try {
+            AzquoMemoryDBConnection.getConnectionFromAccessToken(dataAccessToken).getAzquoMemoryDB().getBackupTransport().linkNames();
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public void sendBatchOfValuesFromBackup(DatabaseAccessToken dataAccessToken, List<ValueForBackup> valuesForBackup) throws RemoteException {
+        try {
+            AzquoMemoryDBConnection.getConnectionFromAccessToken(dataAccessToken).getAzquoMemoryDB().getBackupTransport().setBatchOfValuesFromBackup(valuesForBackup);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public void sendBatchOfValueHistoriesFromBackup(DatabaseAccessToken dataAccessToken, List<ValueForBackup> valuesForBackup) throws RemoteException {
+        try {
+            AzquoMemoryDBConnection.getConnectionFromAccessToken(dataAccessToken).getAzquoMemoryDB().getBackupTransport().setBatchOfValueHistoriesFromBackup(valuesForBackup);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    @Override
+    public void sendBatchOfProvenanceFromBackup(DatabaseAccessToken dataAccessToken, List<ProvenanceForBackup> provenanceForBackup) throws RemoteException {
+        try {
+            AzquoMemoryDBConnection.getConnectionFromAccessToken(dataAccessToken).getAzquoMemoryDB().getBackupTransport().setBatchOfProvenanceFromBackup(provenanceForBackup);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
 }

@@ -1,7 +1,6 @@
 package com.azquo.rmi;
 
-import com.azquo.memorydb.DatabaseAccessToken;
-import com.azquo.memorydb.TreeNode;
+import com.azquo.memorydb.*;
 import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.transport.json.JsonChildStructure;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
@@ -119,4 +118,24 @@ public interface RMIInterface extends Remote {
     boolean databaseWithNameExists(String nameCheck) throws RemoteException;
 
     ProvenanceDetailsForDisplay getListOfChangedValues(DatabaseAccessToken databaseAccessToken, int limit) throws RemoteException;
+
+    // backup functions
+
+    List<NameForBackup> getBatchOfNamesForBackup(DatabaseAccessToken dataAccessToken, int batchNumber) throws RemoteException;
+
+    List<ValueForBackup> getBatchOfValuesForBackup(DatabaseAccessToken dataAccessToken, int batchNumber) throws RemoteException;
+
+    List<ValueForBackup> getBatchOfValuesHistoryForBackup(DatabaseAccessToken dataAccessToken, int batchNumber) throws RemoteException;
+
+    List<ProvenanceForBackup> getBatchOfProvenanceForBackup(DatabaseAccessToken dataAccessToken, int batchNumber) throws RemoteException;
+
+    void sendBatchOfNamesFromBackup(DatabaseAccessToken dataAccessToken, List<NameForBackup> namesForBackup) throws RemoteException;
+
+    void linkNamesForBackupRestore(DatabaseAccessToken dataAccessToken) throws RemoteException;
+
+    void sendBatchOfValuesFromBackup(DatabaseAccessToken dataAccessToken, List<ValueForBackup> valuesForBackup) throws RemoteException;
+
+    void sendBatchOfValueHistoriesFromBackup(DatabaseAccessToken dataAccessToken, List<ValueForBackup> valuesForBackup) throws RemoteException;
+
+    void sendBatchOfProvenanceFromBackup(DatabaseAccessToken dataAccessToken, List<ProvenanceForBackup> provenanceForBackup) throws RemoteException;
 }

@@ -48,7 +48,11 @@ public final class Value extends AzquoMemoryDBEntity {
     private static AtomicInteger newValue3Count = new AtomicInteger(0);
 
     public Value(final AzquoMemoryDB azquoMemoryDB, final int id, final int provenanceId, String text, byte[] namesCache) throws Exception {
-        super(azquoMemoryDB, id);
+        this(azquoMemoryDB, id, provenanceId, text, namesCache, false);
+    }
+
+    Value(final AzquoMemoryDB azquoMemoryDB, final int id, final int provenanceId, String text, byte[] namesCache, boolean forceIdForBackup) throws Exception {
+        super(azquoMemoryDB, id, forceIdForBackup);
         newValue3Count.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId);
         this.text = text.intern(); // important for memory, use the string pool where there will be any strings that are simple numbers
@@ -62,7 +66,7 @@ public final class Value extends AzquoMemoryDBEntity {
         this.names = newNames;
         // this should be fine being handled here while loading a db - was storing this against the name but too much space
         for (Name newName : this.names) {
-            newName.checkValue(this);
+            newName.checkValue(this, forceIdForBackup);
         }
         getAzquoMemoryDB().addValueToDb(this);
     }

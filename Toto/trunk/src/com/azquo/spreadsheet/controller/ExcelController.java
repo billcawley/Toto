@@ -412,6 +412,7 @@ public class ExcelController {
                 return jacksonMapper.writeValueAsString(databaseReports);
             }
             if (op.equals("loadregion")) {
+                long time = System.currentTimeMillis();
                 System.out.println("json : " + json);
                 // ok this will have to be moved
                 //ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json.replace("\\\"", "\""), ExcelJsonRequest.class);
@@ -452,6 +453,7 @@ public class ExcelController {
                     loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
                     result = jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(cellsAndHeadingsForDisplay));
                     cellsAndHeadingsForDisplay.setOptions(holdOptions);
+                    System.out.println("About to return result which is " + result.length() + " long in " + (System.currentTimeMillis() - time));
                     return result;
                 }
             }

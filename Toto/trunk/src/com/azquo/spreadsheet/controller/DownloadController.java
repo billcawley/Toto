@@ -30,7 +30,7 @@ public class DownloadController {
     public void handleRequest(HttpServletRequest request
             , HttpServletResponse response
             , @RequestParam(value = "image", required = false) String image
-    ) throws Exception {
+    )  {
         // deliver a pre prepared image. Are these names unique? Could images move between spreadsheets unintentionally?
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser == null) {

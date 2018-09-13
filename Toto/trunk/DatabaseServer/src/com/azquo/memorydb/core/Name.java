@@ -98,7 +98,12 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger newName3Count = new AtomicInteger(0);
 
     public Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, int noParents, int noValues) throws Exception {
-        super(azquoMemoryDB, id);
+        this(azquoMemoryDB,id,provenanceId,attributes,noParents,noValues,false);
+    }
+
+    // package private - BackupTransport can force the ID
+    Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, int noParents, int noValues, boolean forceIdForbackup) throws Exception {
+        super(azquoMemoryDB, id, forceIdForbackup);
         newName3Count.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId); // see no reason not to do this here now
         //this.attributes = transport.attributes;
@@ -188,9 +193,9 @@ public final class Name extends AzquoMemoryDBEntity {
     // replacing public addToValues and RemoveFromValues. Name should handle this internally.
     // It will do this by checking the value that has been passed to it and seeing if it needs to take action
     // Not putting up with public add and remove from values as before
-    void checkValue(final Value value) throws Exception {
+    void checkValue(final Value value, boolean backupRestore) throws Exception {
         if (value.hasName(this)) {
-            addToValues(value);
+            addToValues(value, backupRestore);
         } else {
             removeFromValues(value);
         }
@@ -222,8 +227,11 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger addToValuesCount = new AtomicInteger(0);
 
     void addToValues(final Value value) throws Exception {
+        addToValues(value, false);
+    }
+    void addToValues(final Value value, boolean backupRestore) throws Exception {
         addToValuesCount.incrementAndGet();
-        boolean databaseIsLoading = getAzquoMemoryDB().getNeedsLoading();
+        boolean databaseIsLoading = getAzquoMemoryDB().getNeedsLoading() || backupRestore;
         checkDatabaseMatches(value);
         // may make this more clever as in clearing only if there's a change but not now
         valuesIncludingChildrenCache = null;
@@ -1002,9 +1010,10 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger linkCount = new AtomicInteger(0);
 
-    void link(byte[] childrenCache) throws Exception {
+    // 12/09/18 - adding the boolean for backup restore. Looks a bit less elegant, might be a way around it
+    void link(byte[] childrenCache, boolean backupRestore) throws Exception {
         linkCount.incrementAndGet();
-        if (getAzquoMemoryDB().getNeedsLoading() && childrenCache != null) { // if called and these conditions are not true then there's a problem
+        if ((getAzquoMemoryDB().getNeedsLoading() || backupRestore) && childrenCache != null) { // if called and these conditions are not true then there's a problem
             synchronized (this) {
                 // it's things like this that I believe will be way faster and lighter on garbage than the old json method
                 int noChildren = childrenCache.length / 4;
