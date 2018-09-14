@@ -127,7 +127,7 @@ todo - add classification here
     still too complex for INtellij to analyse - todo
     */
 
-    static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, String zipVersion, String fileName, List<String> languages) throws Exception {
+    static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, String zipVersion, String fileName, List<String> languages, Map<String, String> topHeadings) throws Exception {
         // option for extra composite headings - I think for PwC, a little odd but harmless.
         if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null) {
             List<String> extraCompositeHeadings = Arrays.asList(importInterpreter.getAttribute(COMPOSITEHEADINGS).split("¬")); // delimiter match the other headings string
@@ -187,9 +187,13 @@ todo - add classification here
 
                          THis is very much Ed broking stuff, I'd like to put it in the EdBrokingExtension class but I'm not sure how to factor right now
                          */
+                            String topHeadingFound = topHeadings.get(header);
                             header = headerName.getDefaultDisplayName();
                             origHeaders.set(i, header);
                             String attribute = getCompositeAttributes(headerName, importAttribute, importAttribute + " " + languages.get(0));
+                            if (topHeadingFound!=null){
+                                attribute+=";default " + topHeadingFound;
+                            }
                             if (attribute != null) {
                                 if (zipVersion != null) {
                                     //  a bit arbitrary really

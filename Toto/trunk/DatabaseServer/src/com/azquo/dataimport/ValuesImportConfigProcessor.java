@@ -73,7 +73,8 @@ class ValuesImportConfigProcessor {
                         valuesImportConfig.getImportInterpreter(),
                         valuesImportConfig.getZipVersion(),
                         valuesImportConfig.getFileName(),
-                        valuesImportConfig.getLanguages())
+                        valuesImportConfig.getLanguages(),
+                        valuesImportConfig.getTopHeadings())
         );
         EdBrokingExtension.dealWithAssumptions(valuesImportConfig);
         // finally resolve them with the HeadingReader and we're good to go

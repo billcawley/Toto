@@ -300,7 +300,7 @@ check that the headings that are required are there . . .
         List<String> languages = valuesImportConfig.getLanguages();
         // add in the top headings
         for (String topHeadingKey : valuesImportConfig.getTopHeadings().keySet()) {
-            headers.add(topHeadingKey + ";default " + valuesImportConfig.getTopHeadings().get(topHeadingKey));
+            headers.add(topHeadingKey);
         }
         if (importInterpreter == null || !importInterpreter.hasChildren()) return;
         List<String> defaultNames = new ArrayList<>();
