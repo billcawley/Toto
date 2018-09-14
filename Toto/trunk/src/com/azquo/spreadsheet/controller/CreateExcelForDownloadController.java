@@ -42,7 +42,7 @@ public class CreateExcelForDownloadController {
 
     public static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    public static final String USERSFILENAME = "AzquoUsers.xlsx";
+    public static final String USERSFILENAME = "AzquoUsers";
 
     public static final String REPORTSCHEDULESFILENAME = "AzquoReportSchedules.xlsx";
 
@@ -51,7 +51,7 @@ public class CreateExcelForDownloadController {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null && (loggedInUser.getUser().isMaster() || loggedInUser.getUser().isAdministrator())) {
             if ("DOWNLOADUSERS".equals(request.getParameter("action"))) { // then limited users editing for a master user
-                Book book = Importers.getImporter().imports(servletContext.getResourceAsStream("/WEB-INF/" + USERSFILENAME), "Report name");
+                Book book = Importers.getImporter().imports(servletContext.getResourceAsStream("/WEB-INF/" + USERSFILENAME + ".xlsx"), "Report name");
                 // modify book to add the users and permissions
                 Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
                 if (userSheet != null) {
@@ -85,7 +85,7 @@ public class CreateExcelForDownloadController {
                     }
                 }
                 response.setContentType("application/vnd.ms-excel"); // Set up mime type
-                response.addHeader("Content-Disposition", "attachment; filename=" + USERSFILENAME);
+                response.addHeader("Content-Disposition", "attachment; filename=" + USERSFILENAME + ".xlsx");
                 OutputStream out = response.getOutputStream();
                 Exporter exporter = Exporters.getExporter();
                 exporter.export(book, out);

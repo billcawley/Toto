@@ -137,7 +137,7 @@ public final class ImportService {
 
     private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, String zipName, String filePath, boolean persistAfter, boolean isData, boolean forceReportUpload) throws Exception {
         String toReturn = "";
-        if (fileName.equals(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
+        if (fileName.startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             Book book = Importers.getImporter().imports(new File(filePath), "Report name");
             List<String> notAllowed = new ArrayList<>();
             List<String> rejected = new ArrayList<>();

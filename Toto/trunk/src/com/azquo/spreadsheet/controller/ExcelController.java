@@ -208,9 +208,9 @@ public class ExcelController {
                 try {
                     List<FilterTriple> filterOptions = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                             .getFilterListForQuery(loggedInUser.getDataAccessToken(), choice, chosen, loggedInUser.getUser().getEmail());//choice is the name of the range, chosen= the name of the choice cell (not its value as previously stated. I don't think anyway!)
-                    System.out.println("filter options size "  + filterOptions.size());
+                    System.out.println("filter options size " + filterOptions.size());
                     return jacksonMapper.writeValueAsString(filterOptions);
-                } catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
                     return jacksonMapper.writeValueAsString(new ArrayList<FilterTriple>());
                 }
@@ -412,49 +412,80 @@ public class ExcelController {
                 return jacksonMapper.writeValueAsString(databaseReports);
             }
             if (op.equals("loadregion")) {
-                long time = System.currentTimeMillis();
+                // since this expects a certain type of json format returned then we need to wrap the error in one of those objects
                 System.out.println("json : " + json);
-                // ok this will have to be moved
-                //ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json.replace("\\\"", "\""), ExcelJsonRequest.class);
-                // maybe it shouldn't be replaced!
                 ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json, ExcelJsonRequest.class);
-                String optionsSource = excelJsonRequest.optionsSource != null ? excelJsonRequest.optionsSource : "";
+                try {
+                    long time = System.currentTimeMillis();
+                    // ok this will have to be moved
+                    //ExcelJsonRequest excelJsonRequest = jacksonMapper.readValue(json.replace("\\\"", "\""), ExcelJsonRequest.class);
+                    // maybe it shouldn't be replaced!
+                    String optionsSource = excelJsonRequest.optionsSource != null ? excelJsonRequest.optionsSource : "";
 
-                UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), loggedInUser.getUser().getReportId(), excelJsonRequest.region, optionsSource);
-                // UserRegionOptions from MySQL will have limited fields filled
-                UserRegionOptions userRegionOptions2 = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), loggedInUser.getUser().getReportId(), excelJsonRequest.region);
-                // only these five fields are taken from the table
-                if (userRegionOptions2 != null) {
-                    if (userRegionOptions.getSortColumn() == null) {
-                        userRegionOptions.setSortColumn(userRegionOptions2.getSortColumn());
-                        userRegionOptions.setSortColumnAsc(userRegionOptions2.getSortColumnAsc());
+                    UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), loggedInUser.getUser().getReportId(), excelJsonRequest.region, optionsSource);
+                    // UserRegionOptions from MySQL will have limited fields filled
+                    UserRegionOptions userRegionOptions2 = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), loggedInUser.getUser().getReportId(), excelJsonRequest.region);
+                    // only these five fields are taken from the table
+                    if (userRegionOptions2 != null) {
+                        if (userRegionOptions.getSortColumn() == null) {
+                            userRegionOptions.setSortColumn(userRegionOptions2.getSortColumn());
+                            userRegionOptions.setSortColumnAsc(userRegionOptions2.getSortColumnAsc());
+                        }
+                        if (userRegionOptions.getSortRow() == null) {
+                            userRegionOptions.setSortRow(userRegionOptions2.getSortRow());
+                            userRegionOptions.setSortRowAsc(userRegionOptions2.getSortRowAsc());
+                        }
+                        userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
                     }
-                    if (userRegionOptions.getSortRow() == null) {
-                        userRegionOptions.setSortRow(userRegionOptions2.getSortRow());
-                        userRegionOptions.setSortRowAsc(userRegionOptions2.getSortRowAsc());
+                    if (excelJsonRequest.rowHeadings == null || excelJsonRequest.rowHeadings.isEmpty()) { // no row headings is an import region - assign an empty sent cells. Todo - could this be factored?
+                        List<List<String>> colHeadings = excelJsonRequest.columnHeadings;
+                        // ok change from the logic used in ZK. In ZK we had to prepare a blank set of data cells to be modified
+                        // as the user changed them but it's difficult to prepare them here as we don't know the data region size and luckily it's not necessary
+                        // as the data is sent in a block from Excel. It might have changed size in the mean time (as in someone changed the data region size and now the headings don't match) but I'm nto that bothered by this for the mo
+                        // put an empty data set here as the reference is final, fill it out below with the data sent size from the user
+                        // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings, parsed into an array in Excel
+                        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(excelJsonRequest.region, colHeadings, null, null, null, new ArrayList<>(), null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);
+                        loggedInUser.setSentCells(loggedInUser.getUser().getReportId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
+                        return "Empty space set to ad hoc data : " + excelJsonRequest.region;
+                    } else {
+                        CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, excelJsonRequest.region, 0, excelJsonRequest.rowHeadings, excelJsonRequest.columnHeadings,
+                                excelJsonRequest.context, userRegionOptions, true);
+                        RegionOptions holdOptions = cellsAndHeadingsForDisplay.getOptions();//don't want to send these to Excel
+                        cellsAndHeadingsForDisplay.setOptions(null);
+                        loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
+                        result = jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(cellsAndHeadingsForDisplay));
+                        cellsAndHeadingsForDisplay.setOptions(holdOptions);
+                        System.out.println("About to return result which is " + result.length() + " long in " + (System.currentTimeMillis() - time));
+                        return result;
                     }
-                    userRegionOptions.setHighlightDays(userRegionOptions2.getHighlightDays());
-                }
-                if (excelJsonRequest.rowHeadings == null || excelJsonRequest.rowHeadings.isEmpty()) { // no row headings is an import region - assign an empty sent cells. Todo - could this be factored?
-                    List<List<String>> colHeadings = excelJsonRequest.columnHeadings;
-                    // ok change from the logic used in ZK. In ZK we had to prepare a blank set of data cells to be modified
-                    // as the user changed them but it's difficult to prepare them here as we don't know the data region size and luckily it's not necessary
-                    // as the data is sent in a block from Excel. It might have changed size in the mean time (as in someone changed the data region size and now the headings don't match) but I'm nto that bothered by this for the mo
-                    // put an empty data set here as the reference is final, fill it out below with the data sent size from the user
-                    // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings, parsed into an array in Excel
-                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(excelJsonRequest.region, colHeadings, null, null, null, new ArrayList<>(), null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);
-                    loggedInUser.setSentCells(loggedInUser.getUser().getReportId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
-                    return "Empty space set to ad hoc data : " + excelJsonRequest.region;
-                } else {
-                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, excelJsonRequest.region, 0, excelJsonRequest.rowHeadings, excelJsonRequest.columnHeadings,
-                            excelJsonRequest.context, userRegionOptions, true);
-                    RegionOptions holdOptions = cellsAndHeadingsForDisplay.getOptions();//don't want to send these to Excel
-                    cellsAndHeadingsForDisplay.setOptions(null);
-                    loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
-                    result = jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(cellsAndHeadingsForDisplay));
-                    cellsAndHeadingsForDisplay.setOptions(holdOptions);
-                    System.out.println("About to return result which is " + result.length() + " long in " + (System.currentTimeMillis() - time));
-                    return result;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    List<List<String>> errorHeading = new ArrayList<>();
+                    List<String> error = new ArrayList<>();
+                    error.add("error");
+                    errorHeading.add(error);
+                    List<List<CellForDisplay>> data = new ArrayList<>();
+                    List<CellForDisplay> row = new ArrayList<>();
+                    // todo - chop down the error from the exception, there will be existing code to do this
+                    row.add(new CellForDisplay(
+                            true, "Error : " + e.getMessage(), 0, false,0,0,false, false, "", 0)
+                    );
+                    data.add(row);
+                    errorHeading.add(error);
+                    return jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(new CellsAndHeadingsForDisplay(
+                            excelJsonRequest.region,
+                            errorHeading,
+                            errorHeading,
+                            new HashSet<>(),
+                            new HashSet<>(),
+                            data,
+                            excelJsonRequest.rowHeadings,
+                            excelJsonRequest.columnHeadings,
+                            excelJsonRequest.context,
+                            System.currentTimeMillis(),
+                            null,
+                            ""
+                    )));
                 }
             }
             if (op.equals("saveregion")) {
@@ -496,15 +527,15 @@ public class ExcelController {
         File check = new File(sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf(".")));
         // need to do this at the moment as I'm not sure how we deal with reports being updated . . .
         // question is - if there is an autoopen version has the original been updated in the mean time? Some kind of timestamp against the original file
-        if (check.exists()){
+        if (check.exists()) {
             check.delete();
         }
 
         // this needs to be somewhere better. Todo.
         String patchFilesSource = "/home/edward/Downloads/xlsxbreakdown/415-ECL Summarysimple saveao/xl/webextensions/";
         //String zipFile = "/home/edward/Downloads/xlsxbreakdown/tomodify.xlsx";
-            FileUtils.copyFile(new File(sourceFile), new File(sourceFile + ".bak")); // worth making a backup as the .explode below will zap the original it seems
-            ZipUtil.explode(new File(sourceFile));
+        FileUtils.copyFile(new File(sourceFile), new File(sourceFile + ".bak")); // worth making a backup as the .explode below will zap the original it seems
+        ZipUtil.explode(new File(sourceFile));
                 /* right, in here I need to hack the XML files
                 Based off a diff between files with the bits we need and files which don't :
                 1. [Content_Types].xml] - add
@@ -528,45 +559,45 @@ public class ExcelController {
                 https://docs.microsoft.com/en-us/office/dev/add-ins/develop/automatically-open-a-task-pane-with-a-document
                  */
 
-            File xmlFileToPatch = new File(sourceFile + "/[Content_Types].xml");
-            String xml = FileUtils.readFileToString(xmlFileToPatch);
-            xml = xml.substring(0, xml.indexOf("</Types>"))
-                    + "<Override PartName=\"/xl/webextensions/taskpanes.xml\" ContentType=\"application/vnd.ms-office.webextensiontaskpanes+xml\"/>"
-                    + "<Override PartName=\"/xl/webextensions/webextension1.xml\" ContentType=\"application/vnd.ms-office.webextension+xml\"/>"
-                    + xml.substring(xml.indexOf("</Types>"));
-            FileUtils.deleteQuietly(xmlFileToPatch);
-            FileUtils.write(xmlFileToPatch, xml);
+        File xmlFileToPatch = new File(sourceFile + "/[Content_Types].xml");
+        String xml = FileUtils.readFileToString(xmlFileToPatch);
+        xml = xml.substring(0, xml.indexOf("</Types>"))
+                + "<Override PartName=\"/xl/webextensions/taskpanes.xml\" ContentType=\"application/vnd.ms-office.webextensiontaskpanes+xml\"/>"
+                + "<Override PartName=\"/xl/webextensions/webextension1.xml\" ContentType=\"application/vnd.ms-office.webextension+xml\"/>"
+                + xml.substring(xml.indexOf("</Types>"));
+        FileUtils.deleteQuietly(xmlFileToPatch);
+        FileUtils.write(xmlFileToPatch, xml);
 
-            // now patch the .rels file
+        // now patch the .rels file
 
-            File relsFileToPatch = new File(sourceFile + "/_rels/.rels");
-            String rels = FileUtils.readFileToString(relsFileToPatch);
+        File relsFileToPatch = new File(sourceFile + "/_rels/.rels");
+        String rels = FileUtils.readFileToString(relsFileToPatch);
                 /* ok find the point at which existing relationships stop and add
                  <Relationship Id="rId2" Type="http://schemas.microsoft.com/office/2011/relationships/webextensiontaskpanes" Target="xl/webextensions/taskpanes.xml"/>
                 with a non taken id
                 */
-            int i;
-            for (i = 1; i < 20; i++){ // arbitrary stop at 20, I'm looking for the first spare
-                if (!rels.contains("Relationship Id=\"rId" + i + "\"")){
-                    break;
-                }
+        int i;
+        for (i = 1; i < 20; i++) { // arbitrary stop at 20, I'm looking for the first spare
+            if (!rels.contains("Relationship Id=\"rId" + i + "\"")) {
+                break;
             }
-            // jam it right before </Relationships>
+        }
+        // jam it right before </Relationships>
 
-            rels = rels.substring(0, rels.indexOf("</Relationships>"))
-                    + "<Relationship Id=\"rId" + i + "\" Type=\"http://schemas.microsoft.com/office/2011/relationships/webextensiontaskpanes\" Target=\"xl/webextensions/taskpanes.xml\"/>"
-                    + rels.substring(rels.indexOf("</Relationships>"));
-            FileUtils.deleteQuietly(relsFileToPatch);
-            FileUtils.write(relsFileToPatch, rels);
+        rels = rels.substring(0, rels.indexOf("</Relationships>"))
+                + "<Relationship Id=\"rId" + i + "\" Type=\"http://schemas.microsoft.com/office/2011/relationships/webextensiontaskpanes\" Target=\"xl/webextensions/taskpanes.xml\"/>"
+                + rels.substring(rels.indexOf("</Relationships>"));
+        FileUtils.deleteQuietly(relsFileToPatch);
+        FileUtils.write(relsFileToPatch, rels);
 
-            // now copy in the patch files . . .
-            FileUtils.copyDirectory(new File(patchFilesSource), new File(sourceFile +"/xl/webextensions/"));
-            ZipUtil.pack(new File(sourceFile), new File(sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf("."))));
-            FileUtils.deleteDirectory(new File(sourceFile));
-            //restore the backup
-            FileUtils.copyFile(new File(sourceFile + ".bak"), new File(sourceFile));
-            FileUtils.deleteQuietly(new File(sourceFile + ".bak"));
-            return sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf("."));
+        // now copy in the patch files . . .
+        FileUtils.copyDirectory(new File(patchFilesSource), new File(sourceFile + "/xl/webextensions/"));
+        ZipUtil.pack(new File(sourceFile), new File(sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf("."))));
+        FileUtils.deleteDirectory(new File(sourceFile));
+        //restore the backup
+        FileUtils.copyFile(new File(sourceFile + ".bak"), new File(sourceFile));
+        FileUtils.deleteQuietly(new File(sourceFile + ".bak"));
+        return sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf("."));
 
     }
 

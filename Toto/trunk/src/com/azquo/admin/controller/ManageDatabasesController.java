@@ -285,7 +285,7 @@ public class ManageDatabasesController {
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
                         // todo - like a normal import give feedback to the user . . .
-                        model.put("error", BackupService.loadBackup(loggedInUser, moved));
+                        model.put("error", BackupService.loadBackup(loggedInUser, moved, database));
                     } else if (database != null) {
                         if (database.isEmpty()) {
                             model.put("error", "Please select a database");

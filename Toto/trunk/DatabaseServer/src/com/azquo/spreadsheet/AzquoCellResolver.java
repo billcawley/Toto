@@ -13,6 +13,10 @@ import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 
 
+import javax.swing.text.DateFormatter;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -21,6 +25,10 @@ import java.util.*;
  * Functions specifically to resolve individual cells, nothing to do with sorting filtering etc.
  */
 public class AzquoCellResolver {
+
+    // for audit date
+    private static final DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     // hacky, I just need a way to pass the values without doing a redundant addAll
     public static class ValuesHook {
         public List<Value> values = null;
@@ -479,8 +487,27 @@ But can use a library?
                             StandardDeviation sd = new StandardDeviation();
                             doubleValue = sd.evaluate(forSD);
                         }
-                        //if there's only one value, treat it as text (it may be text, or may include £,$,%)
-                        if (valuesHook.values.size() == 1 && (!locked.isTrue
+                        // these two functions must be right before the default assigning of stringValue to stop is as necessary as they will explicitly set string even if there's just one value
+                        if (function == DataRegionHeading.FUNCTION.AUDITDATE) {
+                            LocalDateTime latest = null;
+                            for (Value v : valuesHook.values) {
+                                if (latest == null || v.getProvenance().getTimeStamp().isAfter(latest)){
+                                    latest = v.getProvenance().getTimeStamp();
+                                }
+                            }
+                            if (latest != null){
+                                stringValue = df.format(latest);
+                            }
+                        } else if (function == DataRegionHeading.FUNCTION.AUDITCHANGEDBY){
+                            LocalDateTime latest = null;
+                            for (Value v : valuesHook.values) {
+                                if (latest == null || v.getProvenance().getTimeStamp().isAfter(latest)){
+                                    latest = v.getProvenance().getTimeStamp();
+                                    stringValue = v.getProvenance().getUser();
+                                }
+                            }
+
+                        } else if (valuesHook.values.size() == 1 && (!locked.isTrue//if there's only one value, treat it as text (it may be text, or may include £,$,%)
                                 || function == DataRegionHeading.FUNCTION.MAX
                                 || function == DataRegionHeading.FUNCTION.MIN
                                 || function == null)) { // locked conditional added back in by Edd, required or counts of one for example won't work. Also allowing null function to be a string now, logic added up here as a small refactor from a WFC change

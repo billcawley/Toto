@@ -21,7 +21,7 @@ import java.util.Set;
  */
 public class DataRegionHeading {
     // todo - average min and max use calculation?
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, VALUESET, PERCENTILE, PERCENTILENZ, STDEVA, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT, ALLEXACT}
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, VALUESET, PERCENTILE, PERCENTILENZ, STDEVA, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT, ALLEXACT, AUDITDATE, AUDITCHANGEDBY}
     /*
     COUNT               Value function      The number of values rather than the sum
     AVERAGE             Value function      The average value

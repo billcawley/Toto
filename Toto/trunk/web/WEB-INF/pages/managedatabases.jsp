@@ -157,13 +157,15 @@ Created by IntelliJ IDEA.
 <!-- END DB Management -->		
 <!-- Maintenance -->	
 	<div id="tab3" style="display:none">
-		<h3>Restore Backup. WARNING : a backup file will overwrite a database and its reports if one exists with the backup's name.</h3>
+		<h3>Restore Backup. WARNING : the database speified internally by the zip or "Databse" here will zap a database and associated reports if they exist before it restores the file contents.</h3>
 		<form action="/api/ManageDatabases" method="post" enctype="multipart/form-data">
 			<table>
 				<tbody>
 				<tr>
 					<td><label for="uploadFile">Upload Backup File:</label> <input type="file" name="uploadFile"></td>
-					<td><input type="hidden" name="backup" value="true"/><input type="submit" name="Upload" value="Upload" class="button "/></td>
+					<td><input type="hidden" name="backup" value="true"/></td>
+					<td>Database <input type="text" name="database" value=""/></td>
+					<td><input type="submit" name="Upload" value="Upload" class="button "/></td>
 				</tr>
 				</tbody>
 			</table>

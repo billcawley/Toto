@@ -146,7 +146,7 @@ public class BackupService {
         return tempzip;
     }
 
-    public static String loadBackup(LoggedInUser loggedInUser, File file) throws Exception {
+    public static String loadBackup(LoggedInUser loggedInUser, File file, String database) throws Exception {
         StringBuilder toReturn = new StringBuilder();
         System.out.println("attempting backup restore on " + file.getPath());
         ZipUtil.explode(file);
@@ -156,7 +156,7 @@ public class BackupService {
         // need to load the database first
         for (File f : files) {
             if (f.getName().endsWith(".db")) {
-                loadDBBackup(loggedInUser, f, toReturn);
+                loadDBBackup(loggedInUser, f, database, toReturn);
             }
         }
         // now reports
@@ -176,7 +176,7 @@ public class BackupService {
     // should be in shared?
     static int batchSize = 100_000;
 
-    public static void loadDBBackup(LoggedInUser loggedInUser, File file, StringBuilder log) {
+    public static void loadDBBackup(LoggedInUser loggedInUser, File file, String database, StringBuilder log) {
         int line = 1;
         try {
             CsvMapper csvMapper = new CsvMapper();
@@ -189,8 +189,9 @@ public class BackupService {
                     new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
             String[] lineValues = lineIterator.next();
             line++;
-
-            String database = lineValues[0];
+            if (database == null || database.trim().isEmpty()){
+                database = lineValues[0];
+            }
             // first thing to do is delete the database and all associated reports
             Database db = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
             if (db != null) {
