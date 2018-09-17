@@ -89,6 +89,7 @@ public class BackupTransport {
     public synchronized void setBatchOfNamesFromBackup(List<NameForBackup> backupBatch) throws Exception {
         for (NameForBackup nameForBackup : backupBatch){
             namesFromBackup.add(new Name(azquoMemoryDB, nameForBackup.getId(), nameForBackup.getProvenanceId(), nameForBackup.getAttributes(), nameForBackup.getNoParents(), nameForBackup.getNoValues(), true));
+            azquoMemoryDB.setNextId(nameForBackup.getId());
             namesChildrenCacheFromBackup.add(nameForBackup.getChildren());
         }
     }
@@ -110,6 +111,7 @@ public class BackupTransport {
     public synchronized void setBatchOfValuesFromBackup(List<ValueForBackup> backupBatch) throws Exception {
         for (ValueForBackup valueForBackup: backupBatch){
             new Value(azquoMemoryDB, valueForBackup.getId(), valueForBackup.getProvenanceId(), valueForBackup.getText(), valueForBackup.getNames(), true);
+            azquoMemoryDB.setNextId(valueForBackup.getId());
         }
     }
 
@@ -129,6 +131,7 @@ public class BackupTransport {
     public synchronized void setBatchOfProvenanceFromBackup(List<ProvenanceForBackup> backupBatch) throws Exception {
         for (ProvenanceForBackup provenanceForBackup: backupBatch){
             new Provenance(azquoMemoryDB, provenanceForBackup.id, provenanceForBackup.json, true);
+            azquoMemoryDB.setNextId(provenanceForBackup.id);
         }
     }
 }
