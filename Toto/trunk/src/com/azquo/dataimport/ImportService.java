@@ -122,7 +122,7 @@ public final class ImportService {
                 , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, setup ? "setup" : "", "", filePath);//should record the error? (in comment)
         UploadRecordDAO.store(uploadRecord);
         if (Objects.equals(toReturn, UPLOADEDBYANOTHERUSER)) { //  .equals to shut intelliJ up. Of little consequence.
-            toReturn = UPLOADEDBYANOTHERUSER + " <a href=\"/api/ManageDatabases?uploadAnyway=" + uploadRecord.getId() + "\">Upload Anyway</a>"; // and should there be HTML in here? It will work I guess . . .
+            toReturn = UPLOADEDBYANOTHERUSER + ", " + uploadRecord.getFileName() + " <a href=\"/api/ManageDatabases?uploadAnyway=" + uploadRecord.getId() + "\">Upload Anyway</a>"; // and should there be HTML in here? It will work I guess . . .
         }
         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         int executePos = toReturn.toLowerCase().indexOf("execute:");
@@ -145,8 +145,14 @@ public final class ImportService {
             if (userSheet != null) {
                 int row = 1;
                 SName listRegion = book.getInternalBook().getNameByName("az_ListStart");
-                if (listRegion != null) {
+                if (listRegion != null && listRegion.getRefersToCellRegion() != null) {
                     row = listRegion.getRefersToCellRegion().getRow();
+                } else {
+                    if ("Email/logon".equalsIgnoreCase(userSheet.getInternalSheet().getCell(4, 0).getStringValue())){
+                        row = 5;
+                    } else {
+                        throw new Exception("az_ListStart not found, typically it is A6");
+                    }
                 }
                 // keep them to use if not set. Should I be updating records instead? I'm not sure.
                 Map<String, String> oldPasswordMap = new HashMap<>();

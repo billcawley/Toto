@@ -71,12 +71,14 @@ public class SpreadsheetService {
     }
 
     private static String homeDir = null;
+    private static String alias = null;
 
     // ints not boolean as I want to be able to tell if not set. Thread safety not such a concern, it's reading from a file, can't see how the state would be corrupted
     private static int devMachine = -1;
 
     private static final String AZQUOHOME = "azquo.home";
     private static final String DEVMACHINE = "dev.machine";
+    private static final String ALIAS = "alias";
 
     public static String getHomeDir() {
         if (homeDir == null) {
@@ -86,6 +88,16 @@ public class SpreadsheetService {
             }
         }
         return homeDir;
+    }
+
+    public static String getAlias() {
+        if (alias == null) {
+            alias = azquoProperties.getProperty(host + "." + ALIAS);
+            if (alias == null) {
+                alias = host;
+            }
+        }
+        return alias;
     }
 
     public static boolean onADevMachine() {

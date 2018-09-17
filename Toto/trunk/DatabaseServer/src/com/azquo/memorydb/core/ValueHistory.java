@@ -71,7 +71,9 @@ public class ValueHistory {
         try {
             ByteBuffer buffer = ByteBuffer.allocate(names.length * 4);
             for (Name name : names) {
-                buffer.putInt(name.getId());
+                if (name != null){
+                    buffer.putInt(name.getId());
+                }
             }
             return buffer.array();
         } catch (BufferOverflowException e) {

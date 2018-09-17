@@ -76,7 +76,7 @@ Created by IntelliJ IDEA.
 				<!--<td>${upload.fileType}</td>
 				<td>${upload.comments}</td> -->
 				<td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}" class="button small" title="Download"><span class="fa fa-download" title="Download"></span> </a></c:if></td>
-				<td><c:if test="${upload.downloadable}"><a href="/api/ManageDatabases?deleteUploadRecordId=${upload.id}" class="button small" title="Delete"><span class="fa fa-trash" title="Delete"></span> </a></c:if></td>
+				<td><a href="/api/ManageDatabases?deleteUploadRecordId=${upload.id}" class="button small" title="Delete"><span class="fa fa-trash" title="Delete"></span> </a></td>
 			</tr>
 		</c:forEach>
 		</tbody>
@@ -157,7 +157,7 @@ Created by IntelliJ IDEA.
 <!-- END DB Management -->		
 <!-- Maintenance -->	
 	<div id="tab3" style="display:none">
-		<h3>Restore Backup. WARNING : the database speified internally by the zip or "Databse" here will zap a database and associated reports if they exist before it restores the file contents.</h3>
+		<h3>Restore Backup. WARNING : the database specified internally by the zip or "Database" here will zap a database and associated reports if they exist before it restores the file contents.</h3>
 		<form action="/api/ManageDatabases" method="post" enctype="multipart/form-data">
 			<table>
 				<tbody>

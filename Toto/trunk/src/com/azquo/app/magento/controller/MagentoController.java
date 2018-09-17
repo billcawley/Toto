@@ -74,7 +74,7 @@ public class MagentoController {
                     // an insecure call . . .
                     AdminService.emptyDatabase(loggedInUser);
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                    String title = SpreadsheetService.host +  " Magento db clear " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
+                    String title = SpreadsheetService.getAlias() +  " Magento db clear " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                     AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
                     AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
                     AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
@@ -100,7 +100,7 @@ public class MagentoController {
                     long elapsed = System.currentTimeMillis() - start;
                     if (!SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                        String title = SpreadsheetService.host +  " Magento file upload " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
+                        String title = SpreadsheetService.getAlias() +  " Magento file upload " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
                         AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
                         AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, title);
                         AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, title);
