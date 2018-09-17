@@ -172,7 +172,7 @@ class ValuesImportConfigProcessor {
             String firstLine = br.readLine();
             if (firstLine == null || firstLine.length() == 0) {
                 br.close();
-                throw new Exception("Unable to read any data");
+                throw new Exception("Unable to read any data (perhaps due to an empty file in a zip or an empty sheet in a workbook)");
             }
             String secondLine = br.readLine();
             long linesGuess = fileLength / ((secondLine != null && secondLine.length() > 20) ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
