@@ -120,8 +120,10 @@ public class BatchImporter implements Callable<Void> {
         //returns the error
         for (ImportCellWithHeading cell : cells) {
             if (cell.getImmutableImportHeading().ignoreList != null) {
-                if (Arrays.asList(cell.getImmutableImportHeading().ignoreList).contains(cell.getLineValue().toLowerCase())) {
-                    return "ignored";
+                for (String ignoreItem:cell.getImmutableImportHeading().ignoreList){
+                    if (cell.getLineValue().toLowerCase().contains(ignoreItem)){
+                        return "ignored";
+                    }
                 }
             }
             if (cell.getImmutableImportHeading().only != null) {
