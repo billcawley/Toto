@@ -40,7 +40,7 @@ public interface RMIInterface extends Remote {
 
     String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws RemoteException;
 
-    String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String zipName, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException;
+    String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, Map<String, String> fileNameParameters, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException;
 
     CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws RemoteException;

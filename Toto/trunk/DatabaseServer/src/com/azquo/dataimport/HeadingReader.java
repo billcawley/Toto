@@ -127,7 +127,7 @@ todo - add classification here
     still too complex for INtellij to analyse - todo
     */
 
-    static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, String zipVersion, String fileName, List<String> languages, Map<String, String> topHeadings) throws Exception {
+    static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, String fileName, List<String> languages, Map<String, String> topHeadings) throws Exception {
         // option for extra composite headings - I think for PwC, a little odd but harmless.
         if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null) {
             List<String> extraCompositeHeadings = Arrays.asList(importInterpreter.getAttribute(COMPOSITEHEADINGS).split("¬")); // delimiter match the other headings string
@@ -176,7 +176,7 @@ todo - add classification here
                         The header is overwritten with "Transaction Type" then a combination of HEADINGS RISK and HEADINGS RISK RLD
                         are grabbed making "classification Policy Reference; required; language RENEWAL"
 
-                        replace ZIPVERSION in this if you can then add it to the main name, "Transaction Type"
+                        "Transaction Type"
                          unless it contains "." in which case replace the header with the combined created attribute
                          that "." business might come from HEADINGS RISK e.g. "Policy Reference.DateReceived;default NOW" in the name "Date Received"
 
@@ -195,10 +195,6 @@ todo - add classification here
                                 attribute+=";default " + topHeadingFound;
                             }
                             if (attribute != null) {
-                                if (zipVersion != null) {
-                                    //  a bit arbitrary really
-                                    attribute = attribute.replace("ZIPVERSION", zipVersion);
-                                }
                                 header = attribute;
                                 /*
                                 if (attribute.contains(".")) {

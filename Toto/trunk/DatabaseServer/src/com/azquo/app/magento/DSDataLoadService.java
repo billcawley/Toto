@@ -11,8 +11,6 @@ import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -981,7 +979,7 @@ public class DSDataLoadService {
         }
 
 
-        System.out.println("");
+        System.out.println();
         System.out.println("shipments");
 
         if (tableMap.get("sales_flat_shipment") != null) {
@@ -1062,7 +1060,7 @@ public class DSDataLoadService {
         double priceRemaining = bundleTotal.price;
         double taxRemaining = bundleTotal.tax;
 
-        Double taxAdjustment = priceRemaining / (priceRemaining + taxRemaining);
+        double taxAdjustment = priceRemaining / (priceRemaining + taxRemaining);
 
 /*        List<String> productLanguage = new ArrayList<String>();
         productLanguage.add("MagentoProductId");*/
@@ -1107,7 +1105,7 @@ public class DSDataLoadService {
 
             }
         }
-        Double unallocatedPriceRemaining = priceRemaining;
+        double unallocatedPriceRemaining = priceRemaining;
         for (SaleItem saleItem : bundleItems) {
             if (saleItem.price == 0.0) {
                 if (--unknownCount == 0) {

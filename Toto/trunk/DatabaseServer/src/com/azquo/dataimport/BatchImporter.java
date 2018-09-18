@@ -81,6 +81,8 @@ public class BatchImporter implements Callable<Void> {
                             }
                         }
                     }
+                    // default values might now be used by composite
+                    resolveDefaultValues(lineToLoad, importLine);
                     // composite might do things that affect only and existing hence do it before
                     resolveCompositeValues(lineToLoad, importLine);
                      String rejectionReason =  checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
@@ -111,6 +113,28 @@ public class BatchImporter implements Callable<Void> {
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
+        }
+    }
+
+    // set defaults, factored now as new logic means composites might use defaults
+    private static void resolveDefaultValues(List<ImportCellWithHeading> lineToLoad, int importLine) {
+        // set defaults before dealing with local parent/child
+        for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
+            if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && importCellWithHeading.getLineValue().trim().length() == 0) {
+                String defaultValue = importCellWithHeading.getImmutableImportHeading().defaultValue;
+                if (importCellWithHeading.getImmutableImportHeading().lineNameRequired) {
+                    for (ImportCellWithHeading cell : lineToLoad) {
+                        // If one of the other cells is referring to this as its attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Customer.Address1 and set the language to Address1
+                        // of course this logic only is used where default is used so it's a question of whether there's a better option than default if the cell is empty
+                        // So keep the line imported if there's data missing I guess
+                        if (cell != importCellWithHeading && cell.getImmutableImportHeading().indexForAttribute == lineToLoad.indexOf(importCellWithHeading) && cell.getLineValue().length() > 0) {
+                            defaultValue = cell.getLineValue();
+                            break;
+                        }
+                    }
+                }
+                importCellWithHeading.setLineValue(defaultValue);
+            }
         }
     }
 
@@ -385,25 +409,8 @@ public class BatchImporter implements Callable<Void> {
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
     private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Set<String> linesRejected) throws Exception {
         int valueCount = 0;
-        // initial pass to deal with defaults, spaces that might need removing and local parents
-        // set defaults before dealing with local parent/child
+        // initial pass to deal spaces that might need removing and local parents
         for (ImportCellWithHeading importCellWithHeading : cells) {
-            if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && importCellWithHeading.getLineValue().trim().length() == 0) {
-                String defaultValue = importCellWithHeading.getImmutableImportHeading().defaultValue;
-                if (importCellWithHeading.getImmutableImportHeading().lineNameRequired) {
-                    for (ImportCellWithHeading cell : cells) {
-                        // If one of the other cells is referring to this as its attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Customer.Address1 and set the language to Address1
-                        // of course this logic only is used where default is used so it's a question of whether there's a better option than default if the cell is empty
-                        // So keep the line imported if there's data missing I guess
-                        if (cell != importCellWithHeading && cell.getImmutableImportHeading().indexForAttribute == cells.indexOf(importCellWithHeading) && cell.getLineValue().length() > 0) {
-                            defaultValue = cell.getLineValue();
-                            break;
-                        }
-                    }
-
-                }
-                importCellWithHeading.setLineValue(defaultValue);
-            }
             if (importCellWithHeading.getImmutableImportHeading().removeSpaces){
                 importCellWithHeading.setLineValue(importCellWithHeading.getLineValue().replace(" ", ""));
             }

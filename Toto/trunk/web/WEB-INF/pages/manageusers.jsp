@@ -44,7 +44,7 @@
 	</table>
 
 	<div class="centeralign">
-		<a href="/api/ManageUsers?editId=0" class="button"><span class="fa fa-plus-circle"></span> Add New User</a>&nbsp;<c:if test="${showDownload}"><a href="/api/CreateExcelForDownload?action=DOWNLOADUSERS" class="button">Download Users as Excel</a></c:if>
+		<a href="/api/ManageUsers?editId=0" class="button"><span class="fa fa-plus-circle"></span> Add New User</a>&nbsp;<a href="/api/CreateExcelForDownload?action=DOWNLOADUSERS" class="button">Download Users as Excel</a>
 	</div>
 </main>
 <%@ include file="../includes/admin_footer.jsp" %>

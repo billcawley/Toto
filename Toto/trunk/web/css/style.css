@@ -30,6 +30,7 @@ a:hover {color:#CCC;}
 a img{border:none;}
 
 .button{display:inline-block; color:#FFF !important; background:#F58030; padding:7px 10px; font-size:15px; font-weight:400; border-radius:5px;  border:0px; margin:0px 2px 5px 2px; vertical-align:top; overflow:visible; /* IE button hack for width */ cursor:pointer; box-shadow:rgba(0,0,0,0.25) 0px 2px 3px;}
+.edbutton{display:inline-block; color:#FFF !important; background:#ff0006; padding:7px 10px; font-size:15px; font-weight:400; border-radius:5px;  border:0px; margin:0px 2px 5px 2px; vertical-align:top; overflow:visible; /* IE button hack for width */ cursor:pointer; box-shadow:rgba(0,0,0,0.25) 0px 2px 3px;}
 .button:hover{background:#000; box-shadow:none;}
 form .button {clear:both; width:auto;}
 

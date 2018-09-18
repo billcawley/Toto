@@ -18,8 +18,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import static com.azquo.dataimport.ValuesImport.ALLIMPORTSHEETS;
-
 /*
 
 Will process a ValuesImportConfig until it's reasy to be used by Values import.
@@ -47,9 +45,9 @@ class ValuesImportConfigProcessor {
     private static final String SKIPLINESSTRING = "SKIPLINES";
 
     static void prepareValuesImportConfig(ValuesImportConfig valuesImportConfig) throws Exception {
-        EdBrokingExtension.addZipNameToLanguages(valuesImportConfig);
+        EdBrokingExtension.checkImportFormatterLanguage(valuesImportConfig);
         // now step through what getHeadersWithIteratorAndBatchSize was doing
-        EdBrokingExtension.checkForZipNameImportInterpreterAndAssumptions(valuesImportConfig);
+        EdBrokingExtension.checkImportFormat(valuesImportConfig);
         // now standard import interpreter check - we just checked according to teh zip file
         checkImportInterpreter(valuesImportConfig);
         checkGroovy(valuesImportConfig);
@@ -71,7 +69,6 @@ class ValuesImportConfigProcessor {
                         valuesImportConfig.getAzquoMemoryDBConnection(),
                         valuesImportConfig.getHeaders(),
                         valuesImportConfig.getImportInterpreter(),
-                        valuesImportConfig.getZipVersion(),
                         valuesImportConfig.getFileName(),
                         valuesImportConfig.getLanguages(),
                         valuesImportConfig.getTopHeadings())
@@ -288,7 +285,7 @@ class ValuesImportConfigProcessor {
                 if (!buildHeadersFromVerticallyListedClauses(headers, valuesImportConfig.getLineIterator())) {
                     headers = oldHeaders;
                 }
-            }
+            }/*
             if (valuesImportConfig.isSpreadsheet() && valuesImportConfig.getZipName() == null) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
                 // as in add the headings to the first upload then upload again without headings (assuming the file name is the same!)
@@ -301,7 +298,7 @@ class ValuesImportConfigProcessor {
                 }
                 dataImportThis.setAttributeWillBePersisted(HEADINGSSTRING, sb.toString());
                 dataImportThis.setAttributeWillBePersisted(SKIPLINESSTRING, "1");//  currently assuming one line - may need to adjust
-            }
+            }*/
         } else {
             int skipLines = valuesImportConfig.getSkipLines();
             while (skipLines-- > 0) {

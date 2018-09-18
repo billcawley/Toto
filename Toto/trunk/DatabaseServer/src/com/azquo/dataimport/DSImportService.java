@@ -3,6 +3,7 @@ package com.azquo.dataimport;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -26,7 +27,7 @@ public class DSImportService {
 
     */
     public static String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName
-            , String zipName, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
+            , Map<String, String> fileNameParameters, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
         System.out.println("Reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an Excel file import, a different thing from a data entry area.
@@ -34,14 +35,14 @@ public class DSImportService {
         if (fileName.contains(":")) {
             fileName = fileName.substring(fileName.indexOf(":") + 1);//remove the workbook name.  sent only for the provenance.
         }
-        return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, zipName, persistAfter, isSpreadsheet, new AtomicInteger());
+        return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, fileNameParameters, persistAfter, isSpreadsheet, new AtomicInteger());
     }
 
     // Called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     // I wonder if the valuesModifiedCounter is a bit hacky, will maybe revisit this later
     // EFC - parameters going up, should a configuration object be passed?
     public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName
-            , String zipName, boolean persistAfter, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
+            , Map<String, String> fileNameParameters, boolean persistAfter, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
         // of course this doesn't currently stop the opposite, a persist being started while an import is going on.
         azquoMemoryDBConnection.lockTest();
@@ -52,7 +53,7 @@ public class DSImportService {
             toReturn = SetsImport.setsImport(azquoMemoryDBConnection, filePath, fileName);
         } else {
             boolean clearData = fileName.toLowerCase().contains("cleardata");
-            ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection, filePath, fileName, zipName, isSpreadsheet, valuesModifiedCounter, clearData);
+            ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection, filePath, fileName, fileNameParameters, isSpreadsheet, valuesModifiedCounter, clearData);
             // a lot goes on in this function to do with checking the file, finding import configuration, resolving headings etc.
             ValuesImportConfigProcessor.prepareValuesImportConfig(valuesImportConfig);
             // when it is done we assume we're ready to batch up lines with headers and import with BatchImporter

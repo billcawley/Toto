@@ -25,14 +25,13 @@ class ValuesImportConfig {
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
     private String filePath; // grovvy can override
     private final String fileName;
-    private final String zipName;
+    private final Map<String, String> fileNameParameters;
     private boolean isSpreadsheet;
     private final AtomicInteger valuesModifiedCounter;
     private List<String> languages;
     private String importAttribute;
     private Name importInterpreter;
-    private Name assumptions;
-    private String zipVersion;
+    private Map<String, String> assumptions;
     private List<String> headers;
     private int skipLines;
     private boolean clearData;
@@ -41,18 +40,17 @@ class ValuesImportConfig {
 
 
     // exactly the same as is passed to valuesImport, no coincidence. Set these in this object then pass the object through various processes until it's ready to go
-    ValuesImportConfig(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String zipName, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter, boolean clearData) {
+    ValuesImportConfig(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, Map<String, String> fileNameParameters, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter, boolean clearData) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
         this.filePath = filePath;
         this.fileName = fileName;
-        this.zipName = zipName;
+        this.fileNameParameters = fileNameParameters;
         this.valuesModifiedCounter = valuesModifiedCounter;
         this.isSpreadsheet = isSpreadsheet;
         languages = Constants.DEFAULT_DISPLAY_NAME_AS_LIST;
         importAttribute = null;
         importInterpreter = null;
         assumptions = null;
-        zipVersion = null;
         headers = new ArrayList<>();
         skipLines = 0;
         this.clearData = clearData;
@@ -107,8 +105,8 @@ class ValuesImportConfig {
         return fileName;
     }
 
-    String getZipName() {
-        return zipName;
+    public Map<String, String> getFileNameParameters() {
+        return fileNameParameters;
     }
 
     public boolean isSpreadsheet() {
@@ -147,20 +145,12 @@ class ValuesImportConfig {
         this.importInterpreter = importInterpreter;
     }
 
-    Name getAssumptions() {
+    Map<String, String> getAssumptions() {
         return assumptions;
     }
 
-    void setAssumptions(Name assumptions) {
+    void setAssumptions(Map<String, String> assumptions) {
         this.assumptions = assumptions;
-    }
-
-    String getZipVersion() {
-        return zipVersion;
-    }
-
-    void setZipVersion(String zipVersion) {
-        this.zipVersion = zipVersion;
     }
 
     List<String> getHeaders() {

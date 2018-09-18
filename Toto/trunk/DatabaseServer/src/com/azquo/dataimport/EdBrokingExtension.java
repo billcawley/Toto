@@ -14,65 +14,41 @@ Code written by WFC for Ed Broking, extracted/factored to here by EFC, modified 
  */
 
 
+
 class EdBrokingExtension {
 
-    static void addZipNameToLanguages(ValuesImportConfig valuesImportConfig) throws Exception{
-                    /*
-            New Ed Broking logic wants to do a combination of lookup initially based on the first half of the zip name then using the first half of the file name
-            in language as a way of "versioning" the headers. The second half of the zip name is held to the side to perhaps be replaced in headers later too.
-            */
-        if (valuesImportConfig.getZipName() != null) {
-            if (!valuesImportConfig.getFileName().contains(" ")){
-               throw new Exception("the file/sheet name should contain a blank - the prefix indicates the interpretation method");
+    public static final String IMPORT_TEMPLATE = "import template";
+
+    static void checkImportFormatterLanguage(ValuesImportConfig valuesImportConfig) {
+        // EFC revising logic based off WFC recommendations, set language from the second half of the import format if it's there
+        if (valuesImportConfig.getFileNameParameters() != null && valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE) != null) {
+            String importFormat = valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE);
+            if (importFormat.contains(" ")){
+                List<String> languages = new ArrayList<>();
+                languages.add(importFormat.substring(importFormat.indexOf(" ")).trim());
+                languages.add(Constants.DEFAULT_DISPLAY_NAME);
+                valuesImportConfig.setLanguages(languages);
             }
-            List<String> languages = new ArrayList<>();
-            languages.add(valuesImportConfig.getFileName().substring(0, valuesImportConfig.getFileName().indexOf(" ")));
-            languages.add(Constants.DEFAULT_DISPLAY_NAME);
-            valuesImportConfig.setLanguages(languages);
         }
 
     }
 
-    // so we got the import attribute based off the beginning of the zip name, same for the import interpreter, the former starts HEADINGS, the latter dataimport
-    // assumptions is a name found if created by an import file in the normal way. zip version is the end of the zip file name, at the moment a date e.g. Feb-18
-    static void checkForZipNameImportInterpreterAndAssumptions(ValuesImportConfig valuesImportConfig) throws Exception {
-        String zipName = valuesImportConfig.getZipName();
+    // EFC 18/09/2018, moving from using zip name to deduce things to IMPORT_TEMPLATE from fileNameParameters
+    static void checkImportFormat(ValuesImportConfig valuesImportConfig) throws Exception {
         // prepares for the more complex "headings as children with attributes" method of importing
-        // a bunch of files in a zip file,
-        if (zipName != null && zipName.length() > 0 && zipName.indexOf(" ") > 0) {// EFC - so if say it was "Risk Apr-18.zip" we have Apr-18 as the zipVersion.
+        valuesImportConfig.setAssumptions(valuesImportConfig.getFileNameParameters());
+        if (valuesImportConfig.getFileNameParameters() != null && valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE) != null) {
+            String importFormat = valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE);
             // this is passed through to preProcessHeadersAndCreatePivotSetsIfRequired
-            // it isused as a straight replacement e.g. that Apr-18 in something like
-            // composition `Policy No` `Policy Issuance Date`;parent of Policy Line;child of ZIPVERSION;required
-            // EFC note - this seems a bit hacky, specific to Ed Broking
-            valuesImportConfig.setZipVersion(zipName.substring(zipName.indexOf(" ")).trim());
-            String zipPrefix = zipName.substring(0, zipName.indexOf(" ")); // e.g. Risk
-            valuesImportConfig.setImportInterpreter(NameService.findByName(valuesImportConfig.getAzquoMemoryDBConnection(), "dataimport " + zipPrefix));
-            // so the attribute might be "HEADINGS RISK" assuming the file was "Risk Apr-18.zip"
-            valuesImportConfig.setImportAttribute("HEADINGS " + zipPrefix);
-            String importFile;
-            String filePath = valuesImportConfig.getFilePath();
-            if (filePath.contains("/")) {
-                importFile = filePath.substring(filePath.lastIndexOf("/") + 1);
-            } else {
-                importFile = filePath.substring(filePath.lastIndexOf("\\") + 1);
-            }
-            int blankPos = importFile.indexOf(" ");
-            if (blankPos > 0) {
-                /* EFC - this looks hacky. more string literals, So it's something like "zip file name assumptions firstbitofimportfilename"
-                it turns out assumptions is a sheet in a workbook - it gets put into All Import Sheets as usual
-                BUT there's also this name e.g. "Risk test2 Assumptions RLD" which is in Risk test2 Assumptions which is in Import Assumptions
-                notably this isn't set as part of any code, it's created when the assumptions file is uploaded, that it should match is based on the headings in tha file
-                matching. Rather fragile I'd say.
-                Assumptions in the example simply has the attribute "COVERHOLDER NAME" which has the value "Unknown Coverholder"
-
-                Note : assumptions unsued at the moment - todo - clarify the situation and maybe remove?
-                */
-                valuesImportConfig.setAssumptions(NameService.findByName(valuesImportConfig.getAzquoMemoryDBConnection(), zipName + " assumptions " + importFile.substring(0, blankPos)));
+            // it issued as a straight replacement e.g. that Apr-18 in something like
+            // so the attribute might be "HEADINGS RISK" assuming the import format was "Risk Apr-18"
+            if (importFormat.contains(" ")){
+                String firstPart = importFormat.substring(0, importFormat.indexOf(" "));
+                valuesImportConfig.setImportInterpreter(NameService.findByName(valuesImportConfig.getAzquoMemoryDBConnection(), "dataimport " + firstPart));
+                valuesImportConfig.setImportAttribute("HEADINGS " + firstPart);
             }
         }
     }
-
-
 
     /*
     Info from WFC e-mail about changes to this function where it can have versions of headers, the ability to override defaults as required :
@@ -318,7 +294,7 @@ check that the headings that are required are there . . .
             // I can't see any of the second which might be relevant with "required" but I imagine there will be some from the first
             // for example Policy Reference.Contract Reference;required
             String attribute = HeadingReader.getCompositeAttributes(name, importAttribute, importAttribute + " " + languages.get(0));
-            if ((valuesImportConfig.getAssumptions() == null || valuesImportConfig.getAssumptions().getAttribute(name.getDefaultDisplayName()) == null) && attribute != null) { //if there's an assumption then no need to check required.
+            if (attribute != null) {
                 boolean required = false;
                 boolean composition = false;
                 String[] clauses = attribute.split(";");
@@ -341,7 +317,9 @@ check that the headings that are required are there . . .
                             */
                             if (!attribute.toLowerCase().contains(HeadingReader.DEFAULT)
                                     && !attribute.toLowerCase().contains(HeadingReader.COMPOSITION)
-                                    && !attribute.toLowerCase().contains(HeadingReader.TOPHEADING)) {
+                                    && !attribute.toLowerCase().contains(HeadingReader.TOPHEADING)
+                                    && valuesImportConfig.getAssumptions().get(clauses[0].toLowerCase()) == null
+                            ) {
                                 throw new Exception("headers missing required header: " + name.getDefaultDisplayName());
                             } else {
                                 headers.add(name.getDefaultDisplayName());//maybe a problem if there is another name in the given language
@@ -411,12 +389,12 @@ check that the headings that are required are there . . .
     // assumptions being a bunch of defaults it seems.
     static void dealWithAssumptions(ValuesImportConfig valuesImportConfig) {
         // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
-        if (valuesImportConfig.getAssumptions() != null) {
+        if (valuesImportConfig.getAssumptions() != null && !valuesImportConfig.getAssumptions().isEmpty()) {
             List<String> headers = valuesImportConfig.getHeaders();
             for (int i = 0; i < headers.size(); i++) {
                 String header = headers.get(i);
                 String[] clauses = header.split(";");
-                String assumption = valuesImportConfig.getAssumptions().getAttribute(clauses[0]);
+                String assumption = valuesImportConfig.getAssumptions().get(clauses[0].toLowerCase().trim());
                 if (assumption != null) {
                     headers.set(i, header + ";default " + assumption);
                 }
