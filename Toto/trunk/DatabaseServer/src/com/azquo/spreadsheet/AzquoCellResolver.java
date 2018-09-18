@@ -594,6 +594,9 @@ But can use a library?
                     for (Name possibleParent : attributeSet) {
                         if (possibleParent.getChildren().contains(n)) {
                             attValue = possibleParent.getDefaultDisplayName();
+                            if (attValue.equals(attribute)){
+                                attValue = n.getDefaultDisplayName();
+                            }
                             break;
                         }
                     }
@@ -614,7 +617,9 @@ But can use a library?
                         if (stringResult == null) {
                             stringResult = attValue;
                         } else {
-                            stringResult += (", " + attValue);
+                            if (!stringResult.contains(attValue)){
+                                stringResult += (", " + attValue);
+                            }
                         }
                     }
                 }
