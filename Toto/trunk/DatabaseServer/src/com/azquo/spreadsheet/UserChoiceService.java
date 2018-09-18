@@ -162,10 +162,10 @@ public class UserChoiceService {
             languages.add(Constants.DEFAULT_DISPLAY_NAME);
         }
         Collection<Name> names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, false);
-        if (names.size() > 500) { // don't even try, you're not getting the dropdown or multi select = SHOW THE FIRST 500!!!!!!!
+        if (names.size() > 1000) { // don't even try, you're not getting the dropdown or multi select = SHOW THE FIRST 500!!!!!!!
             List<Name> newNames = new ArrayList<>();
             Iterator it = names.iterator();
-            for (int i = 0; i < 500; i++) newNames.add((Name) it.next());
+            for (int i = 0; i < 1000; i++) newNames.add((Name) it.next());
             names = newNames;
         }
         return getUniqueNameStrings(getUniqueNames(names, forceFirstLevel));
