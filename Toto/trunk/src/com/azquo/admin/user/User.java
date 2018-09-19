@@ -20,7 +20,7 @@ public final class User extends StandardEntity {
     public static final String STATUS_ADMINISTRATOR = "ADMINISTRATOR";
     private static final String STATUS_MASTER = "MASTER";
 
-    private static final String STATUS_DEVELOPER = "DEVELOPER";
+    public static final String STATUS_DEVELOPER = "DEVELOPER";
     //developer means like admin but just reports and databases. Means those tables and the upload tables will need user Id and I'll need to make the right checks . .hhhhhhhhhhhhhhhngh
 
     private LocalDateTime endDate;

@@ -120,9 +120,9 @@ public class BackupTransport {
         int startPoint = 0;
         while (startPoint < backupBatch.size()){
             if (startPoint + sqlLimit <= backupBatch.size()){
-                ValueDAO.insertValuesHistoriesFromBackup(azquoMemoryDB, backupBatch.subList(sqlLimit, startPoint + sqlLimit));
+                ValueDAO.insertValuesHistoriesFromBackup(azquoMemoryDB, backupBatch.subList(startPoint, sqlLimit));
             } else {
-                ValueDAO.insertValuesHistoriesFromBackup(azquoMemoryDB, backupBatch.subList(sqlLimit, backupBatch.size()));
+                ValueDAO.insertValuesHistoriesFromBackup(azquoMemoryDB, backupBatch.subList(startPoint, backupBatch.size()));
             }
             startPoint += sqlLimit;
         }

@@ -200,6 +200,10 @@ public final class ImportService {
                         }
                         Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 5).getStringValue(), loggedInUser.getUser().getBusinessId());
                         OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 6).getStringValue(), loggedInUser.getUser().getBusinessId());
+                        if (!status.equalsIgnoreCase(User.STATUS_ADMINISTRATOR) && !status.equalsIgnoreCase(User.STATUS_DEVELOPER) && or == null){
+                            throw new Exception("Unable to find report " + userSheet.getInternalSheet().getCell(row, 6).getStringValue());
+                        }
+                        // todo - master and user types need to check for a report and error if it's not there
                         if (!loggedInUser.getUser().isAdministrator()) { // then I need to check against the session for allowable reports and databases
                             boolean stored = false;
                             if (d != null && or != null) {
