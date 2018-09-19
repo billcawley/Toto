@@ -160,7 +160,9 @@ todo - add classification here
                         header = header.replace("\\\\n",c + "");
                         // given preparation we should be able to find a name with this header in the correct language
                         Name headerName = NameService.findByName(azquoMemoryDBConnection, header, languages);
-                        if (headerName != null) {
+                        //amendment to catch cases where there happens to be a heading with the given name, but we don't want it
+                        String localImportAttribute = importAttribute + " " + languages.get(0);
+                        if (headerName != null && (headerName.getAttribute(localImportAttribute)== null ||  !headerName.getAttribute(localImportAttribute).toLowerCase().equals("ignore"))) {
                         /*
 
                         Ok examining the risk database makes this clearer. There's "Transaction Type" under "Data Import Risk"
@@ -190,7 +192,7 @@ todo - add classification here
                             String topHeadingFound = topHeadings.get(header);
                             header = headerName.getDefaultDisplayName();
                             origHeaders.set(i, header);
-                            String attribute = getCompositeAttributes(headerName, importAttribute, importAttribute + " " + languages.get(0));
+                            String attribute = getCompositeAttributes(headerName, importAttribute, localImportAttribute);
                             if (topHeadingFound!=null){
                                 attribute+=";default " + topHeadingFound;
                             }
