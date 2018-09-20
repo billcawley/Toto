@@ -15,6 +15,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -136,6 +137,9 @@ public class ManageUsersController {
                 return "edituser";
             }
             final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);
+            if (userListForBusiness != null) {
+                userListForBusiness.sort(Comparator.comparing(User::getEmail));
+            }
             model.put("users", userListForBusiness);
             if (userListForBusiness != null && userListForBusiness.size() > 1) {
                 model.put("showDownload", true);

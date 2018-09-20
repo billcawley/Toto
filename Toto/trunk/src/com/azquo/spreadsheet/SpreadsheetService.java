@@ -144,7 +144,7 @@ public class SpreadsheetService {
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)
     public static ProvenanceDetailsForDisplay getProvenanceDetailsForDisplay(LoggedInUser loggedInUser, int reportId, String sheetName, String region, UserRegionOptions userRegionOptions, int rowInt, int colInt, int maxSize) throws Exception {
         final CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
-        if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().get(rowInt) != null
+        if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getData().size() > rowInt && cellsAndHeadingsForDisplay.getData().get(rowInt) != null// added range check as rowInt was the same as size - should it have been?
                 && cellsAndHeadingsForDisplay.getData().size() > rowInt // stop array index problems
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).size() > colInt
                 && cellsAndHeadingsForDisplay.getData().get(rowInt).get(colInt) != null) {

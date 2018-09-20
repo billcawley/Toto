@@ -392,6 +392,18 @@ class AzquoMemoryDBTransport {
     BUT at the moment I'm allowing the database to be modified while persisting, this function should be robust to that
      */
     void persistDatabase() {
+        if (azquoMemoryDB.needToCheckValueLengths()){
+            System.out.println("***********************");
+            System.out.println("***********************");
+            System.out.println("***********************");
+            System.out.println("***********************");
+            System.out.println("Converting value and value history tables to 8k long varchar text");
+            System.out.println("***********************");
+            System.out.println("***********************");
+            System.out.println("***********************");
+            System.out.println("***********************");
+            ValueDAO.convertForLongTextValues(azquoMemoryDB.getPersistenceName());
+        }
         System.out.println("PERSIST STARTING");
         // ok first do the json bits, currently this is just provenance, may well be others
         for (Map.Entry<String, Set<AzquoMemoryDBEntity>> tableNameEntites : jsonEntitiesToPersist.entrySet()) {

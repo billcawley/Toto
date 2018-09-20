@@ -274,6 +274,7 @@ public class ExcelController {
                 return CommonReportUtils.resolveQuery(loggedInUser, chosen);
             }
             if (op.equals("getdropdownlistforquery")) {
+                System.out.println("choice query : " + choice);
                 return jacksonMapper.writeValueAsString(CommonReportUtils.getDropdownListForQuery(loggedInUser, choice));
             }
 

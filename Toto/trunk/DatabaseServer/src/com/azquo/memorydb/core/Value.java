@@ -40,6 +40,10 @@ public final class Value extends AzquoMemoryDBEntity {
         super(azquoMemoryDB, 0);
         newValueCount.incrementAndGet();
         this.provenance = provenance;
+        //alter the persistence to deal with longer value lengths
+        if (text.length() > 255){
+            getAzquoMemoryDB().checkValueLengths();
+        }
         this.text = text;
         names = new Name[0];
         getAzquoMemoryDB().addValueToDb(this);
@@ -56,6 +60,10 @@ public final class Value extends AzquoMemoryDBEntity {
         newValue3Count.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId);
         this.text = text.intern(); // important for memory, use the string pool where there will be any strings that are simple numbers
+        //alter the persistence to deal with longer value lengths
+        if (text.length() > 255){
+            getAzquoMemoryDB().checkValueLengths();
+        }
         int noNames = namesCache.length / 4;
         ByteBuffer byteBuffer = ByteBuffer.wrap(namesCache);
         // we assume the names are loaded (though they may not be linked yet)

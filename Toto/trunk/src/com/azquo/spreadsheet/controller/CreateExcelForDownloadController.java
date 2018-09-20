@@ -24,6 +24,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -56,6 +58,9 @@ public class CreateExcelForDownloadController {
                 Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
                 if (userSheet != null) {
                     final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);
+                    if (userListForBusiness != null) {
+                        userListForBusiness.sort(Comparator.comparing(User::getEmail));
+                    }
                     int row = 1;
                     SName listRegion = book.getInternalBook().getNameByName("az_ListStart");
                     SName business = book.getInternalBook().getNameByName("az_Business");

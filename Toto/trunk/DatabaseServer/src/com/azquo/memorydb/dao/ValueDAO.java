@@ -207,6 +207,14 @@ public class ValueDAO {
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;", JsonRecordDAO.EMPTY_PARAMETERS_MAP);
     }
 
+    public static void convertForLongTextValues(final String persistenceName) throws DataAccessException {
+        final String ALTER = "ALTER TABLE `" + persistenceName + "`.`" + FASTVALUE + "` MODIFY COLUMN `" + TEXT + "` VARCHAR(8192);";
+        JdbcTemplateUtils.update (ALTER, JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+        final String ALTER1 = "ALTER TABLE `" + persistenceName + "`.`" + VALUEHISTORY + "` MODIFY COLUMN `" + TEXT + "` VARCHAR(8192);";
+        JdbcTemplateUtils.update(ALTER1, JsonRecordDAO.EMPTY_PARAMETERS_MAP);
+    }
+
+
     public static List<Value> findForMinMaxId(final AzquoMemoryDB azquoMemoryDB, int minId, int maxId) throws DataAccessException {
         final String SQL_SELECT_ALL = "Select `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "`.* from `" + azquoMemoryDB.getPersistenceName() + "`.`" + FASTVALUE + "` where id > " + minId + " and id <= " + maxId; // should I prepare this? Ints safe I think
         return JdbcTemplateUtils.query(SQL_SELECT_ALL, new ValueRowMapper(azquoMemoryDB));

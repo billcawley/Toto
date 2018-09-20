@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -36,7 +37,7 @@ class ValuesImportConfigProcessor {
 
     // Attribute names for a name in the database with importing instructions.
     // is there a groovy pre processor?
-    private static final String GROOVYPROCESSOR = "GROOVYPROCESSOR";
+    private static final String PREPROCESSOR = "pp";
     // override default encoding
     private static final String FILEENCODING = "FILEENCODING";
     // to do with reading the file in the first place, are the headings already in the DB as an attribute?
@@ -112,16 +113,22 @@ class ValuesImportConfigProcessor {
 
     // typically groovy scripts write out to a different file, helps a lot for debugging! Most of the time with no groovy specified will just not modify anything
     private static void checkGroovy(ValuesImportConfig valuesImportConfig) throws Exception {
-        if (valuesImportConfig.getImportInterpreter() != null && valuesImportConfig.getImportInterpreter().getAttribute(GROOVYPROCESSOR) != null) {
+        if (valuesImportConfig.getFileNameParameters() != null && valuesImportConfig.getFileNameParameters().get(PREPROCESSOR) != null) {
             System.out.println("Groovy found! Running  . . . ");
             Object[] groovyParams = new Object[3];
             groovyParams[0] = valuesImportConfig.getFilePath();
             groovyParams[1] = valuesImportConfig.getAzquoMemoryDBConnection();
             GroovyShell shell = new GroovyShell();
             try {
-                final Script script = shell.parse(valuesImportConfig.getImportInterpreter().getAttribute(GROOVYPROCESSOR));
-                System.out.println("Groovy done.");
-                valuesImportConfig.setFilePath((String) script.invokeMethod("fileProcess", groovyParams));
+                // new thing gotta do it from file
+                File file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getFileNameParameters().get(PREPROCESSOR));
+                if (file.exists()){
+                    final Script script = shell.parse(file);
+                    System.out.println("loaded groovy " + file.getPath());
+                    valuesImportConfig.setFilePath((String) script.invokeMethod("fileProcess", groovyParams));
+                } else {
+                    System.out.println("can't fined groovy " + file.getPath());
+                }
             } catch (GroovyRuntimeException e) {
                 // exception could be because the groovy script didn't have a function that matched
                 e.printStackTrace();

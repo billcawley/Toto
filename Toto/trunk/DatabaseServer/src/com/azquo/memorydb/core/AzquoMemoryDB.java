@@ -7,6 +7,7 @@ import net.openhft.koloboke.collect.map.hash.HashObjObjMaps;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -36,7 +37,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public final class AzquoMemoryDB {
 
+    // todo - move these somewhere else
     private static Properties azquoProperties = new Properties();
+    public static final String host;
+    private static final String GROOVYDIR = "groovydir";
 
     // no point doing this on every constructor!
     static {
@@ -45,7 +49,30 @@ public final class AzquoMemoryDB {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        String thost = "";
+        try {
+            thost = InetAddress.getLocalHost().getHostName();
+        } catch (Exception e) {
+            e.printStackTrace(); // may as well in case it goes wrong
+        }
+        System.out.println("host : " + thost);
+        System.out.println("Available processors : " + Runtime.getRuntime().availableProcessors());
+        host = thost;
     }
+
+    private static String groovyDir = null;
+
+    public static String getGroovyDir() {
+        if (groovyDir == null) {
+            groovyDir = azquoProperties.getProperty(host + "." + GROOVYDIR);
+            if (groovyDir == null) {
+                groovyDir = azquoProperties.getProperty(GROOVYDIR);
+            }
+        }
+        return groovyDir;
+    }
+
+
 
     private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
 
@@ -98,6 +125,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger newDatabaseCount = new AtomicInteger(0);
 
+    private boolean checkValueLengths;
     /*
 
     I need to consider this https://www.securecoding.cert.org/confluence/display/java/TSM03-J.+Do+not+publish+partially+initialized+objects
@@ -141,6 +169,15 @@ public final class AzquoMemoryDB {
             System.out.println("***************** name integrity problems detected/fixed on load, persisting fixes");
             persistToDataStore();
         }
+        checkValueLengths = false;
+    }
+
+    public void checkValueLengths(){
+        checkValueLengths = true;
+    }
+
+    public boolean needToCheckValueLengths() {
+        return checkValueLengths;
     }
 
     boolean getNeedsLoading() {
