@@ -42,7 +42,7 @@ def fileProcess(Object[] args) {
             }
             if (lineNo > skipLines){
                 if (lineNo == (skipLines + 1)){ // top line, add the header
-                    fileWriter.write(line + "\tClaim State");
+                    fileWriter.write(line.replace("\\\\n", " ") + "\tClaim State");
                 } else {
                     fileWriter.write(line + "\t" + state);
                 }
@@ -52,6 +52,4 @@ def fileProcess(Object[] args) {
         }
     }
     return outFile
-
-
 }
