@@ -96,16 +96,12 @@ public class ChoicesService {
                                         row++;// like starting at 1
                                         SCell vCell = validationSheet.getInternalSheet().getCell(row, numberOfValidationsAdded);
                                         vCell.setCellStyle(sheet.getInternalSheet().getCell(chosenRegion.getRow(), chosenRegion.getColumn()).getCellStyle());
-                                        /*
-                                        //don't set values in the data region
                                         try {
                                             Date date = df.parse(choiceOption);
                                             vCell.setDateValue(date);
                                         } catch (Exception e) {
                                             BookUtils.setValue(vCell, choiceOption);
                                         }
-                                        */
-
                                     }
                                     if (row > 0) { // if choice options is empty this will not work
                                         Range validationValues = Ranges.range(validationSheet, 1, numberOfValidationsAdded, row, numberOfValidationsAdded);
@@ -183,8 +179,7 @@ public class ChoicesService {
             context = "";
             // Now I need to run through all choices setting from the user options IF it is valid and the first on the menu if it is not
             for (SName sName : namesForSheet) {
-                 boolean inDataRegion =  !BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn(),sheet).isEmpty();
-                if (sName.getName().endsWith("Chosen") && !inDataRegion) {
+                if (sName.getName().endsWith("Chosen")) {
                     CellRegion chosen = sName.getRefersToCellRegion();
                     String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length()).toLowerCase();
                     if (chosen != null) {
