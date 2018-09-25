@@ -14,7 +14,9 @@ import net.openhft.koloboke.collect.map.hash.HashIntDoubleMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMaps;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,7 +45,7 @@ class AzquoCellService {
         // ok I can't see a way around this, I'm going to have to check all doubles for a null and if I find one abandon the doublesort
         int doubleSorts = sortCount;
         for (List<TypedPair<Double, String>> check : sortListsMap.values()) {
-            for (int i = 0; i < sortCount; i++) {
+             for (int i = 0; i < sortCount; i++) {
                 TypedPair<Double, String> value = check.get(i);
                 // hack for gaps, make them 0, lets see how it goes (of course one non blank will mean string sorting which is correct)
                 if ("".equals(value.getSecond()) && value.getFirst() == null){
@@ -282,6 +284,7 @@ class AzquoCellService {
 
     private static List<List<AzquoCell>> sortAndFilterCells(List<List<AzquoCell>> sourceData, List<List<DataRegionHeading>> rowHeadings
             , RegionOptions regionOptions, boolean permute) {
+        final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd-MMM-yy");
         List<List<AzquoCell>> toReturn = sourceData;
         if (sourceData == null || sourceData.isEmpty()) {
             return sourceData;
@@ -378,6 +381,15 @@ class AzquoCellService {
                                     //not a number - ignore
                                 }
                             }
+                            String stringVal = cell.getStringValue();
+                               try{
+                                    LocalDate date = LocalDate.parse("01-"+ stringVal, dateTimeFormatter);
+                                    d = (double)date.toEpochDay();
+
+                                }catch(Exception e){
+                                   //ignore.  If every val produces a double, then the double will be sorted.
+                                }
+
                             sortRowValues.add(new TypedPair<>(d, cell.getStringValue()));
                         }
                     }
@@ -525,6 +537,7 @@ class AzquoCellService {
         }
         return toReturn;
     }
+
 
     private static boolean hasAttribute(AzquoCell cell){
         for(DataRegionHeading heading:cell.getColumnHeadings()){
