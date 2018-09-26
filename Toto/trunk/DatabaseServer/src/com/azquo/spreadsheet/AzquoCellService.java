@@ -65,12 +65,17 @@ class AzquoCellService {
         List<Map.Entry<Integer, List<TypedPair<Double, String>>>> list = new ArrayList<>(sortListsMap.entrySet());
         // sort list based on the list of values in each entry
         try {
-            list.sort((o1, o2) -> {
+             list.sort((o1, o2) -> {
                 int result = 0;
                 if (o1.getValue().size() != o2.getValue().size()) { // the really should match! I'll call it neutral for the moment
                     return 0;
                 }
                 for (int index = 0; index < sortCount; index++) {
+                    if (sortRowsUp){
+                        //put blanks to the end
+                        if (o1.getValue().get(index).getSecond() == null) return 1;
+                        if (o2.getValue().get(index).getSecond() == null) return -1;
+                    }
                     if (doubleSort.get(index)) {
                         result = o1.getValue().get(index).getFirst().compareTo(o2.getValue().get(index).getFirst());
                     } else {
