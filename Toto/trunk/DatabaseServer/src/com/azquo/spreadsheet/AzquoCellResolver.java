@@ -635,7 +635,7 @@ But can use a library?
                     }
                 }
                 if (attValue == null) {
-                    attValue = n.getAttribute(attribute.replace("`", "").toUpperCase());
+                    attValue = n.getAttribute(attribute.replace("`", "").toUpperCase().replace(" EXCLUSIVE",""));
                 }
                 if (attValue != null) {
                     count++;
