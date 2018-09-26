@@ -10,6 +10,7 @@ import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
+import javax.xml.crypto.Data;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -177,6 +178,16 @@ class DataRegionHeadingService {
                             // maybe could have a "true" on returnReadOnlyCollection . . . todo
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
                             row.add(dataRegionHeadingsFromNames(mainSet, function, suffix, null, null, percentileDouble));
+                        } else if (function == DataRegionHeading.FUNCTION.LASTLOOKUP) {
+                            // todo - this function parameter parsing needs to be factored and be aware of commas in names
+                            String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
+                            String description = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();
+                            // maybe these two could have a "true" on returnReadOnlyCollection . . . todo
+                            final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);//returns the single name to find
+                            List<DataRegionHeading> dataRegionHeadings = new ArrayList<>();
+                            dataRegionHeadings.add(new DataRegionHeading(null, true, function, suffix, description, null, mainSet, 0));
+                            row.add(dataRegionHeadings);
+                            //row.add(dataRegionHeadingsFromNames(null, function, suffix, null, mainSet, 0,description));
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later
                             Collection<Name> names;
                             try {
@@ -743,8 +754,14 @@ class DataRegionHeadingService {
         }
         return contextHeadings;
     }
-
     private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
+        return dataRegionHeadingsFromNames(names, function, suffix,offsetHeadings, valueFunctionSet, doubleParameter, null);
+    }
+
+
+
+
+        private static List<DataRegionHeading> dataRegionHeadingsFromNames(Collection<Name> names, DataRegionHeading.FUNCTION function, DataRegionHeading.SUFFIX suffix, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter, String description) {
         List<DataRegionHeading> dataRegionHeadings = new ArrayList<>(names.size()); // names could be big, init the Collection with the right size
       /*
         if (azquoMemoryDBConnection.getWritePermissions() != null && !azquoMemoryDBConnection.getWritePermissions().isEmpty()) {
@@ -756,7 +773,7 @@ class DataRegionHeadingService {
         } else { // don't bother checking permissions, write permissions to true
         */
         for (Name name : names) {
-            dataRegionHeadings.add(new DataRegionHeading(name, true, function, suffix, null, offsetHeadings, valueFunctionSet, doubleParameter));
+            dataRegionHeadings.add(new DataRegionHeading(name, true, function, suffix, description, offsetHeadings, valueFunctionSet, doubleParameter));
         }
         //}
         //System.out.println("time for dataRegionHeadingsFromNames " + (System.currentTimeMillis() - startTime));

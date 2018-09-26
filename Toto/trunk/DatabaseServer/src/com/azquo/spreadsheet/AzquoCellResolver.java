@@ -110,9 +110,9 @@ public class AzquoCellResolver {
             }
 
          for (DataRegionHeading contextHeading : contextHeadings) {
-                if (contextHeading != null && contextHeading.isExpressionFunction()) {
-                    expressionFunctionHeadings.add(contextHeading);
-                }
+             if (contextHeading != null && contextHeading.isExpressionFunction()) {
+                  expressionFunctionHeadings.add(contextHeading);
+              }
             }
          // todo re-implement caching here if there are performance problems - I did use findOverlap before here but I don't think is applicable now the name query is much more flexible. Caching fragments of the query would be the thing
         if (expressionFunctionHeadings.size() > 0) {
@@ -310,7 +310,7 @@ public class AzquoCellResolver {
                 }
             }
             for (DataRegionHeading heading : headingsForThisCell) {
-                if (heading.getName() == null && heading.getAttribute() == null) { // a redundant check? todo : confirm
+                if (heading.getName() == null && heading.getAttribute() == null && heading.getFunction()!= DataRegionHeading.FUNCTION.LASTLOOKUP) { // a redundant check? todo : confirm
                     checked = false;
                 }
                 if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values
@@ -326,7 +326,9 @@ public class AzquoCellResolver {
                 DataRegionHeading functionHeading = null;
                 DataRegionHeading.FUNCTION function = null;
                 Collection<Name> valueFunctionSet = null;
+                String description = null;
                 double functionDoubleParameter = 0;
+                DataRegionHeading redundantHeading = null;
                 for (DataRegionHeading heading : headingsForThisCell) {
                     if (heading.getFunction() != null) { // should NOT be a name function, that should have been caught before
                         functionHeading = heading;
@@ -335,12 +337,19 @@ public class AzquoCellResolver {
                             functionDoubleParameter = heading.getDoubleParameter();
                         }
                         valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
+                        description = heading.getDescription().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP
+                        if (function== DataRegionHeading.FUNCTION.LASTLOOKUP){
+                            redundantHeading = heading;
+                        }
                         if (debugInfo != null) {
                             debugInfo.append("\nFunction\n\n");
                             debugInfo.append("\t" + function + "\n"); // was nameFunctionHeading.getFunction(), think that was wrong
                         }
                         break; // can't combine functions I don't think
                     }
+                }
+                if (redundantHeading!=null){
+                    headingsForThisCell.remove(redundantHeading);//not needed any more - we know the details (above)
                 }
                 if (!DataRegionHeadingService.headingsHaveAttributes(headingsForThisCell)) { // we go the value route (as it was before allowing attributes), need the headings as names,
                     ValuesHook valuesHook = new ValuesHook(); // todo, can we use this only when necessary?
@@ -368,6 +377,28 @@ public class AzquoCellResolver {
                             }
                         }
                         doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, functionHeading, nameComboValueCache, debugInfo);
+                        if (function == DataRegionHeading.FUNCTION.LASTLOOKUP && valueFunctionSet != null && description!=null) { // last lookup: we're going to override the double value just set
+                            // now, find all the parents and cross them with the valueParentCountHeading set
+                            String cutoffString = null;
+                            String bestFit = "";
+                            for (Value v : valuesHook.values) {
+                                 for (Name n : v.getNames()) {
+                                    if (valueFunctionSet.contains(n)){
+                                        String toTry = n.getDefaultDisplayName();
+                                        if (toTry.compareTo(bestFit)>0 && (toTry.compareTo(description)<=0)){
+                                            bestFit = toTry;
+                                            stringValue = v.getText();
+                                        }
+                                    }
+                                 }
+                            }
+                            try{
+                                doubleValue = Double.parseDouble(stringValue);
+                            }catch(Exception e){
+                                //no double value
+                            }
+                            // now find the overlap between the value parents and the set in the heading
+                        }
                         if (function == DataRegionHeading.FUNCTION.VALUEPARENTCOUNT && valueFunctionSet != null) { // then value parent count, we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             Set<Name> allValueParents = HashObjSets.newMutableSet();
