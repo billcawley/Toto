@@ -337,7 +337,9 @@ public class AzquoCellResolver {
                             functionDoubleParameter = heading.getDoubleParameter();
                         }
                         valueFunctionSet = heading.getValueFunctionSet(); // value function e.g. value parent count can allow a name set to be defined
-                        description = heading.getDescription().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP
+                        if (heading.getDescription()!=null){
+                            description = heading.getDescription().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP
+                        }
                         if (function== DataRegionHeading.FUNCTION.LASTLOOKUP){
                             redundantHeading = heading;
                         }
