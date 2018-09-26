@@ -125,7 +125,7 @@ public final class AzquoMemoryDB {
 
     private static AtomicInteger newDatabaseCount = new AtomicInteger(0);
 
-    private boolean checkValueLengths;
+    private volatile boolean checkValueLengths;
     /*
 
     I need to consider this https://www.securecoding.cert.org/confluence/display/java/TSM03-J.+Do+not+publish+partially+initialized+objects

@@ -60,28 +60,16 @@
             for (var v = 0; v < auditForDisplay.valuesWithIdsAndNames.length; v++){
                 var valuesEtc = auditForDisplay.valuesWithIdsAndNames[v];
                 html += "<tr>";
-                var hasHistory = false;
                 var count = 0;
                 var valsList = String(valuesEtc.second);
                 var values = valsList.split(",");
                 for (var v2=0; v2 < values.length;v2++){
-                    if (values[v2]=="Value History : "){
-                        count = 0;
-                        hasHistory = true;
-                    }
                     if (count==0){
                         html+="<td><b>" + values[v2] + "</b></td>";
                     }else{
                         html+="<td>" + values[v2] + "</td>"
                     }
                     count++;
-                    if (values[v2]=="Value History : "){
-                        count = 0;
-
-                    }
-                    if (hasHistory && count==2){
-                        count = 0;
-                    }
                 }
                 html+="</tr>"
             }

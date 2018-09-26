@@ -66,11 +66,11 @@ public class AzquoCell {
         return columnHeadings;
     }
 
-    List<DataRegionHeading> getContexts() {
+    public List<DataRegionHeading> getContexts() {
         return contexts;
     }
 
-    String getStringValue() {
+    public String getStringValue() {
         return stringValue;
     }
 

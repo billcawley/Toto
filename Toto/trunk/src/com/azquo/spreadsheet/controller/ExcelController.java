@@ -22,7 +22,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.zeroturnaround.zip.ZipUtil;
@@ -113,9 +112,11 @@ public class ExcelController {
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "reportname", required = false) String reportName
+            , @RequestParam(value = "sheetname", required = false) String sheetName
             , @RequestParam(value = "logon", required = false) String logon
             , @RequestParam(value = "password", required = false) String password
             , @RequestParam(value = "region", required = false) String region
+            , @RequestParam(value = "options", required = false) String options
             , @RequestParam(value = "regionrow", required = false) String regionrow
             , @RequestParam(value = "regioncol", required = false) String regioncol
             , @RequestParam(value = "choice", required = false) String choice
@@ -190,14 +191,18 @@ public class ExcelController {
             }
 
             if (op.equals("audit")) {
-                UserRegionOptions userRegionOptions = ExcelService.getUserRegionOptions(loggedInUser, "", loggedInUser.getOnlineReport().getId(), region);
+//                UserRegionOptions userRegionOptions = ExcelService.getUserRegionOptions(loggedInUser, "", loggedInUser.getOnlineReport().getId(), region); // what it was, no good!
+                UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), 0, region, options); // fudging report id
+
                 jacksonMapper.registerModule(new JavaTimeModule());
                 jacksonMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
                 //jacksonMapper.registerModule(new JavaTimeModule());
-                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, loggedInUser.getOnlineReport().getId(), reportName,
+                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, loggedInUser.getOnlineReport().getId(), sheetName,
                         region, userRegionOptions, Integer.parseInt(regionrow), Integer.parseInt(regioncol), 1000);
                 if (provenanceDetailsForDisplay.getAuditForDisplayList() != null && !provenanceDetailsForDisplay.getAuditForDisplayList().isEmpty()) {
-                    return jacksonMapper.writeValueAsString(provenanceDetailsForDisplay);
+                    String toReturn = jacksonMapper.writeValueAsString(provenanceDetailsForDisplay);
+                    System.out.println(toReturn);
+                    return toReturn;
                 }
                 return (jsonError("no details"));
                 //buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
@@ -628,9 +633,11 @@ public class ExcelController {
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "reportname", required = false) String reportName
+            , @RequestParam(value = "sheetname", required = false) String sheetName
             , @RequestParam(value = "logon", required = false) String logon
             , @RequestParam(value = "password", required = false) String password
             , @RequestParam(value = "region", required = false) String region
+            , @RequestParam(value = "options", required = false) String options
             , @RequestParam(value = "regionrow", required = false) String regionrow
             , @RequestParam(value = "regioncol", required = false) String regioncol
             , @RequestParam(value = "choice", required = false) String choice
@@ -638,7 +645,7 @@ public class ExcelController {
             , @RequestParam(value = "json", required = false) String json
 
     ) {
-        return handleRequest(request, response, sessionId, op, database, reportName, logon, password, region, regionrow, regioncol, choice, chosen, json, "true");
+        return handleRequest(request, response, sessionId, op, database, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, json, "true");
     }
 
 }

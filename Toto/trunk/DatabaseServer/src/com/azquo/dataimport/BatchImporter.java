@@ -82,13 +82,13 @@ public class BatchImporter implements Callable<Void> {
                         }
                     }
                     // default values might now be used by composite
-                    resolveDefaultValues(lineToLoad, importLine);
+                    resolveDefaultValues(lineToLoad);
                     // composite might do things that affect only and existing hence do it before
                     resolveCompositeValues(lineToLoad, importLine);
                      String rejectionReason =  checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                     if (rejectionReason==null) {
                         try {
-                            resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad,importLine);
+                            resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
                             // valueTracker simply the number of values imported
                             valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, importLine, linesRejected));
                         } catch (Exception e) {
@@ -117,7 +117,7 @@ public class BatchImporter implements Callable<Void> {
     }
 
     // set defaults, factored now as new logic means composites might use defaults
-    private static void resolveDefaultValues(List<ImportCellWithHeading> lineToLoad, int importLine) {
+    private static void resolveDefaultValues(List<ImportCellWithHeading> lineToLoad) {
         // set defaults before dealing with local parent/child
         for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
             if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && importCellWithHeading.getLineValue().trim().length() == 0) {
@@ -337,19 +337,17 @@ public class BatchImporter implements Callable<Void> {
     }
 
 
-    private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,List<ImportCellWithHeading> cells, int importLine) throws Exception {
+    private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,List<ImportCellWithHeading> cells) throws Exception {
              for (ImportCellWithHeading cell : cells) {
                  if (cell.getImmutableImportHeading().dictionaryMap != null) {
                      String value = cell.getLineValue();
                      if (value!=null && value.length() > 0){
                          boolean hasResult = false;
-                         Iterator it = cell.getImmutableImportHeading().dictionaryMap.keySet().iterator();
-                         while (it.hasNext()){
+                         for (Name category : cell.getImmutableImportHeading().dictionaryMap.keySet()) {
                              boolean found = true;
-                             Name category = (Name)it.next();
                              List<DictionaryTerm> dictionaryTerms = cell.getImmutableImportHeading().dictionaryMap.get(category);
-                             for (DictionaryTerm dictionaryTerm:dictionaryTerms) {
-                                 found= false; //the phrase now has to pass every one of the tests.  If it does so then the category is found.
+                             for (DictionaryTerm dictionaryTerm : dictionaryTerms) {
+                                 found = false; //the phrase now has to pass every one of the tests.  If it does so then the category is found.
                                  for (String item : dictionaryTerm.items) {
                                      if (dictionaryTerm.exclude) {
                                          if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
@@ -357,9 +355,9 @@ public class BatchImporter implements Callable<Void> {
                                              break;
                                          }
                                      } else {
-                                        if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
+                                         if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
                                              found = true;
-                                        }
+                                         }
                                      }
 
                                  }
@@ -693,18 +691,5 @@ public class BatchImporter implements Callable<Void> {
         return languages;
 
 
-    }
-
-    private static boolean contains(String target, String element){
-        if (element.startsWith("'")){
-            if (element.endsWith("'")){
-                return target.equals(element.substring(1,element.length()-1));
-            }
-            return target.startsWith(element.substring(1));
-        }
-        if (element.endsWith("'")){
-            return target.endsWith(element.substring(0,element.length()-1));
-        }
-        return target.contains(element);
     }
 }

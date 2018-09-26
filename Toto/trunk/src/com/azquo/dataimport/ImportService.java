@@ -160,7 +160,9 @@ public final class ImportService {
                 //todo - work out what users DEVELOPERs can upload
                 for (User user : userList) {
                     if (user.getId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
-                        if (loggedInUser.getUser().getBusinessId() != user.getBusinessId() || (loggedInUser.getUser().getStatus().equals("MASTER") && !user.getCreatedBy().equals(loggedInUser.getUser().getEmail()))) {
+                        if (loggedInUser.getUser().getBusinessId() != user.getBusinessId()
+                                || (loggedInUser.getUser().getStatus().equals("MASTER") && !user.getCreatedBy().equals(loggedInUser.getUser().getEmail()))
+                                || user.getStatus().equals(User.STATUS_ADMINISTRATOR)) { // don't zap admins
                             notAllowed.add(user.getEmail());
                         } else {
                             oldPasswordMap.put(user.getEmail(), user.getPassword());
@@ -197,6 +199,9 @@ public final class ImportService {
                         } else if (oldPasswordMap.get(email) != null) {
                             password = oldPasswordMap.get(email);
                             salt = oldSaltMap.get(email);
+                        }
+                        if (password.isEmpty()){
+                            throw new Exception("Blank password for " + email);
                         }
                         Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 5).getStringValue(), loggedInUser.getUser().getBusinessId());
                         OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 6).getStringValue(), loggedInUser.getUser().getBusinessId());

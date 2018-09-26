@@ -25,7 +25,7 @@ public class ProvenanceForDisplay implements Serializable {
     private String context;
     private final LocalDateTime date;
      // now what can be attached to each provenance in this context?
-    private List<TypedPair<Integer, List<String>>> valuesWithIdsAndNames;
+    private List<ValueDetailsForProvenance> valueDetailsForProvenances;
     private List<String> names;
 
     public ProvenanceForDisplay(boolean inSpreadsheet, String user, String method, String name, String context, LocalDateTime date ) {
@@ -36,7 +36,7 @@ public class ProvenanceForDisplay implements Serializable {
         this.context = context;
         this.date = date;
         names = null;
-        valuesWithIdsAndNames = null;
+        valueDetailsForProvenances = null;
     }
 
     public void setInSpreadsheet(boolean inSpreadsheet) {
@@ -85,12 +85,12 @@ public class ProvenanceForDisplay implements Serializable {
         this.names = names;
     }
 
-    public List<TypedPair<Integer, List<String>>> getValuesWithIdsAndNames() {
-        return valuesWithIdsAndNames;
+    public List<ValueDetailsForProvenance> getValueDetailsForProvenances() {
+        return valueDetailsForProvenances;
     }
 
-    public void setValuesWithIdsAndNames(List<TypedPair<Integer, List<String>>> valuesWithIdsAndNames) {
-        this.valuesWithIdsAndNames = valuesWithIdsAndNames;
+    public void setValueDetailsForProvenances(List<ValueDetailsForProvenance> valueDetailsForProvenances) {
+        this.valueDetailsForProvenances = valueDetailsForProvenances;
     }
 
     private final static DateTimeFormatter df = DateTimeFormatter.ofPattern("dd/MM/yy HH:mm");
