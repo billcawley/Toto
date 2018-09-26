@@ -115,8 +115,8 @@ class ValuesImportConfigProcessor {
 
     // typically groovy scripts write out to a different file, helps a lot for debugging! Most of the time with no groovy specified will just not modify anything
     private static void checkGroovy(ValuesImportConfig valuesImportConfig) throws Exception {
-        if (valuesImportConfig.getFileNameParameters() != null && valuesImportConfig.getFileNameParameters().get(PREPROCESSOR) != null
-                || valuesImportConfig.getFileNameParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) != null) {
+        if (valuesImportConfig.getFileNameParameters() != null && (valuesImportConfig.getFileNameParameters().get(PREPROCESSOR) != null
+                || valuesImportConfig.getFileNameParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) != null)) {
             try {
                 File file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getFileNameParameters().get(PREPROCESSOR));
                 if (!file.exists()) {
