@@ -643,7 +643,7 @@ But can use a library?
                     boolean inParents = false;
                     if (n.getParents()!=null){
                         for (Name parent:n.getParents()) {
-                            if (parent.getDefaultDisplayName().equals(attValue)) {
+                            if (parent.getDefaultDisplayName()!=null && parent.getDefaultDisplayName().equals(attValue)) {
                                 inParents = true;
                                 break;
                             }
