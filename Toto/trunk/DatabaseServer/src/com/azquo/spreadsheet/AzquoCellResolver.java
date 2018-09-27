@@ -310,7 +310,7 @@ public class AzquoCellResolver {
                 }
             }
             for (DataRegionHeading heading : headingsForThisCell) {
-                if (heading.getName() == null && heading.getAttribute() == null && heading.getFunction()!= DataRegionHeading.FUNCTION.LASTLOOKUP) { // a redundant check? todo : confirm
+                if (heading.getName() == null && heading.getAttribute() == null && heading.getFunction()!= DataRegionHeading.FUNCTION.BESTMATCH) { // a redundant check? todo : confirm
                     checked = false;
                 }
                 if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values
@@ -340,7 +340,7 @@ public class AzquoCellResolver {
                         if (heading.getDescription()!=null){
                             description = heading.getDescription().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP
                         }
-                        if (function== DataRegionHeading.FUNCTION.LASTLOOKUP){
+                        if (function== DataRegionHeading.FUNCTION.BESTMATCH){
                             redundantHeading = heading;
                         }
                         if (debugInfo != null) {
@@ -379,7 +379,7 @@ public class AzquoCellResolver {
                             }
                         }
                         doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, functionHeading, nameComboValueCache, debugInfo);
-                        if (function == DataRegionHeading.FUNCTION.LASTLOOKUP && valueFunctionSet != null && description!=null) { // last lookup: we're going to override the double value just set
+                        if (function == DataRegionHeading.FUNCTION.BESTMATCH && valueFunctionSet != null && description!=null) { // last lookup: we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             String cutoffString = null;
                             String bestFit = "";
@@ -634,12 +634,22 @@ But can use a library?
                         }
                     }
                 }
+                String strippedAttribute = attribute.replace("`", "").toUpperCase().replace(" EXCLUSIVE","");
                 if (attValue == null) {
-                    attValue = n.getAttribute(attribute.replace("`", "").toUpperCase().replace(" EXCLUSIVE",""));
+                    attValue = n.getAttribute(strippedAttribute);
                 }
                 if (attValue != null) {
                     count++;
-                    if (!locked.isTrue && n.getAttribute(attribute, false, new HashSet<>()) == null) { // the attribute is not against the name itself (it's from the parent or structure)
+                    boolean inParents = false;
+                    if (n.getParents()!=null){
+                        for (Name parent:n.getParents()) {
+                            if (parent.getDefaultDisplayName().equals(attValue)) {
+                                inParents = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!inParents && !locked.isTrue && n.getAttribute(strippedAttribute, false, new HashSet<>()) == null) { // the attribute is not against the name itself (it's from the parent or structure)
                         locked.isTrue = true;
                     }
                     // basic sum across the names/attributes (not going into children)
