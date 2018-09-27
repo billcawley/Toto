@@ -71,11 +71,8 @@ class AzquoCellService {
                     return 0;
                 }
                 for (int index = 0; index < sortCount; index++) {
-                    if (sortRowsUp){
-                        //put blanks to the end
-                        if (o1.getValue().get(index).getSecond() == null) return 1;
-                        if (o2.getValue().get(index).getSecond() == null) return -1;
-                    }
+                    if (o1.getValue().get(index).getSecond() == null) return 1;
+                    if (o2.getValue().get(index).getSecond() == null) return -1;
                     if (doubleSort.get(index)) {
                         result = o1.getValue().get(index).getFirst().compareTo(o2.getValue().get(index).getFirst());
                     } else {
