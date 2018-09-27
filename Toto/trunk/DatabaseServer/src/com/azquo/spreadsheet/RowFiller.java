@@ -9,18 +9,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Extracted from DSSpreadsheetService by edward on 28/10/16.
- *
- Fields
-
- The connection to the relevant DB
- Row and column headings (very possibly more than one heading for a given row or column if permutation is involved) and context names list
- Languages is attribute names but I think I'll call it languages as that's what it would practically be - used when looking up names for formulae
-
- So,it's going to return relevant data to the region. The values actually shown, (typed?) objects for ZKspreadsheet, locked or not, the headings are useful (though one could perhaps derive them)
- it seems that there should be a cell map or object and that's what this should return rather than having a bunch of multidimensional arrays
- ok I'm going for that object type (AzquoCell), outer list rows inner items on those rows, hope that's standard. Outside this function the sorting etc will happen.
-
- Callable interface sorts the memory "happens before" using future gets which runnable did not guarantee I don't think (though it did work).
+ * <p>
+ * Fields
+ * <p>
+ * The connection to the relevant DB
+ * Row and column headings (very possibly more than one heading for a given row or column if permutation is involved) and context names list
+ * Languages is attribute names but I think I'll call it languages as that's what it would practically be - used when looking up names for formulae
+ * <p>
+ * So,it's going to return relevant data to the region. The values actually shown, (typed?) objects for ZKspreadsheet, locked or not, the headings are useful (though one could perhaps derive them)
+ * it seems that there should be a cell map or object and that's what this should return rather than having a bunch of multidimensional arrays
+ * ok I'm going for that object type (AzquoCell), outer list rows inner items on those rows, hope that's standard. Outside this function the sorting etc will happen.
+ * <p>
+ * Callable interface sorts the memory "happens before" using future gets which runnable did not guarantee I don't think (though it did work).
  */
 class RowFiller implements Callable<List<AzquoCell>> {
     private final int row;
@@ -51,19 +51,24 @@ class RowFiller implements Callable<List<AzquoCell>> {
 
     @Override
     public List<AzquoCell> call() throws Exception {
-        //System.out.println("Filling " + startRow + " to " + endRow);
-        List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
-        List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
-        int colNo = 0;
-        for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
-            // values I need to build the CellUI
-            returnRow.add(AzquoCellResolver.getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextHeadings, row, colNo, languages, valueId, null));
-            // for some reason this was before, it buggered up the ability to find the right column!
-            colNo++;
-            if (!quiet && counter.incrementAndGet() % progressBarStep == 0) {
-                connection.addToUserLog("=", false);
+        try {
+            //System.out.println("Filling " + startRow + " to " + endRow);
+            List<DataRegionHeading> rowHeadings = headingsForEachRow.get(row);
+            List<AzquoCell> returnRow = new ArrayList<>(headingsForEachColumn.size());
+            int colNo = 0;
+            for (List<DataRegionHeading> columnHeadings : headingsForEachColumn) {
+                // values I need to build the CellUI
+                returnRow.add(AzquoCellResolver.getAzquoCellForHeadings(connection, rowHeadings, columnHeadings, contextHeadings, row, colNo, languages, valueId, null));
+                // for some reason this was before, it buggered up the ability to find the right column!
+                colNo++;
+                if (!quiet && counter.incrementAndGet() % progressBarStep == 0) {
+                    connection.addToUserLog("=", false);
+                }
             }
+            return returnRow;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
         }
-        return returnRow;
     }
 }
