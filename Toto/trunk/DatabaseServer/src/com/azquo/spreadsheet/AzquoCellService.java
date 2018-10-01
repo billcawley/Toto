@@ -71,8 +71,10 @@ class AzquoCellService {
                     return 0;
                 }
                 for (int index = 0; index < sortCount; index++) {
-                    if (o1.getValue().get(index).getSecond() == null) return 1;
-                    if (o2.getValue().get(index).getSecond() == null) return -1;
+                    String v1 = o1.getValue().get(index).getSecond();
+                    String v2 = o2.getValue().get(index).getSecond();
+                    if (v2 == null && v1 != null) return -1;
+                    if (v1 == null && v2 != null) return 1;
                     if (doubleSort.get(index)) {
                         result = o1.getValue().get(index).getFirst().compareTo(o2.getValue().get(index).getFirst());
                     } else {
@@ -86,7 +88,7 @@ class AzquoCellService {
                 return sortRowsUp ? result : -result;
             });
         }catch (Exception e){
-            //not sure what to do if there are null values in the list that needs to be sorted
+             //not sure what to do if there are null values in the list that needs to be sorted
         }
         for (Map.Entry<Integer, List<TypedPair<Double, String>>> entry : list) {
             sortedValues.add(entry.getKey());
