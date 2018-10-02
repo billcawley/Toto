@@ -122,6 +122,9 @@ class ValuesImportConfigProcessor {
                 if (!file.exists()) {
                     file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getFileNameParameters().get(EdBrokingExtension.IMPORT_TEMPLATE));
                 }
+                if (!file.exists()) {
+                    file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getFileNameParameters().get(EdBrokingExtension.IMPORT_TEMPLATE + ".groovy"));
+                }
                 if (file.exists()) {
                     System.out.println("Groovy found! Running  . . . ");
                     Object[] groovyParams = new Object[3];
