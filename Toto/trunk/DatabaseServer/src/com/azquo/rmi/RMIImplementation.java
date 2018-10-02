@@ -530,4 +530,8 @@ class RMIImplementation implements RMIInterface {
         }
     }
 
+    @Override
+    public String getMostRecentProvenance(String persistenceName) {
+        return AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null).getMostRecentProvenance().getProvenanceForDisplay().toString();
+    }
 }

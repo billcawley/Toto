@@ -90,6 +90,13 @@ public class ManageDatabasesController {
             return database.getUrlEncodedName();
         }
 
+        public String getLastProvenance() {
+            return database.getLastProvenance() != null ? database.getLastProvenance() : "";
+        }
+
+        public boolean getAutobackup() {
+            return database.getAutoBackup();
+        }
 
         public String getCreated() {
             return format.format(database.getCreated());

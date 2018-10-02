@@ -159,7 +159,7 @@ public class ProvenanceService {
 
     static private String getProvenanceHeadlineForCell(AzquoCell azquoCell){
         StringBuilder toReturn = new StringBuilder();
-        toReturn.append(azquoCell.getStringValue());
+        toReturn.append(checkNumberFormat(azquoCell.getStringValue()));
         for (DataRegionHeading context : azquoCell.getContexts()){
             toReturn.append(", ").append(context.getName() != null ? context.getName().getDefaultDisplayName() : context.getDescription());
         }
@@ -357,11 +357,23 @@ public class ProvenanceService {
             final List<ValueHistory> historyForValue = ValueDAO.getHistoryForValue(azquoMemoryDBConnection.getAzquoMemoryDB(), v);
             List<TypedPair<String, String>> historicValuesAndProvenance = new ArrayList<>();
             for (ValueHistory valueHistory : historyForValue) {
-                historicValuesAndProvenance.add(new TypedPair<>(valueHistory.getText(), valueHistory.getProvenance().getProvenanceForDisplay().toString()));
+                historicValuesAndProvenance.add(new TypedPair<>(checkNumberFormat(valueHistory.getText()), valueHistory.getProvenance().getProvenanceForDisplay().toString()));
             }
-            toReturn.add(new ValueDetailsForProvenance(v.getId(), v.getText(), nameStrings, historicValuesAndProvenance));
+            toReturn.add(new ValueDetailsForProvenance(v.getId(), checkNumberFormat(v.getText()), nameStrings, historicValuesAndProvenance));
         }
         return toReturn;
+    }
+
+    private static String checkNumberFormat(String text){
+        try{
+            double asNumber = Double.parseDouble(text);
+            NumberFormat instance = NumberFormat.getInstance();
+            if (text.length() >= 10) {
+                instance.setMaximumFractionDigits(2);
+            }
+            text = instance.format(asNumber);
+        } catch (Exception ignored){}
+        return text;
     }
 
 

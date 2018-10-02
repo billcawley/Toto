@@ -32,6 +32,8 @@ public final class DatabaseDAO {
     private static final String VALUECOUNT = "value_count";
     private static final String DATABASESERVERID = "database_server_id";
     private static final String CREATED = "created";
+    private static final String LASTPROVENANCE = "last_provenance";
+    private static final String AUTOBACKUP = "auto_backup";
 
     public static Map<String, Object> getColumnNameValueMap(Database database) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -44,8 +46,9 @@ public final class DatabaseDAO {
         toReturn.put(NAMECOUNT, database.getNameCount());
         toReturn.put(VALUECOUNT, database.getValueCount());
         toReturn.put(DATABASESERVERID, database.getDatabaseServerId());
-        toReturn.put(DATABASESERVERID, database.getDatabaseServerId());
         toReturn.put(CREATED, DateUtils.getDateFromLocalDateTime(database.getCreated()));
+        toReturn.put(LASTPROVENANCE, database.getLastProvenance());
+        toReturn.put(AUTOBACKUP, database.getAutoBackup());
         return toReturn;
     }
 
@@ -62,7 +65,8 @@ public final class DatabaseDAO {
                         , rs.getInt(NAMECOUNT)
                         , rs.getInt(VALUECOUNT)
                         , rs.getInt(DATABASESERVERID),
-                        DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(CREATED)));
+                        DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(CREATED)),
+                        rs.getString(LASTPROVENANCE), rs.getBoolean(AUTOBACKUP));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -82,6 +86,11 @@ public final class DatabaseDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(USERID, userId);
         return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` = :" + USERID + " order by " + NAME, DATABASE, databaseRowMapper, namedParams);
+    }
+
+    public static List<Database> findForBackup() {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + AUTOBACKUP + "` = true", DATABASE, databaseRowMapper, namedParams);
     }
 
     public static Database findForNameAndBusinessId(final String name, final int businessID) {

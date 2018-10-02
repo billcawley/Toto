@@ -1,5 +1,6 @@
 package com.azquo.memorydb.core;
 
+import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.NameForBackup;
 import com.azquo.memorydb.ProvenanceForBackup;
 import com.azquo.memorydb.ValueForBackup;
@@ -104,8 +105,10 @@ public class BackupTransport {
         // will NPE if hit after. Fair enough I think.
         namesFromBackup = null;
         namesChildrenCacheFromBackup = null;
-        // bit of a hack, let's persist here
-        azquoMemoryDB.persistToDataStore();
+        // bit of a hack, let's bump the next id and persist here
+        azquoMemoryDB.getNextId(); // bump it up one, the logic later is get and increment;
+        // persist in background
+        new Thread(azquoMemoryDB::persistToDataStore).start();
     }
 
     public synchronized void setBatchOfValuesFromBackup(List<ValueForBackup> backupBatch) throws Exception {

@@ -5,7 +5,6 @@ import com.azquo.admin.StandardEntity;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -25,6 +24,8 @@ public final class Database extends StandardEntity {
     private int valueCount;
     private int databaseServerId;
     private final LocalDateTime created;
+    private String lastProvenance;
+    private boolean autoBackup;
 
 
     public Database(int id
@@ -36,7 +37,9 @@ public final class Database extends StandardEntity {
             , int nameCount
             , int valueCount
             , int databaseServerId
-    , LocalDateTime created) {
+            , LocalDateTime created, String lastProvenance, boolean autoBackup) {
+        this.lastProvenance = lastProvenance;
+        this.autoBackup = autoBackup;
         this.id = id;
         this.businessId = businessId;
         this.userId = userId;
@@ -122,6 +125,22 @@ public final class Database extends StandardEntity {
 
     public LocalDateTime getCreated() {
         return created;
+    }
+
+    public String getLastProvenance() {
+        return lastProvenance;
+    }
+
+    public void setLastProvenance(String lastProvenance) {
+        this.lastProvenance = lastProvenance;
+    }
+
+    public boolean getAutoBackup() {
+        return autoBackup;
+    }
+
+    public void setAutoBackup(boolean autoBackup) {
+        this.autoBackup = autoBackup;
     }
 
     @Override

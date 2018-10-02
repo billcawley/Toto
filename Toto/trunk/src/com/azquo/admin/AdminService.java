@@ -137,7 +137,7 @@ this may now not work at all, perhaps delete?
                 throw new Exception("That business does not exist");
             }
             final String persistenceName = getSQLDatabaseName(databaseServer, b, databaseName);
-            final Database database = new Database(0, b.getId(), loggedInUser.getUser().getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId(), null);
+            final Database database = new Database(0, b.getId(), loggedInUser.getUser().getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId(), null, null, false);
             DatabaseDAO.store(database);
             // will be over to the DB side
             RMIClient.getServerInterface(databaseServer.getIp()).createDatabase(database.getPersistenceName());
@@ -164,7 +164,7 @@ this may now not work at all, perhaps delete?
             throw new Exception("That business does not exist");
         }
         final String persistenceName = getSQLDatabaseName(DatabaseServerDAO.findById(source.getDatabaseServerId()), b, newName);
-        final Database database = new Database(0, source.getBusinessId(), loggedInUser.getUser().getId(), newName, persistenceName, source.getDatabaseType(), source.getNameCount(), source.getValueCount(), source.getDatabaseServerId(), null);
+        final Database database = new Database(0, source.getBusinessId(), loggedInUser.getUser().getId(), newName, persistenceName, source.getDatabaseType(), source.getNameCount(), source.getValueCount(), source.getDatabaseServerId(), null, null, false);
         DatabaseDAO.store(database);
         DatabaseServer server = DatabaseServerDAO.findById(database.getDatabaseServerId());
         RMIClient.getServerInterface(server.getIp()).copyDatabase(source.getPersistenceName(), database.getPersistenceName());
@@ -174,7 +174,7 @@ this may now not work at all, perhaps delete?
     public static Database copyDatabase(Database source, User newUser) throws Exception {
         Business b = BusinessDAO.findById(newUser.getBusinessId());
         final String persistenceName = getSQLDatabaseName(DatabaseServerDAO.findById(source.getDatabaseServerId()), b, source.getName()); // we want the persistence name based off old db name and server but with the new business name
-        final Database database = new Database(0, newUser.getBusinessId(), newUser.getId(), source.getName(), persistenceName, source.getDatabaseType(), source.getNameCount(), source.getValueCount(), source.getDatabaseServerId(), null);
+        final Database database = new Database(0, newUser.getBusinessId(), newUser.getId(), source.getName(), persistenceName, source.getDatabaseType(), source.getNameCount(), source.getValueCount(), source.getDatabaseServerId(), null, null, false);
         DatabaseDAO.store(database);
         DatabaseServer server = DatabaseServerDAO.findById(database.getDatabaseServerId());
         RMIClient.getServerInterface(server.getIp()).copyDatabase(source.getPersistenceName(), database.getPersistenceName());
@@ -468,9 +468,11 @@ this may now not work at all, perhaps delete?
         }
     }
 
+    //now also does the last audit
     public static void updateNameAndValueCounts(LoggedInUser loggedInUser, Database database) throws Exception {
         database.setNameCount(AdminService.getNameCount(loggedInUser, database));
         database.setValueCount(AdminService.getValueCount(loggedInUser, database));
+        database.setLastProvenance(getMostRecentProvenance(loggedInUser, database));
         DatabaseDAO.store(database);
     }
 
@@ -549,6 +551,14 @@ this may now not work at all, perhaps delete?
             return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getValueCount(database.getPersistenceName());
         }
         return 0;
+    }
+
+    public static String getMostRecentProvenance(LoggedInUser loggedInUser, Database database) throws Exception {
+        if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) {
+            return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getMostRecentProvenance(database.getPersistenceName());
+        }
+        return null;
     }
 
     public static void setBanner(ModelMap model, LoggedInUser loggedInUser){

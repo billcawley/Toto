@@ -141,5 +141,10 @@ setInterval(function(){ updateStatus(); }, 1000);
     
     <div id="serverStatus"></div>
 </div>
-
+<style>
+    /* remove dash borders of the auto filter */
+    [class*="af"]:after {
+        border: initial !important;
+    }
+</style>
 <%@ include file="../includes/public_footer.jsp" %>

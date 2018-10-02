@@ -341,10 +341,11 @@ public final class ImportService {
         }
         if (reportName != null) {
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
-                OnlineReport existing = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
+                // EFC commenting 28/09/18, more annoying than helpful, especially with the new backup functionality
+/*                OnlineReport existing = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                 if (existing != null && existing.getUserId() != loggedInUser.getUser().getId() && !forceReportUpload) {
                     return UPLOADEDBYANOTHERUSER;
-                }
+                }*/
                 String identityCell = null;
                 if (isImportTemplate) {
                     //identity cell in Excel format

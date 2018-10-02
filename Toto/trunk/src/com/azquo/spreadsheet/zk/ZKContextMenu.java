@@ -14,9 +14,7 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Sessions;
-import org.zkoss.zss.api.Exporter;
-import org.zkoss.zss.api.Exporters;
-import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.*;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.SCell;
@@ -29,7 +27,6 @@ import org.zkoss.zul.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -302,7 +299,7 @@ class ZKContextMenu {
             if (provenanceForDisplay.getValueDetailsForProvenances() != null && !provenanceForDisplay.getValueDetailsForProvenances().isEmpty()) {
                 for (ValueDetailsForProvenance valueDetailsForProvenance : provenanceForDisplay.getValueDetailsForProvenances()) {
                     if (provenanceForDisplay.isInSpreadsheet() && valueDetailsForProvenance.getId() > 0) {
-                        final Toolbarbutton provButton = new Toolbarbutton("    " + valueDetailsForProvenance.getValueText());
+                        final Toolbarbutton provButton = new Toolbarbutton("    " + valueDetailsForProvenance.getValueTextForDisplay());
                         provButton.setStyle("color:#000000; font-size:12pt");
                         // are we going to switch to another sheet? need to pas the book through
                         provButton.addEventListener("onClick",
@@ -376,7 +373,7 @@ class ZKContextMenu {
                                 });
                         provenancePopup.appendChild(provButton);
                     } else { // value without id? Not sure how that happens . . .
-                        provenancePopup.appendChild(geLabelForProvenanceMenu("000000", "    " + valueDetailsForProvenance.getValueText()));
+                        provenancePopup.appendChild(geLabelForProvenanceMenu("000000", "    " + valueDetailsForProvenance.getValueTextForDisplay()));
 
                     }
                     StringBuilder names = new StringBuilder();
@@ -424,9 +421,17 @@ class ZKContextMenu {
                             }
                             if (sName.getName().equalsIgnoreCase("Data")) {
                                 int yOffset = 0;
+                                int xOffset = 0;
+                                String[] splitHeadline = provenanceDetailsForDisplay.getHeadline().split(",");
+                                for (String item : splitHeadline){
+                                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(item);
+                                    xOffset++;
+                                }
+                                yOffset++;
                                 for (ProvenanceForDisplay provenanceForDisplay : provenanceDetailsForDisplay.getAuditForDisplayList()) {
-                                    int xOffset = 0;
+                                    xOffset = 0;
                                     sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(provenanceForDisplay.toString());
+                                    CellOperationUtil.applyFontColor(Ranges.range(sheet, sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset), "#0000FF");
                                     yOffset++;
                                     if (provenanceForDisplay.getNames() != null && !provenanceForDisplay.getNames().isEmpty()) {
                                         for (String name : provenanceForDisplay.getNames()) {
@@ -437,21 +442,27 @@ class ZKContextMenu {
                                     }
                                     if (provenanceForDisplay.getValueDetailsForProvenances() != null && !provenanceForDisplay.getValueDetailsForProvenances().isEmpty()) {
                                         for (ValueDetailsForProvenance valueDetailsForProvenance : provenanceForDisplay.getValueDetailsForProvenances()) {
-                                            if (!valueDetailsForProvenance.getHistoricValuesAndProvenance().isEmpty()) {
-                                                System.out.println("number of histories : " + valueDetailsForProvenance.getHistoricValuesAndProvenance().size());
-                                            }
                                             xOffset = 0;
                                             xOffset++;
-                                            if (NumberUtils.isNumber(valueDetailsForProvenance.getValueText())) {
-                                                sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setNumberValue(Double.parseDouble(valueDetailsForProvenance.getValueText()));
+                                            if (NumberUtils.isNumber(valueDetailsForProvenance.getValueTextForDisplay())) {
+                                                sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setNumberValue(Double.parseDouble(valueDetailsForProvenance.getValueTextForDisplay()));
                                             } else {
-                                                sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(valueDetailsForProvenance.getValueText());
+                                                sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(valueDetailsForProvenance.getValueTextForDisplay());
                                             }
                                             for (String name : valueDetailsForProvenance.getNames()) {
                                                 xOffset++;
                                                 sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(name);
                                             }
                                             yOffset++;
+                                            if (valueDetailsForProvenance.getHistoricValuesAndProvenance() != null){
+                                                xOffset = 2;
+                                                for(TypedPair<String, String> historicValue : valueDetailsForProvenance.getHistoricValuesAndProvenance()){
+                                                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset).setStringValue(historicValue.getFirst());
+                                                    CellOperationUtil.applyFontColor(Ranges.range(sheet, sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset), "#FF0000");
+                                                    sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow() + yOffset, sName.getRefersToCellRegion().getColumn() + xOffset + 1).setStringValue(historicValue.getSecond());
+                                                    yOffset++;
+                                                }
+                                            }
                                         }
                                     }
                                 }

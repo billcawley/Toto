@@ -27,7 +27,7 @@ public class ValueDetailsForProvenance implements Serializable {
         return id;
     }
 
-    public String getValueText() {
+    public String getValueTextForDisplay() {
         return valueText;
     }
 

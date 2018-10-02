@@ -248,8 +248,6 @@ public class DSSpreadsheetService {
         azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId());
     }
 
-    private static NumberFormat nf = NumberFormat.getInstance();
-
     // it's easiest just to send the CellsAndHeadingsForDisplay back to the back end and look for relevant changed cells
     // could I derive context from cells and headings for display? Also region. Worth considering . . .
     public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {

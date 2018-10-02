@@ -370,7 +370,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 String region = name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length());
                 int size = name.getRefersToCellRegion().getRowCount();
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheet.getSheetName(), region); // maybe jam this object against the book? Otherwise multiple books could cause problems
-                if (cellsAndHeadingsForDisplay != null){ // apparently it can be??
+                if (cellsAndHeadingsForDisplay != null && cellsAndHeadingsForDisplay.getRowHeadings() != null){ // apparently it can be??
                     int oldSize = cellsAndHeadingsForDisplay.getRowHeadings().size();
                     CellRegion newHeadings = name.getRefersToCellRegion();
                     List<List<String>> oldHeadings = cellsAndHeadingsForDisplay.getRowHeadings();

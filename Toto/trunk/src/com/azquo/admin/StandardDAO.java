@@ -46,6 +46,25 @@ public class StandardDAO {
         if (jdbcTemplate == null) {
             throw new Exception("Ack!, null data source passed to StandardDAO, Azquo report server won't function!");
         }
+        /*
+        Update hack - yoinked from https://dba.stackexchange.com/questions/169458/mysql-how-to-create-column-if-not-exists
+         */
+        if (jdbcTemplate.queryForInt("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"database\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"last_provenance\")", new HashMap<>()) == 0){
+            jdbcTemplate.update("ALTER TABLE master_db.`database` ADD column last_provenance varchar(255)", new HashMap<>());
+        }
+
+        if (jdbcTemplate.queryForInt("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"database\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"auto_backup\")", new HashMap<>()) == 0){
+            jdbcTemplate.update("ALTER TABLE master_db.`database` ADD column auto_backup boolean default false", new HashMap<>());
+        }
+
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
     }
 
