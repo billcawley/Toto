@@ -51,5 +51,8 @@ def fileProcess(Object[] args) {
             lineNo++
         }
     }
+    fileWriter.flush();
+    fileWriter.close();
+
     return outFile
 }
