@@ -5,12 +5,14 @@ import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.*;
 import com.azquo.admin.user.*;
+import com.azquo.dataimport.DBCron;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
+import org.apache.commons.io.FileUtils;
 import org.springframework.ui.ModelMap;
 
 import java.io.File;
@@ -59,7 +61,7 @@ public class AdminService {
         // we need to check for existing businesses
         final String key = shaHash(System.currentTimeMillis() + "");
         final Business.BusinessDetails bd = new Business.BusinessDetails(address1, address2, address3, address4, postcode, telephone, website, key);
-        final Business business = new Business(0, businessName, bd, null,null);
+        final Business business = new Business(0, businessName, bd, null, null);
         final Business existing = BusinessDAO.findByName(businessName);
         if (existing != null) {
             throw new Exception(businessName + " already registered");
@@ -74,7 +76,7 @@ public class AdminService {
         }
         BusinessDAO.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0, 0,null);// Admin with
+        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0, 0, null);// Admin with
         UserDAO.store(user);
         /*
         azquoMailer.sendEMail(user.getEmail()
@@ -108,9 +110,9 @@ this may now not work at all, perhaps delete?
         return "error:  incorrect key";
     }*/
 
-    public static String getSQLDatabaseName(final DatabaseServer databaseServer, Business b, final String databaseName) throws Exception{
+    public static String getSQLDatabaseName(final DatabaseServer databaseServer, Business b, final String databaseName) throws Exception {
         StringBuilder candidate = new StringBuilder(getBusinessPrefix(b) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase());
-        while (RMIClient.getServerInterface(databaseServer.getIp()).databaseWithNameExists(candidate.toString())){
+        while (RMIClient.getServerInterface(databaseServer.getIp()).databaseWithNameExists(candidate.toString())) {
             candidate.append("Z");
         }
         return candidate.toString();
@@ -147,11 +149,16 @@ this may now not work at all, perhaps delete?
         }
     }
 
-    // used by magento, always the currently logged in db
     public static void emptyDatabase(LoggedInUser loggedInUser) throws Exception {
+        emptyDatabase(loggedInUser, true);
+    }
+    // used by magento, always the currently logged in db
+    public static void emptyDatabase(LoggedInUser loggedInUser, boolean checkSetup) throws Exception {
         DatabaseServer databaseServer = DatabaseServerDAO.findById(loggedInUser.getDatabase().getDatabaseServerId());
         RMIClient.getServerInterface(databaseServer.getIp()).emptyDatabase(loggedInUser.getDatabase().getPersistenceName());
-        checkDBSetupFile(loggedInUser, loggedInUser.getDatabase());
+        if (checkSetup){
+            checkDBSetupFile(loggedInUser, loggedInUser.getDatabase());
+        }
     }
 
     public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, String user) throws Exception {
@@ -185,7 +192,7 @@ this may now not work at all, perhaps delete?
     public static OnlineReport copyReport(LoggedInUser loggedInUser, OnlineReport source, User newUser) throws Exception {
         Business b = BusinessDAO.findById(newUser.getBusinessId());
         String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-           OnlineReport newReport = new OnlineReport(0, LocalDateTime.now(), b.getId(), newUser.getId(), source.getDatabase(), source.getReportName(), source.getFilename(), "", null);
+        OnlineReport newReport = new OnlineReport(0, LocalDateTime.now(), b.getId(), newUser.getId(), source.getDatabase(), source.getReportName(), source.getFilename(), "", null);
         OnlineReportDAO.store(newReport); // store before or.getFilenameForDisk() or the id will be wrong!
         // new java 7 call, much better!
         Files.copy(Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + source.getFilenameForDisk())
@@ -203,7 +210,7 @@ this may now not work at all, perhaps delete?
             , int databaseId
             , int userId
             , String selections
-        ) throws Exception {
+    ) throws Exception {
         if (loggedInUser.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
             final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail(), databaseId, userId, selections);
@@ -271,12 +278,12 @@ this may now not work at all, perhaps delete?
     public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
 
         List<OnlineReport> reportList = new ArrayList<>();
-        if (!loggedInUser.getUser().isAdministrator()&&!loggedInUser.getUser().isDeveloper()) {
+        if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()) {
             int reportId = loggedInUser.getUser().getReportId();
             int dbId = loggedInUser.getUser().getDatabaseId();
             if (reportId > 0 && dbId > 0) {
                 OnlineReport or = OnlineReportDAO.findById(reportId);
-                if (or!=null) {
+                if (or != null) {
                     or.setDatabase(DatabaseDAO.findById(dbId).getName());
                     reportList.add(or);
                     return reportList;
@@ -300,14 +307,14 @@ this may now not work at all, perhaps delete?
                 reportList.addAll(reports);
             }
         }
-          // was setting the database name for each report, this will be irrelevant
+        // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {
 
-            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, loggedInUser.getUser().getId(), "", "No reports found", "", "",null);
+            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, loggedInUser.getUser().getId(), "", "No reports found", "", "", null);
             reportList.add(notFound);
         } else {
-            for (OnlineReport or : reportList){
-                if (or.getUserId() != 0 && or.getUserId() != loggedInUser.getUser().getId()){
+            for (OnlineReport or : reportList) {
+                if (or.getUserId() != 0 && or.getUserId() != loggedInUser.getUser().getId()) {
                     User otherUser = UserDAO.findById(or.getUserId());
                     or.setReportName(or.getReportName() + " uploaded by " + (otherUser != null ? otherUser.getName() : "?")); // I'm assuming the report isn't saved after - just for
                 }
@@ -316,10 +323,10 @@ this may now not work at all, perhaps delete?
         reportList.sort((o1, o2) -> {
             // adding isempty here as empty is the same as null for our sorting purposes
             String o1Explanation = o1.getExplanation();
-            if (o1Explanation==null|| o1Explanation.isEmpty()) o1Explanation = "zzz";
+            if (o1Explanation == null || o1Explanation.isEmpty()) o1Explanation = "zzz";
             String o2Explanation = o2.getExplanation();
-            if (o2Explanation==null || o2Explanation.isEmpty()) o2Explanation = "zzz";
-            return (o1.getDatabase() + o1Explanation).compareTo(o2.getDatabase()+o2Explanation);
+            if (o2Explanation == null || o2Explanation.isEmpty()) o2Explanation = "zzz";
+            return (o1.getDatabase() + o1Explanation).compareTo(o2.getDatabase() + o2Explanation);
         });
         return reportList;
     }
@@ -341,7 +348,7 @@ this may now not work at all, perhaps delete?
             int count = 0;
             Set<Integer> databaseIdsWithSetupsAlready = new HashSet<>();
             for (UploadRecord uploadRecord : uploadRecords) {
-                if (fileSearch == null || fileSearch.equals("") || (uploadRecord.getFileName().toLowerCase().contains(fileSearch.toLowerCase()))){
+                if (fileSearch == null || fileSearch.equals("") || (uploadRecord.getFileName().toLowerCase().contains(fileSearch.toLowerCase()))) {
                     if (loggedInUser.getUser().isAdministrator() || uploadRecord.getUserId() == loggedInUser.getUser().getId()) { // admin is all, developer is just theirs
                         count++;
                         String dbName = "";
@@ -366,12 +373,12 @@ this may now not work at all, perhaps delete?
                             }
                         }
                         boolean setup = false;
-                        if ("setup".equals(uploadRecord.getFileType()) && !databaseIdsWithSetupsAlready.contains(uploadRecord.getDatabaseId())){
+                        if ("setup".equals(uploadRecord.getFileType()) && !databaseIdsWithSetupsAlready.contains(uploadRecord.getDatabaseId())) {
                             databaseIdsWithSetupsAlready.add(uploadRecord.getDatabaseId());
                             setup = true;
                         }
                         uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable, setup));
-                        if (count > 100){
+                        if (count > 100) {
                             break;
                         }
                     }
@@ -398,7 +405,7 @@ this may now not work at all, perhaps delete?
     public static Database getDatabaseById(int databaseId, LoggedInUser loggedInUser) {
         Database database = DatabaseDAO.findById(databaseId);
         if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) { // as I've mentioned elsewhere this is dodgy! todo - fix
             return database;
         }
         return null;
@@ -413,12 +420,12 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static void removeReportById(LoggedInUser loggedInUser, int reportId)  {
+    public static void removeReportById(LoggedInUser loggedInUser, int reportId) {
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         if (onlineReport != null && ((loggedInUser.getUser().isAdministrator() && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId())
                 || (loggedInUser.getUser().isDeveloper() && onlineReport.getBusinessId() == loggedInUser.getUser().getId()))) {
             Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + onlineReportsDir + onlineReport.getFilenameForDisk());
-            if (Files.exists(fullPath) || Files.isDirectory(fullPath)){
+            if (Files.exists(fullPath) || Files.isDirectory(fullPath)) {
                 try {
                     Files.deleteIfExists(fullPath);
                 } catch (IOException e) {
@@ -428,7 +435,7 @@ this may now not work at all, perhaps delete?
             OnlineReportDAO.removeById(onlineReport);
             // and the schedules
             List<ReportSchedule> reportSchedules = ReportScheduleDAO.findForReportId(reportId);
-            for (ReportSchedule reportSchedule : reportSchedules){
+            for (ReportSchedule reportSchedule : reportSchedules) {
                 ReportScheduleDAO.removeById(reportSchedule);
             }
         }
@@ -450,6 +457,9 @@ this may now not work at all, perhaps delete?
             }
             OpenDatabaseDAO.removeForDatabaseId(db.getId());
             UploadRecordDAO.removeForDatabaseId(db.getId());
+            // zap the backups also
+            String dbBackupsDirectory = DBCron.getDBBackupsDirectory(db);
+            FileUtils.deleteDirectory(new File(dbBackupsDirectory));
             DatabaseDAO.removeById(db);
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).dropDatabase(db.getPersistenceName());
         }
@@ -462,7 +472,7 @@ this may now not work at all, perhaps delete?
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getPersistenceName());
             Database oldDb = loggedInUser.getDatabase();
             LoginService.switchDatabase(loggedInUser, db);
-            checkDBSetupFile(loggedInUser,db);
+            checkDBSetupFile(loggedInUser, db);
             updateNameAndValueCounts(loggedInUser, db);
             LoginService.switchDatabase(loggedInUser, oldDb);
         }
@@ -476,15 +486,15 @@ this may now not work at all, perhaps delete?
         DatabaseDAO.store(database);
     }
 
-    private static void checkDBSetupFile(LoggedInUser loggedInUser, Database db) throws Exception{
+    private static void checkDBSetupFile(LoggedInUser loggedInUser, Database db) throws Exception {
 //        String nearlyfullPath = SpreadsheetService.getHomeDir() +  ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + ;
         // todo - new apis . . .
         Path setupFile = null;
         Path dir = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir);
-        if (Files.isDirectory(dir)){
-            for (Path path : Files.list(dir).collect(Collectors.toList())){
-                if (path != null &&  path.getFileName() != null && db != null && path.getFileName().toString().startsWith("Setup" + db.getName()) // note the toString here!
-                        && (setupFile == null || Files.getLastModifiedTime(path).toMillis() > Files.getLastModifiedTime(setupFile).toMillis())){
+        if (Files.isDirectory(dir)) {
+            for (Path path : Files.list(dir).collect(Collectors.toList())) {
+                if (path != null && path.getFileName() != null && db != null && path.getFileName().toString().startsWith("Setup" + db.getName()) // note the toString here!
+                        && (setupFile == null || Files.getLastModifiedTime(path).toMillis() > Files.getLastModifiedTime(setupFile).toMillis())) {
                     setupFile = path;
                 }
             }
@@ -492,7 +502,7 @@ this may now not work at all, perhaps delete?
         System.out.println("setup file : " + setupFile);
 
 //        setupFile.getFileName().toString();
-        if (setupFile != null && setupFile.getFileName() != null){
+        if (setupFile != null && setupFile.getFileName() != null) {
             ImportService.importTheFile(loggedInUser,
                     setupFile.getFileName() + ""
                     , setupFile.toString(), false);
@@ -517,7 +527,7 @@ this may now not work at all, perhaps delete?
 
     public static void deleteUploadRecord(LoggedInUser loggedInUser, int uploadRecordId) throws Exception {
         UploadRecord ur = UploadRecordDAO.findById(uploadRecordId);
-        if (ur != null && ur.getBusinessId() == loggedInUser.getUser().getBusinessId()){
+        if (ur != null && ur.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             if (ur.getTempPath() != null && !ur.getTempPath().isEmpty()) {
                 Path path = Paths.get(ur.getTempPath());
                 if (!Files.isDirectory(path) && Files.exists(path)) {
@@ -561,15 +571,23 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static void setBanner(ModelMap model, LoggedInUser loggedInUser){
+    public static void setBanner(ModelMap model, LoggedInUser loggedInUser) {
         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
         String bannerColor = business.getBannerColor();
-        if (bannerColor==null || bannerColor.length()==0) bannerColor = "#F58030";
+        if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
         String logo = business.getLogo();
-        if (logo==null || logo.length()==0) logo = "logo_alt.png";
+        if (logo == null || logo.length() == 0) logo = "logo_alt.png";
         model.addAttribute("bannerColor", bannerColor);
         model.addAttribute("logo", logo);
 
     }
 
+    public static void toggleAutoBackup(LoggedInUser loggedInUser, int databaseId) {
+        Database db = DatabaseDAO.findById(databaseId);
+        if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) { // business ID is user ID?? woah! todo
+            db.setAutoBackup(!db.getAutoBackup());
+            DatabaseDAO.store(db);
+        }
+    }
 }

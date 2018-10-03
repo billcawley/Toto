@@ -504,7 +504,7 @@ todo - add classification here
                         peersString = peersString.substring(1, peersString.indexOf("}"));
                         Collections.addAll(heading.peers, peersString.split(","));
                     } else {
-                        throw new Exception("Unclosed } in headings");
+                        throw new Exception("Unclosed } in headings, heading " + heading.heading);
                     }
                 }
                 break;
@@ -544,7 +544,7 @@ todo - add classification here
                 break;
             case DICTIONARY:
                 if (heading.parentNames==null || heading.parentNames.size()==0){
-                    throw new Exception("dictionary terms must specify the parent first");
+                    throw new Exception("dictionary terms must specify the parent first, heading " + heading.heading);
 
                 }
                 Name parent = heading.parentNames.iterator().next();
@@ -635,7 +635,7 @@ todo - add classification here
                             mutableImportHeading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, mutableImportHeading.heading, null, false);
                         }
                         if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()) {
-                            throw new Exception("context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName());
+                            throw new Exception("context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName() + ", heading " + contextHeading.heading);
                         }
                         resolvePeers(mutableImportHeading, contextHeading, headings);
                     }

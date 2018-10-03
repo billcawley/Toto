@@ -112,6 +112,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "checkId", required = false) String checkId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "unloadId", required = false) String unloadId
+            , @RequestParam(value = "toggleAutobackup", required = false) String toggleAutobackup
                                 // todo - address whether we're still using such parameters and associated functions
             , @RequestParam(value = "backupTarget", required = false) String backupTarget
             , @RequestParam(value = "summaryLevel", required = false) String summaryLevel
@@ -188,6 +189,9 @@ public class ManageDatabasesController {
                 }
                 if (NumberUtils.isNumber(unloadId)) {
                     AdminService.unloadDatabase(loggedInUser, Integer.parseInt(unloadId));
+                }
+                if (NumberUtils.isNumber(toggleAutobackup)) {
+                    AdminService.toggleAutoBackup(loggedInUser, Integer.parseInt(toggleAutobackup));
                 }
                 if (backupTarget != null) {
                     LoggedInUser loggedInUserTarget = LoginService.loginLoggedInUser(request.getSession().getId(), backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB

@@ -134,8 +134,6 @@ class ValuesImportConfigProcessor {
                     final Script script = shell.parse(file);
                     System.out.println("loaded groovy " + file.getPath());
                     valuesImportConfig.setFilePath((String) script.invokeMethod("fileProcess", groovyParams));
-                } else {
-                    System.out.println("can't fined groovy " + file.getPath());
                 }
             } catch (GroovyRuntimeException e) {
                 // exception could be because the groovy script didn't have a function that matched

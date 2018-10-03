@@ -1,7 +1,13 @@
 package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
+import com.azquo.admin.BackupService;
+import com.azquo.admin.business.Business;
+import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseServer;
+import com.azquo.admin.database.DatabaseServerDAO;
+import com.azquo.dataimport.DBCron;
 import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -21,12 +27,10 @@ import java.util.List;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 21/07/16.
- *
- * Basic back up and restore databases. Note that this only works if your report and db servers are on the same machine.
- *
- * todo - restore and backup should block to be safe otherwise a half restored DB for example bight be loaded
+ * <p>
+ * Changed 03/10/2018 to use new backup system - old MySQL based one obsolete
  */
 @Controller
 @RequestMapping("/ManageDatabaseBackups")
@@ -35,6 +39,7 @@ public class ManageDatabaseBackupsController {
 //    private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
 
     private SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
     public static class DisplayBackup {
         private final String name;
@@ -57,80 +62,36 @@ public class ManageDatabaseBackupsController {
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "databaseId", required = false) String databaseId
-            , @RequestParam(value = "deleteBackup", required = false) String deleteBackup
-            , @RequestParam(value = "newBackup", required = false) String newBackup
             , @RequestParam(value = "restoreBackup", required = false) String restoreBackup
-    )
-    {
+    ) {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             StringBuilder error = new StringBuilder();
             try {
                 Database databaseById = null;
-                if (databaseId != null && NumberUtils.isNumber(databaseId)) {
+                if (NumberUtils.isNumber(databaseId)) {
                     databaseById = AdminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
                 }
-                if (databaseById == null || (loggedInUser.getUser().isDeveloper() && databaseById.getUserId() != loggedInUser.getUser().getId())){
+                if (databaseById == null || (loggedInUser.getUser().isDeveloper() && databaseById.getUserId() != loggedInUser.getUser().getId())) {
                     error.append("Bad database Id.");
                 } else {
                     model.put("database", databaseById.getName());
                     model.put("databaseId", databaseById.getId());
-                    File f = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + "backups/");
-                    if (!f.exists()){
-                        if (!f.mkdir()){
-                            throw new Exception("unable to make directory : " + f.getPath());
-                        }
+                    Business b = BusinessDAO.findById(databaseById.getBusinessId());
+                    String dbBackupsDirectory = DBCron.getDBBackupsDirectory(databaseById);
+                    // todo - factor, this could cause problems!
+                    if (restoreBackup != null && !restoreBackup.isEmpty()) {
+                        loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(databaseById.getDatabaseServerId()), databaseById);
+                        BackupService.loadDBBackup(loggedInUser, new File(dbBackupsDirectory + "/" + restoreBackup), null, new StringBuilder(), true);
                     }
-                    File finalDir = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + "backups/" + databaseById.getPersistenceName() + "/");
-                    if (!finalDir.exists()){
-                        if (!finalDir.mkdir()){
-                            throw new Exception("unable to make directory : " + finalDir.getPath());
-                        }
-                    }
-                    if (newBackup != null && !newBackup.isEmpty()){ // since the user has to be admin I'm not sure how much I need to protect against things here
-                        newBackup = newBackup.replace(" ", "");
-                        newBackup = newBackup.replace("..", "");
-                        newBackup = newBackup.replace("/", "");
-                        newBackup = newBackup.replace("\\", "");
-                        // todo, make this more secure from a unix point of transport?? Also parameters for packet size or whatever. Might be set in my.cnf
-                        String dump = "mysqldump  --user='toto' --password='ark'  " + databaseById.getPersistenceName() + " > " + finalDir.getPath() + "/" + newBackup;
-                        // for some reason need to use the command array, dunno why
-                        String[] cmdarray = {"/bin/sh","-c", dump};
-                        CommandLineCalls.runCommand(null, cmdarray, true, null);
-                    }
-                    if (deleteBackup != null && !deleteBackup.isEmpty()){
-                        deleteBackup = deleteBackup.replace(" ", "");
-                        deleteBackup = deleteBackup.replace("..", "");
-                        deleteBackup = deleteBackup.replace("/", "");
-                        deleteBackup = deleteBackup.replace("\\", "");
-                        File toDelete = new File(finalDir.getPath() + "/" + deleteBackup);
-                        if (!toDelete.delete()){
-                            throw new Exception("unable to delete : " + toDelete.getPath());
-                        }
-                    }
-                    if (restoreBackup != null && !restoreBackup.isEmpty()){
-                        restoreBackup = restoreBackup.replace(" ", "");
-                        restoreBackup = restoreBackup.replace("..", "");
-                        restoreBackup = restoreBackup.replace("/", "");
-                        restoreBackup = restoreBackup.replace("\\", "");
-                        // unload the db first
-                        AdminService.unloadDatabase(loggedInUser, databaseById.getId());
-                        //todo - clear the tables first??
-                        String clear = "mysql --user='toto' --password='ark' -e 'drop table if exists fast_name, fast_value, provenance;' " + databaseById.getPersistenceName();
-                        String restore = "mysql --user='toto' --password='ark' " + databaseById.getPersistenceName() + " < " + finalDir.getPath() + "/" + restoreBackup;
-                        // for some reason need to use the command array, dunno why
-                        String[] cmdarray = {"/bin/sh","-c", clear};
-                        CommandLineCalls.runCommand(null, cmdarray, true, null);
-                        String[] cmdarray2 = {"/bin/sh","-c", restore};
-                        CommandLineCalls.runCommand(null, cmdarray2, true, null);
-                    }
-
                     // ok backup directory is there!
-                    List<DisplayBackup> displayBackupList  = new ArrayList<>();
-                    for (File file : finalDir.listFiles()){
+                    List<DisplayBackup> displayBackupList = new ArrayList<>();
+                    File finalDir = new File(dbBackupsDirectory);
+                    for (File file : finalDir.listFiles()) {
                         displayBackupList.add(new DisplayBackup(file.getName(), df.format(file.lastModified())));
                     }
+                    // todo - reverse date sort!
                     model.put("developer", loggedInUser.getUser().isDeveloper());
                     model.put("backups", displayBackupList);
                 }
@@ -143,7 +104,7 @@ public class ManageDatabaseBackupsController {
                 model.put("error", exceptionError);
             }
             model.put("developer", loggedInUser.getUser().isDeveloper());
-            AdminService.setBanner(model,loggedInUser);
+            AdminService.setBanner(model, loggedInUser);
             return "managedatabasebackups";
         } else {
             return "redirect:/api/Login";
