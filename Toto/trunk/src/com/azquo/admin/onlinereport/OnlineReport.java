@@ -2,6 +2,7 @@ package com.azquo.admin.onlinereport;
 
 import com.azquo.admin.StandardEntity;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
  * <p>
  * All reports are online now, we used to have Excel ones.
  */
-public class OnlineReport extends StandardEntity {
+public class OnlineReport extends StandardEntity implements Serializable {
 
     private LocalDateTime dateCreated;
     private int businessId;

@@ -34,7 +34,7 @@ public class DBCron {
 //        System.out.println("every minute?" + LocalDateTime.now());
     }
 
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "0 0 * * * *")
     public void autoDBBakups() throws Exception {
         System.out.println("hourly backup check " + LocalDateTime.now());
         List<Database> forBackup = DatabaseDAO.findForBackup();

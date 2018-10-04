@@ -6,6 +6,7 @@ import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
  * <p>
  * Representing a user who can log in
  */
-public final class User extends StandardEntity {
+public final class User extends StandardEntity implements Serializable {
 
     //ALTER TABLE `user` ADD `database_id` INT(11) NOT NULL DEFAULT '0' , ADD `report_id` INT(11) NOT NULL DEFAULT '0' ;
 

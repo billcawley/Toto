@@ -2,6 +2,7 @@ package com.azquo.admin.database;
 
 import com.azquo.admin.StandardEntity;
 
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
  * <p/>
  * Representing information on the report server about an Azquo memory database.
  */
-public final class Database extends StandardEntity {
+public final class Database extends StandardEntity implements Serializable {
 
     private int businessId;
     private int userId;

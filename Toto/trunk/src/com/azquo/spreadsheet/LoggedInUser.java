@@ -11,6 +11,7 @@ import com.azquo.spreadsheet.transport.json.JsonChildren;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,9 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * On the new client/server model the old LoggedInConnection will not do. We want an object representing a logged in user against the session
  * which holds no database classes. It will have a fair bit of stuff that was in logged in connection but no DB classes
  * <p>
- * TODO - serializable? Bit of a pain to go all the way down.
  */
-public class LoggedInUser {
+public class LoggedInUser implements Serializable {
 
     private static final String userLogsPath = "User Logs/"; // with a space
 

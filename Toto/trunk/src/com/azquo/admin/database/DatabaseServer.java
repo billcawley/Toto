@@ -2,6 +2,8 @@ package com.azquo.admin.database;
 
 import com.azquo.admin.StandardEntity;
 
+import java.io.Serializable;
+
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  * <p>
@@ -11,7 +13,7 @@ import com.azquo.admin.StandardEntity;
  * <p>
  * The Server being the server the database is physically hosted on (if that was not obvious)
  */
-public final class DatabaseServer extends StandardEntity {
+public final class DatabaseServer extends StandardEntity implements Serializable {
     // name user time db, email user when logged in
 
     private final String name;

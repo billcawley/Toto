@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -34,7 +35,7 @@ public class LoginController {
     public static final String LOGGED_IN_USER_SESSION = "LOGGED_IN_USER_SESSION";
 
     @RequestMapping
-    public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
+    public String handleRequest(ModelMap model, HttpServletRequest request, HttpSession session, HttpServletResponse response
             , @RequestParam(value = "user", required = false) String userEmail
             , @RequestParam(value = "password", required = false) String password
             , @RequestParam(value = "logoff", required = false) String logoff
@@ -47,9 +48,9 @@ public class LoginController {
         }
 
         if ("true".equals(logoff)) {
-            if (request.getSession().getAttribute(LOGGED_IN_USER_SESSION) != null) {
+            if (session.getAttribute(LOGGED_IN_USER_SESSION) != null) {
                 if (!SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
-                    LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+                    LoggedInUser loggedInUser = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                     String title =  SpreadsheetService.getAlias() +  " Logout from " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                     String userAgent = request.getHeader("User-Agent");
@@ -59,13 +60,13 @@ public class LoginController {
                     AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
                     AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                 }
-                request.getSession().removeAttribute(LOGGED_IN_USER_SESSION);
+                session.removeAttribute(LOGGED_IN_USER_SESSION);
             }
         }
         if (connectionid != null && connectionid.length() > 0 && !connectionid.equals("javascript")) { // nasty hack to support connection id from the plugin
             if (request.getServletContext().getAttribute(connectionid) != null) { // then pick up the temp logged in conneciton
                 LoggedInUser loggedInUser = (LoggedInUser) request.getServletContext().getAttribute(connectionid);
-                request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
+                session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                 request.getServletContext().removeAttribute(connectionid); // take it off the context
                 if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                     return "redirect:/api/ManageReports";
@@ -76,7 +77,7 @@ public class LoginController {
         } else {
             if (userEmail != null && userEmail.length() > 0 && password != null && password.length() > 0) {
                 model.put("userEmail", userEmail);
-                LoggedInUser loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), null, userEmail, password, false);
+                LoggedInUser loggedInUser = LoginService.loginLoggedInUser(session.getId(), null, userEmail, password, false);
                 if (loggedInUser != null) {
                     // same checks as magento controller
                     if (!"nic@azquo.com".equalsIgnoreCase(userEmail) && !SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
@@ -89,7 +90,7 @@ public class LoginController {
                         AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
                         AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                     }
-                    request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
+                    session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (connectionid != null && connectionid.equals("javascript")) {
                         String jsonFunction = "azquojsonresponse";
                         String userType = "user";
