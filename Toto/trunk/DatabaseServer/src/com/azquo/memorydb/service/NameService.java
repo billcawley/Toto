@@ -454,7 +454,9 @@ public final class NameService {
 
     public static List<String> attributeList(AzquoMemoryDBConnection azquoMemoryDBConnection) {
         attributeListCount.incrementAndGet();
-        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().getAttributes();
+        List<String> attributes = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getAttributes();
+        Collections.sort(attributes);
+        return attributes;
     }
 
     private static AtomicInteger inParentSetCount = new AtomicInteger(0);
