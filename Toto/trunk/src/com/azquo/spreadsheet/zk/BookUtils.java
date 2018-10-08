@@ -85,7 +85,11 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         at com.azquo.spreadsheet.zk.BookUtils.nameToStringLists(BookUtils.java:32)
 
                                  */
-                                row.add(cell.getStringValue());
+                                try{
+                                    row.add(cell.getStringValue());
+                                }catch(Exception e3){
+                                    row.add("");
+                                }
                             }
                         } else {
                             row.add("");
