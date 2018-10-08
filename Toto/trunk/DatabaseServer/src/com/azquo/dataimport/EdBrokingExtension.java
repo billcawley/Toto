@@ -25,7 +25,11 @@ class EdBrokingExtension {
             String importFormat = valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE);
             if (importFormat.contains(" ")){
                 List<String> languages = new ArrayList<>();
-                languages.add(importFormat.substring(importFormat.indexOf(" ")).trim());
+                //wfc added ability to put in a list of languages - NOT CURRENTLY USED
+                String[] newLangs = importFormat.substring(importFormat.indexOf(" ")).split("-");//may need to be part of a Groovy file name, hence '-' rather than ','
+                for (String newLang:newLangs) {
+                    languages.add(newLang.trim());
+                }
                 languages.add(Constants.DEFAULT_DISPLAY_NAME);
                 valuesImportConfig.setLanguages(languages);
             }
@@ -190,7 +194,7 @@ There would be some duplication but it would be less complex to make
             }
             //looking for something in column A, there may be a gap after things like Coverholder: Joe Bloggs
             // so keep looking until we have headers
-            while (lineNo < 20 && (headersOut == null || headersOut.size() == 0 || headersOut.get(0).length() == 0 || (topline!=null && !containsIgnoreCase(headersOut,topline))) && valuesImportConfig.getLineIterator().hasNext()) {
+            while (lineNo < 20 && (headersOut == null || headersOut.size() == 0 || headingCount(headersOut) < 2  || headersOut.get(0).length() == 0 || (topline!=null && !containsIgnoreCase(headersOut,topline))) && valuesImportConfig.getLineIterator().hasNext()) {
                 headersOut = new ArrayList<>(Arrays.asList(valuesImportConfig.getLineIterator().next()));
             }
             // finally we assume we have headers. If there more than a line of headers we'll have to squash them together. Heading1|Heading2|Heading3
@@ -207,6 +211,17 @@ There would be some duplication but it would be less complex to make
         }
 
 
+    }
+
+    private static int headingCount(List<String>headers){
+        int headingCount = 0;
+        for (String header:headers){
+            if (header!=null && header.length()>0){
+                //if (header.contains(";")) headingCount++; // usually we shall ignore lines with one name only, but if that name contains a semicolon, then it cannot be ignored
+                headingCount++;
+            }
+        }
+        return headingCount;
     }
 
     public static boolean containsIgnoreCase(List<String> list, String toTest){
