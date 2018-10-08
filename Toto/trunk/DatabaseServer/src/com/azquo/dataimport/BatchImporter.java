@@ -84,7 +84,7 @@ public class BatchImporter implements Callable<Void> {
                     // default values might now be used by composite
                     resolveDefaultValues(lineToLoad);
                     // composite might do things that affect only and existing hence do it before
-                    resolveCompositeValues(lineToLoad, importLine);
+                    resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine);
                      String rejectionReason =  checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                     if (rejectionReason==null) {
                         try {
@@ -201,7 +201,7 @@ public class BatchImporter implements Callable<Void> {
     // Now supports basic excel like string operations, left right and mid, also simple single operator calculation on the results.
     // Calcs simple for the moment - if required could integrate the shunting yard algorithm
 
-    private static void resolveCompositeValues(List<ImportCellWithHeading> cells, int importLine) throws Exception {
+    private static void resolveCompositeValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,List<String>attributeNames,List<ImportCellWithHeading> cells, int importLine) throws Exception {
         boolean adjusted = true;
         //loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
         // note : a circular reference could cause an infinite loop - hence the counter
@@ -262,7 +262,18 @@ public class BatchImporter implements Callable<Void> {
 
                             }
                             if (compCell != null) {
-                                String sourceVal = compCell.getLineValue();
+                                String sourceVal = null;
+                                if (compCell.getImmutableImportHeading().lineNameRequired ){
+                                    if (compCell.getLineNames()==null){
+                                        compCell.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
+                                                , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames)));
+
+
+                                    }
+                                    sourceVal = compCell.getLineNames().iterator().next().getDefaultDisplayName();
+                                }else {
+                                    sourceVal = compCell.getLineValue();
+                                }
                                 // the two ints need to be as they are used in excel
                                 if (function != null && (funcInt > 0 || funcInt2 > 0) && sourceVal.length() > funcInt) {
                                     if (function.equalsIgnoreCase("left")) {
@@ -683,8 +694,12 @@ public class BatchImporter implements Callable<Void> {
 
     private static List<String> setLocalLanguage(String localLanguage, List<String> defaultLanguages) {
         List<String> languages = new ArrayList<>();
+
         if (localLanguage != null) {
-            languages.add(localLanguage);
+            String[] localLangs = localLanguage.split(",");
+            for (String localLang:localLangs){
+                languages.add(localLang.trim());
+            }
         } else {
             languages.addAll(defaultLanguages);
         }
