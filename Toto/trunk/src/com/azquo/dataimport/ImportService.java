@@ -516,7 +516,7 @@ public final class ImportService {
             fos.close();
             return stripTempSuffix(fileName) + ": " + readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, fileNameParameters, persistAfter, true);
         } catch (Exception e) {
-            return e.getMessage();
+            return "\n" + stripTempSuffix(fileName) + ": " + e.getMessage();
         }
 
     }
