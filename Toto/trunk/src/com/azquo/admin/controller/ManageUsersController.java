@@ -30,7 +30,6 @@ import java.util.List;
 public class ManageUsersController {
 
 //    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
-
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "editId", required = false) String editId
@@ -44,19 +43,17 @@ public class ManageUsersController {
             , @RequestParam(value = "reportId", required = false) String reportId
             , @RequestParam(value = "selections", required = false) String selections
             , @RequestParam(value = "submit", required = false) String submit
-    ) throws Exception
-
-    {
+    ) throws Exception {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            if (deleteId != null && NumberUtils.isDigits(deleteId)) {
+            if (NumberUtils.isDigits(deleteId)) {
                 AdminService.deleteUserById(Integer.parseInt(deleteId));
             }
-            if (editId != null && NumberUtils.isDigits(editId)) {
+            if (NumberUtils.isDigits(editId)) {
                 User toEdit = AdminService.getUserById(Integer.parseInt(editId), loggedInUser);
                 // ok check to see if data was submitted
                 StringBuilder error = new StringBuilder();
@@ -90,15 +87,15 @@ public class ManageUsersController {
                         if (toEdit == null) {
                             // Have to use  a LocalDate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
                             AdminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser
-                                    , databaseId != null && NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0
-                                    , reportId != null && NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0, selections);
+                                    , NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0
+                                    , NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0, selections);
                         } else {
                             toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());
                             toEdit.setEmail(email);
                             toEdit.setName(name);
                             toEdit.setStatus(status);
-                            toEdit.setDatabaseId(databaseId != null && NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0);
-                            toEdit.setReportId(reportId != null && NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0);
+                            toEdit.setDatabaseId(NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0);
+                            toEdit.setReportId(NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0);
                             if (password != null && !password.isEmpty()) {
                                 final String salt = AdminService.shaHash(System.currentTimeMillis() + "salt");
                                 toEdit.setSalt(salt);
@@ -107,8 +104,8 @@ public class ManageUsersController {
                             toEdit.setSelections(selections);
                             UserDAO.store(toEdit);
                         }
-                        model.put("users", AdminService.getUserListForBusiness(loggedInUser));
-                        AdminService.setBanner(model,loggedInUser);
+                        model.put("users", AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser));
+                        AdminService.setBanner(model, loggedInUser);
                         return "manageusers";
                     } else {
                         model.put("error", error.toString());
@@ -131,12 +128,12 @@ public class ManageUsersController {
                         model.put("id", "0");
                     }
                 }
-                 model.put("databases", AdminService.getDatabaseListForBusiness(loggedInUser));
+                model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
                 model.put("reports", AdminService.getReportList(loggedInUser));
-                 AdminService.setBanner(model,loggedInUser);
+                AdminService.setBanner(model, loggedInUser);
                 return "edituser";
             }
-            final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);
+            final List<User> userListForBusiness = AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser);
             if (userListForBusiness != null) {
                 userListForBusiness.sort(Comparator.comparing(User::getEmail));
             }
@@ -144,7 +141,7 @@ public class ManageUsersController {
             if (userListForBusiness != null && userListForBusiness.size() > 1) {
                 model.put("showDownload", true);
             }
-            AdminService.setBanner(model,loggedInUser);
+            AdminService.setBanner(model, loggedInUser);
             return "manageusers";
         }
     }

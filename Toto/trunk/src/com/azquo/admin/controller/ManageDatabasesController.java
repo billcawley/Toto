@@ -114,7 +114,6 @@ public class ManageDatabasesController {
             , @RequestParam(value = "unloadId", required = false) String unloadId
             , @RequestParam(value = "toggleAutobackup", required = false) String toggleAutobackup
                                 // todo - address whether we're still using such parameters and associated functions
-            , @RequestParam(value = "backupTarget", required = false) String backupTarget
             , @RequestParam(value = "summaryLevel", required = false) String summaryLevel
             , @RequestParam(value = "fileSearch", required = false) String fileSearch
             , @RequestParam(value = "deleteUploadRecordId", required = false) String deleteUploadRecordId
@@ -179,23 +178,19 @@ public class ManageDatabasesController {
                     }
                 }
                 if (NumberUtils.isNumber(emptyId)) {
-                    AdminService.emptyDatabaseById(loggedInUser, Integer.parseInt(emptyId));
+                    AdminService.emptyDatabaseByIdWithBasicSecurity(loggedInUser, Integer.parseInt(emptyId));
                 }
                 if (NumberUtils.isNumber(checkId)) {
-                    AdminService.checkDatabaseById(loggedInUser, Integer.parseInt(checkId));
+                    AdminService.checkDatabaseByIdWithBasicSecurity(loggedInUser, Integer.parseInt(checkId));
                 }
                 if (NumberUtils.isNumber(deleteId)) {
-                    AdminService.removeDatabaseById(loggedInUser, Integer.parseInt(deleteId));
+                    AdminService.removeDatabaseByIdWithBasicSecurity(loggedInUser, Integer.parseInt(deleteId));
                 }
                 if (NumberUtils.isNumber(unloadId)) {
-                    AdminService.unloadDatabase(loggedInUser, Integer.parseInt(unloadId));
+                    AdminService.unloadDatabaseWithBasicSecurity(loggedInUser, Integer.parseInt(unloadId));
                 }
                 if (NumberUtils.isNumber(toggleAutobackup)) {
-                    AdminService.toggleAutoBackup(loggedInUser, Integer.parseInt(toggleAutobackup));
-                }
-                if (backupTarget != null) {
-                    LoggedInUser loggedInUserTarget = LoginService.loginLoggedInUser(request.getSession().getId(), backupTarget, loggedInUser.getUser().getEmail(), "", true); // targetted to destinationDB
-                    AdminService.copyDatabase(loggedInUser.getDataAccessToken(), loggedInUserTarget.getDataAccessToken(), summaryLevel, loggedInUserTarget.getUser().getEmail());// re languages I should just be followign what was there before . . .
+                    AdminService.toggleAutoBackupWithBasicSecurity(loggedInUser, Integer.parseInt(toggleAutobackup));
                 }
                 if (NumberUtils.isNumber(deleteUploadRecordId)) {
                     AdminService.deleteUploadRecord(loggedInUser, Integer.parseInt(deleteUploadRecordId));
@@ -207,16 +202,16 @@ public class ManageDatabasesController {
             if (error.length() > 0) {
                 model.put("error", error.toString());
             }
-            List<Database> databaseList = AdminService.getDatabaseListForBusiness(loggedInUser);
+            List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
             try {
                 for (Database database : databaseList) {
                     boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database);
                     displayDataBases.add(new DisplayDataBase(isLoaded, database));
-/*                    if (isLoaded && (AdminService.getNameCount(loggedInUser, database) != database.getNameCount()
-                            || AdminService.getValueCount(loggedInUser, database) != database.getValueCount())) { // then update the counts
-                        database.setNameCount(AdminService.getNameCount(loggedInUser, database));
-                        database.setValueCount(AdminService.getValueCount(loggedInUser, database));
+/*                    if (isLoaded && (AdminService.getNameCountWithBasicSecurity(loggedInUser, database) != database.getNameCountWithBasicSecurity()
+                            || AdminService.getValueCountWithBasicSecurity(loggedInUser, database) != database.getValueCountWithBasicSecurity())) { // then update the counts
+                        database.setNameCount(AdminService.getNameCountWithBasicSecurity(loggedInUser, database));
+                        database.setValueCount(AdminService.getValueCountWithBasicSecurity(loggedInUser, database));
                         DatabaseDAO.store(database);
                     }*/
                 }
@@ -346,16 +341,16 @@ public class ManageDatabasesController {
                     model.put("error", exceptionError);
                 }
             }
-            List<Database> databaseList = AdminService.getDatabaseListForBusiness(loggedInUser);
+            List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
             try {
                 for (Database database1 : databaseList) {
                     boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database1);
                     displayDataBases.add(new DisplayDataBase(isLoaded, database1));
-/*                    if (isLoaded && (AdminService.getNameCount(loggedInUser, database1) != database1.getNameCount()
-                            || AdminService.getValueCount(loggedInUser, database1) != database1.getValueCount())) { // then update the counts
-                        database1.setNameCount(AdminService.getNameCount(loggedInUser, database1));
-                        database1.setValueCount(AdminService.getValueCount(loggedInUser, database1));
+/*                    if (isLoaded && (AdminService.getNameCountWithBasicSecurity(loggedInUser, database1) != database1.getNameCountWithBasicSecurity()
+                            || AdminService.getValueCountWithBasicSecurity(loggedInUser, database1) != database1.getValueCountWithBasicSecurity())) { // then update the counts
+                        database1.setNameCount(AdminService.getNameCountWithBasicSecurity(loggedInUser, database1));
+                        database1.setValueCount(AdminService.getValueCountWithBasicSecurity(loggedInUser, database1));
                         DatabaseDAO.store(database1);
                     }*/
                 }
@@ -376,7 +371,6 @@ public class ManageDatabasesController {
             return "managedatabases";
         } else {
             return "redirect:/api/Login";
-
         }
     }
 }

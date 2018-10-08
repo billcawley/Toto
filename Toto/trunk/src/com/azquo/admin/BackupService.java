@@ -9,7 +9,6 @@ Report server logic for creating and restoring backups
 
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
@@ -23,7 +22,6 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.MappingIterator;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
@@ -115,7 +113,7 @@ public class BackupService {
                     loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(db.getDatabaseServerId()), db);
                     AdminService.emptyDatabase(loggedInUser, false); // don't load the setup file!
                 } else {
-                    AdminService.removeDatabaseById(loggedInUser, db.getId());
+                    AdminService.removeDatabaseByIdWithBasicSecurity(loggedInUser, db.getId());
                     AdminService.createDatabase(db.getName(), db.getDatabaseType(), loggedInUser, DatabaseServerDAO.findById(db.getDatabaseServerId()));
                 }
             } else {

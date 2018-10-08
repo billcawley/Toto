@@ -44,7 +44,7 @@ public class ManageReportSchedulesController {
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
             return "redirect:/api/Login";
         } else {
-            final List<Database> databaseListForBusiness = AdminService.getDatabaseListForBusiness(loggedInUser);
+            final List<Database> databaseListForBusiness = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
             if (request.getParameter("new") != null && databaseListForBusiness != null) {
                 // note, this will fail with no reports or databases
                 ReportSchedule reportSchedule = new ReportSchedule(0, "DAILY", "", LocalDateTime.now().plusYears(30)
@@ -78,7 +78,7 @@ public class ManageReportSchedulesController {
                     String databaseId = request.getParameter("databaseId" + reportSchedule.getId());
                     if (databaseId != null && !databaseId.equals(reportSchedule.getDatabaseId() + "")) {
                         try {
-                            Database database = AdminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
+                            Database database = AdminService.getDatabaseByIdWithBasicSecurityCheck(Integer.parseInt(databaseId), loggedInUser);
                             if (database != null) {
                                 reportSchedule.setDatabaseId(Integer.parseInt(databaseId));
                                 store = true;
@@ -90,7 +90,7 @@ public class ManageReportSchedulesController {
                     String reportId = request.getParameter("reportId" + reportSchedule.getId());
                     if (reportId != null && !reportId.equals(reportSchedule.getReportId() + "")) {
                         try {
-                            OnlineReport onlineReport = AdminService.getReportById(Integer.parseInt(reportId), loggedInUser);
+                            OnlineReport onlineReport = AdminService.getReportByIdWithBasicSecurityCheck(Integer.parseInt(reportId), loggedInUser);
                             if (onlineReport != null) {
                                 reportSchedule.setReportId(Integer.parseInt(reportId));
                                 store = true;

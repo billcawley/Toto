@@ -5,14 +5,10 @@ import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.dataimport.DBCron;
-import com.azquo.dataimport.ImportService;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
-import com.azquo.util.CommandLineCalls;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -71,25 +67,28 @@ public class ManageDatabaseBackupsController {
             try {
                 Database databaseById = null;
                 if (NumberUtils.isNumber(databaseId)) {
-                    databaseById = AdminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
+                    databaseById = AdminService.getDatabaseByIdWithBasicSecurityCheck(Integer.parseInt(databaseId), loggedInUser);
                 }
-                if (databaseById == null || (loggedInUser.getUser().isDeveloper() && databaseById.getUserId() != loggedInUser.getUser().getId())) {
+                if (databaseById == null) {
                     error.append("Bad database Id.");
                 } else {
                     model.put("database", databaseById.getName());
                     model.put("databaseId", databaseById.getId());
-                    Business b = BusinessDAO.findById(databaseById.getBusinessId());
                     String dbBackupsDirectory = DBCron.getDBBackupsDirectory(databaseById);
-                    // todo - factor, this could cause problems!
-                    if (restoreBackup != null && !restoreBackup.isEmpty()) {
-                        loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(databaseById.getDatabaseServerId()), databaseById);
-                        BackupService.loadDBBackup(loggedInUser, new File(dbBackupsDirectory + "/" + restoreBackup), null, new StringBuilder(), true);
-                    }
                     // ok backup directory is there!
                     List<DisplayBackup> displayBackupList = new ArrayList<>();
                     File finalDir = new File(dbBackupsDirectory);
+                    boolean restoreBackupOk = false;
                     for (File file : finalDir.listFiles()) {
+                        if (file.getName().equals(restoreBackup)){
+                            restoreBackupOk = true;
+                        }
                         displayBackupList.add(new DisplayBackup(file.getName(), df.format(file.lastModified())));
+                    }
+                    // todo - factor, this could cause problems!
+                    if (restoreBackupOk) {
+                        loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(databaseById.getDatabaseServerId()), databaseById);
+                        BackupService.loadDBBackup(loggedInUser, new File(dbBackupsDirectory + "/" + restoreBackup), null, new StringBuilder(), true);
                     }
                     // todo - reverse date sort!
                     model.put("developer", loggedInUser.getUser().isDeveloper());

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  */
 public final class Database extends StandardEntity implements Serializable {
 
-    private int businessId;
+    final private int businessId;
     private int userId;
     private String name;
     private String persistenceName;
@@ -57,9 +57,9 @@ public final class Database extends StandardEntity implements Serializable {
         return businessId;
     }
 
-    public void setBusinessId(int businessId) {
+    /*public void setBusinessId(int businessId) {
         this.businessId = businessId;
-    }
+    }*/
 
     public int getUserId() {
         return userId;

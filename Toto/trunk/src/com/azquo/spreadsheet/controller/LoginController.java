@@ -54,11 +54,7 @@ public class LoginController {
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                     String title =  SpreadsheetService.getAlias() +  " Logout from " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                     String userAgent = request.getHeader("User-Agent");
-                    AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, userAgent);
-                    AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
-                    AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, userAgent);
                     AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
-                    AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                 }
                 session.removeAttribute(LOGGED_IN_USER_SESSION);
             }
@@ -84,11 +80,7 @@ public class LoginController {
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                         String title = SpreadsheetService.getAlias() +  " Login to the server " + userEmail + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                         String userAgent = request.getHeader("User-Agent");
-                        AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, userAgent);
-                        AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
-                        AzquoMailer.sendEMail("bill@azquo.com", "Bill", title, userAgent);
                         AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
-                        AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                     }
                     session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (connectionid != null && connectionid.equals("javascript")) {

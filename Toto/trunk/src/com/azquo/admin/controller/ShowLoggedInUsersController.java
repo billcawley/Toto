@@ -26,8 +26,7 @@ public class ShowLoggedInUsersController {
 
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-        if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-            StringBuilder list = new StringBuilder();
+        if (loggedInUser != null && loggedInUser.getUser().isAdministrator()) {
             List<HttpSession> listSessionByDate = new ArrayList<>(SessionListener.sessions);
             listSessionByDate.sort(Comparator.comparing(HttpSession::getLastAccessedTime)); // I think that will sort it!
             Collections.reverse(listSessionByDate); // most recent first
@@ -35,10 +34,10 @@ public class ShowLoggedInUsersController {
                 LoggedInUser user = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 if (user != null && !user.getUser().getEmail().equalsIgnoreCase("nic@azquo.com")) { // don't show the server monitoring logins
                     Date lastAccessed = new Date(session.getLastAccessedTime());
-                    list.append("Last accessed :  " + lastAccessed + " " + user.getUser().getEmail() + "<br/>");
+                    System.out.println("Last accessed :  " + lastAccessed + " " + user.getUser().getEmail());
                 }
             }
-            return list.toString();
+            return "ok";
         } else {
             return "redirect:/api/Login";
         }

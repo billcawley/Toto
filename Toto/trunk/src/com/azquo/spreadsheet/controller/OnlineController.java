@@ -146,7 +146,7 @@ public class OnlineController {
                     } else { //any for the business for admin
                         if (reportId.equals("ADHOC")){
                             List<String> databases = new ArrayList<>();
-                            List<Database> databaseList = AdminService.getDatabaseListForBusiness(loggedInUser);
+                            List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
                            for (Database db : databaseList) {
                                 databases.add(db.getName());
                            }

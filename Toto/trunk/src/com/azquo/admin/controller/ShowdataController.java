@@ -1,7 +1,5 @@
 package com.azquo.admin.controller;
 
-import com.azquo.admin.database.UploadRecord;
-import com.azquo.admin.database.UploadRecordDAO;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -34,7 +32,7 @@ import java.util.Set;
 
 public class ShowdataController {
 
-    static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
 
     @RequestMapping

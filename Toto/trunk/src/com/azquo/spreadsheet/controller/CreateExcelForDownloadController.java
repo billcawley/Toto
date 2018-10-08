@@ -24,7 +24,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -57,7 +56,7 @@ public class CreateExcelForDownloadController {
                 // modify book to add the users and permissions
                 Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
                 if (userSheet != null) {
-                    final List<User> userListForBusiness = AdminService.getUserListForBusiness(loggedInUser);
+                    final List<User> userListForBusiness = AdminService.getUserListForBusinessWithBasicSecurity(loggedInUser);
                     if (userListForBusiness != null) {
                         userListForBusiness.sort(Comparator.comparing(User::getEmail));
                     }
@@ -106,8 +105,8 @@ public class CreateExcelForDownloadController {
                         row = listRegion.getRefersToCellRegion().getRow();
                     }
                     for (ReportSchedule reportSchedule : reportSchedules) {
-                        final Database databaseById = AdminService.getDatabaseById(reportSchedule.getDatabaseId(), loggedInUser);
-                        final OnlineReport reportById = AdminService.getReportById(reportSchedule.getReportId(), loggedInUser);
+                        final Database databaseById = AdminService.getDatabaseByIdWithBasicSecurityCheck(reportSchedule.getDatabaseId(), loggedInUser);
+                        final OnlineReport reportById = AdminService.getReportByIdWithBasicSecurityCheck(reportSchedule.getReportId(), loggedInUser);
                         if (databaseById != null && reportById != null) {
                             schedulesSheet.getInternalSheet().getCell(row, 0).setStringValue(reportSchedule.getPeriod());
                             schedulesSheet.getInternalSheet().getCell(row, 1).setStringValue(reportSchedule.getRecipients());

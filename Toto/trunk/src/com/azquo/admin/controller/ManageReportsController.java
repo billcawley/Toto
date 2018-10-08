@@ -61,7 +61,7 @@ public class ManageReportsController {
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             if (deleteId != null) {
-                AdminService.removeReportById(loggedInUser, Integer.parseInt(deleteId));
+                AdminService.removeReportByIdWithBasicSecurity(loggedInUser, Integer.parseInt(deleteId));
             }
             if (editId != null) {
                 final OnlineReport theReport = OnlineReportDAO.findById(Integer.parseInt(editId)); // yes could exception, don't care at the mo
@@ -86,7 +86,7 @@ public class ManageReportsController {
                     model.put("id", editId);
                     List<DatabaseSelected> databasesSelected = new ArrayList<>();
 
-                    final List<Database> forUser = AdminService.getDatabaseListForBusiness(loggedInUser);
+                    final List<Database> forUser = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
                     if (forUser != null){
                         for (Database database : forUser) {
                             databasesSelected.add(new DatabaseSelected(databaseIdsForReportId.contains(database.getId()), database));

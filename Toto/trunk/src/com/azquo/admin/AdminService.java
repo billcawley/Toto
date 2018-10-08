@@ -7,7 +7,6 @@ import com.azquo.admin.onlinereport.*;
 import com.azquo.admin.user.*;
 import com.azquo.dataimport.DBCron;
 import com.azquo.dataimport.ImportService;
-import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -110,7 +109,7 @@ this may now not work at all, perhaps delete?
         return "error:  incorrect key";
     }*/
 
-    public static String getSQLDatabaseName(final DatabaseServer databaseServer, Business b, final String databaseName) throws Exception {
+    private static String getSQLDatabaseName(final DatabaseServer databaseServer, Business b, final String databaseName) throws Exception {
         StringBuilder candidate = new StringBuilder(getBusinessPrefix(b) + "_" + databaseName.replaceAll("[^A-Za-z0-9_]", "").toLowerCase());
         while (RMIClient.getServerInterface(databaseServer.getIp()).databaseWithNameExists(candidate.toString())) {
             candidate.append("Z");
@@ -153,16 +152,12 @@ this may now not work at all, perhaps delete?
         emptyDatabase(loggedInUser, true);
     }
     // used by magento, always the currently logged in db
-    public static void emptyDatabase(LoggedInUser loggedInUser, boolean checkSetup) throws Exception {
+    static void emptyDatabase(LoggedInUser loggedInUser, boolean checkSetup) throws Exception {
         DatabaseServer databaseServer = DatabaseServerDAO.findById(loggedInUser.getDatabase().getDatabaseServerId());
         RMIClient.getServerInterface(databaseServer.getIp()).emptyDatabase(loggedInUser.getDatabase().getPersistenceName());
         if (checkSetup){
             checkDBSetupFile(loggedInUser, loggedInUser.getDatabase());
         }
-    }
-
-    public static void copyDatabase(DatabaseAccessToken source, DatabaseAccessToken target, String nameList, String user) throws Exception {
-        RMIClient.getServerInterface(source.getServerIp()).copyDatabase(source, target, nameList, user);
     }
 
     public static void copyDatabase(LoggedInUser loggedInUser, Database source, String newName) throws Exception {
@@ -175,30 +170,6 @@ this may now not work at all, perhaps delete?
         DatabaseDAO.store(database);
         DatabaseServer server = DatabaseServerDAO.findById(database.getDatabaseServerId());
         RMIClient.getServerInterface(server.getIp()).copyDatabase(source.getPersistenceName(), database.getPersistenceName());
-    }
-
-    // added for the business copy function - copy a database to another business. Currently same db server, might change that later. I pass the new user as it's the one attached to the enw business
-    public static Database copyDatabase(Database source, User newUser) throws Exception {
-        Business b = BusinessDAO.findById(newUser.getBusinessId());
-        final String persistenceName = getSQLDatabaseName(DatabaseServerDAO.findById(source.getDatabaseServerId()), b, source.getName()); // we want the persistence name based off old db name and server but with the new business name
-        final Database database = new Database(0, newUser.getBusinessId(), newUser.getId(), source.getName(), persistenceName, source.getDatabaseType(), source.getNameCount(), source.getValueCount(), source.getDatabaseServerId(), null, null, false);
-        DatabaseDAO.store(database);
-        DatabaseServer server = DatabaseServerDAO.findById(database.getDatabaseServerId());
-        RMIClient.getServerInterface(server.getIp()).copyDatabase(source.getPersistenceName(), database.getPersistenceName());
-        return database;
-    }
-
-    // added for the business copy function - copy a report to another business
-    public static OnlineReport copyReport(LoggedInUser loggedInUser, OnlineReport source, User newUser) throws Exception {
-        Business b = BusinessDAO.findById(newUser.getBusinessId());
-        String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-        OnlineReport newReport = new OnlineReport(0, LocalDateTime.now(), b.getId(), newUser.getId(), source.getDatabase(), source.getReportName(), source.getFilename(), "", null);
-        OnlineReportDAO.store(newReport); // store before or.getFilenameForDisk() or the id will be wrong!
-        // new java 7 call, much better!
-        Files.copy(Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + source.getFilenameForDisk())
-                , Paths.get(SpreadsheetService.getHomeDir() + dbPath + businessDirectory + onlineReportsDir + newReport.getFilenameForDisk()));
-        // do the links after
-        return newReport;
     }
 
     public static void createUser(final String email
@@ -255,7 +226,7 @@ this may now not work at all, perhaps delete?
     }
 
     // return empty lists? Not sure . . .
-    public static List<Database> getDatabaseListForBusiness(final LoggedInUser loggedInUser) {
+    public static List<Database> getDatabaseListForBusinessWithBasicSecurity(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
             return DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         }
@@ -265,7 +236,7 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static List<User> getUserListForBusiness(final LoggedInUser loggedInUser) {
+    public static List<User> getUserListForBusinessWithBasicSecurity(final LoggedInUser loggedInUser) {
         if (loggedInUser.getUser().isAdministrator()) {
             return UserDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
         }
@@ -276,7 +247,6 @@ this may now not work at all, perhaps delete?
     }
 
     public static List<OnlineReport> getReportList(final LoggedInUser loggedInUser) {
-
         List<OnlineReport> reportList = new ArrayList<>();
         if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper()) {
             int reportId = loggedInUser.getUser().getReportId();
@@ -299,7 +269,7 @@ this may now not work at all, perhaps delete?
                     report.setDatabase(database.getName());
                 }
                 reportList.addAll(reports);
-            } else if (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()) { // develope constrained to their own reports
+            } else if (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()) { // developer constrained to their own database reports
                 List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(database.getId());
                 for (OnlineReport report : reports) {
                     report.setDatabase(database.getName());
@@ -309,7 +279,6 @@ this may now not work at all, perhaps delete?
         }
         // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {
-
             OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, loggedInUser.getUser().getId(), "", "No reports found", "", "", null);
             reportList.add(notFound);
         } else {
@@ -402,28 +371,28 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static Database getDatabaseById(int databaseId, LoggedInUser loggedInUser) {
+    public static Database getDatabaseByIdWithBasicSecurityCheck(int databaseId, LoggedInUser loggedInUser) {
         Database database = DatabaseDAO.findById(databaseId);
         if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) { // as I've mentioned elsewhere this is dodgy! todo - fix
+                || (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()))) {
             return database;
         }
         return null;
     }
 
-    public static OnlineReport getReportById(int reportId, LoggedInUser loggedInUser) {
+    public static OnlineReport getReportByIdWithBasicSecurityCheck(int reportId, LoggedInUser loggedInUser) {
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         if (onlineReport != null && ((loggedInUser.getUser().isAdministrator() && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && onlineReport.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && onlineReport.getUserId() == loggedInUser.getUser().getId()))) {
             return onlineReport;
         }
         return null;
     }
 
-    public static void removeReportById(LoggedInUser loggedInUser, int reportId) {
+    public static void removeReportByIdWithBasicSecurity(LoggedInUser loggedInUser, int reportId) {
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
         if (onlineReport != null && ((loggedInUser.getUser().isAdministrator() && onlineReport.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && onlineReport.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && onlineReport.getUserId() == loggedInUser.getUser().getId()))) {
             Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + onlineReportsDir + onlineReport.getFilenameForDisk());
             if (Files.exists(fullPath) || Files.isDirectory(fullPath)) {
                 try {
@@ -442,17 +411,17 @@ this may now not work at all, perhaps delete?
     }
 
     // code adapted from spreadsheet
-    public static void removeDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
+    public static void removeDatabaseByIdWithBasicSecurity(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = DatabaseDAO.findById(databaseId);
         if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) { // business ID is user ID?? woah! todo
+                || (loggedInUser.getUser().isDeveloper() && db.getUserId() == loggedInUser.getUser().getId()))) {
             // note, used to delete choices for the reports for this DB, won't do this now as
             // before unlinking get the reports to see if they need zapping
             final List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(db.getId());
             DatabaseReportLinkDAO.unLinkDatabase(databaseId);
             for (OnlineReport or : reports) {
                 if (DatabaseReportLinkDAO.getDatabaseIdsForReportId(or.getId()).isEmpty()) { // then this report no longer has any databases
-                    removeReportById(loggedInUser, or.getId());
+                    removeReportByIdWithBasicSecurity(loggedInUser, or.getId());
                 }
             }
             OpenDatabaseDAO.removeForDatabaseId(db.getId());
@@ -465,10 +434,10 @@ this may now not work at all, perhaps delete?
         }
     }
 
-    public static void emptyDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
+    public static void emptyDatabaseByIdWithBasicSecurity(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = DatabaseDAO.findById(databaseId);
         if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && db.getUserId() == loggedInUser.getUser().getId()))) {
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getPersistenceName());
             Database oldDb = loggedInUser.getDatabase();
             LoginService.switchDatabase(loggedInUser, db);
@@ -480,8 +449,8 @@ this may now not work at all, perhaps delete?
 
     //now also does the last audit
     public static void updateNameAndValueCounts(LoggedInUser loggedInUser, Database database) throws Exception {
-        database.setNameCount(AdminService.getNameCount(loggedInUser, database));
-        database.setValueCount(AdminService.getValueCount(loggedInUser, database));
+        database.setNameCount(AdminService.getNameCountWithBasicSecurity(loggedInUser, database));
+        database.setValueCount(AdminService.getValueCountWithBasicSecurity(loggedInUser, database));
         database.setLastProvenance(getMostRecentProvenance(loggedInUser, database));
         DatabaseDAO.store(database);
     }
@@ -509,25 +478,26 @@ this may now not work at all, perhaps delete?
         }
     }
 
-    public static void checkDatabaseById(LoggedInUser loggedInUser, int databaseId) throws Exception {
+    public static void checkDatabaseByIdWithBasicSecurity(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = DatabaseDAO.findById(databaseId);
         if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && db.getUserId() == loggedInUser.getUser().getId()))) {
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).checkDatabase(db.getPersistenceName());
         }
     }
 
-    public static void unloadDatabase(LoggedInUser loggedInUser, int databaseId) throws Exception {
+    public static void unloadDatabaseWithBasicSecurity(LoggedInUser loggedInUser, int databaseId) throws Exception {
         Database db = DatabaseDAO.findById(databaseId);
         if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && db.getUserId() == loggedInUser.getUser().getId()))) {
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).unloadDatabase(db.getPersistenceName());
         }
     }
 
     public static void deleteUploadRecord(LoggedInUser loggedInUser, int uploadRecordId) throws Exception {
         UploadRecord ur = UploadRecordDAO.findById(uploadRecordId);
-        if (ur != null && ur.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+        if (ur != null &&  ((loggedInUser.getUser().isAdministrator() && ur.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                || (loggedInUser.getUser().isDeveloper() && ur.getUserId() == loggedInUser.getUser().getId()))) {
             if (ur.getTempPath() != null && !ur.getTempPath().isEmpty()) {
                 Path path = Paths.get(ur.getTempPath());
                 if (!Files.isDirectory(path) && Files.exists(path)) {
@@ -541,31 +511,31 @@ this may now not work at all, perhaps delete?
     // a little inconsistent but it will be called using a database object, no point looking up again
     public static boolean isDatabaseLoaded(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()))) {
             return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).isDatabaseLoaded(database.getPersistenceName());
         }
         return false;
     }
 
-    public static int getNameCount(LoggedInUser loggedInUser, Database database) throws Exception {
+    private static int getNameCountWithBasicSecurity(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()))) {
             return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getNameCount(database.getPersistenceName());
         }
         return 0;
     }
 
-    public static int getValueCount(LoggedInUser loggedInUser, Database database) throws Exception {
+    private static int getValueCountWithBasicSecurity(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()))) {
             return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getValueCount(database.getPersistenceName());
         }
         return 0;
     }
 
-    public static String getMostRecentProvenance(LoggedInUser loggedInUser, Database database) throws Exception {
+    private static String getMostRecentProvenance(LoggedInUser loggedInUser, Database database) throws Exception {
         if (database != null && ((loggedInUser.getUser().isAdministrator() && database.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && database.getBusinessId() == loggedInUser.getUser().getId()))) {
+                || (loggedInUser.getUser().isDeveloper() && database.getUserId() == loggedInUser.getUser().getId()))) {
             return RMIClient.getServerInterface(DatabaseServerDAO.findById(database.getDatabaseServerId()).getIp()).getMostRecentProvenance(database.getPersistenceName());
         }
         return null;
@@ -582,10 +552,10 @@ this may now not work at all, perhaps delete?
 
     }
 
-    public static void toggleAutoBackup(LoggedInUser loggedInUser, int databaseId) {
+    public static void toggleAutoBackupWithBasicSecurity(LoggedInUser loggedInUser, int databaseId) {
         Database db = DatabaseDAO.findById(databaseId);
         if (db != null && ((loggedInUser.getUser().isAdministrator() && db.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                || (loggedInUser.getUser().isDeveloper() && db.getBusinessId() == loggedInUser.getUser().getId()))) { // business ID is user ID?? woah! todo
+                || (loggedInUser.getUser().isDeveloper() && db.getUserId() == loggedInUser.getUser().getId()))) { // business ID is user ID?? woah! todo
             db.setAutoBackup(!db.getAutoBackup());
             DatabaseDAO.store(db);
         }

@@ -34,10 +34,10 @@ public class CopyDatabaseController {
             StringBuilder error = new StringBuilder();
             try {
                 Database databaseById = null;
-                if (databaseId != null && NumberUtils.isNumber(databaseId)) {
-                    databaseById = AdminService.getDatabaseById(Integer.parseInt(databaseId), loggedInUser);
+                if (NumberUtils.isNumber(databaseId)) {
+                    databaseById = AdminService.getDatabaseByIdWithBasicSecurityCheck(Integer.parseInt(databaseId), loggedInUser);
                 }
-                if (databaseById == null || (loggedInUser.getUser().isDeveloper() && databaseById.getUserId() != loggedInUser.getUser().getId())){
+                if (databaseById == null){
                     error.append("Bad database Id.");
                 } else {
                     model.put("database", databaseById.getName());

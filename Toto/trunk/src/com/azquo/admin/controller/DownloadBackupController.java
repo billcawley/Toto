@@ -1,14 +1,13 @@
 package com.azquo.admin.controller;
 
+import com.azquo.admin.AdminService;
 import com.azquo.admin.BackupService;
 import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.DownloadController;
 import com.azquo.spreadsheet.controller.LoginController;
-import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,8 +34,8 @@ public class DownloadBackupController {
             , @RequestParam(value = "id", required = false) String id
     ) throws Exception {
         final LoggedInUser  loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-        if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && NumberUtils.isNumber(id)) {
-            Database db = DatabaseDAO.findById(Integer.parseInt(id));
+        if (loggedInUser != null) {
+            Database db = AdminService.getDatabaseByIdWithBasicSecurityCheck(Integer.parseInt(id), loggedInUser);
             if (db != null) {
                 DatabaseServer dbs = DatabaseServerDAO.findById(db.getDatabaseServerId());
                 loggedInUser.setDatabaseWithServer(dbs, db);
