@@ -18,7 +18,9 @@ import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.csvreader.CsvWriter;
+import org.apache.commons.io.FileUtils;
 import org.springframework.web.multipart.MultipartFile;
+import org.zeroturnaround.zip.ZipUtil;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
@@ -61,53 +63,49 @@ public final class ImportService {
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
         }
-        String tempFile = ImportFileUtilities.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
+        File tempFile = ImportFileUtilities.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
         uploadFile.close(); // windows requires this (though windows should not be used in production), perhaps not a bad idea anyway
 
         String toReturn;
 
 
         if (fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
-            // todo - replace with ziputils explode?
-            List<Path> files = ImportFileUtilities.unZip(tempFile);
+            ZipUtil.explode(tempFile);
+            // after exploding the original file is replaced with a directory
+            File zipDir = new File(tempFile.getPath());
+            List<File> files = new ArrayList<>(FileUtils.listFiles(zipDir, null, true));
             // should be sorting by xls first then size ascending
             files.sort((f1, f2) -> {
-                //note - this does not sort zip files....
-                if ((f1.getFileName().endsWith(".xls") || f1.getFileName().endsWith(".xlsx")) && (!f2.getFileName().endsWith(".xls") && !f2.getFileName().endsWith(".xlsx"))) { // one is xls, the other is not
+                //note - this does not sort zip files.... should they be first?
+                if ((f1.getName().endsWith(".xls") || f1.getName().endsWith(".xlsx")) && (!f2.getName().endsWith(".xls") && !f2.getName().endsWith(".xlsx"))) { // one is xls, the other is not
                     return -1;
                 }
-                if ((f2.getFileName().endsWith(".xls") || f2.getFileName().endsWith(".xlsx")) && (!f1.getFileName().endsWith(".xls") && !f1.getFileName().endsWith(".xlsx"))) { // otehr way round
+                if ((f2.getName().endsWith(".xls") || f2.getName().endsWith(".xlsx")) && (!f1.getName().endsWith(".xls") && !f1.getName().endsWith(".xlsx"))) { // otehr way round
                     return 1;
                 }
-                // fall back to file size among the same types
-                if (f1.toFile().length() < f2.toFile().length()) {
-                    return -1;
-                }
-                if (f1.toFile().length() > f2.toFile().length()) {
-                    return 1;
-                }
-                return 0;
+                //now standard string order
+                return  f1.getName().compareTo(f2.getName());
             });
             StringBuilder sb = new StringBuilder();
-            Iterator<Path> fileIterator = files.iterator();
+            Iterator<File> fileIterator = files.iterator();
             while (fileIterator.hasNext()) {
-                Path p = fileIterator.next();
-                if (p.getFileName().toString().endsWith(".zip")) {
+                File f = fileIterator.next();
+                if (f.getName().endsWith(".zip")) {
                     // added fileNameParams will be sorted internally - recursive call
-                    sb.append(importTheFile(loggedInUser, p.getFileName().toString(), p.toString(), fileNameParams, isData, setup, forceReportUpload, !fileIterator.hasNext()));
+                    sb.append(importTheFile(loggedInUser, f.getName(), f.getPath(), fileNameParams, isData, setup, forceReportUpload, !fileIterator.hasNext()));
                 } else {
                     Map<String, String> mapCopy = new HashMap<>(fileNameParams); // must copy as the map might get changed by each file in the zip
-                    addFileNameParametersToMap(p.getFileName().toString(), mapCopy);
+                    addFileNameParametersToMap(f.getName(), mapCopy);
                     if (fileIterator.hasNext()) {
-                        sb.append(readBookOrFile(loggedInUser, p.getFileName().toString(), mapCopy, p.toString(), false, isData, false));
+                        sb.append(readBookOrFile(loggedInUser, f.getName(), mapCopy, f.getPath(), false, isData, false));
                     } else {
-                        sb.append(stripTempSuffix(fileName) + ": " + readBookOrFile(loggedInUser, p.getFileName().toString(), mapCopy, p.toString(), isLast, isData, false)); // persist on the last one
+                        sb.append(stripTempSuffix(fileName) + ": " + readBookOrFile(loggedInUser, f.getName(), mapCopy, f.getPath(), isLast, isData, false)); // persist on the last one
                     }
                 }
             }
             toReturn = sb.toString();
         } else { // vanilla
-            toReturn = readBookOrFile(loggedInUser, fileName, fileNameParams, tempFile, true, isData, forceReportUpload);
+            toReturn = readBookOrFile(loggedInUser, fileName, fileNameParams, tempFile.getPath(), true, isData, forceReportUpload);
         }
         // hacky way to get the report name so it can be seen on the list. I wonder if this should be removed . . .
         String reportName = null;
@@ -527,7 +525,7 @@ public final class ImportService {
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         // right - here we're going to have to move the file if the DB server is not local.
-        if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is hte same the question is whether the path refers to this machine or another
+        if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
             filePath = ImportFileUtilities.copyFileToDatabaseServer(new FileInputStream(filePath), databaseServer.getSftpUrl());
         }
         return RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileName, fileNameParameters, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);

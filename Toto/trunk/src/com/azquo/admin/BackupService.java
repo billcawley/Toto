@@ -109,6 +109,10 @@ public class BackupService {
             // first thing to do is delete the database and all associated reports
             Database db = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
             if (db != null) {
+                // hack in a security check, we know the user is an Admin or Developer but if a developer it needs to be their DB
+                if (loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getId() != db.getUserId()){
+                    throw new Exception("A developer cannot restore to a database that is not thiers");
+                }
                 if (justEmpty){
                     loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(db.getDatabaseServerId()), db);
                     AdminService.emptyDatabase(loggedInUser, false); // don't load the setup file!

@@ -231,7 +231,7 @@ public class ManageDatabasesController {
             } else {
                 model.put("serverList", false);
             }
-            List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser, fileSearch);
+            List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, fileSearch);
             if ("database".equals(sort)) {
                 uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getDatabaseName().compareTo(o2.getDatabaseName())));
             }
@@ -365,7 +365,7 @@ public class ManageDatabasesController {
                 model.put("serverList", false);
             }
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
-            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusiness(loggedInUser, null));
+            model.put("uploads", AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             AdminService.setBanner(model, loggedInUser);
             return "managedatabases";

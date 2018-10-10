@@ -2,6 +2,7 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
@@ -71,9 +72,13 @@ public class ManageReportsController {
                     if (submit != null) {
                         // to keep intelliJ happy, I'm not sure if this is a good idea or not? I suppose protects against logic above being changed unpredictably
                         DatabaseReportLinkDAO.unLinkReport(theReport.getId());
-                        // todo - stop db id hacking here by developers
                         for (String databaseId : databaseIdList) {
-                            DatabaseReportLinkDAO.link(Integer.parseInt(databaseId), theReport.getId());
+                            int dbId = Integer.parseInt(databaseId);
+                            Database byId = DatabaseDAO.findById(dbId);
+                            if (byId != null && ((loggedInUser.getUser().isAdministrator() && byId.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                                    || (loggedInUser.getUser().isDeveloper() && byId.getUserId() == loggedInUser.getUser().getId()))){
+                                DatabaseReportLinkDAO.link(byId.getId(), theReport.getId());
+                            }
                         }
                         theReport.setReportName(name);
                         theReport.setExplanation(explanation);
@@ -85,7 +90,6 @@ public class ManageReportsController {
                     final List<Integer> databaseIdsForReportId = DatabaseReportLinkDAO.getDatabaseIdsForReportId(theReport.getId());
                     model.put("id", editId);
                     List<DatabaseSelected> databasesSelected = new ArrayList<>();
-
                     final List<Database> forUser = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
                     if (forUser != null){
                         for (Database database : forUser) {

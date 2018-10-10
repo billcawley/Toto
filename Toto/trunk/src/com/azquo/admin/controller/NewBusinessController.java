@@ -39,9 +39,7 @@ public class NewBusinessController {
             , @RequestParam(value = "password", required = false) String password
             , @RequestParam(value = "confirmPassword", required = false) String confirmPassword
             , @RequestParam(value = "submit", required = false) String submit
-    ) throws Exception
-
-    {
+    ) throws Exception {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
@@ -67,7 +65,6 @@ public class NewBusinessController {
                     if (loggedInUser != null) {
                         request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, loggedInUser);
                     }
-
                     return "redirect:/api/Online?reportid=1";
                 } else {
                     model.put("error", error.toString());

@@ -34,7 +34,6 @@ public class ShowdataController {
 
     private static final ObjectMapper jacksonMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-
     @RequestMapping
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
             , @RequestParam(value = "chosen", required = false) String chosen
@@ -44,8 +43,8 @@ public class ShowdataController {
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             // ok we'll put the id parsing bits in here now, much better
             String[] namesString = chosen.split(",");
-            if (namesString[0].startsWith("changed") && loggedInUser.getDatabase()!=null){
-                ProvenanceDetailsForDisplay provenanceDetailsForDisplay = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getListOfChangedValues(loggedInUser.getDataAccessToken(),100);
+            if (namesString[0].startsWith("changed") && loggedInUser.getDatabase() != null) {
+                ProvenanceDetailsForDisplay provenanceDetailsForDisplay = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getListOfChangedValues(loggedInUser.getDataAccessToken(), 100);
                 if (provenanceDetailsForDisplay.getAuditForDisplayList() != null && !provenanceDetailsForDisplay.getAuditForDisplayList().isEmpty()) {
                     modelMap.addAttribute("audit", jacksonMapper.writeValueAsString(provenanceDetailsForDisplay));
                     modelMap.addAttribute("op", "audit");

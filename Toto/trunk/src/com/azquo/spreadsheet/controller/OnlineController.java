@@ -164,7 +164,7 @@ public class OnlineController {
                             onlineReport = OnlineReportDAO.findForIdAndBusinessId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
                         }
                     }
-                    // todo - decide which method to switch databases
+                    // todo - decide which method to switch databases - it seems id is not being used? Or is it in the user menus?
                     if (databaseId != null && databaseId.length() > 0) {
                         final List<Integer> databaseIdsForReportId = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
                         for (int dbId : databaseIdsForReportId) {
