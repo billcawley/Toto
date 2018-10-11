@@ -538,7 +538,10 @@ public class ExcelController {
         }
 
         // this needs to be somewhere better. Todo.
-        String patchFilesSource = "/home/edward/Downloads/xlsxbreakdown/415-ECL Summarysimple saveao/xl/webextensions/";
+        String patchFilesSource = SpreadsheetService.getPatchFilesSource();
+        if (patchFilesSource == null || patchFilesSource.isEmpty()){
+            return "no patch files";
+        }
         //String zipFile = "/home/edward/Downloads/xlsxbreakdown/tomodify.xlsx";
         FileUtils.copyFile(new File(sourceFile), new File(sourceFile + ".bak")); // worth making a backup as the .explode below will zap the original it seems
         ZipUtil.explode(new File(sourceFile));
