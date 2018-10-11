@@ -209,7 +209,7 @@ public class BatchImporter implements Callable<Void> {
         while (adjusted && counter < 10) {
             adjusted = false;
             for (ImportCellWithHeading cell : cells) {
-                if (cell.getImmutableImportHeading().compositionPattern != null) {
+                if (cell.getImmutableImportHeading().compositionPattern != null && (cell.getLineValue()==null || cell.getLineValue().length()==0)) {
                     String result = cell.getImmutableImportHeading().compositionPattern;
                     // do line number first, I see no reason not to. Important for pivot.
                     String LINENO = "LINENO";
@@ -261,7 +261,7 @@ public class BatchImporter implements Callable<Void> {
                             } catch (Exception ignored) {
 
                             }
-                            if (compCell != null) {
+                            if (compCell != null && compCell.getLineValue()!=null && compCell.getLineValue().length() > 0) {
                                 String sourceVal = null;
                                 if (compCell.getImmutableImportHeading().lineNameRequired ){
                                     if (compCell.getLineNames()==null){
@@ -292,6 +292,7 @@ public class BatchImporter implements Callable<Void> {
                                 if (doublequotes) headingMarker++;
                             } else {
                                 headingMarker = headingEnd;
+                                result = "";
                             }
 
                         }
@@ -333,9 +334,10 @@ public class BatchImporter implements Callable<Void> {
                     if (cell.getImmutableImportHeading().removeSpaces){
                         result = result.replace(" ", "");
                     }
-                    if (!result.equals(cell.getLineValue())) {
+                    if (result.length() > 0 && !result.equals(cell.getLineValue())) {
 
                         cell.setLineValue(result);
+                        checkLookup(azquoMemoryDBConnection,cell);
                         adjusted = true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
                     }
                 }
@@ -350,7 +352,7 @@ public class BatchImporter implements Callable<Void> {
 
     private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,List<ImportCellWithHeading> cells) throws Exception {
              for (ImportCellWithHeading cell : cells) {
-                 if (cell.getImmutableImportHeading().dictionaryMap != null) {
+             if (cell.getImmutableImportHeading().dictionaryMap != null) {
                      String value = cell.getLineValue();
                      if (value!=null && value.length() > 0){
                          boolean hasResult = false;
@@ -396,6 +398,62 @@ public class BatchImporter implements Callable<Void> {
              }
      }
 
+     private static void checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell)throws Exception{
+         if (cell.getLineValue()!=null && cell.getLineValue().length() > 0  && cell.getImmutableImportHeading().lookupFrom!=null && cell.getLineNames()==null){
+             int commaPos = cell.getLineValue().indexOf(",");
+             if (commaPos < 0){
+                 throw new Exception(cell.getImmutableImportHeading().heading + " has no comma in the lookup value");
+             }
+             String setName = cell.getLineValue().substring(0, commaPos).trim();
+             String valueToTest = cell.getLineValue().substring(commaPos + 1).trim();
+             Name toTestParent = NameService.findByName(azquoMemoryDBConnection, setName);
+             if (toTestParent==null){
+                 throw new Exception((cell.getImmutableImportHeading().heading + " no such set: " + setName));
+             }
+
+             for (Name toTest:toTestParent.getChildren()){
+                 String lowLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupFrom);
+                 if (lowLimit!=null) {
+                     try {
+
+                         Double d = Double.parseDouble(lowLimit);
+                         Double d2 = Double.parseDouble(valueToTest);
+                         if (d2 >= d) {
+                             if (cell.getImmutableImportHeading().lookupTo != null) {
+                                 String highlimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
+                                 if (highlimit != null) {
+                                     d = Double.parseDouble(highlimit);
+                                     if (d2 <= d) {
+                                         newCellNameValue(cell,toTest);
+                                          break;
+                                     }
+                                 }
+                             } else {
+                                 newCellNameValue(cell,toTest);
+                                 break;
+                             }
+                         }
+                     }catch(Exception e){
+                         //compare strings
+                         if (lowLimit.compareTo(valueToTest)<=0){
+                             if (cell.getImmutableImportHeading().lookupTo!=null){
+                                 String highLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
+                                 if (highLimit!=null && highLimit.compareTo(valueToTest)>=0){
+                                     newCellNameValue(cell,toTest);
+                                     break;
+                                 }
+                             }else{
+                                 newCellNameValue(cell,toTest);
+                                 break;
+                             }
+                         }
+                     }
+                 }
+             }
+         }
+
+     }
+
 
      private static boolean containsSynonym(Map<String,List<String>> synonymList, String term, String value){
          if (value.contains(term)) {
@@ -413,6 +471,11 @@ public class BatchImporter implements Callable<Void> {
          }
          return false;
 
+    }
+
+    private static void newCellNameValue(ImportCellWithHeading cell, Name name){
+         cell.addToLineNames(name);
+         cell.setLineValue(name.getDefaultDisplayName());
     }
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
