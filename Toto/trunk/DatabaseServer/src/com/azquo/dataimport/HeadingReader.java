@@ -42,6 +42,13 @@ class HeadingReader {
     static final String LANGUAGE = "language";
     static final String PEERS = "peers";
     static final String LOCAL = "local";
+    /*
+    COMPOSITION  <phrase with column heading names enclosed in ``>
+    e.g   COMPOSITION  `Name`, `address` Tel No: `Telephone No`
+
+    NOTE the values ofthe fields will be the final values - some fields using 'language' 'dictionary' or 'lookup' will find names, and it is the default value of those names which is used in 'composition'
+    */
+
     static final String COMPOSITION = "composition";
     static final String CLASSIFICATION = "classification";
     static final String DEFAULT = "default";
@@ -64,7 +71,29 @@ class HeadingReader {
     static final String LINEDATA = "linedata";
     static final String SPLIT = "split";
     static final String TOPLINE = "topline";
+    /*DICTIONARY finds a name based on the string value of the cell.  The system will search all names for the attribute given by the 'dictionary' term.  For instance if the phrase is 'dictionary complaint terms'
+    the system will look through all the attributes 'complaint terms' to see if any match the value of this cell.
+    the 'terms' consist of words or phrases separated by '+','-' or ','.   ',' means  'or'  '+' means 'and' and '-' means 'and not'
+    e.g      'car, bus, van + accident - sunday,saturday' would find any phrase containg 'car' or 'bus' or 'van' AND 'accident' but NOT containing 'saturday' or 'sunday'
+    DICTIONARY can be used in conjunction with the set 'SYNONYMS`.  The elements of 'Synonyms` are names witth an attriubte 'sysnonyms'.  The attribute gives a comma-separated list of synonyms.
+    e.g  if an element of 'Synonyms' is 'car'    then 'car' may have an attribute 'synonyms' consisting of 'motor, auto, vehicle'  which DICTIONARY  would consider to mean the same as 'car'
+     */
     static final String DICTIONARY = "dictionary";
+    /*
+    LOOKUP FROM  `<start attribute>` {TO `<end attribute>`}
+    used in conjunction with 'child of' or 'classification'
+
+    used where you are not looking for an exact match, but for a name with the given attribute which falls within the range.
+
+    e.g. there might be a value for 'Weight' which you wish to categorise into 'light'  (Min weight = 0, Max weight = 10) and 'heavy' (Min weight = 10, max weight = 1000)
+    'classification weight categories;lookup from `min weight` to `max weight`
+
+    the system will find the first element of the set which satisfies the requirements.   'TO' is optional
+
+
+
+     */
+    static final String LOOKUP = "lookup";
 
     private static final int FINDATTRIBUTECOLUMN = -2;
 
@@ -368,8 +397,13 @@ todo - add classification here
         heading.clearData = clearData;
         List<String> clauses = new ArrayList<>(Arrays.asList(headingString.split(";")));
         Iterator clauseIt = clauses.iterator();
-        heading.heading = ((String) clauseIt.next()).replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
-        heading.name = NameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames); // at this stage, look for a name, but don't create it unless necessary
+          heading.heading = ((String) clauseIt.next()).replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
+        try {
+            //WFC - I do not understand why we're trying to set up a name for an attribute!
+            heading.name = NameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames); // at this stage, look for a name, but don't create it unless necessary
+        }catch(Exception e){
+
+        }
         // loop over the clauses making sense and modifying the heading object as you go
 
         while (clauseIt.hasNext()) {
@@ -599,6 +633,25 @@ todo - add classification here
                 }
 
                 heading.exclusive = "";
+                break;
+            case LOOKUP:
+                if (!result.toLowerCase().startsWith("from ") || result.indexOf("`",6) < 0){
+                    throw new Exception("lookup FROM `<attribute`");
+                }
+                result = result.substring(6);
+                int endFrom = result.indexOf("`");
+                heading.lookupFrom = result.substring(0,endFrom);
+                result = result.substring(endFrom + 1);
+                if (result.toLowerCase().contains("to")){
+                    int startTo = result.indexOf("to") + 2;
+                    startTo = result.indexOf("`", startTo);
+                    if (startTo < 0 || result.indexOf("`", startTo + 1)<0){
+                        throw new Exception ("lookup FROM `attribute` TO `attribute`");
+                    }
+                    heading.lookupTo = result.substring(startTo + 1, result.indexOf("`", startTo + 1)).trim();
+                }
+
+
                 break;
             default:
                 throw new Exception(firstWord + " not understood in heading '" + heading.heading + "'");
