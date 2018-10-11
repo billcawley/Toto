@@ -54,6 +54,8 @@ class ImmutableImportHeading {
     final List<Integer> localParentIndexes;
      Map<Name,List<DictionaryTerm>> dictionaryMap;
      Map<String, List<String>> synonyms;
+     String lookupFrom;
+     String lookupTo;
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -80,5 +82,8 @@ class ImmutableImportHeading {
         this.localParentIndexes = mutableImportHeading.localParentIndexes;
         this.dictionaryMap = mutableImportHeading.dictionaryMap;
         this.synonyms = mutableImportHeading.synonyms;
+        this.lookupFrom = mutableImportHeading.lookupFrom;
+        this.lookupTo = mutableImportHeading.lookupTo;
+
     }
 }

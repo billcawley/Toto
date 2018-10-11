@@ -86,4 +86,6 @@ class MutableImportHeading {
     */
     Map<Name,List<DictionaryTerm>> dictionaryMap = null;
     Map<String, List<String>> synonyms = null;
+    String lookupFrom = null;
+    String lookupTo = null;
 }
