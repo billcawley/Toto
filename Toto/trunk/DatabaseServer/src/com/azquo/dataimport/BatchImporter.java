@@ -85,8 +85,8 @@ public class BatchImporter implements Callable<Void> {
                     resolveDefaultValues(lineToLoad);
                     // composite might do things that affect only and existing hence do it before
                     resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine);
-                     String rejectionReason =  checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
-                    if (rejectionReason==null) {
+                    String rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
+                    if (rejectionReason == null) {
                         try {
                             resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
                             // valueTracker simply the number of values imported
@@ -144,8 +144,8 @@ public class BatchImporter implements Callable<Void> {
         //returns the error
         for (ImportCellWithHeading cell : cells) {
             if (cell.getImmutableImportHeading().ignoreList != null) {
-                for (String ignoreItem:cell.getImmutableImportHeading().ignoreList){
-                    if (cell.getLineValue().toLowerCase().contains(ignoreItem)){
+                for (String ignoreItem : cell.getImmutableImportHeading().ignoreList) {
+                    if (cell.getLineValue().toLowerCase().contains(ignoreItem)) {
                         return "ignored";
                     }
                 }
@@ -201,7 +201,7 @@ public class BatchImporter implements Callable<Void> {
     // Now supports basic excel like string operations, left right and mid, also simple single operator calculation on the results.
     // Calcs simple for the moment - if required could integrate the shunting yard algorithm
 
-    private static void resolveCompositeValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,List<String>attributeNames,List<ImportCellWithHeading> cells, int importLine) throws Exception {
+    private static void resolveCompositeValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<String> attributeNames, List<ImportCellWithHeading> cells, int importLine) throws Exception {
         boolean adjusted = true;
         //loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
         // note : a circular reference could cause an infinite loop - hence the counter
@@ -209,7 +209,7 @@ public class BatchImporter implements Callable<Void> {
         while (adjusted && counter < 10) {
             adjusted = false;
             for (ImportCellWithHeading cell : cells) {
-                if (cell.getImmutableImportHeading().compositionPattern != null && (cell.getLineValue()==null || cell.getLineValue().length()==0)) {
+                if (cell.getImmutableImportHeading().compositionPattern != null && (cell.getLineValue() == null || cell.getLineValue().length() == 0)) {
                     String result = cell.getImmutableImportHeading().compositionPattern;
                     // do line number first, I see no reason not to. Important for pivot.
                     String LINENO = "LINENO";
@@ -261,17 +261,15 @@ public class BatchImporter implements Callable<Void> {
                             } catch (Exception ignored) {
 
                             }
-                            if (compCell != null && compCell.getLineValue()!=null && compCell.getLineValue().length() > 0) {
-                                String sourceVal = null;
-                                if (compCell.getImmutableImportHeading().lineNameRequired ){
-                                    if (compCell.getLineNames()==null){
+                            if (compCell != null && compCell.getLineValue() != null && compCell.getLineValue().length() > 0) {
+                                String sourceVal;
+                                if (compCell.getImmutableImportHeading().lineNameRequired) {
+                                    if (compCell.getLineNames() == null) {
                                         compCell.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
                                                 , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames)));
-
-
                                     }
                                     sourceVal = compCell.getLineNames().iterator().next().getDefaultDisplayName();
-                                }else {
+                                } else {
                                     sourceVal = compCell.getLineValue();
                                 }
                                 // the two ints need to be as they are used in excel
@@ -331,13 +329,12 @@ public class BatchImporter implements Callable<Void> {
                             result = dresult + "";
                         }
                     }
-                    if (cell.getImmutableImportHeading().removeSpaces){
+                    if (cell.getImmutableImportHeading().removeSpaces) {
                         result = result.replace(" ", "");
                     }
                     if (result.length() > 0 && !result.equals(cell.getLineValue())) {
-
                         cell.setLineValue(result);
-                        checkLookup(azquoMemoryDBConnection,cell);
+                        checkLookup(azquoMemoryDBConnection, cell);
                         adjusted = true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
                     }
                 }
@@ -350,132 +347,128 @@ public class BatchImporter implements Callable<Void> {
     }
 
 
-    private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,List<ImportCellWithHeading> cells) throws Exception {
-             for (ImportCellWithHeading cell : cells) {
-             if (cell.getImmutableImportHeading().dictionaryMap != null) {
-                     String value = cell.getLineValue();
-                     if (value!=null && value.length() > 0){
-                         boolean hasResult = false;
-                         for (Name category : cell.getImmutableImportHeading().dictionaryMap.keySet()) {
-                             boolean found = true;
-                             List<DictionaryTerm> dictionaryTerms = cell.getImmutableImportHeading().dictionaryMap.get(category);
-                             for (DictionaryTerm dictionaryTerm : dictionaryTerms) {
-                                 found = false; //the phrase now has to pass every one of the tests.  If it does so then the category is found.
-                                 for (String item : dictionaryTerm.items) {
-                                     if (dictionaryTerm.exclude) {
-                                         if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
-                                             found = false;
-                                             break;
-                                         }
-                                     } else {
-                                         if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
-                                             found = true;
-                                         }
-                                     }
-
-                                 }
-                                 if (!found) break;
-
-                             }
-                             if (found) {
-                                 cell.addToLineNames(category);
-                                 hasResult = true;
-                                 break;
-                             }
-
-                         }
-                         if (!hasResult){
-                             if(!cell.getImmutableImportHeading().blankZeroes) {
-                                 Name parent = cell.getImmutableImportHeading().parentNames.iterator().next();
-                                 List<String> languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
-                                 cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + parent.getDefaultDisplayName(), parent, false, languages));
-                             }else{
-                                 cell.setLineValue("");
-                             }
-                         }
-                      }
-                 }
-             }
-     }
-
-     private static void checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell)throws Exception{
-         if (cell.getLineValue()!=null && cell.getLineValue().length() > 0  && cell.getImmutableImportHeading().lookupFrom!=null && cell.getLineNames()==null){
-             int commaPos = cell.getLineValue().indexOf(",");
-             if (commaPos < 0){
-                 throw new Exception(cell.getImmutableImportHeading().heading + " has no comma in the lookup value");
-             }
-             String setName = cell.getLineValue().substring(0, commaPos).trim();
-             String valueToTest = cell.getLineValue().substring(commaPos + 1).trim();
-             Name toTestParent = NameService.findByName(azquoMemoryDBConnection, setName);
-             if (toTestParent==null){
-                 throw new Exception((cell.getImmutableImportHeading().heading + " no such set: " + setName));
-             }
-
-             for (Name toTest:toTestParent.getChildren()){
-                 String lowLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupFrom);
-                 if (lowLimit!=null) {
-                     try {
-
-                         Double d = Double.parseDouble(lowLimit);
-                         Double d2 = Double.parseDouble(valueToTest);
-                         if (d2 >= d) {
-                             if (cell.getImmutableImportHeading().lookupTo != null) {
-                                 String highlimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
-                                 if (highlimit != null) {
-                                     d = Double.parseDouble(highlimit);
-                                     if (d2 <= d) {
-                                         newCellNameValue(cell,toTest);
-                                          break;
-                                     }
-                                 }
-                             } else {
-                                 newCellNameValue(cell,toTest);
-                                 break;
-                             }
-                         }
-                     }catch(Exception e){
-                         //compare strings
-                         if (lowLimit.compareTo(valueToTest)<=0){
-                             if (cell.getImmutableImportHeading().lookupTo!=null){
-                                 String highLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
-                                 if (highLimit!=null && highLimit.compareTo(valueToTest)>=0){
-                                     newCellNameValue(cell,toTest);
-                                     break;
-                                 }
-                             }else{
-                                 newCellNameValue(cell,toTest);
-                                 break;
-                             }
-                         }
-                     }
-                 }
-             }
-         }
-
-     }
-
-
-     private static boolean containsSynonym(Map<String,List<String>> synonymList, String term, String value){
-         if (value.contains(term)) {
-             return true;
-         }
-         if (synonymList!=null){
-             List<String> synonyms = synonymList.get(term);
-             if (synonyms!=null){
-                 for (String synonym:synonyms){
-                     if (value.contains(synonym.toLowerCase())){
-                         return true;
-                     }
-                 }
-             }
-         }
-         return false;
-
+    private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<ImportCellWithHeading> cells) throws Exception {
+        for (ImportCellWithHeading cell : cells) {
+            if (cell.getImmutableImportHeading().dictionaryMap != null) {
+                String value = cell.getLineValue();
+                if (value != null && value.length() > 0) {
+                    boolean hasResult = false;
+                    for (Name category : cell.getImmutableImportHeading().dictionaryMap.keySet()) {
+                        boolean found = true;
+                        List<DictionaryTerm> dictionaryTerms = cell.getImmutableImportHeading().dictionaryMap.get(category);
+                        for (DictionaryTerm dictionaryTerm : dictionaryTerms) {
+                            found = false; //the phrase now has to pass every one of the tests.  If it does so then the category is found.
+                            for (String item : dictionaryTerm.items) {
+                                if (dictionaryTerm.exclude) {
+                                    if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
+                                        found = false;
+                                        break;
+                                    }
+                                } else {
+                                    if (containsSynonym(cell.getImmutableImportHeading().synonyms, item.toLowerCase().trim(), value.toLowerCase())) {
+                                        found = true;
+                                    }
+                                }
+                            }
+                            if (!found) break;
+                        }
+                        if (found) {
+                            cell.addToLineNames(category);
+                            hasResult = true;
+                            break;
+                        }
+                    }
+                    if (!hasResult) {
+                        if (!cell.getImmutableImportHeading().blankZeroes) {
+                            Name parent = cell.getImmutableImportHeading().parentNames.iterator().next();
+                            List<String> languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
+                            cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + parent.getDefaultDisplayName(), parent, false, languages));
+                        } else {
+                            cell.setLineValue("");
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    private static void newCellNameValue(ImportCellWithHeading cell, Name name){
-         cell.addToLineNames(name);
-         cell.setLineValue(name.getDefaultDisplayName());
+    // categorise numeric values, see HeadingReader
+
+    private static void checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell) throws Exception {
+        if (cell.getLineValue() != null && cell.getLineValue().length() > 0 && cell.getImmutableImportHeading().lookupFrom != null && cell.getLineNames() == null) {
+            int commaPos = cell.getLineValue().indexOf(",");
+            if (commaPos < 0) {
+                throw new Exception(cell.getImmutableImportHeading().heading + " has no comma in the lookup value");
+            }
+            String setName = cell.getLineValue().substring(0, commaPos).trim();
+            String valueToTest = cell.getLineValue().substring(commaPos + 1).trim();
+            Name toTestParent = NameService.findByName(azquoMemoryDBConnection, setName);
+            if (toTestParent == null) {
+                throw new Exception((cell.getImmutableImportHeading().heading + " no such set: " + setName));
+            }
+
+            for (Name toTest : toTestParent.getChildren()) {
+                String lowLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupFrom);
+                if (lowLimit != null) {
+                    try {
+
+                        Double d = Double.parseDouble(lowLimit);
+                        Double d2 = Double.parseDouble(valueToTest);
+                        if (d2 >= d) {
+                            if (cell.getImmutableImportHeading().lookupTo != null) {
+                                String highlimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
+                                if (highlimit != null) {
+                                    d = Double.parseDouble(highlimit);
+                                    if (d2 <= d) {
+                                        newCellNameValue(cell, toTest);
+                                        break;
+                                    }
+                                }
+                            } else {
+                                newCellNameValue(cell, toTest);
+                                break;
+                            }
+                        }
+                    } catch (Exception e) {
+                        //compare strings
+                        if (lowLimit.compareTo(valueToTest) <= 0) {
+                            if (cell.getImmutableImportHeading().lookupTo != null) {
+                                String highLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
+                                if (highLimit != null && highLimit.compareTo(valueToTest) >= 0) {
+                                    newCellNameValue(cell, toTest);
+                                    break;
+                                }
+                            } else {
+                                newCellNameValue(cell, toTest);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static boolean containsSynonym(Map<String, List<String>> synonymList, String term, String value) {
+        if (value.contains(term)) {
+            return true;
+        }
+        if (synonymList != null) {
+            List<String> synonyms = synonymList.get(term);
+            if (synonyms != null) {
+                for (String synonym : synonyms) {
+                    if (value.contains(synonym.toLowerCase())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static void newCellNameValue(ImportCellWithHeading cell, Name name) {
+        cell.addToLineNames(name);
+        cell.setLineValue(name.getDefaultDisplayName());
     }
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
@@ -483,7 +476,7 @@ public class BatchImporter implements Callable<Void> {
         int valueCount = 0;
         // initial pass to deal spaces that might need removing and local parents
         for (ImportCellWithHeading importCellWithHeading : cells) {
-            if (importCellWithHeading.getImmutableImportHeading().removeSpaces){
+            if (importCellWithHeading.getImmutableImportHeading().removeSpaces) {
                 importCellWithHeading.setLineValue(importCellWithHeading.getLineValue().replace(" ", ""));
             }
         }
@@ -654,7 +647,7 @@ public class BatchImporter implements Callable<Void> {
                 }
             } else { // a simple include in sets if line names exists. Exclusive after is for taking stuff out if required
                 // in theory this column could be multiple parents and the column "parent of" refers to could be multiple children, permute over the combinations
-                if (cellWithHeading.getLineNames() != null){ // it can be null, not sure if it should be?? But it can be, stop NPE
+                if (cellWithHeading.getLineNames() != null) { // it can be null, not sure if it should be?? But it can be, stop NPE
                     for (Name parent : cellWithHeading.getLineNames()) {
                         for (Name childCellName : childCell.getLineNames()) {
                             parent.addChildWillBePersisted(childCellName);
@@ -760,7 +753,7 @@ public class BatchImporter implements Callable<Void> {
 
         if (localLanguage != null) {
             String[] localLangs = localLanguage.split(",");
-            for (String localLang:localLangs){
+            for (String localLang : localLangs) {
                 languages.add(localLang.trim());
             }
         } else {

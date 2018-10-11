@@ -79,6 +79,7 @@ public class SpreadsheetService {
     private static final String AZQUOHOME = "azquo.home";
     private static final String DEVMACHINE = "dev.machine";
     private static final String ALIAS = "alias";
+    private static final String SCANDIR = "scandir";
 
     public static String getHomeDir() {
         if (homeDir == null) {
@@ -109,6 +110,18 @@ public class SpreadsheetService {
             }
         }
         return devMachine == 1;
+    }
+
+    private static String scanDir = null;
+
+    public static String getScanDir() {
+        if (scanDir == null) {
+            scanDir = azquoProperties.getProperty(host + "." + SCANDIR);
+            if (scanDir == null) {
+                scanDir = azquoProperties.getProperty(SCANDIR);
+            }
+        }
+        return scanDir;
     }
 
     public static void setUserChoice(int userId, String choiceName, String choiceValue) {
@@ -374,8 +387,7 @@ public class SpreadsheetService {
                 if (b == null) {
                     throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
                 }
-                String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-                String bookPath = getHomeDir() + ImportService.dbPath + businessDirectory + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
+                String bookPath = getHomeDir() + ImportService.dbPath + b.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
 //                final Book book = new support.importer.PatchedImporterImpl().imports(new File(bookPath), "Report name"); // the old temporary one, should be fixed now in the ZK libraries
                 final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                 // the first two make sense. Little funny about the second two but we need a reference to these
@@ -384,7 +396,7 @@ public class SpreadsheetService {
                 DatabaseServer databaseServer = DatabaseServerDAO.findById(database.getDatabaseServerId());
                 // assuming no read permissions?
                 // I should factor these few lines really
-                LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, businessDirectory);
+                LoggedInUser loggedInUser = new LoggedInUser("", user, databaseServer, database, null, b.getBusinessDirectory());
                 book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
                 // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
                 book.getInternalBook().setAttribute(OnlineController.REPORT_ID, reportSchedule.getReportId());

@@ -14,20 +14,19 @@ Code written by WFC for Ed Broking, extracted/factored to here by EFC, modified 
  */
 
 
-
 class EdBrokingExtension {
 
-    public static final String IMPORT_TEMPLATE = "import template";
+    static final String IMPORT_TEMPLATE = "import template";
 
     static void checkImportFormatterLanguage(ValuesImportConfig valuesImportConfig) {
         // EFC revising logic based off WFC recommendations, set language from the second half of the import format if it's there
         if (valuesImportConfig.getFileNameParameters() != null && valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE) != null) {
             String importFormat = valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE);
-            if (importFormat.contains(" ")){
+            if (importFormat.contains(" ")) {
                 List<String> languages = new ArrayList<>();
                 //wfc added ability to put in a list of languages - NOT CURRENTLY USED
                 String[] newLangs = importFormat.substring(importFormat.indexOf(" ")).split("-");//may need to be part of a Groovy file name, hence '-' rather than ','
-                for (String newLang:newLangs) {
+                for (String newLang : newLangs) {
                     languages.add(newLang.trim());
                 }
                 languages.add(Constants.DEFAULT_DISPLAY_NAME);
@@ -46,7 +45,7 @@ class EdBrokingExtension {
             // this is passed through to preProcessHeadersAndCreatePivotSetsIfRequired
             // it issued as a straight replacement e.g. that Apr-18 in something like
             // so the attribute might be "HEADINGS RISK" assuming the import format was "Risk Apr-18"
-            if (importFormat.contains(" ")){
+            if (importFormat.contains(" ")) {
                 String firstPart = importFormat.substring(0, importFormat.indexOf(" "));
                 valuesImportConfig.setImportInterpreter(NameService.findByName(valuesImportConfig.getAzquoMemoryDBConnection(), "dataimport " + firstPart));
                 valuesImportConfig.setImportAttribute("HEADINGS " + firstPart);
@@ -143,10 +142,10 @@ There would be some duplication but it would be less complex to make
                 if (interpretation != null && interpretation.toLowerCase().contains(HeadingReader.TOPHEADING)) {
                     topHeadingNames.add(name);
                 }
-                if (interpretation!=null && interpretation.toLowerCase().contains(HeadingReader.TOPLINE)){
-                    for (String language:languages){
+                if (interpretation != null && interpretation.toLowerCase().contains(HeadingReader.TOPLINE)) {
+                    for (String language : languages) {
                         topline = name.getAttribute(language);
-                        if (topline!=null) break;
+                        if (topline != null) break;
                     }
                 }
             }
@@ -185,7 +184,7 @@ There would be some duplication but it would be less complex to make
                 }
                 lineNo++;
             }
-            if (topHeadingNames.size() > 0){
+            if (topHeadingNames.size() > 0) {
                 throw new Exception("Cannot find topheading " + topHeadingNames.iterator().next());
             }
             // get the next line, that may just be the headers if there are no top headings
@@ -194,7 +193,7 @@ There would be some duplication but it would be less complex to make
             }
             //looking for something in column A, there may be a gap after things like Coverholder: Joe Bloggs
             // so keep looking until we have headers
-            while (lineNo < 20 && (headersOut == null || headersOut.size() == 0 || headingCount(headersOut) < 2  || headersOut.get(0).length() == 0 || (topline!=null && !containsIgnoreCase(headersOut,topline))) && valuesImportConfig.getLineIterator().hasNext()) {
+            while (lineNo < 20 && (headersOut == null || headersOut.size() == 0 || headingCount(headersOut) < 2 || headersOut.get(0).length() == 0 || (topline != null && !containsIgnoreCase(headersOut, topline))) && valuesImportConfig.getLineIterator().hasNext()) {
                 headersOut = new ArrayList<>(Arrays.asList(valuesImportConfig.getLineIterator().next()));
             }
             // finally we assume we have headers. If there more than a line of headers we'll have to squash them together. Heading1|Heading2|Heading3
@@ -213,10 +212,10 @@ There would be some duplication but it would be less complex to make
 
     }
 
-    private static int headingCount(List<String>headers){
+    private static int headingCount(List<String> headers) {
         int headingCount = 0;
-        for (String header:headers){
-            if (header!=null && header.length()>0){
+        for (String header : headers) {
+            if (header != null && header.length() > 0) {
                 //if (header.contains(";")) headingCount++; // usually we shall ignore lines with one name only, but if that name contains a semicolon, then it cannot be ignored
                 headingCount++;
             }
@@ -224,10 +223,10 @@ There would be some duplication but it would be less complex to make
         return headingCount;
     }
 
-    public static boolean containsIgnoreCase(List<String> list, String toTest){
+    private static boolean containsIgnoreCase(List<String> list, String toTest) {
         toTest = toTest.toLowerCase();
-        for (String element:list){
-            if (element.toLowerCase().equals(toTest)){
+        for (String element : list) {
+            if (element.toLowerCase().equals(toTest)) {
                 return true;
             }
         }
@@ -266,12 +265,10 @@ There would be some duplication but it would be less complex to make
         for (Name importField : importInterpreter.getChildren()) {
             String existingName = importField.getAttribute(importAttribute);
             if (existingName != null && existingName.startsWith("<") && existingName.contains(">")) {
-                String newName = "";
-                String newHeadingAttributes = existingName;
                 int nameEndPos = existingName.indexOf(">");
-                 newName = existingName.substring(1, nameEndPos).trim();
-                 newHeadingAttributes = existingName.substring(nameEndPos + 1).trim();
-                 importField.setAttributeWillBePersisted(language, newName);
+                String newName = existingName.substring(1, nameEndPos).trim();
+                String newHeadingAttributes = existingName.substring(nameEndPos + 1).trim();
+                importField.setAttributeWillBePersisted(language, newName);
                 // often it seems newHeadingAttributes will be empty and hence no attribute will be created
                 importField.setAttributeWillBePersisted(importAttribute, newHeadingAttributes);
             }
@@ -290,9 +287,7 @@ check that the headings that are required are there . . .
         List<String> headers = valuesImportConfig.getHeaders();
         List<String> languages = valuesImportConfig.getLanguages();
         // add in the top headings
-        for (String topHeadingKey : valuesImportConfig.getTopHeadings().keySet()) {
-            headers.add(topHeadingKey);
-        }
+        headers.addAll(valuesImportConfig.getTopHeadings().keySet());
         if (importInterpreter == null || !importInterpreter.hasChildren()) return;
         List<String> defaultNames = new ArrayList<>();
         for (String header : headers) {
@@ -320,7 +315,7 @@ check that the headings that are required are there . . .
                     if (clause.toLowerCase().startsWith("composition")) {
                         composition = true;
                     }
-                    if (required && !defaultNames.contains(name.getDefaultDisplayName()) && name.getAttribute(languages.get(0))==null) { // so we don't already have this header and we need it
+                    if (required && !defaultNames.contains(name.getDefaultDisplayName()) && name.getAttribute(languages.get(0)) == null) { // so we don't already have this header and we need it
                         if (composition) {// so a composition in one of the name children, add it to the headers
                             headers.add(name.getDefaultDisplayName());
                             defaultNames.add(name.getDefaultDisplayName());

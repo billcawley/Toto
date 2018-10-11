@@ -65,10 +65,7 @@ public final class ImportService {
         }
         File tempFile = ImportFileUtilities.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
         uploadFile.close(); // windows requires this (though windows should not be used in production), perhaps not a bad idea anyway
-
         String toReturn;
-
-
         if (fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
             ZipUtil.explode(tempFile);
             // after exploding the original file is replaced with a directory
@@ -141,7 +138,7 @@ public final class ImportService {
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             if (userSheet != null) {
                 int row = 1;
-                SName listRegion = book.getInternalBook().getNameByName("az_ListStart");
+                SName listRegion = book.getInternalBook().getNameByName(ReportRenderer.AZLISTSTART);
                 if (listRegion != null && listRegion.getRefersToCellRegion() != null) {
                     row = listRegion.getRefersToCellRegion().getRow();
                 } else {
@@ -577,7 +574,7 @@ public final class ImportService {
                 if (name.toLowerCase().contains(ReportRenderer.AZREPEATSCOPE)) { // then deal with the multiple data regions sent due to this
                     // need to gather associated names for calculations, the region and the data region, code copied and changewd from getRegionRowColForRepeatRegion, it needs to work well for a batch of cells not just one
                     SName repeatRegion = getNameByName(ReportRenderer.AZREPEATREGION + regionName, sheet);
-                    SName repeatDataRegion = getNameByName("az_DataRegion" + regionName, sheet); // todo string literals ergh!
+                    SName repeatDataRegion = getNameByName(ReportRenderer.AZDATAREGION + regionName, sheet);
                     // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
                     if (repeatRegion != null && repeatDataRegion != null) {
                         int regionHeight = repeatRegion.getRefersToCellRegion().getRowCount();
@@ -660,11 +657,10 @@ public final class ImportService {
         return errorMessage + " - " + saveCount + " data items amended successfully";
     }
 
-    static SName getNameByName(String name, Sheet sheet) {
+    private static SName getNameByName(String name, Sheet sheet) {
         SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
         if (toReturn != null) {
             return toReturn;
-
         }
         // should we check the formula refers to the sheet here? I'm not sure. Applies will have been checked for above.
         return sheet.getBook().getInternalBook().getNameByName(name);
@@ -673,11 +669,11 @@ public final class ImportService {
 
 
     private static String getRegionName(String name) {
-        if (name.toLowerCase().startsWith("az_dataregion")) {
-            return name.substring("az_dataregion".length()).toLowerCase();
+        if (name.toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
+            return name.substring(ReportRenderer.AZDATAREGION.length()).toLowerCase();
         }
-        if (name.toLowerCase().startsWith("az_repeatscope")) {
-            return name.substring("az_repeatscope".length()).toLowerCase();
+        if (name.toLowerCase().startsWith(ReportRenderer.AZREPEATSCOPE)) {
+            return name.substring(ReportRenderer.AZREPEATSCOPE.length()).toLowerCase();
         }
         return null;
     }

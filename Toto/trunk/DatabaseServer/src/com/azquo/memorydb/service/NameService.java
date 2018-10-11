@@ -101,7 +101,7 @@ public final class NameService {
     private static AtomicInteger findByName2Count = new AtomicInteger(0);
 
     private static Name findParentAttributesName(Name child, String attributeName, Set<Name> checked) {
-        attributeName = attributeName.trim().toUpperCase();
+        attributeName = attributeName.trim(); // EFC removed .toUppercase, pointless as only used for equalsIgnoreCase
         for (Name parent : child.getParents()) {
             if (!checked.contains(parent)) {
                 checked.add(parent);

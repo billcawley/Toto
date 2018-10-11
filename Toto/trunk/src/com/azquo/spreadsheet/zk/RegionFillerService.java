@@ -67,7 +67,7 @@ class RegionFillerService {
                     //this is a total line
                     int selStart = displayRowHeadings.getColumn();
                     int selEnd = displayDataRegion.getColumn() + displayDataRegion.getColumnCount() - 1;
-                    SCell lineFormat = BookUtils.getSnameCell(sheet.getBook().getInternalBook().getNameByName("az_totalFormat" + totalCount + region));
+                    SCell lineFormat = BookUtils.getSnameCell(sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZTOTALFORMAT + totalCount + region));
                     Range selection = Ranges.range(sheet, row - 1, selStart, row - 1, selEnd);
                     Range headingRange = Ranges.range(sheet, row - 1, selStart, row - 1, selStart + displayRowHeadings.getColumnCount() - 1);
                     if (lineFormat == null) {

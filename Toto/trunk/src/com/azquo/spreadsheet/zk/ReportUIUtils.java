@@ -89,7 +89,7 @@ public class ReportUIUtils {
                 }
                 if (firstItem.toLowerCase().startsWith("permute(")) {
                     String[] rowHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
-                    String displayRowHeadingsString = "az_Display" + name.getName().substring(3);
+                    String displayRowHeadingsString = ReportRenderer.AZDISPLAY + name.getName().substring(3);
                     CellRegion displayRowHeadings = BookUtils.getCellRegionForSheetAndName(event.getSheet(), displayRowHeadingsString);
                     if (displayRowHeadings != null) {
                         int hrow = displayRowHeadings.getRow() - 1;
@@ -119,7 +119,7 @@ public class ReportUIUtils {
                 }
                 if (firstItem.toLowerCase().startsWith("permute(")) {
                     String[] colHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
-                    String displayColHeadingsString = "az_Display" + name.getName().substring(3);
+                    String displayColHeadingsString = ReportRenderer.AZDISPLAY + name.getName().substring(3);
                     CellRegion displayColHeadings = BookUtils.getCellRegionForSheetAndName(event.getSheet(), displayColHeadingsString);
                     if (displayColHeadings != null) {
                         int hrow = displayColHeadings.getRow();
@@ -143,7 +143,7 @@ public class ReportUIUtils {
     static ZKComposer.RegionRowCol getRegionRowColForRepeatRegion(Book book, int row, int col, SName repeatScopeName) {
         String repeatRegionName = repeatScopeName.getName().substring(ReportRenderer.AZREPEATSCOPE.length());
         SName repeatRegion = book.getInternalBook().getNameByName(ReportRenderer.AZREPEATREGION + repeatRegionName);
-        SName repeatDataRegion = book.getInternalBook().getNameByName("az_DataRegion" + repeatRegionName); // todo string literals ergh!
+        SName repeatDataRegion = book.getInternalBook().getNameByName(ReportRenderer.AZDATAREGION + repeatRegionName);
         // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
         if (repeatRegion != null && repeatDataRegion != null) { // ergh, got to try and find the right sent cell!
             // local row ancd col starts off local to the repeat scope then the region and finally the data region in the repeated region

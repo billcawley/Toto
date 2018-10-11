@@ -74,8 +74,7 @@ public class LoginService {
             if (b == null) {
                 throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
             }
-            String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-            return new LoggedInUser(sessionId, user, databaseServer, database, null, businessDirectory);// null the read/write list for the mo
+            return new LoggedInUser(sessionId, user, databaseServer, database, null, b.getBusinessDirectory());// null the read/write list for the mo
         }
         return null;
     }

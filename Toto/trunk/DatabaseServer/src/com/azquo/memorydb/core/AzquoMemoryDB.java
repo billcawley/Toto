@@ -72,8 +72,6 @@ public final class AzquoMemoryDB {
         return groovyDir;
     }
 
-
-
     private static final Logger logger = Logger.getLogger(AzquoMemoryDB.class);
 
     // The old memory db manager logic is going in here, want to make the constructor private

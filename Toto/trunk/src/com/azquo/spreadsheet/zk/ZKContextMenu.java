@@ -161,7 +161,7 @@ class ZKContextMenu {
                 for (SName name : names) {
                     SName rowHeadingsName = myzss.getSelectedSheet().getBook().getInternalBook().getNameByName("az_rowheadings" + name.getName().substring(13));
                     if (rowHeadingsName != null) {
-                        region = name.getName().substring("az_DataRegion".length());
+                        region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
                         regionRow = cellRow - name.getRefersToCellRegion().getRow();
                         regionColumn = cellCol - name.getRefersToCellRegion().getColumn();
                         break;
@@ -250,7 +250,7 @@ class ZKContextMenu {
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         for (SName name : book.getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith("az_dataregion")) {
+            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
                 String region = name.getName().substring(13);
                 UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
@@ -490,7 +490,7 @@ class ZKContextMenu {
         for (SName sName : myzss.getBook().getInternalBook().getNames()) {
             // going through all the names there might be one without a name
             if (sName.getName() != null && sName.getName().toLowerCase().startsWith("az_drilldown" + region.toLowerCase())) {
-                String qualifier = sName.getName().substring(("az_drilldown" + region).length()).replace("_", " ");
+                String qualifier = sName.getName().substring((ReportRenderer.AZDRILLDOWN + region).length()).replace("_", " ");
                 String drillDownString = BookUtils.getSnameCell(sName).getStringValue();
                 if (drillDownString.length() > 0) {
                     CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);

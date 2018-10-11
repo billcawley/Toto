@@ -99,7 +99,7 @@ public class BackupService {
                     .withColumnSeparator('\t')
                     .withLineSeparator("\n")
                     .withoutQuoteChar();
-            MappingIterator<String[]> lineIterator = csvMapper.reader(String[].class).with(schema).readValues(
+            MappingIterator<String[]> lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(
                     new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
             String[] lineValues = lineIterator.next();
             line++;

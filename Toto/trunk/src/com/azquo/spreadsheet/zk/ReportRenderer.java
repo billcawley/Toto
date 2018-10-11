@@ -30,13 +30,16 @@ public class ReportRenderer {
 
     // all case insensetive now so make these lower case and make the names from the reports .toLowerCase().startsWith().
     public static final String AZDATAREGION = "az_dataregion";
+    public static final String AZLISTSTART = "az_ListStart";
+    public static final String AZDISPLAY = "az_display";
+    public static final String AZDRILLDOWN = "az_drilldown";
     static final String AZOPTIONS = "az_options";
     public static final String AZREPEATREGION = "az_repeatregion";
     public static final String AZREPEATSCOPE = "az_repeatscope";
     static final String AZREPEATITEM = "az_repeatitem";
     static final String AZREPEATLIST = "az_repeatlist";
     public static final String AZDISPLAYROWHEADINGS = "az_displayrowheadings";
-    private static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
+    public static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
     public static final String AZCOLUMNHEADINGS = "az_columnheadings";
     public static final String AZROWHEADINGS = "az_rowheadings";
     private static final String AZCONTEXT = "az_context";
@@ -46,10 +49,13 @@ public class ReportRenderer {
     static final String AZPIVOTHEADINGS = "az_pivotheadings";//old version
     public static final String AZREPORTNAME = "az_reportname";
     public static final String AZIMPORTNAME = "az_importname";
-    public static final String EXECUTE = "az_Execute";
-    static final String FOLLOWON = "az_Followon";
+    public static final String EXECUTE = "az_execute";
+    static final String FOLLOWON = "az_followon";
     static final String AZSAVE = "az_save";
     static final String AZREPEATSHEET = "az_repeatsheet";
+    public static final String AZPDF = "az_pdf";
+    public static final String AZTOTALFORMAT = "az_totalformat";
+    private static final String AZFASTLOAD = "az_fastload";
 
     public static boolean populateBook(Book book, int valueId) {
         return populateBook(book, valueId, false, false, null, true);
@@ -190,7 +196,7 @@ public class ReportRenderer {
             boolean fastLoad = false; // skip some checks, initially related to saving
             for (SName name : namesForSheet) {
                 // Old one was case insensitive - not so happy about this. Will allow it on prefixes. (fast load being set outside the loop so is there a problem with it not being found before data regions??)
-                if (name.getName().equalsIgnoreCase("az_FastLoad")) {
+                if (name.getName().equalsIgnoreCase(ReportRenderer.AZFASTLOAD)) {
                     fastLoad = true;
                 }
                 if (name.getName().equals("az_ImageStoreName")) {

@@ -59,12 +59,20 @@ public class DBCron {
     }
 
     public static String getDBBackupsDirectory(Database toBackUp) throws IOException {
-        // todo - factor, this could cause problems!
         Business b = BusinessDAO.findById(toBackUp.getBusinessId());
-        String businessDirectory = (b.getBusinessName() + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
-        String businessDir = SpreadsheetService.getHomeDir() + ImportService.dbPath + businessDirectory;
+        String businessDir = SpreadsheetService.getHomeDir() + ImportService.dbPath + b.getBusinessDirectory();
         String dbBackupsDir = businessDir + "/" + dbBackupsDirectory + toBackUp.getPersistenceName(); // persistence name less likely to cause a problem with the file system
         Files.createDirectories(Paths.get(dbBackupsDir));
         return dbBackupsDir;
+    }
+
+    // need to think of how to define this
+    @Scheduled(cron = "0 0 * * * *")
+    public void directoryScan() throws Exception {
+        synchronized (this){ // one at a time
+            if (SpreadsheetService.getScanDir() != null && SpreadsheetService.getScanDir().length() > 0){
+                // then do something . . . .
+            }
+        }
     }
 }

@@ -36,6 +36,10 @@ public final class Business extends StandardEntity {
         return businessName;
     }
 
+    public String getBusinessDirectory() {
+        return (businessName + "                    ").substring(0, 20).trim().replaceAll("[^A-Za-z0-9_]", "");
+    }
+
     public void setBusinessName(String businessName) {
         this.businessName = businessName;
     }

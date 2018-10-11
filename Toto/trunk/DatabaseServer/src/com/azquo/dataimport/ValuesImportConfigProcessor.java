@@ -217,11 +217,11 @@ class ValuesImportConfigProcessor {
    Charset charset = new AutoDetectReader(new FileInputStream(file)).getCharset();
          */
         if (valuesImportConfig.getImportInterpreter() != null && valuesImportConfig.getImportInterpreter().getAttribute(FILEENCODING) != null) {
-            valuesImportConfig.setOriginalIterator(csvMapper.reader(String[].class).with(schema).readValues(
+            valuesImportConfig.setOriginalIterator(csvMapper.readerFor(String[].class).with(schema).readValues(
                     new InputStreamReader(new FileInputStream(valuesImportConfig.getFilePath()), valuesImportConfig.getImportInterpreter().getAttribute(FILEENCODING))));
             // so override file encoding.
         } else {
-            valuesImportConfig.setOriginalIterator(csvMapper.reader(String[].class).with(schema).readValues(new File(valuesImportConfig.getFilePath())));
+            valuesImportConfig.setOriginalIterator(csvMapper.readerFor(String[].class).with(schema).readValues(new File(valuesImportConfig.getFilePath())));
         }
         // the copy held in case of the transpose
         valuesImportConfig.setLineIterator(valuesImportConfig.getOriginalIterator());

@@ -472,7 +472,7 @@ public class ExcelController {
                     errorHeading.add(error);
                     List<List<CellForDisplay>> data = new ArrayList<>();
                     List<CellForDisplay> row = new ArrayList<>();
-                    // todo - chop down the error from the exception, there will be existing code to do this
+                    // I had a comment about the error needing more but I think this is fine for the moment
                     row.add(new CellForDisplay(
                             true, "Error : " + e.getMessage(), 0, false,0,0,false, false, "", 0)
                     );

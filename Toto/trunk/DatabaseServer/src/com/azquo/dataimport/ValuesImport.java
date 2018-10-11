@@ -117,7 +117,6 @@ public class ValuesImport {
                     .append(" lines").append(", ").append(valuesImportConfig.getValuesModifiedCounter()).append(" values adjusted");
 
             // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
-            // todo - lines blank or corrupt readout
             if (!linesRejected.isEmpty()) {
                 toReturn.append(" - No. lines rejected: ").append(linesRejected.size()).append(" - Line numbers with rejected cells : ");
                 int col = 0;

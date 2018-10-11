@@ -177,7 +177,7 @@ public class ZKComposer extends SelectorComposer<Component> {
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// it ends chosen and is one row tall
                 //and it cannot be in an existing data region
                 if (BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE).size() == 0
-                        && BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), "az_dataregion").size() == 0) {
+                        && BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ReportRenderer.AZDATAREGION).size() == 0) {
                     // therefore it's a choice change, set the choice and the reload flag and break
                     String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                     loggedInUser.userLog("Choice select : " + choice + "," + chosen);
@@ -187,8 +187,8 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
             // We may add row heading later but it's not a requirement currently
-            if (name.getName().startsWith("az_DisplayColumnHeadings")) { // ok going to try for a sorting on column heading detect
-                String region = name.getName().substring("az_DisplayColumnHeadings".length());
+            if (name.getName().startsWith(ReportRenderer.AZDISPLAYCOLUMNHEADINGS)) { // ok going to try for a sorting on column heading detect
+                String region = name.getName().substring(ReportRenderer.AZDISPLAYCOLUMNHEADINGS.length());
                 UserRegionOptions userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
                 if (userRegionOptions == null) {
                     SName optionsRegion = event.getSheet().getBook().getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);

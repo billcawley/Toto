@@ -269,6 +269,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
     }
 
     static SName getNameByName(String name, Sheet sheet) {
+        //this call is case insensitive - I checked the decompiled code
         SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
         if (toReturn != null) {
             return toReturn;

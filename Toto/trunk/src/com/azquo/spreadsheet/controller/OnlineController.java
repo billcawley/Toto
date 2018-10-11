@@ -263,8 +263,8 @@ public class OnlineController {
                         final List<SName> names = book.getInternalBook().getNames();
                         List<String> pdfMerges = new ArrayList<>();
                         for (SName name : names) {
-                            if (name.getName().startsWith("az_PDF")) {
-                                pdfMerges.add(name.getName().substring("az_PDF".length()).replace("_", " "));
+                            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZPDF)) {
+                                pdfMerges.add(name.getName().substring(ReportRenderer.AZPDF.length()).replace("_", " "));
                             }
                         }
                         // if this NPEs then it's probably to do with sessions crossing . . .

@@ -179,7 +179,8 @@ class NameStackOperators {
 
     // "As" assign the results of a query as a certain name
     static void assignSetAsName(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames, final List<NameSetList> nameStack, int stackCount, boolean global) throws Exception {
-        // if it's empty we'll get no such element . . . what to do? todo
+        // if it's empty we'll get no such element . . .
+        // I will change this if it causes exceptions, I don't think the "as" will get to this point without being assigned
         Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
                 /* ok here's the thing. We don't want this to be under the default display name, new logic jams the user email as the first "language"
                 therefore if there's more than one language, we use the first one as the way to define this name.

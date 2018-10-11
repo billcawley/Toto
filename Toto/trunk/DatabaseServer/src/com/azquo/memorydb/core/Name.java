@@ -878,7 +878,6 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static String findParentAttributes(Name child, String attributeName, Set<Name> checked, Name origName, int level) {
         findParentAttributesCount.incrementAndGet();
-        attributeName = attributeName.trim().toUpperCase();
         for (Name parent : child.parents) {
             if (!checked.contains(parent)) {
                 checked.add(parent);
@@ -942,7 +941,7 @@ public final class Name extends AzquoMemoryDBEntity {
     }
 
     public String getAttribute(String attributeName, boolean parentCheck, Set<Name> checked, Name origName, int level) {
-        attributeName = attributeName.toUpperCase(); // edd adding (back?) in, need to do this since all attributes are uppercase internally - check there are not redundant uppercases in other places TODO
+        attributeName = attributeName.trim().toUpperCase(); // edd adding (back?) in, need to do this since all attributes are uppercase internally
         getAttribute2Count.incrementAndGet();
         String attribute = nameAttributes.getAttribute(attributeName);
         if (attribute != null) return attribute;

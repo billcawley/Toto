@@ -21,18 +21,13 @@ class ImportFileUtilities {
 
     // as in drop the import stream into a temp file and return its path
     // todo, better api calls, perhaps making the function redundant
-    static File tempFileWithoutDecoding(final InputStream data, final String fileName) {
-        try {
+    static File tempFileWithoutDecoding(final InputStream data, final String fileName) throws IOException {
             File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
             temp.deleteOnExit();
             FileOutputStream fos = new FileOutputStream(temp);
             org.apache.commons.io.IOUtils.copy(data, fos);
             fos.close();
             return temp;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     static String copyFileToDatabaseServer(InputStream inputStream, String sftpDestination) {

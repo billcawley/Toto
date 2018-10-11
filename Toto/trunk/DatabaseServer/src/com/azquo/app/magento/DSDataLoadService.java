@@ -1041,7 +1041,7 @@ public class DSDataLoadService {
                     for (String att : productAtts) {
                         String thisAttId = attIds.get(att);
                         if (thisAttId != null && thisAttId.equals(attId)) {
-                            productName.setAttributeWillBePersisted(att.replace("_", " ").toUpperCase(), attVal);
+                            productName.setAttributeWillBePersisted(att.replace("_", " "), attVal);
                         }
                     }
                 }
