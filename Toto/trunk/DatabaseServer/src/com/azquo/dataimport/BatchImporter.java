@@ -625,7 +625,7 @@ public class BatchImporter implements Callable<Void> {
         if (cellWithHeading.getImmutableImportHeading().indexForChild != -1 && cellWithHeading.getLineValue().length() > 0) {
             ImportCellWithHeading childCell = cells.get(cellWithHeading.getImmutableImportHeading().indexForChild);
             if (childCell.getLineValue().length() == 0) {
-                throw new Exception("Line " + importLine + ": blank value for child of " + cellWithHeading.getLineValue() + " " + cellWithHeading.getImmutableImportHeading().heading);
+                throw new Exception("Line " + importLine + ": blank value for " + childCell.getImmutableImportHeading().heading + " (child of " + cellWithHeading.getLineValue() + " " + cellWithHeading.getImmutableImportHeading().heading + ")");
             }
             // ok got the child cell, need to find the child cell name to add it to this cell's children
             if (childCell.getLineNames() == null) {
