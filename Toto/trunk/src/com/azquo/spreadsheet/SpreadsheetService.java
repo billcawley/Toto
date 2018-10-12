@@ -138,6 +138,10 @@ public class SpreadsheetService {
     }
 
     public static void setUserChoice(int userId, String choiceName, String choiceValue) {
+        String choiceStoreName = choiceName;
+        if (choiceName.startsWith("az_")) {
+            choiceStoreName = choiceName.substring(3);
+        }
         UserChoice userChoice = UserChoiceDAO.findForUserIdAndChoice(userId, choiceName);
         if (choiceValue != null && choiceValue.length() > 0) {
             if (userChoice == null) {
