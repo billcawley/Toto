@@ -103,7 +103,11 @@ public class CommonReportUtils {
                 int endPos = query.indexOf("]", pos);
                 if (endPos < 0) break;
                 String userChoice = query.substring(pos + 1, endPos);
-                String replacement = userChoices.get(userChoice.toLowerCase());
+                String userChoiceBasic = userChoice;
+                if (userChoice.startsWith("az_")) {
+                    userChoiceBasic = userChoice.substring(3);
+                }
+                String replacement = userChoices.get(userChoiceBasic.toLowerCase());
                 if (replacement != null){
                     query = query.substring(0,pos) + replacement + query.substring(endPos + 1);
                     pos = pos + replacement.length();
