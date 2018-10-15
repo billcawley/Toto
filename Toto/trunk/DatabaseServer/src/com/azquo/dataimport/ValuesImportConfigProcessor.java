@@ -299,7 +299,7 @@ class ValuesImportConfigProcessor {
                     headers = oldHeaders;
                 }
             }
-            if (valuesImportConfig.isSpreadsheet() && valuesImportConfig.getFileNameParameters() == null) { // it's saying really is it a template (isSpreadsheet = yes)
+            if (valuesImportConfig.isSpreadsheet() && (valuesImportConfig.getFileNameParameters() == null ||valuesImportConfig.getFileNameParameters().size()==0) ) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
                 // as in add the headings to the first upload then upload again without headings (assuming the file name is the same!)
                 Name importSheets = NameService.findOrCreateNameInParent(valuesImportConfig.getAzquoMemoryDBConnection(), ALLIMPORTSHEETS, null, false);
