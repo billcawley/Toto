@@ -192,7 +192,16 @@ public class DSSpreadsheetService {
         String tempPath = temp.getPath();
         BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(temp), "UTF-8"));
         StringBuffer sb = new StringBuffer();
-        List<String> colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(0);
+        List<String> colHeadings = null;
+        boolean transpose = false;
+        //new behaviour.  If the saved region has row headings but no column headings, then transpose
+        if (cellsAndHeadingsForDisplay.getColumnHeadings().size()==0){
+            transpose = true;
+            colHeadings = cellsAndHeadingsForDisplay.getRowHeadings().get(0);
+        }else{
+            colHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(0);
+        }
+
         boolean firstCol = true;
         for (String heading : colHeadings) {
             if (!firstCol) {
@@ -205,6 +214,9 @@ public class DSSpreadsheetService {
         bw.write(sb.toString());
         bw.newLine();
         List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
+        if (transpose){
+            data = MultidimensionalListUtils.transpose2DList(data);
+        }
         for (List<CellForDisplay> row : data) {
             sb = new StringBuffer();
             firstCol = true;
@@ -278,7 +290,7 @@ public class DSSpreadsheetService {
             boolean modifiedInTheMeanTime = azquoMemoryDBConnection.getDBLastModifiedTimeStamp() != cellsAndHeadingsForDisplay.getTimeStamp(); // if true we need to check if someone else changed the data
             // ad hoc saves regardless of changes in the mean time. Perhaps not the best plan . . .
             azquoMemoryDBConnection.setProvenance(user, Constants.IN_SPREADSHEET, reportName, context);
-            if (cellsAndHeadingsForDisplay.getRowHeadings() == null && cellsAndHeadingsForDisplay.getData().size() > 0) {
+            if ((cellsAndHeadingsForDisplay.getRowHeadings().size()== 0 || cellsAndHeadingsForDisplay.getColumnHeadings().size() == 0) && cellsAndHeadingsForDisplay.getData().size() > 0) {
                 // todo - cen we get the number of values modified???
                 numberOfValuesModified = importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
                 if (persist) {
