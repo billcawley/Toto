@@ -403,8 +403,9 @@ public class ReportRenderer {
         SName contextDescription = BookUtils.getNameByName(AZCONTEXT + region, sheet);
         String errorMessage = null;
         // make a blank area for data to be populated from, an upload in the sheet so to speak (ad hoc)
-        if (columnHeadingsDescription != null && rowHeadingsDescription == null) {
+        if ((columnHeadingsDescription != null && rowHeadingsDescription == null)||(rowHeadingsDescription !=null && columnHeadingsDescription==null)) {
             List<List<String>> colHeadings = BookUtils.nameToStringLists(columnHeadingsDescription);
+            List<List<String>> rowHeadings= BookUtils.nameToStringLists(rowHeadingsDescription);
             List<List<CellForDisplay>> dataRegionCells = new ArrayList<>();
             CellRegion dataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);
             for (int rowNo = 0; rowNo < dataRegion.getRowCount(); rowNo++) {
@@ -415,7 +416,7 @@ public class ReportRenderer {
                 dataRegionCells.add(oneRow);
             }
             // note the col headings source is going in here as is without processing as in the case of ad-hoc it is not dynamic (i.e. an Azquo query), it's import file column headings
-            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(region, colHeadings, null, null, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
+            CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = new CellsAndHeadingsForDisplay(region, colHeadings, rowHeadings, null, null, dataRegionCells, null, null, null, 0, userRegionOptions.getRegionOptionsForTransport(), null);// todo - work out what to do with the timestamp here! Might be a moot point given now row headings
             loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
             return null;
         }
