@@ -261,7 +261,7 @@ public class BatchImporter implements Callable<Void> {
                             } catch (Exception ignored) {
 
                             }
-                            if (compCell != null && compCell.getLineValue() != null && compCell.getLineValue().length() > 0) {
+                            if (compCell != null && compCell.getLineValue() != null) {
                                 String sourceVal;
                                 if (compCell.getImmutableImportHeading().lineNameRequired) {
                                     if (compCell.getLineNames() == null) {
