@@ -3,6 +3,7 @@ package com.azquo.dataimport;
 import com.azquo.TypedPair;
 import com.csvreader.CsvWriter;
 import com.jcraft.jsch.*;
+import org.zkoss.poi.ss.usermodel.DateUtil;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.CellData;
@@ -10,6 +11,8 @@ import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.SRow;
 
 import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * Created by edward on 11/11/16.
@@ -18,6 +21,8 @@ import java.io.*;
  *
  */
 class ImportFileUtilities {
+
+    static SimpleDateFormat YYYYMMDD = new SimpleDateFormat("yyyy-MM-dd");
 
     // as in drop the import stream into a temp file and return its path
     // todo, better api calls, perhaps making the function redundant
@@ -195,6 +200,16 @@ class ImportFileUtilities {
                 if (dataFormat.equals("h:mm") && stringValue.length()==4) {
                     //ZK BUG - reads "hh:mm" as "h:mm"
                     stringValue = "0"+stringValue;
+                }else {
+                    if (dataFormat.toLowerCase().contains("m") &&  dataFormat.length() > 6) {
+                        try {
+                            Date javaDate = DateUtil.getJavaDate((cellData.getDoubleValue()));
+                            stringValue = YYYYMMDD.format(javaDate);
+                        } catch (Exception e) {
+                            //not sure what to do here.
+                        }
+
+                    }
                 }
                 if ((stringValue.length() == 6 || stringValue.length()==8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-") ) {//another ZK bug
                     stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
@@ -228,6 +243,6 @@ class ImportFileUtilities {
             returnString = stringValue;
         }
         if (returnString.startsWith("'") && returnString.indexOf("'",1) <0) returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
-        return new TypedPair<>(returnNumber, returnString);
+        return new TypedPair<>(returnNumber, returnString.trim());
     }
 }
