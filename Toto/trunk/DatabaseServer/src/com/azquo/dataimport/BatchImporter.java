@@ -134,6 +134,7 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
                 importCellWithHeading.setLineValue(defaultValue);
+                importCellWithHeading.setResolved(true);
             }
         }
     }
