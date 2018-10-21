@@ -209,7 +209,7 @@ public class BatchImporter implements Callable<Void> {
         while (adjusted && counter < 10) {
             adjusted = false;
             for (ImportCellWithHeading cell : cells) {
-                if (cell.getImmutableImportHeading().compositionPattern != null && (cell.getLineValue() == null || cell.getLineValue().length() == 0)) {
+                if (!cell.getResolved() && cell.getImmutableImportHeading().compositionPattern != null && (cell.getLineValue() == null || cell.getLineValue().length() == 0)) {
                     String result = cell.getImmutableImportHeading().compositionPattern;
                     // do line number first, I see no reason not to. Important for pivot.
                     String LINENO = "LINENO";
@@ -261,33 +261,40 @@ public class BatchImporter implements Callable<Void> {
                             } catch (Exception ignored) {
 
                             }
-                            if (compCell != null && compCell.getLineValue() != null) {
-                                String sourceVal;
+                            if (compCell != null && compCell.getLineValue() != null && resolved(compCell)) {
+                                String sourceVal= null;
                                 if (compCell.getImmutableImportHeading().lineNameRequired) {
-                                    if (compCell.getLineNames() == null) {
+                                    if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
                                         compCell.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
                                                 , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames)));
                                     }
-                                    sourceVal = compCell.getLineNames().iterator().next().getDefaultDisplayName();
+                                    if (compCell.getLineNames()!=null) {
+                                          sourceVal = compCell.getLineNames().iterator().next().getDefaultDisplayName();
+                                    }
                                 } else {
                                     sourceVal = compCell.getLineValue();
                                 }
                                 // the two ints need to be as they are used in excel
-                                if (function != null && (funcInt > 0 || funcInt2 > 0) && sourceVal.length() > funcInt) {
-                                    if (function.equalsIgnoreCase("left")) {
-                                        sourceVal = sourceVal.substring(0, funcInt);
+                                if (sourceVal!=null) {
+                                    if (function != null && (funcInt > 0 || funcInt2 > 0) && sourceVal.length() > funcInt) {
+                                        if (function.equalsIgnoreCase("left")) {
+                                            sourceVal = sourceVal.substring(0, funcInt);
+                                        }
+                                        if (function.equalsIgnoreCase("right")) {
+                                            sourceVal = sourceVal.substring(sourceVal.length() - funcInt);
+                                        }
+                                        if (function.equalsIgnoreCase("mid")) {
+                                            //the second parameter of mid is the number of characters, not the end character
+                                            sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
+                                        }
                                     }
-                                    if (function.equalsIgnoreCase("right")) {
-                                        sourceVal = sourceVal.substring(sourceVal.length() - funcInt);
-                                    }
-                                    if (function.equalsIgnoreCase("mid")) {
-                                        //the second parameter of mid is the number of characters, not the end character
-                                        sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
-                                    }
+                                    result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
+                                    headingMarker = headingMarker + sourceVal.length() - 1;//is increaed before two lines below
+                                    if (doublequotes) headingMarker++;
+                                }else{
+                                    result = "";
+                                    headingMarker = headingEnd;
                                 }
-                                result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
-                                headingMarker = headingMarker + sourceVal.length() - 1;//is increaed before two lines below
-                                if (doublequotes) headingMarker++;
                             } else {
                                 headingMarker = headingEnd;
                                 result = "";
@@ -334,6 +341,7 @@ public class BatchImporter implements Callable<Void> {
                     }
                     if (result.length() > 0 && !result.equals(cell.getLineValue())) {
                         cell.setLineValue(result);
+                        cell.setResolved(true);
                         checkLookup(azquoMemoryDBConnection, cell);
                         adjusted = true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
                     }
@@ -346,6 +354,13 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
+    private static boolean resolved(ImportCellWithHeading cell){
+        if (cell.getImmutableImportHeading().compositionPattern != null || cell.getImmutableImportHeading().lookupFrom !=null){
+            return cell.getResolved();
+        }
+
+        return true;
+    }
 
     private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<ImportCellWithHeading> cells) throws Exception {
         for (ImportCellWithHeading cell : cells) {
@@ -469,6 +484,7 @@ public class BatchImporter implements Callable<Void> {
     private static void newCellNameValue(ImportCellWithHeading cell, Name name) {
         cell.addToLineNames(name);
         cell.setLineValue(name.getDefaultDisplayName());
+        cell.setResolved(true);
     }
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
