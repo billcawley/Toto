@@ -1,0 +1,47 @@
+22-10-18
+
+Improved error messages on importing
+
+User choices ignore az_ so if date set in one place from a dropdown as az_datechoice it will be picked up by datechoice and vice versa
+
+Adding data to a list (column headings but no row headings) now also works going right rather than down with row headings but no column headings
+
+When importing, fixed bug in calculating compositions where the child value is a blank string, improvements to composition dependency (resolve cells in the correct order)
+
+Standardise dates when converting an Excel file for importing
+
+Cap ZK rows at 5k, we should use the Excel Add In for large numbers of cells
+
+
+11-10-18
+
+More URL security tightening
+
+Improvements to 'composition' and new 'lookup' function in import
+
+new 'lookup' function and exception catch on testing attribute as name in import
+
+new fields for 'lookup' function
+
+Code tidying, removed some redundant calls, no more depreciated warnings on compile, some removal of string literals, trying to get rid of some of the "todo"s. Started on the directory scanning code for Ed Broking
+
+Ed Broking login page build version, patch files fix for deployment (auto open for Excel Javascript plugin)
+
+
+08-10-18
+
+Improved chances of maintaining user sessions across code deployment
+
+When importing before using the plain cell value in composite calcs, looks to see if name should be calculated, and default display name used instead (relevant if an import cell's value is different to the name it resolves to)
+
+Maintenance on url hacking security (e.g. if someone were to manually edit a database id) and removal of a few redundant controllers
+
+Allows (ignores) error cells when converting worksheets to CSVs for importing
+
+Improved skipping of irrelevant lines at the top of data import sheets
+
+Added file name to import error messages
+
+Attributes now sorted alphabetically when editing on "inspect database"
+
+Version number in the login screen title

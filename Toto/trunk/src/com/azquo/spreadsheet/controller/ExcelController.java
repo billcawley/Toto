@@ -528,6 +528,7 @@ public class ExcelController {
         }
         return jsonError(result);
     }
+    // for dev this was simple but now there's an issue of the patch to the file being dependant on how the manifest is deployed
 
     public String createAutoOpenIfRequired(String sourceFile) throws IOException {
         File check = new File(sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf(".")));
@@ -592,13 +593,11 @@ public class ExcelController {
             }
         }
         // jam it right before </Relationships>
-
         rels = rels.substring(0, rels.indexOf("</Relationships>"))
                 + "<Relationship Id=\"rId" + i + "\" Type=\"http://schemas.microsoft.com/office/2011/relationships/webextensiontaskpanes\" Target=\"xl/webextensions/taskpanes.xml\"/>"
                 + rels.substring(rels.indexOf("</Relationships>"));
         FileUtils.deleteQuietly(relsFileToPatch);
         FileUtils.write(relsFileToPatch, rels);
-
         // now copy in the patch files . . .
         FileUtils.copyDirectory(new File(patchFilesSource), new File(sourceFile + "/xl/webextensions/"));
         ZipUtil.pack(new File(sourceFile), new File(sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf("."))));
