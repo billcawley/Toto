@@ -616,28 +616,32 @@ public class ReportRenderer {
                 }
             }
             // now the insert as normal
+            //found a bug in ZK - lines to fudge it
             Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
-            CellOperationUtil.insertRow(insertRange);
+            if (rowsToAdd < 5000) {// ZK siesed when 16000 rows were added to a spreadsheet with 200 columns
+                CellOperationUtil.insertRow(insertRange);
+
 //            CellOperationUtil.insert(insertRange, Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE); // don't copy any formatting . . . a problem with hidden rows!
-            // this is hacky, the bulk insert above will have pushed the bottom row down and in many cases we want it back where it was for teh pattern to be pasted properly
-            if (rowsFormattingPatternHeight > 1) {
-                //cut back the last column to it's original position, and shift the insert range one column to the right
-                CellOperationUtil.cut(Ranges.range(sheet, insertRow + rowsToAdd, 0, insertRow + rowsToAdd, maxCol)
-                        , Ranges.range(sheet, insertRow, 0, insertRow, maxCol));
-                // so the next row after the first section to copy until the end bit
-                insertRange = Ranges.range(sheet, insertRow + 1, 0, insertRow + rowsToAdd, maxCol);
-                copySource = Ranges.range(sheet, displayDataRegion.getRow(), 0, displayDataRegion.getRow() + rowsFormattingPatternHeight - 1, maxCol);// should be the section representing the pattern we want to copy (with the last row restored to where it was)
-            }
+                // this is hacky, the bulk insert above will have pushed the bottom row down and in many cases we want it back where it was for teh pattern to be pasted properly
+                if (rowsFormattingPatternHeight > 1) {
+                    //cut back the last column to it's original position, and shift the insert range one column to the right
+                    CellOperationUtil.cut(Ranges.range(sheet, insertRow + rowsToAdd, 0, insertRow + rowsToAdd, maxCol)
+                            , Ranges.range(sheet, insertRow, 0, insertRow, maxCol));
+                    // so the next row after the first section to copy until the end bit
+                    insertRange = Ranges.range(sheet, insertRow + 1, 0, insertRow + rowsToAdd, maxCol);
+                    copySource = Ranges.range(sheet, displayDataRegion.getRow(), 0, displayDataRegion.getRow() + rowsFormattingPatternHeight - 1, maxCol);// should be the section representing the pattern we want to copy (with the last row restored to where it was)
+                }
 //            CellOperationUtil.pasteSpecial(copySource, insertRange, Range.PasteType.FORMULAS, Range.PasteOperation.NONE, false, false);
-            CellOperationUtil.paste(copySource, insertRange);
-            int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
-            if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
-                insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
-            }
-            boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
-            if (hidden) {
-                for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
-                    sheet.getInternalSheet().getRow(row).setHidden(true);
+                CellOperationUtil.paste(copySource, insertRange);
+                int originalHeight = sheet.getInternalSheet().getRow(insertRow - 1).getHeight();
+                if (originalHeight != sheet.getInternalSheet().getRow(insertRow).getHeight()) { // height may not match on insert
+                    insertRange.setRowHeight(originalHeight); // hopefully set the lot in one go??
+                }
+                boolean hidden = sheet.getInternalSheet().getRow(insertRow - 1).isHidden();
+                if (hidden) {
+                    for (int row = insertRange.getRow(); row <= insertRange.getLastRow(); row++) {
+                        sheet.getInternalSheet().getRow(row).setHidden(true);
+                    }
                 }
             }
         }
