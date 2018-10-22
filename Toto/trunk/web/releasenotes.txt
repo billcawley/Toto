@@ -1,5 +1,7 @@
 22-10-18
 
+Added this file!
+
 Improved error messages on importing
 
 User choices ignore az_ so if date set in one place from a dropdown as az_datechoice it will be picked up by datechoice and vice versa
@@ -12,6 +14,7 @@ Standardise dates when converting an Excel file for importing
 
 Cap ZK rows at 5k, we should use the Excel Add In for large numbers of cells
 
+Download database icon better
 
 11-10-18
 

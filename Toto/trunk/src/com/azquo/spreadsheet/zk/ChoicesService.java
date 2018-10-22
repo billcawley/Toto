@@ -82,7 +82,7 @@ public class ChoicesService {
                         boolean dataRegionDropdown = !BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                             // check to make it work for Darren after some recent changes - todo - address what's actually going on here
-                            if (choiceCell.getType() == SCell.CellType.FORMULA && choiceCell.getFormulaResultType() == SCell.CellType.NUMBER){
+                            if (choiceCell.getType() == SCell.CellType.FORMULA){
                                 choiceCell.clearFormulaResultCache();
                             }
                             String query = choiceCell.getStringValue();
