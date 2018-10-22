@@ -38,6 +38,9 @@ import java.util.Map;
  * Use of the ZK API to alter the user interface might be a little hacky, might be sensetive to changes to their API or implementation
  * <p>
  * THis class is a little bigger than I'd like. Could break code off for provenance stuff?
+ *
+ * todo - string literals and check name lookups work for sheet names not just book names
+ *
  */
 class ZKContextMenu {
 
@@ -159,7 +162,7 @@ class ZKContextMenu {
             } else { // standard
                 List<SName> names = BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());
                 for (SName name : names) {
-                    SName rowHeadingsName = myzss.getSelectedSheet().getBook().getInternalBook().getNameByName("az_rowheadings" + name.getName().substring(13));
+                    SName rowHeadingsName = BookUtils.getNameByName("az_rowheadings" + name.getName().substring(13), myzss.getSelectedSheet());
                     if (rowHeadingsName != null) {
                         region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
                         regionRow = cellRow - name.getRefersToCellRegion().getRow();
@@ -320,7 +323,7 @@ class ZKContextMenu {
                                     if (trySheetSwitch) {
                                         for (SSheet sheet : book.getInternalBook().getSheets()) {
                                             SName reportNameName = BookUtils.getNameByName(ReportRenderer.AZREPORTNAME, book.getSheet(sheet.getSheetName()));
-                                            if (reportNameName != null && reportNameName.getRefersToSheetName() == sheet.getSheetName() &&
+                                            if (reportNameName != null && reportNameName.getRefersToSheetName().equals(sheet.getSheetName()) &&
                                                     BookUtils.getSnameCell(reportNameName).getStringValue().equalsIgnoreCase(provenanceForDisplay.getName())) { // then it's a candidate
                                                 SName repeatItemName = book.getInternalBook().getNameByName(ReportRenderer.AZREPEATITEM, sheet.getSheetName()); // should be fine we want it specific to this
                                                 if (repeatItemName != null) {
@@ -472,14 +475,8 @@ class ZKContextMenu {
 
                     Exporter exporter = Exporters.getExporter();
                     File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-                    FileOutputStream fos = null;
-                    try {
-                        fos = new FileOutputStream(file);
+                    try (FileOutputStream fos = new FileOutputStream(file)) {
                         exporter.export(book1, fos);
-                    } finally {
-                        if (fos != null) {
-                            fos.close();
-                        }
                     }
                     Filedownload.save(new AMedia("Audit " + or.getReportName() + ".xlsx", null, null, file, true));
                 });
@@ -574,14 +571,8 @@ class ZKContextMenu {
 
                         Exporter exporter = Exporters.getExporter();
                         File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-                        FileOutputStream fos = null;
-                        try {
-                            fos = new FileOutputStream(file);
+                        try (FileOutputStream fos = new FileOutputStream(file)) {
                             exporter.export(book1, fos);
-                        } finally {
-                            if (fos != null) {
-                                fos.close();
-                            }
                         }
                         Filedownload.save(new AMedia("Debug " + or.getReportName() + ".xlsx", null, null, file, true));
                     });
