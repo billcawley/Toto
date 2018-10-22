@@ -317,7 +317,7 @@ public final class ImportService {
     public static final String UPLOADEDBYANOTHERUSER = "A report with that name has been uploaded by another user.";
 
     private static String readBook(LoggedInUser loggedInUser, final String fileName, final Map<String, String> fileNameParameters, final String tempPath, boolean persistAfter, boolean isData, boolean forceReportUpload) throws Exception {
-        Book book = null;
+        Book book;
         try {
             book = Importers.getImporter().imports(new File(tempPath), "Imported");
         } catch (Exception e) {

@@ -94,6 +94,13 @@ public class UserDAO {
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, userRowMapper, namedParams);
     }
 
+    // really to check if a report should be zapped
+    public static List<User> findForReportId(final int reportId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(REPORTID, reportId);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + REPORTID + " = :" + REPORTID, TABLENAME, userRowMapper, namedParams);
+    }
+
     public static List<User> findForBusinessIdAndCreatedBy(final int businessId, String createdBy) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);

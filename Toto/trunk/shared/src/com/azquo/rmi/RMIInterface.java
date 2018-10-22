@@ -75,6 +75,8 @@ public interface RMIInterface extends Remote {
 
     int getNameCount(String persistenceName) throws RemoteException;
 
+    String getCPUReport() throws RemoteException;
+
     int getValueCount(String persistenceName) throws RemoteException;
 
     String getMemoryReport(boolean suggestGc) throws RemoteException;

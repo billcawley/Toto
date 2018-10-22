@@ -421,7 +421,7 @@ this may now not work at all, perhaps delete?
             final List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(db.getId());
             DatabaseReportLinkDAO.unLinkDatabase(databaseId);
             for (OnlineReport or : reports) {
-                if (DatabaseReportLinkDAO.getDatabaseIdsForReportId(or.getId()).isEmpty()) { // then this report no longer has any databases
+                if (DatabaseReportLinkDAO.getDatabaseIdsForReportId(or.getId()).isEmpty() && UserDAO.findForReportId(or.getId()).isEmpty()) { // then this report no longer has any databases
                     removeReportByIdWithBasicSecurity(loggedInUser, or.getId());
                 }
             }

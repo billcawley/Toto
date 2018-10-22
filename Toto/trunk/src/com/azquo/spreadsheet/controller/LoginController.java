@@ -55,6 +55,7 @@ public class LoginController {
                     String title =  SpreadsheetService.getAlias() +  " Logout from " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                     String userAgent = request.getHeader("User-Agent");
                     AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
+                    AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                 }
                 session.removeAttribute(LOGGED_IN_USER_SESSION);
             }
@@ -81,6 +82,7 @@ public class LoginController {
                         String title = SpreadsheetService.getAlias() +  " Login to the server " + userEmail + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                         String userAgent = request.getHeader("User-Agent");
                         AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
+                        AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
                     }
                     session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (connectionid != null && connectionid.equals("javascript")) {

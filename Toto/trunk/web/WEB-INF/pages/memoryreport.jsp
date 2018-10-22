@@ -3,13 +3,16 @@
 
 <c:choose>
 	<c:when test="${param.gc == true}">
-		<a href="/api/MemoryReport?serverIp=${serverIp}&gc=false">Exclude GC</a></br>
+<!--		<a href="/api/MemoryReport?serverIp=${serverIp}&gc=false">Exclude GC</a></br> -->
 	</c:when>
 	<c:otherwise>
-		<a href="/api/MemoryReport?serverIp=${serverIp}&gc=true">Include GC</a></br>
+<!--		<a href="/api/MemoryReport?serverIp=${serverIp}&gc=true">Include GC</a></br> -->
 	</c:otherwise>
 </c:choose>
 
 <pre>
 ${memoryReport}
+</pre>
+<pre>
+${cpuReport}
 </pre>

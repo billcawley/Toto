@@ -159,7 +159,7 @@
 			el.dialog({
 				modal	: 'true',
 				width	: 'auto',
-				title	: 'Memory Report'
+				title	: 'Memory/CPU Report'
 			});
 			
 			// reload content every second
@@ -173,7 +173,7 @@
 						$this.attr('href', $(this).attr('href')); // override any links
 					});
 			
-					setTimeout(refresh,1000);
+					setTimeout(refresh,2000);
 				});
 			}
 			refresh();

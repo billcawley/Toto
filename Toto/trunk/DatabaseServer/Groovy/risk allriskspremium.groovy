@@ -56,7 +56,6 @@ def fileProcess(Object[] args) {
         int compare(String s, String t1) {
             def split1 = s.split("\t")
             def split2 = t1.split("\t")
-
             if (!split1[contractNumCol].equals(split2[contractNumCol])){
                 return split1[contractNumCol].compareTo(split2[contractNumCol])
             } else { // they match! numeric compare on the

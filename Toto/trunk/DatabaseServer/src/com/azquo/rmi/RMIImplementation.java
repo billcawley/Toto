@@ -4,7 +4,6 @@ import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.*;
 import com.azquo.memorydb.core.AzquoMemoryDB;
-import com.azquo.memorydb.core.BackupTransport;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
@@ -19,6 +18,11 @@ import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.transport.FilterTriple;
 import com.azquo.spreadsheet.transport.RegionOptions;
 
+
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.rmi.RemoteException;
 import java.text.NumberFormat;
 import java.util.List;
@@ -354,6 +358,34 @@ class RMIImplementation implements RMIInterface {
         String message = "--- MEMORY USED :  " + nf.format((runtime.totalMemory() - runtime.freeMemory()) / mb) + "MB of " + nf.format(runtime.totalMemory() / mb) + "MB, max allowed " + nf.format(runtime.maxMemory() / mb);
         toReturn.append(message);
         return toReturn.toString();
+    }
+
+    @Override
+    public String getCPUReport() throws RemoteException {
+        try {
+            StringBuilder toReturn = new StringBuilder();
+            OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
+            double percent = -1;
+            for (Method method : operatingSystemMXBean.getClass().getDeclaredMethods()) {
+                method.setAccessible(true);
+                if (method.getName().equals("getSystemCpuLoad")
+                        && Modifier.isPublic(method.getModifiers())) {
+                    Object value;
+                    try {
+                        value = method.invoke(operatingSystemMXBean);
+                        percent = (Double)value;
+                    } catch (Exception e) {
+                    } // try
+//                    toReturn.append(method.getName() + " = " + value);
+                } // if
+            } // for            // variable here is a bit easier to read and makes intellij happier
+            NumberFormat nf = NumberFormat.getInstance();
+            String message = "--- CPU USAGE :  " + nf.format(percent * 100) + "%";
+            toReturn.append(message);
+            return toReturn.toString();
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
     }
 
     @Override

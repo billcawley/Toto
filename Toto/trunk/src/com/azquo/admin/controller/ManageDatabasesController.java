@@ -226,11 +226,11 @@ public class ManageDatabasesController {
             }
             model.put("databases", displayDataBases);
             final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
-            if (allServers.size() > 1) {
+//            if (allServers.size() > 1) {
                 model.put("databaseServers", allServers);
-            } else {
+//            } else {
                 model.put("serverList", false);
-            }
+//            }
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, fileSearch);
             if ("database".equals(sort)) {
                 uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getDatabaseName().compareTo(o2.getDatabaseName())));

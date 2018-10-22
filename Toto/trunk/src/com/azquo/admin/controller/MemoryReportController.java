@@ -30,7 +30,10 @@ public class MemoryReportController {
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-            modelMap.addAttribute("memoryReport", RMIClient.getServerInterface(serverIp).getMemoryReport("true".equalsIgnoreCase(gc)));
+            modelMap.addAttribute("memoryReport", RMIClient.getServerInterface(serverIp).getMemoryReport(false));
+            modelMap.addAttribute("cpuReport", RMIClient.getServerInterface(serverIp).getCPUReport());
+            // not allowing gc
+//            modelMap.addAttribute("memoryReport", RMIClient.getServerInterface(serverIp).getMemoryReport("true".equalsIgnoreCase(gc)));
             modelMap.addAttribute("serverIp", serverIp);
             return "memoryreport";
         } else {

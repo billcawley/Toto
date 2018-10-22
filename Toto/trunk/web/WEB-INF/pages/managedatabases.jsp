@@ -162,7 +162,7 @@ Created by IntelliJ IDEA.
 <!-- END DB Management -->		
 <!-- Maintenance -->	
 	<div id="tab3" style="display:none">
-        <h3>Restore Backup.</h3>>
+        <h3>Restore Backup.</h3>
         WARNING : the database specified internally by the zip or "Database" here will zap a database and associated reports and auto backups if they exist before it restores the file contents.
 		<form action="/api/ManageDatabases" method="post" enctype="multipart/form-data">
 			<table>
@@ -176,7 +176,7 @@ Created by IntelliJ IDEA.
 				</tbody>
 			</table>
 		</form>
-		<h3>Memory report for servers:</h3>
+		<h3>Memory/CPU report for servers:</h3>
 		<div class="well">
 			<c:forEach items="${databaseServers}" var="databaseServer">
 				<a href="/api/MemoryReport?serverIp=${databaseServer.ip}" target="new" class="button report">${databaseServer.name}</a>
