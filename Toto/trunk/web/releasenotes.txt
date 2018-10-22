@@ -2,6 +2,8 @@
 
 Added this file!
 
+Bug fixing resolving choices and queries - was only clearing the formula result cache when a number - clearly wrong!
+
 Improved error messages on importing
 
 User choices ignore az_ so if date set in one place from a dropdown as az_datechoice it will be picked up by datechoice and vice versa

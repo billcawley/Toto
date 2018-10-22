@@ -618,7 +618,7 @@ public class ReportRenderer {
             // now the insert as normal
             //found a bug in ZK - lines to fudge it
             Range insertRange = Ranges.range(sheet, insertRow, 0, insertRow + rowsToAdd - 1, maxCol); // insert at the 3rd row - should be rows to add - 1 as it starts at one without adding anything
-            if (rowsToAdd < 5000) {// ZK siesed when 16000 rows were added to a spreadsheet with 200 columns
+//            if (rowsToAdd < 5000) {// ZK siesed when 16000 rows were added to a spreadsheet with 200 columns
                 CellOperationUtil.insertRow(insertRange);
 
 //            CellOperationUtil.insert(insertRange, Range.InsertShift.DOWN, Range.InsertCopyOrigin.FORMAT_NONE); // don't copy any formatting . . . a problem with hidden rows!
@@ -643,7 +643,7 @@ public class ReportRenderer {
                         sheet.getInternalSheet().getRow(row).setHidden(true);
                     }
                 }
-            }
+            //}
         }
         // add columns
         int maxRow = sheet.getLastRow();

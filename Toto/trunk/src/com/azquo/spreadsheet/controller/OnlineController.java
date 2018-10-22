@@ -297,34 +297,37 @@ public class OnlineController {
                             try {
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
-                                Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                                book.getInternalBook().setAttribute(BOOK_PATH, bookPath);
-                                book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
-                                // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
-                                System.out.println("Loading report : " + finalOnlineReport.getReportName());
-                                book.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
-                                if (!templateMode) {
-                                    boolean executeName = false;
-                                    // annoying, factor?
-                                    for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
-                                        Sheet sheet = book.getSheetAt(sheetNumber);
-                                        List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
-                                        for (SName sName : namesForSheet) {
-                                            if (sName.getName().equalsIgnoreCase(ReportRenderer.EXECUTE)) {
-                                                executeName = true;
+                                Book book = Importers.getImporter().imports(new File(bookPath), "Report name", book1 -> {
+                                    // here is the "process" for book 1, an atempt to speed up[ zk loading, let's see how it goes
+                                    book1.getInternalBook().setAttribute(BOOK_PATH, bookPath);
+                                    book1.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
+                                    // todo, address allowing multiple books open for one user. I think this could be possible. Might mean passing a DB connection not a logged in one
+                                    System.out.println("Loading report : " + finalOnlineReport.getReportName());
+                                    book1.getInternalBook().setAttribute(REPORT_ID, finalOnlineReport.getId());
+                                    if (!templateMode) {
+                                        boolean executeName = false;
+                                        // annoying, factor?
+                                        for (int sheetNumber = 0; sheetNumber < book1.getNumberOfSheets(); sheetNumber++) {
+                                            Sheet sheet = book1.getSheetAt(sheetNumber);
+                                            List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
+                                            for (SName sName : namesForSheet) {
+                                                if (sName.getName().equalsIgnoreCase(ReportRenderer.EXECUTE)) {
+                                                    executeName = true;
+                                                }
                                             }
                                         }
+                                        // todo, lock check here like execute
+                                        session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
+                                        loggedInUser.userLog(loggedInUser.getUser().getEmail() + " Load report : " + finalOnlineReport.getReportName());
+                                        session.setAttribute(finalReportId + SAVE_FLAG, ReportRenderer.populateBook(book1, valueId));
+                                    } else {
+                                        loggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
                                     }
-                                    // todo, lock check here like execute
-                                    session.setAttribute(finalReportId + EXECUTE_FLAG, executeName); // pretty crude but should do it
-                                    loggedInUser.userLog(loggedInUser.getUser().getEmail() + " Load report : " + finalOnlineReport.getReportName());
-                                   session.setAttribute(finalReportId + SAVE_FLAG, ReportRenderer.populateBook(book, valueId));
-                                    if (executeMode) {
-                                        book = ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
-                                        session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
-                                    }
-                                } else {
-                                    loggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
+                                    
+                                });
+                                if (executeMode) {
+                                    book = ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
+                                    session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                 }
                                 long newHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 System.out.println();

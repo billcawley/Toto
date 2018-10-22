@@ -1,6 +1,6 @@
 <%-- Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT --%><%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<c:set var="title" scope="request" value="Login, Azquo build 11-10-18" />
+<c:set var="title" scope="request" value="Login" />
 <%@ include file="../includes/basic_header.jsp" %>
 
 <main class="basicDialog">
