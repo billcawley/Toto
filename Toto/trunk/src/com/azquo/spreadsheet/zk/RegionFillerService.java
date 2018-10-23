@@ -547,7 +547,6 @@ class RegionFillerService {
     static void fillData(Sheet sheet, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, CellRegion displayDataRegion) {
         int row = displayDataRegion.getRow();
         List<String> bottomColHeadings = cellsAndHeadingsForDisplay.getColumnHeadings().get(cellsAndHeadingsForDisplay.getColumnHeadings().size() - 1); // bottom of the col headings if they are multi layered
-        Ranges.range(sheet, displayDataRegion.getRow(), displayDataRegion.getColumn(), displayDataRegion.lastRow, displayDataRegion.lastColumn).setAutoRefresh(false);
         if (cellsAndHeadingsForDisplay.getData() != null) {
             for (List<CellForDisplay> rowCellValues : cellsAndHeadingsForDisplay.getData()) {
                 int col = displayDataRegion.getColumn();
@@ -584,6 +583,6 @@ class RegionFillerService {
             }
         }
         Ranges.range(sheet, displayDataRegion.getRow(), displayDataRegion.getColumn(), displayDataRegion.lastRow, displayDataRegion.lastColumn).notifyChange();
-        Ranges.range(sheet, displayDataRegion.getRow(), displayDataRegion.getColumn(), displayDataRegion.lastRow, displayDataRegion.lastColumn).setAutoRefresh(true);
+
     }
 }

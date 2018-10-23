@@ -1,6 +1,10 @@
 23-10-18
 
+Shows audit on calculated fields
 
+Started work on pending uploads area (currently hidden to users)
+
+When importing removes the ' mark on excel cells that start ' and have no other '
 
 
 22-10-18-3
