@@ -126,112 +126,95 @@ class ZKContextMenu {
             popupChild = debugPopup.getFirstChild();
         }
         SCell sCell = myzss.getSelectedSheet().getInternalSheet().getCell(cellRow, cellCol);
-        if (sCell.getType() == SCell.CellType.FORMULA) {
-            String formula = sCell.getFormulaValue();
-            Label provenanceLabel = new Label();
-            provenanceLabel.setMultiline(true);
-            provenanceLabel.setValue(ReportUIUtils.trimString("Spreadsheet formula: =" + formula));
-            provenancePopup.appendChild(provenanceLabel);
-            Menuitem auditItem = new Menuitem("Audit");
-            editPopup.appendChild(auditItem);
-            auditItem.setPopup(provenancePopup);
-//            auditItem.addEventListener("onClick",
-//                    event -> System.out.println("audit menu item clicked, formula bit . . ."));
+        String region = null;
+        int regionRow = 0;
+        int regionColumn = 0;
+        // adding support for repeat regions. There's an additional check for row headings in a normal data region but I think this is redundant in repeat regions
+        List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE);
+        if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
+            // repeat can overlap now, this should help
+            for (SName name : repeatRegionNames) {
+                ZKComposer.RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(myzss.getBook(), cellRow, cellCol, name);
+                if (regionRowColForRepeatRegion != null) {
+                    region = regionRowColForRepeatRegion.region;
+                    regionRow = regionRowColForRepeatRegion.row;
+                    regionColumn = regionRowColForRepeatRegion.col;
+                    break;
+                }
+            }
+        } else { // standard
+            List<SName> names = BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());
+            for (SName name : names) {
+                SName rowHeadingsName = BookUtils.getNameByName("az_rowheadings" + name.getName().substring(13), myzss.getSelectedSheet());
+                if (rowHeadingsName != null) {
+                    region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+                    regionRow = cellRow - name.getRefersToCellRegion().getRow();
+                    regionColumn = cellCol - name.getRefersToCellRegion().getColumn();
+                    break;
+                }
+            }
+        }
+        // going to put a check on region not being null - should provenance etc work on headings? It will stop it for the mo
+        if (region != null) {
+            // Edd adding in the user region options that are now required due to column and row languages
+            SName optionsRegion = myzss.getSelectedSheet().getBook().getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
+            String source = null;
+            if (optionsRegion != null) {
+                source = BookUtils.getSnameCell(optionsRegion).getStringValue();
+            }
+            UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
+            try {
+                final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn, 1000);
+                if (provenanceDetailsForDisplay.getAuditForDisplayList() != null && !provenanceDetailsForDisplay.getAuditForDisplayList().isEmpty()) {
+                    buildContextMenuProvenance(provenanceDetailsForDisplay, myzss);
+                    buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
+                    Menuitem auditItem = new Menuitem("Audit");
+                    editPopup.appendChild(auditItem);
+                    auditItem.setPopup(provenancePopup);
+//                            auditItem.addEventListener("onClick",
+//                                    event -> System.out.println("audit menu item clicked"));
+                    buildContextMenuDrillDownIfApplicable(myzss.getSelectedSheetName(), region, regionRow, regionColumn);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            buildContextMenuDebug(myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn);
+            buildContextMenuInstructions(myzss.getSelectedSheetName(), region);
+
+            popupChild = highlightPopup.getFirstChild();
+            while (popupChild != null) {
+                highlightPopup.removeChild(popupChild);
+                popupChild = highlightPopup.getFirstChild();
+            }
+            // just concerned withe the user ones as opposed to the report ones
+            userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
+            int highlightDays = 0;
+            if (userRegionOptions != null) {
+                highlightDays = userRegionOptions.getHighlightDays();
+            }
+            String highlightString = "no highlight";
+            if (highlightDays > 0) highlightString = highlightDays + " days";
+            final String highlightList = "Current highlight is " + highlightString + "\n";
+            Label highlightLabel = new Label();
+            highlightLabel.setMultiline(true);
+            highlightLabel.setValue(highlightList);
+            highlightPopup.appendChild(highlightLabel);
+            addHighlight(highlightPopup, 0);
+            addHighlight(highlightPopup, 2);
+            addHighlight(highlightPopup, 1);
+            addHighlight(highlightPopup, 7);
+            addHighlight(highlightPopup, 30);
+            addHighlight(highlightPopup, 90);
+            Menuitem highlightItem = new Menuitem("Highlight");
+            editPopup.appendChild(highlightItem);
+            highlightItem.setPopup(highlightPopup);
             if (ref != null) {
                 editPopup.open(ref, "at_pointer");
             } else {
                 editPopup.open(mouseX - 140, mouseY);
             }
-        } else {
-            String region = null;
-            int regionRow = 0;
-            int regionColumn = 0;
-            // adding support for repeat regions. There's an additional check for row headings in a normal data region but I think this is redundant in repeat regions
-            List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE);
-            if (repeatRegionNames != null && !repeatRegionNames.isEmpty()) {
-                // repeat can overlap now, this should help
-                for (SName name : repeatRegionNames) {
-                    ZKComposer.RegionRowCol regionRowColForRepeatRegion = ReportUIUtils.getRegionRowColForRepeatRegion(myzss.getBook(), cellRow, cellCol, name);
-                    if (regionRowColForRepeatRegion != null) {
-                        region = regionRowColForRepeatRegion.region;
-                        regionRow = regionRowColForRepeatRegion.row;
-                        regionColumn = regionRowColForRepeatRegion.col;
-                        break;
-                    }
-                }
-            } else { // standard
-                List<SName> names = BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(cellRow, cellCol, myzss.getSelectedSheet());
-                for (SName name : names) {
-                    SName rowHeadingsName = BookUtils.getNameByName("az_rowheadings" + name.getName().substring(13), myzss.getSelectedSheet());
-                    if (rowHeadingsName != null) {
-                        region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
-                        regionRow = cellRow - name.getRefersToCellRegion().getRow();
-                        regionColumn = cellCol - name.getRefersToCellRegion().getColumn();
-                        break;
-                    }
-                }
-            }
-            // going to put a check on region not being null - should provenance etc work on headings? It will stop it for the mo
-            if (region != null) {
-                // Edd adding in the user region options that are now required due to column and row languages
-                SName optionsRegion = myzss.getSelectedSheet().getBook().getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
-                String source = null;
-                if (optionsRegion != null) {
-                    source = BookUtils.getSnameCell(optionsRegion).getStringValue();
-                }
-                UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), reportId, region, source);
-                try {
-                    final ProvenanceDetailsForDisplay provenanceDetailsForDisplay = SpreadsheetService.getProvenanceDetailsForDisplay(loggedInUser, reportId, myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn, 1000);
-                    if (provenanceDetailsForDisplay.getAuditForDisplayList() != null && !provenanceDetailsForDisplay.getAuditForDisplayList().isEmpty()) {
-                        buildContextMenuProvenance(provenanceDetailsForDisplay, myzss);
-                        buildContextMenuProvenanceDownload(provenanceDetailsForDisplay, reportId);
-                        Menuitem auditItem = new Menuitem("Audit");
-                        editPopup.appendChild(auditItem);
-                        auditItem.setPopup(provenancePopup);
-//                            auditItem.addEventListener("onClick",
-//                                    event -> System.out.println("audit menu item clicked"));
-                        buildContextMenuDrillDownIfApplicable(myzss.getSelectedSheetName(), region, regionRow, regionColumn);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                buildContextMenuDebug(myzss.getSelectedSheetName(), region, userRegionOptions, regionRow, regionColumn);
-                buildContextMenuInstructions(myzss.getSelectedSheetName(), region);
-
-                popupChild = highlightPopup.getFirstChild();
-                while (popupChild != null) {
-                    highlightPopup.removeChild(popupChild);
-                    popupChild = highlightPopup.getFirstChild();
-                }
-                // just concerned withe the user ones as opposed to the report ones
-                userRegionOptions = UserRegionOptionsDAO.findForUserIdReportIdAndRegion(loggedInUser.getUser().getId(), reportId, region);
-                int highlightDays = 0;
-                if (userRegionOptions != null) {
-                    highlightDays = userRegionOptions.getHighlightDays();
-                }
-                String highlightString = "no highlight";
-                if (highlightDays > 0) highlightString = highlightDays + " days";
-                final String highlightList = "Current highlight is " + highlightString + "\n";
-                Label highlightLabel = new Label();
-                highlightLabel.setMultiline(true);
-                highlightLabel.setValue(highlightList);
-                highlightPopup.appendChild(highlightLabel);
-                addHighlight(highlightPopup, 0);
-                addHighlight(highlightPopup, 2);
-                addHighlight(highlightPopup, 1);
-                addHighlight(highlightPopup, 7);
-                addHighlight(highlightPopup, 30);
-                addHighlight(highlightPopup, 90);
-                Menuitem highlightItem = new Menuitem("Highlight");
-                editPopup.appendChild(highlightItem);
-                highlightItem.setPopup(highlightPopup);
-                if (ref != null) {
-                    editPopup.open(ref, "at_pointer");
-                } else {
-                    editPopup.open(mouseX - 140, mouseY);
-                }
-            }
         }
+
     }
 
     private void addHighlight(Popup highlightPopup, final int days) {
