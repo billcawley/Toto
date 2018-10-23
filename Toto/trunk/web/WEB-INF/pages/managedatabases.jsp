@@ -21,7 +21,7 @@ Created by IntelliJ IDEA.
 		<li><a href="#tab1">Uploads</a></li>
 		<li><a href="#tab2">DB Management</a></li>
 		<li><a href="#tab3">Maintenance</a></li>
-<!--		<li><a href="#tab4">Pending Uploads</a></li> -->
+		<!--<li><a href="#tab4">Pending Uploads</a></li> -->
 	</ul>
 <!-- Uploads -->
 	<div id="tab1" style="display:none">
@@ -191,56 +191,33 @@ Created by IntelliJ IDEA.
 			<thead>
 			<tr>
 				<td>Date</td>
-				<td>Source</td>
+				<td>Last Changed</td>
 				<td>File Name</td>
+				<td>File Path</td>
+				<td>Source</td>
+                <td>Status</td>
 				<td>Database</td>
-				<td>Import Template</td>
-                <td>Month</td>
-                <td>Download</td>
-                <td></td>
+				<td>Database</td>
+				<td>Database</td>
+				<td>Database</td>
+				<td>User Name</td>
 			</tr>
 			</thead>
 			<tbody>
-            <tr>
-                <td>11/10/18-16:03</td>
-                <td>anemail@client.com</td>
-                <td>All Risks Data.xlsx</td>
-                <td><select name="database"><c:forEach items="${databases}" var="database"><option value="${database.name}">${database.name}</option></c:forEach></select></td>
-                <td><select name="import template"><option value="">None</option><option value="1">template 1</option><option value="2">template 2</option><option value="3">template 3</option></select></td>
-                <td><select name="month"><option value="">Jan-18</option><option value="">Feb-18</option><option value="">Mar-18</option><option value="">Apr-18</option><option value="">May-18</option><option value="">Jun-18</option></select></td>
-                <td><a class="button small" href="#"> <span class="fa fa-download" title="Download"></span></a></td>
-                <td><input type="submit" name="Load" value="Load" class="button"/></td>
-            </tr>
-            <tr>
-                <td>12/10/18-14:05</td>
-                <td>anemail@client2.com</td>
-                <td>Other Risks Data.xlsx</td>
-                <td><select name="database"><c:forEach items="${databases}" var="database"><option value="${database.name}">${database.name}</option></c:forEach></select></td>
-                <td><select name="import template"><option value="">None</option><option value="1">template 1</option><option value="2">template 2</option><option value="3">template 3</option></select></td>
-                <td><select name="month"><option value="">Jan-18</option><option value="">Feb-18</option><option value="">Mar-18</option><option value="">Apr-18</option><option value="">May-18</option><option value="">Jun-18</option></select></td>
-                <td><a class="button small"  href="#"> <span class="fa fa-download" title="Download"></span></a></td>
-                <td><input type="submit" name="Load" value="Load" class="button"/></td>
-            </tr>
-            <tr>
-                <td>12/10/18-11:23</td>
-                <td>anemail@client3.com</td>
-                <td>Risks Data.xlsx</td>
-                <td><select name="database"><c:forEach items="${databases}" var="database"><option value="${database.name}">${database.name}</option></c:forEach></select></td>
-                <td><select name="import template"><option value="">None</option><option value="1">template 1</option><option value="2">template 2</option><option value="3">template 3</option></select></td>
-                <td><select name="month"><option value="">Jan-18</option><option value="">Feb-18</option><option value="">Mar-18</option><option value="">Apr-18</option><option value="">May-18</option><option value="">Jun-18</option></select></td>
-                <td><a class="button small"  href="#"> <span class="fa fa-download" title="Download"></span></a></td>
-                <td><input type="submit" name="Load" value="Load" class="button"/></td>
-            </tr>
-            <tr>
-                <td>13/10/18-11:55</td>
-                <td>anemail@client4.com</td>
-                <td>More Data.xlsx</td>
-                <td><select name="database"><c:forEach items="${databases}" var="database"><option value="${database.name}">${database.name}</option></c:forEach></select></td>
-                <td><select name="import template"><option value="">None</option><option value="1">template 1</option><option value="2">template 2</option><option value="3">template 3</option></select></td>
-                <td><select name="month"><option value="">Jan-18</option><option value="">Feb-18</option><option value="">Mar-18</option><option value="">Apr-18</option><option value="">May-18</option><option value="">Jun-18</option></select></td>
-                <td><a class="button small"  href="#"> <span class="fa fa-download" title="Download"></span></a></td>
-                <td><input type="submit" name="Load" value="Load" class="button"/></td>
-            </tr>
+
+			<c:forEach items="${pendinguploads}" var="pendingupload">
+				<tr>
+					<td>${pendingupload.date}</td>
+					<td>${pendingupload.statusChangedDate}</td>
+					<td>${pendingupload.fileName}</td>
+					<td>${pendingupload.filePath}</td>
+					<td>${pendingupload.source}</td>
+					<td>${pendingupload.status}</td>
+					<td><select name="database"><c:forEach items="${databases}" var="database"><option value="${database.name}">${database.name}</option></c:forEach></select>${pendingupload.databaseName}</td>
+					<td>${pendingupload.userName}</td>
+					<td><input type="submit" name="Load" value="Load" class="button"/></td>
+				</tr>
+			</c:forEach>
 			</tbody>
 		</table>
 	</div>

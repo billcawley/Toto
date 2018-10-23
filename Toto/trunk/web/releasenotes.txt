@@ -1,8 +1,19 @@
+23-10-18
+
+
+
+
+22-10-18-3
+
+CPU and memory report added, bug fix to keep user menus linked when loading a DB from a backup file
+
+
 22-10-18-2
 
 ZK optimiseation to put our code in their PostImporter. Should allow inserting of lines faster.
 
 Bug fix when auditing multiple worksheets
+
 
 22-10-18
 
@@ -23,6 +34,7 @@ Standardise dates when converting an Excel file for importing
 Cap ZK rows at 5k, we should use the Excel Add In for large numbers of cells
 
 Download database icon better
+
 
 11-10-18
 

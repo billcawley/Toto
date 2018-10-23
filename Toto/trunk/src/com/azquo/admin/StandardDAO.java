@@ -65,6 +65,22 @@ public class StandardDAO {
             jdbcTemplate.update("ALTER TABLE master_db.`database` ADD column auto_backup boolean default false", new HashMap<>());
         }
 
+        jdbcTemplate.update("CREATE TABLE if not exists `master_db`.`pending upload` (\n" +
+                "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
+                "  `business_id` int(11) NOT NULL,\n" +
+                "  `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
+                "  `statusChangedDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
+                "  `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                "  `file_path` varchar(255) COLLATE utf8_unicode_ci not null,\n" +
+                "  `source` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                "  `status` varchar(50) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                "  `parameters` text COLLATE utf8_unicode_ci,\n" +
+                "  `database_id` int(11) NOT NULL,\n" +
+                "  `user_id` int(11) NOT NULL,\n" +
+                "  `import_result` text COLLATE utf8_unicode_ci,\n" +
+                "  PRIMARY KEY (`id`)\n" +
+                ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n", new HashMap<>());
+
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
     }
 

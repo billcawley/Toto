@@ -14,9 +14,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -71,6 +73,24 @@ public class DBCron {
     public void directoryScan() throws Exception {
         synchronized (this){ // one at a time
             if (SpreadsheetService.getScanDir() != null && SpreadsheetService.getScanDir().length() > 0){
+                // we'll move imported files into loaded when they have been entered into Pending Uploads
+                Path tagged = Paths.get(SpreadsheetService.getScanDir() + "/tagged");
+                if (!Files.exists(tagged)){
+                    Files.createDirectories(tagged);
+                }
+                Path p  = Paths.get(SpreadsheetService.getScanDir());
+                Stream<Path> list = Files.list(p);
+                list.forEach(path -> {
+                    if (!Files.isDirectory(path)){ // skip any directories
+                        String origName = path.getFileName().toString();
+                        try {
+                            Files.move(path, tagged.resolve(System.currentTimeMillis() + origName));
+                            // ok it's moved
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
                 // then do something . . . .
             }
         }

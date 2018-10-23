@@ -508,6 +508,7 @@ public class ReportRenderer {
                 }
 
                 if (displayDataRegion != null) {
+
                     expandDataRegionBasedOnHeadings(loggedInUser, sheet, region, displayDataRegion, cellsAndHeadingsForDisplay, maxCol, userRegionOptions);
                     // these re loadings are because the region may have changed
                     // why reload displayDataRegion but not displayRowHeadings for example? todo - check, either both need reloading or both don't - this isn't a biggy it's just to do with name references which now I think about it probably don't need reloading but it's worth checking and being consistent
@@ -523,7 +524,7 @@ public class ReportRenderer {
                             colsToAdd = rowHeadingCols - displayRowHeadings.getColumnCount();
                             if (colsToAdd > 0) {
                                 int insertCol = displayRowHeadings.getColumn() + displayRowHeadings.getColumnCount() - 1;
-                                Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1); //
+                                Range insertRange = Ranges.range(sheet, 0, insertCol, maxRow, insertCol + colsToAdd - 1);
                                 CellOperationUtil.insert(insertRange.toColumnRange(), Range.InsertShift.RIGHT, Range.InsertCopyOrigin.FORMAT_LEFT_ABOVE);
                                 displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, ReportRenderer.AZDATAREGION + region);
                             }

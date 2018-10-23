@@ -199,6 +199,25 @@ CREATE TABLE IF NOT EXISTS `user_region_options` (
   `highlight_days` int(3) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Made for Ed Broking - but perhaps useful for all
+
+CREATE TABLE if not exists `pending upload` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `business_id` int(11) NOT NULL,
+  `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `statusChangedDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `file_path` varchar(255) COLLATE utf8_unicode_ci not null,
+  `source` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `status` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
+  `parameters` text COLLATE utf8_unicode_ci,
+  `database_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `import_result` text COLLATE utf8_unicode_ci,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
 --
 -- Indexes for dumped tables
 --
