@@ -201,11 +201,11 @@ CREATE TABLE IF NOT EXISTS `user_region_options` (
 
 -- Made for Ed Broking - but perhaps useful for all
 
-CREATE TABLE if not exists `pending upload` (
+CREATE TABLE if not exists `pending_upload` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `business_id` int(11) NOT NULL,
   `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `statusChangedDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `status_changed_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `file_path` varchar(255) COLLATE utf8_unicode_ci not null,
   `source` varchar(255) COLLATE utf8_unicode_ci NOT NULL,

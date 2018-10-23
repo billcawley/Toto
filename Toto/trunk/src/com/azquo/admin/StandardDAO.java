@@ -65,11 +65,11 @@ public class StandardDAO {
             jdbcTemplate.update("ALTER TABLE master_db.`database` ADD column auto_backup boolean default false", new HashMap<>());
         }
 
-        jdbcTemplate.update("CREATE TABLE if not exists `master_db`.`pending upload` (\n" +
+        jdbcTemplate.update("CREATE TABLE if not exists `master_db`.`pending_upload` (\n" +
                 "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
                 "  `business_id` int(11) NOT NULL,\n" +
                 "  `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
-                "  `statusChangedDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
+                "  `status_changed_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
                 "  `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
                 "  `file_path` varchar(255) COLLATE utf8_unicode_ci not null,\n" +
                 "  `source` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +

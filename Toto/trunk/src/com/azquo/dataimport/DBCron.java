@@ -4,9 +4,7 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
-import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.admin.database.DatabaseServerDAO;
+import com.azquo.admin.database.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -16,7 +14,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -69,29 +69,47 @@ public class DBCron {
     }
 
     // need to think of how to define this
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(cron = "0 * * * * *")
     public void directoryScan() throws Exception {
         synchronized (this){ // one at a time
-            if (SpreadsheetService.getScanDir() != null && SpreadsheetService.getScanDir().length() > 0){
-                // we'll move imported files into loaded when they have been entered into Pending Uploads
-                Path tagged = Paths.get(SpreadsheetService.getScanDir() + "/tagged");
-                if (!Files.exists(tagged)){
-                    Files.createDirectories(tagged);
-                }
-                Path p  = Paths.get(SpreadsheetService.getScanDir());
-                Stream<Path> list = Files.list(p);
-                list.forEach(path -> {
-                    if (!Files.isDirectory(path)){ // skip any directories
-                        String origName = path.getFileName().toString();
-                        try {
-                            Files.move(path, tagged.resolve(System.currentTimeMillis() + origName));
-                            // ok it's moved
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+            if (SpreadsheetService.getScanDir() != null && SpreadsheetService.getScanDir().length() > 0
+                    && SpreadsheetService.getScanBusiness() != null && SpreadsheetService.getScanBusiness().length() > 0){
+                Business b = BusinessDAO.findByName(SpreadsheetService.getScanBusiness());
+                if (b != null){
+                    System.out.println("running file scan");
+                    // we'll move imported files into loaded when they have been entered into Pending Uploads
+                    Path tagged = Paths.get(SpreadsheetService.getScanDir() + "/tagged");
+                    if (!Files.exists(tagged)){
+                        Files.createDirectories(tagged);
                     }
-                });
-                // then do something . . . .
+                    Path p  = Paths.get(SpreadsheetService.getScanDir());
+                    Stream<Path> list = Files.list(p);
+                    list.forEach(path -> {
+                        if (!Files.isDirectory(path)){ // skip any directories
+                            String origName = path.getFileName().toString();
+                            try {
+                                System.out.println("file : " + origName);
+                                FileTime lastModifiedTime = Files.getLastModifiedTime(path);
+                                Files.move(path, tagged.resolve(System.currentTimeMillis() + origName));
+                                // ok it's moved now make the pending upload record
+                                PendingUpload pendingUpload = new PendingUpload(0, b.getId()
+                                        , LocalDateTime.ofInstant(lastModifiedTime.toInstant(), ZoneId.systemDefault())
+                                        , LocalDateTime.now()
+                                        , origName
+                                        , tagged.resolve(System.currentTimeMillis() + origName).toString()
+                                        , "fileimport"
+                                ,"waiting"
+                                ,""
+                                ,0
+                                ,0
+                                ,null);
+                                PendingUploadDAO.store(pendingUpload);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                }
             }
         }
     }
