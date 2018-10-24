@@ -4,6 +4,7 @@ import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.OnlineController;
 import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
@@ -19,12 +20,12 @@ import java.util.List;
  * Could maybe be called composer utils, t
  */
 public class ReportUIUtils {
-    static List<SName> getNamedRegionForRowAndColumnSelectedSheet(Spreadsheet myzss, int row, int col) {
+    static List<SName> getNamedRegionForRowAndColumnSelectedSheet(Sheet sheet, int row, int col) {
         // now how to get the name?? Guess run through them. Feel there should be a better way.
-        final Book book = myzss.getBook();
+        final Book book = sheet.getBook();
         List<SName> found = new ArrayList<>();
         for (SName name : book.getInternalBook().getNames()) { // seems best to loop through names checking which matches I think
-            if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(myzss.getSelectedSheet().getSheetName())
+            if (name.getRefersToSheetName() != null && name.getRefersToSheetName().equals(sheet.getSheetName())
                     && name.getRefersToCellRegion() != null
                     && row >= name.getRefersToCellRegion().getRow() && row <= name.getRefersToCellRegion().getLastRow()
                     && col >= name.getRefersToCellRegion().getColumn() && col <= name.getRefersToCellRegion().getLastColumn()) {
