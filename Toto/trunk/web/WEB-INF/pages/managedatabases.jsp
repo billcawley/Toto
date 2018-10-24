@@ -21,7 +21,7 @@ Created by IntelliJ IDEA.
             <li><a href="#tab1">Uploads</a></li>
             <li><a href="#tab2">DB Management</a></li>
             <li><a href="#tab3">Maintenance</a></li>
-            <!-- <li><a href="#tab4">Pending Uploads</a></li> -->
+            <!--<li><a href="#tab4">Pending Uploads</a></li>-->
         </ul>
         <!-- Uploads -->
         <div id="tab1" style="display:none">
@@ -240,27 +240,28 @@ Created by IntelliJ IDEA.
                 <c:forEach items="${pendinguploads}" var="pendingupload">
                     <form action="/api/ManageDatabases#tab4">
                         <input type="hidden" name="pendingUploadId" value="${pendingupload.id}">
-                    <tr>
-                        <td>${pendingupload.date}</td>
-                        <td>${pendingupload.statusChangedDate}</td>
-                        <td>${pendingupload.userName}</td>
-                        <td>${pendingupload.fileName}</td>
-                        <td>${pendingupload.source}</td>
-                        <td>${pendingupload.status}</td>
-                        <td><select name="databaseId"><c:forEach items="${databases}" var="database">
-                            <option value="${database.id}">${database.name}</option>
-                        </c:forEach></select>${pendingupload.databaseName}</td>
-                        <c:forEach items="${params}" var="entry">
-                            <td>
-                                <select name="pendingupload-${entry.key}"><c:forEach items="${entry.value}" var="listitem">
-                                    <option value="${listitem}">${listitem}</option>
-                                </c:forEach></select>
-                            </td>
-                        </c:forEach>
-                        <td><input type="submit" name="Load" value="Load" class="button"/></td>
-                        <td><a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}" class="button small"
-                               title="Download"><span class="fa fa-download" title="Download"></span> </a></td>
-                    </tr>
+                        <tr>
+                            <td>${pendingupload.date}</td>
+                            <td>${pendingupload.statusChangedDate}</td>
+                            <td>${pendingupload.userName}</td>
+                            <td>${pendingupload.fileName}</td>
+                            <td>${pendingupload.source}</td>
+                            <td>${pendingupload.status}</td>
+                            <td><select name="databaseId"><c:forEach items="${databases}" var="database">
+                                <option value="${database.id}">${database.name}</option>
+                            </c:forEach></select>${pendingupload.databaseName}</td>
+                            <c:forEach items="${params}" var="entry">
+                                <td>
+                                    <select name="pendingupload-${entry.key}"><c:forEach items="${entry.value}"
+                                                                                         var="listitem">
+                                        <option value="${listitem}">${listitem}</option>
+                                    </c:forEach></select>
+                                </td>
+                            </c:forEach>
+                            <td><input type="submit" name="Load" value="Load" class="button"/></td>
+                            <td><a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}" class="button small"
+                                   title="Download"><span class="fa fa-download" title="Download"></span> </a></td>
+                        </tr>
                     </form>
                 </c:forEach>
                 </tbody>

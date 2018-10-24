@@ -115,6 +115,7 @@ public class BackupService {
                 if (loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getId() != db.getUserId()) {
                     throw new Exception("A developer cannot restore to a database that is not thiers");
                 }
+                // here's a question - given the hack to move the database id should it just empty instead of delete and delete reports as necessary? Not a biggy but todo
                 if (justEmpty) {
                     loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(db.getDatabaseServerId()), db);
                     AdminService.emptyDatabase(loggedInUser, false); // don't load the setup file!

@@ -93,7 +93,7 @@ public class LoginService {
 
     // we used to record open counts, this will need to be dealt with server side
 
-    public static void switchDatabase(LoggedInUser loggedInUser, Database db) throws Exception {
+    public static void switchDatabase(LoggedInUser loggedInUser, Database db) {
         if (db != null && db.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
             DatabaseServer databaseServer = DatabaseServerDAO.findById(db.getDatabaseServerId());
             loggedInUser.setDatabaseWithServer(databaseServer, db);

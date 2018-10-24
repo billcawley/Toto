@@ -134,15 +134,21 @@ public class ManageDatabasesController {
         // I assume secure until we move to proper spring security
         final LoggedInUser loggedInUser = possibleUser;
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-            if (pendingUploadId != null && pendingUploadId.length() > 0){
-                System.out.println("pending upload id " + pendingUploadId);
-                System.out.println("database " + databaseId);
-                Enumeration<String> params = request.getParameterNames();
-                while (params.hasMoreElements()){
-                    String param = params.nextElement();
-                    if (param.startsWith("pendingupload-")){
-                        System.out.println("param : " + param.substring("pendingupload-".length()) + " value : " + request.getParameter(param));
+            if (NumberUtils.isNumber(pendingUploadId) && NumberUtils.isNumber(databaseId)){
+                PendingUpload pendingUpload = PendingUploadDAO.findById(Integer.parseInt(pendingUploadId));
+                if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()){
+                    System.out.println("pending upload id " + pendingUploadId);
+                    System.out.println("database " + databaseId);
+                    Enumeration<String> params = request.getParameterNames();
+                    while (params.hasMoreElements()){
+                        String param = params.nextElement();
+                        if (param.startsWith("pendingupload-")){
+                            System.out.println("param : " + param.substring("pendingupload-".length()) + " value : " + request.getParameter(param));
+                        }
                     }
+                    // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
+                    LoginService.switchDatabase(loggedInUser, DatabaseDAO.findById(Integer.parseInt(databaseId)));
+                    return handleImport(loggedInUser, request.getSession(), model, pendingUpload.getFileName(), pendingUpload.getFilePath());
                 }
             }
 
@@ -351,26 +357,7 @@ public class ManageDatabasesController {
                                 Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
                                 Files.copy(Paths.get(moved.getPath()), fullPath, StandardCopyOption.REPLACE_EXISTING);
                             }
-                            // need to add in code similar to report loading to give feedback on imports
-                            new Thread(() -> {
-                                // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
-                                try {
-                                    session.setAttribute("importResult",
-                                            ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), false).replace("\n", "<br/>")
-                                    );
-                                } catch (Exception e) {
-                                    session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
-                                }
-                            }).start();
-                            // edd pasting in here to get the banner colour working
-                            Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                            String bannerColor = business.getBannerColor();
-                            if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
-                            String logo = business.getLogo();
-                            if (logo == null || logo.length() == 0) logo = "logo_alt.png";
-                            model.addAttribute("bannerColor", bannerColor);
-                            model.addAttribute("logo", logo);
-                            return "importrunning";
+                            return handleImport(loggedInUser, session, model, fileName, moved.getAbsolutePath());
                         }
                     }
                 } catch (Exception e) { // now the import has it's on exception catching
@@ -410,5 +397,28 @@ public class ManageDatabasesController {
         } else {
             return "redirect:/api/Login";
         }
+    }
+
+    static String handleImport(LoggedInUser loggedInUser,HttpSession session, ModelMap model, String fileName, String filePath){
+        // need to add in code similar to report loading to give feedback on imports
+        new Thread(() -> {
+            // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
+            try {
+                session.setAttribute("importResult",
+                        ImportService.importTheFile(loggedInUser, fileName, filePath, false).replace("\n", "<br/>")
+                );
+            } catch (Exception e) {
+                session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
+            }
+        }).start();
+        // edd pasting in here to get the banner colour working
+        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+        String bannerColor = business.getBannerColor();
+        if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
+        String logo = business.getLogo();
+        if (logo == null || logo.length() == 0) logo = "logo_alt.png";
+        model.addAttribute("bannerColor", bannerColor);
+        model.addAttribute("logo", logo);
+        return "importrunning";
     }
 }
