@@ -1,3 +1,15 @@
+24-10-18-2
+
+Brand the audit/debug xlsx file, needs a more configurable solution later
+
+
+24-10-18
+
+Bug fix on sheet calculations that was causing save problems for Elseco
+
+Further (still hidden) work on pending uploads
+
+
 23-10-18-2
 
 Changes condition for creating an import template from a worksheet - parameters are allowed on set up files

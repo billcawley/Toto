@@ -81,6 +81,7 @@ public class SpreadsheetService {
     private static final String ALIAS = "alias";
     private static final String SCANDIR = "scandir";
     private static final String SCANBUSINESS = "scanbusiness";
+    private static final String SCANPARAMS = "scanparams";
     private static final String PATCHFILESSOURCE = "patchfilessource";
 
     public static String getHomeDir() {
@@ -136,6 +137,18 @@ public class SpreadsheetService {
             }
         }
         return scanBusiness;
+    }
+
+    private static String scanParams = null;
+
+    public static String getScanParams() {
+        if (scanParams == null) {
+            scanParams = azquoProperties.getProperty(host + "." + SCANPARAMS);
+            if (scanParams == null) {
+                scanParams = azquoProperties.getProperty(SCANPARAMS);
+            }
+        }
+        return scanParams;
     }
 
     private static String patchFilesSource = null;

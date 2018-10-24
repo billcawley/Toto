@@ -220,6 +220,15 @@ public class ManageDatabasesController {
                 error.append(e.getMessage());
             }
 
+            // ok, so, for pending uploads we need to know what parameters the user can set
+            Map<String, List<String>> paramsMap = new HashMap<>();
+            String scanParams = SpreadsheetService.getScanParams();
+            if (!scanParams.isEmpty()){
+//                StringTokenizer stringTokenizer = new StringTokenizer(scanParams, )
+            }
+            model.put("paramsmap", paramsMap); // no search for the mo
+
+
             if (error.length() > 0) {
                 String exceptionError = error.toString();
                 model.put("error", exceptionError);
