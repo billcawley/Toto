@@ -77,7 +77,9 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
         }
-        Ranges.range(myzss.getSelectedSheet()).notifyChange(); // try to update the lot - sometimes it seems it does not!
+        for (int i = 0; i < myzss.getBook().getNumberOfSheets(); i++){
+            Ranges.range(myzss.getBook().getSheetAt(i)).notifyChange(); // try to update the lot - sometimes it seems it does not!
+        }
     }
 
     private static String MULTI = "Multi";
