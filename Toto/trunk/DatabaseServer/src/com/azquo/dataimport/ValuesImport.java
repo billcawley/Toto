@@ -170,7 +170,9 @@ public class ValuesImport {
 
             }
         }else{
+            if (lineValue.toLowerCase().endsWith("f")) return lineValue;
             try{
+
                 double d = Double.parseDouble(lineValue.replace(",",""));
                 lineValue = d + "";
                 if (lineValue.endsWith(".0")){
