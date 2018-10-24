@@ -1,3 +1,10 @@
+23-10-18-2
+
+Changes condition for creating an import template from a worksheet - parameters are allowed on set up files
+
+First successful test of a directory scan moving files and creating records in the database successfully
+
+
 23-10-18
 
 Shows audit on calculated fields

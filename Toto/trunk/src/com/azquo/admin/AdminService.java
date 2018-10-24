@@ -152,11 +152,12 @@ this may now not work at all, perhaps delete?
     public static void emptyDatabase(LoggedInUser loggedInUser) throws Exception {
         emptyDatabase(loggedInUser, true);
     }
+
     // used by magento, always the currently logged in db
     static void emptyDatabase(LoggedInUser loggedInUser, boolean checkSetup) throws Exception {
         DatabaseServer databaseServer = DatabaseServerDAO.findById(loggedInUser.getDatabase().getDatabaseServerId());
         RMIClient.getServerInterface(databaseServer.getIp()).emptyDatabase(loggedInUser.getDatabase().getPersistenceName());
-        if (checkSetup){
+        if (checkSetup) {
             checkDBSetupFile(loggedInUser, loggedInUser.getDatabase());
         }
     }
@@ -359,6 +360,40 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
+    public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch) {
+        if (loggedInUser.getUser().isAdministrator()) { // juat admin
+            List<PendingUpload> pendingUploads = PendingUploadDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            String businessName = BusinessDAO.findById(loggedInUser.getUser().getBusinessId()).getBusinessName();
+            List<PendingUpload.PendingUploadForDisplay> pendingUploadForDisplays = new ArrayList<>();
+            int count = 0;
+            for (PendingUpload pendingUpload : pendingUploads) {
+                if (fileSearch == null || fileSearch.equals("") || (pendingUpload.getFileName().toLowerCase().contains(fileSearch.toLowerCase()))) {
+                    count++;
+                    String dbName = "";
+                    if (pendingUpload.getDatabaseId() > 0) {
+                        Database database = DatabaseDAO.findById(pendingUpload.getDatabaseId());
+                        if (database != null) {
+                            dbName = database.getName();
+                        }
+                    }
+                    String userName = "";
+                    if (pendingUpload.getUserId() > 0) {
+                        User user = UserDAO.findById(pendingUpload.getUserId());
+                        if (user != null) {
+                            userName = user.getName();
+                        }
+                    }
+                    pendingUploadForDisplays.add(new PendingUpload.PendingUploadForDisplay(pendingUpload, businessName, dbName, userName));
+                    if (count > 100) {
+                        break;
+                    }
+                }
+            }
+            return pendingUploadForDisplays;
+        }
+        return null;
+    }
+
     public static void deleteUserById(int userId) {
         User user = UserDAO.findById(userId);
         UserDAO.removeById(user);
@@ -497,7 +532,7 @@ this may now not work at all, perhaps delete?
 
     public static void deleteUploadRecord(LoggedInUser loggedInUser, int uploadRecordId) throws Exception {
         UploadRecord ur = UploadRecordDAO.findById(uploadRecordId);
-        if (ur != null &&  ((loggedInUser.getUser().isAdministrator() && ur.getBusinessId() == loggedInUser.getUser().getBusinessId())
+        if (ur != null && ((loggedInUser.getUser().isAdministrator() && ur.getBusinessId() == loggedInUser.getUser().getBusinessId())
                 || (loggedInUser.getUser().isDeveloper() && ur.getUserId() == loggedInUser.getUser().getId()))) {
             if (ur.getTempPath() != null && !ur.getTempPath().isEmpty()) {
                 Path path = Paths.get(ur.getTempPath());

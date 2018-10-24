@@ -21,7 +21,7 @@ Created by IntelliJ IDEA.
 		<li><a href="#tab1">Uploads</a></li>
 		<li><a href="#tab2">DB Management</a></li>
 		<li><a href="#tab3">Maintenance</a></li>
-		<!--<li><a href="#tab4">Pending Uploads</a></li> -->
+		<!-- <li><a href="#tab4">Pending Uploads</a></li>  -->
 	</ul>
 <!-- Uploads -->
 	<div id="tab1" style="display:none">
@@ -191,30 +191,25 @@ Created by IntelliJ IDEA.
 			<thead>
 			<tr>
 				<td>Date</td>
-				<td>Last Changed</td>
+				<td>Modified On</td>
+				<td>Modified By</td>
 				<td>File Name</td>
-				<td>File Path</td>
 				<td>Source</td>
                 <td>Status</td>
 				<td>Database</td>
-				<td>Database</td>
-				<td>Database</td>
-				<td>Database</td>
-				<td>User Name</td>
+				<td></td>
 			</tr>
 			</thead>
 			<tbody>
-
 			<c:forEach items="${pendinguploads}" var="pendingupload">
 				<tr>
 					<td>${pendingupload.date}</td>
 					<td>${pendingupload.statusChangedDate}</td>
+					<td>${pendingupload.userName}</td>
 					<td>${pendingupload.fileName}</td>
-					<td>${pendingupload.filePath}</td>
 					<td>${pendingupload.source}</td>
 					<td>${pendingupload.status}</td>
 					<td><select name="database"><c:forEach items="${databases}" var="database"><option value="${database.name}">${database.name}</option></c:forEach></select>${pendingupload.databaseName}</td>
-					<td>${pendingupload.userName}</td>
 					<td><input type="submit" name="Load" value="Load" class="button"/></td>
 				</tr>
 			</c:forEach>

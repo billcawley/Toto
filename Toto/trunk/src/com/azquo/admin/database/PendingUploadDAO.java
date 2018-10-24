@@ -58,7 +58,7 @@ public final class PendingUploadDAO {
         toReturn.put(FILENAME, pendingUpload.getFileName());
         toReturn.put(FILEPATH, pendingUpload.getFilePath());
         toReturn.put(SOURCE, pendingUpload.getSource());
-        toReturn.put(STATUS, pendingUpload.getSource());
+        toReturn.put(STATUS, pendingUpload.getStatus());
         toReturn.put(PARAMETERS, pendingUpload.getParametersAsString());
         toReturn.put(DATABASEID, pendingUpload.getDatabaseId());
         toReturn.put(USERID, pendingUpload.getUserId());

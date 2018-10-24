@@ -261,6 +261,7 @@ public class ManageDatabasesController {
             model.put("businessnamesort", "businessname".equals(sort) ? "businessnamedown" : "businessname");
             model.put("usernamesort", "username".equals(sort) ? "usernamedown" : "username");
             model.put("uploads", uploadRecordsForDisplayForBusiness);
+            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null)); // no search for the mo
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             AdminService.setBanner(model, loggedInUser);
