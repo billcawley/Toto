@@ -100,11 +100,11 @@ public class ZKComposer extends SelectorComposer<Component> {
             selectionName = "az_" + selectionName.trim();
         } else {
             // check to see if it's a non-pivot multi
-            List<SName> names = ReportUIUtils.getNamedRegionForRowAndColumnSelectedSheet(myzss, event.getRow(), event.getColumn());
+            List<SName> names = ReportUIUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getSheet(), event.getRow(), event.getColumn());
             for (SName name : names) {
                 if (name.getName().toLowerCase().endsWith(MULTI.toLowerCase())) { // a new style
                     selectionName = name.getName();
-                    final SName filterQueryCell = myzss.getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
+                    final SName filterQueryCell = event.getSheet().getBook().getInternalBook().getNameByName(name.getName().substring(0, name.getName().length() - MULTI.length()) + CHOICE);
                     if (filterQueryCell != null) {
                         selectionList = BookUtils.getSnameCell(filterQueryCell).getStringValue();
                     }
@@ -137,7 +137,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 }
             }
             // and now check for the cell being a save button
-            SName saveName = myzss.getBook().getInternalBook().getNameByName(ReportRenderer.AZSAVE);
+            SName saveName = event.getSheet().getBook().getInternalBook().getNameByName(ReportRenderer.AZSAVE);
             if (saveName != null && saveName.getRefersToSheetName().equals(myzss.getSelectedSheetName())
                     && event.getRow() >= saveName.getRefersToCellRegion().getRow()
                     && event.getRow() <= saveName.getRefersToCellRegion().getLastRow()
@@ -170,14 +170,14 @@ public class ZKComposer extends SelectorComposer<Component> {
         final Book book = event.getSheet().getBook();
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
-        List<SName> names = ReportUIUtils.getNamedRegionForRowAndColumnSelectedSheet(myzss, event.getRow(), event.getColumn());
+        List<SName> names = ReportUIUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getSheet(), event.getRow(), event.getColumn());
         boolean reload = false;
         // so run through all the names associated with that cell
         for (SName name : names) {
             if (name.getName().endsWith("Chosen") && name.getRefersToCellRegion().getRowCount() == 1) {// it ends chosen and is one row tall
                 //and it cannot be in an existing data region
-                if (BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE).size() == 0
-                        && BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ReportRenderer.AZDATAREGION).size() == 0) {
+                if (BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), ReportRenderer.AZREPEATSCOPE).size() == 0
+                        && BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), ReportRenderer.AZDATAREGION).size() == 0) {
                     // therefore it's a choice change, set the choice and the reload flag and break
                     String choice = name.getName().substring(0, name.getName().length() - "Chosen".length());
                     loggedInUser.userLog("Choice select : " + choice + "," + chosen);
@@ -296,8 +296,8 @@ public class ZKComposer extends SelectorComposer<Component> {
         //System.out.println("after cell change : " + row + " col " + col + " chosen");
         // now how to get the name?? Guess run through them. Feel there should be a better way.
         final Book book = event.getSheet().getBook();
-        List<SName> names = BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet());
-        List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ReportRenderer.AZREPEATSCOPE);
+        List<SName> names = BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet());
+        List<SName> repeatRegionNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), ReportRenderer.AZREPEATSCOPE);
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
         checkRegionSizes(event.getSheet(), loggedInUser, reportId);
@@ -316,7 +316,7 @@ public class ZKComposer extends SelectorComposer<Component> {
                 regionRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), regionName, row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
             }
         }
-        List<SName> headingNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), myzss.getSelectedSheet(), ReportRenderer.AZDISPLAYROWHEADINGS);
+        List<SName> headingNames = BookUtils.getNamedRegionForRowAndColumnSelectedSheet(event.getRow(), event.getColumn(), event.getSheet(), ReportRenderer.AZDISPLAYROWHEADINGS);
         for (SName name : headingNames) {
             headingRowColsToSave.add(new RegionRowCol(name.getRefersToSheetName(), name.getName().substring(ReportRenderer.AZDISPLAYROWHEADINGS.length()), row - name.getRefersToCellRegion().getRow(), col - name.getRefersToCellRegion().getColumn()));
         }
