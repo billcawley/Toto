@@ -413,6 +413,7 @@ todo - add classification here
             if (clause.toLowerCase().startsWith(CLASSIFICATION)) {
                 interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring(CLASSIFICATION.length()));
                 interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading);
+                interpretClause(azquoMemoryDBConnection,heading, "exclusive");
             } else {
                 interpretClause(azquoMemoryDBConnection, heading, clause);
             }
