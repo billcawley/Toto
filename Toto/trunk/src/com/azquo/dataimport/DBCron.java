@@ -76,7 +76,7 @@ public class DBCron {
                     && SpreadsheetService.getScanBusiness() != null && SpreadsheetService.getScanBusiness().length() > 0){
                 Business b = BusinessDAO.findByName(SpreadsheetService.getScanBusiness());
                 if (b != null){
-                    System.out.println("running file scan");
+                    //System.out.println("running file scan");
                     // we'll move imported files into loaded when they have been entered into Pending Uploads
                     Path tagged = Paths.get(SpreadsheetService.getScanDir() + "/tagged");
                     if (!Files.exists(tagged)){

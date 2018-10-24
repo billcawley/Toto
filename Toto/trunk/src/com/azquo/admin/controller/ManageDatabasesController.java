@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.nio.file.*;
@@ -36,6 +35,8 @@ import java.util.*;
  * New HTML admin, upload files and manage databases
  * <p>
  * CRUD type stuff though databases will be created/deleted etc. server side.
+ *
+ * Edd note 24/10/2018 - this is getting a little cluttered, should it be refactored? todo
  */
 @Controller
 @RequestMapping("/ManageDatabases")
@@ -104,7 +105,7 @@ public class ManageDatabasesController {
     }
 
     @RequestMapping
-    public String handleRequest(ModelMap model, HttpServletRequest request, HttpServletResponse response
+    public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "createDatabase", required = false) String createDatabase
             , @RequestParam(value = "databaseType", required = false) String databaseType
             , @RequestParam(value = "databaseServerId", required = false) String databaseServerId
@@ -120,6 +121,8 @@ public class ManageDatabasesController {
             , @RequestParam(value = "uploadAnyway", required = false) String uploadAnyway
             , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "sort", required = false) String sort
+            , @RequestParam(value = "pendingUploadId", required = false) String pendingUploadId
+            , @RequestParam(value = "databaseId", required = false) String databaseId
     ) {
         LoggedInUser possibleUser = null;
         if (sessionId != null) {
@@ -131,6 +134,19 @@ public class ManageDatabasesController {
         // I assume secure until we move to proper spring security
         final LoggedInUser loggedInUser = possibleUser;
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+            if (pendingUploadId != null && pendingUploadId.length() > 0){
+                System.out.println("pending upload id " + pendingUploadId);
+                System.out.println("database " + databaseId);
+                Enumeration<String> params = request.getParameterNames();
+                while (params.hasMoreElements()){
+                    String param = params.nextElement();
+                    if (param.startsWith("pendingupload-")){
+                        System.out.println("param : " + param.substring("pendingupload-".length()) + " value : " + request.getParameter(param));
+                    }
+                }
+            }
+
+
             if (uploadAnyway != null) {
                 // todo - factor?
                 try {
@@ -224,9 +240,21 @@ public class ManageDatabasesController {
             Map<String, List<String>> paramsMap = new HashMap<>();
             String scanParams = SpreadsheetService.getScanParams();
             if (!scanParams.isEmpty()){
-//                StringTokenizer stringTokenizer = new StringTokenizer(scanParams, )
+                StringTokenizer stringTokenizer = new StringTokenizer(scanParams, "|");
+                while (stringTokenizer.hasMoreTokens()){
+                    String name = stringTokenizer.nextToken().trim();
+                    if (stringTokenizer.hasMoreTokens()){
+                        String list = stringTokenizer.nextToken().trim();
+                        List<String> values = new ArrayList<>();
+                        StringTokenizer stringTokenizer1 = new StringTokenizer(list, ",");
+                        while (stringTokenizer1.hasMoreTokens()){
+                            values.add(stringTokenizer1.nextToken().trim());
+                        }
+                        paramsMap.put(name, values);
+                    }
+                }
             }
-            model.put("paramsmap", paramsMap); // no search for the mo
+            model.put("params", paramsMap.entrySet()); // no search for the mo
 
 
             if (error.length() > 0) {

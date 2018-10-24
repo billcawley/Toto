@@ -1,3 +1,8 @@
+24-10-18-3
+
+Bug fix on keeping user menus when overwriting databases
+
+
 24-10-18-2
 
 Brand the audit/debug xlsx file, needs a more configurable solution later

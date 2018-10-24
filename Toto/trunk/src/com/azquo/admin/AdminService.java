@@ -123,7 +123,7 @@ this may now not work at all, perhaps delete?
 
     // ok in new report/database server split creating a database needs distinct bits
 
-    public static void createDatabase(final String databaseName, String databaseType, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
+    public static Database createDatabase(final String databaseName, String databaseType, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
         if (databaseType == null) {
             databaseType = "";
         }
@@ -143,6 +143,7 @@ this may now not work at all, perhaps delete?
             // will be over to the DB side
             RMIClient.getServerInterface(databaseServer.getIp()).createDatabase(database.getPersistenceName());
             loggedInUser.setDatabaseWithServer(databaseServer, database);
+            return database;
         } else {
             throw new Exception("Only administrators can create databases");
         }

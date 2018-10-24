@@ -137,6 +137,7 @@ public final class PendingUpload extends StandardEntity {
     // better for display
     public static class PendingUploadForDisplay {
 
+        final private int id;
         final private String businessName;
         final private LocalDateTime date;
         final private LocalDateTime statusChangedDate;
@@ -151,6 +152,7 @@ public final class PendingUpload extends StandardEntity {
 
 
         public PendingUploadForDisplay(PendingUpload pu, String businessName, String databaseName, String userName) {
+            this.id = pu.id;
             this.businessName = businessName;
             this.date = pu.date;
             this.statusChangedDate = pu.statusChangedDate;
@@ -206,6 +208,10 @@ public final class PendingUpload extends StandardEntity {
 
         public String getImportResult() {
             return importResult;
+        }
+
+        public int getId() {
+            return id;
         }
     }
 }

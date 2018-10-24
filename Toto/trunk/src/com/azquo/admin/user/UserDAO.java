@@ -101,6 +101,14 @@ public class UserDAO {
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + REPORTID + " = :" + REPORTID, TABLENAME, userRowMapper, namedParams);
     }
 
+    // required when restoring a backup
+    public static List<User> findForDatabaseId(int databaseId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(DATABASEID, databaseId);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + DATABASEID + " = :" + DATABASEID, TABLENAME, userRowMapper, namedParams);
+    }
+
+
     public static List<User> findForBusinessIdAndCreatedBy(final int businessId, String createdBy) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);

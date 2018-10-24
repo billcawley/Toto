@@ -12,6 +12,8 @@ import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServerDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
+import com.azquo.admin.user.User;
+import com.azquo.admin.user.UserDAO;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.NameForBackup;
@@ -77,7 +79,7 @@ public class BackupService {
         for (File f : files) {
             if (!f.getName().endsWith(".db")) {
                 // rename the xlsx file to get rid of the ID that will probably be in front in the backup zip
-                if (f.getName().contains("-") && NumberUtils.isNumber(f.getName().substring(0, f.getName().indexOf("-")))){
+                if (f.getName().contains("-") && NumberUtils.isNumber(f.getName().substring(0, f.getName().indexOf("-")))) {
                     toReturn.append(ImportService.importTheFile(loggedInUser, f.getName().substring(f.getName().indexOf("-") + 1), f.getAbsolutePath(), false).replace("\n", "<br/>") + "<br/>");
                 } else {
                     toReturn.append(ImportService.importTheFile(loggedInUser, f.getName(), f.getAbsolutePath(), false).replace("\n", "<br/>") + "<br/>");
@@ -103,22 +105,28 @@ public class BackupService {
                     new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
             String[] lineValues = lineIterator.next();
             line++;
-            if (database == null || database.trim().isEmpty()){
+            if (database == null || database.trim().isEmpty()) {
                 database = lineValues[0];
             }
             // first thing to do is delete the database and all associated reports
             Database db = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
             if (db != null) {
                 // hack in a security check, we know the user is an Admin or Developer but if a developer it needs to be their DB
-                if (loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getId() != db.getUserId()){
+                if (loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getId() != db.getUserId()) {
                     throw new Exception("A developer cannot restore to a database that is not thiers");
                 }
-                if (justEmpty){
+                if (justEmpty) {
                     loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(db.getDatabaseServerId()), db);
                     AdminService.emptyDatabase(loggedInUser, false); // don't load the setup file!
                 } else {
                     AdminService.removeDatabaseByIdWithBasicSecurity(loggedInUser, db.getId());
-                    AdminService.createDatabase(db.getName(), db.getDatabaseType(), loggedInUser, DatabaseServerDAO.findById(db.getDatabaseServerId()));
+                    Database createdDb = AdminService.createDatabase(db.getName(), db.getDatabaseType(), loggedInUser, DatabaseServerDAO.findById(db.getDatabaseServerId()));
+                    // fix the user records if we're overwriting a db
+                    List<User> users = UserDAO.findForDatabaseId(db.getId());
+                    for (User u : users) {
+                        u.setDatabaseId(createdDb.getId());
+                        UserDAO.store(u);
+                    }
                 }
             } else {
                 // still not really dealing with different servers properly
