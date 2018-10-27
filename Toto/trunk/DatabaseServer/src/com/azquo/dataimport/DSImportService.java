@@ -1,6 +1,7 @@
 package com.azquo.dataimport;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 
 import java.util.Map;
@@ -35,7 +36,10 @@ public class DSImportService {
         if (fileName.contains(":")) {
             fileName = fileName.substring(fileName.indexOf(":") + 1);//remove the workbook name.  sent only for the provenance.
         }
-        return readPreparedFile(azquoMemoryDBConnection, filePath, fileName, fileNameParameters, persistAfter, isSpreadsheet, new AtomicInteger());
+        // if the provenance is unused I could perhaps zap it but it's not a big deal for the mo
+        // also jamming this feedback on the beginning is a bit of a hack
+        String result = readPreparedFile(azquoMemoryDBConnection, filePath, fileName, fileNameParameters, persistAfter, isSpreadsheet, new AtomicInteger());
+        return (azquoMemoryDBConnection.isUnusedProvenance() ? Constants.DATABASE_UNMODIFIED : "") + result;
     }
 
     // Called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
