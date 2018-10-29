@@ -21,7 +21,7 @@ Created by IntelliJ IDEA.
             <li><a href="#tab1">Uploads</a></li>
             <li><a href="#tab2">DB Management</a></li>
             <li><a href="#tab3">Maintenance</a></li>
-            <li><a href="#tab4">Pending Uploads</a></li>
+            <!-- <li><a href="#tab4">Pending Uploads</a></li> -->
         </ul>
         <!-- Uploads -->
         <div id="tab1" style="display:none">
@@ -266,12 +266,12 @@ Created by IntelliJ IDEA.
 
                                     <c:choose>
                                         <c:when test="${pendingupload.status!='Waiting' && pendingupload.status!='Rejected'}">
-                                            ${pendingupload.parameters[entry.key]}
+                                            ${pendingupload.parameters[fn:toLowerCase(entry.key)]}
                                         </c:when>
                                         <c:otherwise>
                                             <select name="pendingupload-${entry.key}"><c:forEach items="${entry.value}"
                                                                                                  var="listitem">
-                                                <option value="${listitem}"<c:if test="${listitem == pendingupload.parameters[entry.key]}">selected</c:if>>${listitem}</option>
+                                                <option value="${listitem}"<c:if test="${listitem == pendingupload.parameters[fn:toLowerCase(entry.key)]}">selected</c:if>>${listitem}</option>
                                             </c:forEach></select>
 
                                         </c:otherwise>

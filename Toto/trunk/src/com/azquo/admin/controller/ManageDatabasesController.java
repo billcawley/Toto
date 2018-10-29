@@ -183,7 +183,7 @@ public class ManageDatabasesController {
                         String param = params.nextElement();
                         if (param.startsWith("pendingupload-")) {
                             System.out.println("param : " + param.substring("pendingupload-".length()) + " value : " + request.getParameter(param));
-                            paramsFromUser.put(param.substring("pendingupload-".length()), request.getParameter(param));
+                            paramsFromUser.put(param.substring("pendingupload-".length()).toLowerCase().trim(), request.getParameter(param)); // lower case important, it's the convention when grabbing from the file name
                         }
                     }
                     // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
