@@ -419,10 +419,11 @@ public class BatchImporter implements Callable<Void> {
             String setName = cell.getLineValue().substring(0, commaPos).trim();
             String valueToTest = cell.getLineValue().substring(commaPos + 1).trim();
             Name toTestParent = NameService.findByName(azquoMemoryDBConnection, setName);
+
             if (toTestParent == null) {
                 throw new Exception((cell.getImmutableImportHeading().heading + " no such set: " + setName));
             }
-
+            boolean found = false;
             for (Name toTest : toTestParent.getChildren()) {
                 String lowLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupFrom);
                 if (lowLimit != null) {
@@ -436,6 +437,7 @@ public class BatchImporter implements Callable<Void> {
                                 if (highlimit != null) {
                                     d = Double.parseDouble(highlimit);
                                     if (d2 <= d) {
+                                        found = true;
                                         newCellNameValue(cell, toTest);
                                         break;
                                     }
@@ -452,15 +454,20 @@ public class BatchImporter implements Callable<Void> {
                                 String highLimit = toTest.getAttribute(cell.getImmutableImportHeading().lookupTo);
                                 if (highLimit != null && highLimit.compareTo(valueToTest) >= 0) {
                                     newCellNameValue(cell, toTest);
+                                    found = true;
                                     break;
                                 }
                             } else {
                                 newCellNameValue(cell, toTest);
+                                found = true;
                                 break;
                             }
                         }
                     }
                 }
+            }
+            if (!found){
+                throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " on " + setName + " and " + valueToTest);
             }
         }
     }
