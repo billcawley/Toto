@@ -31,6 +31,8 @@ public class AzquoMemoryDBConnection {
 
     protected Provenance provenance = null;
 
+    private volatile boolean unusedProvenance = false;
+
 
     // A bit involved but it makes this object immutable, think that's worth it - note
     // new logic here : we'll say that top test that have no permissions are added as allowed - if someone has added a department for example they should still have access to all dates
@@ -92,10 +94,17 @@ public class AzquoMemoryDBConnection {
             } catch (Exception ignored) {
             }
         }
+        unusedProvenance = false;
         return provenance;
     }
 
+    public boolean isUnusedProvenance() {
+        return unusedProvenance;
+    }
+
     public void setProvenance(final String user, final String method, String name, final String context) throws Exception {
+        // the question is whether the provenance was used not whether it is new - maybe needs a rename
+        unusedProvenance = true;
         Provenance latest = azquoMemoryDB.getMostRecentProvenance();
         // not sure how latest and method cen get set as null but best to be careful with it
         if (latest != null && latest.getUser().equals(user)) {

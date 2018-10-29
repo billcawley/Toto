@@ -6,6 +6,7 @@ import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
+import com.azquo.memorydb.Constants;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -23,9 +24,14 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.*;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -35,7 +41,7 @@ import java.util.*;
  * New HTML admin, upload files and manage databases
  * <p>
  * CRUD type stuff though databases will be created/deleted etc. server side.
- *
+ * <p>
  * Edd note 24/10/2018 - this is getting a little cluttered, should it be refactored? todo
  */
 @Controller
@@ -44,6 +50,11 @@ public class ManageDatabasesController {
 
     private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
     private static DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yy-HH:mm");
+
+    public static final String IMPORTRESULT = "importResult";
+    public static final String IMPORTURLSUFFIX = "importUrlSuffix";
+    public static final String IMPORTRESULTPREFIX = "importResultPrefix";
+    public static final String PENDINGUPLOADID = "pendingUploadId";
 
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
     public static class DisplayDataBase {
@@ -123,6 +134,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "sort", required = false) String sort
             , @RequestParam(value = "pendingUploadId", required = false) String pendingUploadId
             , @RequestParam(value = "databaseId", required = false) String databaseId
+            , @RequestParam(value = "revert", required = false) String revert
     ) {
         LoggedInUser possibleUser = null;
         if (sessionId != null) {
@@ -134,61 +146,102 @@ public class ManageDatabasesController {
         // I assume secure until we move to proper spring security
         final LoggedInUser loggedInUser = possibleUser;
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-            if (NumberUtils.isNumber(pendingUploadId) && NumberUtils.isNumber(databaseId)){
+            if ("true".equalsIgnoreCase(revert)) {
+                for (PendingUpload pendingUpload : PendingUploadDAO.findForBusinessId(loggedInUser.getUser().getBusinessId())) {
+                    pendingUpload.setImportResult("");
+                    pendingUpload.setStatus(PendingUpload.WAITING);
+                    PendingUploadDAO.store(pendingUpload);
+                }
+                // now restore and delete backups
+                Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
+                try {
+                    if (Files.exists(backups)) {
+                        for (Iterator<Path> iter2 = Files.list(backups).iterator(); iter2.hasNext(); ) {
+                            Path path = iter2.next();
+                            Database forPersistenceName = DatabaseDAO.findForPersistenceName(path.getFileName().toString());
+                            if (forPersistenceName != null) { // then restore
+                                loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(forPersistenceName.getDatabaseServerId()), forPersistenceName);
+                                BackupService.loadDBBackup(loggedInUser, path.toFile(), null, new StringBuilder(), true);
+                            }
+                            Files.deleteIfExists(path);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+            }
+            // can a developer do pending?? todo
+            if (NumberUtils.isNumber(pendingUploadId) && NumberUtils.isNumber(databaseId)) {
                 PendingUpload pendingUpload = PendingUploadDAO.findById(Integer.parseInt(pendingUploadId));
-                if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()){
+                if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
                     System.out.println("pending upload id " + pendingUploadId);
                     System.out.println("database " + databaseId);
                     Enumeration<String> params = request.getParameterNames();
-                    while (params.hasMoreElements()){
+                    Map<String, String> paramsFromUser = new HashMap<>();
+                    while (params.hasMoreElements()) {
                         String param = params.nextElement();
-                        if (param.startsWith("pendingupload-")){
+                        if (param.startsWith("pendingupload-")) {
                             System.out.println("param : " + param.substring("pendingupload-".length()) + " value : " + request.getParameter(param));
+                            paramsFromUser.put(param.substring("pendingupload-".length()), request.getParameter(param));
                         }
                     }
                     // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
-                    LoginService.switchDatabase(loggedInUser, DatabaseDAO.findById(Integer.parseInt(databaseId)));
-                    return handleImport(loggedInUser, request.getSession(), model, pendingUpload.getFileName(), pendingUpload.getFilePath());
-                }
-            }
-
-
-            if (uploadAnyway != null) {
-                // todo - factor?
-                try {
-                    UploadRecord ur = UploadRecordDAO.findById(Integer.parseInt(uploadAnyway));
-                    if (ur != null && ur.getUserId() == loggedInUser.getUser().getId()) {
-                        HttpSession session = request.getSession();
-                        new Thread(() -> {
-                            // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
-                            try {
-                                session.setAttribute("importResult",
-                                        ImportService.importTheFile(loggedInUser, ur.getFileName(), ur.getTempPath(), null, false, false, true, true)
-                                );
-                            } catch (Exception e) {
-                                session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
+                    Database byId = DatabaseDAO.findById(Integer.parseInt(databaseId));
+                    if (byId != null) {
+                        LoginService.switchDatabase(loggedInUser, byId);
+                        // todo backup the db for a revert if it hasn't been already
+                        Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
+                        try {
+                            if (!Files.exists(backups)) {
+                                Files.createDirectories(backups);
                             }
-                        }).start();
-                        // edd pasting in here to get the banner colour working
-                        Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                        String bannerColor = business.getBannerColor();
-                        if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
-                        String logo = business.getLogo();
-                        if (logo == null || logo.length() == 0) logo = "logo_alt.png";
-                        model.addAttribute("bannerColor", bannerColor);
-                        model.addAttribute("logo", logo);
-                        return "importrunning";
+                            // now, is there a backup already?
+                            Path backupFile = backups.resolve(byId.getPersistenceName());
+                            if (!Files.exists(backupFile)) {
+                                BackupService.createDBBackupFile(loggedInUser.getDatabase().getName(), loggedInUser.getDataAccessToken(), backupFile.toString(), loggedInUser.getDatabaseServer().getIp());
+                                request.getSession().setAttribute(IMPORTRESULTPREFIX, "** Created revert backup for database " + byId.getName() + " **");
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        request.getSession().setAttribute(IMPORTURLSUFFIX, "#tab4");
+                        request.getSession().setAttribute(PENDINGUPLOADID, pendingUpload.getId());
+                        pendingUpload.setParameters(paramsFromUser);
+                        pendingUpload.setDatabaseId(byId.getId());
+                        PendingUploadDAO.store(pendingUpload);
+                        return handleImport(loggedInUser, request.getSession(), model, pendingUpload.getFileName(), pendingUpload.getFilePath(), paramsFromUser);
                     }
-                } catch (Exception e) { // now the import has it's on exception catching
-                    String exceptionError = e.getMessage();
-                    e.printStackTrace();
-                    model.put("error", exceptionError);
                 }
             }
             StringBuilder error = new StringBuilder();
-            if (request.getSession().getAttribute("importResult") != null) {
-                error.append(request.getSession().getAttribute("importResult"));
-                request.getSession().removeAttribute("importResult");
+            String importResult = (String) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
+            if (importResult != null) {
+                if (request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX) != null) {
+                    error.append(request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX)).append("<br/>");
+                    request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULTPREFIX);
+                }
+                error.append(importResult);
+                if (request.getSession().getAttribute(ManageDatabasesController.PENDINGUPLOADID) != null) {
+                    int pendingUploadImportedId = (Integer) request.getSession().getAttribute(ManageDatabasesController.PENDINGUPLOADID);
+                    PendingUpload pendingUpload = PendingUploadDAO.findById(pendingUploadImportedId);
+                    if (pendingUpload != null) {
+                        pendingUpload.setImportResult(importResult);
+                        if (importResult.startsWith(Constants.DATABASE_UNMODIFIED) || importResult.startsWith("ERROR")) { // string literals, as ever todo
+                            if (importResult.startsWith(Constants.DATABASE_UNMODIFIED)) {
+                                error.append("<span style=\"background-color: #FF8888; color: #000000\">** Marked as rejected as no data was modified **</span><br/>");
+                            }
+                            if (importResult.startsWith("ERROR")) {
+                                error.append("<span style=\"background-color: #FF8888; color: #000000\">** Marked as rejected due to an error. Depending on the error data may have modified **</span><br/>");
+                            }
+                            pendingUpload.setStatus(PendingUpload.REJECTED);
+                        } else {
+                            pendingUpload.setStatus(PendingUpload.PROVISIONALLY_LOADED);
+                        }
+                        PendingUploadDAO.store(pendingUpload);
+                    }
+                }
+                request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
             }
             try {
                 final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
@@ -245,15 +298,15 @@ public class ManageDatabasesController {
             // ok, so, for pending uploads we need to know what parameters the user can set
             Map<String, List<String>> paramsMap = new HashMap<>();
             String scanParams = SpreadsheetService.getScanParams();
-            if (!scanParams.isEmpty()){
+            if (!scanParams.isEmpty()) {
                 StringTokenizer stringTokenizer = new StringTokenizer(scanParams, "|");
-                while (stringTokenizer.hasMoreTokens()){
+                while (stringTokenizer.hasMoreTokens()) {
                     String name = stringTokenizer.nextToken().trim();
-                    if (stringTokenizer.hasMoreTokens()){
+                    if (stringTokenizer.hasMoreTokens()) {
                         String list = stringTokenizer.nextToken().trim();
                         List<String> values = new ArrayList<>();
                         StringTokenizer stringTokenizer1 = new StringTokenizer(list, ",");
-                        while (stringTokenizer1.hasMoreTokens()){
+                        while (stringTokenizer1.hasMoreTokens()) {
                             values.add(stringTokenizer1.nextToken().trim());
                         }
                         paramsMap.put(name, values);
@@ -261,7 +314,27 @@ public class ManageDatabasesController {
                 }
             }
             model.put("params", paramsMap.entrySet()); // no search for the mo
-
+            // ok revert info - what backups there are and what date they're from
+            Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
+            StringBuilder stringBuilder = new StringBuilder();
+            DateTimeFormatter formatter =
+                    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
+                            .withLocale(Locale.UK)
+                            .withZone(ZoneId.systemDefault());
+            if (Files.exists(backups)) {
+                try {
+                    for (Iterator<Path> iter2 = Files.list(backups).iterator(); iter2.hasNext(); ) {
+                        Path path = iter2.next();
+                        stringBuilder.append("\\n");
+                        stringBuilder.append(path.getFileName());
+                        stringBuilder.append(" - ");
+                        stringBuilder.append(formatter.format(Files.getLastModifiedTime(path).toInstant()));
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            model.put("revertlist", stringBuilder.toString());
 
             if (error.length() > 0) {
                 String exceptionError = error.toString();
@@ -269,11 +342,10 @@ public class ManageDatabasesController {
             }
             model.put("databases", displayDataBases);
             final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
-//            if (allServers.size() > 1) {
-                model.put("databaseServers", allServers);
-//            } else {
+            model.put("databaseServers", allServers);
+            if (allServers.size() == 1) {
                 model.put("serverList", false);
-//            }
+            }
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, fileSearch);
             if ("database".equals(sort)) {
                 uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getDatabaseName().compareTo(o2.getDatabaseName())));
@@ -357,7 +429,7 @@ public class ManageDatabasesController {
                                 Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
                                 Files.copy(Paths.get(moved.getPath()), fullPath, StandardCopyOption.REPLACE_EXISTING);
                             }
-                            return handleImport(loggedInUser, session, model, fileName, moved.getAbsolutePath());
+                            return handleImport(loggedInUser, session, model, fileName, moved.getAbsolutePath(), null);
                         }
                     }
                 } catch (Exception e) { // now the import has it's on exception catching
@@ -399,16 +471,20 @@ public class ManageDatabasesController {
         }
     }
 
-    static String handleImport(LoggedInUser loggedInUser,HttpSession session, ModelMap model, String fileName, String filePath){
+    // factored due to pending uploads, need to check the factoring after the prototype is done
+    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String fileName, String filePath, Map<String, String> paramsFromUser) {
         // need to add in code similar to report loading to give feedback on imports
         new Thread(() -> {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
-                session.setAttribute("importResult",
-                        ImportService.importTheFile(loggedInUser, fileName, filePath, false).replace("\n", "<br/>")
-                );
+                AtomicBoolean dataChanged = new AtomicBoolean(false);
+                String result = ImportService.importTheFile(loggedInUser, fileName, filePath, paramsFromUser, false, false, true, dataChanged).replace("\n", "<br/>");
+                if (!dataChanged.get()) {
+                    result = Constants.DATABASE_UNMODIFIED + "<br/>" + result;
+                }
+                session.setAttribute(ManageDatabasesController.IMPORTRESULT, result);
             } catch (Exception e) {
-                session.setAttribute("importResult", CommonReportUtils.getErrorFromServerSideException(e));
+                session.setAttribute(ManageDatabasesController.IMPORTRESULT, "ERROR : " + CommonReportUtils.getErrorFromServerSideException(e));
             }
         }).start();
         // edd pasting in here to get the banner colour working

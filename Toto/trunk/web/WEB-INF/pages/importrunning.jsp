@@ -16,8 +16,8 @@
     function updateStatus(){
         jq.post("/api/SpreadsheetStatus?action=importResult", function(data){
             var objDiv = document.getElementById("serverStatus");
-            if ("true" == data){ // the sheet should be ready
-                location.replace("/api/ManageDatabases");
+            if (data.indexOf("true") == 0){ // the sheet should be ready, note indexof not startswith, support for the former better
+                location.replace("/api/ManageDatabases" + data.substring(4));// nothing added in most cases
                 return;
             }
         });

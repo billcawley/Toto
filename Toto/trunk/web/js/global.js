@@ -180,6 +180,20 @@
 			
 			el.show();
 		});
+
+/*		// import results popup
+        $('.importresults').on('click', function(e){
+            e.preventDefault();
+            var el = $('<div class="overlay"></div>').hide().appendTo('body');
+            var $this = $(this);
+
+            el.dialog({
+                modal	: 'true',
+                width	: 'auto',
+                title	: 'Import Results'
+            });
+            el.show();
+        });*/
 	});
 	
 })(window.jQuery, window, window.document);

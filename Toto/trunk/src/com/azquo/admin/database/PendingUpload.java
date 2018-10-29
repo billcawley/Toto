@@ -30,6 +30,11 @@ import java.util.Map;
  */
 public final class PendingUpload extends StandardEntity {
 
+    public static final String PROVISIONALLY_LOADED = "Provisionally Loaded";
+    public static final String WAITING = "Waiting";
+    public static final String LOADED = "Loaded";
+    public static final String REJECTED = "Rejected";
+
     private static final String paramDivider = "↑";
 
     final private int businessId;
@@ -40,7 +45,7 @@ public final class PendingUpload extends StandardEntity {
     final private String source;
     private String status;
     private Map<String, String> parameters;
-    final private int databaseId;
+    private int databaseId;
     final private int userId;
     private String importResult;
 
@@ -121,7 +126,7 @@ public final class PendingUpload extends StandardEntity {
         }
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> stringStringEntry : parameters.entrySet()) {
-            sb.append(paramDivider).append(stringStringEntry.getKey()).append(paramDivider).append(stringStringEntry);
+            sb.append(paramDivider).append(stringStringEntry.getKey()).append(paramDivider).append(stringStringEntry.getValue());
         }
         return sb.substring(1); // knock off the first divider
     }
@@ -130,8 +135,13 @@ public final class PendingUpload extends StandardEntity {
         return importResult;
     }
 
+
     public void setImportResult(String importResult) {
         this.importResult = importResult;
+    }
+
+    public void setDatabaseId(int databaseId) {
+        this.databaseId = databaseId;
     }
 
     // better for display
@@ -190,7 +200,9 @@ public final class PendingUpload extends StandardEntity {
             return source;
         }
 
-        public String getStatus() {
+        // perhaps formatting shouldn't be in here
+        public String getStatus()
+        {
             return status;
         }
 
@@ -213,5 +225,7 @@ public final class PendingUpload extends StandardEntity {
         public int getId() {
             return id;
         }
+
+
     }
 }

@@ -232,7 +232,7 @@ public class BackupService {
             e.printStackTrace();
         }
     }
-
+    // todo - use Path for paths? applies everywhere!
     public static void createDBBackupFile(String databaseName, DatabaseAccessToken databaseAccessToken, String filePath, String databaseServerIP) throws Exception {
         System.out.println("attempting to create backup file " + filePath);
         FileOutputStream fos = new FileOutputStream(filePath);

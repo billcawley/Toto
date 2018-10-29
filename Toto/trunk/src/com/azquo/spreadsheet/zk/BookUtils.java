@@ -1,11 +1,10 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.DateUtils;
-import com.azquo.TypedPair;
-import com.azquo.admin.database.Database;
-import com.azquo.admin.onlinereport.OnlineReport;
-import com.azquo.spreadsheet.LoggedInUser;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.poi.ss.util.AreaReference;
+import org.apache.poi.ss.util.CellReference;
+import org.apache.poi.xssf.usermodel.XSSFName;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
@@ -17,9 +16,7 @@ import org.zkoss.zss.model.SName;
 import org.zkoss.zss.model.SSheet;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by edward on 09/01/17.
@@ -133,6 +130,12 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         if (sName == null) return null;
         // todo - with a poorly configured sheet this can NPE
         return sName.getBook().getSheetByName(sName.getRefersToSheetName()).getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
+    }
+
+    public static CellReference getXSSFNameCell(XSSFName xssfName) {
+        if (xssfName == null) return null;
+        AreaReference aref = new AreaReference(xssfName.getRefersToFormula(), null);
+        return aref.getFirstCell();
     }
 
     static String rangeToText(int row, int col) {

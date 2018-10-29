@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.admin.controller.ManageDatabasesController;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import org.springframework.stereotype.Controller;
@@ -32,9 +33,12 @@ public class SpreadsheetStatusController {
             }
         }
         // not strictly a spreadsheet status, may move this later
-        if ("importResult".equals(action)) {
-            if (request.getSession().getAttribute("importResult") != null) {
-                return "true";
+        if (ManageDatabasesController.IMPORTRESULT.equals(action)) {
+            if (request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT) != null) {
+                // url suffix to jam an href anchor on, in then first place #tab4 probably
+                String toReturn = "true" + (request.getSession().getAttribute(ManageDatabasesController.IMPORTURLSUFFIX) != null ? request.getSession().getAttribute(ManageDatabasesController.IMPORTURLSUFFIX) : "");
+                request.getSession().removeAttribute(ManageDatabasesController.IMPORTURLSUFFIX); // it will cause trouble if left!!
+                return toReturn;
             }
         }
         if ("log".equals(action)) {

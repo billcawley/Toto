@@ -12,6 +12,7 @@ import java.util.List;
  */
 public class Constants {
     public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
+    public static final String DATABASE_UNMODIFIED = "DATABASE UNMODIFIED";
     public static final List<String> DEFAULT_DISPLAY_NAME_AS_LIST = Collections.singletonList(DEFAULT_DISPLAY_NAME);
     public static String IN_SPREADSHEET = "in spreadsheet"; // We'll do this by string literal for the moment - might reconsider later. This is shared as currently it's part of the drilldown syntax and provenance, I'm not sure about this!
     public static int UKDATE = 1;

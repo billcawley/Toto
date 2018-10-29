@@ -88,7 +88,7 @@ public final class DatabaseDAO {
         return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + USERID + "` = :" + USERID + " order by " + NAME, DATABASE, databaseRowMapper, namedParams);
     }
 
-    public static List<Database> findForBackup() {
+    public static List<Database> findForAutoBackup() {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + AUTOBACKUP + "` = true", DATABASE, databaseRowMapper, namedParams);
     }
@@ -98,6 +98,12 @@ public final class DatabaseDAO {
         namedParams.addValue(BUSINESSID, businessID);
         namedParams.addValue(NAME, name);
         return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` =:" + BUSINESSID + " and `" + NAME + "` = :" + NAME, DATABASE, databaseRowMapper, namedParams);
+    }
+
+    public static Database findForPersistenceName(final String persistenceName) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(MYSQLNAME, persistenceName);
+        return StandardDAO.findOneWithWhereSQLAndParameters(" WHERE `" + MYSQLNAME + "` =:" + MYSQLNAME, DATABASE, databaseRowMapper, namedParams);
     }
 
     public static Database findById(int id) {

@@ -1,3 +1,15 @@
+25-10-18
+
+Added 'exclusive' to 'classification' when importing
+
+Bug fix stopped numbers ending in 'F' being recognised as numbers (parseDouble recognises '17F')
+
+
+24-10-18-4
+
+Bug fix - ZK force formula check on all sheets not just the front one
+
+
 24-10-18-3
 
 Bug fix on keeping user menus when overwriting databases
