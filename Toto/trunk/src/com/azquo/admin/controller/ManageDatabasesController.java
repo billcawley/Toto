@@ -31,7 +31,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Stream;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -133,8 +132,10 @@ public class ManageDatabasesController {
             , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "sort", required = false) String sort
             , @RequestParam(value = "pendingUploadId", required = false) String pendingUploadId
+            , @RequestParam(value = "rejectId", required = false) String rejectId
             , @RequestParam(value = "databaseId", required = false) String databaseId
             , @RequestParam(value = "revert", required = false) String revert
+            , @RequestParam(value = "commit", required = false) String commit
     ) {
         LoggedInUser possibleUser = null;
         if (sessionId != null) {
@@ -147,7 +148,7 @@ public class ManageDatabasesController {
         final LoggedInUser loggedInUser = possibleUser;
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             if ("true".equalsIgnoreCase(revert)) {
-                for (PendingUpload pendingUpload : PendingUploadDAO.findForBusinessId(loggedInUser.getUser().getBusinessId())) {
+                for (PendingUpload pendingUpload : PendingUploadDAO.findForBusinessIdAndComitted(loggedInUser.getUser().getBusinessId(), false)) {
                     pendingUpload.setImportResult("");
                     pendingUpload.setStatus(PendingUpload.WAITING);
                     PendingUploadDAO.store(pendingUpload);
@@ -169,7 +170,26 @@ public class ManageDatabasesController {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
+            }
+            if ("true".equalsIgnoreCase(commit)) {
+                for (PendingUpload pendingUpload : PendingUploadDAO.findForBusinessIdAndComitted(loggedInUser.getUser().getBusinessId(), false)) {
+                    if (!pendingUpload.getStatus().equals(PendingUpload.WAITING)){
+                        pendingUpload.setCommitted(true);
+                        PendingUploadDAO.store(pendingUpload);
+                    }
+                }
+                // now restore and delete backups
+                Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
+                try {
+                    if (Files.exists(backups)) {
+                        for (Iterator<Path> iter2 = Files.list(backups).iterator(); iter2.hasNext(); ) {
+                            Path path = iter2.next();
+                            Files.deleteIfExists(path);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
             // can a developer do pending?? todo
             if (NumberUtils.isNumber(pendingUploadId) && NumberUtils.isNumber(databaseId)) {
@@ -212,6 +232,13 @@ public class ManageDatabasesController {
                         PendingUploadDAO.store(pendingUpload);
                         return handleImport(loggedInUser, request.getSession(), model, pendingUpload.getFileName(), pendingUpload.getFilePath(), paramsFromUser);
                     }
+                }
+            }
+            if (NumberUtils.isNumber(rejectId)) {
+                PendingUpload pendingUpload = PendingUploadDAO.findById(Integer.parseInt(rejectId));
+                if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+                        pendingUpload.setStatus(PendingUpload.REJECTED);
+                        PendingUploadDAO.store(pendingUpload);
                 }
             }
             StringBuilder error = new StringBuilder();
@@ -376,7 +403,9 @@ public class ManageDatabasesController {
             model.put("businessnamesort", "businessname".equals(sort) ? "businessnamedown" : "businessname");
             model.put("usernamesort", "username".equals(sort) ? "usernamedown" : "username");
             model.put("uploads", uploadRecordsForDisplayForBusiness);
-            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null)); // no search for the mo
+            AtomicBoolean canCommit = new AtomicBoolean(false);
+            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, canCommit)); // no search for the mo
+            model.put("commit", canCommit.get());
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             AdminService.setBanner(model, loggedInUser);

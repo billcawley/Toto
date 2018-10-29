@@ -1,3 +1,16 @@
+29-10-18-2
+
+Import throws an error if lookup not found
+
+
+29-10-18
+
+Apache POI libraries added for import optimizeation work (code currently disabled)
+
+Better feedback on the import on whether the database was actually changed or not
+
+File import parameter assumptions now override any value found on file. (for Ed Broking where 'certain underwriters at Lloyds' does not mean the default value (BB007620))
+
 25-10-18
 
 Added 'exclusive' to 'classification' when importing

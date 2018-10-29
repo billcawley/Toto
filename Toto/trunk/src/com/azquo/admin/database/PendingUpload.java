@@ -3,7 +3,6 @@ package com.azquo.admin.database;
 import com.azquo.admin.StandardEntity;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,7 +31,6 @@ public final class PendingUpload extends StandardEntity {
 
     public static final String PROVISIONALLY_LOADED = "Provisionally Loaded";
     public static final String WAITING = "Waiting";
-    public static final String LOADED = "Loaded";
     public static final String REJECTED = "Rejected";
 
     private static final String paramDivider = "↑";
@@ -48,8 +46,9 @@ public final class PendingUpload extends StandardEntity {
     private int databaseId;
     final private int userId;
     private String importResult;
+    private boolean committed;
 
-    public PendingUpload(int id, int businessId, LocalDateTime date, LocalDateTime statusChangedDate, String fileName, String filePath, String source, String status, String parametersString, int databaseId, int userId, String importResult) {
+    public PendingUpload(int id, int businessId, LocalDateTime date, LocalDateTime statusChangedDate, String fileName, String filePath, String source, String status, String parametersString, int databaseId, int userId, String importResult, boolean committed) {
         this.id = id;
         this.businessId = businessId;
         this.date = date;
@@ -66,6 +65,7 @@ public final class PendingUpload extends StandardEntity {
         this.databaseId = databaseId;
         this.userId = userId;
         this.importResult = importResult;
+        this.committed = committed;
     }
 
     public int getBusinessId() {
@@ -142,6 +142,14 @@ public final class PendingUpload extends StandardEntity {
 
     public void setDatabaseId(int databaseId) {
         this.databaseId = databaseId;
+    }
+
+    public boolean getCommitted() {
+        return committed;
+    }
+
+    public void setCommitted(boolean committed) {
+        this.committed = committed;
     }
 
     // better for display

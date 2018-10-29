@@ -101,7 +101,8 @@ public class DBCron {
                                     , ""
                                     , 0
                                     , 0
-                                    , null);
+                                    , null
+                                    , false);
                             PendingUploadDAO.store(pendingUpload);
                         }
                     }

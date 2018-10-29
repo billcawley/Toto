@@ -6,7 +6,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +47,7 @@ public final class PendingUploadDAO {
     private static final String DATABASEID = "database_id";
     private static final String USERID = "user_id";
     private static final String IMPORTRESULT = "import_result";
+    private static final String COMMITTED = "committed";
 
     public static Map<String, Object> getColumnNameValueMap(final PendingUpload pendingUpload) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -63,6 +63,7 @@ public final class PendingUploadDAO {
         toReturn.put(DATABASEID, pendingUpload.getDatabaseId());
         toReturn.put(USERID, pendingUpload.getUserId());
         toReturn.put(IMPORTRESULT, pendingUpload.getImportResult());
+        toReturn.put(COMMITTED, pendingUpload.getCommitted());
         return toReturn;
     }
 
@@ -83,6 +84,7 @@ public final class PendingUploadDAO {
                         , rs.getInt(DATABASEID)
                         , rs.getInt(USERID)
                         , rs.getString(IMPORTRESULT)
+                        , rs.getBoolean(COMMITTED)
                 );
             } catch (Exception e) {
                 e.printStackTrace();
@@ -93,10 +95,11 @@ public final class PendingUploadDAO {
 
     private static final PendingUploadRowMapper pendingUploadRowMapper = new PendingUploadRowMapper();
 
-    public static List<PendingUpload> findForBusinessId(final int businessId) {
+    public static List<PendingUpload> findForBusinessIdAndComitted(final int businessId, boolean committed) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
+        namedParams.addValue(COMMITTED, committed);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + COMMITTED + " = :" + COMMITTED + " order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
     }
 
     public static void removeForDatabaseId(int databaseId) {

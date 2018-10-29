@@ -21,7 +21,7 @@ Created by IntelliJ IDEA.
             <li><a href="#tab1">Uploads</a></li>
             <li><a href="#tab2">DB Management</a></li>
             <li><a href="#tab3">Maintenance</a></li>
-            <!-- <li><a href="#tab4">Pending Uploads</a></li> -->
+            <li><a href="#tab4">Pending Uploads</a></li>
         </ul>
         <!-- Uploads -->
         <div id="tab1" style="display:none">
@@ -288,9 +288,18 @@ Created by IntelliJ IDEA.
                                     </c:if>
                                 <c:if test="${pendingupload.status == 'Waiting'}">
                                     <input type="submit" name="Load" value="Load" class="button small"/>
+                                    <a href="/api/ManageDatabases?rejectId=${pendingupload.id}#tab4"
+                                       class="button small" title="Reject">Reject</a>
                                 </c:if>
                                 <c:if test="${pendingupload.status == 'Rejected'}">
-                                    <input type="submit" name="Load" value="Reload" class="button small"/>
+                                    <c:choose>
+                                        <c:when test="${pendingupload.importResult.length() > 0}">
+                                            <input type="submit" name="Load" value="Reload" class="button small"/>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <input type="submit" name="Load" value="Load" class="button small"/>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </c:if>
                             </td>
                             <td><a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}" class="button small"
@@ -300,11 +309,16 @@ Created by IntelliJ IDEA.
                 </c:forEach>
                 </tbody>
             </table>
-<c:if test="${revertlist.length() > 0}">
-            <a href="/api/ManageDatabases?revert=true#tab4"
-               onclick="return confirm('Are you sure you want to revert${revertlist}')"
-               class="button" title="revert">Revert</a>
-</c:if>
+            <c:if test="${revertlist.length() > 0}">
+                <a href="/api/ManageDatabases?revert=true#tab4"
+                   onclick="return confirm('Are you sure you want to revert${revertlist}')"
+                   class="button" title="revert">Revert</a>
+            </c:if>
+            <c:if test="${commit}">
+                <a href="/api/ManageDatabases?commit=true#tab4"
+                   onclick="return confirm('Are you sure you want to commit changes? Revert backups will be removed!')"
+                   class="button" title="Commit">Commit</a>
+            </c:if>
         </div>
         <!-- END pending Uploads -->
     </div>

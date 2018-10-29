@@ -23,6 +23,7 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.azquo.dataimport.ImportService.dbPath;
@@ -361,9 +362,9 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch) {
+    public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch, AtomicBoolean commit) {
         if (loggedInUser.getUser().isAdministrator()) { // juat admin
-            List<PendingUpload> pendingUploads = PendingUploadDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+            List<PendingUpload> pendingUploads = PendingUploadDAO.findForBusinessIdAndComitted(loggedInUser.getUser().getBusinessId(), false);
             String businessName = BusinessDAO.findById(loggedInUser.getUser().getBusinessId()).getBusinessName();
             List<PendingUpload.PendingUploadForDisplay> pendingUploadForDisplays = new ArrayList<>();
             int count = 0;
@@ -383,6 +384,9 @@ this may now not work at all, perhaps delete?
                         if (user != null) {
                             userName = user.getName();
                         }
+                    }
+                    if (!pendingUpload.getStatus().equals(PendingUpload.WAITING)){
+                        commit.set(true);
                     }
                     pendingUploadForDisplays.add(new PendingUpload.PendingUploadForDisplay(pendingUpload, businessName, dbName, userName));
                     if (count > 100) {
