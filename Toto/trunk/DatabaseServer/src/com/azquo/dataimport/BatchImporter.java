@@ -120,7 +120,7 @@ public class BatchImporter implements Callable<Void> {
     private static void resolveDefaultValues(List<ImportCellWithHeading> lineToLoad) {
         // set defaults before dealing with local parent/child
         for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
-            if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && importCellWithHeading.getLineValue().trim().length() == 0) {
+            if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && (importCellWithHeading.getImmutableImportHeading().override!=null || importCellWithHeading.getLineValue().trim().length() == 0)) {
                 String defaultValue = importCellWithHeading.getImmutableImportHeading().defaultValue;
                 if (importCellWithHeading.getImmutableImportHeading().lineNameRequired) {
                     for (ImportCellWithHeading cell : lineToLoad) {

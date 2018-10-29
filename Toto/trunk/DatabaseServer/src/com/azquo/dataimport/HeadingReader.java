@@ -52,6 +52,7 @@ class HeadingReader {
     static final String COMPOSITION = "composition";
     static final String CLASSIFICATION = "classification";
     static final String DEFAULT = "default";
+    static final String OVERRIDE = "override";
     static final String NONZERO = "nonzero";
     static final String REMOVESPACES = "removespaces";
     private static final String REQUIRED = "required";
@@ -105,10 +106,13 @@ todo - add classification here
 
     // Manages the context being assigned automatically to subsequent headers. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.
-    static List<ImmutableImportHeading> readHeaders(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, List<String> attributeNames, boolean clearData) throws Exception {
+    static void readHeaders(ValuesImportConfig valuesImportConfig) throws Exception{
+        boolean clearData = valuesImportConfig.getClearData();
+         AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
+        List<String>attributeNames = valuesImportConfig.getLanguages();
         List<MutableImportHeading> headings = new ArrayList<>();
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
-        for (String header : headers) {
+        for (String header : valuesImportConfig.getHeaders()) {
             // on some spreadsheets, pseudo headers are created because there is text in more than one line.  The divider must also be accompanied by a 'peers' clause
             int dividerPos = header.lastIndexOf(headingDivider); // is there context defined here?
             if (header.trim().length() > 0 && (dividerPos < 0 || header.toLowerCase().indexOf(PEERS) > 0)) { // miss out blanks also.
@@ -142,7 +146,7 @@ todo - add classification here
         // further processing of the Mutable headings - the bits where headings interact with each other
         resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
         // convert to immutable. Not strictly necessary, as much for my sanity as anything (EFC) - we do NOT want this info changed by actual data loading
-        return headings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList());
+        valuesImportConfig.setHeadings(headings.stream().map(ImmutableImportHeading::new).collect(Collectors.toList()));
     }
 
     /* deal with attribute short hand and pivot stuff, essentially pre processing that can be done before making any MutableImportHeadings
@@ -156,9 +160,16 @@ todo - add classification here
     still too complex for INtellij to analyse - todo
     */
 
-    static List<String> preProcessHeadersAndCreatePivotSetsIfRequired(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> headers, Name importInterpreter, String fileName, List<String> languages, Map<String, String> topHeadings) throws Exception {
+    static void preProcessHeadersAndCreatePivotSetsIfRequired(ValuesImportConfig valuesImportConfig) throws  Exception{
+        /*             valuesImportConfig.getAzquoMemoryDBConnection(),
+                             valuesImportConfig.getFileName(),
+
+*/
         // option for extra composite headings - I think for PwC, a little odd but harmless.
-        if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null) {
+            AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
+            Name importInterpreter = valuesImportConfig.getImportInterpreter();
+            List<String> headers = valuesImportConfig.getHeaders();
+            if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null) {
             List<String> extraCompositeHeadings = Arrays.asList(importInterpreter.getAttribute(COMPOSITEHEADINGS).split("¬")); // delimiter match the other headings string
             headers.addAll(extraCompositeHeadings);
         }
@@ -186,6 +197,7 @@ todo - add classification here
                     } else if (importInterpreter.getChildren() != null && importInterpreter.getChildren().size() > 0) {//PROCESS FOR ZIP FILE
                         headersReplaced = false;
                         char c = 10;
+                        List<String> languages = valuesImportConfig.getLanguages();
                         header = header.replace("\\\\n",c + "");
                         // given preparation we should be able to find a name with this header in the correct language
                         Name headerName = NameService.findByName(azquoMemoryDBConnection, header, languages);
@@ -218,7 +230,7 @@ todo - add classification here
 
                          THis is very much Ed broking stuff, I'd like to put it in the EdBrokingExtension class but I'm not sure how to factor right now
                          */
-                            String topHeadingFound = topHeadings.get(header);
+                            String topHeadingFound = valuesImportConfig.getTopHeadings().get(header);
                             header = headerName.getDefaultDisplayName();
                             origHeaders.set(i, header);
                             String attribute = getCompositeAttributes(headerName, importAttribute, localImportAttribute);
@@ -265,6 +277,7 @@ todo - add classification here
                     int functionEnd = header.indexOf(")", fileNamePos);
                     if (functionEnd > 0) {
                         try {
+                            String fileName = valuesImportConfig.getFileName();
                             int len = Integer.parseInt(header.substring(fileNamePos + function.length(), functionEnd));
                             String replacement = "";
                             if (fileName.contains(".")) {// this had a comment saying it was a hack - as long as behavior is consistent I see no harm in stripping the extension
@@ -283,7 +296,7 @@ todo - add classification here
                     }
                 }
 
-                header = header.replace("IMPORTLANGUAGE", languages.get(0));
+                header = header.replace("IMPORTLANGUAGE", valuesImportConfig.getLanguages().get(0));
                 header = header.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
                 /* line heading and data
                 Line heading means that the cell data on the line will be a name that is a parent of the line no
@@ -319,9 +332,12 @@ todo - add classification here
             headers.add("LINENO;composition LINENO;language " + importInterpreter.getDefaultDisplayName() + ";child of " + importInterpreter.getDefaultDisplayName() + " lines|"); // pipe on the end, clear context if there was any
         }
 
-        if (!headersReplaced) return replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders, headers);
-        return headers;
-    }
+        if (!headersReplaced){
+            valuesImportConfig.setHeaders(replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders, headers));
+         }else{
+            valuesImportConfig.setHeaders(headers);
+        }
+     }
 
     // headings replaced by WFC into indexes as the headings were changed by the new Ed Broking children of the data import name functionality
     // also headings shouldn't be resolved on every line when dealing with composite
@@ -529,6 +545,16 @@ todo - add classification here
                     } else {
                         heading.defaultValue = result;
                     }
+                }
+                break;
+            case OVERRIDE: // if there's no value on the line a default
+                if (result.length() > 0) {
+                    if (result.equals("NOW")) {
+                        heading.override = LocalDateTime.now() + "";
+                    } else {
+                        heading.override = result;
+                    }
+                    heading.defaultValue = heading.override;
                 }
                 break;
             case PEERS: // in new logic this is the only place that peers are defined in Azquo - previously they were against the Name object

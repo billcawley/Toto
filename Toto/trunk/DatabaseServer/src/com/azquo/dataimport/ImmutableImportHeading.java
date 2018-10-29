@@ -43,6 +43,7 @@ class ImmutableImportHeading {
     final String only;
     final String compositionPattern;
     final String defaultValue;
+    final String override;
     final List<String> ignoreList;
     final boolean blankZeroes;
     final boolean removeSpaces;
@@ -71,6 +72,7 @@ class ImmutableImportHeading {
         this.only = mutableImportHeading.only;
         this.compositionPattern = mutableImportHeading.compositionPattern;
         this.defaultValue = mutableImportHeading.defaultValue;
+        this.override = mutableImportHeading.override;
         this.ignoreList = mutableImportHeading.ignoreList;
         this.blankZeroes = mutableImportHeading.blankZeroes;
         this.removeSpaces = mutableImportHeading.removeSpaces;

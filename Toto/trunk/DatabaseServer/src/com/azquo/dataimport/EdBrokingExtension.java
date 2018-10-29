@@ -406,7 +406,7 @@ check that the headings that are required are there . . .
                 String[] clauses = header.split(";");
                 String assumption = valuesImportConfig.getAssumptions().get(clauses[0].toLowerCase().trim());
                 if (assumption != null) {
-                    headers.set(i, header + ";default " + assumption);
+                    headers.set(i, header + ";override " + assumption);
                 }
             }
         }

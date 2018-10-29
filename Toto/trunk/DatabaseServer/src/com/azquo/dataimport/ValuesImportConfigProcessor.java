@@ -67,25 +67,10 @@ class ValuesImportConfigProcessor {
         EdBrokingExtension.checkRequiredHeadings(valuesImportConfig);
         //attribute names may have additions when language is in the context);
         // I'm not currently making the heading reader deal with a ValuesImportConfig object
-        valuesImportConfig.setHeaders(
-                HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(
-                        valuesImportConfig.getAzquoMemoryDBConnection(),
-                        valuesImportConfig.getHeaders(),
-                        valuesImportConfig.getImportInterpreter(),
-                        valuesImportConfig.getFileName(),
-                        valuesImportConfig.getLanguages(),
-                        valuesImportConfig.getTopHeadings())
-        );
+        HeadingReader.preProcessHeadersAndCreatePivotSetsIfRequired(valuesImportConfig);
         EdBrokingExtension.dealWithAssumptions(valuesImportConfig);
         // finally resolve them with the HeadingReader and we're good to go
-        valuesImportConfig.setHeadings(
-                HeadingReader.readHeaders(
-                        valuesImportConfig.getAzquoMemoryDBConnection()
-                        , valuesImportConfig.getHeaders()
-                        , valuesImportConfig.getLanguages()
-                        , valuesImportConfig.getClearData()
-                )
-        );
+        HeadingReader.readHeaders(valuesImportConfig);
     }
 
     // the standard way of finding some headings in teh database. Checks they're not set in case the new Ed Broking way set the interpreter
