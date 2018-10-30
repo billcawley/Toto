@@ -26,6 +26,7 @@ import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -149,7 +150,8 @@ public class ManageDatabasesController {
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             if ("true".equalsIgnoreCase(revert)) {
                 for (PendingUpload pendingUpload : PendingUploadDAO.findForBusinessIdAndComitted(loggedInUser.getUser().getBusinessId(), false)) {
-                    pendingUpload.setImportResult("");
+                    pendingUpload.setStatusChangedDate(LocalDateTime.now());
+                    pendingUpload.setUserId(loggedInUser.getUser().getId());
                     pendingUpload.setStatus(PendingUpload.WAITING);
                     PendingUploadDAO.store(pendingUpload);
                 }
@@ -173,7 +175,9 @@ public class ManageDatabasesController {
             }
             if ("true".equalsIgnoreCase(commit)) {
                 for (PendingUpload pendingUpload : PendingUploadDAO.findForBusinessIdAndComitted(loggedInUser.getUser().getBusinessId(), false)) {
-                    if (!pendingUpload.getStatus().equals(PendingUpload.WAITING)){
+                    if (!pendingUpload.getStatus().equals(PendingUpload.WAITING)) {
+                        pendingUpload.setStatusChangedDate(LocalDateTime.now());
+                        pendingUpload.setUserId(loggedInUser.getUser().getId());
                         pendingUpload.setCommitted(true);
                         PendingUploadDAO.store(pendingUpload);
                     }
@@ -229,6 +233,8 @@ public class ManageDatabasesController {
                         request.getSession().setAttribute(PENDINGUPLOADID, pendingUpload.getId());
                         pendingUpload.setParameters(paramsFromUser);
                         pendingUpload.setDatabaseId(byId.getId());
+                        pendingUpload.setStatusChangedDate(LocalDateTime.now());
+                        pendingUpload.setUserId(loggedInUser.getUser().getId());
                         PendingUploadDAO.store(pendingUpload);
                         return handleImport(loggedInUser, request.getSession(), model, pendingUpload.getFileName(), pendingUpload.getFilePath(), paramsFromUser);
                     }
@@ -237,8 +243,10 @@ public class ManageDatabasesController {
             if (NumberUtils.isNumber(rejectId)) {
                 PendingUpload pendingUpload = PendingUploadDAO.findById(Integer.parseInt(rejectId));
                 if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-                        pendingUpload.setStatus(PendingUpload.REJECTED);
-                        PendingUploadDAO.store(pendingUpload);
+                    pendingUpload.setStatus(PendingUpload.REJECTED);
+                    pendingUpload.setStatusChangedDate(LocalDateTime.now());
+                    pendingUpload.setUserId(loggedInUser.getUser().getId());
+                    PendingUploadDAO.store(pendingUpload);
                 }
             }
             StringBuilder error = new StringBuilder();
@@ -265,6 +273,8 @@ public class ManageDatabasesController {
                         } else {
                             pendingUpload.setStatus(PendingUpload.PROVISIONALLY_LOADED);
                         }
+                        pendingUpload.setStatusChangedDate(LocalDateTime.now());
+                        pendingUpload.setUserId(loggedInUser.getUser().getId());
                         PendingUploadDAO.store(pendingUpload);
                     }
                 }

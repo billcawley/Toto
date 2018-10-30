@@ -48,8 +48,7 @@ public class BatchImporter implements Callable<Void> {
     }
 
     @Override
-    public Void call() throws Exception {
-        try {
+    public Void call() {
             Long time = System.currentTimeMillis();
             for (List<ImportCellWithHeading> lineToLoad : dataToLoad) {
             /*
@@ -59,50 +58,57 @@ public class BatchImporter implements Callable<Void> {
             happy for the check to remain in here - more stuff for the multi threaded bit
             blank attribute allowed as it's not structural, a blank attribute won't break anything
             */
-                ImportCellWithHeading first = lineToLoad.get(0);
-                if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null || first.getImmutableImportHeading().compositionPattern != null || first.getImmutableImportHeading().attribute != null) {
-                    //check dates before resolving composite values
-                    for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
-                        // this basic value checking was outside, I see no reason it shouldn't be in here
-                        // attempt to standardise date formats
-                        if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().dateForm > 0) {
+                try {
+                    ImportCellWithHeading first = lineToLoad.get(0);
+                    if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null || first.getImmutableImportHeading().compositionPattern != null || first.getImmutableImportHeading().attribute != null) {
+                        //check dates before resolving composite values
+                        for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
+                            // this basic value checking was outside, I see no reason it shouldn't be in here
+                            // attempt to standardise date formats
+                            if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().dateForm > 0) {
                             /*
                             interpret the date and change to standard form
                             todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
                             */
-                            LocalDate date;
-                            if (importCellWithHeading.getImmutableImportHeading().dateForm == Constants.UKDATE) {
-                                date = DateUtils.isADate(importCellWithHeading.getLineValue());
-                            } else {
-                                date = DateUtils.isUSDate(importCellWithHeading.getLineValue());
+                                LocalDate date;
+                                if (importCellWithHeading.getImmutableImportHeading().dateForm == Constants.UKDATE) {
+                                    date = DateUtils.isADate(importCellWithHeading.getLineValue());
+                                } else {
+                                    date = DateUtils.isUSDate(importCellWithHeading.getLineValue());
+                                }
+                                if (date != null) {
+                                    importCellWithHeading.setLineValue(DateUtils.dateTimeFormatter.format(date));
+                                }
                             }
-                            if (date != null) {
-                                importCellWithHeading.setLineValue(DateUtils.dateTimeFormatter.format(date));
+                        }
+                        // default values might now be used by composite
+                        resolveDefaultValues(lineToLoad);
+                        // composite might do things that affect only and existing hence do it before
+                        resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine);
+                        String rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
+                        if (rejectionReason == null) {
+                            try {
+                                resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
+                                // valueTracker simply the number of values imported
+                                valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, importLine, linesRejected));
+                            } catch (Exception e) {
+                                azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
+                                throw e;
                             }
+                            Long now = System.currentTimeMillis();
+                            if (now - time > 10) { // 10ms a bit arbitrary
+                                System.out.println("line no " + importLine + " time = " + (now - time) + "ms");
+                            }
+
+                            time = now;
+                        } else if (linesRejected.size() < 100) {
+                            linesRejected.add(importLine + ": " + rejectionReason);
                         }
                     }
-                    // default values might now be used by composite
-                    resolveDefaultValues(lineToLoad);
-                    // composite might do things that affect only and existing hence do it before
-                    resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine);
-                    String rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
-                    if (rejectionReason == null) {
-                        try {
-                            resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
-                            // valueTracker simply the number of values imported
-                            valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, importLine, linesRejected));
-                        } catch (Exception e) {
-                            azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
-                            throw e;
-                        }
-                        Long now = System.currentTimeMillis();
-                        if (now - time > 10) { // 10ms a bit arbitrary
-                            System.out.println("line no " + importLine + " time = " + (now - time) + "ms");
-                        }
 
-                        time = now;
-                    } else if (linesRejected.size() < 1_000) {
-                        linesRejected.add(importLine + ": " + rejectionReason);
+                } catch (Exception e) {
+                    if (linesRejected.size() < 100) {
+                        linesRejected.add(importLine + ": " + e.getMessage());
                     }
                 }
                 importLine++;
@@ -110,17 +116,13 @@ public class BatchImporter implements Callable<Void> {
             azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(importLine) + " imported.", true);
             azquoMemoryDBConnection.addToUserLogNoException("Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
             return null;
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw e;
-        }
     }
 
     // set defaults, factored now as new logic means composites might use defaults
     private static void resolveDefaultValues(List<ImportCellWithHeading> lineToLoad) {
         // set defaults before dealing with local parent/child
         for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
-            if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && (importCellWithHeading.getImmutableImportHeading().override!=null || importCellWithHeading.getLineValue().trim().length() == 0)) {
+            if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && (importCellWithHeading.getImmutableImportHeading().override != null || importCellWithHeading.getLineValue().trim().length() == 0)) {
                 String defaultValue = importCellWithHeading.getImmutableImportHeading().defaultValue;
                 if (importCellWithHeading.getImmutableImportHeading().lineNameRequired) {
                     for (ImportCellWithHeading cell : lineToLoad) {
@@ -263,20 +265,20 @@ public class BatchImporter implements Callable<Void> {
 
                             }
                             if (compCell != null && compCell.getLineValue() != null && resolved(compCell)) {
-                                String sourceVal= null;
+                                String sourceVal = null;
                                 if (compCell.getImmutableImportHeading().lineNameRequired) {
                                     if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
                                         compCell.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
                                                 , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames)));
                                     }
-                                    if (compCell.getLineNames()!=null) {
-                                          sourceVal = compCell.getLineNames().iterator().next().getDefaultDisplayName();
+                                    if (compCell.getLineNames() != null) {
+                                        sourceVal = compCell.getLineNames().iterator().next().getDefaultDisplayName();
                                     }
                                 } else {
                                     sourceVal = compCell.getLineValue();
                                 }
                                 // the two ints need to be as they are used in excel
-                                if (sourceVal!=null) {
+                                if (sourceVal != null) {
                                     if (function != null && (funcInt > 0 || funcInt2 > 0) && sourceVal.length() > funcInt) {
                                         if (function.equalsIgnoreCase("left")) {
                                             sourceVal = sourceVal.substring(0, funcInt);
@@ -292,7 +294,7 @@ public class BatchImporter implements Callable<Void> {
                                     result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
                                     headingMarker = headingMarker + sourceVal.length() - 1;//is increaed before two lines below
                                     if (doublequotes) headingMarker++;
-                                }else{
+                                } else {
                                     result = "";
                                     headingMarker = headingEnd;
                                 }
@@ -355,8 +357,8 @@ public class BatchImporter implements Callable<Void> {
         }
     }
 
-    private static boolean resolved(ImportCellWithHeading cell){
-        if (cell.getImmutableImportHeading().compositionPattern != null || cell.getImmutableImportHeading().lookupFrom !=null){
+    private static boolean resolved(ImportCellWithHeading cell) {
+        if (cell.getImmutableImportHeading().compositionPattern != null || cell.getImmutableImportHeading().lookupFrom != null) {
             return cell.getResolved();
         }
 
@@ -466,7 +468,7 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
             }
-            if (!found){
+            if (!found) {
                 throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " on " + setName + " and " + valueToTest);
             }
         }

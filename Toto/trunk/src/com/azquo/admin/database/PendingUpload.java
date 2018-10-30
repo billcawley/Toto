@@ -44,7 +44,7 @@ public final class PendingUpload extends StandardEntity {
     private String status;
     private Map<String, String> parameters;
     private int databaseId;
-    final private int userId;
+    private int userId;
     private String importResult;
     private boolean committed;
 
@@ -118,6 +118,10 @@ public final class PendingUpload extends StandardEntity {
 
     public int getUserId() {
         return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
     }
 
     public String getParametersAsString() {

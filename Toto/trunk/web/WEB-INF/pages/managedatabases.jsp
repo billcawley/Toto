@@ -21,7 +21,7 @@ Created by IntelliJ IDEA.
             <li><a href="#tab1">Uploads</a></li>
             <li><a href="#tab2">DB Management</a></li>
             <li><a href="#tab3">Maintenance</a></li>
-            <li><a href="#tab4">Pending Uploads</a></li>
+            <c:if test="${pendinguploads.size() > 0}"><li><a href="#tab4">Pending Uploads</a></li></c:if>
         </ul>
         <!-- Uploads -->
         <div id="tab1" style="display:none">
@@ -281,10 +281,9 @@ Created by IntelliJ IDEA.
                                 </td>
                             </c:forEach>
                             <td>
-                                <!-- todo allow another load when rejected-->
                                     <c:if test="${pendingupload.importResult.length() > 0}">
                                         <a href="/api/ImportResults?id=${pendingupload.id}" target="new"
-                                           class="button inspect small" data-title="Import Results" title="View Import Results">View Import Results</a>
+                                           class="button inspect small" data-title="Import Results" title="View Import Results">View <c:if test="${pendingupload.status == 'Waiting'}">Previous </c:if>Import Results</a>
                                     </c:if>
                                 <c:if test="${pendingupload.status == 'Waiting'}">
                                     <input type="submit" name="Load" value="Load" class="button small"/>
