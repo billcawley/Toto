@@ -70,7 +70,7 @@ public class ReportRenderer {
         return populateBook(book, valueId, useSavedValuesOnFormulae, executeMode, errors, true);
     }
 
-
+    // todo - is it possible to extract some of this to a pre importer? Can't put it all in there . . .
     private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) { // todo - make more elegant? error hack . . .
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
         book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
@@ -95,6 +95,9 @@ public class ReportRenderer {
             // I'd like to put this somewhere else but for the moment it must be per sheet to lessen the chances of overlapping repeat regions interfering with each other
             Set<String> repeatRegionTracker = new HashSet<>();
             Sheet sheet = book.getSheetAt(sheetNumber);
+            // might give a little speed increase until the notifys get going . . .
+            Ranges.range(sheet).setAutoRefresh(false);
+
             // check we're not hitting a validation sheet we added!
             if (sheet.getSheetName().endsWith(ChoicesService.VALIDATION_SHEET)) {
                 continue;

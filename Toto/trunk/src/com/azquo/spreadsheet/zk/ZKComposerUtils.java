@@ -23,23 +23,21 @@ class ZKComposerUtils {
     static void reloadBook(Spreadsheet myzss, Book book) {
         try {
             // new book from same source
-            final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name",
-                    book1 -> {
-                        for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
-                            book1.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
-                        }
-                        book1.getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, null); // zap the locked result, it will be checked below and we only want it there if  populate book put it there
-                        if (ReportRenderer.populateBook(book1, 0)) { // check if formulae made saveable data
-                            Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
-                        }
-                        if (book1.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) != null) {
-                            String message = (String) book1.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT);
-                            Clients.evalJavaScript("document.getElementById(\"lockedResult\").innerHTML='<textarea class=\"public\" style=\"height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0\">" + StringEscapeUtils.escapeJavaScript(message) + "</textarea>';");
-                        } else {
-                            Clients.evalJavaScript("document.getElementById(\"lockedResult\").innerHTML='';");
-                        }
+            final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
+            for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes over
+                newBook.getInternalBook().setAttribute(key, book.getInternalBook().getAttribute(key));
+            }
+            newBook.getInternalBook().setAttribute(OnlineController.LOCKED_RESULT, null); // zap the locked result, it will be checked below and we only want it there if  populate book put it there
+            if (ReportRenderer.populateBook(newBook, 0)) { // check if formulae made saveable data
+                Clients.evalJavaScript("document.getElementById(\"saveDataButton\").style.display=\"block\";document.getElementById(\"restoreDataButton\").style.display=\"block\";");
+            }
+            if (newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT) != null) {
+                String message = (String) newBook.getInternalBook().getAttribute(OnlineController.LOCKED_RESULT);
+                Clients.evalJavaScript("document.getElementById(\"lockedResult\").innerHTML='<textarea class=\"public\" style=\"height:60px;width:400px;font:10px monospace;overflow:auto;font-family:arial;background:#f58030;color:#fff;font-size:14px;border:0\">" + StringEscapeUtils.escapeJavaScript(message) + "</textarea>';");
+            } else {
+                Clients.evalJavaScript("document.getElementById(\"lockedResult\").innerHTML='';");
+            }
 
-                    });
             myzss.setBook(newBook); // and set to the ui. I think if I set to the ui first it becomes overwhelmed trying to track modifications (lots of unhelpful null pointers)
             if (myzss.getSelectedSheet().isHidden()) {
                 for (SSheet s : myzss.getSBook().getSheets()) {

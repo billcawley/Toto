@@ -1,3 +1,12 @@
+31-10-18
+
+Initial version of pending uploads - only visible if some files actually are there to be processed
+
+Batch importer line exceptions now pushed into "rejected lines" rather than stopping the whole import.
+
+Rejigging jar libraries as poi and ZK don't coexist well, more work on faster poi based import but this is still quarantined
+
+
 29-10-18-2
 
 Import throws an error if lookup not found

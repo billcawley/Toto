@@ -28,7 +28,6 @@ class RegionFillerService {
     // this had clonecols which was added to "selection" to make it wider, this made no sense and has been removed
     static void fillRowHeadings(LoggedInUser loggedInUser, Sheet sheet, String region, CellRegion displayRowHeadings
             , CellRegion displayDataRegion, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, UserRegionOptions userRegionOptions) throws Exception {
-        Ranges.range(sheet, displayRowHeadings.getRow(), displayRowHeadings.getColumn(), displayRowHeadings.lastRow, displayRowHeadings.lastColumn).setAutoRefresh(false);
         int rowHeadingsColumn = displayRowHeadings.getColumn();
         boolean isHierarchy = ReportUtils.isHierarchy(cellsAndHeadingsForDisplay.getRowHeadingsSource());
         int row = displayRowHeadings.getRow();
@@ -62,7 +61,7 @@ class RegionFillerService {
                         break;
                     }
                 }
-                //format the row headings for hierarchy.  Each total level has a different format.   clear visible names in all but on heading
+                //format the row headings for hierarchy.  Each total level has sa different format.   clear visible names in all but on heading
                 if (sameValues < rowHeading.size() - 1) {
                     int totalCount = rowHeading.size() - sameValues - 1;
                     //this is a total line
