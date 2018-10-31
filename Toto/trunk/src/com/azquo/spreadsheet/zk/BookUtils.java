@@ -2,9 +2,9 @@ package com.azquo.spreadsheet.zk;
 
 import com.azquo.DateUtils;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.poi.ss.util.AreaReference;
-import org.apache.poi.ss.util.CellReference;
-import org.apache.poi.xssf.usermodel.XSSFName;
+import org.zkoss.poi.ss.util.AreaReference;
+import org.zkoss.poi.ss.util.CellReference;
+import org.zkoss.poi.xssf.usermodel.XSSFName;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
@@ -134,7 +134,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
 
     public static CellReference getXSSFNameCell(XSSFName xssfName) {
         if (xssfName == null) return null;
-        AreaReference aref = new AreaReference(xssfName.getRefersToFormula(), null);
+        AreaReference aref = new AreaReference(xssfName.getRefersToFormula());
         return aref.getFirstCell();
     }
 

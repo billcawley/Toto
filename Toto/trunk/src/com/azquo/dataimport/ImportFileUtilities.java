@@ -8,17 +8,18 @@ import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
+import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SRow;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Iterator;
 
 /**
  * Created by edward on 11/11/16.
  * <p>
  * Factoring off a few functions from ImportService.
- *
  */
 class ImportFileUtilities {
 
@@ -27,12 +28,12 @@ class ImportFileUtilities {
     // as in drop the import stream into a temp file and return its path
     // todo, better api calls, perhaps making the function redundant
     static File tempFileWithoutDecoding(final InputStream data, final String fileName) throws IOException {
-            File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
-            temp.deleteOnExit();
-            FileOutputStream fos = new FileOutputStream(temp);
-            org.apache.commons.io.IOUtils.copy(data, fos);
-            fos.close();
-            return temp;
+        File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
+        temp.deleteOnExit();
+        FileOutputStream fos = new FileOutputStream(temp);
+        org.apache.commons.io.IOUtils.copy(data, fos);
+        fos.close();
+        return temp;
     }
 
     static String copyFileToDatabaseServer(InputStream inputStream, String sftpDestination) {
@@ -139,40 +140,26 @@ class ImportFileUtilities {
         }
     }
 
-    static void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW, boolean transpose) throws Exception {
+    static void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW) throws Exception {
         int rows = sheet.getLastRow();
-        int maxCol = 0;
-        for (int row = 0; row <= sheet.getLastRow(); row++) {
-            if (maxCol < sheet.getLastColumn(row)) {
-                maxCol = sheet.getLastColumn(row);
-            }
-        }
         int startRow = 0;
-        int startCol = 0;
-/*        if (range != null) {
-            startRow = range.getRow();
-            startCol = range.getColumn();
-            rows = startRow + range.getRowCount() - 1;
-            maxCol = startCol + range.getColumnCount() - 1;
-        }*/
-
-        if (!transpose) {
-            for (int r = startRow; r <= rows; r++) {
-                SRow row = sheet.getInternalSheet().getRow(r);
-                if (row != null) {
-                    //System.out.println("Excel row " + r);
-                    //int colCount = 0;
-                    for (int c = startCol; c <= maxCol; c++) {
+        for (int r = startRow; r <= rows; r++) {
+            SRow row = sheet.getInternalSheet().getRow(r);
+            if (row != null) {
+                //System.out.println("Excel row " + r);
+                //int colCount = 0;
+/*                    for (int c = startCol; c <= maxCol; c++) {
                         writeCell(sheet, r, c, csvW);
-                    }
-                    csvW.endRecord();
+                    }*/
+                int lastcell = 0;
+                // EFC note - I know this looks odd - the code will be booted shortly hopefully
+                for (Iterator<SCell> cellIterator = row.getCellIterator(); cellIterator.hasNext();) {
+                        lastcell = cellIterator.next().getColumnIndex();
                 }
-            }
-        } else {
-            for (int c = startCol; c <= maxCol; c++) {
-                for (int r = startRow; r <= rows; r++) {
+                for (int c = 0; c <= lastcell; c++) {
                     writeCell(sheet, r, c, csvW);
                 }
+
                 csvW.endRecord();
             }
         }
@@ -197,11 +184,11 @@ class ImportFileUtilities {
             String stringValue = "";
             try {
                 stringValue = cellData.getFormatText();// I assume means formatted text
-                if (dataFormat.equals("h:mm") && stringValue.length()==4) {
+                if (dataFormat.equals("h:mm") && stringValue.length() == 4) {
                     //ZK BUG - reads "hh:mm" as "h:mm"
-                    stringValue = "0"+stringValue;
-                }else {
-                    if (dataFormat.toLowerCase().contains("m") &&  dataFormat.length() > 6) {
+                    stringValue = "0" + stringValue;
+                } else {
+                    if (dataFormat.toLowerCase().contains("m") && dataFormat.length() > 6) {
                         try {
                             Date javaDate = DateUtil.getJavaDate((cellData.getDoubleValue()));
                             stringValue = YYYYMMDD.format(javaDate);
@@ -211,25 +198,25 @@ class ImportFileUtilities {
 
                     }
                 }
-                if ((stringValue.length() == 6 || stringValue.length()==8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-") ) {//another ZK bug
+                if ((stringValue.length() == 6 || stringValue.length() == 8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-")) {//another ZK bug
                     stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
                 }
             } catch (Exception ignored) {
             }
             if (stringValue.endsWith("%") || (stringValue.contains(".") || !stringValue.startsWith("0")) && !dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
                 //if it's a number, remove all formatting
-               try {
+                try {
                     double d = cellData.getDoubleValue();
                     returnNumber = d;
                     String newStringValue = d + "";
                     if (newStringValue.contains("E")) {
-                        newStringValue = String.format("%f",d);
+                        newStringValue = String.format("%f", d);
 
                     }
                     if (newStringValue.endsWith(".0")) {
                         stringValue = newStringValue.substring(0, newStringValue.length() - 2);
                     } else {
-                        if (!newStringValue.endsWith(".000000")){
+                        if (!newStringValue.endsWith(".000000")) {
                             stringValue = newStringValue;
                         }
                     }
@@ -242,10 +229,11 @@ class ImportFileUtilities {
             }
             returnString = stringValue;
         }
-        if (returnString.startsWith("`") && returnString.indexOf("'",1)<0){
+        if (returnString.startsWith("`") && returnString.indexOf("'", 1) < 0) {
             returnString = returnString.substring(1);
         }
-        if (returnString.startsWith("'") && returnString.indexOf("'",1) <0) returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
+        if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
+            returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
         return new TypedPair<>(returnNumber, returnString.trim());
     }
 }

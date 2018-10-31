@@ -59,6 +59,9 @@ public final class ImportService {
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, Map<String, String> inheritedFileNameParams, boolean isData, boolean setup, boolean isLast, AtomicBoolean dataChanged) throws Exception { // setup just to flag it
+        if (fileName.contains("andnewtest")){
+            System.out.println("import service 2 result " + ImportService2.importTheFile(loggedInUser, fileName, filePath, inheritedFileNameParams, isData, setup, isLast, dataChanged));
+        }
         Map<String, String> fileNameParams = inheritedFileNameParams != null ? new HashMap<>(inheritedFileNameParams) : new HashMap<>(); // copy, it might be modified
         addFileNameParametersToMap(fileName, fileNameParams);
         InputStream uploadFile = new FileInputStream(filePath);
@@ -320,7 +323,9 @@ public final class ImportService {
     private static String readBook(LoggedInUser loggedInUser, final String fileName, final Map<String, String> fileNameParameters, final String tempPath, boolean persistAfter, boolean isData, AtomicBoolean dataChanged) throws Exception {
         Book book;
         try {
+            long time = System.currentTimeMillis();
             book = Importers.getImporter().imports(new File(tempPath), "Imported");
+            System.out.println("millis to read an Excel file for import old way " + (System.currentTimeMillis() - time));
         } catch (Exception e) {
             e.printStackTrace();
             return stripTempSuffix(fileName) + ": Import error - " + e.getMessage();
@@ -435,11 +440,7 @@ public final class ImportService {
 
 
     private static String readSheet(LoggedInUser loggedInUser, String fileName, Map<String, String> fileNameParameters, Sheet sheet, final String tempFileName, Map<String, String> knownValues, boolean persistAfter, AtomicBoolean dataChanged) {
-        boolean transpose = false;
         String sheetName = sheet.getInternalSheet().getSheetName();
-        if (sheetName.toLowerCase().contains("transpose")) {
-            transpose = true;
-        }
         String toReturn = "";
         try {
             List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(loggedInUser.getDatabase().getId());
@@ -496,14 +497,14 @@ public final class ImportService {
             }
 
 
-            File temp = File.createTempFile(tempFileName, ".csv");
+            File temp = File.createTempFile(tempFileName + sheetName, ".csv");
             String tempPath = temp.getPath();
             temp.deleteOnExit();
             //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
             FileOutputStream fos = new FileOutputStream(tempPath);
             CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
             csvW.setUseTextQualifier(false);
-            ImportFileUtilities.convertRangeToCSV(sheet, csvW, transpose);
+            ImportFileUtilities.convertRangeToCSV(sheet, csvW);
             csvW.close();
             fos.close();
             return stripTempSuffix(fileName) + ": " + readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, fileNameParameters, persistAfter, true, dataChanged);

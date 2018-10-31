@@ -3,10 +3,10 @@ package com.azquo.dataimport;
 import com.azquo.TypedPair;
 import com.csvreader.CsvWriter;
 import com.jcraft.jsch.*;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
+import org.zkoss.poi.ss.usermodel.Cell;
 import org.zkoss.poi.ss.usermodel.DateUtil;
+import org.zkoss.poi.ss.usermodel.Row;
+import org.zkoss.poi.ss.usermodel.Sheet;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.CellData;
@@ -147,13 +147,22 @@ class ImportFileUtilities2 {
 
     static void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW) throws Exception {
         for (Row row : sheet) {
+            int cellIndex = -1;
             for(Iterator<Cell> ri = row.cellIterator(); ri.hasNext();) {
                 Cell cell = ri.next();
+                if (++cellIndex != cell.getColumnIndex()){
+//                    System.out.println("cell index notu as expectec, found " + cell.getColumnIndex() + ", expected " + cellIndex);
+                    while (cellIndex != cell.getColumnIndex()){
+                        csvW.write("");
+                        cellIndex++;
+                    }
+                }
+//                System.out.println("cell col : " + cell.getColumnIndex());
                 final TypedPair<Double, String> cellValue = getCellValue(cell);
                 csvW.write(cellValue.getSecond().replace("\n", "\\\\n").replace("\r", "")
                         .replace("\t", "\\\\t"));
-                csvW.endRecord();
             }
+            csvW.endRecord();
         }
 
     }
@@ -166,10 +175,10 @@ class ImportFileUtilities2 {
 
     private static TypedPair<Double, String> getCellValue(Cell cell) {
         Double returnNumber = null;
-        String returnString = null;
+        String returnString = "";
         String dataFormat = cell.getCellStyle().getDataFormatString();
         //if (colCount++ > 0) bw.write('\t');
-        if (cell.getStringCellValue() != null) {
+        if (cell.getCellType() == Cell.CELL_TYPE_STRING || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_STRING)) {
             String stringValue = "";
             try {
                 stringValue = cell.getStringCellValue();// I assume means formatted text?
@@ -192,31 +201,36 @@ class ImportFileUtilities2 {
                 }
             } catch (Exception ignored) {
             }
-            if (stringValue.endsWith("%") || (stringValue.contains(".") || !stringValue.startsWith("0")) && !dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
-                //if it's a number, remove all formatting
-                try {
-                    double d = cell.getNumericCellValue();
-                    returnNumber = d;
-                    String newStringValue = d + "";
-                    if (newStringValue.contains("E")) {
-                        newStringValue = String.format("%f",d);
-
-                    }
-                    if (newStringValue.endsWith(".0")) {
-                        stringValue = newStringValue.substring(0, newStringValue.length() - 2);
-                    } else {
-                        if (!newStringValue.endsWith(".000000")){
-                            stringValue = newStringValue;
-                        }
-                    }
-                } catch (Exception ignored) {
-                }
-            }
             if (stringValue.contains("\"\"") && stringValue.startsWith("\"") && stringValue.endsWith("\"")) {
-                //remove spuriouse quote marks
+                //remove spurious quote marks
                 stringValue = stringValue.substring(1, stringValue.length() - 1).replace("\"\"", "\"");
             }
             returnString = stringValue;
+        } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_NUMERIC)){
+            double d = cell.getNumericCellValue();
+            returnNumber = d;
+            String newStringValue = d + "";
+            if (newStringValue.contains("E")) {
+                newStringValue = String.format("%f",d);
+
+            }
+            if (newStringValue.endsWith(".0")) {
+                returnString = newStringValue.substring(0, newStringValue.length() - 2);
+            } else {
+                // problem here - could return string not be set, Edd commenting as it triggered on first test!
+//                if (!newStringValue.endsWith(".000000")){
+                    returnString = newStringValue;
+/*                } else {
+                    System.out.println("numeric not assigning " + newStringValue);
+                }*/
+            }
+        } else if (cell.getCellType() == Cell.CELL_TYPE_BOOLEAN || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_BOOLEAN)){
+            returnString = cell.getBooleanCellValue() + "";
+        } else if (cell.getCellType() != Cell.CELL_TYPE_BLANK){
+            if (cell.getCellType() == Cell.CELL_TYPE_FORMULA){
+                System.out.println("other forumla cell type : " + cell.getCachedFormulaResultType());
+            }
+            System.out.println("other cell type : " + cell.getCellType());
         }
         if (returnString.startsWith("`") && returnString.indexOf("'",1)<0){
             returnString = returnString.substring(1);

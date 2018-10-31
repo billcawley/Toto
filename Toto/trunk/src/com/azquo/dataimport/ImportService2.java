@@ -21,14 +21,20 @@ import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.csvreader.CsvWriter;
 import org.apache.commons.io.FileUtils;
-import org.apache.poi.openxml4j.opc.OPCPackage;
+/*import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.AreaReference;
 import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFName;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;*/
 import org.springframework.web.multipart.MultipartFile;
 import org.zeroturnaround.zip.ZipUtil;
+import org.zkoss.poi.openxml4j.opc.OPCPackage;
+import org.zkoss.poi.ss.usermodel.Sheet;
+import org.zkoss.poi.ss.util.AreaReference;
+import org.zkoss.poi.ss.util.CellReference;
+import org.zkoss.poi.xssf.usermodel.XSSFName;
+import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.model.CellRegion;
@@ -76,6 +82,7 @@ public final class ImportService2 {
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
         }
+
         File tempFile = ImportFileUtilities2.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
         uploadFile.close(); // windows requires this (though windows should not be used in production), perhaps not a bad idea anyway
         String toReturn;
@@ -127,7 +134,17 @@ public final class ImportService2 {
         }
         UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
                 , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName, setup ? "setup" : "", "", filePath);//should record the error? (in comment)
-        UploadRecordDAO.store(uploadRecord);
+        // todo - uncomment when pasting back over!!
+        System.out.println("********");
+        System.out.println("********");
+        System.out.println("********");
+        System.out.println("********");
+        System.out.println("not storing upload record (should only happen on ImportService2 test)");
+        System.out.println("********");
+        System.out.println("********");
+        System.out.println("********");
+        System.out.println("********");
+        //UploadRecordDAO.store(uploadRecord);
         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         int executePos = toReturn.toLowerCase().indexOf("execute:");
         if (executePos > 0) {
@@ -155,7 +172,7 @@ public final class ImportService2 {
                 XSSFName listRegion = book.getName(ReportRenderer.AZLISTSTART);
 //                SName listRegion = book.getInternalBook().getNameByName(ReportRenderer.AZLISTSTART);
                 if (listRegion != null && listRegion.getRefersToFormula() != null) {
-                    AreaReference aref = new AreaReference(listRegion.getRefersToFormula(), null);
+                    AreaReference aref = new AreaReference(listRegion.getRefersToFormula());
                         row = aref.getFirstCell().getRow();
                 } else {
                     if ("Email/logon".equalsIgnoreCase(userSheet.getRow(4).getCell( 0).getStringCellValue())) {
@@ -266,7 +283,7 @@ public final class ImportService2 {
 //                SName listRegion = book.getInternalBook().getNameByName("data");
                 XSSFName listRegion = book.getName("data");
                 if (listRegion != null && listRegion.getRefersToFormula() != null) {
-                    AreaReference aref = new AreaReference(listRegion.getRefersToFormula(), null);
+                    AreaReference aref = new AreaReference(listRegion.getRefersToFormula());
                         row = aref.getFirstCell().getRow();
                 }
                 
@@ -345,7 +362,8 @@ public final class ImportService2 {
             OPCPackage opcPackage = OPCPackage.open(fs);
             book = new XSSFWorkbook(opcPackage);
             //book = Importers.getImporter().imports(new File(tempPath), "Imported");
-            System.out.println("millis to read an Excel file for import " + (System.currentTimeMillis() - time));
+            System.out.println("millis to read an Excel file for import new way" +
+                    " " + (System.currentTimeMillis() - time));
         } catch (Exception e) {
             e.printStackTrace();
             return stripTempSuffix(fileName) + ": Import error - " + e.getMessage();
@@ -402,14 +420,15 @@ public final class ImportService2 {
         Map<String, String> knownValues = new HashMap<String, String>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            toReturn.append(readSheet(loggedInUser, fileName, fileNameParameters, sheet, tempPath, knownValues, sheetNo == book.getNumberOfSheets() - 1 && persistAfter, dataChanged)); // that last conditional means persist on the last one through (if we've been told to persist)
+            toReturn.append(readSheet(loggedInUser, fileName, fileNameParameters, sheet, tempPath+"poi", knownValues, sheetNo == book.getNumberOfSheets() - 1 && persistAfter, dataChanged)); // that last conditional means persist on the last one through (if we've been told to persist)
             toReturn.append("\n");
         }
         return toReturn.toString();
     }
 
     private static void checkEditableSets(XSSFWorkbook book, LoggedInUser loggedInUser) {
-        for (XSSFName sName : book.getAllNames()) {
+        for (int i = 0; i <  book.getNumberOfNames(); i++) {
+            XSSFName sName = book.getNameAt(i);
             if (sName.getNameName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
                 String region = sName.getNameName().substring(ReportRenderer.AZROWHEADINGS.length());
                 Sheet sheet = book.getSheet(sName.getSheetName());
@@ -423,7 +442,7 @@ public final class ImportService2 {
                         editLine.append("edit:saveset ");
                         editLine.append("`" + setName + "` ");
                         if (displayName.getRefersToFormula() != null){
-                            AreaReference aref = new AreaReference(displayName.getRefersToFormula(), null);
+                            AreaReference aref = new AreaReference(displayName.getRefersToFormula());
                             int rowCount = aref.getLastCell().getRow() - aref.getLastCell().getRow();
                             rowCount++; // don't want it to be 0!
                             for (int rowNo = 0; rowNo <  rowCount; rowNo++) {
@@ -520,13 +539,13 @@ public final class ImportService2 {
                             }
                         }
                         return toReturn;
-
+g
                     }
                 }
             }*/
 
 
-            File temp = File.createTempFile(tempFileName, ".csv");
+            File temp = File.createTempFile(tempFileName + sheetName, ".csv");
             String tempPath = temp.getPath();
             temp.deleteOnExit();
             //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
@@ -538,6 +557,7 @@ public final class ImportService2 {
             fos.close();
             return stripTempSuffix(fileName) + ": " + readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, fileNameParameters, persistAfter, true, dataChanged);
         } catch (Exception e) {
+            e.printStackTrace();
             return "\n" + stripTempSuffix(fileName) + ": " + e.getMessage();
         }
 
@@ -553,7 +573,8 @@ public final class ImportService2 {
         if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
             filePath = ImportFileUtilities2.copyFileToDatabaseServer(new FileInputStream(filePath), databaseServer.getSftpUrl());
         }
-        String s = RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileName, fileNameParameters, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
+        String s = "no db upload, testing";
+//        String s = RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileName, fileNameParameters, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
         if (s.startsWith(Constants.DATABASE_UNMODIFIED)){
             s = s.substring(Constants.DATABASE_UNMODIFIED.length());
         } else {
@@ -561,6 +582,8 @@ public final class ImportService2 {
         }
         return s;
     }
+
+    // EFC note - I don't like this
 
     public static String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName) throws Exception {
         String success = "image uploaded successfully";
@@ -692,10 +715,14 @@ public final class ImportService2 {
     }
 
     private static XSSFName getNameByName(String name, Sheet sheet, XSSFWorkbook book) {
-        List<XSSFName> names = book.getNames(name);
-        for (XSSFName name1 : names){
-            if (name1.getSheetName().equals(sheet.getSheetName())){
-                return  name1;
+        List<XSSFName> names = new ArrayList<>();
+        for (int i = 0; i <  book.getNumberOfNames(); i++) {
+            XSSFName name1 = book.getNameAt(i);
+            if (name1.getNameName().equalsIgnoreCase(name)){
+                if (name1.getSheetName().equals(sheet.getSheetName())){
+                    return  name1;
+                }
+                names.add(name1);
             }
         }
         if (!names.isEmpty()){
@@ -730,7 +757,8 @@ public final class ImportService2 {
     private static Map<String, String> uploadChoices(XSSFWorkbook book) {
         //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
         Map<String, String> choices = new HashMap<>();
-        for (XSSFName sName : book.getAllNames()) {
+        for (int i = 0; i <  book.getNumberOfNames(); i++) {
+            XSSFName sName = book.getNameAt(i);
             String rangeName = sName.getNameName().toLowerCase();
             if (rangeName.endsWith("chosen")) {
                 //there is probably a more elegant solution than this....
