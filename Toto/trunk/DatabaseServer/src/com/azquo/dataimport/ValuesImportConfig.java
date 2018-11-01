@@ -17,7 +17,7 @@ Note : while some fields might be thread safe, this object is not designed to be
 adjusting functions before it's passed to ValuesImport
  */
 
-class ValuesImportConfig {
+public class ValuesImportConfig {
     private MappingIterator<String[]> originalIterator;
     private Iterator<String[]> lineIterator;
     private int batchSize;
