@@ -229,7 +229,7 @@ class ImportFileUtilities {
             }
             returnString = stringValue;
         }
-        if (returnString.startsWith("`") && returnString.indexOf("'", 1) < 0) {
+        if (returnString.startsWith("`") && returnString.indexOf("`", 1) < 0) {
             returnString = returnString.substring(1);
         }
         if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
