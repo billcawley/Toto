@@ -11,7 +11,9 @@ Also chop the first 4 lines
 */
 
 def fileProcess(Object[] args) {
-    String filePath = args[0];
+    ValuesImportConfig valuesImportConfig = (ValuesImportConfig) args[0];
+    String filePath = valuesImportConfig.getFilePath();
+    //AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
     File file = new File(filePath);
     def outFile = filePath + "groovyout"
     File writeFile = new File(outFile);

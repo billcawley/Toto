@@ -1,15 +1,19 @@
 /*
 
+
 Need to check for where there's more than one contract line and assign a section column at the end
 
 */
+import com.azquo.dataimport.ValuesImportConfig
 
 def fileProcess(Object[] args) {
     // now do it again
     println("risk all risks premium running ")
     def lineNo = 1
     int headingsLine = 0;
-    String filePath = args[0];
+    ValuesImportConfig valuesImportConfig = (ValuesImportConfig) args[0];
+    String filePath = valuesImportConfig.getFilePath();
+    //AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
     File file = new File(filePath);
     def outFile = filePath + "groovyout"
     File writeFile = new File(outFile);
@@ -17,6 +21,7 @@ def fileProcess(Object[] args) {
     String line
     int contractNumCol = 0;
     int contractPremCol = 0;
+    int agreementCol = 0;
     List<String> linesToSort = new ArrayList<>();
     fileWriter = writeFile.newWriter();
     file.withReader { reader ->
@@ -28,6 +33,9 @@ def fileProcess(Object[] args) {
                 int colNum = 0;
                 while (st.hasMoreTokens()){
                     String col = st.nextToken()
+                    if (col.equalsIgnoreCase("agmt_num")){
+                        agreementCol = colNum
+                    }
                     if (col.equalsIgnoreCase("contract_num")){
                         contractNumCol = colNum
                     }
@@ -39,6 +47,10 @@ def fileProcess(Object[] args) {
                 fileWriter.write(line + "\tLine")
                 fileWriter.write("\r\n")
             } else if (headingsLine != 0){ // ok we're into data
+                if (contractPremCol >=0 && line[contractPremCol].length() < 8){
+                    valuesImportConfig.getFileNameParameters().put("import template","risk allriskspremium1");
+
+                }
                 if (!line.trim().isEmpty()){
                     linesToSort.add(line);
                 }
