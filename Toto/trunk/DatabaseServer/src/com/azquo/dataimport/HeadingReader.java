@@ -65,13 +65,15 @@ class HeadingReader {
     static final String EXCLUSIVE = "exclusive";
     static final String CLEAR = "clear";
     static final String COMMENT = "comment";
-    static final String EXISTING = "existing"; // only works in in context of child of
+     static final String EXISTING = "existing"; // only works in in context of child of
     // essentially using either of these keywords switches to pivot mode (like an Excel pivot) where a name is created
     // from the line number and in a set called the name of the file, uploading successive files with the same name would of course cause problems for this system, data should be cleared before re uploading
     static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table, they are replaced before parsing starts properly
     static final String LINEDATA = "linedata";
     static final String SPLIT = "split";
     static final String TOPLINE = "topline";
+    static final String CHECK = "check";
+
     /*DICTIONARY finds a name based on the string value of the cell.  The system will search all names for the attribute given by the 'dictionary' term.  For instance if the phrase is 'dictionary complaint terms'
     the system will look through all the attributes 'complaint terms' to see if any match the value of this cell.
     the 'terms' consist of words or phrases separated by '+','-' or ','.   ',' means  'or'  '+' means 'and' and '-' means 'and not'
@@ -680,6 +682,36 @@ todo - add classification here
 
 
                 break;
+            case CHECK:
+                String[] checks = result.split(";");
+               for (String check:checks){
+                   boolean ok = false;
+                   check = check.toLowerCase().trim();
+                   if (check.startsWith("letters ")){
+                        String letterCheck = check.substring(7).trim();
+
+                        while (letterCheck.length() > 0 && (letterCheck.startsWith(">") || letterCheck.startsWith("=") || letterCheck.startsWith("<"))){
+                            ok = true;
+                            letterCheck = letterCheck.substring(1);
+                        }
+                        if (ok) {
+                            try {
+                                int i = Integer.parseInt(letterCheck.trim());
+
+                            } catch (Exception e){
+                                ok = false;
+                            }
+                        }
+                   }else{
+                       if (check.equals("number")){
+                           ok = true;
+                       }
+                   }
+                   if (!ok){
+                       throw new Exception("heading "+ heading.heading + " has unknown check " + check);
+                   }
+                }
+                heading.checkList = result;
             default:
                 throw new Exception(firstWord + " not understood in heading '" + heading.heading + "'");
         }
