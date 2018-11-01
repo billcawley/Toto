@@ -7,6 +7,8 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.service.*;
 import com.azquo.memorydb.*;
+import com.azquo.dataimport.ValuesImportConfig
+
 def fileProcess(Object[] args) {
     // loose typing seems to be what's required here
     ValuesImportConfig valuesImportConfig = (ValuesImportConfig) args[0];

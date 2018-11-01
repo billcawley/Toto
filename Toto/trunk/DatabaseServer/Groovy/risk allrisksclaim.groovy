@@ -9,6 +9,8 @@ so we have to make the last column Claim State showing this as appropriate, ther
 Also chop the first 4 lines
 
 */
+import com.azquo.dataimport.ValuesImportConfig
+
 
 def fileProcess(Object[] args) {
     ValuesImportConfig valuesImportConfig = (ValuesImportConfig) args[0];

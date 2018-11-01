@@ -8,8 +8,9 @@ if Column E holds a value starting 'S' this is a sales invoice         - fill th
 else leave the two columns blank.
 
 */
+import com.azquo.dataimport.ValuesImportConfig
 
-import com.azquo.memorydb.service.*;
+
 def fileProcess(Object[] args) {
     // loose typing seems to be what's required here
     ValuesImportConfig valuesImportConfig = (ValuesImportConfig) args[0];
