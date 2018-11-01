@@ -112,9 +112,9 @@ class ValuesImportConfigProcessor {
                 }
                 if (file.exists()) {
                     System.out.println("Groovy found! Running  . . . ");
-                    Object[] groovyParams = new Object[3];
-                    groovyParams[0] = valuesImportConfig.getFilePath();
-                    groovyParams[1] = valuesImportConfig.getAzquoMemoryDBConnection();
+                    Object[] groovyParams = new Object[1];
+                    groovyParams[0] = valuesImportConfig;
+                    //groovyParams[1] = valuesImportConfig.getAzquoMemoryDBConnection();
                     GroovyShell shell = new GroovyShell();
                     final Script script = shell.parse(file);
                     System.out.println("loaded groovy " + file.getPath());
@@ -319,17 +319,21 @@ class ValuesImportConfigProcessor {
             lastfilled = false;
             // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
             for (String heading : nextLine) {
-                if (heading.length() > 0 && !heading.equals("--") && colNo < headers.size()) { //ignore "--", can be used to give space below the headers
-                    if (heading.startsWith(".")) {
-                        headers.set(colNo, headers.get(colNo) + heading);
-                    } else {
-                        if (headers.get(colNo).length() == 0) {
-                            headers.set(colNo, heading);
+                if (heading.length() > 0 && !heading.equals("--")) { //ignore "--", can be used to give space below the headers
+                    if (colNo >= headers.size()){
+                        headers.add(heading);
+                    }else {
+                        if (heading.startsWith(".")) {
+                            headers.set(colNo, headers.get(colNo) + heading);
                         } else {
-                            if (findReservedWord(heading)) {
-                                headers.set(colNo, headers.get(colNo) + ";" + heading.trim());
+                            if (headers.get(colNo).length() == 0) {
+                                headers.set(colNo, heading);
                             } else {
-                                headers.set(colNo, heading.trim() + "|" + headers.get(colNo));
+                                if (findReservedWord(heading)) {
+                                    headers.set(colNo, headers.get(colNo) + ";" + heading.trim());
+                                } else {
+                                    headers.set(colNo, heading.trim() + "|" + headers.get(colNo));
+                                }
                             }
                         }
                     }
