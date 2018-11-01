@@ -57,6 +57,7 @@ class ImmutableImportHeading {
      Map<String, List<String>> synonyms;
      String lookupFrom;
      String lookupTo;
+     String checkList;
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -86,6 +87,7 @@ class ImmutableImportHeading {
         this.synonyms = mutableImportHeading.synonyms;
         this.lookupFrom = mutableImportHeading.lookupFrom;
         this.lookupTo = mutableImportHeading.lookupTo;
+        this.checkList = mutableImportHeading.checkList;
 
     }
 }

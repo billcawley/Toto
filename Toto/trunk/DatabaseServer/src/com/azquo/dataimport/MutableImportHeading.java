@@ -90,4 +90,5 @@ class MutableImportHeading {
     Map<String, List<String>> synonyms = null;
     String lookupFrom = null;
     String lookupTo = null;
+    String checkList = null; //list of terms 'number' or 'letters <=> n' separated by ';'
 }
