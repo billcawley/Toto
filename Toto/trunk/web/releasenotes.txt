@@ -1,3 +1,8 @@
+31-10-18-2
+
+Removed the ZK importer optimization, it was causing a problem with sheet update detection (snap charts and resolve formulae function)
+
+
 31-10-18
 
 Initial version of pending uploads - only visible if some files actually are there to be processed

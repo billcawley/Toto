@@ -3,10 +3,8 @@ package com.azquo.dataimport;
 import com.azquo.TypedPair;
 import com.csvreader.CsvWriter;
 import com.jcraft.jsch.*;
-import org.zkoss.poi.ss.usermodel.Cell;
-import org.zkoss.poi.ss.usermodel.DateUtil;
-import org.zkoss.poi.ss.usermodel.Row;
-import org.zkoss.poi.ss.usermodel.Sheet;
+import org.springframework.security.access.method.P;
+import org.zkoss.poi.ss.usermodel.*;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.CellData;
@@ -24,7 +22,6 @@ import java.util.Iterator;
  * Created by edward on 11/11/16.
  * <p>
  * Factoring off a few functions from ImportService.
- *
  */
 class ImportFileUtilities2 {
 
@@ -33,12 +30,12 @@ class ImportFileUtilities2 {
     // as in drop the import stream into a temp file and return its path
     // todo, better api calls, perhaps making the function redundant
     static File tempFileWithoutDecoding(final InputStream data, final String fileName) throws IOException {
-            File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
-            temp.deleteOnExit();
-            FileOutputStream fos = new FileOutputStream(temp);
-            org.apache.commons.io.IOUtils.copy(data, fos);
-            fos.close();
-            return temp;
+        File temp = File.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
+        temp.deleteOnExit();
+        FileOutputStream fos = new FileOutputStream(temp);
+        org.apache.commons.io.IOUtils.copy(data, fos);
+        fos.close();
+        return temp;
     }
 
     static String copyFileToDatabaseServer(InputStream inputStream, String sftpDestination) {
@@ -148,11 +145,11 @@ class ImportFileUtilities2 {
     static void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW) throws Exception {
         for (Row row : sheet) {
             int cellIndex = -1;
-            for(Iterator<Cell> ri = row.cellIterator(); ri.hasNext();) {
+            for (Iterator<Cell> ri = row.cellIterator(); ri.hasNext(); ) {
                 Cell cell = ri.next();
-                if (++cellIndex != cell.getColumnIndex()){
+                if (++cellIndex != cell.getColumnIndex()) {
 //                    System.out.println("cell index notu as expectec, found " + cell.getColumnIndex() + ", expected " + cellIndex);
-                    while (cellIndex != cell.getColumnIndex()){
+                    while (cellIndex != cell.getColumnIndex()) {
                         csvW.write("");
                         cellIndex++;
                     }
@@ -171,6 +168,7 @@ class ImportFileUtilities2 {
         return getCellValue(sheet.getRow(row).getCell(col));
     }
 
+    static DataFormatter df = new DataFormatter();
     // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO - factor common code
 
     private static TypedPair<Double, String> getCellValue(Cell cell) {
@@ -179,63 +177,62 @@ class ImportFileUtilities2 {
         String dataFormat = cell.getCellStyle().getDataFormatString();
         //if (colCount++ > 0) bw.write('\t');
         if (cell.getCellType() == Cell.CELL_TYPE_STRING || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_STRING)) {
-            String stringValue = "";
             try {
-                stringValue = cell.getStringCellValue();// I assume means formatted text?
-                if (dataFormat.equals("h:mm") && stringValue.length()==4) {
-                    //ZK BUG - reads "hh:mm" as "h:mm"
-                    stringValue = "0"+stringValue;
-                }else {
-                    if (dataFormat.toLowerCase().contains("m") &&  dataFormat.length() > 6) {
-                        try {
-                            Date javaDate = DateUtil.getJavaDate((cell.getNumericCellValue()));
-                            stringValue = YYYYMMDD.format(javaDate);
-                        } catch (Exception e) {
-                            //not sure what to do here.
-                        }
-
-                    }
-                }
-                if ((stringValue.length() == 6 || stringValue.length()==8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-") ) {//another ZK bug
-                    stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
-                }
+                returnString = cell.getStringCellValue();// I assume means formatted text?
             } catch (Exception ignored) {
             }
-            if (stringValue.contains("\"\"") && stringValue.startsWith("\"") && stringValue.endsWith("\"")) {
-                //remove spurious quote marks
-                stringValue = stringValue.substring(1, stringValue.length() - 1).replace("\"\"", "\"");
+        } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_NUMERIC)) {
+            returnNumber = cell.getNumericCellValue();
+            returnString = returnNumber.toString();
+            if (returnString.contains("E")) {
+                returnString = String.format("%f", returnNumber);
             }
-            returnString = stringValue;
-        } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_NUMERIC)){
-            double d = cell.getNumericCellValue();
-            returnNumber = d;
-            String newStringValue = d + "";
-            if (newStringValue.contains("E")) {
-                newStringValue = String.format("%f",d);
+            if (returnNumber%1 == 0) {
+                // specific condition - integer and format all 000, then actually use the format. For zip codes
+                if (dataFormat.contains("0") && dataFormat.replace("0","").isEmpty()){
+                    returnString = df.formatCellValue(cell);
+                } else {
+                    returnString = returnNumber.intValue() + "";
+                }
+            }
 
-            }
-            if (newStringValue.endsWith(".0")) {
-                returnString = newStringValue.substring(0, newStringValue.length() - 2);
+            if (dataFormat.equals("h:mm") && returnString.length() == 4) {
+                //ZK BUG - reads "hh:mm" as "h:mm"
+                returnString = "0" + returnString;
             } else {
-                // problem here - could return string not be set, Edd commenting as it triggered on first test!
-//                if (!newStringValue.endsWith(".000000")){
-                    returnString = newStringValue;
-/*                } else {
-                    System.out.println("numeric not assigning " + newStringValue);
-                }*/
+                if (dataFormat.toLowerCase().contains("m") && dataFormat.length() > 6) {
+                    try {
+                        returnString = YYYYMMDD.format(cell.getDateCellValue());
+                    } catch (Exception e) {
+                        //not sure what to do here.
+                    }
+
+                }
             }
-        } else if (cell.getCellType() == Cell.CELL_TYPE_BOOLEAN || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_BOOLEAN)){
+            if ((returnString.length() == 6 || returnString.length() == 8) && returnString.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-")) {//another ZK bug
+                returnString = returnString.replace(" ", "-");//crude replacement of spaces in dates with dashes
+            }
+/*            if (!dataFormat.equalsIgnoreCase("general")){
+                System.out.println("data format, " + dataFormat + " new sting value " + newStringValue);
+            }*/
+        } else if (cell.getCellType() == Cell.CELL_TYPE_BOOLEAN || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_BOOLEAN)) {
             returnString = cell.getBooleanCellValue() + "";
-        } else if (cell.getCellType() != Cell.CELL_TYPE_BLANK){
-            if (cell.getCellType() == Cell.CELL_TYPE_FORMULA){
+        } else if (cell.getCellType() != Cell.CELL_TYPE_BLANK) {
+            if (cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
                 System.out.println("other forumla cell type : " + cell.getCachedFormulaResultType());
             }
             System.out.println("other cell type : " + cell.getCellType());
         }
-        if (returnString.startsWith("`") && returnString.indexOf("'",1)<0){
+        if (returnString.contains("\"\"") && returnString.startsWith("\"") && returnString.endsWith("\"")) {
+            //remove spurious quote marks
+            returnString = returnString.substring(1, returnString.length() - 1).replace("\"\"", "\"");
+        }
+
+        if (returnString.startsWith("`") && returnString.indexOf("'", 1) < 0) {
             returnString = returnString.substring(1);
         }
-        if (returnString.startsWith("'") && returnString.indexOf("'",1) <0) returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
+        if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
+            returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
         return new TypedPair<>(returnNumber, returnString.trim());
     }
 
@@ -253,11 +250,11 @@ class ImportFileUtilities2 {
             String stringValue = "";
             try {
                 stringValue = cellData.getFormatText();// I assume means formatted text
-                if (dataFormat.equals("h:mm") && stringValue.length()==4) {
+                if (dataFormat.equals("h:mm") && stringValue.length() == 4) {
                     //ZK BUG - reads "hh:mm" as "h:mm"
-                    stringValue = "0"+stringValue;
-                }else {
-                    if (dataFormat.toLowerCase().contains("m") &&  dataFormat.length() > 6) {
+                    stringValue = "0" + stringValue;
+                } else {
+                    if (dataFormat.toLowerCase().contains("m") && dataFormat.length() > 6) {
                         try {
                             Date javaDate = DateUtil.getJavaDate((cellData.getDoubleValue()));
                             stringValue = YYYYMMDD.format(javaDate);
@@ -267,7 +264,7 @@ class ImportFileUtilities2 {
 
                     }
                 }
-                if ((stringValue.length() == 6 || stringValue.length()==8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-") ) {//another ZK bug
+                if ((stringValue.length() == 6 || stringValue.length() == 8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-")) {//another ZK bug
                     stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
                 }
             } catch (Exception ignored) {
@@ -279,13 +276,13 @@ class ImportFileUtilities2 {
                     returnNumber = d;
                     String newStringValue = d + "";
                     if (newStringValue.contains("E")) {
-                        newStringValue = String.format("%f",d);
+                        newStringValue = String.format("%f", d);
 
                     }
                     if (newStringValue.endsWith(".0")) {
                         stringValue = newStringValue.substring(0, newStringValue.length() - 2);
                     } else {
-                        if (!newStringValue.endsWith(".000000")){
+                        if (!newStringValue.endsWith(".000000")) {
                             stringValue = newStringValue;
                         }
                     }
@@ -298,10 +295,11 @@ class ImportFileUtilities2 {
             }
             returnString = stringValue;
         }
-        if (returnString.startsWith("`") && returnString.indexOf("'",1)<0){
+        if (returnString.startsWith("`") && returnString.indexOf("'", 1) < 0) {
             returnString = returnString.substring(1);
         }
-        if (returnString.startsWith("'") && returnString.indexOf("'",1) <0) returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
+        if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
+            returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
         return new TypedPair<>(returnNumber, returnString.trim());
     }
 
