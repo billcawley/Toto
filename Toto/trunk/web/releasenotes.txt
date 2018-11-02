@@ -1,3 +1,19 @@
+02-11-18
+
+
+01-11-18
+
+New 'check' work (not yet completed) - basic column validation for when users mix up columns in a data file
+
+Fixed bug where ` was deleted from start of import string
+
+Some work on how groovy scripts are loaded
+
+Further work on new faster POI import, may be enabled early next week
+
+Fixed nasty bug when saving using a temporary set. Lookup on temporary sets should be by user email/logon NOT name!
+
+
 31-10-18-2
 
 Removed the ZK importer optimization, it was causing a problem with sheet update detection (snap charts and resolve formulae function)

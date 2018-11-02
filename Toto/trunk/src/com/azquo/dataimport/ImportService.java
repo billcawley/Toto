@@ -4,7 +4,8 @@ import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.*;
-import com.azquo.admin.user.*;
+import com.azquo.admin.user.User;
+import com.azquo.admin.user.UserDAO;
 import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
@@ -15,19 +16,28 @@ import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
-import com.azquo.spreadsheet.zk.BookUtils;
 import com.csvreader.CsvWriter;
 import org.apache.commons.io.FileUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.zeroturnaround.zip.ZipUtil;
+import org.zkoss.poi.openxml4j.opc.OPCPackage;
+import org.zkoss.poi.ss.usermodel.Sheet;
+import org.zkoss.poi.ss.util.AreaReference;
+import org.zkoss.poi.ss.util.CellReference;
+import org.zkoss.poi.xssf.usermodel.XSSFName;
+import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
-import org.zkoss.zss.api.model.Sheet;
-import org.zkoss.zss.model.*;
+import org.zkoss.zss.model.CellRegion;
+import org.zkoss.zss.model.SName;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,9 +69,6 @@ public final class ImportService {
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public static String importTheFile(LoggedInUser loggedInUser, String fileName, String filePath, Map<String, String> inheritedFileNameParams, boolean isData, boolean setup, boolean isLast, AtomicBoolean dataChanged) throws Exception { // setup just to flag it
-        if (fileName.contains("andnewtest")){
-            System.out.println("import service 2 result " + ImportService2.importTheFile(loggedInUser, fileName, filePath, inheritedFileNameParams, isData, setup, isLast, dataChanged));
-        }
         Map<String, String> fileNameParams = inheritedFileNameParams != null ? new HashMap<>(inheritedFileNameParams) : new HashMap<>(); // copy, it might be modified
         addFileNameParametersToMap(fileName, fileNameParams);
         InputStream uploadFile = new FileInputStream(filePath);
@@ -69,7 +76,8 @@ public final class ImportService {
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
         }
-        File tempFile = ImportFileUtilities2.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
+
+        File tempFile = ImportFileUtilities.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
         uploadFile.close(); // windows requires this (though windows should not be used in production), perhaps not a bad idea anyway
         String toReturn;
         if (fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
@@ -135,18 +143,23 @@ public final class ImportService {
     private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, Map<String, String> fileNameParameters, String filePath, boolean persistAfter, boolean isData, AtomicBoolean dataChanged) throws Exception {
         String toReturn = "";
         if (fileName.startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
-            Book book = Importers.getImporter().imports(new File(filePath), "Report name");
+            FileInputStream fs = new FileInputStream(new File(filePath));
+            OPCPackage opcPackage = OPCPackage.open(fs);
+            XSSFWorkbook book = new XSSFWorkbook(opcPackage);
+            //Book book = Importers.getImporter().imports(new File(filePath), "Report name");
             List<String> notAllowed = new ArrayList<>();
             List<String> rejected = new ArrayList<>();
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             if (userSheet != null) {
                 dataChanged.set(true);
                 int row = 1;
-                SName listRegion = book.getInternalBook().getNameByName(ReportRenderer.AZLISTSTART);
-                if (listRegion != null && listRegion.getRefersToCellRegion() != null) {
-                    row = listRegion.getRefersToCellRegion().getRow();
+                XSSFName listRegion = book.getName(ReportRenderer.AZLISTSTART);
+//                SName listRegion = book.getInternalBook().getNameByName(ReportRenderer.AZLISTSTART);
+                if (listRegion != null && listRegion.getRefersToFormula() != null) {
+                    AreaReference aref = new AreaReference(listRegion.getRefersToFormula());
+                    row = aref.getFirstCell().getRow();
                 } else {
-                    if ("Email/logon".equalsIgnoreCase(userSheet.getInternalSheet().getCell(4, 0).getStringValue())) {
+                    if ("Email/logon".equalsIgnoreCase(userSheet.getRow(4).getCell( 0).getStringCellValue())) {
                         row = 5;
                     } else {
                         throw new Exception("az_ListStart not found, typically it is A6");
@@ -170,24 +183,24 @@ public final class ImportService {
                         }
                     }
                 }
-                while (userSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && userSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
+                while (userSheet.getRow(row).getCell( 0).getStringCellValue() != null && userSheet.getRow(row).getCell( 0).getStringCellValue().length() > 0) {
                     //Email	Name  Password	End Date	Status	Database	Report
-                    String user = userSheet.getInternalSheet().getCell(row, 1).getStringValue().trim();
-                    String email = userSheet.getInternalSheet().getCell(row, 0).getStringValue().trim();
+                    String user = userSheet.getRow(row).getCell( 1).getStringCellValue().trim();
+                    String email = userSheet.getRow(row).getCell( 0).getStringCellValue().trim();
                     if (notAllowed.contains(email)) rejected.add(email);
                     if (!loggedInUser.getUser().getEmail().equals(email) && !notAllowed.contains(email)) { // leave the logged in user alone!
                         String salt = "";
-                        String password = userSheet.getInternalSheet().getCell(row, 2).getStringValue();
-                        String selections = userSheet.getInternalSheet().getCell(row, 7).getStringValue();
+                        String password = userSheet.getRow(row).getCell( 2).getStringCellValue();
+                        String selections = userSheet.getRow(row).getCell( 7).getStringCellValue();
                         if (password == null) {
                             password = "";
                         }
                         LocalDate end = LocalDate.now().plusYears(10);
                         try {
-                            end = LocalDate.parse(userSheet.getInternalSheet().getCell(row, 3).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
+                            end = LocalDate.parse(userSheet.getRow(row).getCell( 3).getStringCellValue(), CreateExcelForDownloadController.dateTimeFormatter);
                         } catch (Exception ignored) {
                         }
-                        String status = userSheet.getInternalSheet().getCell(row, 4).getStringValue();
+                        String status = userSheet.getRow(row).getCell( 4).getStringCellValue();
                         if (!loggedInUser.getUser().isAdministrator()) {
                             status = "USER"; // only admins can set status
                         }
@@ -202,10 +215,10 @@ public final class ImportService {
                         if (password.isEmpty()){
                             throw new Exception("Blank password for " + email);
                         }
-                        Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 5).getStringValue(), loggedInUser.getUser().getBusinessId());
-                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getInternalSheet().getCell(row, 6).getStringValue(), loggedInUser.getUser().getBusinessId());
+                        Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getRow(row).getCell( 5).getStringCellValue(), loggedInUser.getUser().getBusinessId());
+                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getRow(row).getCell( 6).getStringCellValue(), loggedInUser.getUser().getBusinessId());
                         if (!status.equalsIgnoreCase(User.STATUS_ADMINISTRATOR) && !status.equalsIgnoreCase(User.STATUS_DEVELOPER) && or == null){
-                            throw new Exception("Unable to find report " + userSheet.getInternalSheet().getCell(row, 6).getStringValue());
+                            throw new Exception("Unable to find report " + userSheet.getRow(row).getCell( 6).getStringCellValue());
                         }
                         // todo - master and user types need to check for a report and error if it's not there
                         if (!loggedInUser.getUser().isAdministrator()) { // then I need to check against the session for allowable reports and databases
@@ -243,36 +256,42 @@ public final class ImportService {
             }
             return message.toString();
         } else if (fileName.equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
-            Book book = Importers.getImporter().imports(new File(fileName), "Report name");
+            FileInputStream fs = new FileInputStream(new File(filePath));
+            OPCPackage opcPackage = OPCPackage.open(fs);
+            XSSFWorkbook book = new XSSFWorkbook(opcPackage);
+            //Book book = Importers.getImporter().imports(new File(fileName), "Report name");
             Sheet schedulesSheet = book.getSheet("ReportSchedules"); // literals not best practice, could it be factored between this and the xlsx file?
             if (schedulesSheet != null) {
                 dataChanged.set(true);
                 int row = 1;
-                SName listRegion = book.getInternalBook().getNameByName("data");
-                if (listRegion != null) {
-                    row = listRegion.getRefersToCellRegion().getRow();
+//                SName listRegion = book.getInternalBook().getNameByName("data");
+                XSSFName listRegion = book.getName("data");
+                if (listRegion != null && listRegion.getRefersToFormula() != null) {
+                    AreaReference aref = new AreaReference(listRegion.getRefersToFormula());
+                    row = aref.getFirstCell().getRow();
                 }
+
                 final List<ReportSchedule> reportSchedules = AdminService.getReportScheduleList(loggedInUser);
                 for (ReportSchedule reportSchedule : reportSchedules) {
                     ReportScheduleDAO.removeById(reportSchedule);
                 }
-                while (schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue() != null && schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue().length() > 0) {
-                    String period = schedulesSheet.getInternalSheet().getCell(row, 0).getStringValue();
-                    String recipients = schedulesSheet.getInternalSheet().getCell(row, 1).getStringValue();
+                while (schedulesSheet.getRow(row).getCell( 0).getStringCellValue() != null && schedulesSheet.getRow(row).getCell( 0).getStringCellValue().length() > 0) {
+                    String period = schedulesSheet.getRow(row).getCell( 0).getStringCellValue();
+                    String recipients = schedulesSheet.getRow(row).getCell( 1).getStringCellValue();
                     LocalDateTime nextDue = LocalDateTime.now();
                     try {
-                        nextDue = LocalDateTime.parse(schedulesSheet.getInternalSheet().getCell(row, 2).getStringValue(), CreateExcelForDownloadController.dateTimeFormatter);
+                        nextDue = LocalDateTime.parse(schedulesSheet.getRow(row).getCell( 2).getStringCellValue(), CreateExcelForDownloadController.dateTimeFormatter);
                     } catch (Exception ignored) {
                     }
-                    String database = schedulesSheet.getInternalSheet().getCell(row, 3).getStringValue();
+                    String database = schedulesSheet.getRow(row).getCell( 3).getStringCellValue();
                     Database database1 = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
                     if (database1 != null) {
-                        String report = schedulesSheet.getInternalSheet().getCell(row, 4).getStringValue();
+                        String report = schedulesSheet.getRow(row).getCell( 4).getStringCellValue();
                         OnlineReport onlineReport = OnlineReportDAO.findForDatabaseIdAndName(database1.getId(), report);
                         if (onlineReport != null) {
-                            String type = schedulesSheet.getInternalSheet().getCell(row, 5).getStringValue();
-                            String parameters = schedulesSheet.getInternalSheet().getCell(row, 6).getStringValue();
-                            String emailSubject = schedulesSheet.getInternalSheet().getCell(row, 7).getStringValue();
+                            String type = schedulesSheet.getRow(row).getCell( 5).getStringCellValue();
+                            String parameters = schedulesSheet.getRow(row).getCell( 6).getStringCellValue();
+                            String emailSubject = schedulesSheet.getRow(row).getCell( 7).getStringCellValue();
                             ReportSchedule rs = new ReportSchedule(0, period, recipients, nextDue, database1.getId(), onlineReport.getId(), type, parameters, emailSubject);
                             ReportScheduleDAO.store(rs);
                         }
@@ -291,7 +310,6 @@ public final class ImportService {
             toReturn = toReturn.substring(errorPos + 10).trim();
         }
         return toReturn;
-
     }
 
     private static void uploadReport(LoggedInUser loggedInUser, String filePath, String fileName, String reportName, String identityCell, AtomicBoolean dataChanged) throws Exception {
@@ -321,36 +339,38 @@ public final class ImportService {
     }
 
     private static String readBook(LoggedInUser loggedInUser, final String fileName, final Map<String, String> fileNameParameters, final String tempPath, boolean persistAfter, boolean isData, AtomicBoolean dataChanged) throws Exception {
-        Book book;
+        XSSFWorkbook book;
         try {
             long time = System.currentTimeMillis();
-            book = Importers.getImporter().imports(new File(tempPath), "Imported");
-            System.out.println("millis to read an Excel file for import old way " + (System.currentTimeMillis() - time));
+            FileInputStream fs = new FileInputStream(new File(tempPath));
+            OPCPackage opcPackage = OPCPackage.open(fs);
+            book = new XSSFWorkbook(opcPackage);
+            //book = Importers.getImporter().imports(new File(tempPath), "Imported");
+            System.out.println("millis to read an Excel file for import new way" +
+                    " " + (System.currentTimeMillis() - time));
         } catch (Exception e) {
             e.printStackTrace();
             return stripTempSuffix(fileName) + ": Import error - " + e.getMessage();
         }
         String reportName = null;
         boolean isImportTemplate = false;
-        SName reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
+        XSSFName reportRange = book.getName(ReportRenderer.AZREPORTNAME);
         if (reportRange == null) {
-            reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZIMPORTNAME);
+            reportRange = book.getName(ReportRenderer.AZIMPORTNAME);
             isImportTemplate = true;
         }
         if (reportRange != null) {
-            reportName = BookUtils.getSnameCell(reportRange).getStringValue().trim();
+            CellReference xssfNameCell = BookUtils.getXSSFNameCell(reportRange);
+            reportName = book.getSheetAt(reportRange.getSheetIndex()).getRow(xssfNameCell.getRow()).getCell(xssfNameCell.getCol()).getStringCellValue();
         }
         if (reportName != null) {
+            // todo sort duplicates later
+            CellReference xssfNameCell = BookUtils.getXSSFNameCell(reportRange);
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
-                // EFC commenting 28/09/18, more annoying than helpful, especially with the new backup functionality
-/*                OnlineReport existing = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
-                if (existing != null && existing.getUserId() != loggedInUser.getUser().getId() && !forceReportUpload) {
-                    return UPLOADEDBYANOTHERUSER;
-                }*/
                 String identityCell = null;
                 if (isImportTemplate) {
                     //identity cell in Excel format
-                    identityCell = "" + (char) (reportRange.getRefersToCellRegion().getColumn() + 65) + (reportRange.getRefersToCellRegion().getRow() + 1);
+                    identityCell = "" + (char) (xssfNameCell.getCol() + 65) + (xssfNameCell.getRow() + 1);
                 }
 
                 uploadReport(loggedInUser, tempPath, fileName, reportName, identityCell, dataChanged);
@@ -373,7 +393,9 @@ public final class ImportService {
             reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
             //the uploaded book will already have the repeat sheet repeated - so zap the name
             ReportRenderer.populateBook(reportBook, 0, false);
-            return fillDataRangesFromCopy(loggedInUser, book, or);
+            // this REALLY should have been commented - the load before will populate the logged in users sent cells correctly, that's
+            // why it was done
+            return fillDataRangesFromCopy(loggedInUser, Importers.getImporter().imports(new File(tempPath), "Imported"), or);
         }
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("no database set");
@@ -382,29 +404,34 @@ public final class ImportService {
         Map<String, String> knownValues = new HashMap<String, String>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            toReturn.append(readSheet(loggedInUser, fileName, fileNameParameters, sheet, tempPath, knownValues, sheetNo == book.getNumberOfSheets() - 1 && persistAfter, dataChanged)); // that last conditional means persist on the last one through (if we've been told to persist)
+            toReturn.append(readSheet(loggedInUser, fileName, fileNameParameters, sheet, tempPath+"poi", knownValues, sheetNo == book.getNumberOfSheets() - 1 && persistAfter, dataChanged)); // that last conditional means persist on the last one through (if we've been told to persist)
             toReturn.append("\n");
         }
         return toReturn.toString();
     }
 
-    private static void checkEditableSets(Book book, LoggedInUser loggedInUser) {
-        for (SName sName : book.getInternalBook().getNames()) {
-            if (sName.getName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
-                String region = sName.getName().substring(ReportRenderer.AZROWHEADINGS.length());
-                Sheet sheet = book.getSheet(sName.getRefersToSheetName());
-                String rowHeading = ImportFileUtilities.getCellValue(sheet, sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getSecond();
+    private static void checkEditableSets(XSSFWorkbook book, LoggedInUser loggedInUser) {
+        for (int i = 0; i <  book.getNumberOfNames(); i++) {
+            XSSFName sName = book.getNameAt(i);
+            if (sName.getNameName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
+                String region = sName.getNameName().substring(ReportRenderer.AZROWHEADINGS.length());
+                Sheet sheet = book.getSheet(sName.getSheetName());
+                CellReference xssfNameCell = BookUtils.getXSSFNameCell(sName);
+                String rowHeading = ImportFileUtilities.getCellValue(sheet, xssfNameCell.getRow(), xssfNameCell.getCol()).getSecond();
                 if (rowHeading.toLowerCase().endsWith(" children editable")) {
                     String setName = rowHeading.substring(0, rowHeading.length() - " children editable".length()).replace("`", "");
-                    SName displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS + region, sheet);
+                    XSSFName displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS + region, sheet, book);
                     if (displayName != null) {
                         StringBuffer editLine = new StringBuffer();
                         editLine.append("edit:saveset ");
                         editLine.append("`" + setName + "` ");
-                        CellRegion dispRegion = displayName.getRefersToCellRegion();
-                        for (int rowNo = 0; rowNo < dispRegion.getRowCount(); rowNo++) {
-                            editLine.append("`" + ImportFileUtilities.getCellValue(sheet, dispRegion.getRow() + rowNo, dispRegion.getColumn()).getSecond() + "`,");
-
+                        if (displayName.getRefersToFormula() != null){
+                            AreaReference aref = new AreaReference(displayName.getRefersToFormula());
+                            int rowCount = aref.getLastCell().getRow() - aref.getLastCell().getRow();
+                            rowCount++; // don't want it to be 0!
+                            for (int rowNo = 0; rowNo <  rowCount; rowNo++) {
+                                editLine.append("`" + ImportFileUtilities.getCellValue(sheet, aref.getFirstCell().getRow() + rowNo, aref.getFirstCell().getCol()).getSecond() + "`,");
+                            }
                         }
                         CommonReportUtils.getDropdownListForQuery(loggedInUser, editLine.toString());
                     }
@@ -413,7 +440,7 @@ public final class ImportService {
             }
         }
     }
-
+/*
 
     private static void rangeToCSV(Sheet sheet, CellRegion region, Map<String, String> knownNames, CsvWriter csvW) throws Exception {
         for (int rNo = region.getRow(); rNo < region.getRow() + region.getRowCount(); rNo++) {
@@ -436,25 +463,30 @@ public final class ImportService {
             }
         }
 
-    }
+    }*/
 
 
     private static String readSheet(LoggedInUser loggedInUser, String fileName, Map<String, String> fileNameParameters, Sheet sheet, final String tempFileName, Map<String, String> knownValues, boolean persistAfter, AtomicBoolean dataChanged) {
-        String sheetName = sheet.getInternalSheet().getSheetName();
-        String toReturn = "";
+        String sheetName = sheet.getSheetName();
+//        String toReturn = "";
         try {
+            /*
             List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(loggedInUser.getDatabase().getId());
             for (OnlineReport report : reports) {
                 String cell = report.getIdentityCell();
                 if (cell != null && cell.length() > 0) {
                     int row = Integer.parseInt(cell.substring(1)) - 1;
                     int col = cell.charAt(0) - 65;
-                    if (ImportFileUtilities.getCellValue(sheet, row, col).getSecond().equals(report.getReportName())) {
+                    if (ImportFileUtilities.getCellValue(sheet, row).getCell( col).getSecond().equals(report.getReportName())) {
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + report.getFilenameForDisk();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                        book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
+                        book.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+                        book.getInternalBook().setAttribute(OnlineController.REPORT_ID, report.getId());
                         Sheet template = book.getSheetAt(0);
                         //FIRST  glean information from range names
                         List<SName> namesForTemplate = BookUtils.getNamesForSheet(template);
+                        List<SName> columnHeadings = new ArrayList<>();
                         for (SName name : namesForTemplate) {
                             if (name.getRefersToCellRegion().getRowCount() == 1 && name.getRefersToCellRegion().getColumnCount() == 1) {
                                 int rowNo = name.getRefersToCellRegion().getRow();
@@ -491,10 +523,10 @@ public final class ImportService {
                             }
                         }
                         return toReturn;
-
+g
                     }
                 }
-            }
+            }*/
 
 
             File temp = File.createTempFile(tempFileName + sheetName, ".csv");
@@ -509,6 +541,7 @@ public final class ImportService {
             fos.close();
             return stripTempSuffix(fileName) + ": " + readPreparedFile(loggedInUser, tempPath, fileName + ":" + sheetName, fileNameParameters, persistAfter, true, dataChanged);
         } catch (Exception e) {
+            e.printStackTrace();
             return "\n" + stripTempSuffix(fileName) + ": " + e.getMessage();
         }
 
@@ -522,8 +555,9 @@ public final class ImportService {
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         // right - here we're going to have to move the file if the DB server is not local.
         if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
-            filePath = ImportFileUtilities2.copyFileToDatabaseServer(new FileInputStream(filePath), databaseServer.getSftpUrl());
+            filePath = ImportFileUtilities.copyFileToDatabaseServer(new FileInputStream(filePath), databaseServer.getSftpUrl());
         }
+        //String s = "";
         String s = RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken, filePath, fileName, fileNameParameters, loggedInUser.getUser().getName(), persistAfter, isSpreadsheet);
         if (s.startsWith(Constants.DATABASE_UNMODIFIED)){
             s = s.substring(Constants.DATABASE_UNMODIFIED.length());
@@ -532,6 +566,8 @@ public final class ImportService {
         }
         return s;
     }
+
+    // EFC note - I don't like this
 
     public static String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName) throws Exception {
         String success = "image uploaded successfully";
@@ -566,14 +602,14 @@ public final class ImportService {
     }
 
     // for the download, modify and upload the report
-
+    // todo - can we convert to apache poi?
     private static String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
         String errorMessage = "";
         int saveCount = 0;
         for (SName sName : sourceBook.getInternalBook().getNames()) {
             String name = sName.getName();
             String regionName = getRegionName(name);
-            Sheet sheet = sourceBook.getSheet(sName.getRefersToSheetName());
+            org.zkoss.zss.api.model.Sheet sheet = sourceBook.getSheet(sName.getRefersToSheetName());
             if (regionName != null) {
                 CellRegion sourceRegion = sName.getRefersToCellRegion();
                 if (name.toLowerCase().contains(ReportRenderer.AZREPEATSCOPE)) { // then deal with the multiple data regions sent due to this
@@ -627,7 +663,7 @@ public final class ImportService {
                             for (int row = 0; row < data.size(); row++) {
                                 for (int col = 0; col < data.get(0).size(); col++) {
                                     // note that this function might return a null double but no null string. Perhaps could be mroe consistent? THis area is a bit hacky . . .
-                                    final TypedPair<Double, String> cellValue = ImportFileUtilities.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    final TypedPair<Double, String> cellValue = ImportFileUtilities.getCellValue(sheet, sourceRegion.getRow() + row,sourceRegion.getColumn() + col);
                                     data.get(row).get(col).setNewStringValue(cellValue.getSecond());
                                     // added by Edd, should sort some numbers being ignored!
                                     if (cellValue.getFirst() != null) {
@@ -662,7 +698,26 @@ public final class ImportService {
         return errorMessage + " - " + saveCount + " data items amended successfully";
     }
 
-    private static SName getNameByName(String name, Sheet sheet) {
+    private static XSSFName getNameByName(String name, Sheet sheet, XSSFWorkbook book) {
+        List<XSSFName> names = new ArrayList<>();
+        for (int i = 0; i <  book.getNumberOfNames(); i++) {
+            XSSFName name1 = book.getNameAt(i);
+            if (name1.getNameName().equalsIgnoreCase(name)){
+                if (name1.getSheetName().equals(sheet.getSheetName())){
+                    return  name1;
+                }
+                names.add(name1);
+            }
+        }
+        if (!names.isEmpty()){
+            return names.get(0);
+        }
+        // should we check the formula refers to the sheet here? I'm not sure. Applies will have been checked for above.
+        return null;
+    }
+
+
+    private static SName getNameByName(String name, org.zkoss.zss.api.model.Sheet sheet) {
         SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
         if (toReturn != null) {
             return toReturn;
@@ -671,8 +726,6 @@ public final class ImportService {
         return sheet.getBook().getInternalBook().getNameByName(name);
 
     }
-
-
     private static String getRegionName(String name) {
         if (name.toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
             return name.substring(ReportRenderer.AZDATAREGION.length()).toLowerCase();
@@ -685,14 +738,16 @@ public final class ImportService {
 
     // as in write a cell to csv
 
-    private static Map<String, String> uploadChoices(Book book) {
+    private static Map<String, String> uploadChoices(XSSFWorkbook book) {
         //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
         Map<String, String> choices = new HashMap<>();
-        for (SName sName : book.getInternalBook().getNames()) {
-            String rangeName = sName.getName().toLowerCase();
+        for (int i = 0; i <  book.getNumberOfNames(); i++) {
+            XSSFName sName = book.getNameAt(i);
+            String rangeName = sName.getNameName().toLowerCase();
             if (rangeName.endsWith("chosen")) {
                 //there is probably a more elegant solution than this....
-                choices.put(rangeName.substring(0, rangeName.length() - 6), ImportFileUtilities.getCellValue(book.getSheet(sName.getRefersToSheetName()), sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getSecond());
+                CellReference xssfNameCell = BookUtils.getXSSFNameCell(sName);
+                choices.put(rangeName.substring(0, rangeName.length() - 6), ImportFileUtilities.getCellValue(book.getSheet(sName.getSheetName()), xssfNameCell.getRow(), xssfNameCell.getCol()).getSecond());
             }
         }
         return choices;

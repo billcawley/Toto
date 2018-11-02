@@ -3,18 +3,22 @@ package com.azquo.dataimport;
 import com.azquo.TypedPair;
 import com.csvreader.CsvWriter;
 import com.jcraft.jsch.*;
-import org.zkoss.poi.ss.usermodel.DateUtil;
+import org.springframework.security.access.method.P;
+import org.zkoss.poi.ss.format.CellDateFormatter;
+import org.zkoss.poi.ss.usermodel.*;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.CellData;
-import org.zkoss.zss.api.model.Sheet;
-import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SRow;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Locale;
 
 /**
  * Created by edward on 11/11/16.
@@ -141,39 +145,123 @@ class ImportFileUtilities {
     }
 
     static void convertRangeToCSV(final Sheet sheet, final CsvWriter csvW) throws Exception {
-        int rows = sheet.getLastRow();
-        int startRow = 0;
-        for (int r = startRow; r <= rows; r++) {
-            SRow row = sheet.getInternalSheet().getRow(r);
-            if (row != null) {
-                //System.out.println("Excel row " + r);
-                //int colCount = 0;
-/*                    for (int c = startCol; c <= maxCol; c++) {
-                        writeCell(sheet, r, c, csvW);
-                    }*/
-                int lastcell = 0;
-                // EFC note - I know this looks odd - the code will be booted shortly hopefully
-                for (Iterator<SCell> cellIterator = row.getCellIterator(); cellIterator.hasNext();) {
-                        lastcell = cellIterator.next().getColumnIndex();
+        int rowIndex = -1;
+        for (Row row : sheet) {
+            // turns out blank lines are important
+            if (++rowIndex != row.getRowNum()) {
+                while (rowIndex != row.getRowNum()) {
+                    csvW.endRecord();
+                    rowIndex++;
                 }
-                for (int c = 0; c <= lastcell; c++) {
-                    writeCell(sheet, r, c, csvW);
-                }
-
-                csvW.endRecord();
             }
+            int cellIndex = -1;
+            for (Iterator<Cell> ri = row.cellIterator(); ri.hasNext(); ) {
+
+                Cell cell = ri.next();
+                if (++cellIndex != cell.getColumnIndex()) {
+//                    System.out.println("cell index notu as expectec, found " + cell.getColumnIndex() + ", expected " + cellIndex);
+                    while (cellIndex != cell.getColumnIndex()) {
+                        csvW.write("");
+                        cellIndex++;
+                    }
+                }
+//                System.out.println("cell col : " + cell.getColumnIndex());
+                final TypedPair<Double, String> cellValue = getCellValue(cell);
+                csvW.write(cellValue.getSecond().replace("\n", "\\\\n").replace("\r", "")
+                        .replace("\t", "\\\\t"));
+            }
+            csvW.endRecord();
         }
+
     }
 
-    private static void writeCell(Sheet sheet, int r, int c, CsvWriter csvW) throws Exception {
-        final TypedPair<Double, String> cellValue = getCellValue(sheet, r, c);
-        csvW.write(cellValue.getSecond().replace("\n", "\\\\n").replace("\r", "")
-                .replace("\t", "\\\\t"));
+    static TypedPair<Double, String> getCellValue(Sheet sheet, int row, int col) {
+        return getCellValue(sheet.getRow(row).getCell(col));
     }
+
+    static DataFormatter df = new DataFormatter();
+    // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO - factor common code
+
+    private static TypedPair<Double, String> getCellValue(Cell cell) {
+        Double returnNumber = null;
+        String returnString = "";
+        // first we try to get it without locale - better match on built in formats it seems
+        String dataFormat = BuiltinFormats.getBuiltinFormat(cell.getCellStyle().getDataFormat());
+        if (dataFormat == null){
+            dataFormat = cell.getCellStyle().getDataFormatString();
+        }
+        //if (colCount++ > 0) bw.write('\t');
+        if (cell.getCellType() == Cell.CELL_TYPE_STRING || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_STRING)) {
+            try {
+                returnString = cell.getStringCellValue();// I assume means formatted text?
+            } catch (Exception ignored) {
+            }
+        } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_NUMERIC)) {
+            returnNumber = cell.getNumericCellValue();
+            returnString = returnNumber.toString();
+            if (returnString.contains("E")) {
+                returnString = String.format("%f", returnNumber);
+            }
+            if (returnNumber%1 == 0) {
+                // specific condition - integer and format all 000, then actually use the format. For zip codes
+                if (dataFormat.contains("0") && dataFormat.replace("0","").isEmpty()){
+                    returnString = df.formatCellValue(cell);
+                } else {
+                    returnString = returnNumber.intValue() + "";
+                }
+            }
+
+            if (dataFormat.equals("h:mm") && returnString.length() == 4) {
+                //ZK BUG - reads "hh:mm" as "h:mm"
+                returnString = "0" + returnString;
+            } else {
+                if (dataFormat.toLowerCase().contains("m")) {
+                    if (dataFormat.length() > 6){
+                        try {
+                            returnString = YYYYMMDD.format(cell.getDateCellValue());
+                        } catch (Exception e) {
+                            //not sure what to do here.
+                        }
+                    } else { // it's still a date - match the defauilt format
+                        // this seems to be required as if the date is based off another cell then the normal formatter will return the formula
+                        CellDateFormatter cdf = new CellDateFormatter(dataFormat, Locale.UK);
+                        returnString = cdf.format(cell.getDateCellValue());
+                    }
+
+                }
+            }
+            /* I thnk this is redundant due to my call wihtout the locale above
+            if ((returnString.length() == 6 || returnString.length() == 8) && returnString.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-")) {//another ZK bug
+                returnString = returnString.replace(" ", "-");//crude replacement of spaces in dates with dashes
+            }*/
+/*            if (!dataFormat.equalsIgnoreCase("general")){
+                System.out.println("data format, " + dataFormat + " new sting value " + newStringValue);
+            }*/
+        } else if (cell.getCellType() == Cell.CELL_TYPE_BOOLEAN || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_BOOLEAN)) {
+            returnString = cell.getBooleanCellValue() + "";
+        } else if (cell.getCellType() != Cell.CELL_TYPE_BLANK) {
+            if (cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
+                System.out.println("other forumla cell type : " + cell.getCachedFormulaResultType());
+            }
+            System.out.println("other cell type : " + cell.getCellType());
+        }
+        if (returnString.contains("\"\"") && returnString.startsWith("\"") && returnString.endsWith("\"")) {
+            //remove spurious quote marks
+            returnString = returnString.substring(1, returnString.length() - 1).replace("\"\"", "\"");
+        }
+
+        if (returnString.startsWith("`") && returnString.indexOf("`", 1) < 0) {
+            returnString = returnString.substring(1);
+        }
+        if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
+            returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
+        return new TypedPair<>(returnNumber, returnString.trim());
+    }
+
 
     // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO
 
-    static TypedPair<Double, String> getCellValue(Sheet sheet, int r, int c) {
+    static TypedPair<Double, String> getCellValue(org.zkoss.zss.api.model.Sheet sheet, int r, int c) {
         Double returnNumber = null;
         String returnString = null;
         Range range = Ranges.range(sheet, r, c);
@@ -229,11 +317,12 @@ class ImportFileUtilities {
             }
             returnString = stringValue;
         }
-        if (returnString.startsWith("`") && returnString.indexOf("`", 1) < 0) {
+        if (returnString.startsWith("`") && returnString.indexOf("'", 1) < 0) {
             returnString = returnString.substring(1);
         }
         if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
             returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
         return new TypedPair<>(returnNumber, returnString.trim());
     }
+
 }
