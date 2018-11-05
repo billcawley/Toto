@@ -23,8 +23,11 @@ import com.csvreader.CsvWriter;
 import org.apache.commons.io.FileUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.zeroturnaround.zip.ZipUtil;
+import org.zkoss.poi.hssf.usermodel.HSSFWorkbook;
 import org.zkoss.poi.openxml4j.opc.OPCPackage;
+import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Sheet;
+import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.ss.util.CellReference;
 import org.zkoss.poi.xssf.usermodel.XSSFName;
@@ -145,6 +148,7 @@ public final class ImportService {
         if (fileName.startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             FileInputStream fs = new FileInputStream(new File(filePath));
             OPCPackage opcPackage = OPCPackage.open(fs);
+
             XSSFWorkbook book = new XSSFWorkbook(opcPackage);
             //Book book = Importers.getImporter().imports(new File(filePath), "Report name");
             List<String> notAllowed = new ArrayList<>();
@@ -339,12 +343,16 @@ public final class ImportService {
     }
 
     private static String readBook(LoggedInUser loggedInUser, final String fileName, final Map<String, String> fileNameParameters, final String tempPath, boolean persistAfter, boolean isData, AtomicBoolean dataChanged) throws Exception {
-        XSSFWorkbook book;
+        Workbook book;
         try {
             long time = System.currentTimeMillis();
             FileInputStream fs = new FileInputStream(new File(tempPath));
-            OPCPackage opcPackage = OPCPackage.open(fs);
-            book = new XSSFWorkbook(opcPackage);
+            if (fileName.endsWith("xlsx")) {
+                OPCPackage opcPackage = OPCPackage.open(fs);
+                book = new XSSFWorkbook(opcPackage);
+            }else{
+                book = new HSSFWorkbook(fs);
+            }
             //book = Importers.getImporter().imports(new File(tempPath), "Imported");
             System.out.println("millis to read an Excel file for import new way" +
                     " " + (System.currentTimeMillis() - time));
@@ -354,23 +362,23 @@ public final class ImportService {
         }
         String reportName = null;
         boolean isImportTemplate = false;
-        XSSFName reportRange = book.getName(ReportRenderer.AZREPORTNAME);
+        Name reportRange = BookUtils.getName(book,ReportRenderer.AZREPORTNAME);
         if (reportRange == null) {
             reportRange = book.getName(ReportRenderer.AZIMPORTNAME);
             isImportTemplate = true;
         }
         if (reportRange != null) {
-            CellReference xssfNameCell = BookUtils.getXSSFNameCell(reportRange);
-            reportName = book.getSheetAt(reportRange.getSheetIndex()).getRow(xssfNameCell.getRow()).getCell(xssfNameCell.getCol()).getStringCellValue();
+            CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
+            reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
         }
         if (reportName != null) {
             // todo sort duplicates later
-            CellReference xssfNameCell = BookUtils.getXSSFNameCell(reportRange);
+            CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && !isData) {
                 String identityCell = null;
                 if (isImportTemplate) {
                     //identity cell in Excel format
-                    identityCell = "" + (char) (xssfNameCell.getCol() + 65) + (xssfNameCell.getRow() + 1);
+                    identityCell = "" + (char) (sheetNameCell.getCol() + 65) + (sheetNameCell.getRow() + 1);
                 }
 
                 uploadReport(loggedInUser, tempPath, fileName, reportName, identityCell, dataChanged);
@@ -410,17 +418,17 @@ public final class ImportService {
         return toReturn.toString();
     }
 
-    private static void checkEditableSets(XSSFWorkbook book, LoggedInUser loggedInUser) {
+    private static void checkEditableSets(Workbook book, LoggedInUser loggedInUser) {
         for (int i = 0; i <  book.getNumberOfNames(); i++) {
-            XSSFName sName = book.getNameAt(i);
+            Name sName = book.getNameAt(i);
             if (sName.getNameName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
                 String region = sName.getNameName().substring(ReportRenderer.AZROWHEADINGS.length());
                 Sheet sheet = book.getSheet(sName.getSheetName());
-                CellReference xssfNameCell = BookUtils.getXSSFNameCell(sName);
+                CellReference xssfNameCell = BookUtils.getNameCell(sName);
                 String rowHeading = ImportFileUtilities.getCellValue(sheet, xssfNameCell.getRow(), xssfNameCell.getCol()).getSecond();
                 if (rowHeading.toLowerCase().endsWith(" children editable")) {
                     String setName = rowHeading.substring(0, rowHeading.length() - " children editable".length()).replace("`", "");
-                    XSSFName displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS + region, sheet, book);
+                    Name displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS + region, sheet, book);
                     if (displayName != null) {
                         StringBuffer editLine = new StringBuffer();
                         editLine.append("edit:saveset ");
@@ -698,10 +706,10 @@ g
         return errorMessage + " - " + saveCount + " data items amended successfully";
     }
 
-    private static XSSFName getNameByName(String name, Sheet sheet, XSSFWorkbook book) {
-        List<XSSFName> names = new ArrayList<>();
+    private static Name getNameByName(String name, Sheet sheet, Workbook book) {
+        List<Name> names = new ArrayList<>();
         for (int i = 0; i <  book.getNumberOfNames(); i++) {
-            XSSFName name1 = book.getNameAt(i);
+            Name name1 = book.getNameAt(i);
             if (name1.getNameName().equalsIgnoreCase(name)){
                 if (name1.getSheetName().equals(sheet.getSheetName())){
                     return  name1;
@@ -738,16 +746,16 @@ g
 
     // as in write a cell to csv
 
-    private static Map<String, String> uploadChoices(XSSFWorkbook book) {
+    private static Map<String, String> uploadChoices(Workbook book) {
         //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
         Map<String, String> choices = new HashMap<>();
         for (int i = 0; i <  book.getNumberOfNames(); i++) {
-            XSSFName sName = book.getNameAt(i);
+            Name sName = book.getNameAt(i);
             String rangeName = sName.getNameName().toLowerCase();
             if (rangeName.endsWith("chosen")) {
                 //there is probably a more elegant solution than this....
-                CellReference xssfNameCell = BookUtils.getXSSFNameCell(sName);
-                choices.put(rangeName.substring(0, rangeName.length() - 6), ImportFileUtilities.getCellValue(book.getSheet(sName.getSheetName()), xssfNameCell.getRow(), xssfNameCell.getCol()).getSecond());
+                CellReference sheetNameCell = BookUtils.getNameCell(sName);
+                choices.put(rangeName.substring(0, rangeName.length() - 6), ImportFileUtilities.getCellValue(book.getSheet(sName.getSheetName()), sheetNameCell.getRow(), sheetNameCell.getCol()).getSecond());
             }
         }
         return choices;

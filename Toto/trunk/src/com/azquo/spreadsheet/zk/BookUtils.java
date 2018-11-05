@@ -2,6 +2,8 @@ package com.azquo.spreadsheet.zk;
 
 import com.azquo.DateUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import org.zkoss.poi.ss.usermodel.Name;
+import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.ss.util.CellReference;
 import org.zkoss.poi.xssf.usermodel.XSSFName;
@@ -132,9 +134,9 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return sName.getBook().getSheetByName(sName.getRefersToSheetName()).getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
     }
 
-    public static CellReference getXSSFNameCell(XSSFName xssfName) {
-        if (xssfName == null) return null;
-        AreaReference aref = new AreaReference(xssfName.getRefersToFormula());
+    public static CellReference getNameCell(Name sheetName) {
+        if (sheetName == null) return null;
+        AreaReference aref = new AreaReference(sheetName.getRefersToFormula());
         return aref.getFirstCell();
     }
 
@@ -286,4 +288,17 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         Range selection = Ranges.range(sheet, region.row, region.column, region.lastRow, region.lastColumn);
         selection.notifyChange();
     }
+
+    public static Name getName(Workbook book, String stringName) {
+        int i = 0;
+        int nameCount = book.getNumberOfNames();
+        for (i=0;i<nameCount;i++){
+            Name name = book.getNameAt(i);
+            if (name.getNameName().equalsIgnoreCase(stringName)){
+                return name;
+            }
+        }
+        return null;
+     }
+
 }
