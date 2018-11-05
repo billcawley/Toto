@@ -41,19 +41,12 @@ public class LoginController {
             , @RequestParam(value = "logoff", required = false) String logoff
             , @RequestParam(value = "connectionid", required = false) String connectionid // only for the magento plugin and Javascript (connectionId = "javascript")
     ) throws Exception {
-        String url = request.getRequestURL().toString();
-        String page = "login";
-
-        if (SpreadsheetService.getLogonPageOverride() != null && !SpreadsheetService.getLogonPageOverride().isEmpty()){
-            page = SpreadsheetService.getLogonPageOverride();
-        }
-
         if ("true".equals(logoff)) {
             if (session.getAttribute(LOGGED_IN_USER_SESSION) != null) {
-                if (!SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
+                if (SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                     LoggedInUser loggedInUser = (LoggedInUser) session.getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                    String title =  SpreadsheetService.getAlias() +  " Logout from " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
+                    String title = SpreadsheetService.getAlias() + " Logout from " + loggedInUser.getUser().getEmail() + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                     String userAgent = request.getHeader("User-Agent");
                     AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
                     AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
@@ -78,9 +71,9 @@ public class LoginController {
                 LoggedInUser loggedInUser = LoginService.loginLoggedInUser(session.getId(), null, userEmail, password, false);
                 if (loggedInUser != null) {
                     // same checks as magento controller
-                    if (!"nic@azquo.com".equalsIgnoreCase(userEmail) && !SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
+                    if (!"nic@azquo.com".equalsIgnoreCase(userEmail) && SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                        String title = SpreadsheetService.getAlias() +  " Login to the server " + userEmail + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
+                        String title = SpreadsheetService.getAlias() + " Login to the server " + userEmail + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr();
                         String userAgent = request.getHeader("User-Agent");
                         AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
                         AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
@@ -89,20 +82,20 @@ public class LoginController {
                     if (connectionid != null && connectionid.equals("javascript")) {
                         String jsonFunction = "azquojsonresponse";
                         String userType = "user";
-                        if (loggedInUser.getUser().isAdministrator()){
+                        if (loggedInUser.getUser().isAdministrator()) {
                             userType = "administrator";
 
-                        }else{
-                            if (loggedInUser.getUser().isDeveloper()){
+                        } else {
+                            if (loggedInUser.getUser().isDeveloper()) {
                                 userType = "developer";
 
-                            }else{
-                                if (loggedInUser.getUser().isMaster()){
+                            } else {
+                                if (loggedInUser.getUser().isMaster()) {
                                     userType = "master";
                                 }
                             }
                         }
-                         model.addAttribute("content", jsonFunction + "({\"usertype\":\"" + userType + "})");
+                        model.addAttribute("content", jsonFunction + "({\"usertype\":\"" + userType + "})");
                         return "utf8page";
 
                     } else {
@@ -125,6 +118,17 @@ public class LoginController {
                     }
                 }
             }
+        }
+        String page = "login";
+
+        if (SpreadsheetService.getLogonPageOverride() != null && !SpreadsheetService.getLogonPageOverride().isEmpty()) {
+            page = SpreadsheetService.getLogonPageOverride();
+        }
+        if (SpreadsheetService.getLogonPageColour() != null && !SpreadsheetService.getLogonPageColour().isEmpty()){
+            model.put("logoncolour", SpreadsheetService.getLogonPageColour());
+        }
+        if (SpreadsheetService.getLogonPageMessage() != null){
+            model.put("logonmessage", SpreadsheetService.getLogonPageMessage());
         }
         return page;
     }

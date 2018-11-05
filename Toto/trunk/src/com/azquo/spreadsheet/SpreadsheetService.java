@@ -44,7 +44,7 @@ public class SpreadsheetService {
 
     private static final Properties azquoProperties = new Properties();
 
-    public static final String host;
+    private static final String host;
 
     static {
         System.out.println("attempting properties load from classpath");
@@ -113,7 +113,7 @@ public class SpreadsheetService {
         return alias;
     }
     // keeps its own pattern
-    public static boolean onADevMachine() {
+    public static boolean inProduction() {
         if (devMachine == -1) {
             if (azquoProperties.getProperty(host + "." + DEVMACHINE) != null) {
                 devMachine = (azquoProperties.getProperty(host + "." + DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
@@ -121,7 +121,7 @@ public class SpreadsheetService {
                 devMachine = (azquoProperties.getProperty(DEVMACHINE) != null && azquoProperties.getProperty(DEVMACHINE).equalsIgnoreCase("true") ? 1 : 0);
             }
         }
-        return devMachine == 1;
+        return devMachine != 1;
     }
 
     public static String getScanDir() {
@@ -156,10 +156,6 @@ public class SpreadsheetService {
     }
 
     public static void setUserChoice(int userId, String choiceName, String choiceValue) {
-        String choiceStoreName = choiceName;
-        if (choiceName.startsWith("az_")) {
-            choiceStoreName = choiceName.substring(3);
-        }
         UserChoice userChoice = UserChoiceDAO.findForUserIdAndChoice(userId, choiceName);
         if (choiceValue != null && choiceValue.length() > 0) {
             if (userChoice == null) {
@@ -232,13 +228,12 @@ public class SpreadsheetService {
         return saveData(loggedInUser, reportId, reportName, sheetName, region, true); // default to persist server side
     }
 
-    public static void sendEmail(String emailInfo) {
-        String[] emailParts = emailInfo.split("|");
+    private static void sendEmail(String emailInfo) {
+        String[] emailParts = emailInfo.split("\\|"); // I *think* this will do the job, I changed from | which apparently on it's own in regexp is not treated as a string literal
         String emailAddress = emailParts[0];
         String emailSubject = emailParts[1];
         String emailText = emailParts[2];
         AzquoMailer.sendEMail(emailAddress, null, emailSubject, emailText, null, null);
-
     }
 
     public static String saveData(LoggedInUser loggedInUser, int reportId, String reportName, String sheetName, String region, boolean persist) throws Exception {
@@ -418,6 +413,7 @@ public class SpreadsheetService {
                     }
                 }
                 // similar to normal loading
+                assert user != null;
                 Business b = BusinessDAO.findById(user.getBusinessId());
                 if (b == null) {
                     throw new Exception("Business not found for user! Business id : " + user.getBusinessId());
@@ -440,15 +436,7 @@ public class SpreadsheetService {
                 if ("PDF".equals(reportSchedule.getType())) {
                     Exporter exporter = Exporters.getExporter("pdf");
                     File file = File.createTempFile(onlineReport.getReportName(), ".pdf");
-                    FileOutputStream fos = null;
-                    try {
-                        fos = new FileOutputStream(file);
-                        exporter.export(book, file);
-                    } finally {
-                        if (fos != null) {
-                            fos.close();
-                        }
-                    }
+                    exporter.export(book, file);
                     // queue don't send
                     for (String email : reportSchedule.getRecipients().split(",")) {
                         filesToSendForEachEmail.computeIfAbsent(email, t -> new ArrayList<>()).add(file);
@@ -458,14 +446,8 @@ public class SpreadsheetService {
                 if ("XLS".equals(reportSchedule.getType())) {
                     Exporter exporter = Exporters.getExporter();
                     File file = File.createTempFile(Long.toString(System.currentTimeMillis()), "temp");
-                    FileOutputStream fos = null;
-                    try {
-                        fos = new FileOutputStream(file);
+                    try (FileOutputStream fos = new FileOutputStream(file)) {
                         exporter.export(book, fos);
-                    } finally {
-                        if (fos != null) {
-                            fos.close();
-                        }
                     }
                     for (String email : reportSchedule.getRecipients().split(",")) {
                         filesToSendForEachEmail.computeIfAbsent(email, t -> new ArrayList<>()).add(file);
@@ -512,9 +494,9 @@ public class SpreadsheetService {
         }
         return images;
     }
-
+    /* comment for the mo, might be useful later
     public static List<String> nameAutoComplete(LoggedInUser loggedInUser, String name) throws Exception {
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).nameAutoComplete(databaseAccessToken, name, 100);
-    }
+    }*/
 }

@@ -5,20 +5,17 @@
 
 <main class="basicDialog">
     <div class="basic-box-container">
-        <div class="basic-head" style="background-color:#ed1b24">
+        <div class="basic-head" style="background-color:${logoncolour}">
             <div class="logo">
                 <img src="/images/edbroking_logo.jpg" alt="azquo">
             </div>
         </div>
         <div class="basic-box">
-            <h3>Logon to the Azquo system below</h3>
+            <h3>Logon to the EdIT system</h3>
             <div class="error">${error}</div>
-            <p>All Azquo reports can be viewed online &#8211; use the same log on details as you use in your spreadsheets.</p>
 
             <form method="post" name="loginform" action="/api/Login">
                 <input type="hidden" name="online" value="true">
-
-
                 <div>
                     <label for="user">Username</label>
                     <input type="text" id="az_Logon" value="${userEmail}" name="user" placeholder="Please enter your username"/>
@@ -30,6 +27,7 @@
                 </div>
                 <div class="centeralign">
                     <button class="button" style="background-color:#ed1b24">Login <span class="fa fa-sign-in"></span></button>
+                    ${logonmessage}
                 </div>
             </form>
         </div>

@@ -3,11 +3,8 @@ package com.azquo.app.magento.controller;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
-import com.azquo.admin.database.DatabaseServerDAO;
-import com.azquo.admin.database.Database;
 import com.azquo.app.magento.service.DataLoadService;
 import com.azquo.dataimport.ImportService;
-import com.azquo.memorydb.Constants;
 import com.azquo.spreadsheet.*;
 import com.azquo.util.AzquoMailer;
 import org.springframework.stereotype.Controller;
@@ -20,7 +17,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
 import java.util.Date;
 
 /**
@@ -98,7 +94,7 @@ public class MagentoController {
                     data.transferTo(moved);
                     DataLoadService.loadData(loggedInUser.getDataAccessToken(), moved.getAbsolutePath(), request.getRemoteAddr(), loggedInUser.getUser().getName());
                     long elapsed = System.currentTimeMillis() - start;
-                    if (!SpreadsheetService.onADevMachine() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
+                    if (SpreadsheetService.inProduction() && !request.getRemoteAddr().equals("82.68.244.254") && !request.getRemoteAddr().equals("127.0.0.1") && !request.getRemoteAddr().startsWith("0")) { // if it's from us don't email us :)
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                         String title = SpreadsheetService.getAlias() +  " Magento file upload " + logon + " - " + loggedInUser.getUser().getStatus() + " - " + (business != null ? business.getBusinessName() : "") + " from " + request.getRemoteAddr() + " elapsed time " + elapsed + " millisec";
                         AzquoMailer.sendEMail("edd@azquo.com", "Edd", title, title);
