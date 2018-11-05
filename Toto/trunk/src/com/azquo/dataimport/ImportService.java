@@ -113,7 +113,7 @@ public final class ImportService {
                     if (fileIterator.hasNext()) {
                         sb.append(readBookOrFile(loggedInUser, f.getName(), mapCopy, f.getPath(), false, isData, dataChanged));
                     } else {
-                        sb.append(stripTempSuffix(fileName) + ": " + readBookOrFile(loggedInUser, f.getName(), mapCopy, f.getPath(), isLast, isData, dataChanged)); // persist on the last one
+                        sb.append(stripTempSuffix(fileName)).append(": ").append(readBookOrFile(loggedInUser, f.getName(), mapCopy, f.getPath(), isLast, isData, dataChanged)); // persist on the last one
                     }
                 }
             }
@@ -144,7 +144,7 @@ public final class ImportService {
     }
 
     private static String readBookOrFile(LoggedInUser loggedInUser, String fileName, Map<String, String> fileNameParameters, String filePath, boolean persistAfter, boolean isData, AtomicBoolean dataChanged) throws Exception {
-        String toReturn = "";
+        String toReturn;
         if (fileName.startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
             FileInputStream fs = new FileInputStream(new File(filePath));
             OPCPackage opcPackage = OPCPackage.open(fs);
@@ -156,7 +156,7 @@ public final class ImportService {
             Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
             if (userSheet != null) {
                 dataChanged.set(true);
-                int row = 1;
+                int row;
                 XSSFName listRegion = book.getName(ReportRenderer.AZLISTSTART);
 //                SName listRegion = book.getInternalBook().getNameByName(ReportRenderer.AZLISTSTART);
                 if (listRegion != null && listRegion.getRefersToFormula() != null) {
@@ -409,7 +409,7 @@ public final class ImportService {
             throw new Exception("no database set");
         }
         StringBuilder toReturn = new StringBuilder();
-        Map<String, String> knownValues = new HashMap<String, String>();
+        Map<String, String> knownValues = new HashMap<>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
             toReturn.append(readSheet(loggedInUser, fileName, fileNameParameters, sheet, tempPath+"poi", knownValues, sheetNo == book.getNumberOfSheets() - 1 && persistAfter, dataChanged)); // that last conditional means persist on the last one through (if we've been told to persist)
@@ -430,15 +430,15 @@ public final class ImportService {
                     String setName = rowHeading.substring(0, rowHeading.length() - " children editable".length()).replace("`", "");
                     Name displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS + region, sheet, book);
                     if (displayName != null) {
-                        StringBuffer editLine = new StringBuffer();
+                        StringBuilder editLine = new StringBuilder();
                         editLine.append("edit:saveset ");
-                        editLine.append("`" + setName + "` ");
+                        editLine.append("`").append(setName).append("` ");
                         if (displayName.getRefersToFormula() != null){
                             AreaReference aref = new AreaReference(displayName.getRefersToFormula());
                             int rowCount = aref.getLastCell().getRow() - aref.getLastCell().getRow();
                             rowCount++; // don't want it to be 0!
                             for (int rowNo = 0; rowNo <  rowCount; rowNo++) {
-                                editLine.append("`" + ImportFileUtilities.getCellValue(sheet, aref.getFirstCell().getRow() + rowNo, aref.getFirstCell().getCol()).getSecond() + "`,");
+                                editLine.append("`").append(ImportFileUtilities.getCellValue(sheet, aref.getFirstCell().getRow() + rowNo, aref.getFirstCell().getCol()).getSecond()).append("`,");
                             }
                         }
                         CommonReportUtils.getDropdownListForQuery(loggedInUser, editLine.toString());
@@ -612,7 +612,7 @@ g
     // for the download, modify and upload the report
     // todo - can we convert to apache poi?
     private static String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
-        String errorMessage = "";
+        StringBuilder errorMessage = new StringBuilder();
         int saveCount = 0;
         for (SName sName : sourceBook.getInternalBook().getNames()) {
             String name = sName.getName();
@@ -687,18 +687,16 @@ g
                     try {
                         final String result = SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), sName.getRefersToSheetName(), regionName);
                         if (!result.startsWith("true")) {// unlikely to fail here I think but catch it anyway . . .
-
-                            errorMessage += "- in region " + regionName + " -" + result;
+                            errorMessage.append("- in region ").append(regionName).append(" -").append(result);
                         } else {
                             try {
                                 saveCount += Integer.parseInt(result.substring(5));  //count follows the word 'true'
-                            } catch (Exception e) {
-
+                            } catch (Exception ignored) {
                             }
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
-                        errorMessage += "- in region " + regionName + " -" + e.getMessage();
+                        errorMessage.append("- in region ").append(regionName).append(" -").append(e.getMessage());
                     }
                 }
             }
@@ -803,5 +801,4 @@ g
             e.printStackTrace();
         }
     }
-
 }

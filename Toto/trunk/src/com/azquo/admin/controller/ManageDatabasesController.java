@@ -53,15 +53,15 @@ public class ManageDatabasesController {
 
     public static final String IMPORTRESULT = "importResult";
     public static final String IMPORTURLSUFFIX = "importUrlSuffix";
-    public static final String IMPORTRESULTPREFIX = "importResultPrefix";
-    public static final String PENDINGUPLOADID = "pendingUploadId";
+    private static final String IMPORTRESULTPREFIX = "importResultPrefix";
+    private static final String PENDINGUPLOADID = "pendingUploadId";
 
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
     public static class DisplayDataBase {
         private final boolean loaded;
         private final Database database;
 
-        public DisplayDataBase(boolean loaded, Database database) {
+        DisplayDataBase(boolean loaded, Database database) {
             this.loaded = loaded;
             this.database = database;
         }
@@ -480,6 +480,7 @@ public class ManageDatabasesController {
             List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
             try {
+                assert databaseList != null;
                 for (Database database1 : databaseList) {
                     boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database1);
                     displayDataBases.add(new DisplayDataBase(isLoaded, database1));

@@ -3,13 +3,11 @@ package com.azquo.dataimport;
 import com.azquo.TypedPair;
 import com.csvreader.CsvWriter;
 import com.jcraft.jsch.*;
-import org.springframework.security.access.method.P;
 import org.zkoss.poi.ss.format.CellDateFormatter;
 import org.zkoss.poi.ss.usermodel.*;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.CellData;
-import org.zkoss.zss.model.SRow;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -27,7 +25,7 @@ import java.util.Locale;
  */
 class ImportFileUtilities {
 
-    static SimpleDateFormat YYYYMMDD = new SimpleDateFormat("yyyy-MM-dd");
+    private static SimpleDateFormat YYYYMMDD = new SimpleDateFormat("yyyy-MM-dd");
 
     // as in drop the import stream into a temp file and return its path
     // todo, better api calls, perhaps making the function redundant
@@ -156,7 +154,6 @@ class ImportFileUtilities {
             }
             int cellIndex = -1;
             for (Iterator<Cell> ri = row.cellIterator(); ri.hasNext(); ) {
-
                 Cell cell = ri.next();
                 if (++cellIndex != cell.getColumnIndex()) {
 //                    System.out.println("cell index notu as expectec, found " + cell.getColumnIndex() + ", expected " + cellIndex);
@@ -172,14 +169,13 @@ class ImportFileUtilities {
             }
             csvW.endRecord();
         }
-
     }
 
     static TypedPair<Double, String> getCellValue(Sheet sheet, int row, int col) {
         return getCellValue(sheet.getRow(row).getCell(col));
     }
 
-    static DataFormatter df = new DataFormatter();
+    private static DataFormatter df = new DataFormatter();
     // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO - factor common code
 
     private static TypedPair<Double, String> getCellValue(Cell cell) {
@@ -210,7 +206,6 @@ class ImportFileUtilities {
                     returnString = returnNumber.intValue() + "";
                 }
             }
-
             if (dataFormat.equals("h:mm") && returnString.length() == 4) {
                 //ZK BUG - reads "hh:mm" as "h:mm"
                 returnString = "0" + returnString;
@@ -227,7 +222,6 @@ class ImportFileUtilities {
                         CellDateFormatter cdf = new CellDateFormatter(dataFormat, Locale.UK);
                         returnString = cdf.format(cell.getDateCellValue());
                     }
-
                 }
             }
             /* I thnk this is redundant due to my call wihtout the locale above
@@ -249,7 +243,6 @@ class ImportFileUtilities {
             //remove spurious quote marks
             returnString = returnString.substring(1, returnString.length() - 1).replace("\"\"", "\"");
         }
-
         if (returnString.startsWith("`") && returnString.indexOf("`", 1) < 0) {
             returnString = returnString.substring(1);
         }
@@ -283,7 +276,6 @@ class ImportFileUtilities {
                         } catch (Exception e) {
                             //not sure what to do here.
                         }
-
                     }
                 }
                 if ((stringValue.length() == 6 || stringValue.length() == 8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-")) {//another ZK bug
@@ -299,7 +291,6 @@ class ImportFileUtilities {
                     String newStringValue = d + "";
                     if (newStringValue.contains("E")) {
                         newStringValue = String.format("%f", d);
-
                     }
                     if (newStringValue.endsWith(".0")) {
                         stringValue = newStringValue.substring(0, newStringValue.length() - 2);
@@ -317,6 +308,7 @@ class ImportFileUtilities {
             }
             returnString = stringValue;
         }
+        assert returnString != null;
         if (returnString.startsWith("`") && returnString.indexOf("'", 1) < 0) {
             returnString = returnString.substring(1);
         }
@@ -324,5 +316,4 @@ class ImportFileUtilities {
             returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
         return new TypedPair<>(returnNumber, returnString.trim());
     }
-
 }
