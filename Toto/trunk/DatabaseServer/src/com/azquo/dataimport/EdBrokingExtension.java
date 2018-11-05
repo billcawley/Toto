@@ -202,7 +202,10 @@ There would be some duplication but it would be less complex to make
             }
 
             if (lineNo == 20 || !valuesImportConfig.getLineIterator().hasNext()) {
-                throw new Exception("Unable to find headers!");
+                if (lineNo ==1){
+                    throw new Exception(valuesImportConfig.getFileName() + ": no data");
+                }
+                throw new Exception(valuesImportConfig.getFileName() + ":Unable to find headers!");
             }
         }
         if (headersOut != null) {
