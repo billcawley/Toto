@@ -36,7 +36,7 @@ public class ImportResultsController {
             if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()){ // ok we're allowed to see it
                 result = pendingUpload.getImportResult();
             }
-            modelMap.addAttribute("memoryReport", result);
+            modelMap.addAttribute("memoryReport", result.replace("\n", "<br/>"));
             return "memoryreport";
         } else {
             return "redirect:/api/Login";

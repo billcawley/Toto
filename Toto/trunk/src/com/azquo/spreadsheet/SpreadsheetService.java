@@ -27,6 +27,7 @@ import java.io.*;
 import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /*
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -70,8 +71,8 @@ public class SpreadsheetService {
         host = thost;
     }
 
-    private static String homeDir = null;
-    private static String alias = null;
+    private static Map<String, String> properties = new ConcurrentHashMap<>();
+
 
     // ints not boolean as I want to be able to tell if not set. Thread safety not such a concern, it's reading from a file, can't see how the state would be corrupted
     private static int devMachine = -1;
@@ -84,16 +85,24 @@ public class SpreadsheetService {
     private static final String SCANPARAMS = "scanparams";
     private static final String PATCHFILESSOURCE = "patchfilessource";
 
-    public static String getHomeDir() {
-        if (homeDir == null) {
-            homeDir = azquoProperties.getProperty(host + "." + AZQUOHOME);
-            if (homeDir == null) {
-                homeDir = azquoProperties.getProperty(AZQUOHOME);
+    private static String getProperty(String key) {
+        if (properties.get(key) == null) {
+            properties.put(key, azquoProperties.getProperty(host + "." + key));
+            if (properties.get(key) == null) {
+                properties.put(key, azquoProperties.getProperty(key));
             }
         }
-        return homeDir;
+        return properties.get(key);
     }
 
+
+
+    public static String getHomeDir() {
+        return getProperty(AZQUOHOME);
+    }
+
+    private static String alias = null;
+    // keeps its own pattern
     public static String getAlias() {
         if (alias == null) {
             alias = azquoProperties.getProperty(host + "." + ALIAS);
@@ -103,7 +112,7 @@ public class SpreadsheetService {
         }
         return alias;
     }
-
+    // keeps its own pattern
     public static boolean onADevMachine() {
         if (devMachine == -1) {
             if (azquoProperties.getProperty(host + "." + DEVMACHINE) != null) {
@@ -115,52 +124,35 @@ public class SpreadsheetService {
         return devMachine == 1;
     }
 
-    private static String scanDir = null;
-
     public static String getScanDir() {
-        if (scanDir == null) {
-            scanDir = azquoProperties.getProperty(host + "." + SCANDIR);
-            if (scanDir == null) {
-                scanDir = azquoProperties.getProperty(SCANDIR);
-            }
-        }
-        return scanDir;
+        return getProperty(SCANDIR);
     }
-
-    private static String scanBusiness = null;
 
     public static String getScanBusiness() {
-        if (scanBusiness == null) {
-            scanBusiness = azquoProperties.getProperty(host + "." + SCANBUSINESS);
-            if (scanBusiness == null) {
-                scanBusiness = azquoProperties.getProperty(SCANBUSINESS);
-            }
-        }
-        return scanBusiness;
+        return getProperty(SCANBUSINESS);
     }
-
-    private static String scanParams = null;
 
     public static String getScanParams() {
-        if (scanParams == null) {
-            scanParams = azquoProperties.getProperty(host + "." + SCANPARAMS);
-            if (scanParams == null) {
-                scanParams = azquoProperties.getProperty(SCANPARAMS);
-            }
-        }
-        return scanParams;
+        return getProperty(SCANPARAMS);
     }
 
-    private static String patchFilesSource = null;
-
     public static String getPatchFilesSource() {
-        if (patchFilesSource == null) {
-            patchFilesSource = azquoProperties.getProperty(host + "." + PATCHFILESSOURCE);
-            if (patchFilesSource == null) {
-                patchFilesSource = azquoProperties.getProperty(PATCHFILESSOURCE);
-            }
-        }
-        return patchFilesSource;
+        return getProperty(PATCHFILESSOURCE);
+    }
+
+    private static final String LOGONPAGEOVERRIDE = "logonpageoverride";
+    public static String getLogonPageOverride() {
+        return getProperty(LOGONPAGEOVERRIDE);
+    }
+
+    private static final String LOGONPAGECOLOUR = "logonpagecolour";
+    public static String getLogonPageColour() {
+        return getProperty(LOGONPAGECOLOUR);
+    }
+
+    private static final String LOGONPAGEMESSAGE = "logonpagemessage";
+    public static String getLogonPageMessage() {
+        return getProperty(LOGONPAGEMESSAGE);
     }
 
     public static void setUserChoice(int userId, String choiceName, String choiceValue) {

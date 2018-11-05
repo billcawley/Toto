@@ -102,6 +102,13 @@ public final class PendingUploadDAO {
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + COMMITTED + " = :" + COMMITTED + " order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
     }
 
+    public static List<PendingUpload> findForBusinessIdAndComittedAndFileNameSearch(final int businessId, boolean committed, String fileNameSearch) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(COMMITTED, committed);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + COMMITTED + " = :" + COMMITTED + " order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
+    }
+
     public static void removeForDatabaseId(int databaseId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(DATABASEID, databaseId);

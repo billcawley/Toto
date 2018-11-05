@@ -43,8 +43,9 @@ public class LoginController {
     ) throws Exception {
         String url = request.getRequestURL().toString();
         String page = "login";
-        if (url.contains("edbroking")){
-            page = "edbroking_login";
+
+        if (SpreadsheetService.getLogonPageOverride() != null && !SpreadsheetService.getLogonPageOverride().isEmpty()){
+            page = SpreadsheetService.getLogonPageOverride();
         }
 
         if ("true".equals(logoff)) {

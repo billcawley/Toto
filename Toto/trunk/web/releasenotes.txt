@@ -1,4 +1,12 @@
-02-11-18
+05-11-18
+
+Updated groovy import script for premium.
+
+Handles xls files with new import routines - some recent xls files show issues that need to be addressed but no Ed Broking data.
+
+Importing brings the names of cells imported into line with the default display name of the value found.
+
+New poi based reading of xlsx enabled. Much faster than ZK.
 
 
 01-11-18

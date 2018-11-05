@@ -470,6 +470,8 @@ this may now not work at all, perhaps delete?
             // zap the backups also
             String dbBackupsDirectory = DBCron.getDBBackupsDirectory(db);
             FileUtils.deleteDirectory(new File(dbBackupsDirectory));
+            // I'm not going to delete the files for the moment
+            PendingUploadDAO.removeForDatabaseId(db.getId());
             DatabaseDAO.removeById(db);
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).dropDatabase(db.getPersistenceName());
         }
