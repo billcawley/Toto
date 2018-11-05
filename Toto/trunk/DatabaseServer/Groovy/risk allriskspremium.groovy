@@ -6,11 +6,14 @@ Need to check for where there's more than one contract line and assign a section
 */
 import com.azquo.dataimport.ValuesImportConfig
 
+import java.text.SimpleDateFormat
+
 def fileProcess(Object[] args) {
     // now do it again
+    SimpleDateFormat df = new SimpleDateFormat("yyyy-mm-dd");
+    SimpleDateFormat usdf = new SimpleDateFormat("mm/dd/yyyy");
     println("risk all risks premium running ")
     def lineNo = 1
-    int headingsLine = 0;
     ValuesImportConfig valuesImportConfig = (ValuesImportConfig) args[0];
     String filePath = valuesImportConfig.getFilePath();
     //AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
@@ -22,42 +25,61 @@ def fileProcess(Object[] args) {
     int contractNumCol = 0;
     int contractPremCol = 0;
     int agreementCol = 0;
+    int expDateCol = 0;
     List<String> linesToSort = new ArrayList<>();
     fileWriter = writeFile.newWriter();
     file.withReader { reader ->
         while ((line = reader.readLine()) != null) {
-            if (line.trim().contains("\t") && headingsLine == 0){ // for the moment we'll assume the headings are here
+            if (line.trim().contains("\t") && expDateCol == 0){ // for the moment we'll assume the headings are here
                 println("read line " + line)
-                headingsLine = lineNo
                 StringTokenizer st = new StringTokenizer(line, "\t");
                 int colNum = 0;
                 while (st.hasMoreTokens()){
-                    String col = st.nextToken()
-                    if (col.equalsIgnoreCase("agmt_num")){
+                    String col = st.nextToken().toLowerCase();
+                    if (col.equals("agmt_num")){
                         agreementCol = colNum
                     }
-                    if (col.equalsIgnoreCase("contract_num")){
+                    if (col.equals("contract_num")){
                         contractNumCol = colNum
                     }
-                    if (col.equalsIgnoreCase("written_prem")){
+                    if (col.equals("written_prem")){
                         contractPremCol = colNum
+                    }
+                    if (col.equals("exp_date")){
+                        expDateCol = colNum;
                     }
                     colNum++;
                 }
-                fileWriter.write(line + "\tLine")
-                fileWriter.write("\r\n")
-            } else if (headingsLine != 0){ // ok we're into data
+                if (expDateCol> 0) {
+                    fileWriter.write(line + "\tInception_date\tLine");
+                    fileWriter.write("\r\n");
+                }
+            } else if (expDateCol > 0){ // ok we're into data
                 if (contractPremCol >=0 && line[contractPremCol].length() < 8){
                     valuesImportConfig.getFileNameParameters().put("import template","risk allriskspremium1");
 
                 }
                 if (!line.trim().isEmpty()){
+                    //work out inception date....
+                    def split1 = line.split("\t")
+                    String exp_date = split1[expDateCol];
+                    Calendar c = Calendar.getInstance();
+                    try{
+                        c.setTime(df.parse(exp_date));
+                    }catch(Exception e1) {
+                        try {
+                            //if the original cell was not formatted as a date, the date will be in US format
+                            c.setTime(usdf.parse(exp_date))
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            throw new Exception(e);
+                        }
+                    }
+                    c.add(Calendar.YEAR,-1);
+                    c.add(Calendar.DAY_OF_MONTH,1);
+                    line += "\t" + df.format(c.getTime());
                     linesToSort.add(line);
                 }
-            } else {
-                // copying the top until data we need to sort
-                fileWriter.write(line)
-                fileWriter.write("\r\n")
             }
             lineNo++
         }
