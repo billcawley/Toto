@@ -123,7 +123,7 @@ class ValuesImportConfigProcessor {
             } catch (GroovyRuntimeException e) {
                 // exception could be because the groovy script didn't have a function that matched
                 e.printStackTrace();
-                throw new Exception("Groovy error " + e.getMessage());
+                throw new Exception("Groovy error " + valuesImportConfig.getFileName() + ": " + e.getMessage() + "\n");
             }
         }
     }
@@ -168,7 +168,7 @@ class ValuesImportConfigProcessor {
             String secondLine = null;
             if (firstLine == null || (firstLine.length() == 0 && (secondLine = br.readLine()) == null)) {
                 br.close();
-                throw new Exception("Unable to read any data (perhaps due to an empty file in a zip or an empty sheet in a workbook)");
+                throw new Exception(valuesImportConfig.getFileName() + ": Unable to read any data (perhaps due to an empty file in a zip or an empty sheet in a workbook)");
             }
             if (secondLine == null){ // it might have been assigned above in the empty file check - todo clean logic?
                 secondLine = br.readLine();
