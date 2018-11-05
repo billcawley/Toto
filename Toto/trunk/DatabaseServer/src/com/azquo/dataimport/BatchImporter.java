@@ -268,8 +268,13 @@ public class BatchImporter implements Callable<Void> {
                                 String sourceVal = null;
                                 if (compCell.getImmutableImportHeading().lineNameRequired) {
                                     if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
-                                        compCell.addToLineNames(includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
-                                                , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames)));
+                                        Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
+                                                , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames));
+                                        compCell.addToLineNames(compName);
+                                        if (compName.getDefaultDisplayName().equals(compCell.getLineValue())){
+                                            compCell.setLineValue(compName.getDefaultDisplayName());
+                                        }
+
                                     }
                                     if (compCell.getLineNames() != null) {
                                         sourceVal = compCell.getLineNames().iterator().next().getDefaultDisplayName();
