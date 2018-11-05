@@ -55,7 +55,7 @@ def fileProcess(Object[] args) {
                     fileWriter.write("\r\n");
                 }
             } else if (expDateCol > 0){ // ok we're into data
-                if (contractPremCol >=0 && line[contractPremCol].length() < 8){
+                if (contractPremCol >=0 && line.size()> contractPremCol && line[contractPremCol].length() < 8){
                     valuesImportConfig.getFileNameParameters().put("import template","risk allriskspremium1");
 
                 }
