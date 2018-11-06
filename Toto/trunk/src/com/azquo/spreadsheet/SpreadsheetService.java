@@ -18,6 +18,7 @@ import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.util.AzquoMailer;
 import org.apache.commons.lang.math.NumberUtils;
+import org.springframework.security.access.method.P;
 import org.zkoss.zss.api.Exporter;
 import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
@@ -87,9 +88,13 @@ public class SpreadsheetService {
 
     private static String getProperty(String key) {
         if (properties.get(key) == null) {
-            properties.put(key, azquoProperties.getProperty(host + "." + key));
+            if (azquoProperties.getProperty(host + "." + key) != null) {
+                properties.put(key, azquoProperties.getProperty(host + "." + key));
+            }
             if (properties.get(key) == null) {
-                properties.put(key, azquoProperties.getProperty(key));
+                if (azquoProperties.getProperty(key) != null){
+                    properties.put(key, azquoProperties.getProperty(key));
+                }
             }
         }
         return properties.get(key);
