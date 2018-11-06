@@ -203,7 +203,7 @@ class ImportFileUtilities {
                 if (dataFormat.contains("0") && dataFormat.replace("0","").isEmpty()){
                     returnString = df.formatCellValue(cell);
                 } else {
-                    returnString = returnNumber.intValue() + "";
+                    returnString = returnNumber.longValue() + "";
                 }
             }
             if (dataFormat.equals("h:mm") && returnString.length() == 4) {
