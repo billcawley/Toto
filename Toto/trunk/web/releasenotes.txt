@@ -1,3 +1,9 @@
+06-11-18
+
+Login message and colour configurable to distinguish between systems.
+
+Important bug fix to new import code! (it was tripped up by very large numbers)
+
 05-11-18-2
 
 Formatting import error messages.

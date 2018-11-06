@@ -126,13 +126,12 @@ public class ManageDatabasesController {
             , @RequestParam(value = "unloadId", required = false) String unloadId
             , @RequestParam(value = "toggleAutobackup", required = false) String toggleAutobackup
                                 // todo - address whether we're still using such parameters and associated functions
-            , @RequestParam(value = "summaryLevel", required = false) String summaryLevel
             , @RequestParam(value = "fileSearch", required = false) String fileSearch
             , @RequestParam(value = "deleteUploadRecordId", required = false) String deleteUploadRecordId
-            , @RequestParam(value = "uploadAnyway", required = false) String uploadAnyway
             , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "sort", required = false) String sort
             , @RequestParam(value = "pendingUploadId", required = false) String pendingUploadId
+            , @RequestParam(value = "pendingUploadSearch", required = false) String pendingUploadSearch
             , @RequestParam(value = "rejectId", required = false) String rejectId
             , @RequestParam(value = "databaseId", required = false) String databaseId
             , @RequestParam(value = "revert", required = false) String revert
@@ -414,7 +413,7 @@ public class ManageDatabasesController {
             model.put("usernamesort", "username".equals(sort) ? "usernamedown" : "username");
             model.put("uploads", uploadRecordsForDisplayForBusiness);
             AtomicBoolean canCommit = new AtomicBoolean(false);
-            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, canCommit)); // no search for the mo
+            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, pendingUploadSearch, canCommit)); // no search for the mo
             model.put("commit", canCommit.get());
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("developer", loggedInUser.getUser().isDeveloper());

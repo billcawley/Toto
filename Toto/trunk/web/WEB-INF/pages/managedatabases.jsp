@@ -225,7 +225,9 @@ Created by IntelliJ IDEA.
                     <td>Date</td>
                     <td>Modified On</td>
                     <td>Modified By</td>
-                    <td>File Name</td>
+                    <td>
+                        <form method="post" action="/api/ManageDatabases#tab4"> File Name <input size="20" name="pendingUploadSearch"></form>
+                    </td>
                     <td>Source</td>
                     <td>Status</td>
                     <td>Database</td>
