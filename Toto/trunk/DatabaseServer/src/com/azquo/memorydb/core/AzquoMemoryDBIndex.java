@@ -303,31 +303,34 @@ public class AzquoMemoryDBIndex {
         setAttributeForNameInAttributeNameMapCount.incrementAndGet();
         // upper and lower seems a bit arbitrary, I need a way of making it case insensitive.
         // these interns have been tested as helping memory usage.
-        String lcAttributeValue = attributeValue.toLowerCase().trim().intern();
-        String ucAttributeName = attributeName.toUpperCase().trim().intern();
-        if (lcAttributeValue.indexOf(StringLiterals.QUOTE) >= 0 && !ucAttributeName.equals(StringLiterals.CALCULATION)) {
-            lcAttributeValue = lcAttributeValue.replace(StringLiterals.QUOTE, '\'').intern();
+          String ucAttributeName = attributeName.toUpperCase().trim().intern();
+        String[] attValues = attributeValue.split(StringLiterals.NEXTATTRIBUTE);
+        for (String attValue:attValues) {
+            String lcAttributeValue = attValue.toLowerCase().trim().intern();
+            if (lcAttributeValue.indexOf(StringLiterals.QUOTE) >= 0 && !ucAttributeName.equals(StringLiterals.CALCULATION)) {
+                lcAttributeValue = lcAttributeValue.replace(StringLiterals.QUOTE, '\'').intern();
+            }
+            // moved to computeIfAbsent, saved a fair few lines of code
+            Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.computeIfAbsent(ucAttributeName, s -> new ConcurrentHashMap<>());
+            // Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
+            // cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
+            // ok, these got bigger than expected, big bottleneck. Using compute should be able to safely switch over at 512 entries
+            //Collection<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
+            // modification of the sets or list is in compute but I still need the collections themselves to be thread safe as I need to safely call an iterator on them
+            namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
+                // Could maybe get a little speed by adding a special case for the first name (as in singleton)?
+                if (v == null) {
+                    v = new CopyOnWriteArrayList<>();
+                }
+                if (v.size() == 512) {
+                    Collection<Name> asSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
+                    asSet.addAll(v);
+                    v = asSet;
+                }
+                v.add(name); // this WAS outside but in theory this might mean two different collections escaping to each have something added, hence an index entry gets missed. Unlikely but no harm in it being in here
+                return v;
+            });
         }
-        // moved to computeIfAbsent, saved a fair few lines of code
-        Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.computeIfAbsent(ucAttributeName, s -> new ConcurrentHashMap<>());
-        // Generally these lists will be single and not modified often so I think copy on write array should do the high read speed thread safe trick!
-        // cost on writes but thread safe reads, might take a little more memory than the ol arraylist, hopefully not a big prob
-        // ok, these got bigger than expected, big bottleneck. Using compute should be able to safely switch over at 512 entries
-        //Collection<Name> names = namesForThisAttribute.computeIfAbsent(lcAttributeValue, s -> new CopyOnWriteArrayList<>());
-        // modification of the sets or list is in compute but I still need the collections themselves to be thread safe as I need to safely call an iterator on them
-        namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
-            // Could maybe get a little speed by adding a special case for the first name (as in singleton)?
-            if (v == null) {
-                v = new CopyOnWriteArrayList<>();
-            }
-            if (v.size() == 512) {
-                Collection<Name> asSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
-                asSet.addAll(v);
-                v = asSet;
-            }
-            v.add(name); // this WAS outside but in theory this might mean two different collections escaping to each have something added, hence an index entry gets missed. Unlikely but no harm in it being in here
-            return v;
-        });
     }
 
     // Again use the compute, keeps things safe
@@ -337,16 +340,19 @@ public class AzquoMemoryDBIndex {
     void removeAttributeFromNameInAttributeNameMap(final String attributeName, final String attributeValue, final Name name) throws Exception {
         removeAttributeFromNameInAttributeNameMapCount.incrementAndGet();
         String ucAttributeName = attributeName.toUpperCase().trim();
-        String lcAttributeValue = attributeValue.toLowerCase().trim();
-        final Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
-        if (namesForThisAttribute != null) {// the map we care about
-            // putting this modification in compute to be sure it won't get tripped up finding a collection that was switched in the mean time by the 512 setAttribute switch above
-            namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
-                if (v != null) {
-                    v.remove(name);
-                }
-                return v;
-            });
+        String[] attValues = attributeValue.split(StringLiterals.NEXTATTRIBUTE);
+        for (String attValue:attValues) {
+            String lcAttributeValue = attValue.toLowerCase().trim();
+            final Map<String, Collection<Name>> namesForThisAttribute = nameByAttributeMap.get(ucAttributeName);
+            if (namesForThisAttribute != null) {// the map we care about
+                // putting this modification in compute to be sure it won't get tripped up finding a collection that was switched in the mean time by the 512 setAttribute switch above
+                namesForThisAttribute.compute(lcAttributeValue, (k, v) -> {
+                    if (v != null) {
+                        v.remove(name);
+                    }
+                    return v;
+                });
+            }
         }
     }
 
