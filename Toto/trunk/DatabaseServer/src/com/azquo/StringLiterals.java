@@ -11,6 +11,7 @@ public class StringLiterals {
     public static final String DISPLAYROWS = "DISPLAYROWS";
     public static final String LOCAL = "LOCAL";
     public static final String ATTRIBUTEDIVIDER = "↑"; // it will go attribute name, attribute vale, attribute name, attribute vale
+    public static final String NEXTATTRIBUTE = "\\|\\|";//when we need to be able to look up different versions of an attribute (e.g importing where more than one version exists)
     public static final char QUOTE = '`';
     public static final String MEMBEROF = "->"; // used to qualify names, no longer using ","
     public static final String LEVEL = "level";
