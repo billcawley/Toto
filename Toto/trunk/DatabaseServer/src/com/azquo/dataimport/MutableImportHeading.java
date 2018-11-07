@@ -91,4 +91,5 @@ class MutableImportHeading {
     String lookupFrom = null;
     String lookupTo = null;
     String checkList = null; //list of terms 'number' or 'letters <=> n' separated by ';'
+    boolean replace = false; //usually numbers will add if on the same file.  'replace' will accept the last one.
 }

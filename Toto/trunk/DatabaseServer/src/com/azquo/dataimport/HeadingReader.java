@@ -73,6 +73,7 @@ class HeadingReader {
     static final String SPLIT = "split";
     static final String TOPLINE = "topline";
     static final String CHECK = "check";
+    static final String REPLACE = "replace";
 
     /*DICTIONARY finds a name based on the string value of the cell.  The system will search all names for the attribute given by the 'dictionary' term.  For instance if the phrase is 'dictionary complaint terms'
     the system will look through all the attributes 'complaint terms' to see if any match the value of this cell.
@@ -469,7 +470,8 @@ todo - add classification here
                 && !firstWord.equals(REMOVESPACES)
                 && !firstWord.equals(EXCLUSIVE)
                 && !firstWord.equals(CLEAR)
-                && !firstWord.equalsIgnoreCase(TOPLINE)
+                && !firstWord.equals(TOPLINE)
+                && !firstWord.equals(REPLACE)
                 && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading + " in headings"); // other clauses cannot be blank!
         }
@@ -602,6 +604,7 @@ todo - add classification here
             case TOPHEADING:
                 //used elsewhere
                 break;
+
             case TOPLINE:
                 //used elsewhere
                 break;
@@ -712,6 +715,9 @@ todo - add classification here
                    }
                 }
                 heading.checkList = result;
+            case REPLACE:
+                heading.replace = true;
+                break;
             default:
                 throw new Exception(firstWord + " not understood in heading '" + heading.heading + "'");
         }

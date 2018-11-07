@@ -58,6 +58,7 @@ class ImmutableImportHeading {
      String lookupFrom;
      String lookupTo;
      String checkList;
+     boolean replace;
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -88,6 +89,7 @@ class ImmutableImportHeading {
         this.lookupFrom = mutableImportHeading.lookupFrom;
         this.lookupTo = mutableImportHeading.lookupTo;
         this.checkList = mutableImportHeading.checkList;
+        this.replace = mutableImportHeading.replace;
 
     }
 }
