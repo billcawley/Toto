@@ -5,6 +5,7 @@ Need to check for where there's more than one contract line and assign a section
 
 */
 import com.azquo.dataimport.ValuesImportConfig
+import com.azquo.memorydb.Constants
 
 import java.text.SimpleDateFormat
 
@@ -14,6 +15,7 @@ def fileProcess(Object[] args) {
     SimpleDateFormat usdf = new SimpleDateFormat("mm/dd/yyyy");
     println("risk all risks premium running ")
     def lineNo = 1
+    int topLine = 0;
     ValuesImportConfig valuesImportConfig = (ValuesImportConfig) args[0];
     String filePath = valuesImportConfig.getFilePath();
     //AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
@@ -22,22 +24,24 @@ def fileProcess(Object[] args) {
     File writeFile = new File(outFile);
     writeFile.delete() // to avoid confusion
     String line
-    int contractNumCol = 0;
-    int contractPremCol = 0;
-    int agreementCol = 0;
-    int expDateCol = 0;
+    int contractNumCol = -1;
+    int contractPremCol = -1;
+    int agreementCol = -1;
+    int expDateCol = -1;
     List<String> linesToSort = new ArrayList<>();
     fileWriter = writeFile.newWriter();
     file.withReader { reader ->
         while ((line = reader.readLine()) != null) {
-            if (line.trim().contains("\t") && expDateCol == 0){ // for the moment we'll assume the headings are here
+            if (line.trim().contains("\t") && topLine == 0){ // for the moment we'll assume the headings are here
                 println("read line " + line)
                 StringTokenizer st = new StringTokenizer(line, "\t");
                 int colNum = 0;
                 while (st.hasMoreTokens()){
                     String col = st.nextToken().toLowerCase();
                     if (col.equals("agmt_num")){
-                        agreementCol = colNum
+                       topLine = lineNo;
+                       agreementCol = colNum
+
                     }
                     if (col.equals("contract_num")){
                         contractNumCol = colNum
@@ -54,10 +58,16 @@ def fileProcess(Object[] args) {
                     fileWriter.write(line + "\tInception_date\tLine");
                     fileWriter.write("\r\n");
                 }
-            } else if (expDateCol > 0){ // ok we're into data
-                if (contractPremCol >=0 && line.size()> contractPremCol && line[contractPremCol].length() < 8){
-                    valuesImportConfig.getFileNameParameters().put("import template","risk allriskspremium1");
+            } else if (agreementCol >= 0) { // ok we're into data
+                if (lineNo == topLine + 1) {
+                    if (agreementCol >= 0 && line.size() > agreementCol && line[agreementCol] != 'B') {
+                        valuesImportConfig.getFileNameParameters().put("import template", "risk allriskspremium1");
+                        List<String> languages = new ArrayList<>();
+                        languages.add("allriskspremium1");
+                        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+                        valuesImportConfig.setLanguages(languages);
 
+                    }
                 }
                 if (!line.trim().isEmpty()){
                     //work out inception date....
