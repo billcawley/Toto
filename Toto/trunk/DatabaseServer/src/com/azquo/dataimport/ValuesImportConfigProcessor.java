@@ -80,8 +80,6 @@ class ValuesImportConfigProcessor {
             if (importInterpreterLookup.contains(".")) {
                 importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
             }
-            // this distinction was previously dealt with by fileType and fileName, we still support the filename being replaced
-            // in the headings and it expects this (filename without extension), importInterpreterLookup is no good as it may be mangled further
             // try to find a name which might have the headings in its attributes
             Name importInterpreter = NameService.findByName(valuesImportConfig.getAzquoMemoryDBConnection(), "dataimport " + importInterpreterLookup, valuesImportConfig.getLanguages());
             //we can use the import interpreter to import different files by suffixing the name with _ or a space and suffix.

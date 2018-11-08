@@ -1,7 +1,7 @@
 package com.azquo.spreadsheet;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.TreeNode;
 import com.azquo.memorydb.core.Name;
@@ -74,7 +74,7 @@ public class JSTreeService {
         final AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name name = NameService.findById(connectionFromAccessToken, nameId); // the parent, will be null if -1 passed in the case of adding to root . . .
         Name newName = NameService.findOrCreateNameInParent(connectionFromAccessToken, "newnewnew", name, true);
-        newName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, "New node");
+        newName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, "New node");
         return new JsonChildren.Node(-1, "New node", false, newName.getId(), nameId);
     }
 

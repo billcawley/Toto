@@ -8,7 +8,7 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.dataimport.ImportService;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
@@ -287,7 +287,7 @@ public class ReportExecutor {
                 } else if (trimmedLine.toLowerCase().startsWith("delete ")) {
                     // zapdata is put through to the name query parser - this is not great practice really . . . .
                   RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                            .getJsonChildren(loggedInUser.getDataAccessToken(),0, 0, false, "edit:zapdata " + trimmedLine.substring(7), Constants.DEFAULT_DISPLAY_NAME, 0);
+                            .getJsonChildren(loggedInUser.getDataAccessToken(),0, 0, false, "edit:zapdata " + trimmedLine.substring(7), StringLiterals.DEFAULT_DISPLAY_NAME, 0);
 
                 } else if (trimmedLine.toLowerCase().startsWith("set ")) {
                     String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));

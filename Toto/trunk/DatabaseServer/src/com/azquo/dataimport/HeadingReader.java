@@ -2,11 +2,9 @@ package com.azquo.dataimport;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 
-import java.lang.reflect.Array;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -52,7 +50,7 @@ class HeadingReader {
     static final String COMPOSITION = "composition";
     static final String CLASSIFICATION = "classification";
     static final String DEFAULT = "default";
-    static final String OVERRIDE = "override";
+    private static final String OVERRIDE = "override";
     static final String NONZERO = "nonzero";
     static final String REMOVESPACES = "removespaces";
     private static final String REQUIRED = "required";
@@ -267,39 +265,7 @@ todo - add classification here
                         lastHeading = header;
                     }
                 }
-                boolean left = false;
-                String function = "right(filename,";
-                int fileNamePos = header.toLowerCase().indexOf(function);
-                if (fileNamePos < 0) {
-                    left = true;
-                    function = "left(filename,";
-                    fileNamePos = header.toLowerCase().indexOf(function);
-                }
-                if (fileNamePos > 0) {
-                    //extract this part of the file name.  This is currently limited to this format
-                    int functionEnd = header.indexOf(")", fileNamePos);
-                    if (functionEnd > 0) {
-                        try {
-                            String fileName = valuesImportConfig.getFileName();
-                            int len = Integer.parseInt(header.substring(fileNamePos + function.length(), functionEnd));
-                            String replacement = "";
-                            if (fileName.contains(".")) {// this had a comment saying it was a hack - as long as behavior is consistent I see no harm in stripping the extension
-                                fileName = fileName.substring(0, fileName.lastIndexOf("."));
-                            }
-                            if (len < fileName.length()) {
-                                if (left) {
-                                    replacement = fileName.substring(0, len);
-                                } else {
-                                    replacement = fileName.substring(fileName.length() - len);
-                                }
-                            }
-                            header = header.replace(header.substring(fileNamePos - 1, functionEnd + 2), replacement);// accommodating the quote marks
-                        } catch (Exception ignored) {
-                        }
-                    }
-                }
-
-                header = header.replace("IMPORTLANGUAGE", valuesImportConfig.getLanguages().get(0));
+//                header = header.replace("IMPORTLANGUAGE", valuesImportConfig.getLanguages().get(0));
                 header = header.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
                 /* line heading and data
                 Line heading means that the cell data on the line will be a name that is a parent of the line no
@@ -491,9 +457,9 @@ todo - add classification here
             case LANGUAGE: // language being attribute
                 if (result.equalsIgnoreCase(DATELANG) || result.equalsIgnoreCase(USDATELANG)) {
                     if (result.equalsIgnoreCase(DATELANG)) {
-                        heading.dateForm = Constants.UKDATE;
+                        heading.dateForm = StringLiterals.UKDATE;
                     } else {
-                        heading.dateForm = Constants.USDATE;
+                        heading.dateForm = StringLiterals.USDATE;
                         result = DATELANG;
                     }
                     //Bill had commented these three lines, Edd uncommenting 13/07/2018 as it broke DG import
@@ -515,7 +481,7 @@ todo - add classification here
                 }
                 heading.attribute = result.replace(StringLiterals.QUOTE + "", "");
                 if (heading.attribute.equalsIgnoreCase("name")) {
-                    heading.attribute = Constants.DEFAULT_DISPLAY_NAME;
+                    heading.attribute = StringLiterals.DEFAULT_DISPLAY_NAME;
                 }
                 break;
             case ONLY:

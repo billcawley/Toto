@@ -517,7 +517,7 @@ this may now not work at all, perhaps delete?
         if (setupFile != null && setupFile.getFileName() != null) {
             ImportService.importTheFile(loggedInUser,
                     setupFile.getFileName() + ""
-                    , setupFile.toString(), false);
+                    , setupFile.toString());
         }
     }
 

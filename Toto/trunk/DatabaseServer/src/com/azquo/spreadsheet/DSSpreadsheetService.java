@@ -5,7 +5,7 @@ import com.azquo.MultidimensionalListUtils;
 import com.azquo.StringLiterals;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.service.*;
@@ -289,7 +289,7 @@ public class DSSpreadsheetService {
             azquoMemoryDBConnection.getAzquoMemoryDB().removeValuesLockForUser(databaseAccessToken.getUserId()); // todo - is this the palce to unlock? It's probably fair
             boolean modifiedInTheMeanTime = azquoMemoryDBConnection.getDBLastModifiedTimeStamp() != cellsAndHeadingsForDisplay.getTimeStamp(); // if true we need to check if someone else changed the data
             // ad hoc saves regardless of changes in the mean time. Perhaps not the best plan . . .
-            azquoMemoryDBConnection.setProvenance(user, Constants.IN_SPREADSHEET, reportName, context);
+            azquoMemoryDBConnection.setProvenance(user, StringLiterals.IN_SPREADSHEET, reportName, context);
             if ((cellsAndHeadingsForDisplay.getRowHeadings().size()== 0 || cellsAndHeadingsForDisplay.getColumnHeadings().size() == 0) && cellsAndHeadingsForDisplay.getData().size() > 0) {
                 // todo - cen we get the number of values modified???
                 numberOfValuesModified = importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
@@ -368,7 +368,7 @@ public class DSSpreadsheetService {
                             if (valuesForCell != null) {
                                 Provenance originalProvenance = azquoMemoryDBConnection.getProvenance();
                                 if (cell.getComment() != null && !cell.getComment().isEmpty()) {
-                                    azquoMemoryDBConnection.setProvenance(user, Constants.IN_SPREADSHEET + ", comment : " + cell.getComment(), reportName, context);
+                                    azquoMemoryDBConnection.setProvenance(user, StringLiterals.IN_SPREADSHEET + ", comment : " + cell.getComment(), reportName, context);
                                 }
                                 //logger.info(columnCounter + ", " + rowCounter + " not locked and modified");
                                 // one thing about these store functions to the value spreadsheet, they expect the provenance on the logged in connection to be appropriate
@@ -662,7 +662,7 @@ public class DSSpreadsheetService {
     }
 
     public static List<String> nameAutoComplete(DatabaseAccessToken databaseAccessToken, String s, int limit) throws Exception {
-        Collection<Name> names = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDBIndex().getNamesWithAttributeStarting(Constants.DEFAULT_DISPLAY_NAME, s);
+        Collection<Name> names = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDBIndex().getNamesWithAttributeStarting(StringLiterals.DEFAULT_DISPLAY_NAME, s);
         List<String> toReturn = new ArrayList<>();
         if (names == null || names.size() == 0) {//maybe it is a query
             names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), s);

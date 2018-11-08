@@ -2,7 +2,7 @@ package com.azquo.app.magento;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
@@ -182,15 +182,15 @@ public class DSDataLoadService {
         String lastNameId = null;
 
         List<String> dateLanguage = Collections.singletonList("date");
-        Name storeName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "store", null, false, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
-        Name allStoresName = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All stores", storeName, false, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
+        Name storeName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "store", null, false, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
+        Name allStoresName = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All stores", storeName, false, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
         Map<String, Name> storeGroupMap = HashObjObjMaps.newMutableMap();
 
         for (Map<String, String> storeGroupRec : tableMap.get("core_store_group")) {
             String groupId = storeGroupRec.get("group_id");
             String name = storeGroupRec.get("name");
             if (!groupId.equals("0")) {
-                Name storeGroup = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, allStoresName, true, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
+                Name storeGroup = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, allStoresName, true, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
                 storeGroupMap.put(groupId, storeGroup);
             }
         }
@@ -203,7 +203,7 @@ public class DSDataLoadService {
             String groupId = storeRec.get("group_id");
             String name = storeRec.get("name");
             if (!storeId.equals("0")) {
-                Name store = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, storeGroupMap.get(groupId), true, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
+                Name store = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, name, storeGroupMap.get(groupId), true, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
                 storeMap.put(storeId, store);
             }
         }
@@ -288,7 +288,7 @@ public class DSDataLoadService {
             }
             //TODO consider what might happen if importing categories from two different databases - don't do it!
             Name categoryName = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, "`" + path + "`", productCategories, true, categoryLanguage);
-            categoryName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, categoryNames.get(thisCatNo));
+            categoryName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, categoryNames.get(thisCatNo));
             azquoCategoriesFound.put(thisCatNo, categoryName);
             allCategories.addChildWillBePersisted(categoryName);
         }
@@ -516,10 +516,10 @@ public class DSDataLoadService {
         Name allCurrenciesName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All currencies", ordersName, false);
         Name allHours = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, "date" + StringLiterals.MEMBEROF + "All hours", null, false);
 
-        Name customersName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "customer", null, false, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
-        Name allCustomersName = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
-        Name allCountriesName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All countries", customersName, false, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
-        Name allGroupsName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All customer groups", customersName, false, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
+        Name customersName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "customer", null, false, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
+        Name allCustomersName = NameService.findOrCreateNameStructure(azquoMemoryDBConnection, "All customers", customersName, false, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
+        Name allCountriesName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All countries", customersName, false, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
+        Name allGroupsName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, "All customer groups", customersName, false, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
         List<String> emailLanguage = new ArrayList<>();
         emailLanguage.add("email");
 
@@ -604,7 +604,7 @@ public class DSDataLoadService {
                     } else {
                         customerName = lastName;
                     }
-                    customer.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, customerName);
+                    customer.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, customerName);
                 }
             }
         }
@@ -899,7 +899,7 @@ public class DSDataLoadService {
                         }
                         customerName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, email, allCustomersName, true, Collections.singletonList("email"));
                         String fullName = getFullName(salesFlatOrderShippingAddress);
-                        customerName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, fullName);
+                        customerName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, fullName);
                         customerName.setAttributeWillBePersisted("POSTCODE", salesFlatOrderShippingAddress.get("postcode"));
                     } else {
                         if (notLoggedIn == null) {
@@ -953,7 +953,7 @@ public class DSDataLoadService {
                 }
                 String orderStatus = orderRow.get("status");
                 if (orderStatus != null && orderStatus.length() > 0) {
-                    Name statusName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderStatus, orderStatusName, true, Constants.DEFAULT_DISPLAY_NAME_AS_LIST);
+                    Name statusName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, orderStatus, orderStatusName, true, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST);
                     statusName.addChildWillBePersisted(orderName);
                 }
 
@@ -1036,7 +1036,7 @@ public class DSDataLoadService {
                     System.out.println("Entity id linked in catalog_product_entity_varchar that doesn't exist in catalog_product_entity : " + attributeRow.get("entity_id"));
                 } else {
                     if (attId.equals(productNameId)) {
-                        productName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, attVal);
+                        productName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, attVal);
                     }
                     for (String att : productAtts) {
                         String thisAttId = attIds.get(att);

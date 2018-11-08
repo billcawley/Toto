@@ -2,9 +2,8 @@ package com.azquo.memorydb.service;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
-import com.azquo.spreadsheet.StringUtils;
+import com.azquo.StringUtils;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -50,7 +49,7 @@ public class NameQueryParser {
 
     public static Collection<Name> parseQuery(final AzquoMemoryDBConnection azquoMemoryDBConnection, String setFormula) throws Exception {
         parseQueryCount.incrementAndGet();
-        return parseQuery(azquoMemoryDBConnection, setFormula, Constants.DEFAULT_DISPLAY_NAME_AS_LIST, null, false);
+        return parseQuery(azquoMemoryDBConnection, setFormula, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, null, false);
     }
 
     private static AtomicInteger parseQuery2Count = new AtomicInteger(0);
@@ -205,14 +204,14 @@ public class NameQueryParser {
 
             } else if (op == StringLiterals.ASSYMBOL) {
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
-                if (totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME) != null){
-                    resetDefs = totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME).toLowerCase();
+                if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null){
+                    resetDefs = totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME).toLowerCase();
                 }
                 NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, false);
             }else if (op == StringLiterals.ASGLOBALSYMBOL){
                 Name totalName = nameStack.get(stackCount).getAsCollection().iterator().next();// get(0) relies on list, this works on a collection
-                if (totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME) != null){
-                    resetDefs = totalName.getAttribute(Constants.DEFAULT_DISPLAY_NAME).toLowerCase();
+                if (totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME) != null){
+                    resetDefs = totalName.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME).toLowerCase();
                 }
                 NameStackOperators.assignSetAsName(azquoMemoryDBConnection, attributeNames, nameStack, stackCount, true);
                 global = true;

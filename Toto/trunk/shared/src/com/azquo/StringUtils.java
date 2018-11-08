@@ -1,6 +1,5 @@
-package com.azquo.spreadsheet;
+package com.azquo;
 
-import com.azquo.StringLiterals;
 import org.apache.commons.lang.math.NumberUtils;
 
 import java.text.DecimalFormat;
@@ -247,7 +246,7 @@ I should be ok for StringTokenizer at this point
         String stack = "";
         Matcher m = p.matcher(calc);
         int startPos = 0;
-        final String funcOrder = StringLiterals.CONTAINSSYMBOL + "+-/*" + StringLiterals.MATHFUNCTION ;//if a CONTAINS b  then result is  b - a, so CONTAINSSYMBOL has higher priority than + or -)
+        final String funcOrder = StringLiterals.CONTAINSSYMBOL + "+-/*" + StringLiterals.MATHFUNCTION;//if a CONTAINS b  then result is  b - a, so CONTAINSSYMBOL has higher priority than + or -)
         while (m.find()) {
             String opfound = m.group();
             char thisOp = opfound.charAt(0);
@@ -257,7 +256,7 @@ I should be ok for StringTokenizer at this point
                 sb.append(namefound).append(" ");
             }
             char lastOffStack = ' ';
-            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && (")" +funcOrder + "(").indexOf(thisOp) <= ("(" + funcOrder).indexOf(stack.charAt(0)))) {
+            while (!(thisOp == ')' && lastOffStack == '(') && (stack.length() > 0 && (")" + funcOrder + "(").indexOf(thisOp) <= ("(" + funcOrder).indexOf(stack.charAt(0)))) {
                 if (stack.charAt(0) != '(') {
                     sb.append(stack.charAt(0)).append(" ");
                 }
@@ -338,11 +337,11 @@ I should be ok for StringTokenizer at this point
         return val;
     }
 
-    static boolean isStringInQuotes(String sourceString, String searchString, char quoteChar){
+    public static boolean isStringInQuotes(String sourceString, String searchString, char quoteChar) {
         boolean inQuotes = false;
         int index = sourceString.indexOf(searchString);
-        for (int i = 0; i < index; i++){
-            if (sourceString.charAt(i) == quoteChar){
+        for (int i = 0; i < index; i++) {
+            if (sourceString.charAt(i) == quoteChar) {
                 inQuotes = !inQuotes;
             }
         }
@@ -352,61 +351,61 @@ I should be ok for StringTokenizer at this point
     // to make number functions work with the SYA I'm going to say e.g. that EXP ((x / y) + (a * b)) is changed to ( ((x / y) + (a * b)) | EXP), then make the calc resolver understand it
     public static String fixNumberFunction(String statement, String function) {
         int nextClosed = getNextClosedBracketFrom(statement, function);
-        while (nextClosed != -1){
+        while (nextClosed != -1) {
             int functionIndex = statement.toLowerCase().indexOf(function.toLowerCase());
             statement = statement.substring(0, functionIndex)
                     + " ( " + statement.substring(functionIndex + function.length(), nextClosed + 1)
-                    + " " + StringLiterals.MATHFUNCTION + " " + function + " ) " + statement.substring( nextClosed + 1);
+                    + " " + StringLiterals.MATHFUNCTION + " " + function + " ) " + statement.substring(nextClosed + 1);
             statement = statement.trim();
             nextClosed = getNextClosedBracketFrom(statement, function);
         }
         return statement;
     }
 
-    private static int getNextClosedBracketFrom(String statement, String from){
+    private static int getNextClosedBracketFrom(String statement, String from) {
         // could leave the lowercases? Efficient?
         statement = statement.toLowerCase();
         from = from.toLowerCase();
-        if (!statement.contains(from)){
-            return  -1;
+        if (!statement.contains(from)) {
+            return -1;
         }
         int start = statement.indexOf(from);
         start = statement.indexOf("(", start);
-        if (start == -1){
+        if (start == -1) {
             return -1;
         }
         start++;
         int brackets = 1;
-        for (int i = start; i < statement.length(); i++){
-            if (statement.charAt(i) == '('){
+        for (int i = start; i < statement.length(); i++) {
+            if (statement.charAt(i) == '(') {
                 brackets++;
             }
-            if (statement.charAt(i) == ')'){
+            if (statement.charAt(i) == ')') {
                 brackets--;
             }
-            if (brackets == 0){
+            if (brackets == 0) {
                 return i;
             }
         }
         return -1;
     }
 
-    public static String stripTempSuffix(String name){
+    public static String stripTempSuffix(String name) {
         int dotPos = name.lastIndexOf(".");
         boolean istimestamp = true;
-        while (istimestamp && dotPos > 0){
+        while (istimestamp && dotPos > 0) {
             istimestamp = false;
-            int underscorePos = name.substring(0,dotPos).lastIndexOf("_");
-            if (dotPos - underscorePos > 14){
+            int underscorePos = name.substring(0, dotPos).lastIndexOf("_");
+            if (dotPos - underscorePos > 14) {
                 istimestamp = true;
-                for (int i=underscorePos + 1;i<dotPos;i++){
-                    if (name.charAt(i) < '0' || name.charAt(i) > '9'){
+                for (int i = underscorePos + 1; i < dotPos; i++) {
+                    if (name.charAt(i) < '0' || name.charAt(i) > '9') {
                         istimestamp = false;
                         break;
                     }
                 }
-                if (istimestamp){
-                    name = name.substring(0,underscorePos) + name.substring(dotPos);
+                if (istimestamp) {
+                    name = name.substring(0, underscorePos) + name.substring(dotPos);
                     dotPos = name.lastIndexOf(".");
                 }
             }
@@ -414,5 +413,4 @@ I should be ok for StringTokenizer at this point
         return name;
 
     }
-
 }

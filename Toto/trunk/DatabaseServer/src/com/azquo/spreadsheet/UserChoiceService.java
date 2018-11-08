@@ -2,7 +2,6 @@ package com.azquo.spreadsheet;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameQueryParser;
@@ -159,7 +158,7 @@ public class UserChoiceService {
         List<String> languages = new ArrayList<>();
         languages.add(user);
         if (!justUser){
-            languages.add(Constants.DEFAULT_DISPLAY_NAME);
+            languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
         }
         Collection<Name> names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, false);
         if (names.size() > 1000) { // don't even try, you're not getting the dropdown or multi select = SHOW THE FIRST 500!!!!!!!
@@ -185,7 +184,7 @@ public class UserChoiceService {
         //must be a local name in 'Filter sets' and be for this user,  start with just the username in the languages
         Name filterSet = NameService.findOrCreateNameInParent(connectionFromAccessToken, filterName, filterSets, true, languages);
         // now add in the default display name for a more typical languages list
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
         if (filterSet.getChildren() == null || filterSet.getChildren().size() == 0) {
             Collection<Name> possibleNames = NameQueryParser.parseQuery(connectionFromAccessToken, query, languages, true);
             for (Name possibleName : possibleNames) {

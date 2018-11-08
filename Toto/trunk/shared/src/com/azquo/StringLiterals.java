@@ -1,11 +1,23 @@
 package com.azquo;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Created by edward on 14/10/16.
  *
  * Just a place to collate the String literals. Makes sense given that some are used across classes.
  */
 public class StringLiterals {
+
+    // shared ones that used to be in "Constants"
+    public static final String DEFAULT_DISPLAY_NAME = "DEFAULT_DISPLAY_NAME";
+    public static final String DATABASE_UNMODIFIED = "DATABASE UNMODIFIED";
+    public static final List<String> DEFAULT_DISPLAY_NAME_AS_LIST = Collections.singletonList(DEFAULT_DISPLAY_NAME);
+    public static String IN_SPREADSHEET = "in spreadsheet"; // We'll do this by string literal for the moment - might reconsider later. This is shared as currently it's part of the drilldown syntax and provenance, I'm not sure about this!
+    public static int UKDATE = 1;
+    public static int USDATE = 2;
+
     public static final String CALCULATION = "CALCULATION";
     public static final String DEFINITION = "DEFINITION";
     public static final String DISPLAYROWS = "DISPLAYROWS";

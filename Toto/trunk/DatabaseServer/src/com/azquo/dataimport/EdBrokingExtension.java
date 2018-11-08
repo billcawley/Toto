@@ -1,6 +1,6 @@
 package com.azquo.dataimport;
 
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import org.springframework.util.StringUtils;
@@ -29,7 +29,7 @@ class EdBrokingExtension {
                 for (String newLang : newLangs) {
                     languages.add(newLang.trim());
                 }
-                languages.add(Constants.DEFAULT_DISPLAY_NAME);
+                languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
                 valuesImportConfig.setLanguages(languages);
             }
         }

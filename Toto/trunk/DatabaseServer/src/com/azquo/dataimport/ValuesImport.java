@@ -2,7 +2,7 @@ package com.azquo.dataimport;
 
 import com.azquo.ThreadPools;
 import com.azquo.memorydb.core.Name;
-import com.azquo.spreadsheet.StringUtils;
+import com.azquo.StringUtils;
 
 import java.io.File;
 import java.util.*;

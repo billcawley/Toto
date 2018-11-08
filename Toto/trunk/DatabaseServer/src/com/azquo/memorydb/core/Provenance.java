@@ -1,7 +1,7 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.DateUtils;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.spreadsheet.transport.ProvenanceForDisplay;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -142,6 +142,6 @@ public final class Provenance extends AzquoMemoryDBEntity {
     }
 
     public ProvenanceForDisplay getProvenanceForDisplay() {
-        return new ProvenanceForDisplay(method != null && method.toLowerCase().startsWith(Constants.IN_SPREADSHEET), user, method, name, context, timeStamp);
+        return new ProvenanceForDisplay(method != null && method.toLowerCase().startsWith(StringLiterals.IN_SPREADSHEET), user, method, name, context, timeStamp);
     }
 }

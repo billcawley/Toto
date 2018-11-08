@@ -4,7 +4,7 @@ import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.user.UserChoice;
 import com.azquo.admin.user.UserChoiceDAO;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.rmi.RMIClient;
 
 import java.util.ArrayList;

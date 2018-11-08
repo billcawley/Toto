@@ -4,13 +4,12 @@ import com.azquo.MultidimensionalListUtils;
 import com.azquo.StringLiterals;
 import com.azquo.ThreadPools;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
-import javax.xml.crypto.Data;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -674,7 +673,7 @@ class DataRegionHeadingService {
         }
         // note, custom languages - the wrong way around!
         List<String> languages = new ArrayList<>();
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);//for displaying headings always look for DEFAULT_DISPLAY_NAME first - otherwise may look up the chain for local names
+        languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);//for displaying headings always look for DEFAULT_DISPLAY_NAME first - otherwise may look up the chain for local names
         languages.add(user);
         List<List<String>> toReturn = new ArrayList<>(source.size());
         for (List<DataRegionHeading> row : source) {

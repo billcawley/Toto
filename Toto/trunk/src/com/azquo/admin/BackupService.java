@@ -80,9 +80,9 @@ public class BackupService {
             if (!f.getName().endsWith(".db")) {
                 // rename the xlsx file to get rid of the ID that will probably be in front in the backup zip
                 if (f.getName().contains("-") && NumberUtils.isNumber(f.getName().substring(0, f.getName().indexOf("-")))) {
-                    toReturn.append(ImportService.importTheFile(loggedInUser, f.getName().substring(f.getName().indexOf("-") + 1), f.getAbsolutePath(), false).replace("\n", "<br/>") + "<br/>");
+                    toReturn.append(ImportService.importTheFile(loggedInUser, f.getName().substring(f.getName().indexOf("-") + 1), f.getAbsolutePath()).replace("\n", "<br/>") + "<br/>");
                 } else {
-                    toReturn.append(ImportService.importTheFile(loggedInUser, f.getName(), f.getAbsolutePath(), false).replace("\n", "<br/>") + "<br/>");
+                    toReturn.append(ImportService.importTheFile(loggedInUser, f.getName(), f.getAbsolutePath()).replace("\n", "<br/>") + "<br/>");
                 }
             }
         }

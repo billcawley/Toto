@@ -2,7 +2,6 @@ package com.azquo.memorydb.service;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 
@@ -199,7 +198,7 @@ class NameEditFunctions {
                     v.setNamesWillBePersisted(existingForValue);
                 }
 
-                child2.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, "duplicate-" + child2.getDefaultDisplayName());
+                child2.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, "duplicate-" + child2.getDefaultDisplayName());
                 rubbishBin.addChildWillBePersisted(child2);
             }
         }
@@ -217,7 +216,7 @@ class NameEditFunctions {
             }
         }
        /*input syntax 'findduplicates`   probably need to add 'exception' list of cases where duplicates are expected (e.g.   Swimshop product categories)*/
-        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().findDuplicateNames(Constants.DEFAULT_DISPLAY_NAME, attributeExceptions);
+        return azquoMemoryDBConnection.getAzquoMemoryDBIndex().findDuplicateNames(StringLiterals.DEFAULT_DISPLAY_NAME, attributeExceptions);
     }
 
     private static List<Name> deduplicate(AzquoMemoryDBConnection azquoMemoryDBConnection, String formula) throws Exception {
@@ -250,7 +249,7 @@ class NameEditFunctions {
         Name name = names.iterator().next();
         for (Name child : name.findAllChildren()) {
             if (!rubbishBin.getChildren().contains(child)) {
-                Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(Constants.DEFAULT_DISPLAY_NAME_AS_LIST, child.getDefaultDisplayName(), name);
+                Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, child.getDefaultDisplayName(), name);
                 if (possibles.size() > 1) {
                     dedupeOne(child, possibles, rubbishBin);
                 }

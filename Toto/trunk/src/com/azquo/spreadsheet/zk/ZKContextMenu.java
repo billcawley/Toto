@@ -5,7 +5,7 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
@@ -493,8 +493,8 @@ class ZKContextMenu {
                     editPopup.appendChild(ddItem);
                     // right, showProvenance has been simplified a little, I need to parse out the report name here
                     String reportName = "";
-                    if (drillDownString.contains(Constants.IN_SPREADSHEET)) {
-                        drillDownString = drillDownString.substring(drillDownString.indexOf(Constants.IN_SPREADSHEET) + Constants.IN_SPREADSHEET.length()).trim();
+                    if (drillDownString.contains(StringLiterals.IN_SPREADSHEET)) {
+                        drillDownString = drillDownString.substring(drillDownString.indexOf(StringLiterals.IN_SPREADSHEET) + StringLiterals.IN_SPREADSHEET.length()).trim();
                         if (drillDownString.contains(" with ")) {
                             reportName = drillDownString.substring(0, drillDownString.indexOf(" with ")).replace("`", "");
                             drillDownString = drillDownString.substring(drillDownString.indexOf(" with ") + 6);

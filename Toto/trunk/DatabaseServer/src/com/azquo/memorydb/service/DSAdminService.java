@@ -1,7 +1,7 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
@@ -147,7 +147,7 @@ public class DSAdminService {
             for (Name parent : name.findAllParents()) {
                 if (parent.getParents() == null) {//we need to start from the top
                     //copyname copies all allowed children, and avoids endless loops.
-                    copyName(targetConnection, parent, null, Constants.DEFAULT_DISPLAY_NAME_AS_LIST, allowed, dictionary);
+                    copyName(targetConnection, parent, null, StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, allowed, dictionary);
                 }
             }
 

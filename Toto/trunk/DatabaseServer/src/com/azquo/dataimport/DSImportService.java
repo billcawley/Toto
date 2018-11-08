@@ -1,7 +1,7 @@
 package com.azquo.dataimport;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.DatabaseAccessToken;
 
 import java.util.Map;
@@ -23,23 +23,18 @@ public class DSImportService {
     Currently only two types of import supported and detection on file name (best idea?). Run the import and persist.
     Generally speaking creating the import headers and basic set structure is what is required to ready a database to load data.
 
-    EFC - Zip name is as it says, the name of the zip file (excluding the extension) if the file was originally part of a zip file.
-    Whether this should be used is another matter.
-
     */
-    public static String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName
-            , Map<String, String> fileNameParameters, String user, boolean persistAfter, boolean isSpreadsheet) throws Exception {
+    public static String readPreparedFile(final DatabaseAccessToken databaseAccessToken, final String filePath, final String fileName
+            , final String fileSource, final Map<String, String> fileNameParameters, final String user
+            , final boolean persistAfter, final boolean isSpreadsheet) throws Exception {
         System.out.println("Reading file " + filePath);
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an Excel file import, a different thing from a data entry area.
-        azquoMemoryDBConnection.setProvenance(user, fileName.contains("duplicates") ? "imported with duplicates" : "imported", fileName, "");
-        if (fileName.contains(":")) {
-            fileName = fileName.substring(fileName.indexOf(":") + 1);//remove the workbook name.  sent only for the provenance.
-        }
+        azquoMemoryDBConnection.setProvenance(user, "imported", fileName + ":" + fileSource, "");
         // if the provenance is unused I could perhaps zap it but it's not a big deal for the mo
         // also jamming this feedback on the beginning is a bit of a hack
         String result = readPreparedFile(azquoMemoryDBConnection, filePath, fileName, fileNameParameters, persistAfter, isSpreadsheet, new AtomicInteger());
-        return (azquoMemoryDBConnection.isUnusedProvenance() ? Constants.DATABASE_UNMODIFIED : "") + result;
+        return (azquoMemoryDBConnection.isUnusedProvenance() ? StringLiterals.DATABASE_UNMODIFIED : "") + result;
     }
 
     // Called by above but also directly from DSSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
@@ -54,7 +49,7 @@ public class DSImportService {
         String toReturn;
         if (fileName.toLowerCase().startsWith("sets")) { // typically from a sheet with that name in a book
             // not currently paying attention to isSpreadsheet - only possible issue is the replacing of \\\n with \n required based off writeCell in ImportFileUtilities
-            toReturn = SetsImport.setsImport(azquoMemoryDBConnection, filePath, fileName);
+            toReturn = SetsImport.setsImport(azquoMemoryDBConnection, filePath, fileNameParameters, fileName);
         } else {
             boolean clearData = fileName.toLowerCase().contains("cleardata");
             ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection, filePath, fileName, fileNameParameters, isSpreadsheet, valuesModifiedCounter, clearData);

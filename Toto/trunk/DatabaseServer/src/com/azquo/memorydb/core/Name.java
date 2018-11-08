@@ -1,7 +1,6 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.StringLiterals;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
@@ -135,7 +134,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // for convenience but be careful where it is used . . .
     public String getDefaultDisplayName() {
         getDefaultDisplayNameCount.incrementAndGet();
-        return nameAttributes.getAttribute(Constants.DEFAULT_DISPLAY_NAME);
+        return nameAttributes.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME);
     }
 
     // todo what was this for, aagh, I know there was something!
@@ -143,7 +142,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     public boolean hasDefaultDisplayName() {
         hasDefaultDisplayNameCount.incrementAndGet();
-        return nameAttributes.hasAttribute(Constants.DEFAULT_DISPLAY_NAME);
+        return nameAttributes.hasAttribute(StringLiterals.DEFAULT_DISPLAY_NAME);
     }
 
     // provenance immutable. If it were not then would need to clone

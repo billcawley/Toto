@@ -1,7 +1,7 @@
 package com.azquo.dataimport;
 
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import com.fasterxml.jackson.databind.MappingIterator;
 
@@ -47,7 +47,7 @@ public class ValuesImportConfig {
         this.fileNameParameters = fileNameParameters;
         this.valuesModifiedCounter = valuesModifiedCounter;
         this.isSpreadsheet = isSpreadsheet;
-        languages = Constants.DEFAULT_DISPLAY_NAME_AS_LIST;
+        languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
         importAttribute = null;
         importInterpreter = null;
         assumptions = null;

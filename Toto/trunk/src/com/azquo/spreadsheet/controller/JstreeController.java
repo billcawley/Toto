@@ -2,7 +2,7 @@ package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
@@ -56,7 +56,7 @@ public class JstreeController {
             , @RequestParam(value = "sessionId", required = false) String sessionId
     ) throws Exception {
         if (attribute == null || attribute.length() == 0) {
-            attribute = Constants.DEFAULT_DISPLAY_NAME;
+            attribute = StringLiterals.DEFAULT_DISPLAY_NAME;
         }
         String jsonFunction = "azquojsonfeed";
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);

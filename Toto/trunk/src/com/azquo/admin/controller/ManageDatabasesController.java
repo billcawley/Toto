@@ -6,7 +6,7 @@ import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -261,8 +261,8 @@ public class ManageDatabasesController {
                     PendingUpload pendingUpload = PendingUploadDAO.findById(pendingUploadImportedId);
                     if (pendingUpload != null) {
                         pendingUpload.setImportResult(importResult);
-                        if (importResult.startsWith(Constants.DATABASE_UNMODIFIED) || importResult.startsWith("ERROR")) { // string literals, as ever todo
-                            if (importResult.startsWith(Constants.DATABASE_UNMODIFIED)) {
+                        if (importResult.startsWith(StringLiterals.DATABASE_UNMODIFIED) || importResult.startsWith("ERROR")) { // string literals, as ever todo
+                            if (importResult.startsWith(StringLiterals.DATABASE_UNMODIFIED)) {
                                 error.append("<span style=\"background-color: #FF8888; color: #000000\">** Marked as rejected as no data was modified **</span><br/>");
                             }
                             if (importResult.startsWith("ERROR")) {
@@ -517,9 +517,9 @@ public class ManageDatabasesController {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
                 AtomicBoolean dataChanged = new AtomicBoolean(false);
-                String result = ImportService.importTheFile(loggedInUser, fileName, filePath, paramsFromUser, false, false, true, dataChanged).replace("\n", "<br/>");
+                String result = ImportService.importTheFile(loggedInUser, fileName, filePath, paramsFromUser, false, true, dataChanged).replace("\n", "<br/>");
                 if (!dataChanged.get()) {
-                    result = Constants.DATABASE_UNMODIFIED + "<br/>" + result;
+                    result = StringLiterals.DATABASE_UNMODIFIED + "<br/>" + result;
                 }
                 session.setAttribute(ManageDatabasesController.IMPORTRESULT, result);
             } catch (Exception e) {

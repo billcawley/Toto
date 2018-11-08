@@ -1,7 +1,7 @@
 package com.azquo.memorydb;
 
 import com.azquo.memorydb.core.*;
-import com.azquo.spreadsheet.StringUtils;
+import com.azquo.StringUtils;
 //import org.apache.log4j.Logger;
 
 import java.time.LocalDateTime;

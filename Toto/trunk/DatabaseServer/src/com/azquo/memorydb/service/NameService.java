@@ -1,10 +1,9 @@
 package com.azquo.memorydb.service;
 
 import com.azquo.StringLiterals;
-import com.azquo.memorydb.Constants;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.spreadsheet.StringUtils;
+import com.azquo.StringUtils;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -95,7 +94,7 @@ public final class NameService {
 
     public static Name findByName(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String name) throws Exception {
         findByNameCount.incrementAndGet();
-        return findByName(azquoMemoryDBConnection, name, Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME));
+        return findByName(azquoMemoryDBConnection, name, Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME));
     }
 
     private static AtomicInteger findByName2Count = new AtomicInteger(0);
@@ -189,7 +188,7 @@ public final class NameService {
 
     public static List<Name> findTopNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String language) {
         findTopNamesCount.incrementAndGet();
-        if (language.equals(Constants.DEFAULT_DISPLAY_NAME)) {
+        if (language.equals(StringLiterals.DEFAULT_DISPLAY_NAME)) {
             return azquoMemoryDBConnection.getAzquoMemoryDB().findTopNames();
         } else {
             return azquoMemoryDBConnection.getAzquoMemoryDBIndex().findTopNames(language);
@@ -288,7 +287,7 @@ public final class NameService {
         }
      /* this routine is designed to be able to find a name that has been put in with little structure (e.g. directly from an dataimport),and insert a structure into it*/
         if (attributeNames == null) {
-            attributeNames = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
+            attributeNames = Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME);
         }
 
         String storeName = name.replace(StringLiterals.QUOTE, ' ').trim();
@@ -345,10 +344,10 @@ public final class NameService {
               logger.debug("New name: " + storeName + ", " + (parent != null ? "," + parent.getDefaultDisplayName() : ""));
             // I think provenance from connection is correct, we should be looking to make a useful provenance when making the connection from the data access token
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance());
-            if (!attributeNames.get(0).equals(Constants.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
+            if (!attributeNames.get(0).equals(StringLiterals.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
                 newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
             }
-            newName.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, storeName); // and set the default regardless
+            newName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, storeName); // and set the default regardless
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent6", marker);
             if (parent != null) {
                 // and add the new name to the parent of course :)
@@ -481,7 +480,7 @@ public final class NameService {
         getDefaultLanguagesListCount.incrementAndGet();
         List<String> languages = new ArrayList<>();
         languages.add(user);
-        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+        languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
         return languages;
     }
 

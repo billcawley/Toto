@@ -3,7 +3,7 @@ package com.azquo.memorydb.service;
 import com.azquo.DateUtils;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
-import com.azquo.spreadsheet.StringUtils;
+import com.azquo.StringUtils;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
 import java.util.*;

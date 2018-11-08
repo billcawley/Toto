@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -187,13 +188,8 @@ public class OnlineController {
                     }
                 }
                 String result = "error: user has no permission for this report";
-                // highlighting etc. From the top right menu and the azquobook context menu, can be zapped later
-                // I wonder if this should be a different controller
-                if (opcode.equalsIgnoreCase(UPLOAD) || opcode.equalsIgnoreCase(UPLOADTEMPLATE)) {
-                    boolean isData = true;
-                    if (opcode.equalsIgnoreCase(UPLOADTEMPLATE)){
-                        isData = false;
-                    }
+                if (opcode.equalsIgnoreCase(UPLOAD)) {
+                    // revised logic - this is ONLY for uploading data entered in a downloaded report
                     reportId = "";
                     if (submit.length() > 0) {
                         // getting rid of database switch
@@ -204,7 +200,7 @@ public class OnlineController {
                             if (fileName.length() > 0) {
                                 File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp the upload to stop overwriting with a file with the same name is uploaded after
                                 uploadfile.transferTo(moved);
-                                result = ImportService.importTheFile(loggedInUser, fileName, moved.getAbsolutePath(), isData);
+                                result = ImportService.uploadDataInReport(loggedInUser, fileName, moved.getAbsolutePath());
                             } else {
                                 result = "no file to import";
                             }

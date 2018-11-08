@@ -171,10 +171,6 @@ class ImportFileUtilities {
         }
     }
 
-    static TypedPair<Double, String> getCellValue(Sheet sheet, int row, int col) {
-        return getCellValue(sheet.getRow(row).getCell(col));
-    }
-
     private static DataFormatter df = new DataFormatter();
     // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO - factor common code
 

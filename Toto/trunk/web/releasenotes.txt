@@ -1,8 +1,18 @@
+07-11-18
+
+Pending upload search
+
+Splits attributes where there is a NEXTATTRIBUTE (||) symbol
+
+New heading 'replace' which accepts the last value rather than adding all values
+
+
 06-11-18
 
 Login message and colour configurable to distinguish between systems.
 
 Important bug fix to new import code! (it was tripped up by very large numbers)
+
 
 05-11-18-2
 

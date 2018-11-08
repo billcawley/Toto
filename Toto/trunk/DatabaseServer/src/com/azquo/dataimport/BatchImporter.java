@@ -2,7 +2,7 @@ package com.azquo.dataimport;
 
 import com.azquo.DateUtils;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.memorydb.Constants;
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameQueryParser;
@@ -71,7 +71,7 @@ public class BatchImporter implements Callable<Void> {
                             todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
                             */
                                 LocalDate date;
-                                if (importCellWithHeading.getImmutableImportHeading().dateForm == Constants.UKDATE) {
+                                if (importCellWithHeading.getImmutableImportHeading().dateForm == StringLiterals.UKDATE) {
                                     date = DateUtils.isADate(importCellWithHeading.getLineValue());
                                 } else {
                                     date = DateUtils.isUSDate(importCellWithHeading.getLineValue());
@@ -183,7 +183,7 @@ public class BatchImporter implements Callable<Void> {
                     languages = Collections.singletonList(cell.getImmutableImportHeading().attribute);
                 }
                 if (languages == null) { // same logic as used when creating the line names, not sure of this
-                    languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
+                    languages = Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME);
                 }
                 // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
                 for (Name parent : cell.getImmutableImportHeading().parentNames) { // try to find any names from anywhere
@@ -404,7 +404,7 @@ public class BatchImporter implements Callable<Void> {
                     if (!hasResult) {
                         if (!cell.getImmutableImportHeading().blankZeroes) {
                             Name parent = cell.getImmutableImportHeading().parentNames.iterator().next();
-                            List<String> languages = Collections.singletonList(Constants.DEFAULT_DISPLAY_NAME);
+                            List<String> languages = Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME);
                             cell.addToLineNames(findOrCreateNameStructureWithCache(azquoMemoryDBConnection, namesFoundCache, "Uncategorised " + parent.getDefaultDisplayName(), parent, false, languages));
                         } else {
                             cell.setLineValue("");
