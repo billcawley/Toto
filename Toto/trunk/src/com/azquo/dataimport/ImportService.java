@@ -388,10 +388,10 @@ public final class ImportService {
             throw new Exception("no database set");
         }
         StringBuilder toReturn = new StringBuilder();
-        Map<String, String> knownValues = new HashMap<>();
+//        Map<String, String> knownValues = new HashMap<>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            toReturn.append(readSheet(loggedInUser, fileName, fileNameParameters, sheet, tempPath, knownValues, sheetNo == book.getNumberOfSheets() - 1 && persistAfter, dataChanged)); // that last conditional means persist on the last one through (if we've been told to persist)
+            toReturn.append(readSheet(loggedInUser, fileName, fileNameParameters, sheet, tempPath/*, knownValues*/, sheetNo == book.getNumberOfSheets() - 1 && persistAfter, dataChanged)); // that last conditional means persist on the last one through (if we've been told to persist)
             toReturn.append("\n");
         }
         return toReturn.toString();
@@ -446,11 +446,10 @@ public final class ImportService {
                     if (displayName != null) {
                         StringBuilder editLine = new StringBuilder();
                         editLine.append("edit:saveset ");
-                        editLine.append("`" + setName + "` ");
+                        editLine.append("`").append(setName).append("` ");
                         CellRegion dispRegion = displayName.getRefersToCellRegion();
                         for (int rowNo = 0; rowNo < dispRegion.getRowCount(); rowNo++) {
-                            editLine.append("`" + ImportFileUtilities.getCellValue(sheet, dispRegion.getRow() + rowNo, dispRegion.getColumn()).getSecond() + "`,");
-
+                            editLine.append("`").append(ImportFileUtilities.getCellValue(sheet, dispRegion.getRow() + rowNo, dispRegion.getColumn()).getSecond()).append("`,");
                         }
                         CommonReportUtils.getDropdownListForQuery(loggedInUser, editLine.toString());
                     }
@@ -484,7 +483,7 @@ public final class ImportService {
     }*/
 
 
-    private static String readSheet(LoggedInUser loggedInUser, String fileName, Map<String, String> fileNameParameters, Sheet sheet, final String tempFileName, Map<String, String> knownValues, boolean persistAfter, AtomicBoolean dataChanged) {
+    private static String readSheet(LoggedInUser loggedInUser, String fileName, Map<String, String> fileNameParameters, Sheet sheet, final String tempFileName/*, Map<String, String> knownValues*/, boolean persistAfter, AtomicBoolean dataChanged) {
         String sheetName = sheet.getSheetName();
 //        String toReturn = "";
         try {
