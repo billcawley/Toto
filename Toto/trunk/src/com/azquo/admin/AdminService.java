@@ -351,7 +351,7 @@ this may now not work at all, perhaps delete?
                             setup = true;
                         }
                         uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable, setup));
-                        if (count > 100) {
+                        if (count > 500) {
                             break;
                         }
                     }
