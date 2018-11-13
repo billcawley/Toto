@@ -25,6 +25,7 @@ public class ValuesImportConfig {
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
     private String filePath; // grovvy can override
     private final String fileName;
+    private final String fileSource;
     private final Map<String, String> fileNameParameters;
     private boolean isSpreadsheet;
     private final AtomicInteger valuesModifiedCounter;
@@ -40,10 +41,11 @@ public class ValuesImportConfig {
 
 
     // exactly the same as is passed to valuesImport, no coincidence. Set these in this object then pass the object through various processes until it's ready to go
-    ValuesImportConfig(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, Map<String, String> fileNameParameters, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter, boolean clearData) {
+    ValuesImportConfig(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String fileSource, Map<String, String> fileNameParameters, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter, boolean clearData) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
         this.filePath = filePath;
         this.fileName = fileName;
+        this.fileSource = fileSource;
         this.fileNameParameters = fileNameParameters;
         this.valuesModifiedCounter = valuesModifiedCounter;
         this.isSpreadsheet = isSpreadsheet;
@@ -104,6 +106,8 @@ public class ValuesImportConfig {
     String getFileName() {
         return fileName;
     }
+
+    String getFileSource() {return fileSource; }
 
     public Map<String, String> getFileNameParameters() {
         return fileNameParameters;
