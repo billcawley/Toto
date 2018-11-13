@@ -243,7 +243,7 @@ public class DSSpreadsheetService {
         bw.flush();
         bw.close();
         AtomicInteger valuesModifiedCounter = new AtomicInteger();
-        DSImportService.readPreparedFile(azquoMemoryDBConnection, tempPath, "csv", null, true, true, valuesModifiedCounter);
+        DSImportService.readPreparedFile(azquoMemoryDBConnection, tempPath, "csv",  cellsAndHeadingsForDisplay.getRegion(), null, true, true, valuesModifiedCounter);
         if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
         }
