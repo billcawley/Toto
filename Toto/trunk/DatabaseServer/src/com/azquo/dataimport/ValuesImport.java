@@ -110,6 +110,9 @@ public class ValuesImport {
             }
             StringBuilder toReturn = new StringBuilder();
             toReturn.append(StringUtils.stripTempSuffix(valuesImportConfig.getFileName()));
+            if (valuesImportConfig.getFileName().contains(".xls")) {
+                toReturn.append("." + valuesImportConfig.getFileSource());
+            }
             toReturn.append(" imported. Dataimport took ")// I'm not sure I agree with intellij warning about non chained
                     .append((System.currentTimeMillis() - track) / 1000)
                     .append(" second(s) to import ")
