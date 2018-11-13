@@ -281,6 +281,13 @@ this may now not work at all, perhaps delete?
                 reportList.addAll(reports);
             }
         }
+        if (loggedInUser.getUser().isAdministrator()){
+            List<OnlineReport> reports = OnlineReportDAO.findForBusinessIdWithNoDatabase(loggedInUser.getUser().getBusinessId());
+            for (OnlineReport report : reports) {
+                report.setDatabase("None");
+            }
+            reportList.addAll(reports);
+        }
         // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {
             OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, loggedInUser.getUser().getId(), "", "No reports found", "", "", null);
@@ -473,6 +480,16 @@ this may now not work at all, perhaps delete?
             // I'm not going to delete the files for the moment
             PendingUploadDAO.removeForDatabaseId(db.getId());
             DatabaseDAO.removeById(db);
+            // setup file! Had forgot
+            Path dir = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir);
+            if (Files.isDirectory(dir)) {
+                for (Path path : Files.list(dir).collect(Collectors.toList())) {
+                    if (path != null && path.getFileName() != null && path.getFileName().toString().startsWith("Setup" + db.getName())) {
+                        Files.deleteIfExists(path);
+                    }
+                }
+            }
+
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).dropDatabase(db.getPersistenceName());
         }
     }

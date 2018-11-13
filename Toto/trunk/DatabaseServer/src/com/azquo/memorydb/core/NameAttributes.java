@@ -40,7 +40,7 @@ final class NameAttributes {
     }
 
     // faster init - note this is kind of dangerous in that the arrays could be externally modified, used by the new fast loader
-    NameAttributes(String[] attributeKeys, String[] attributeValues) throws Exception {
+    NameAttributes(String[] attributeKeys, String[] attributeValues) {
         this.attributeKeys = attributeKeys;
         this.attributeValues = attributeValues;
     }
@@ -67,7 +67,7 @@ final class NameAttributes {
         return null;
     }
 
-    public boolean hasAttribute(String attributeName) {
+    boolean hasAttribute(String attributeName) {
         for (int i = 0; i < attributeKeys.length; i++) {
             if (attributeKeys[i].equals(attributeName)) {
                 return true;

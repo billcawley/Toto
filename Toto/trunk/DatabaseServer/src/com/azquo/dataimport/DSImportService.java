@@ -39,7 +39,7 @@ public class DSImportService {
 
     // Called by above but also directly from SSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     // I wonder if the valuesModifiedCounter is a bit hacky, will maybe revisit this later
-    // EFC - parameters going up, should a configuration object be passed?
+    // EFC - parameters going up, should a configuration/context object be passed?
     public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String fileSource
             , Map<String, String> fileNameParameters, boolean persistAfter, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
@@ -69,6 +69,6 @@ public class DSImportService {
         if (persistAfter) { // get back to the user straight away. Should not be a problem, multiple persists would be queued. The only issue is of changes while persisting, need to check this in the memory db.
             new Thread(azquoMemoryDBConnection::persist).start();
         }
-         return toReturn;
+        return toReturn;
     }
 }
