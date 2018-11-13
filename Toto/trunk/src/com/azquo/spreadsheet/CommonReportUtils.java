@@ -7,10 +7,7 @@ import com.azquo.admin.user.UserChoiceDAO;
 import com.azquo.StringLiterals;
 import com.azquo.rmi.RMIClient;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by edward on 17/11/16.
@@ -72,7 +69,7 @@ public class CommonReportUtils {
                     if (equalPos > 0) {
                         if (selection.substring(0, equalPos).equalsIgnoreCase(fieldName)) {
                             List<String> toReturn = new ArrayList<>();
-                            toReturn.add(selection.substring(equalPos + 1));
+                            toReturn.addAll(Arrays.asList(selection.substring(equalPos + 1).split(",")));
                             return toReturn;
                         }
                     }
