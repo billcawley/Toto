@@ -75,7 +75,7 @@ class ValuesImportConfigProcessor {
 
     // the standard way of finding some headings in teh database. Checks they're not set in case the new Ed Broking way set the interpreter
     private static void checkImportInterpreter(ValuesImportConfig valuesImportConfig) throws Exception {
-        String importInterpreterLookup = valuesImportConfig.getFileName();
+        String importInterpreterLookup = valuesImportConfig.getFileSource();
         if (valuesImportConfig.getImportInterpreter() == null) {
             if (importInterpreterLookup.contains(".")) {
                 importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
