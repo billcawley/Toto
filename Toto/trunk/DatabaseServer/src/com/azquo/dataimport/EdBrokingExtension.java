@@ -288,6 +288,7 @@ check that the headings that are required are there . . .
      */
 
     static void checkRequiredHeadings(ValuesImportConfig valuesImportConfig) throws Exception {
+        valuesImportConfig.setLineCells(valuesImportConfig.getHeaders().size());//so that additional headings cannot have their value set by mistake
         Name importInterpreter = valuesImportConfig.getImportInterpreter();
         List<String> headers = valuesImportConfig.getHeaders();
         List<String> languages = valuesImportConfig.getLanguages();
