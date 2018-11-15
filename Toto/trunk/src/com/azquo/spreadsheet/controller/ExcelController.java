@@ -8,12 +8,15 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
+import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.*;
 import com.azquo.spreadsheet.transport.json.CellsAndHeadingsForExcel;
 import com.azquo.spreadsheet.transport.json.ExcelJsonRequest;
+import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ChoicesService;
+import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -25,6 +28,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.zeroturnaround.zip.ZipUtil;
+import org.zkoss.zss.api.Importers;
+import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.Sheet;
+import org.zkoss.zss.model.SName;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -101,7 +108,6 @@ public class ExcelController {
 
     private static final Logger logger = Logger.getLogger(OnlineController.class);
 
-    public static final String BOOK_PATH = "BOOK_PATH";
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
     public static final String REPORT_ID = "REPORT_ID";
 
@@ -147,6 +153,17 @@ public class ExcelController {
 
             if (loggedInUser == null) {
                 loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, java.net.URLDecoder.decode(password, "UTF-8"), false);
+                if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getReportId() != 0) {// then we need to load in the permissions
+                    // typically loading in the permissions would be done in online report controller. I'm going to paste relevant code here, it might be factored later
+                    OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
+                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
+                            loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();
+                    Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                    // I think I need those two
+                    book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
+                    book.getInternalBook().setAttribute(REPORT_ID, or.getId());
+                    ReportRenderer.populateBook(book, 0);
+                }
                 if (loggedInUser == null) {
                     System.out.println("login attempt by " + logon + " password " + password);
                     return jsonError("incorrect login details");
@@ -474,7 +491,7 @@ public class ExcelController {
                     List<CellForDisplay> row = new ArrayList<>();
                     // I had a comment about the error needing more but I think this is fine for the moment
                     row.add(new CellForDisplay(
-                            true, "Error : " + e.getMessage(), 0, false,0,0,false, false, "", 0)
+                            true, "Error : " + e.getMessage(), 0, false, 0, 0, false, false, "", 0)
                     );
                     data.add(row);
                     errorHeading.add(error);
@@ -540,7 +557,7 @@ public class ExcelController {
 
         // this needs to be somewhere better. Todo.
         String patchFilesSource = SpreadsheetService.getPatchFilesSource();
-        if (patchFilesSource == null || patchFilesSource.isEmpty()){
+        if (patchFilesSource == null || patchFilesSource.isEmpty()) {
             return "no patch files";
         }
         //String zipFile = "/home/edward/Downloads/xlsxbreakdown/tomodify.xlsx";

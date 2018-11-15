@@ -72,12 +72,14 @@ public class ManageReportsController {
                     if (submit != null) {
                         // to keep intelliJ happy, I'm not sure if this is a good idea or not? I suppose protects against logic above being changed unpredictably
                         DatabaseReportLinkDAO.unLinkReport(theReport.getId());
-                        for (String databaseId : databaseIdList) {
-                            int dbId = Integer.parseInt(databaseId);
-                            Database byId = DatabaseDAO.findById(dbId);
-                            if (byId != null && ((loggedInUser.getUser().isAdministrator() && byId.getBusinessId() == loggedInUser.getUser().getBusinessId())
-                                    || (loggedInUser.getUser().isDeveloper() && byId.getUserId() == loggedInUser.getUser().getId()))){
-                                DatabaseReportLinkDAO.link(byId.getId(), theReport.getId());
+                        if (databaseIdList != null){
+                            for (String databaseId : databaseIdList) {
+                                int dbId = Integer.parseInt(databaseId);
+                                Database byId = DatabaseDAO.findById(dbId);
+                                if (byId != null && ((loggedInUser.getUser().isAdministrator() && byId.getBusinessId() == loggedInUser.getUser().getBusinessId())
+                                        || (loggedInUser.getUser().isDeveloper() && byId.getUserId() == loggedInUser.getUser().getId()))){
+                                    DatabaseReportLinkDAO.link(byId.getId(), theReport.getId());
+                                }
                             }
                         }
                         theReport.setReportName(name);

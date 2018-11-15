@@ -99,6 +99,4 @@ public class LoginService {
             loggedInUser.setDatabaseWithServer(databaseServer, db);
         }
     }
-
-
 }

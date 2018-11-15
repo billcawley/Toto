@@ -30,7 +30,8 @@
 				<td>${report.database}</td>
 				<td>${report.author}</td>
 				<!-- should reportid be 1??? -->
-				<td><a href="/api/Online?reportid=${report.id}&amp;database=${report.database}" target="_blank"> <span class="fa fa-table"></span>  ${report.untaggedReportName}</a></td>
+				<td><c:if test="${report.database != 'None'}"><a href="/api/Online?reportid=${report.id}&amp;database=${report.database}" target="_blank"></c:if>
+					<span class="fa fa-table"></span>  ${report.untaggedReportName}<c:if test="${report.database != 'None'}"></a></c:if></td>
 				<!-- <td>${report.filename}</td> -->
 				<td>${report.explanation}</td>
 				<td><a href="/api/ManageReports?editId=${report.id}"  title="Edit ${report.reportName}" class="button small fa fa-edit"></a>
