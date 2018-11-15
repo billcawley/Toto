@@ -38,6 +38,7 @@ public class ValuesImportConfig {
     private boolean clearData;
     // held for Ed broking stuff, might be factored in a mo
     private final Map<String, String> topHeadings;
+    private int lineCells = 0;
 
 
     // exactly the same as is passed to valuesImport, no coincidence. Set these in this object then pass the object through various processes until it's ready to go
@@ -179,4 +180,8 @@ public class ValuesImportConfig {
     Map<String, String> getTopHeadings() {
         return topHeadings;
     }
+
+    int getLineCells() {return lineCells; }
+
+    void setLineCells(int lineCells) {this.lineCells = lineCells; }
 }
