@@ -106,7 +106,9 @@ There would be some duplication but it would be less complex to make
         // referenced like Wind|Limit. Based off the number of pipes code below will squash the headers into one. See comments where topHeadingNames is queried below
         int headingLineCount = 1;
         Set<Name> topHeadingNames = new HashSet<>();
-        if (importInterpreter != null && importInterpreter.hasChildren()) {//check for top headers
+        // EFC adding import interpreter attribute not being null - this can happen and caused a NPE. When checkImportInterpreter sets the importInterpreter
+        // as opposed to checkImportFormat above . . .
+        if (importInterpreter != null && importInterpreter.hasChildren() && importAttribute != null) {//check for top headers -
             /*CHECK FOR CONVERSION :   PERMISSIBLE IN '.<language name> is <header name> additional header info
             this converts to header name in this attribute (without brackets), together with additional header info
             in the attribute (importInterpreter.getDefaultDisplayName() + " " + <language>
