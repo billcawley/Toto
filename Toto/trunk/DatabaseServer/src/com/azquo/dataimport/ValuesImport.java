@@ -47,9 +47,10 @@ public class ValuesImport {
                 /* essentially run some basic checks on the data as it comes in and batch it up into headings with line values.
                 that pairing is very helpful in the BatchImporter
                 */
+                int cellCount = 0;
                 for (ImmutableImportHeading immutableImportHeading : valuesImportConfig.getHeadings()) {
-                    // Intern may save a little memory if strings are repeated a lot. Column Index could point past line values for things like composite.
-                    String lineValue = columnIndex < lineValues.length ? lineValues[columnIndex].trim().intern() : "";
+                      // Intern may save a little memory if strings are repeated a lot. Column Index could point past line values for things like composite.
+                    String lineValue = (cellCount++< valuesImportConfig.getLineCells() && columnIndex < lineValues.length) ? lineValues[columnIndex].trim().intern() : "";
                     if (lineValue.length() > 0) blankLine = false;
                     if (lineValue.equals("\"")) {// was a problem, might be worth checking if it is still
                         corrupt = true;
