@@ -200,7 +200,7 @@ public class OnlineController {
                             if (fileName.length() > 0) {
                                 File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp the upload to stop overwriting with a file with the same name is uploaded after
                                 uploadfile.transferTo(moved);
-                                result = ImportService.uploadDataInReport(loggedInUser, fileName, moved.getAbsolutePath());
+                                result = fileName + " : " + ImportService.uploadDataInReport(loggedInUser, moved.getAbsolutePath());
                             } else {
                                 result = "no file to import";
                             }

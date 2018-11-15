@@ -108,8 +108,6 @@ public class AzquoMemoryDBConnection {
         Provenance latest = azquoMemoryDB.getMostRecentProvenance();
         // not sure how latest and method cen get set as null but best to be careful with it
         if (latest != null && latest.getUser().equals(user)) {
-            //check to remove a timestamp
-            name = StringUtils.stripTempSuffix(name);
             if (latest.getMethod() != null && latest.getMethod().equals(method) && latest.getName() != null && latest.getName().equals(name) &&
                     latest.getContext() != null && latest.getContext().equals(context) && latest.getTimeStamp().plusSeconds(30).isAfter(LocalDateTime.now())) {
                 this.provenance = latest;

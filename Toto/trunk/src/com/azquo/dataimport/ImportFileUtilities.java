@@ -14,9 +14,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.Locale;
+import java.util.*;
 
 /**
  * Created by edward on 11/11/16.
@@ -177,11 +175,6 @@ class ImportFileUtilities {
     private static TypedPair<Double, String> getCellValue(Cell cell) {
         Double returnNumber = null;
         String returnString = "";
-        // first we try to get it without locale - better match on built in formats it seems
-        String dataFormat = BuiltinFormats.getBuiltinFormat(cell.getCellStyle().getDataFormat());
-        if (dataFormat == null){
-            dataFormat = cell.getCellStyle().getDataFormatString();
-        }
         //if (colCount++ > 0) bw.write('\t');
         if (cell.getCellType() == Cell.CELL_TYPE_STRING || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_STRING)) {
             try {
@@ -189,6 +182,11 @@ class ImportFileUtilities {
             } catch (Exception ignored) {
             }
         } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_NUMERIC)) {
+            // first we try to get it without locale - better match on built in formats it seems
+            String dataFormat = BuiltinFormats.getBuiltinFormat(cell.getCellStyle().getDataFormat());
+            if (dataFormat == null){
+                dataFormat = cell.getCellStyle().getDataFormatString();
+            }
             returnNumber = cell.getNumericCellValue();
             returnString = returnNumber.toString();
             if (returnString.contains("E")) {
@@ -246,7 +244,6 @@ class ImportFileUtilities {
             returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
         return new TypedPair<>(returnNumber, returnString.trim());
     }
-
 
     // EFC note : I'm not completely happy with this function, I'd like to rewrite. TODO
 

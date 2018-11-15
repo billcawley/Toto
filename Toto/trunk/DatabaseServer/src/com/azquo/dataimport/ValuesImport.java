@@ -109,7 +109,7 @@ public class ValuesImport {
                 }
             }
             StringBuilder toReturn = new StringBuilder();
-            toReturn.append(StringUtils.stripTempSuffix(valuesImportConfig.getFileName()));
+            toReturn.append(valuesImportConfig.getFileName());
             if (valuesImportConfig.getFileName().contains(".xls")) {
                 toReturn.append("." + valuesImportConfig.getFileSource());
             }

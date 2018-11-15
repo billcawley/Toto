@@ -81,7 +81,7 @@ public final class ImportService {
         }
         // is this overkill? Not a biggy
         File tempFile = ImportFileUtilities.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
-        uploadFile.close(); // windows requires this (though windows should not be used in production), perhaps not a bad idea anyway
+        uploadFile.close(); // windows requires this (though windows ideally should not be used in production), perhaps not a bad idea anyway
         String toReturn;
         if (fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
             ZipUtil.explode(tempFile);
@@ -113,7 +113,7 @@ public final class ImportService {
                     if (fileIterator.hasNext()) {
                         sb.append(readBookOrFile(loggedInUser, f.getName(), mapCopy, f.getPath(), false, dataChanged));
                     } else {
-                        sb.append(StringUtils.stripTempSuffix(fileName)).append(": ").append(readBookOrFile(loggedInUser, f.getName(), mapCopy, f.getPath(), isLast, dataChanged)); // persist on the last one
+                        sb.append(fileName).append(": ").append(readBookOrFile(loggedInUser, f.getName(), mapCopy, f.getPath(), isLast, dataChanged)); // persist on the last one
                     }
                 }
             }
@@ -138,6 +138,76 @@ public final class ImportService {
             toReturn += " " + ReportExecutor.runExecute(loggedInUser, execute.substring(0, executeEnd)).toString();
         }
         return toReturn;
+    }
+
+    // as it says, for when a user has downloaded a report, modified data, then uploaded
+    // uses ZK as it will have to render a copy, third public entry point into the class
+    public static String uploadDataInReport(LoggedInUser loggedInUser, String tempPath) throws Exception{
+        Book book;
+        try {
+            book = Importers.getImporter().imports(new File(tempPath), "Imported");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Import error - " + e.getMessage();
+        }
+        String reportName = null;
+        SName reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
+        if (reportRange == null) {
+            reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZIMPORTNAME);
+        }
+        if (reportRange != null) {
+            reportName = BookUtils.getSnameCell(reportRange).getStringValue().trim();
+        }
+        if (reportName != null) {
+            OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
+            Map<String, String> choices = uploadChoices(book);
+            for (Map.Entry<String, String> choiceAndValue : choices.entrySet()) {
+                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceAndValue.getKey(), choiceAndValue.getValue());
+            }
+            checkEditableSets(book, loggedInUser);
+            final Book reportBook = Importers.getImporter().imports(new File(tempPath), "Report name");
+            reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, tempPath);
+            reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+            reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
+            // this REALLY should have been commented - the load before will populate the logged in users sent cells correctly, that's
+            ReportRenderer.populateBook(reportBook, 0, false);
+            return fillDataRangesFromCopy(loggedInUser, book, or);
+        }
+        return "file doesn't appear to be an Azquo report";
+    }
+
+    // EFC note - I don't like this, want to remove it. Public entry point
+
+    public static String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName) throws Exception {
+        String success = "image uploaded successfully";
+        String sourceName = sourceFile.getOriginalFilename();
+        String suffix = sourceName.substring(sourceName.indexOf("."));
+        DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
+        String pathOffset = loggedInUser.getDatabase().getPersistenceName() + "/images/" + fileName + suffix;
+        String destinationPath = SpreadsheetService.getHomeDir() + dbPath + pathOffset;
+        if (databaseServer.getIp().equals(LOCALIP)) {
+            Path fullPath = Paths.get(destinationPath);
+            Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
+            Files.copy(sourceFile.getInputStream(), fullPath); // and copy
+        } else {
+            destinationPath = databaseServer.getSftpUrl() + pathOffset;
+            ImportFileUtilities.copyFileToDatabaseServer(sourceFile.getInputStream(), destinationPath);
+        }
+        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+        String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
+        if (imageList != null) {//check if it's already in the list
+            String[] images = imageList.split(",");
+            for (String image : images) {
+                if (image.trim().equals(fileName + suffix)) {
+                    return success;
+                }
+            }
+            imageList += "," + fileName + suffix;
+        } else {
+            imageList = fileName + suffix;
+        }
+        RMIClient.getServerInterface(databaseAccessToken.getServerIp()).setNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images", imageList);
+        return success;
     }
 
     private static String readBookOrFile(final LoggedInUser loggedInUser, final String fileName, final Map<String, String> fileNameParameters
@@ -259,7 +329,6 @@ public final class ImportService {
             FileInputStream fs = new FileInputStream(new File(filePath));
             OPCPackage opcPackage = OPCPackage.open(fs);
             XSSFWorkbook book = new XSSFWorkbook(opcPackage);
-            //Book book = Importers.getImporter().imports(new File(fileName), "Report name");
             Sheet schedulesSheet = book.getSheet("ReportSchedules"); // literals not best practice, could it be factored between this and the xlsx file?
             if (schedulesSheet != null) {
                 dataChanged.set(true);
@@ -355,7 +424,7 @@ public final class ImportService {
                     " " + (System.currentTimeMillis() - time));
         } catch (Exception e) {
             e.printStackTrace();
-            return StringUtils.stripTempSuffix(fileName) + ": Import error - " + e.getMessage();
+            return fileName + ": Import error - " + e.getMessage();
         }
         String reportName = null;
         boolean isImportTemplate = false;
@@ -396,43 +465,6 @@ public final class ImportService {
         }
         return toReturn.toString();
     }
-
-    // as it says, for when a user has downloaded a report, modified data, then uploaded
-    // uses ZK as it will have to render a copy
-    public static String uploadDataInReport(LoggedInUser loggedInUser, String fileName, String tempPath) throws Exception{
-        Book book;
-        try {
-            book = Importers.getImporter().imports(new File(tempPath), "Imported");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return StringUtils.stripTempSuffix(fileName) + ": Import error - " + e.getMessage();
-        }
-        String reportName = null;
-        SName reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
-        if (reportRange == null) {
-            reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZIMPORTNAME);
-        }
-        if (reportRange != null) {
-            reportName = BookUtils.getSnameCell(reportRange).getStringValue().trim();
-        }
-        if (reportName != null) {
-            OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
-            Map<String, String> choices = uploadChoices(book);
-            for (Map.Entry<String, String> choiceAndValue : choices.entrySet()) {
-                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceAndValue.getKey(), choiceAndValue.getValue());
-            }
-            checkEditableSets(book, loggedInUser);
-            final Book reportBook = Importers.getImporter().imports(new File(tempPath), "Report name");
-            reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, tempPath);
-            reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
-            reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
-            // this REALLY should have been commented - the load before will populate the logged in users sent cells correctly, that's
-            ReportRenderer.populateBook(reportBook, 0, false);
-            return fillDataRangesFromCopy(loggedInUser, book, or);
-        }
-        return "File doesn't appear to be an Azquo report";
-    }
-
 
     private static void checkEditableSets(Book book, LoggedInUser loggedInUser) {
         for (SName sName : book.getInternalBook().getNames()) {
@@ -556,12 +588,11 @@ g
             ImportFileUtilities.convertRangeToCSV(sheet, csvW);
             csvW.close();
             fos.close();
-            return StringUtils.stripTempSuffix(fileName) + ": " + readPreparedFile(loggedInUser, tempPath, fileName, sheetName, fileNameParameters, persistAfter, true, dataChanged);
+            return fileName + ": " + readPreparedFile(loggedInUser, tempPath, fileName, sheetName, fileNameParameters, persistAfter, true, dataChanged);
         } catch (Exception e) {
             e.printStackTrace();
-            return "\n" + StringUtils.stripTempSuffix(fileName) + ": " + e.getMessage();
+            return "\n" + fileName + ": " + e.getMessage();
         }
-
     }
 
     private static String LOCALIP = "127.0.0.1";
@@ -584,40 +615,6 @@ g
             dataChanged.set(true);
         }
         return s;
-    }
-
-    // EFC note - I don't like this
-
-    public static String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName) throws Exception {
-        String success = "image uploaded successfully";
-        String sourceName = sourceFile.getOriginalFilename();
-        String suffix = sourceName.substring(sourceName.indexOf("."));
-        DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
-        String pathOffset = loggedInUser.getDatabase().getPersistenceName() + "/images/" + fileName + suffix;
-        String destinationPath = SpreadsheetService.getHomeDir() + dbPath + pathOffset;
-        if (databaseServer.getIp().equals(LOCALIP)) {
-            Path fullPath = Paths.get(destinationPath);
-            Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
-            Files.copy(sourceFile.getInputStream(), fullPath); // and copy
-        } else {
-            destinationPath = databaseServer.getSftpUrl() + pathOffset;
-            ImportFileUtilities.copyFileToDatabaseServer(sourceFile.getInputStream(), destinationPath);
-        }
-        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-        String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
-        if (imageList != null) {//check if it's already in the list
-            String[] images = imageList.split(",");
-            for (String image : images) {
-                if (image.trim().equals(fileName + suffix)) {
-                    return success;
-                }
-            }
-            imageList += "," + fileName + suffix;
-        } else {
-            imageList = fileName + suffix;
-        }
-        RMIClient.getServerInterface(databaseAccessToken.getServerIp()).setNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images", imageList);
-        return success;
     }
 
     // for the download, modify and upload the report

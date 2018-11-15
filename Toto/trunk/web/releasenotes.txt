@@ -1,3 +1,16 @@
+13-11-18
+
+Shows 500 recently updated files
+
+Fixed bug - SetsImport required FileSource - not fileName
+
+Shows the sheet name when reporting the import
+
+! Will accept a user choice list (from UserDAO) with multiple choices separated by commas
+
+Reports associated with no databases no longer hidden
+
+
 07-11-18
 
 Pending upload search
