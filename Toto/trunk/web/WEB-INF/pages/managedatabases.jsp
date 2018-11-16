@@ -43,8 +43,6 @@ Created by IntelliJ IDEA.
                                     </c:forEach>
                                 </select>
                             </td>
-                            <td><label for="useType">Use as setup? (Reload after database cleared)</label> <input
-                                    id="useType" type="checkbox" name="setup" value="true"/></td>
                             <td><input type="submit" name="Upload" value="Upload" class="button "/></td>
                             <c:if test="${fn:contains(error,'values ')}">
                                 <td><a href="/api/Showdata?chosen=changed" class="button small" title="Download"><span
@@ -79,7 +77,7 @@ Created by IntelliJ IDEA.
                         <td>${upload.businessName}</td>
                         <td>${upload.databaseName}</td>
                         <td>${upload.userName}</td>
-                        <td><c:if test="${upload.setup}">*SETUP* </c:if>${upload.fileName}</td>
+                        <td>${upload.fileName}</td>
                         <!--<td>${upload.fileType}</td>
 				<td>${upload.comments}</td> -->
                         <td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}"

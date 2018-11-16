@@ -1,3 +1,10 @@
+16-11-18
+
+NPE catch on outside case in query parsing (from/to in a list), optimiseation when resetting large children sets on a name
+
+Fixed bug - confusion between fileName and fileSource when setting up 'DATAIMPORT'
+
+
 15-11-18
 
 ! Import null pointer fix

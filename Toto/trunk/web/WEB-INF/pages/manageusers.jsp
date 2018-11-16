@@ -5,7 +5,7 @@
 
 <main>
 	<h1>Manage Users</h1>
-		
+	<div class="error">${error}</div>
 	<table>
 		<thead>
 			<tr>
@@ -44,7 +44,10 @@
 	</table>
 
 	<div class="centeralign">
-		<a href="/api/ManageUsers?editId=0" class="button"><span class="fa fa-plus-circle"></span> Add New User</a>&nbsp;<a href="/api/CreateExcelForDownload?action=DOWNLOADUSERS" class="button">Download Users as Excel</a>
+		<a href="/api/ManageUsers?editId=0" class="button"><span class="fa fa-plus-circle"></span> Add New User</a>&nbsp;
+		<a href="/api/CreateExcelForDownload?action=DOWNLOADUSERS" class="button">Download Users as Excel</a> &nbsp;
+		<form action="/api/ManageUsers" method="post" enctype="multipart/form-data"><input type="submit" name="Upload" value="Upload User List" class="button "/>&nbsp;
+		<input id="uploadFile" type="file" name="uploadFile"></form>
 	</div>
 </main>
 <%@ include file="../includes/admin_footer.jsp" %>

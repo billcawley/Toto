@@ -101,9 +101,8 @@ public final class UploadRecord extends StandardEntity {
         final String fileType;
         final String comments;
         final boolean downloadable;
-        final boolean setup;
 
-        public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName, boolean downloadable, boolean setup) {
+        public UploadRecordForDisplay(UploadRecord ur, String businessName, String databaseName, String userName, boolean downloadable) {
             this.id = ur.id;
             this.date = ur.date;
             this.businessName = businessName;
@@ -113,7 +112,6 @@ public final class UploadRecord extends StandardEntity {
             fileType = ur.fileType;
             comments = ur.comments;
             this.downloadable = downloadable;
-            this.setup = setup;
         }
 
         public LocalDateTime getDate() {
@@ -152,10 +150,6 @@ public final class UploadRecord extends StandardEntity {
 
         public boolean getDownloadable() {
             return downloadable;
-        }
-
-        public boolean getSetup() {
-            return setup;
         }
 
         public int getId() {

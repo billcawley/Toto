@@ -151,17 +151,10 @@ this may now not work at all, perhaps delete?
     }
 
 
-    public static void emptyDatabase(LoggedInUser loggedInUser) throws Exception {
-        emptyDatabase(loggedInUser, true);
-    }
-
     // used by magento, always the currently logged in db
-    static void emptyDatabase(LoggedInUser loggedInUser, boolean checkSetup) throws Exception {
+    public static void emptyDatabase(LoggedInUser loggedInUser) throws Exception {
         DatabaseServer databaseServer = DatabaseServerDAO.findById(loggedInUser.getDatabase().getDatabaseServerId());
         RMIClient.getServerInterface(databaseServer.getIp()).emptyDatabase(loggedInUser.getDatabase().getPersistenceName());
-        if (checkSetup) {
-            checkDBSetupFile(loggedInUser, loggedInUser.getDatabase());
-        }
     }
 
     public static void copyDatabase(LoggedInUser loggedInUser, Database source, String newName) throws Exception {
@@ -326,7 +319,6 @@ this may now not work at all, perhaps delete?
             List<UploadRecord> uploadRecords = UploadRecordDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()); // limited to 10k for the mo
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<>();
             int count = 0;
-            Set<Integer> databaseIdsWithSetupsAlready = new HashSet<>();
             for (UploadRecord uploadRecord : uploadRecords) {
                 if (fileSearch == null || fileSearch.equals("") || (uploadRecord.getFileName().toLowerCase().contains(fileSearch.toLowerCase()))) {
                     if (loggedInUser.getUser().isAdministrator() || uploadRecord.getUserId() == loggedInUser.getUser().getId()) { // admin is all, developer is just theirs
@@ -352,12 +344,7 @@ this may now not work at all, perhaps delete?
                                 downloadable = true;
                             }
                         }
-                        boolean setup = false;
-                        if ("setup".equals(uploadRecord.getFileType()) && !databaseIdsWithSetupsAlready.contains(uploadRecord.getDatabaseId())) {
-                            databaseIdsWithSetupsAlready.add(uploadRecord.getDatabaseId());
-                            setup = true;
-                        }
-                        uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable, setup));
+                        uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
                         if (count > 500) {
                             break;
                         }
@@ -480,16 +467,6 @@ this may now not work at all, perhaps delete?
             // I'm not going to delete the files for the moment
             PendingUploadDAO.removeForDatabaseId(db.getId());
             DatabaseDAO.removeById(db);
-            // setup file! Had forgot
-            Path dir = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir);
-            if (Files.isDirectory(dir)) {
-                for (Path path : Files.list(dir).collect(Collectors.toList())) {
-                    if (path != null && path.getFileName() != null && path.getFileName().toString().startsWith("Setup" + db.getName())) {
-                        Files.deleteIfExists(path);
-                    }
-                }
-            }
-
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).dropDatabase(db.getPersistenceName());
         }
     }
@@ -501,7 +478,6 @@ this may now not work at all, perhaps delete?
             RMIClient.getServerInterface(DatabaseServerDAO.findById(db.getDatabaseServerId()).getIp()).emptyDatabase(db.getPersistenceName());
             Database oldDb = loggedInUser.getDatabase();
             LoginService.switchDatabase(loggedInUser, db);
-            checkDBSetupFile(loggedInUser, db);
             updateNameAndValueCounts(loggedInUser, db);
             LoginService.switchDatabase(loggedInUser, oldDb);
         }
@@ -513,29 +489,6 @@ this may now not work at all, perhaps delete?
         database.setValueCount(AdminService.getValueCountWithBasicSecurity(loggedInUser, database));
         database.setLastProvenance(getMostRecentProvenance(loggedInUser, database));
         DatabaseDAO.store(database);
-    }
-
-    private static void checkDBSetupFile(LoggedInUser loggedInUser, Database db) throws Exception {
-//        String nearlyfullPath = SpreadsheetService.getHomeDir() +  ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + ;
-        // todo - new apis . . .
-        Path setupFile = null;
-        Path dir = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir);
-        if (Files.isDirectory(dir)) {
-            for (Path path : Files.list(dir).collect(Collectors.toList())) {
-                if (path != null && path.getFileName() != null && db != null && path.getFileName().toString().startsWith("Setup" + db.getName()) // note the toString here!
-                        && (setupFile == null || Files.getLastModifiedTime(path).toMillis() > Files.getLastModifiedTime(setupFile).toMillis())) {
-                    setupFile = path;
-                }
-            }
-        }
-        System.out.println("setup file : " + setupFile);
-
-//        setupFile.getFileName().toString();
-        if (setupFile != null && setupFile.getFileName() != null) {
-            ImportService.importTheFile(loggedInUser,
-                    setupFile.getFileName() + ""
-                    , setupFile.toString());
-        }
     }
 
     public static void checkDatabaseByIdWithBasicSecurity(LoggedInUser loggedInUser, int databaseId) throws Exception {

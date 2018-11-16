@@ -428,7 +428,6 @@ public class ManageDatabasesController {
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
-            , @RequestParam(value = "setup", required = false) String setup
             , @RequestParam(value = "backup", required = false) String backup
     ) {
         if (database != null) {
@@ -460,13 +459,6 @@ public class ManageDatabasesController {
                             // always move uplaoded files now, they'll need to be transferred to the DB server after code split
                             File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                             uploadFile.transferTo(moved);
-                            // if flagged as setup we simply park the file to be reloaded each time regardless of checking it
-                            if ("true".equals(setup)) {
-                                String extension = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".")) : "";
-                                Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.databaseSetupSheetsDir + "Setup" + loggedInUser.getDatabase().getName() + extension);
-                                Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
-                                Files.copy(Paths.get(moved.getPath()), fullPath, StandardCopyOption.REPLACE_EXISTING);
-                            }
                             return handleImport(loggedInUser, session, model, fileName, moved.getAbsolutePath(), null);
                         }
                     }
@@ -517,7 +509,7 @@ public class ManageDatabasesController {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
                 AtomicBoolean dataChanged = new AtomicBoolean(false);
-                String result = ImportService.importTheFile(loggedInUser, fileName, filePath, paramsFromUser, false, true, dataChanged).replace("\n", "<br/>");
+                String result = ImportService.importTheFile(loggedInUser, fileName, filePath, paramsFromUser, true, dataChanged).replace("\n", "<br/>");
                 if (!dataChanged.get()) {
                     result = StringLiterals.DATABASE_UNMODIFIED + "<br/>" + result;
                 }

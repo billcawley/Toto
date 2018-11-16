@@ -66,12 +66,12 @@ public final class ImportService {
 
     // just convenience
     public static String importTheFile(final LoggedInUser loggedInUser, final String fileName, final String filePath) throws Exception {
-        return importTheFile(loggedInUser, fileName, filePath, null, false, true, new AtomicBoolean());
+        return importTheFile(loggedInUser, fileName, filePath, null, true, new AtomicBoolean());
     }
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
     public static String importTheFile(final LoggedInUser loggedInUser, final String fileName, final String filePath
-            , final Map<String, String> inheritedFileNameParams, final boolean setup
+            , final Map<String, String> inheritedFileNameParams
             , final boolean isLast, final AtomicBoolean dataChanged) throws Exception { // setup just to flag it
         Map<String, String> fileNameParams = inheritedFileNameParams != null ? new HashMap<>(inheritedFileNameParams) : new HashMap<>(); // copy, it might be modified
         addFileNameParametersToMap(fileName, fileNameParams);
@@ -106,7 +106,7 @@ public final class ImportService {
                 File f = fileIterator.next();
                 if (f.getName().endsWith(".zip")) {
                     // added fileNameParams will be sorted internally - recursive call
-                    sb.append(importTheFile(loggedInUser, f.getName(), f.getPath(), fileNameParams, setup, !fileIterator.hasNext(), dataChanged));
+                    sb.append(importTheFile(loggedInUser, f.getName(), f.getPath(), fileNameParams, !fileIterator.hasNext(), dataChanged));
                 } else {
                     Map<String, String> mapCopy = new HashMap<>(fileNameParams); // must copy as the map might get changed by each file in the zip
                     addFileNameParametersToMap(f.getName(), mapCopy);
@@ -127,7 +127,7 @@ public final class ImportService {
             reportName = toReturn.substring("Report uploaded : ".length());
         }
         UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
-                , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName + (reportName != null ? " - (" + reportName + ")" : ""), setup ? "setup" : "", "", filePath);//should record the error? (in comment)
+                , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName + (reportName != null ? " - (" + reportName + ")" : ""), "", "", filePath);//should record the error? (in comment)
         UploadRecordDAO.store(uploadRecord);
         AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         int executePos = toReturn.toLowerCase().indexOf("execute:");
@@ -214,161 +214,9 @@ public final class ImportService {
             , final String filePath, final boolean persistAfter, final AtomicBoolean dataChanged) throws Exception {
         String toReturn;
         if (fileName.startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
-            FileInputStream fs = new FileInputStream(new File(filePath));
-            OPCPackage opcPackage = OPCPackage.open(fs);
-            XSSFWorkbook book = new XSSFWorkbook(opcPackage);
-            List<String> notAllowed = new ArrayList<>();
-            List<String> rejected = new ArrayList<>();
-            Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
-            if (userSheet != null) {
-                dataChanged.set(true);
-                int row;
-                XSSFName listRegion = book.getName(ReportRenderer.AZLISTSTART);
-//                SName listRegion = book.getInternalBook().getNameByName(ReportRenderer.AZLISTSTART);
-                if (listRegion != null && listRegion.getRefersToFormula() != null) {
-                    AreaReference aref = new AreaReference(listRegion.getRefersToFormula());
-                    row = aref.getFirstCell().getRow();
-                } else {
-                    if ("Email/logon".equalsIgnoreCase(userSheet.getRow(4).getCell(0).getStringCellValue())) {
-                        row = 5;
-                    } else {
-                        throw new Exception("az_ListStart not found, typically it is A6");
-                    }
-                }
-                // keep them to use if not set. Should I be updating records instead? I'm not sure.
-                Map<String, String> oldPasswordMap = new HashMap<>();
-                Map<String, String> oldSaltMap = new HashMap<>();
-                List<User> userList = UserDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()); // don't use the admin call, it will just return for this user, we want all for the business so we can check not allowed
-                //todo - work out what users DEVELOPERs can upload
-                for (User user : userList) {
-                    if (user.getId() != loggedInUser.getUser().getId()) { // leave the logged in user alone!
-                        if (loggedInUser.getUser().getBusinessId() != user.getBusinessId()
-                                || (loggedInUser.getUser().getStatus().equals("MASTER") && !user.getCreatedBy().equals(loggedInUser.getUser().getEmail()))
-                                || user.getStatus().equals(User.STATUS_ADMINISTRATOR)) { // don't zap admins
-                            notAllowed.add(user.getEmail());
-                        } else {
-                            oldPasswordMap.put(user.getEmail(), user.getPassword());
-                            oldSaltMap.put(user.getEmail(), user.getSalt());
-                            UserDAO.removeById(user);
-                        }
-                    }
-                }
-                while (userSheet.getRow(row).getCell(0).getStringCellValue() != null && userSheet.getRow(row).getCell(0).getStringCellValue().length() > 0) {
-                    //Email	Name  Password	End Date	Status	Database	Report
-                    String user = userSheet.getRow(row).getCell(1).getStringCellValue().trim();
-                    String email = userSheet.getRow(row).getCell(0).getStringCellValue().trim();
-                    if (notAllowed.contains(email)) rejected.add(email);
-                    if (!loggedInUser.getUser().getEmail().equals(email) && !notAllowed.contains(email)) { // leave the logged in user alone!
-                        String salt = "";
-                        String password = userSheet.getRow(row).getCell(2).getStringCellValue();
-                        String selections = userSheet.getRow(row).getCell(7).getStringCellValue();
-                        if (password == null) {
-                            password = "";
-                        }
-                        LocalDate end = LocalDate.now().plusYears(10);
-                        try {
-                            end = LocalDate.parse(userSheet.getRow(row).getCell(3).getStringCellValue(), CreateExcelForDownloadController.dateTimeFormatter);
-                        } catch (Exception ignored) {
-                        }
-                        String status = userSheet.getRow(row).getCell(4).getStringCellValue();
-                        if (!loggedInUser.getUser().isAdministrator()) {
-                            status = "USER"; // only admins can set status
-                        }
-                        // Probably could be factored somewhere
-                        if (password.length() > 0) {
-                            salt = AdminService.shaHash(System.currentTimeMillis() + "salt");
-                            password = AdminService.encrypt(password, salt);
-                        } else if (oldPasswordMap.get(email) != null) {
-                            password = oldPasswordMap.get(email);
-                            salt = oldSaltMap.get(email);
-                        }
-                        if (password.isEmpty()) {
-                            throw new Exception("Blank password for " + email);
-                        }
-                        Database d = DatabaseDAO.findForNameAndBusinessId(userSheet.getRow(row).getCell(5).getStringCellValue(), loggedInUser.getUser().getBusinessId());
-                        OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(userSheet.getRow(row).getCell(6).getStringCellValue(), loggedInUser.getUser().getBusinessId());
-                        if (!status.equalsIgnoreCase(User.STATUS_ADMINISTRATOR) && !status.equalsIgnoreCase(User.STATUS_DEVELOPER) && or == null) {
-                            throw new Exception("Unable to find report " + userSheet.getRow(row).getCell(6).getStringCellValue());
-                        }
-                        // todo - master and user types need to check for a report and error if it's not there
-                        if (!loggedInUser.getUser().isAdministrator()) { // then I need to check against the session for allowable reports and databases
-                            boolean stored = false;
-                            if (d != null && or != null) {
-                                final Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport = loggedInUser.getPermissionsFromReport();
-                                for (TypedPair<OnlineReport, Database> allowedCombo : permissionsFromReport.values()) {
-                                    if (allowedCombo.getFirst().getId() == or.getId() && allowedCombo.getSecond().getId() == d.getId()) { // then we can add the user with this info
-                                        User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId(), selections);
-                                        UserDAO.store(user1);
-                                        stored = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!stored) { // default to the current users home menu
-                                User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status,
-                                        password, salt, loggedInUser.getUser().getEmail(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getReportId(), selections);
-                                UserDAO.store(user1);
-                            }
-                        } else {
-                            User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d != null ? d.getId() : 0, or != null ? or.getId() : 0, selections);
-                            UserDAO.store(user1);
-                        }
-                    }
-                    row++;
-                }
-            }
-            StringBuilder message = new StringBuilder("User file uploaded.");
-            if (rejected.size() > 0) {
-                message.append("  Some users rejected: ");
-                for (String reject : rejected) {
-                    message.append(reject).append(", ");
-                }
-            }
-            return message.toString();
+            return "Please upload the users file in the users tab.";
         } else if (fileName.equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
-            FileInputStream fs = new FileInputStream(new File(filePath));
-            OPCPackage opcPackage = OPCPackage.open(fs);
-            XSSFWorkbook book = new XSSFWorkbook(opcPackage);
-            Sheet schedulesSheet = book.getSheet("ReportSchedules"); // literals not best practice, could it be factored between this and the xlsx file?
-            if (schedulesSheet != null) {
-                dataChanged.set(true);
-                int row = 1;
-//                SName listRegion = book.getInternalBook().getNameByName("data");
-                XSSFName listRegion = book.getName("data");
-                if (listRegion != null && listRegion.getRefersToFormula() != null) {
-                    AreaReference aref = new AreaReference(listRegion.getRefersToFormula());
-                    row = aref.getFirstCell().getRow();
-                }
-
-                final List<ReportSchedule> reportSchedules = AdminService.getReportScheduleList(loggedInUser);
-                for (ReportSchedule reportSchedule : reportSchedules) {
-                    ReportScheduleDAO.removeById(reportSchedule);
-                }
-                while (schedulesSheet.getRow(row).getCell(0).getStringCellValue() != null && schedulesSheet.getRow(row).getCell(0).getStringCellValue().length() > 0) {
-                    String period = schedulesSheet.getRow(row).getCell(0).getStringCellValue();
-                    String recipients = schedulesSheet.getRow(row).getCell(1).getStringCellValue();
-                    LocalDateTime nextDue = LocalDateTime.now();
-                    try {
-                        nextDue = LocalDateTime.parse(schedulesSheet.getRow(row).getCell(2).getStringCellValue(), CreateExcelForDownloadController.dateTimeFormatter);
-                    } catch (Exception ignored) {
-                    }
-                    String database = schedulesSheet.getRow(row).getCell(3).getStringCellValue();
-                    Database database1 = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
-                    if (database1 != null) {
-                        String report = schedulesSheet.getRow(row).getCell(4).getStringCellValue();
-                        OnlineReport onlineReport = OnlineReportDAO.findForDatabaseIdAndName(database1.getId(), report);
-                        if (onlineReport != null) {
-                            String type = schedulesSheet.getRow(row).getCell(5).getStringCellValue();
-                            String parameters = schedulesSheet.getRow(row).getCell(6).getStringCellValue();
-                            String emailSubject = schedulesSheet.getRow(row).getCell(7).getStringCellValue();
-                            ReportSchedule rs = new ReportSchedule(0, period, recipients, nextDue, database1.getId(), onlineReport.getId(), type, parameters, emailSubject);
-                            ReportScheduleDAO.store(rs);
-                        }
-                    }
-                    row++;
-                }
-            }
-            return "Report schedules file uploaded"; // I hope that's what it is looking for.
+            return "Please upload the report schedules file in the schedules tab.";
         } else if (fileName.contains(".xls")) { // normal. I'm not entirely sure the code for users etc above should be in this file, maybe a different importer?
             toReturn = readBook(loggedInUser, fileName, fileNameParameters, filePath, persistAfter, dataChanged);
         } else {

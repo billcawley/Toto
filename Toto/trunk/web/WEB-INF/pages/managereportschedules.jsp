@@ -6,7 +6,7 @@
 
 <h1>Manage Report Schedules</h1><br/>
 <form action="/api/ManageReportSchedules" method="post">
-    ${error}
+    <div class="error">${error}</div>
 		<table>
 			<thead>
 				<tr>
@@ -63,8 +63,12 @@
 		</table>
 		<div class="centeralign">
 			<input type="submit" name="submit" value="Save Changes" class="button"/>
-			<a href="/api/ManageReportSchedules?new=true" class="button">Add new schedule</a>
-		</div>	 
+			<a href="/api/ManageReportSchedules?new=true" class="button">Add new schedule</a>&nbsp;
+		</div>
 	</form>
+    <div class="centeralign">
+        <form action="/api/ManageReportSchedules" method="post" enctype="multipart/form-data"><input type="submit" name="Upload" value="Upload ReportSchedule" class="button "/>&nbsp;
+            <input id="uploadFile" type="file" name="uploadFile"></form>
+    </div>
 </main>
 <%@ include file="../includes/admin_footer.jsp" %>
