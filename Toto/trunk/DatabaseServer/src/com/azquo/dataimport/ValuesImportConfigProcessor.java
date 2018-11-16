@@ -73,9 +73,13 @@ class ValuesImportConfigProcessor {
         HeadingReader.readHeaders(valuesImportConfig);
     }
 
+
     // the standard way of finding some headings in teh database. Checks they're not set in case the new Ed Broking way set the interpreter
     private static void checkImportInterpreter(ValuesImportConfig valuesImportConfig) throws Exception {
-        String importInterpreterLookup = valuesImportConfig.getFileSource();
+         String importInterpreterLookup = valuesImportConfig.getFileSource();
+        if (importInterpreterLookup==null|| importInterpreterLookup.length()==0){
+            importInterpreterLookup =  valuesImportConfig.getFileName();
+        }
         if (valuesImportConfig.getImportInterpreter() == null) {
             if (importInterpreterLookup.contains(".")) {
                 importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
@@ -290,7 +294,7 @@ class ValuesImportConfigProcessor {
                 // as in add the headings to the first upload then upload again without headings (assuming the file name is the same!)
                 Name importSheets = NameService.findOrCreateNameInParent(valuesImportConfig.getAzquoMemoryDBConnection(), ALLIMPORTSHEETS, null, false);
                 Name dataImportThis = NameService.findOrCreateNameInParent(valuesImportConfig.getAzquoMemoryDBConnection(),
-                        "DataImport " + valuesImportConfig.getFileName(), importSheets, true);
+                        "DataImport " + valuesImportConfig.getFileSource(), importSheets, true);
                 StringBuilder sb = new StringBuilder();
                 for (String header : headers) {
                     sb.append(header).append("¬");
