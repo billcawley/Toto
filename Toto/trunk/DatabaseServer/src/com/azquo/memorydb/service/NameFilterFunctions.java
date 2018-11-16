@@ -170,7 +170,7 @@ class NameFilterFunctions {
         }
         int added = 0;
         for (int i =  - offset; i < nameSetList.list.size() - offset; i++) {
-            if (position == from || (i >= 0 && i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(fromString))) {
+            if (position == from || (i >= 0 && i < nameSetList.list.size() && fromString.equals(nameSetList.list.get(i).getDefaultDisplayName()))) {
                 inSet = true;
             }
             if (inSet && i + offset < nameSetList.list.size()) {
@@ -183,7 +183,7 @@ class NameFilterFunctions {
                 }
                 added++;
             }
-            if (position == to || (i >= 0 && i < nameSetList.list.size() && nameSetList.list.get(i).getDefaultDisplayName().equals(toString)) || added == count) {
+            if (position == to || (i >= 0 && i < nameSetList.list.size() && toString.equals(nameSetList.list.get(i).getDefaultDisplayName())) || added == count) {
                 inSet = false;
             }
             position++;

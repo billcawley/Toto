@@ -1,3 +1,14 @@
+15-11-18
+
+! Import null pointer fix
+
+Added 'linecells' (the number of actual cells on an import line)
+
+Avoids filling in values where the cell count > heading count
+
+Bug fix on report list and support for non admin user menus in the Excel plugin
+
+
 13-11-18
 
 Shows 500 recently updated files

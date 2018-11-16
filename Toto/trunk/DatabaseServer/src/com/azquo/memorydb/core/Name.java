@@ -667,19 +667,20 @@ public final class Name extends AzquoMemoryDBEntity {
     // each add/remove is thread safe but should not allow two to run concurrently
     private static AtomicInteger setChildrenCount = new AtomicInteger(0);
 
-    public synchronized void setChildrenWillBePersisted(Collection<Name> children) throws Exception {
+    public synchronized void setChildrenWillBePersisted(Collection<Name> newChildren) throws Exception {
         setChildrenCount.incrementAndGet();
         Collection<Name> existingChildren = getChildren();
         /* like an equals but the standard equals might trip up on different collection types
-        notable that contains all will ignore ordering! If large it will be a HashSet anyway
+        notable that contains all will ignore ordering! If large it will be a HashSet anyway (note - it WAS the wrong way around,
+         call contains on existing, NOT children, children (the passed parameter) could be a massive List!)
         this could provide a major speed increase where this function is "recklessly" called (e.g. in the "as" bit in parseQuery in NameService),
         don't keep reassigning "as" and clearing the caches when the collection is the same */
-        if (children.size() != existingChildren.size() || !children.containsAll(existingChildren)) {
+        if (newChildren.size() != existingChildren.size() || !existingChildren.containsAll(newChildren)) {
             for (Name oldChild : this.getChildren()) {
                 removeFromChildrenWillBePersistedNoCacheClear(oldChild);
             }
             // there was a child null check here, not keen on that
-            for (Name child : children) {
+            for (Name child : newChildren) {
                 addChildWillBePersisted(child, false); // todo, get rid of the boolean
             }
             clearChildrenCaches();

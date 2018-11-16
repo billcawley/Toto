@@ -93,6 +93,7 @@ public class BatchImporter implements Callable<Void> {
                                 valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, importLine, linesRejected));
                             } catch (Exception e) {
                                 azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
+                                e.printStackTrace();
                                 throw e;
                             }
                             Long now = System.currentTimeMillis();
