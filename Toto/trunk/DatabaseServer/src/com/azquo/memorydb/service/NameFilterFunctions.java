@@ -102,8 +102,28 @@ class NameFilterFunctions {
         return toReturn; // its appropriate member collection should have been modified via namesToFilter above, return it
     }
 
+
+
+
+
     static NameSetList constrainNameListFromToCount(NameSetList nameSetList, String fromString, String toString, final String countString, final String offsetString, final String compareWithString, List<Name> referencedNames) throws Exception {
+
+        if (!nameSetList.mutable) {
+            nameSetList = new NameSetList(null, new ArrayList<>(nameSetList.list), true);// then make it mutable
+
+        }
+        List<Name> sortList = nameSetList.list;
+        if (sortList == null) {
+            //sort the names.   These are usually dates
+            sortList = new ArrayList<>();
+            sortList.addAll(nameSetList.set);
+        }
+        if (sortList.size() >= Name.ARRAYTHRESHOLD){
+            sortList.sort(Comparator.comparing(Name::getDefaultDisplayName));
+
+        }
         int count = NameQueryParser.parseInt(countString, -1);
+        /*
         if (nameSetList.list == null) {
             // new criteria - can add a count to unordered
             if (count != -1 && nameSetList.set != null && nameSetList.set.size() > count){ // so constrain the list
@@ -118,6 +138,7 @@ class NameFilterFunctions {
             }
             return nameSetList; // don't bother trying to constrain a non list
         }
+        */
         final ArrayList<Name> toReturn = new ArrayList<>();
         int to = -10000;
         int from = 1;
@@ -127,11 +148,8 @@ class NameFilterFunctions {
         //first look for integers and encoded names...
 
         if (toString.length() > 0 && fromString.length()==0) {
-            if (!nameSetList.mutable) {
-                nameSetList = new NameSetList(null, new ArrayList<>(nameSetList.list), true);// then make it mutable
-            }
             //invert the list
-            Collections.reverse(nameSetList.list);
+            Collections.reverse(sortList);
             fromString = toString;
             toString = "";
         }
@@ -155,7 +173,7 @@ class NameFilterFunctions {
             }
             try {
                 to = Integer.parseInt(toString);
-                if (fromEnd) to = nameSetList.list.size() - to;
+                if (fromEnd) to = sortList.size() - to;
             } catch (NumberFormatException nfe) {// may be a number, may not . . .
                 if (toString.charAt(0) == StringLiterals.NAMEMARKER) {
                     Name toName = NameQueryParser.getNameFromListAndMarker(toString, referencedNames);
@@ -166,24 +184,24 @@ class NameFilterFunctions {
         int position = 1;
         boolean inSet = false;
         if (to != -1000 && to < 0) {
-            to = nameSetList.list.size() + to;
+            to = sortList.size() + to;
         }
         int added = 0;
-        for (int i =  - offset; i < nameSetList.list.size() - offset; i++) {
-            if (position == from || (i >= 0 && i < nameSetList.list.size() && fromString.equals(nameSetList.list.get(i).getDefaultDisplayName()))) {
+        for (int i =  - offset; i < sortList.size() - offset; i++) {
+            if (position == from || (i >= 0 && i < sortList.size() && fromString.equals(sortList.get(i).getDefaultDisplayName()))) {
                 inSet = true;
             }
-            if (inSet && i + offset < nameSetList.list.size()) {
-                toReturn.add(nameSetList.list.get(i + offset));
+            if (inSet && i + offset < sortList.size()) {
+                toReturn.add(sortList.get(i + offset));
                 if (compareWith != 0) {
-                    toReturn.add(nameSetList.list.get(i + offset + compareWith));
+                    toReturn.add(sortList.get(i + offset + compareWith));
                     for (int j = 0; j < space; j++) {
                         toReturn.add(null);
                     }
                 }
                 added++;
             }
-            if (position == to || (i >= 0 && i < nameSetList.list.size() && toString.equals(nameSetList.list.get(i).getDefaultDisplayName())) || added == count) {
+            if (position == to || (i >= 0 && i < sortList.size() && toString.equals(sortList.get(i).getDefaultDisplayName())) || added == count) {
                 inSet = false;
             }
             position++;
