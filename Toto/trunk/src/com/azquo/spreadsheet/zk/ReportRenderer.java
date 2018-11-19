@@ -398,6 +398,11 @@ public class ReportRenderer {
 
     // return the error, executing reports might want it
     private static String populateRegionSet(Sheet sheet, int reportId, final String sheetName, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet, Set<String> repeatRegionTracker) {
+        CellRegion queryRegion = BookUtils.getCellRegionForSheetAndName(sheet,"az_query"+region);
+        if (queryRegion!=null){
+            ReportService.resolveQuery(loggedInUser,sheet,queryRegion);
+        }
+
         if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
             sheet.getBook().getInternalBook().setAttribute(OnlineController.LOCKED, true);
         }
