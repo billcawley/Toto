@@ -106,25 +106,29 @@ public class ReportService {
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
             if (name != null && name.getName() != null && name.getName().endsWith("Query")) {
                 //adjusted by WFC to allow a whole range to be the query.
-                for (int row = 0;row< name.getRefersToCellRegion().getRowCount();row++) {
-                    for (int col = 0; col < name.getRefersToCellRegion().getColumnCount(); col++) {
-                        SCell queryCell = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow() + row, name.getRefersToCellRegion().getColumn() + col);
-                        try {
-                            if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR && queryCell.getStringValue().length() > 0)) {
-                                // hack - on resolving a forumlae if the formula is a string but formatted as number get stirng can error unless you do this
-                                if (queryCell.getType() == SCell.CellType.FORMULA) {
-                                    queryCell.clearFormulaResultCache();
-                                }
-                                String queryResult = CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue());
-                                if (queryResult.toLowerCase().startsWith("error")) {
-                                    BookUtils.setValue(queryCell, queryCell.getStringValue() + " - " + queryResult);
-                                    Ranges.range(sheet, queryCell.getRowIndex(), queryCell.getColumnIndex()).notifyChange(); //
-                                }
-                            }
-                        }catch(Exception e){
-                            // cell is not a string
+                resolveQuery(loggedInUser,sheet,name.getRefersToCellRegion());
+              }
+        }
+    }
+
+    static void resolveQuery(LoggedInUser loggedInUser,Sheet sheet, CellRegion cellRegion){
+        for (int row = 0;row< cellRegion.getRowCount();row++) {
+            for (int col = 0; col < cellRegion.getColumnCount(); col++) {
+                SCell queryCell = sheet.getInternalSheet().getCell(cellRegion.getRow() + row, cellRegion.getColumn() + col);
+                try {
+                    if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR && queryCell.getStringValue().length() > 0)) {
+                        // hack - on resolving a forumlae if the formula is a string but formatted as number get stirng can error unless you do this
+                        if (queryCell.getType() == SCell.CellType.FORMULA) {
+                            queryCell.clearFormulaResultCache();
+                        }
+                        String queryResult = CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue());
+                        if (queryResult.toLowerCase().startsWith("error")) {
+                            BookUtils.setValue(queryCell, queryCell.getStringValue() + " - " + queryResult);
+                            Ranges.range(sheet, queryCell.getRowIndex(), queryCell.getColumnIndex()).notifyChange(); //
                         }
                     }
+                }catch(Exception e){
+
                 }
             }
         }
