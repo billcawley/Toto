@@ -22,6 +22,7 @@ import com.azquo.memorydb.ValueForBackup;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.transport.UploadedFile;
 import com.csvreader.CsvWriter;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -35,6 +36,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 
 public class BackupService {
@@ -79,11 +81,14 @@ public class BackupService {
         for (File f : files) {
             if (!f.getName().endsWith(".db")) {
                 // rename the xlsx file to get rid of the ID that will probably be in front in the backup zip
+                String fileName;
                 if (f.getName().contains("-") && NumberUtils.isNumber(f.getName().substring(0, f.getName().indexOf("-")))) {
-                    toReturn.append(ImportService.importTheFile(loggedInUser, f.getName().substring(f.getName().indexOf("-") + 1), f.getAbsolutePath()).replace("\n", "<br/>") + "<br/>");
+                    fileName = f.getName().substring(f.getName().indexOf("-") + 1);
                 } else {
-                    toReturn.append(ImportService.importTheFile(loggedInUser, f.getName(), f.getAbsolutePath()).replace("\n", "<br/>") + "<br/>");
+                    fileName = f.getName();
                 }
+                toReturn.append(ImportService.importTheFile(loggedInUser
+                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), null, false)).replace("\n", "<br/>") + "<br/>");
             }
         }
         return toReturn.toString();

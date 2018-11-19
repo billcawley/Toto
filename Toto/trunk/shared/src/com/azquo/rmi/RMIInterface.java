@@ -1,12 +1,9 @@
 package com.azquo.rmi;
 
 import com.azquo.memorydb.*;
-import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
+import com.azquo.spreadsheet.transport.*;
 import com.azquo.spreadsheet.transport.json.JsonChildStructure;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
-import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.transport.FilterTriple;
-import com.azquo.spreadsheet.transport.RegionOptions;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -40,7 +37,7 @@ public interface RMIInterface extends Remote {
 
     String findRequiredTables(DatabaseAccessToken databaseAccessToken, String remoteAddress) throws RemoteException;
 
-    String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String fileSource, Map<String, String> fileNameParameters, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException;
+    String readPreparedFile(DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, String user, boolean persistAfter) throws RemoteException;
 
     CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws RemoteException;

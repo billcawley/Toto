@@ -3,6 +3,7 @@ package com.azquo.dataimport;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.spreadsheet.transport.UploadedFile;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,35 +25,32 @@ public class DSImportService {
     Generally speaking creating the import headers and basic set structure is what is required to ready a database to load data.
 
     */
-    public static String readPreparedFile(final DatabaseAccessToken databaseAccessToken, final String filePath, final String fileName
-            , final String fileSource, final Map<String, String> fileNameParameters, final String user
-            , final boolean persistAfter, final boolean isSpreadsheet) throws Exception {
-        System.out.println("Reading file " + filePath);
+    public static String readPreparedFile(final DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, final String user
+            , final boolean persistAfter) throws Exception {
+        System.out.println("Reading file " + uploadedFile.getPath());
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
-        // in an ad hoc spreadsheet area should it say imported? Hard to detect at this point. isSpreadsheet means it could be an Excel file import, a different thing from a data entry area.
-        azquoMemoryDBConnection.setProvenance(user, "imported", fileName + ":" + fileSource, "");
+        azquoMemoryDBConnection.setProvenance(user, "imported", uploadedFile.getFileNamessAsString(), "");
         // if the provenance is unused I could perhaps zap it but it's not a big deal for the mo
         // also jamming this feedback on the beginning is a bit of a hack
-        String result = readPreparedFile(azquoMemoryDBConnection, filePath, fileName, fileSource, fileNameParameters, persistAfter, isSpreadsheet, new AtomicInteger());
+        String result = readPreparedFile(azquoMemoryDBConnection, uploadedFile, persistAfter, new AtomicInteger());
         return (azquoMemoryDBConnection.isUnusedProvenance() ? StringLiterals.DATABASE_UNMODIFIED : "") + result;
     }
 
     // Called by above but also directly from SSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     // I wonder if the valuesModifiedCounter is a bit hacky, will maybe revisit this later
     // EFC - parameters going up, should a configuration/context object be passed?
-    public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String fileSource
-            , Map<String, String> fileNameParameters, boolean persistAfter, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter) throws Exception {
+    public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile, boolean persistAfter, AtomicInteger valuesModifiedCounter) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
         // of course this doesn't currently stop the opposite, a persist being started while an import is going on.
         azquoMemoryDBConnection.lockTest();
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         String toReturn;
-        if (fileSource.toLowerCase().startsWith("sets")) { // typically from a sheet with that name in a book
+        if (uploadedFile.getFileName().toLowerCase().startsWith("sets")) { // typically from a sheet with that name in a book
             // not currently paying attention to isSpreadsheet - only possible issue is the replacing of \\\n with \n required based off writeCell in ImportFileUtilities
-            toReturn = SetsImport.setsImport(azquoMemoryDBConnection, filePath, fileNameParameters, fileSource);
+            toReturn = SetsImport.setsImport(azquoMemoryDBConnection, uploadedFile);
         } else {
-            boolean clearData = fileName.toLowerCase().contains("cleardata");
-            ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection, filePath, fileName, fileSource, fileNameParameters, isSpreadsheet, valuesModifiedCounter, clearData);
+            boolean clearData = uploadedFile.getFileName().toLowerCase().contains("cleardata");
+            ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection, uploadedFile, valuesModifiedCounter, clearData);
             // a lot goes on in this function to do with checking the file, finding import configuration, resolving headings etc.
             ValuesImportConfigProcessor.prepareValuesImportConfig(valuesImportConfig);
             // when it is done we assume we're ready to batch up lines with headers and import with BatchImporter

@@ -12,6 +12,7 @@ import com.azquo.memorydb.service.*;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.transport.RegionOptions;
+import com.azquo.spreadsheet.transport.UploadedFile;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -243,7 +244,7 @@ public class DSSpreadsheetService {
         bw.flush();
         bw.close();
         AtomicInteger valuesModifiedCounter = new AtomicInteger();
-        DSImportService.readPreparedFile(azquoMemoryDBConnection, tempPath, "csv",  cellsAndHeadingsForDisplay.getRegion(), null, true, true, valuesModifiedCounter);
+        DSImportService.readPreparedFile(azquoMemoryDBConnection, new UploadedFile(tempPath, Collections.singletonList("csv-" + cellsAndHeadingsForDisplay.getRegion()), null, true), true, valuesModifiedCounter);
         if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
         }

@@ -2,7 +2,6 @@ package com.azquo.dataimport;
 
 import com.azquo.ThreadPools;
 import com.azquo.memorydb.core.Name;
-import com.azquo.StringUtils;
 
 import java.io.File;
 import java.util.*;
@@ -64,7 +63,7 @@ public class ValuesImport {
                     }
                     // if generated from a spreadsheet this is a danger, fix now before any interpreting
                     //.replace("\n", "\\\\n").replace("\t", "\\\\t") is what that function did on the report server.
-                    if (valuesImportConfig.isSpreadsheet()) {
+                    if (valuesImportConfig.getUploadedFile().isConvertedFromWorksheet()) {
                         lineValue = lineValue.replace("\\\\t", "\t").replace("\\\\n", "\n");
                     }
                     lineValue = checkNumeric(lineValue);
@@ -101,19 +100,16 @@ public class ValuesImport {
             // wasn't closing before, maybe why the files stayed there on Windows. Use the original one to close in case the lineIterator field was reassigned by transpose
             valuesImportConfig.getOriginalIterator().close();
             // Delete check for tomcat temp files, if read from the other temp directly then leave it alone
-            if (valuesImportConfig.getFilePath().contains("/usr/")) {
-                File test = new File(valuesImportConfig.getFilePath());
+            if (valuesImportConfig.getUploadedFile().getPath().contains("/usr/")) {
+                File test = new File(valuesImportConfig.getUploadedFile().getPath());
                 if (test.exists()) {
                     if (!test.delete()) {
-                        System.out.println("unable to delete " + valuesImportConfig.getFilePath());
+                        System.out.println("unable to delete " + valuesImportConfig.getUploadedFile().getPath());
                     }
                 }
             }
             StringBuilder toReturn = new StringBuilder();
-            toReturn.append(valuesImportConfig.getFileName());
-            if (valuesImportConfig.getFileName().contains(".xls")) {
-                toReturn.append("." + valuesImportConfig.getFileSource());
-            }
+            toReturn.append(valuesImportConfig.getUploadedFile().getFileNamessAsString());
             toReturn.append(" imported. Dataimport took ")// I'm not sure I agree with intellij warning about non chained
                     .append((System.currentTimeMillis() - track) / 1000)
                     .append(" second(s) to import ")

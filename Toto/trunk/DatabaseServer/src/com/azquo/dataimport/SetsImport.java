@@ -4,6 +4,7 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
+import com.azquo.spreadsheet.transport.UploadedFile;
 
 import java.io.BufferedReader;
 import java.nio.file.Files;
@@ -20,17 +21,17 @@ class SetsImport {
 
     // typically used to create the basic name structure, an Excel set up workbook with many sheets would have a sets sheet
 
-    static String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, final String filePath, Map<String, String> fileNameParameters, String fileName) throws Exception {
+    static String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile) throws Exception {
         int lines;
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath))) {
+        try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()))) {
             // the filename can override the attribute for name creation/search. Seems a bit hacky but can make sense if the set up is a series of workbooks.
             List<String> languages;
-            if (fileNameParameters.get(HeadingReader.LANGUAGE) != null){
-                languages = Collections.singletonList(fileNameParameters.get(HeadingReader.LANGUAGE));
+            if (uploadedFile.getParameters().get(HeadingReader.LANGUAGE) != null){
+                languages = Collections.singletonList(uploadedFile.getParameters().get(HeadingReader.LANGUAGE));
             } else {
                 // todo - zap this back to normal. When I do then zap the filename parameter and return lines
-                if (fileName.length() > 4 && fileName.charAt(4) == '-') { // see if you can derive a language from the file name
-                    String sheetLanguage = fileName.substring(5);
+                if (uploadedFile.getFileName().length() > 4 && uploadedFile.getFileName().charAt(4) == '-') { // see if you can derive a language from the file name
+                    String sheetLanguage = uploadedFile.getFileName().substring(5);
                     if (sheetLanguage.contains(".")) { // knock off the suffix if it's there. Used to be removed client side, makes more sense here
                         sheetLanguage = sheetLanguage.substring(0, sheetLanguage.lastIndexOf("."));
                     }
@@ -61,6 +62,6 @@ class SetsImport {
             }
             lines++;
         }
-        return fileName + " imported. " + lines + " line(s) of a set file.";  // HTML in DB code! Will let it slide for the mo.
+        return uploadedFile.getFileName() + " imported. " + lines + " line(s) of a set file.";  // HTML in DB code! Will let it slide for the mo.
     }
 }

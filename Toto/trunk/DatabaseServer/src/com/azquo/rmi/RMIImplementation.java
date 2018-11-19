@@ -11,12 +11,9 @@ import com.azquo.memorydb.service.ProvenanceService;
 import com.azquo.spreadsheet.DSSpreadsheetService;
 import com.azquo.spreadsheet.JSTreeService;
 import com.azquo.spreadsheet.UserChoiceService;
-import com.azquo.spreadsheet.transport.ProvenanceDetailsForDisplay;
+import com.azquo.spreadsheet.transport.*;
 import com.azquo.spreadsheet.transport.json.JsonChildStructure;
 import com.azquo.spreadsheet.transport.json.JsonChildren;
-import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
-import com.azquo.spreadsheet.transport.FilterTriple;
-import com.azquo.spreadsheet.transport.RegionOptions;
 
 
 import java.lang.management.ManagementFactory;
@@ -124,9 +121,9 @@ class RMIImplementation implements RMIInterface {
 
     // import
     @Override
-    public String readPreparedFile(DatabaseAccessToken databaseAccessToken, String filePath, String fileName, String fileSource, Map<String, String> fileNameParameters, String user, boolean persistAfter, boolean isSpreadsheet) throws RemoteException {
+    public String readPreparedFile(DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, String user, boolean persistAfter) throws RemoteException {
         try {
-            return DSImportService.readPreparedFile(databaseAccessToken, filePath, fileName, fileSource, fileNameParameters, user, persistAfter, isSpreadsheet);
+            return DSImportService.readPreparedFile(databaseAccessToken, uploadedFile, user, persistAfter);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

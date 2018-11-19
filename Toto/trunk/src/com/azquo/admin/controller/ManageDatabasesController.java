@@ -7,6 +7,7 @@ import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
 import com.azquo.StringLiterals;
+import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -503,13 +504,18 @@ public class ManageDatabasesController {
     }
 
     // factored due to pending uploads, need to check the factoring after the prototype is done
-    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String fileName, String filePath, Map<String, String> paramsFromUser) {
+    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String fileName, String filePath, final Map<String, String> paramsFromUser) {
         // need to add in code similar to report loading to give feedback on imports
         new Thread(() -> {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
+                Map<String, String> fileNameParams = paramsFromUser;
+                if (fileNameParams == null){
+                    fileNameParams = new HashMap<>();
+                    ImportService.addFileNameParametersToMap(fileName, fileNameParams);
+                }
                 AtomicBoolean dataChanged = new AtomicBoolean(false);
-                String result = ImportService.importTheFile(loggedInUser, fileName, filePath, paramsFromUser, true, dataChanged).replace("\n", "<br/>");
+                String result = ImportService.importTheFile(loggedInUser, new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false) ,true, dataChanged).replace("\n", "<br/>");
                 if (!dataChanged.get()) {
                     result = StringLiterals.DATABASE_UNMODIFIED + "<br/>" + result;
                 }

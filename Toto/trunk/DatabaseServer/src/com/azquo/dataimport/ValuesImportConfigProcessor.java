@@ -3,6 +3,7 @@ package com.azquo.dataimport;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
+import com.azquo.spreadsheet.transport.UploadedFile;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
@@ -76,10 +77,7 @@ class ValuesImportConfigProcessor {
 
     // the standard way of finding some headings in teh database. Checks they're not set in case the new Ed Broking way set the interpreter
     private static void checkImportInterpreter(ValuesImportConfig valuesImportConfig) throws Exception {
-         String importInterpreterLookup = valuesImportConfig.getFileSource();
-        if (importInterpreterLookup==null|| importInterpreterLookup.length()==0){
-            importInterpreterLookup =  valuesImportConfig.getFileName();
-        }
+        String importInterpreterLookup = valuesImportConfig.getUploadedFile().getFileName(); // should I work up here though the parent files? I don't think so
         if (valuesImportConfig.getImportInterpreter() == null) {
             if (importInterpreterLookup.contains(".")) {
                 importInterpreterLookup = importInterpreterLookup.substring(0, importInterpreterLookup.lastIndexOf("."));
@@ -102,15 +100,15 @@ class ValuesImportConfigProcessor {
 
     // typically groovy scripts write out to a different file, helps a lot for debugging! Most of the time with no groovy specified will just not modify anything
     private static void checkGroovy(ValuesImportConfig valuesImportConfig) throws Exception {
-        if (valuesImportConfig.getFileNameParameters() != null && (valuesImportConfig.getFileNameParameters().get(PREPROCESSOR) != null
-                || valuesImportConfig.getFileNameParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) != null)) {
+        if (valuesImportConfig.getUploadedFile().getParameters() != null && (valuesImportConfig.getUploadedFile().getParameters().get(PREPROCESSOR) != null
+                || valuesImportConfig.getUploadedFile().getParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) != null)) {
             try {
-                File file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getFileNameParameters().get(PREPROCESSOR));
+                File file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getUploadedFile().getParameters().get(PREPROCESSOR));
                 if (!file.exists()) {
-                    file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getFileNameParameters().get(EdBrokingExtension.IMPORT_TEMPLATE));
+                    file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getUploadedFile().getParameters().get(EdBrokingExtension.IMPORT_TEMPLATE));
                 }
                 if (!file.exists()) {
-                    file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getFileNameParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) + ".groovy");
+                    file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getUploadedFile().getParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) + ".groovy");
                 }
                 if (file.exists()) {
                     System.out.println("Groovy found! Running  . . . ");
@@ -120,12 +118,16 @@ class ValuesImportConfigProcessor {
                     GroovyShell shell = new GroovyShell();
                     final Script script = shell.parse(file);
                     System.out.println("loaded groovy " + file.getPath());
-                    valuesImportConfig.setFilePath((String) script.invokeMethod("fileProcess", groovyParams));
+                    // overly wordy way to override the path
+                    valuesImportConfig.setUploadedFile(new UploadedFile((String) script.invokeMethod("fileProcess", groovyParams)
+                    ,valuesImportConfig.getUploadedFile().getFileNames()
+                            ,valuesImportConfig.getUploadedFile().getParameters()
+                            ,valuesImportConfig.getUploadedFile().isConvertedFromWorksheet()));
                 }
             } catch (GroovyRuntimeException e) {
                 // exception could be because the groovy script didn't have a function that matched
                 e.printStackTrace();
-                throw new Exception("Groovy error " + valuesImportConfig.getFileName() + ": " + e.getMessage() + "\n");
+                throw new Exception("Groovy error " + valuesImportConfig.getUploadedFile().getFileName() + ": " + e.getMessage() + "\n");
             }
         }
     }
@@ -135,7 +137,7 @@ class ValuesImportConfigProcessor {
         if (valuesImportConfig.getImportInterpreter() != null) {
             boolean hasHeadings = false;
             // checks the first few lines of a spreadsheet file to discover evidence of headings.  ten lines without a blank line, and without clauses in the top line indicates no headings
-            try (BufferedReader br = Files.newBufferedReader(Paths.get(valuesImportConfig.getFilePath()), Charset.forName("UTF-8"))) { // should it use the charset attribute? todo
+            try (BufferedReader br = Files.newBufferedReader(Paths.get(valuesImportConfig.getUploadedFile().getPath()), Charset.forName("UTF-8"))) { // should it use the charset attribute? todo
                 String lineData = br.readLine();
                 if (lineData == null || lineData.contains(".") || lineData.contains(";")) {
                     br.close();
@@ -153,7 +155,11 @@ class ValuesImportConfigProcessor {
                 }
             }
             if (!hasHeadings) {
-                valuesImportConfig.setSpreadsheet(false);//allow data uploaded in a spreadsheet to use pre-configured headings. isSpreadsheet could also be seen as data with the headings attached
+                // overly wordy way to override the spreadsheet flag
+                valuesImportConfig.setUploadedFile(new UploadedFile(valuesImportConfig.getUploadedFile().getPath()
+                        ,valuesImportConfig.getUploadedFile().getFileNames()
+                        ,valuesImportConfig.getUploadedFile().getParameters()
+                        ,false));//allow data uploaded in a spreadsheet to use pre-configured headings. isSpreadsheet could also be seen as data with the headings attached
             }
         }
     }
@@ -162,17 +168,17 @@ class ValuesImportConfigProcessor {
     private static void setLineIteratorAndBatchSize(ValuesImportConfig valuesImportConfig) throws Exception {
         int batchSize = 100_000;
         char delimiter = ',';
-        File sizeTest = new File(valuesImportConfig.getFilePath());
+        File sizeTest = new File(valuesImportConfig.getUploadedFile().getPath());
         final long fileLength = sizeTest.length();
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(valuesImportConfig.getFilePath()), Charset.forName("UTF-8"))) {
+        try (BufferedReader br = Files.newBufferedReader(Paths.get(valuesImportConfig.getUploadedFile().getPath()), Charset.forName("UTF-8"))) {
             // grab the first line to check on delimiters
             String firstLine = br.readLine();
             String secondLine = null;
             if (firstLine == null || (firstLine.length() == 0 && (secondLine = br.readLine()) == null)) {
                 br.close();
-                throw new Exception(valuesImportConfig.getFileName() + ": Unable to read any data (perhaps due to an empty file in a zip or an empty sheet in a workbook)");
+                throw new Exception(valuesImportConfig.getUploadedFile().getFileName() + ": Unable to read any data (perhaps due to an empty file in a zip or an empty sheet in a workbook)");
             }
-            if (secondLine == null){ // it might have been assigned above in the empty file check - todo clean logic?
+            if (secondLine == null) { // it might have been assigned above in the empty file check - todo clean logic?
                 secondLine = br.readLine();
             }
             long linesGuess = fileLength / ((secondLine != null && secondLine.length() > 20) ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
@@ -208,10 +214,10 @@ class ValuesImportConfigProcessor {
          */
         if (valuesImportConfig.getImportInterpreter() != null && valuesImportConfig.getImportInterpreter().getAttribute(FILEENCODING) != null) {
             valuesImportConfig.setOriginalIterator(csvMapper.readerFor(String[].class).with(schema).readValues(
-                    new InputStreamReader(new FileInputStream(valuesImportConfig.getFilePath()), valuesImportConfig.getImportInterpreter().getAttribute(FILEENCODING))));
+                    new InputStreamReader(new FileInputStream(valuesImportConfig.getUploadedFile().getPath()), valuesImportConfig.getImportInterpreter().getAttribute(FILEENCODING))));
             // so override file encoding.
         } else {
-            valuesImportConfig.setOriginalIterator(csvMapper.readerFor(String[].class).with(schema).readValues(new File(valuesImportConfig.getFilePath())));
+            valuesImportConfig.setOriginalIterator(csvMapper.readerFor(String[].class).with(schema).readValues(new File(valuesImportConfig.getUploadedFile().getPath())));
         }
         // the copy held in case of the transpose
         valuesImportConfig.setLineIterator(valuesImportConfig.getOriginalIterator());
@@ -247,7 +253,7 @@ class ValuesImportConfigProcessor {
     }
 
     private static void checkSkipLinesAndSimpleImportInterpreterHeaders(ValuesImportConfig valuesImportConfig) {
-        if (!valuesImportConfig.isSpreadsheet() && valuesImportConfig.getImportInterpreter() != null) {
+        if (!valuesImportConfig.getUploadedFile().isConvertedFromWorksheet() && valuesImportConfig.getImportInterpreter() != null) {
             String importHeaders = valuesImportConfig.getImportInterpreter().getAttribute(HEADINGSSTRING); // look for headers and parse them if they are there
             if (importHeaders != null) {
                 String skipLinesSt = valuesImportConfig.getImportInterpreter().getAttribute(SKIPLINESSTRING);
@@ -289,12 +295,12 @@ class ValuesImportConfigProcessor {
                     headers = oldHeaders;
                 }
             }
-            if (valuesImportConfig.isSpreadsheet() && (valuesImportConfig.getFileNameParameters() == null ||valuesImportConfig.getFileNameParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) == null) ) { // it's saying really is it a template (isSpreadsheet = yes)
+            if (valuesImportConfig.getUploadedFile().isConvertedFromWorksheet() && (valuesImportConfig.getUploadedFile().getParameters() == null || valuesImportConfig.getUploadedFile().getParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) == null)) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
                 // as in add the headings to the first upload then upload again without headings (assuming the file name is the same!)
                 Name importSheets = NameService.findOrCreateNameInParent(valuesImportConfig.getAzquoMemoryDBConnection(), ALLIMPORTSHEETS, null, false);
                 Name dataImportThis = NameService.findOrCreateNameInParent(valuesImportConfig.getAzquoMemoryDBConnection(),
-                        "DataImport " + valuesImportConfig.getFileSource(), importSheets, true);
+                        "DataImport " + valuesImportConfig.getUploadedFile().getFileName(), importSheets, true);
                 StringBuilder sb = new StringBuilder();
                 for (String header : headers) {
                     sb.append(header).append("¬");
@@ -322,9 +328,9 @@ class ValuesImportConfigProcessor {
             // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
             for (String heading : nextLine) {
                 if (heading.length() > 0 && !heading.equals("--")) { //ignore "--", can be used to give space below the headers
-                    if (colNo >= headers.size()){
+                    if (colNo >= headers.size()) {
                         headers.add(heading);
-                    }else {
+                    } else {
                         if (heading.startsWith(".")) {
                             headers.set(colNo, headers.get(colNo) + heading);
                         } else {

@@ -5,6 +5,7 @@ import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.app.magento.service.DataLoadService;
 import com.azquo.dataimport.ImportService;
+import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.*;
 import com.azquo.util.AzquoMailer;
 import org.springframework.stereotype.Controller;
@@ -17,6 +18,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 
 /**
@@ -143,7 +145,7 @@ public class MagentoController {
         if (DataLoadService.magentoDBNeedsSettingUp(loggedInUser.getDataAccessToken())) {
             String magentoSetupFile = SpreadsheetService.getHomeDir() + "/databases/ecommerce/setup/ecommerce setup.xlsx";
             String fileName = "magentosetup.xlsx";
-            ImportService.importTheFile(loggedInUser, fileName, magentoSetupFile);
+            ImportService.importTheFile(loggedInUser, new UploadedFile(magentoSetupFile, Collections.singletonList(fileName), null, false));
         }
         return DataLoadService.findRequiredTables(loggedInUser.getDataAccessToken(), remoteAddress);
     }

@@ -3,6 +3,7 @@ package com.azquo.dataimport;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
+import com.azquo.spreadsheet.transport.UploadedFile;
 import com.fasterxml.jackson.databind.MappingIterator;
 
 import java.util.*;
@@ -23,11 +24,7 @@ public class ValuesImportConfig {
     private int batchSize;
     private List<ImmutableImportHeading> headings;
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
-    private String filePath; // grovvy can override
-    private final String fileName;
-    private final String fileSource;
-    private final Map<String, String> fileNameParameters;
-    private boolean isSpreadsheet;
+    private UploadedFile uploadedFile; // groovy can override the path
     private final AtomicInteger valuesModifiedCounter;
     private List<String> languages;
     private String importAttribute;
@@ -42,14 +39,10 @@ public class ValuesImportConfig {
 
 
     // exactly the same as is passed to valuesImport, no coincidence. Set these in this object then pass the object through various processes until it's ready to go
-    ValuesImportConfig(AzquoMemoryDBConnection azquoMemoryDBConnection, String filePath, String fileName, String fileSource, Map<String, String> fileNameParameters, boolean isSpreadsheet, AtomicInteger valuesModifiedCounter, boolean clearData) {
+    ValuesImportConfig(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile, AtomicInteger valuesModifiedCounter, boolean clearData) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
-        this.filePath = filePath;
-        this.fileName = fileName;
-        this.fileSource = fileSource;
-        this.fileNameParameters = fileNameParameters;
+        this.uploadedFile = uploadedFile;
         this.valuesModifiedCounter = valuesModifiedCounter;
-        this.isSpreadsheet = isSpreadsheet;
         languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
         importAttribute = null;
         importInterpreter = null;
@@ -96,30 +89,12 @@ public class ValuesImportConfig {
         return azquoMemoryDBConnection;
     }
 
-    String getFilePath() {
-        return filePath;
+    public UploadedFile getUploadedFile() {
+        return uploadedFile;
     }
 
-    void setFilePath(String filePath) {
-        this.filePath = filePath;
-    }
-
-    String getFileName() {
-        return fileName;
-    }
-
-    String getFileSource() {return fileSource; }
-
-    public Map<String, String> getFileNameParameters() {
-        return fileNameParameters;
-    }
-
-    public boolean isSpreadsheet() {
-        return isSpreadsheet;
-    }
-
-    public void setSpreadsheet(boolean spreadsheet) {
-        isSpreadsheet = spreadsheet;
+    public void setUploadedFile(UploadedFile uploadedFile) {
+        this.uploadedFile = uploadedFile;
     }
 
     AtomicInteger getValuesModifiedCounter() {

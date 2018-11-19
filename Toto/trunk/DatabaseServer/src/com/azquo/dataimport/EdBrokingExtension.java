@@ -20,8 +20,8 @@ class EdBrokingExtension {
 
     static void checkImportFormatterLanguage(ValuesImportConfig valuesImportConfig) {
         // EFC revising logic based off WFC recommendations, set language from the second half of the import format if it's there
-        if (valuesImportConfig.getFileNameParameters() != null && valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE) != null) {
-            String importFormat = valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE);
+        if (valuesImportConfig.getUploadedFile().getParameters() != null && valuesImportConfig.getUploadedFile().getParameters().get(IMPORT_TEMPLATE) != null) {
+            String importFormat = valuesImportConfig.getUploadedFile().getParameters().get(IMPORT_TEMPLATE);
             if (importFormat.contains(" ")) {
                 List<String> languages = new ArrayList<>();
                 //wfc added ability to put in a list of languages - NOT CURRENTLY USED
@@ -39,9 +39,9 @@ class EdBrokingExtension {
     // EFC 18/09/2018, moving from using zip name to deduce things to IMPORT_TEMPLATE from fileNameParameters
     static void checkImportFormat(ValuesImportConfig valuesImportConfig) throws Exception {
         // prepares for the more complex "headings as children with attributes" method of importing
-        valuesImportConfig.setAssumptions(valuesImportConfig.getFileNameParameters());
-        if (valuesImportConfig.getFileNameParameters() != null && valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE) != null) {
-            String importFormat = valuesImportConfig.getFileNameParameters().get(IMPORT_TEMPLATE);
+        valuesImportConfig.setAssumptions(valuesImportConfig.getUploadedFile().getParameters());
+        if (valuesImportConfig.getUploadedFile().getParameters() != null && valuesImportConfig.getUploadedFile().getParameters().get(IMPORT_TEMPLATE) != null) {
+            String importFormat = valuesImportConfig.getUploadedFile().getParameters().get(IMPORT_TEMPLATE);
             // this is passed through to preProcessHeadersAndCreatePivotSetsIfRequired
             // it issued as a straight replacement e.g. that Apr-18 in something like
             // so the attribute might be "HEADINGS RISK" assuming the import format was "Risk Apr-18"
@@ -205,9 +205,9 @@ There would be some duplication but it would be less complex to make
 
             if (lineNo == 20 || !valuesImportConfig.getLineIterator().hasNext()) {
                 if (lineNo ==1){
-                    throw new Exception(valuesImportConfig.getFileName() + ": no data");
+                    throw new Exception(valuesImportConfig.getUploadedFile().getFileName() + ": no data");
                 }
-                throw new Exception(valuesImportConfig.getFileName() + ":Unable to find headers!");
+                throw new Exception(valuesImportConfig.getUploadedFile().getFileName() + ":Unable to find headers!");
             }
         }
         if (headersOut != null) {
