@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class Name extends AzquoMemoryDBEntity {
 
-    private static final int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
+    public static final int ARRAYTHRESHOLD = 512; // if arrays which need distinct members hit above this switch to sets. A bit arbitrary, might be worth testing (speed vs memory usage)
 
 //    private static final Logger logger = Logger.getLogger(Name.class);
 
