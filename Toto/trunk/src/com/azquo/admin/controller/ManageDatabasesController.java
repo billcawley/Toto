@@ -33,6 +33,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -44,6 +45,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * CRUD type stuff though databases will be created/deleted etc. server side.
  * <p>
  * Edd note 24/10/2018 - this is getting a little cluttered, should it be refactored? todo
+ * <p>
+ * Current responsibilities :
+ * <p>
+ * create and delete dbs/upload files and manage uploads/backup/restore/pending uploads
  */
 @Controller
 @RequestMapping("/ManageDatabases")
@@ -87,10 +92,6 @@ public class ManageDatabasesController {
             return database.getPersistenceName();
         }
 
-        public String getDatabaseType() {
-            return database.getDatabaseType();
-        }
-
         public int getNameCount() {
             return database.getNameCount();
         }
@@ -119,7 +120,6 @@ public class ManageDatabasesController {
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "createDatabase", required = false) String createDatabase
-            , @RequestParam(value = "databaseType", required = false) String databaseType
             , @RequestParam(value = "databaseServerId", required = false) String databaseServerId
             , @RequestParam(value = "emptyId", required = false) String emptyId
             , @RequestParam(value = "checkId", required = false) String checkId
@@ -159,14 +159,19 @@ public class ManageDatabasesController {
                 Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
                 try {
                     if (Files.exists(backups)) {
-                        for (Iterator<Path> iter2 = Files.list(backups).iterator(); iter2.hasNext(); ) {
-                            Path path = iter2.next();
-                            Database forPersistenceName = DatabaseDAO.findForPersistenceName(path.getFileName().toString());
-                            if (forPersistenceName != null) { // then restore
-                                loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(forPersistenceName.getDatabaseServerId()), forPersistenceName);
-                                BackupService.loadDBBackup(loggedInUser, path.toFile(), null, new StringBuilder(), true);
-                            }
-                            Files.deleteIfExists(path);
+                        try (Stream<Path> list = Files.list(backups)) {
+                            list.forEach(path -> {
+                                Database forPersistenceName = DatabaseDAO.findForPersistenceName(path.getFileName().toString());
+                                if (forPersistenceName != null) { // then restore
+                                    loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(forPersistenceName.getDatabaseServerId()), forPersistenceName);
+                                    BackupService.loadDBBackup(loggedInUser, path.toFile(), null, new StringBuilder(), true);
+                                }
+                                try {
+                                    Files.deleteIfExists(path);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            });
                         }
                     }
                 } catch (Exception e) {
@@ -186,9 +191,14 @@ public class ManageDatabasesController {
                 Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
                 try {
                     if (Files.exists(backups)) {
-                        for (Iterator<Path> iter2 = Files.list(backups).iterator(); iter2.hasNext(); ) {
-                            Path path = iter2.next();
-                            Files.deleteIfExists(path);
+                        try (Stream<Path> list = Files.list(backups)) {
+                            list.forEach(path -> {
+                                try {
+                                    Files.deleteIfExists(path);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            });
                         }
                     }
                 } catch (Exception e) {
@@ -284,9 +294,9 @@ public class ManageDatabasesController {
                 final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
                 if (createDatabase != null && !createDatabase.isEmpty() && (allServers.size() == 1 || (databaseServerId != null && !databaseServerId.isEmpty()))) {
                     if (allServers.size() == 1) {
-                        AdminService.createDatabase(createDatabase, databaseType, loggedInUser, allServers.get(0));
+                        AdminService.createDatabase(createDatabase, loggedInUser, allServers.get(0));
                     } else {
-                        AdminService.createDatabase(createDatabase, databaseType, loggedInUser, DatabaseServerDAO.findById(Integer.parseInt(databaseServerId)));
+                        AdminService.createDatabase(createDatabase, loggedInUser, DatabaseServerDAO.findById(Integer.parseInt(databaseServerId)));
                     }
                 }
                 if (NumberUtils.isNumber(emptyId)) {
@@ -359,14 +369,17 @@ public class ManageDatabasesController {
                             .withLocale(Locale.UK)
                             .withZone(ZoneId.systemDefault());
             if (Files.exists(backups)) {
-                try {
-                    for (Iterator<Path> iter2 = Files.list(backups).iterator(); iter2.hasNext(); ) {
-                        Path path = iter2.next();
+                try (Stream<Path> list = Files.list(backups)) {
+                    list.forEach(path -> {
                         stringBuilder.append("\\n");
                         stringBuilder.append(path.getFileName());
                         stringBuilder.append(" - ");
-                        stringBuilder.append(formatter.format(Files.getLastModifiedTime(path).toInstant()));
-                    }
+                        try {
+                            stringBuilder.append(formatter.format(Files.getLastModifiedTime(path).toInstant()));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -510,15 +523,13 @@ public class ManageDatabasesController {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
                 Map<String, String> fileNameParams = paramsFromUser;
-                if (fileNameParams == null){
+                if (fileNameParams == null) {
                     fileNameParams = new HashMap<>();
                     ImportService.addFileNameParametersToMap(fileName, fileNameParams);
                 }
-                AtomicBoolean dataChanged = new AtomicBoolean(false);
-                String result = ImportService.importTheFile(loggedInUser, new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false) ,true, dataChanged).replace("\n", "<br/>");
-                if (!dataChanged.get()) {
-                    result = StringLiterals.DATABASE_UNMODIFIED + "<br/>" + result;
-                }
+                String result = ImportService.formatUploadedFiles(
+                        ImportService.importTheFile(loggedInUser, new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false))
+                ).replace("\n", "<br/>");
                 session.setAttribute(ManageDatabasesController.IMPORTRESULT, result);
             } catch (Exception e) {
                 session.setAttribute(ManageDatabasesController.IMPORTRESULT, "ERROR : " + CommonReportUtils.getErrorFromServerSideException(e));

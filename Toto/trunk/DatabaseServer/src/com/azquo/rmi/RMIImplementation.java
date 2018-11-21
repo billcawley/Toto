@@ -121,9 +121,9 @@ class RMIImplementation implements RMIInterface {
 
     // import
     @Override
-    public String readPreparedFile(DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, String user, boolean persistAfter) throws RemoteException {
+    public UploadedFile readPreparedFile(DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, String user) throws RemoteException {
         try {
-            return DSImportService.readPreparedFile(databaseAccessToken, uploadedFile, user, persistAfter);
+            return DSImportService.readPreparedFile(databaseAccessToken, uploadedFile, user);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -301,11 +301,14 @@ class RMIImplementation implements RMIInterface {
         }
     }
 
-    // to allow execute to save multiple times then persist
+    // to allow execute/import to save multiple times then persist
     @Override
     public void persistDatabase(DatabaseAccessToken databaseAccessToken) throws RemoteException {
         try {
-            DSSpreadsheetService.persistDatabase(databaseAccessToken);
+            // get back to the user straight away. Should not be a problem, multiple persists would be queued.
+            new Thread(
+                    () -> DSSpreadsheetService.persistDatabase(databaseAccessToken)
+            ).start();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }
@@ -370,7 +373,7 @@ class RMIImplementation implements RMIInterface {
                     Object value;
                     try {
                         value = method.invoke(operatingSystemMXBean);
-                        percent = (Double)value;
+                        percent = (Double) value;
                     } catch (Exception e) {
                     } // try
 //                    toReturn.append(method.getName() + " = " + value);

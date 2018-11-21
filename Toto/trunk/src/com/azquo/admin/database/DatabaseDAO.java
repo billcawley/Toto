@@ -27,7 +27,6 @@ public final class DatabaseDAO {
     private static final String USERID = "user_id";
     private static final String NAME = "name";
     private static final String MYSQLNAME = "mysql_name"; // needs renaming! todo
-    private static final String DATABASETYPE = "database_type";
     private static final String NAMECOUNT = "name_count";
     private static final String VALUECOUNT = "value_count";
     private static final String DATABASESERVERID = "database_server_id";
@@ -42,7 +41,6 @@ public final class DatabaseDAO {
         toReturn.put(USERID, database.getUserId());
         toReturn.put(NAME, database.getName());
         toReturn.put(MYSQLNAME, database.getPersistenceName());
-        toReturn.put(DATABASETYPE, database.getDatabaseType());
         toReturn.put(NAMECOUNT, database.getNameCount());
         toReturn.put(VALUECOUNT, database.getValueCount());
         toReturn.put(DATABASESERVERID, database.getDatabaseServerId());
@@ -54,14 +52,13 @@ public final class DatabaseDAO {
 
     private static final class DatabaseRowMapper implements RowMapper<Database> {
         @Override
-        public Database mapRow(final ResultSet rs, final int row) throws SQLException {
+        public Database mapRow(final ResultSet rs, final int row) {
             try {
                 return new Database(rs.getInt(StandardDAO.ID)
                         , rs.getInt(BUSINESSID)
                         , rs.getInt(USERID)
                         , rs.getString(NAME)
                         , rs.getString(MYSQLNAME)
-                        , rs.getString(DATABASETYPE)
                         , rs.getInt(NAMECOUNT)
                         , rs.getInt(VALUECOUNT)
                         , rs.getInt(DATABASESERVERID),

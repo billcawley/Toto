@@ -24,7 +24,7 @@ public class ValuesImport {
     // where we store import specs for different file types
     public static final String ALLIMPORTSHEETS = "All import sheets";
 
-    static String valuesImport(ValuesImportConfig valuesImportConfig) {
+    static void valuesImport(ValuesImportConfig valuesImportConfig) {
         try {
             long track = System.currentTimeMillis();
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
@@ -108,40 +108,18 @@ public class ValuesImport {
                     }
                 }
             }
-            StringBuilder toReturn = new StringBuilder();
-            toReturn.append(valuesImportConfig.getUploadedFile().getFileNamessAsString());
-            toReturn.append(" imported. Dataimport took ")// I'm not sure I agree with intellij warning about non chained
-                    .append((System.currentTimeMillis() - track) / 1000)
-                    .append(" second(s) to import ")
-                    .append(linesImported - linesRejected.size())
-                    .append(" lines").append(", ").append(valuesImportConfig.getValuesModifiedCounter()).append(" values adjusted");
+            valuesImportConfig.getUploadedFile().setProcessingDuration((System.currentTimeMillis() - track) / 1000);
+            valuesImportConfig.getUploadedFile().setNoLinesImported(linesImported - linesRejected.size());
+            valuesImportConfig.getUploadedFile().setNoValuesAdjusted(valuesImportConfig.getValuesModifiedCounter().get());
 
             // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
             if (!linesRejected.isEmpty()) {
-                toReturn.append(" - No. lines rejected: ").append(linesRejected.size()).append(" - Line numbers with rejected cells : ");
-                int col = 0;
                 ArrayList<String> lineNumbersList = new ArrayList<>(linesRejected);
                 Collections.sort(lineNumbersList); // should do the basic sort
-                for (String line : lineNumbersList) {
-                    if (col > 0) {
-                        toReturn.append(", ");
-                    }
-                    toReturn.append(line);
-                    col++;
-                    /* the append was commented, made no sense. EFC commenting this little bit until I find out why
-                    if (col == 20) {
-                        col = 0;
-                        toReturn.append("<br/>\n");
-                    }*/
-                }
-                if (linesRejected.size() == 1_000) { // it was full - factor the size?
-                    toReturn.append("etc.");
-                }
-                //toReturn.append("<br/>\n");
+                valuesImportConfig.getUploadedFile().addToLinesRejected(lineNumbersList);
             }
-            valuesImportConfig.getAzquoMemoryDBConnection().addToUserLogNoException(toReturn.toString(), true);
+            valuesImportConfig.getAzquoMemoryDBConnection().addToUserLogNoException("Imported " + (linesImported - linesRejected.size()) + " lines", true); // does the user log require more details??
             System.out.println("---------- names found cache size " + namesFoundCache.size());
-            return toReturn.toString();
         } catch (Exception e) {
             // the point of this is to add the file name to the exception message - I wonder if I should just leave a vanilla exception here and deal with this client side?
             e.printStackTrace();
@@ -149,8 +127,8 @@ public class ValuesImport {
             if (t.getCause() != null) { // once should do it, unwrap to reduce java.lang.exception being shown to the user
                 t = t.getCause();
             }
+            valuesImportConfig.getUploadedFile().setError(t.getMessage());
             //throw new Exception(fileName + " : " + t.getMessage());
-            return "Import error: " + t.getMessage();
         }
     }
 

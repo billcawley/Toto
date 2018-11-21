@@ -40,7 +40,6 @@ CREATE TABLE IF NOT EXISTS `database` (
   `user_id` int(11) NOT NULL,
   `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `mysql_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `database_type` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `name_count` int(11) NOT NULL,
   `value_count` int(11) NOT NULL,
   `database_server_id` int(11) NOT NULL,

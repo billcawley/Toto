@@ -21,7 +21,7 @@ class SetsImport {
 
     // typically used to create the basic name structure, an Excel set up workbook with many sheets would have a sets sheet
 
-    static String setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile) throws Exception {
+    static void setsImport(final AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile) throws Exception {
         int lines;
         try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()))) {
             // the filename can override the attribute for name creation/search. Seems a bit hacky but can make sense if the set up is a series of workbooks.
@@ -62,6 +62,6 @@ class SetsImport {
             }
             lines++;
         }
-        return uploadedFile.getFileName() + " imported. " + lines + " line(s) of a set file.";  // HTML in DB code! Will let it slide for the mo.
+        uploadedFile.setNoLinesImported(lines);
     }
 }

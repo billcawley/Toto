@@ -124,10 +124,7 @@ this may now not work at all, perhaps delete?
 
     // ok in new report/database server split creating a database needs distinct bits
 
-    public static Database createDatabase(final String databaseName, String databaseType, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
-        if (databaseType == null) {
-            databaseType = "";
-        }
+    public static Database createDatabase(final String databaseName, final LoggedInUser loggedInUser, DatabaseServer databaseServer) throws Exception {
         if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
             // force a developer prefix?
             Database existing = DatabaseDAO.findForNameAndBusinessId(databaseName, loggedInUser.getUser().getBusinessId());
@@ -139,7 +136,7 @@ this may now not work at all, perhaps delete?
                 throw new Exception("That business does not exist");
             }
             final String persistenceName = getSQLDatabaseName(databaseServer, b, databaseName);
-            final Database database = new Database(0, b.getId(), loggedInUser.getUser().getId(), databaseName, persistenceName, databaseType, 0, 0, databaseServer.getId(), null, null, false);
+            final Database database = new Database(0, b.getId(), loggedInUser.getUser().getId(), databaseName, persistenceName, 0, 0, databaseServer.getId(), null, null, false);
             DatabaseDAO.store(database);
             // will be over to the DB side
             RMIClient.getServerInterface(databaseServer.getIp()).createDatabase(database.getPersistenceName());
@@ -163,7 +160,7 @@ this may now not work at all, perhaps delete?
             throw new Exception("That business does not exist");
         }
         final String persistenceName = getSQLDatabaseName(DatabaseServerDAO.findById(source.getDatabaseServerId()), b, newName);
-        final Database database = new Database(0, source.getBusinessId(), loggedInUser.getUser().getId(), newName, persistenceName, source.getDatabaseType(), source.getNameCount(), source.getValueCount(), source.getDatabaseServerId(), null, null, false);
+        final Database database = new Database(0, source.getBusinessId(), loggedInUser.getUser().getId(), newName, persistenceName, source.getNameCount(), source.getValueCount(), source.getDatabaseServerId(), null, null, false);
         DatabaseDAO.store(database);
         DatabaseServer server = DatabaseServerDAO.findById(database.getDatabaseServerId());
         RMIClient.getServerInterface(server.getIp()).copyDatabase(source.getPersistenceName(), database.getPersistenceName());

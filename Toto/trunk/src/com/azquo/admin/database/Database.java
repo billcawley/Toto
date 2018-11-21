@@ -20,7 +20,6 @@ public final class Database extends StandardEntity implements Serializable {
     private int userId;
     private String name;
     private String persistenceName;
-    private String databaseType;
     private int nameCount;
     private int valueCount;
     private int databaseServerId;
@@ -34,7 +33,6 @@ public final class Database extends StandardEntity implements Serializable {
             , int userId
             , String name
             , String persistenceName
-            , String databaseType
             , int nameCount
             , int valueCount
             , int databaseServerId
@@ -46,7 +44,6 @@ public final class Database extends StandardEntity implements Serializable {
         this.userId = userId;
         this.name = name;
         this.persistenceName = persistenceName;
-        this.databaseType = databaseType;
         this.nameCount = nameCount;
         this.valueCount = valueCount;
         this.databaseServerId = databaseServerId;
@@ -96,14 +93,6 @@ public final class Database extends StandardEntity implements Serializable {
         this.persistenceName = persistenceName;
     }
 
-    public String getDatabaseType() {
-        return databaseType;
-    }
-
-    public void setDatabaseType(String databaseType) {
-        this.databaseType = databaseType;
-    }
-
     public int getNameCount() {
         return nameCount;
     }
@@ -151,7 +140,6 @@ public final class Database extends StandardEntity implements Serializable {
                 ", userId=" + userId +
                 ", name='" + name + '\'' +
                 ", persistenceName='" + persistenceName + '\'' +
-                ", databaseType='" + databaseType + '\'' +
                 ", nameCount=" + nameCount +
                 ", valueCount=" + valueCount +
                 ", databaseServerId=" + databaseServerId +

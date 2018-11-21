@@ -81,32 +81,39 @@ public class DBCron {
                     if (!Files.exists(tagged)) {
                         Files.createDirectories(tagged);
                     }
-                    Path p = Paths.get(SpreadsheetService.getScanDir());
-                    for (Iterator<Path> iter2 = Files.list(p).iterator(); iter2.hasNext(); ) {
-                        Path path = iter2.next();
-                        if (!Files.isDirectory(path)) { // skip any directories
-                            String origName = path.getFileName().toString();
-                            System.out.println("file : " + origName);
-                            FileTime lastModifiedTime = Files.getLastModifiedTime(path);
-                            long timestamp = System.currentTimeMillis();
-                            Files.move(path, tagged.resolve(timestamp + origName));
-                            // ok it's moved now make the pending upload record
-                            PendingUpload pendingUpload = new PendingUpload(0, b.getId()
-                                    , LocalDateTime.ofInstant(lastModifiedTime.toInstant(), ZoneId.systemDefault())
-                                    , LocalDateTime.now()
-                                    , origName
-                                    , tagged.resolve(timestamp + origName).toString()
-                                    , "fileimport"
-                                    , PendingUpload.WAITING
-                                    , ""
-                                    , 0
-                                    , 0
-                                    , null
-                                    , false);
-                            PendingUploadDAO.store(pendingUpload);
-                        }
-                    }
 
+                    Path p = Paths.get(SpreadsheetService.getScanDir());
+                    try (Stream<Path> list = Files.list(p)) {
+                        list.forEach(path -> {
+                            // Do stuff
+                            if (!Files.isDirectory(path)) { // skip any directories
+                                try {
+                                    String origName = path.getFileName().toString();
+                                    System.out.println("file : " + origName);
+                                    FileTime lastModifiedTime = null;
+                                    lastModifiedTime = Files.getLastModifiedTime(path);
+                                    long timestamp = System.currentTimeMillis();
+                                    Files.move(path, tagged.resolve(timestamp + origName));
+                                    // ok it's moved now make the pending upload record
+                                    PendingUpload pendingUpload = new PendingUpload(0, b.getId()
+                                            , LocalDateTime.ofInstant(lastModifiedTime.toInstant(), ZoneId.systemDefault())
+                                            , LocalDateTime.now()
+                                            , origName
+                                            , tagged.resolve(timestamp + origName).toString()
+                                            , "fileimport"
+                                            , PendingUpload.WAITING
+                                            , ""
+                                            , 0
+                                            , 0
+                                            , null
+                                            , false);
+                                    PendingUploadDAO.store(pendingUpload);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
+                    }
                 }
             }
         }

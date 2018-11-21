@@ -20,53 +20,43 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class DSImportService {
 
-    /*
-    Currently only two types of import supported and detection on file name (best idea?). Run the import and persist.
-    Generally speaking creating the import headers and basic set structure is what is required to ready a database to load data.
-
-    */
-    public static String readPreparedFile(final DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, final String user
-            , final boolean persistAfter) throws Exception {
+    public static UploadedFile readPreparedFile(final DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, final String user) throws Exception {
         System.out.println("Reading file " + uploadedFile.getPath());
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.setProvenance(user, "imported", uploadedFile.getFileNamessAsString(), "");
         // if the provenance is unused I could perhaps zap it but it's not a big deal for the mo
-        // also jamming this feedback on the beginning is a bit of a hack
-        String result = readPreparedFile(azquoMemoryDBConnection, uploadedFile, persistAfter, new AtomicInteger());
-        return (azquoMemoryDBConnection.isUnusedProvenance() ? StringLiterals.DATABASE_UNMODIFIED : "") + result;
+        UploadedFile toReturn = readPreparedFile(azquoMemoryDBConnection, uploadedFile, new AtomicInteger());
+        toReturn.setDataModified(!azquoMemoryDBConnection.isUnusedProvenance());
+        return toReturn;
     }
 
     // Called by above but also directly from SSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     // I wonder if the valuesModifiedCounter is a bit hacky, will maybe revisit this later
     // EFC - parameters going up, should a configuration/context object be passed?
-    public static String readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile, boolean persistAfter, AtomicInteger valuesModifiedCounter) throws Exception {
+    public static UploadedFile readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile, AtomicInteger valuesModifiedCounter) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
         // of course this doesn't currently stop the opposite, a persist being started while an import is going on.
         azquoMemoryDBConnection.lockTest();
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
-        String toReturn;
         if (uploadedFile.getFileName().toLowerCase().startsWith("sets")) { // typically from a sheet with that name in a book
             // not currently paying attention to isSpreadsheet - only possible issue is the replacing of \\\n with \n required based off writeCell in ImportFileUtilities
-            toReturn = SetsImport.setsImport(azquoMemoryDBConnection, uploadedFile);
+            SetsImport.setsImport(azquoMemoryDBConnection, uploadedFile);
         } else {
             boolean clearData = uploadedFile.getFileName().toLowerCase().contains("cleardata");
             ValuesImportConfig valuesImportConfig = new ValuesImportConfig(azquoMemoryDBConnection, uploadedFile, valuesModifiedCounter, clearData);
             // a lot goes on in this function to do with checking the file, finding import configuration, resolving headings etc.
             ValuesImportConfigProcessor.prepareValuesImportConfig(valuesImportConfig);
             // when it is done we assume we're ready to batch up lines with headers and import with BatchImporter
-            toReturn = ValuesImport.valuesImport(valuesImportConfig);
+            ValuesImport.valuesImport(valuesImportConfig);
             // now look to see if there's a need to execute after import
             // find interpreter being called again - a way not to do this?
             if (valuesImportConfig.getImportInterpreter() != null) {
                 String execute = valuesImportConfig.getImportInterpreter().getAttribute("EXECUTE");
                 if (execute != null && execute.length() > 0) {
-                    toReturn += "EXECUTE:" + execute + "EXECUTEEND";
+                    uploadedFile.setExecute(execute);
                 }
             }
         }
-        if (persistAfter) { // get back to the user straight away. Should not be a problem, multiple persists would be queued. The only issue is of changes while persisting, need to check this in the memory db.
-            new Thread(azquoMemoryDBConnection::persist).start();
-        }
-        return toReturn;
+        return uploadedFile; // it will (should!) have been modified
     }
 }

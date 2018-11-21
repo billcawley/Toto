@@ -92,7 +92,6 @@ public class ReportExecutor {
       RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
       SpreadsheetService.databasePersist(loggedInUser);
       return loops;
-
   }
 
 

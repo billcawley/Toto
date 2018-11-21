@@ -87,15 +87,15 @@ public class BackupService {
                 } else {
                     fileName = f.getName();
                 }
-                toReturn.append(ImportService.importTheFile(loggedInUser
-                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), null, false)).replace("\n", "<br/>") + "<br/>");
+                toReturn.append(ImportService.formatUploadedFiles(ImportService.importTheFile(loggedInUser
+                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName)))).replace("\n", "<br/>") + "<br/>");
             }
         }
         return toReturn.toString();
     }
 
     // should be in shared?
-    static int batchSize = 100_000;
+    private static int batchSize = 100_000;
 
     public static void loadDBBackup(LoggedInUser loggedInUser, File file, String database, StringBuilder log, boolean justEmpty) {
         int line = 1;
@@ -126,7 +126,7 @@ public class BackupService {
                     AdminService.emptyDatabase(loggedInUser);
                 } else {
                     AdminService.removeDatabaseByIdWithBasicSecurity(loggedInUser, db.getId());
-                    Database createdDb = AdminService.createDatabase(db.getName(), db.getDatabaseType(), loggedInUser, DatabaseServerDAO.findById(db.getDatabaseServerId()));
+                    Database createdDb = AdminService.createDatabase(db.getName(), loggedInUser, DatabaseServerDAO.findById(db.getDatabaseServerId()));
                     // fix the user records if we're overwriting a db
                     List<User> users = UserDAO.findForDatabaseId(db.getId());
                     for (User u : users) {
@@ -136,7 +136,7 @@ public class BackupService {
                 }
             } else {
                 // still not really dealing with different servers properly
-                AdminService.createDatabase(database, "", loggedInUser, loggedInUser.getDatabaseServer());
+                AdminService.createDatabase(database, loggedInUser, loggedInUser.getDatabaseServer());
             }
             // refresh the db, it probabl;y will have a different ID
             List<NameForBackup> namesForBackup = new ArrayList<>();

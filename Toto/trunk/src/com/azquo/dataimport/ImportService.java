@@ -4,7 +4,6 @@ import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.*;
-import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.CommonReportUtils;
@@ -44,7 +43,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -58,13 +56,15 @@ public final class ImportService {
     public static final String dbPath = "/databases/";
     public static final String onlineReportsDir = "/onlinereports/";
 
-    // just convenience
-    public static String importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile) throws Exception {
-        return importTheFile(loggedInUser, uploadedFile, true, new AtomicBoolean());
+    // will persist after
+    public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile) throws Exception { // setup just to flag it
+        List<UploadedFile> processedUploadedFiles = importTheFileNoPersist(loggedInUser, uploadedFile);
+        SpreadsheetService.databasePersist(loggedInUser);
+        return processedUploadedFiles;
     }
 
     // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    public static String importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, final boolean isLast, final AtomicBoolean dataChanged) throws Exception { // setup just to flag it
+    private static List<UploadedFile> importTheFileNoPersist(final LoggedInUser loggedInUser, final UploadedFile uploadedFile) throws Exception {
         InputStream uploadFile = new FileInputStream(uploadedFile.getPath());
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
@@ -75,7 +75,7 @@ public final class ImportService {
         uploadFile.close(); // windows requires this (though windows ideally should not be used in production), perhaps not a bad idea anyway
         String toReturn;
         UploadedFile uploadedFileWithAdjustedPath = new UploadedFile(tempFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), false);
-        String reportName = null;
+        List<UploadedFile> processedUploadedFiles = new ArrayList<>();
         if (fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
             ZipUtil.explode(tempFile);
             // after exploding the original file is replaced with a directory
@@ -93,52 +93,39 @@ public final class ImportService {
                 //now standard string order
                 return f1.getName().compareTo(f2.getName());
             });
-            StringBuilder sb = new StringBuilder();
-            Iterator<File> fileIterator = files.iterator();
-            while (fileIterator.hasNext()) {
-                File f = fileIterator.next();
+            for (File f : files) {
                 // need new upload file object now!
                 List<String> names = new ArrayList<>(uploadedFile.getFileNames());
                 names.add(f.getName());
                 Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
                 addFileNameParametersToMap(f.getName(), fileNameParams);
-                UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, uploadedFile.isConvertedFromWorksheet());
-                if (f.getName().endsWith(".zip")) {
-                    sb.append(importTheFile(loggedInUser, zipEntryUploadFile, !fileIterator.hasNext(), dataChanged));
+                UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false);
+                if (f.getName().endsWith(".zip") || f.getName().endsWith(".7z")) {
+                    // this is the only recursive call . . .
+                    processedUploadedFiles.addAll(importTheFileNoPersist(loggedInUser, zipEntryUploadFile));
                 } else {
-                    if (fileIterator.hasNext()) {
-                        sb.append(readBookOrFile(loggedInUser, zipEntryUploadFile, false, dataChanged));
-                    } else {
-                        sb.append(fileName).append(": ").append(readBookOrFile(loggedInUser, zipEntryUploadFile, isLast, dataChanged)); // persist on the last one
-                    }
+                    processedUploadedFiles.addAll(readBookOrFile(loggedInUser, zipEntryUploadFile));
                 }
             }
-            toReturn = sb.toString();
         } else { // vanilla
-            toReturn = readBookOrFile(loggedInUser, uploadedFileWithAdjustedPath, true, dataChanged);
-            if (toReturn.startsWith("Report uploaded : ")){
-                // hacky way to get the report name so it can be seen on the list. I wonder if this should be removed . . .
-                reportName = toReturn.substring("Report uploaded : ".length());
-
-            }
+            processedUploadedFiles.addAll(readBookOrFile(loggedInUser, uploadedFileWithAdjustedPath));
         }
         UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
-                , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName + (reportName != null ? " - (" + reportName + ")" : ""), "", "", uploadedFile.getPath());//should record the error? (in comment)
+                , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName + (uploadedFile.getReportName() != null ? " - (" + uploadedFile.getReportName() + ")" : ""), "", "", uploadedFile.getPath());//should record the error? (in comment)
         UploadRecordDAO.store(uploadRecord);
-        AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
-        int executePos = toReturn.toLowerCase().indexOf("execute:");
-        if (executePos > 0) {
-            String execute = toReturn.substring(executePos + "execute:".length());
-            int executeEnd = execute.toLowerCase().indexOf("executeend");
-            toReturn = toReturn.substring(0, executePos) + execute.substring(executeEnd + "executeend".length());
-            toReturn += " " + ReportExecutor.runExecute(loggedInUser, execute.substring(0, executeEnd)).toString();
+        for (UploadedFile uf : processedUploadedFiles) {
+            if (uf.getExecute() != null && !uf.isExecuted()) {
+                uf.setExecute(ReportExecutor.runExecute(loggedInUser, uf.getExecute()).toString());
+                uf.setExecuted(true);
+            }
         }
-        return toReturn;
+        AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
+        return processedUploadedFiles;
     }
 
     // as it says, for when a user has downloaded a report, modified data, then uploaded
     // uses ZK as it will have to render a copy, third public entry point into the class
-    public static String uploadDataInReport(LoggedInUser loggedInUser, String tempPath) throws Exception{
+    public static String uploadDataInReport(LoggedInUser loggedInUser, String tempPath) throws Exception {
         Book book;
         try {
             book = Importers.getImporter().imports(new File(tempPath), "Imported");
@@ -206,26 +193,23 @@ public final class ImportService {
         return success;
     }
 
-    private static String readBookOrFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile, final boolean persistAfter, final AtomicBoolean dataChanged) throws Exception {
-        String toReturn;
+    private static List<UploadedFile> readBookOrFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile) throws Exception {
+        // going to zap these checks later I think
         if (uploadedFile.getFileName().startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
-            return "Please upload the users file in the users tab.";
+            uploadedFile.setError("Please upload the users file in the users tab.");
+            return Collections.singletonList(uploadedFile);
         } else if (uploadedFile.getFileName().equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
-            return "Please upload the report schedules file in the schedules tab.";
+            uploadedFile.setError("Please upload the report schedules file in the schedules tab.");
+            return Collections.singletonList(uploadedFile);
         } else if (uploadedFile.getFileName().contains(".xls")) { // normal. I'm not entirely sure the code for users etc above should be in this file, maybe a different importer?
-            toReturn = readBook(loggedInUser, uploadedFile, persistAfter, dataChanged);
+            return readBook(loggedInUser, uploadedFile);
         } else {
-            toReturn = readPreparedFile(loggedInUser, uploadedFile, persistAfter, dataChanged);
+            return Collections.singletonList(readPreparedFile(loggedInUser, uploadedFile));
         }
-        int errorPos = toReturn.toLowerCase().lastIndexOf("exception:");
-        if (errorPos > 0) {
-            toReturn = toReturn.substring(errorPos + 10).trim();
-        }
-        return toReturn;
     }
 
-    private static void uploadReport(LoggedInUser loggedInUser, UploadedFile uploadedFile, String reportName, String identityCell, AtomicBoolean dataChanged) throws Exception {
-        dataChanged.set(true);
+    private static void uploadReport(LoggedInUser loggedInUser, UploadedFile uploadedFile, String reportName, String identityCell) throws Exception {
+        uploadedFile.setDataModified(true); // I'm not 100% sure this is correct
         int businessId = loggedInUser.getUser().getBusinessId();
         int databaseId = loggedInUser.getDatabase().getId();
         String pathName = loggedInUser.getBusinessDirectory();
@@ -250,10 +234,10 @@ public final class ImportService {
         DatabaseReportLinkDAO.link(databaseId, or.getId());
     }
 
-    private static String readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, boolean persistAfter, AtomicBoolean dataChanged) throws Exception {
+    private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile) throws Exception {
+        long time = System.currentTimeMillis();
         Workbook book;
         try {
-            long time = System.currentTimeMillis();
             FileInputStream fs = new FileInputStream(new File(uploadedFile.getPath()));
             if (uploadedFile.getFileName().endsWith("xlsx")) {
                 OPCPackage opcPackage = OPCPackage.open(fs);
@@ -266,7 +250,8 @@ public final class ImportService {
                     " " + (System.currentTimeMillis() - time));
         } catch (Exception e) {
             e.printStackTrace();
-            return uploadedFile.getFileName() + ": Import error - " + e.getMessage();
+            uploadedFile.setError(e.getMessage());
+            return Collections.singletonList(uploadedFile);
         }
         String reportName = null;
         boolean isImportTemplate = false;
@@ -288,24 +273,32 @@ public final class ImportService {
                     //identity cell in Excel format
                     identityCell = "" + (char) (sheetNameCell.getCol() + 65) + (sheetNameCell.getRow() + 1);
                 }
-                uploadReport(loggedInUser, uploadedFile, reportName, identityCell, dataChanged);
-                if (isImportTemplate) {
+                uploadReport(loggedInUser, uploadedFile, reportName, identityCell);
+                uploadedFile.setReportName(reportName);
+                uploadedFile.setProcessingDuration(System.currentTimeMillis() - time);
+                return Collections.singletonList(uploadedFile);
+/*                if (isImportTemplate) {
                     return "Import uploaded : " + reportName;
                 }
-                return "Report uploaded : " + reportName;
+                return "Report uploaded : " + reportName;*/
             }
         }
         if (loggedInUser.getDatabase() == null) {
-            throw new Exception("no database set");
+            uploadedFile.setError("no database set");
+            return Collections.singletonList(uploadedFile);
         }
-        StringBuilder toReturn = new StringBuilder();
 //        Map<String, String> knownValues = new HashMap<>();
+        // add a share of the initial excel load time to each of the sheet convert and processing times
+        long sheetExcelLoadTimeShare = (System.currentTimeMillis() - time) / book.getNumberOfSheets();
+        // with sheets to convert this is why the function returns a list
+        List<UploadedFile> toReturn = new ArrayList<>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            toReturn.append(readSheet(loggedInUser, uploadedFile, sheet /*, knownValues*/, sheetNo == book.getNumberOfSheets() - 1 && persistAfter, dataChanged)); // that last conditional means persist on the last one through (if we've been told to persist)
-            toReturn.append("\n");
+            UploadedFile uf = readSheet(loggedInUser, uploadedFile, sheet /*, knownValues*/);
+            uf.addToProcessingDuration(sheetExcelLoadTimeShare);
+            toReturn.add(uf);
         }
-        return toReturn.toString();
+        return toReturn;
     }
 
     private static void checkEditableSets(Book book, LoggedInUser loggedInUser) {
@@ -357,8 +350,9 @@ public final class ImportService {
     }*/
 
 
-    private static String readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, Sheet sheet/*, Map<String, String> knownValues*/, boolean persistAfter, AtomicBoolean dataChanged) {
+    private static UploadedFile readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, Sheet sheet/*, Map<String, String> knownValues*/) {
         String sheetName = sheet.getSheetName();
+        long time = System.currentTimeMillis();
 //        String toReturn = "";
         try {
             /*
@@ -430,42 +424,36 @@ public final class ImportService {
             csvW.close();
             fos.close();
 
+            long convertTime = System.currentTimeMillis() - time;
             List<String> names = new ArrayList<>(uploadedFile.getFileNames());
             names.add(sheetName);
             Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
             addFileNameParametersToMap(sheetName, fileNameParams);
             UploadedFile fileFromWorksheet = new UploadedFile(tempPath, names, fileNameParams, true); // true, it IS converted from a worksheet
-
-            return uploadedFile.getFileName() + ": " + readPreparedFile(loggedInUser, fileFromWorksheet, persistAfter, dataChanged);
+            UploadedFile toReturn = readPreparedFile(loggedInUser, fileFromWorksheet);
+            toReturn.addToProcessingDuration(convertTime);
+            return toReturn;
         } catch (Exception e) {
             e.printStackTrace();
-            return "\n" + uploadedFile.getFileName() + ": " + e.getMessage();
+            uploadedFile.setError(e.getMessage());
+            return uploadedFile;
         }
     }
 
     private static String LOCALIP = "127.0.0.1";
 
-    // todo - address whether that last variable is the right way to do things!
-    private static String readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile, final boolean persistAfter
-            , final AtomicBoolean dataChanged) throws Exception {
+    private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile) throws Exception {
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         // right - here we're going to have to move the file if the DB server is not local.
         UploadedFile adjustedUploadedFile = null;
         if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
             adjustedUploadedFile = new UploadedFile(ImportFileUtilities.copyFileToDatabaseServer(new FileInputStream(uploadedFile.getPath()), databaseServer.getSftpUrl())
-            , uploadedFile.getFileNames(), uploadedFile.getParameters(), uploadedFile.isConvertedFromWorksheet());
+                    , uploadedFile.getFileNames(), uploadedFile.getParameters(), uploadedFile.isConvertedFromWorksheet());
         }
-        String s = RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken
+        return RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken
                 , adjustedUploadedFile != null ? adjustedUploadedFile : uploadedFile
-                , loggedInUser.getUser().getName()
-                , persistAfter);
-        if (s.startsWith(StringLiterals.DATABASE_UNMODIFIED)) {
-            s = s.substring(StringLiterals.DATABASE_UNMODIFIED.length());
-        } else {
-            dataChanged.set(true);
-        }
-        return s;
+                , loggedInUser.getUser().getName());
     }
 
     // for the download, modify and upload the report
@@ -614,4 +602,93 @@ public final class ImportService {
             System.out.println("Can't parse file name parameters correctly");
             e.printStackTrace();
         }
-    }}
+    }
+
+    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles) {
+        StringBuilder toReturn = new StringBuilder();
+        List<String> lastNames = null;
+        for (UploadedFile uploadedFile : uploadedFiles) {
+            List<String> names = new ArrayList<>(uploadedFile.getFileNames()); // copy as I might change it
+            int indent = 0;
+            if (lastNames != null && names.size() == lastNames.size()) { // for formatting don't repeat names (e.g. the zip name)
+                for (int index = 0; index < lastNames.size(); index++) {
+                    if (lastNames.get(index).equals(names.get(index))) {
+                        indent++;
+                    }
+                }
+            }
+            for (int i = 0; i < indent; i++) {
+                toReturn.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+            }
+            for (int index = indent; index < names.size(); index++) {
+                toReturn.append(names.get(index));
+                if ((index + 1) != names.size()) {
+                    toReturn.append("\n");
+                    for (int i = 0; i <= index; i++) {
+                        toReturn.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+                    }
+                }
+            }
+            StringBuilder indentSb = new StringBuilder();
+            for (int i = 0; i < names.size(); i++) {
+                indentSb.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+            }
+            // jump it out past the end for actual info
+            toReturn.append("\n");
+
+            if (uploadedFile.getParameters() != null && !uploadedFile.getParameters().isEmpty()) {
+                for (String key : uploadedFile.getParameters().keySet()) {
+                    toReturn.append(indentSb);
+                    toReturn.append(key).append(" = ").append(uploadedFile.getParameters().keySet() + "\n");
+                }
+            }
+
+            if (uploadedFile.isConvertedFromWorksheet()) {
+                toReturn.append(indentSb);
+                toReturn.append("Converted from worksheet.\n");
+            }
+
+            toReturn.append(indentSb);
+            toReturn.append("Time to process : " + uploadedFile.getProcessingDuration()  + " ms\n");
+
+            toReturn.append(indentSb);
+            toReturn.append("Number of lines imported : " + uploadedFile.getNoLinesImported()  + "\n");
+
+            toReturn.append(indentSb);
+            toReturn.append("Number of valuses adjusted: " + uploadedFile.getNoValuesAdjusted()  + "\n");
+
+            if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()){
+                toReturn.append(indentSb);
+                toReturn.append("Rejected lines : " + uploadedFile.getNoValuesAdjusted()  + "\n");
+                for (String lineRejected : uploadedFile.getLinesRejected()){
+                    toReturn.append(indentSb);
+                    toReturn.append(lineRejected + "\n");
+                }
+            }
+
+            if (uploadedFile.getError() != null){
+                toReturn.append(indentSb);
+                toReturn.append("ERROR : " + uploadedFile.getError()  + "\n");
+            }
+
+            if (!uploadedFile.isDataModified()) {
+                toReturn.append(indentSb);
+                toReturn.append("NO DATA MODIFIED.\n");
+            }
+
+            if (uploadedFile.getReportName() != null) {
+                toReturn.append(indentSb);
+                toReturn.append("Report uploaded : " + uploadedFile.getReportName() + "\n");
+            }
+
+            if (uploadedFile.getExecute() != null) {
+                toReturn.append(indentSb);
+                toReturn.append("Execute result : " + uploadedFile.getExecute() + "\n");
+            }
+
+
+            lastNames = uploadedFile.getFileNames();
+        }
+        return toReturn.toString();
+    }
+}
