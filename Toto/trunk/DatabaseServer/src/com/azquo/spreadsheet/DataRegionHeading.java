@@ -27,12 +27,20 @@ public class DataRegionHeading {
     AVERAGE             Value function      The average value
     MAX, MIN            Value functions     Max and min values found
     VALUEPARENTCOUNT    Value/Name function The number of names in a given set that are parents of the values found by the other cell definition features (e.g customers buying a product) (customer set
+    VALUESET            Value function      a replacement for using 'as' <temporaryset>  - creates a set used for that heading only
+    PERCENTILE          Value function      <set, percentileInt>  gives the value in the set at that percentile
+    PERCENTILENZ        Value function       as above ignoring zero figures
+    STDEVA              Value function      Standard deviation
     SET                 Name function       Comma separated list of elements of the set
     FIRST, LAST         Name function       The first or last elements of the set
     NAMECOUNT           Name function       The number of elements of the set
     PATHCOUNT           Name function       The number of paths between the sets (e.g. the number of mailings sent to a specified group of customers)
     PERMUTE             Heading function    The system will find all the combinations of the immediate children of the list to be permuted, selected on the basis of sharing common descendants
-    EXACT               Value function      exact meaning get only values that match exactly the names passed. Generally would only be one value
+    EXACT               Value function      exact meaning get only values that match exactly the name passed. Generally would only be one value
+    ALLEXACT            Value function      as above for all names in cell
+    AUDITDATE           Audit function      the provenance date of the latest value in the cell
+    AUDITCHANGEDBY      Audit function      the name of the person who last changed the value
+    BESTMATCH           Value function      the nearest value of the cll to the value given (e.g the latest date of change BESTMATCH(Change dates, 2018-01-01) for i
      */
     enum SUFFIX {UNLOCKED, LOCKED, SPLIT}
     /*
