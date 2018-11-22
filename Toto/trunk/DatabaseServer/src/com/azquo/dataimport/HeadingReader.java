@@ -343,10 +343,11 @@ todo - add classification here
                                         String element = component.substring(function.length() + 1,commaPos).toLowerCase();
                                         if (headerNames.contains(element)){
                                             String fieldNo = headerNames.indexOf(element) + "";
+                                            int rest = clause.substring(endFieldPos).length();
                                             clause = clause.substring(0,startFieldPos) + component.substring(0,function.length() + 1) + fieldNo + component.substring(commaPos) + clause.substring(endFieldPos);
                                             hasFunction = true;
                                             adjusted = true;
-                                            startFieldPos = startFieldPos + function.length() + 1 + fieldNo.length();
+                                            endFieldPos = clause.length() - rest;
                                             break;
                                         }
                                     }
