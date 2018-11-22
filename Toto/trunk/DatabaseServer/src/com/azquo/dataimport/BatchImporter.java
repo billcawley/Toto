@@ -82,7 +82,7 @@ public class BatchImporter implements Callable<Void> {
                             }
                         }
                         // default values might now be used by composite
-                        resolveDefaultValues(lineToLoad);
+                        //resolveDefaultValues(lineToLoad);
                         // composite might do things that affect only and existing hence do it before
                         resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine);
                         String rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
@@ -117,29 +117,6 @@ public class BatchImporter implements Callable<Void> {
             azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(importLine) + " imported.", true);
             azquoMemoryDBConnection.addToUserLogNoException("Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
             return null;
-    }
-
-    // set defaults, factored now as new logic means composites might use defaults
-    private static void resolveDefaultValues(List<ImportCellWithHeading> lineToLoad) {
-        // set defaults before dealing with local parent/child
-        for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
-            if (importCellWithHeading.getImmutableImportHeading().defaultValue != null && (importCellWithHeading.getImmutableImportHeading().override != null || importCellWithHeading.getLineValue().trim().length() == 0)) {
-                String defaultValue = importCellWithHeading.getImmutableImportHeading().defaultValue;
-                if (importCellWithHeading.getImmutableImportHeading().lineNameRequired) {
-                    for (ImportCellWithHeading cell : lineToLoad) {
-                        // If one of the other cells is referring to this as its attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Customer.Address1 and set the language to Address1
-                        // of course this logic only is used where default is used so it's a question of whether there's a better option than default if the cell is empty
-                        // So keep the line imported if there's data missing I guess
-                        if (cell != importCellWithHeading && cell.getImmutableImportHeading().indexForAttribute == lineToLoad.indexOf(importCellWithHeading) && cell.getLineValue().length() > 0) {
-                            defaultValue = cell.getLineValue();
-                            break;
-                        }
-                    }
-                }
-                importCellWithHeading.setLineValue(defaultValue);
-                importCellWithHeading.setResolved(true);
-            }
-        }
     }
 
     // Checking only and existing means "should we import the line at all" based on these criteria
@@ -213,22 +190,36 @@ public class BatchImporter implements Callable<Void> {
         while (adjusted && counter < 10) {
             adjusted = false;
             for (ImportCellWithHeading cell : cells) {
-                if (!cell.getResolved() && cell.getImmutableImportHeading().compositionPattern != null && (cell.getLineValue() == null || cell.getLineValue().length() == 0)) {
-                    String result = cell.getImmutableImportHeading().compositionPattern;
-                    // do line number first, I see no reason not to. Important for pivot.
+                String compositionPattern = cell.getImmutableImportHeading().compositionPattern;
+                if (cell.getImmutableImportHeading().defaultValue != null && (cell.getImmutableImportHeading().override != null || cell.getLineValue().trim().length() == 0)) {
+                    compositionPattern = cell.getImmutableImportHeading().defaultValue;
+                    if (cell.getImmutableImportHeading().lineNameRequired) {
+                        for (ImportCellWithHeading cell2 : cells) {
+                            // If one of the other cells is referring to this as its attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Customer.Address1 and set the language to Address1
+                            // of course this logic only is used where default is used so it's a question of whether there's a better option than default if the cell is empty
+                            // So keep the line imported if there's data missing I guess
+                            if (cell2 != cell && cell.getImmutableImportHeading().indexForAttribute == cells.indexOf(cell) && cell2.getLineValue().length() > 0) {
+                                compositionPattern = cell2.getLineValue();
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (!cell.getResolved() && compositionPattern != null && (cell.getLineValue() == null || cell.getLineValue().length() == 0)) {
+                      // do line number first, I see no reason not to. Important for pivot.
                     String LINENO = "LINENO";
-                    result = result.replace(LINENO, importLine + "");
-                    int headingMarker = result.indexOf("`");
+                    compositionPattern = compositionPattern.replace(LINENO, importLine + "");
+                    int headingMarker = compositionPattern.indexOf("`");
                     while (headingMarker >= 0) {
                         boolean doublequotes = false;
-                        if (headingMarker < result.length() && result.charAt(headingMarker + 1) == '`') {
+                        if (headingMarker < compositionPattern.length() && compositionPattern.charAt(headingMarker + 1) == '`') {
                             doublequotes = true;
                             headingMarker++;
                         }
-                        int headingEnd = result.indexOf("`", headingMarker + 1);
+                        int headingEnd = compositionPattern.indexOf("`", headingMarker + 1);
                         if (headingEnd > 0) {
                             // fairly standard replace name of column with column value but with string manipulation left right mid
-                            String expression = result.substring(headingMarker + 1, headingEnd);
+                            String expression = compositionPattern.substring(headingMarker + 1, headingEnd);
                             String function = null;
                             int funcInt = 0;
                             int funcInt2 = 0;
@@ -297,33 +288,33 @@ public class BatchImporter implements Callable<Void> {
                                             sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
                                         }
                                     }
-                                    result = result.replace(result.substring(headingMarker, headingEnd + 1), sourceVal);
+                                    compositionPattern = compositionPattern.replace(compositionPattern.substring(headingMarker, headingEnd + 1), sourceVal);
                                     headingMarker = headingMarker + sourceVal.length() - 1;//is increaed before two lines below
                                     if (doublequotes) headingMarker++;
                                 } else {
-                                    result = "";
+                                    compositionPattern = "";
                                     headingMarker = headingEnd;
                                 }
                             } else {
                                 headingMarker = headingEnd;
-                                result = "";
+                                compositionPattern = "";
                             }
 
                         }
                         // try to find the start of the next column referenced
-                        headingMarker = result.indexOf("`", ++headingMarker);
+                        headingMarker = compositionPattern.indexOf("`", ++headingMarker);
                     }
                     // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
-                    if (result.toLowerCase().startsWith("calc")) {
-                        result = result.substring(5);
+                    if (compositionPattern.toLowerCase().startsWith("calc")) {
+                        compositionPattern = compositionPattern.substring(5);
                         // IntelliJ said escaping  was redundant I shall assume it's correct.
                         Pattern p = Pattern.compile("[+\\-*/]");
-                        Matcher m = p.matcher(result);
+                        Matcher m = p.matcher(compositionPattern);
                         if (m.find()) {
                             double dresult = 0.0;
                             try {
-                                double first = Double.parseDouble(result.substring(0, m.start()));
-                                double second = Double.parseDouble(result.substring(m.end()));
+                                double first = Double.parseDouble(compositionPattern.substring(0, m.start()));
+                                double second = Double.parseDouble(compositionPattern.substring(m.end()));
                                 char c = m.group().charAt(0);
                                 switch (c) {
                                     case '+':
@@ -342,14 +333,14 @@ public class BatchImporter implements Callable<Void> {
                                 }
                             } catch (Exception ignored) {
                             }
-                            result = dresult + "";
+                            compositionPattern = dresult + "";
                         }
                     }
                     if (cell.getImmutableImportHeading().removeSpaces) {
-                        result = result.replace(" ", "");
+                        compositionPattern = compositionPattern.replace(" ", "");
                     }
-                    if (result.length() > 0 && !result.equals(cell.getLineValue())) {
-                        cell.setLineValue(result);
+                    if (compositionPattern.length() > 0 && !compositionPattern.equals(cell.getLineValue())) {
+                        cell.setLineValue(compositionPattern);
                         cell.setResolved(true);
                         checkLookup(azquoMemoryDBConnection, cell);
                         adjusted = true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
