@@ -11,10 +11,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /*
-Created August 2018, it's a simple little bit of code but there's no reason it can't live in it's own class
+Created August 2018, it's a simple little bit of code but there's no reason it can't live in it's own class.
  */
 
 class SetsImport {

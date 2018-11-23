@@ -7,6 +7,7 @@ Report server logic for creating and restoring backups
 
  */
 
+import com.azquo.admin.controller.ManageDatabasesController;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServerDAO;
@@ -87,8 +88,8 @@ public class BackupService {
                 } else {
                     fileName = f.getName();
                 }
-                toReturn.append(ImportService.formatUploadedFiles(ImportService.importTheFile(loggedInUser
-                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName)))).replace("\n", "<br/>") + "<br/>");
+                toReturn.append(ManageDatabasesController.formatUploadedFiles(ImportService.importTheFile(loggedInUser
+                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName))))).append("<br/>");
             }
         }
         return toReturn.toString();

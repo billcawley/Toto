@@ -54,7 +54,6 @@ class HeadingReader {
     static final String NONZERO = "nonzero";
     static final String REMOVESPACES = "removespaces";
     private static final String REQUIRED = "required";
-    private static final String CLEARDATA = "cleardata";
     static final String DATELANG = "date";
     private static final String USDATELANG = "us date";
     static final String ONLY = "only";
@@ -63,7 +62,7 @@ class HeadingReader {
     static final String EXCLUSIVE = "exclusive";
     static final String CLEAR = "clear";
     static final String COMMENT = "comment";
-     static final String EXISTING = "existing"; // only works in in context of child of
+    static final String EXISTING = "existing"; // only works in in context of child of
     // essentially using either of these keywords switches to pivot mode (like an Excel pivot) where a name is created
     // from the line number and in a set called the name of the file, uploading successive files with the same name would of course cause problems for this system, data should be cleared before re uploading
     static final String LINEHEADING = "lineheading";//lineheading and linedata are shortcuts for data destined for a pivot table, they are replaced before parsing starts properly
@@ -107,10 +106,9 @@ todo - add classification here
 
     // Manages the context being assigned automatically to subsequent headers. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.
-    static void readHeaders(ValuesImportConfig valuesImportConfig) throws Exception{
-        boolean clearData = valuesImportConfig.getClearData();
-         AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
-        List<String>attributeNames = valuesImportConfig.getLanguages();
+    static void readHeaders(ValuesImportConfig valuesImportConfig) throws Exception {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
+        List<String> attributeNames = valuesImportConfig.getLanguages();
         List<MutableImportHeading> headings = new ArrayList<>();
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
         for (String header : valuesImportConfig.getHeaders()) {
@@ -126,7 +124,7 @@ todo - add classification here
                     // if the heading ends with | the context heading will be blank, ignore it. A way to clear context if you just put a single | at the end of a heading
                     if (contextHeadingString.length() > 0) {
                         // context headings may not use many features but using the standard heading objects and interpreter is fine
-                        MutableImportHeading contextHeading = interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames, clearData);
+                        MutableImportHeading contextHeading = interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames);
                         if (contextHeading.attribute != null) {
                             attributeNames.add(contextHeading.attribute);//not sure when this should be removed.  It must apply until the context is changed THIS IS AN ADDITIONAL LANGUAGE USED TO UNDERSTAND THE HEADERS - NOT THE DATA!
                         }
@@ -135,14 +133,13 @@ todo - add classification here
                     header = header.substring(0, dividerPos);
                     dividerPos = header.lastIndexOf(headingDivider);
                 }
-                final MutableImportHeading heading = interpretHeading(azquoMemoryDBConnection, header, attributeNames, clearData);
+                final MutableImportHeading heading = interpretHeading(azquoMemoryDBConnection, header, attributeNames);
                 heading.contextHeadings = contextHeadings;
                 headings.add(heading);
             } else {// add an empty one, the headings ArrayList should match the number of headings even if that heading is empty
-                MutableImportHeading newHeading =new MutableImportHeading();
-                newHeading.clearData = clearData;
+                MutableImportHeading newHeading = new MutableImportHeading();
                 headings.add(newHeading);
-             }
+            }
         }
         // further processing of the Mutable headings - the bits where headings interact with each other
         resolvePeersAttributesAndParentOf(azquoMemoryDBConnection, headings);
@@ -161,16 +158,16 @@ todo - add classification here
     still too complex for INtellij to analyse - todo
     */
 
-    static void preProcessHeadersAndCreatePivotSetsIfRequired(ValuesImportConfig valuesImportConfig) throws  Exception{
+    static void preProcessHeadersAndCreatePivotSetsIfRequired(ValuesImportConfig valuesImportConfig) throws Exception {
         /*             valuesImportConfig.getAzquoMemoryDBConnection(),
                              valuesImportConfig.getFileName(),
 
 */
         // option for extra composite headings - I think for PwC, a little odd but harmless.
-            AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
-            Name importInterpreter = valuesImportConfig.getImportInterpreter();
-            List<String> headers = valuesImportConfig.getHeaders();
-            if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null) {
+        AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
+        Name importInterpreter = valuesImportConfig.getImportInterpreter();
+        List<String> headers = valuesImportConfig.getHeaders();
+        if (importInterpreter != null && importInterpreter.getAttribute(COMPOSITEHEADINGS) != null) {
             List<String> extraCompositeHeadings = Arrays.asList(importInterpreter.getAttribute(COMPOSITEHEADINGS).split("¬")); // delimiter match the other headings string
             headers.addAll(extraCompositeHeadings);
         }
@@ -199,12 +196,12 @@ todo - add classification here
                         headersReplaced = false;
                         char c = 10;
                         List<String> languages = valuesImportConfig.getLanguages();
-                        header = header.replace("\\\\n",c + "");
+                        header = header.replace("\\\\n", c + "");
                         // given preparation we should be able to find a name with this header in the correct language
                         Name headerName = NameService.findByName(azquoMemoryDBConnection, header, languages);
                         //amendment to catch cases where there happens to be a heading with the given name, but we don't want it
                         String localImportAttribute = importAttribute + " " + languages.get(0);
-                        if (headerName != null && (headerName.getAttribute(localImportAttribute)== null ||  !headerName.getAttribute(localImportAttribute).toLowerCase().equals("ignore"))) {
+                        if (headerName != null && (headerName.getAttribute(localImportAttribute) == null || !headerName.getAttribute(localImportAttribute).toLowerCase().equals("ignore"))) {
                         /*
 
                         Ok examining the risk database makes this clearer. There's "Transaction Type" under "Data Import Risk"
@@ -235,8 +232,8 @@ todo - add classification here
                             header = headerName.getDefaultDisplayName();
                             origHeaders.set(i, header);
                             String attribute = getCompositeAttributes(headerName, importAttribute, localImportAttribute);
-                            if (topHeadingFound!=null){
-                                attribute+=";default " + topHeadingFound;
+                            if (topHeadingFound != null) {
+                                attribute += ";default " + topHeadingFound;
                             }
                             if (attribute != null) {
                                 header = attribute;
@@ -301,12 +298,12 @@ todo - add classification here
             headers.add("LINENO;composition LINENO;language " + importInterpreter.getDefaultDisplayName() + ";child of " + importInterpreter.getDefaultDisplayName() + " lines|"); // pipe on the end, clear context if there was any
         }
 
-        if (!headersReplaced){
+        if (!headersReplaced) {
             valuesImportConfig.setHeaders(replaceFieldNamesWithNumbersInCompositeHeadings(origHeaders, headers));
-         }else{
+        } else {
             valuesImportConfig.setHeaders(headers);
         }
-     }
+    }
 
     // headings replaced by WFC into indexes as the headings were changed by the new Ed Broking children of the data import name functionality
     // also headings shouldn't be resolved on every line when dealing with composite
@@ -334,14 +331,14 @@ todo - add classification here
                             startFieldPos = endFieldPos;
                         } else {
                             String component = clause.substring(startFieldPos, endFieldPos);
-                            String[] functions = {"left","middle","right"};
+                            String[] functions = {"left", "middle", "right"};
                             boolean hasFunction = false;
-                            for (String function:functions){
-                                if (component.toLowerCase().startsWith(function + "(")){
-                                    int commaPos = component.indexOf(",",function.length() + 1);
-                                    if (commaPos > 0){
-                                        String element = component.substring(function.length() + 1,commaPos).toLowerCase();
-                                        if (headerNames.contains(element)){
+                            for (String function : functions) {
+                                if (component.toLowerCase().startsWith(function + "(")) {
+                                    int commaPos = component.indexOf(",", function.length() + 1);
+                                    if (commaPos > 0) {
+                                        String element = component.substring(function.length() + 1, commaPos).toLowerCase();
+                                        if (headerNames.contains(element)) {
                                             String fieldNo = headerNames.indexOf(element) + "";
                                             int rest = clause.substring(endFieldPos).length();
                                             clause = clause.substring(0,startFieldPos) + component.substring(0,function.length() + 1) + fieldNo + component.substring(commaPos) + clause.substring(endFieldPos);
@@ -378,16 +375,15 @@ todo - add classification here
 
     //headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading
-    private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames, boolean clearData) throws Exception {
+    private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames) throws Exception {
         MutableImportHeading heading = new MutableImportHeading();
-        heading.clearData = clearData;
         List<String> clauses = new ArrayList<>(Arrays.asList(headingString.split(";")));
         Iterator clauseIt = clauses.iterator();
-          heading.heading = ((String) clauseIt.next()).replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
+        heading.heading = ((String) clauseIt.next()).replace(StringLiterals.QUOTE + "", ""); // the heading name being the first
         try {
             //WFC - I do not understand why we're trying to set up a name for an attribute!
             heading.name = NameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames); // at this stage, look for a name, but don't create it unless necessary
-        }catch(Exception e){
+        } catch (Exception e) {
 
         }
         // loop over the clauses making sense and modifying the heading object as you go
@@ -399,7 +395,7 @@ todo - add classification here
             if (clause.toLowerCase().startsWith(CLASSIFICATION)) {
                 interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring(CLASSIFICATION.length()));
                 interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading);
-                interpretClause(azquoMemoryDBConnection,heading, "exclusive");
+                interpretClause(azquoMemoryDBConnection, heading, "exclusive");
             } else {
                 interpretClause(azquoMemoryDBConnection, heading, clause);
             }
@@ -494,12 +490,12 @@ todo - add classification here
             case IGNORE:
                 heading.ignoreList = new ArrayList<>();
                 String[] ignores = result.split(",");
-                for (int i=0;i< ignores.length;i++){
+                for (int i = 0; i < ignores.length; i++) {
                     String ignoreItem = ignores[i].toLowerCase().trim();
-                    if (ignoreItem.equals("{blank")){
+                    if (ignoreItem.equals("{blank")) {
                         heading.ignoreList.add("");
                         heading.ignoreList.add("0");
-                    }else{
+                    } else {
                         heading.ignoreList.add(ignoreItem);
                     }
                 }
@@ -552,9 +548,6 @@ todo - add classification here
             case REQUIRED:
                 heading.required = true;
                 break;
-            case CLEARDATA:
-                heading.clearData = true;
-                break;
             case EXCLUSIVE:
                 heading.exclusive = result;
                 break;
@@ -576,57 +569,57 @@ todo - add classification here
                 //used elsewhere
                 break;
             case DICTIONARY:
-                if (heading.parentNames==null || heading.parentNames.size()==0){
+                if (heading.parentNames == null || heading.parentNames.size() == 0) {
                     throw new Exception("dictionary terms must specify the parent first, heading " + heading.heading);
 
                 }
                 Name parent = heading.parentNames.iterator().next();
                 heading.dictionaryMap = new LinkedHashMap<>();
-                for (Name name:parent.getChildren()) {
+                for (Name name : parent.getChildren()) {
                     String term = name.getAttribute(result);
-                    if (term!=null) {
+                    if (term != null) {
                         List<DictionaryTerm> dictionaryTerms = new ArrayList<>();
                         boolean exclude = false;
                         while (term.length() > 0) {
-                            if(term.startsWith("{")) {
+                            if (term.startsWith("{")) {
                                 int endSet = term.indexOf("}");
                                 if (endSet < 0) break;
                                 String stringList = term.substring(1, endSet);
                                 dictionaryTerms.add(new DictionaryTerm(exclude, (List<String>) Arrays.asList(stringList.split(","))));
                                 term = term.substring(endSet + 1).trim();
-                            }else{
+                            } else {
                                 int plusPos = (term + "+").indexOf("+");
                                 int minusPos = (term + "-").indexOf("-");
                                 int termEnd = plusPos;
                                 if (minusPos < plusPos) termEnd = minusPos;
-                                dictionaryTerms.add(new DictionaryTerm(exclude, (List<String>) Arrays.asList(term.substring(0,termEnd).split(","))));
-                                if (termEnd == term.length()){
+                                dictionaryTerms.add(new DictionaryTerm(exclude, (List<String>) Arrays.asList(term.substring(0, termEnd).split(","))));
+                                if (termEnd == term.length()) {
                                     term = "";
-                                }else{
+                                } else {
                                     term = term.substring(termEnd);
                                 }
                             }
                             if (term.startsWith("+")) {
-                                    exclude = false;
-                                    term = term.substring(1).trim();
-                                } else if (term.startsWith("-")) {
-                                    exclude = true;
-                                    term = term.substring(1).trim();
-                                }
+                                exclude = false;
+                                term = term.substring(1).trim();
+                            } else if (term.startsWith("-")) {
+                                exclude = true;
+                                term = term.substring(1).trim();
                             }
+                        }
                         if (dictionaryTerms.size() > 0) {
                             heading.dictionaryMap.put(name, dictionaryTerms);
                         }
                     }
                 }
-                Name synonymList = NameService.findByName(azquoMemoryDBConnection,"synonyms");
+                Name synonymList = NameService.findByName(azquoMemoryDBConnection, "synonyms");
 
-                if (synonymList!=null){
+                if (synonymList != null) {
                     heading.synonyms = new HashMap<>();
-                    for (Name synonym:synonymList.getChildren()){
+                    for (Name synonym : synonymList.getChildren()) {
                         String synonyms = synonym.getAttribute("synonyms");
-                        if (synonyms!=null){
-                            heading.synonyms.put(synonym.getDefaultDisplayName(),Arrays.asList(synonyms.split(",")));
+                        if (synonyms != null) {
+                            heading.synonyms.put(synonym.getDefaultDisplayName(), Arrays.asList(synonyms.split(",")));
                         }
                     }
                 }
@@ -634,18 +627,18 @@ todo - add classification here
                 heading.exclusive = "";
                 break;
             case LOOKUP:
-                if (!result.toLowerCase().startsWith("from ") || result.indexOf("`",6) < 0){
+                if (!result.toLowerCase().startsWith("from ") || result.indexOf("`", 6) < 0) {
                     throw new Exception("lookup FROM `<attribute`");
                 }
                 result = result.substring(6);
                 int endFrom = result.indexOf("`");
-                heading.lookupFrom = result.substring(0,endFrom);
+                heading.lookupFrom = result.substring(0, endFrom);
                 result = result.substring(endFrom + 1);
-                if (result.toLowerCase().contains("to")){
+                if (result.toLowerCase().contains("to")) {
                     int startTo = result.indexOf("to") + 2;
                     startTo = result.indexOf("`", startTo);
-                    if (startTo < 0 || result.indexOf("`", startTo + 1)<0){
-                        throw new Exception ("lookup FROM `attribute` TO `attribute`");
+                    if (startTo < 0 || result.indexOf("`", startTo + 1) < 0) {
+                        throw new Exception("lookup FROM `attribute` TO `attribute`");
                     }
                     heading.lookupTo = result.substring(startTo + 1, result.indexOf("`", startTo + 1)).trim();
                 }
@@ -654,13 +647,13 @@ todo - add classification here
                 break;
             case CHECK:
                 String[] checks = result.split(";");
-               for (String check:checks){
-                   boolean ok = false;
-                   check = check.toLowerCase().trim();
-                   if (check.startsWith("letters ")){
+                for (String check : checks) {
+                    boolean ok = false;
+                    check = check.toLowerCase().trim();
+                    if (check.startsWith("letters ")) {
                         String letterCheck = check.substring(7).trim();
 
-                        while (letterCheck.length() > 0 && (letterCheck.startsWith(">") || letterCheck.startsWith("=") || letterCheck.startsWith("<"))){
+                        while (letterCheck.length() > 0 && (letterCheck.startsWith(">") || letterCheck.startsWith("=") || letterCheck.startsWith("<"))) {
                             ok = true;
                             letterCheck = letterCheck.substring(1);
                         }
@@ -668,18 +661,18 @@ todo - add classification here
                             try {
                                 int i = Integer.parseInt(letterCheck.trim());
 
-                            } catch (Exception e){
+                            } catch (Exception e) {
                                 ok = false;
                             }
                         }
-                   }else{
-                       if (check.equals("number")){
-                           ok = true;
-                       }
-                   }
-                   if (!ok){
-                       throw new Exception("heading "+ heading.heading + " has unknown check " + check);
-                   }
+                    } else {
+                        if (check.equals("number")) {
+                            ok = true;
+                        }
+                    }
+                    if (!ok) {
+                        throw new Exception("heading " + heading.heading + " has unknown check " + check);
+                    }
                 }
                 heading.checkList = result;
             case REPLACE:

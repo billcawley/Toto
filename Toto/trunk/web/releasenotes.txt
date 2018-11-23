@@ -1,3 +1,16 @@
+21-11-18
+
+Will execute regions 'az_query<regionname>' before populating region
+
+Removed redundant "set up file" functionality
+
+Sorts large sets where 'from' or 'to' is specified
+
+Refactoring parameters passed around while uploading data - intitial effect is improved feedback from importing which will be improved further
+
+! Fixed file handler error that was crashing the server
+
+
 16-11-18
 
 NPE catch on outside case in query parsing (from/to in a list), optimiseation when resetting large children sets on a name

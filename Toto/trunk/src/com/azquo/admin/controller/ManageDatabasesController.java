@@ -6,7 +6,6 @@ import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
-import com.azquo.StringLiterals;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -49,6 +48,8 @@ import java.util.stream.Stream;
  * Current responsibilities :
  * <p>
  * create and delete dbs/upload files and manage uploads/backup/restore/pending uploads
+ *
+ * pending uploads should perhaps be taken out of here
  */
 @Controller
 @RequestMapping("/ManageDatabases")
@@ -260,23 +261,35 @@ public class ManageDatabasesController {
                 }
             }
             StringBuilder error = new StringBuilder();
-            String importResult = (String) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
+            // EFC - I can't see a way around this one currently. I want to use @SuppressWarnings very sparingly
+            @SuppressWarnings("unchecked")
+            List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
             if (importResult != null) {
                 if (request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX) != null) {
                     error.append(request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX)).append("<br/>");
                     request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULTPREFIX);
                 }
-                error.append(importResult);
+                error.append(formatUploadedFiles(importResult));
                 if (request.getSession().getAttribute(ManageDatabasesController.PENDINGUPLOADID) != null) {
                     int pendingUploadImportedId = (Integer) request.getSession().getAttribute(ManageDatabasesController.PENDINGUPLOADID);
                     PendingUpload pendingUpload = PendingUploadDAO.findById(pendingUploadImportedId);
                     if (pendingUpload != null) {
-                        pendingUpload.setImportResult(importResult);
-                        if (importResult.startsWith(StringLiterals.DATABASE_UNMODIFIED) || importResult.startsWith("ERROR")) { // string literals, as ever todo
-                            if (importResult.startsWith(StringLiterals.DATABASE_UNMODIFIED)) {
+                        pendingUpload.setImportResult(formatUploadedFiles(importResult));// should html be in here?
+                        boolean modified = false;
+                        boolean errorInResult = false;
+                        for (UploadedFile uploadedFile : importResult){
+                            if (uploadedFile.isDataModified()){
+                                modified = true;
+                            }
+                            if (uploadedFile.getError() != null){
+                                errorInResult = true;
+                            }
+                        }
+                        if (!modified || errorInResult) {
+                            if (!modified) {
                                 error.append("<span style=\"background-color: #FF8888; color: #000000\">** Marked as rejected as no data was modified **</span><br/>");
                             }
-                            if (importResult.startsWith("ERROR")) {
+                            if (errorInResult) {
                                 error.append("<span style=\"background-color: #FF8888; color: #000000\">** Marked as rejected due to an error. Depending on the error data may have modified **</span><br/>");
                             }
                             pendingUpload.setStatus(PendingUpload.REJECTED);
@@ -519,20 +532,24 @@ public class ManageDatabasesController {
     // factored due to pending uploads, need to check the factoring after the prototype is done
     private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String fileName, String filePath, final Map<String, String> paramsFromUser) {
         // need to add in code similar to report loading to give feedback on imports
+        final Map<String, String> fileNameParams;
+        if (paramsFromUser == null) {
+            fileNameParams = new HashMap<>();
+            ImportService.addFileNameParametersToMap(fileName, fileNameParams);
+        } else {
+            fileNameParams = paramsFromUser;
+        }
+        UploadedFile uploadedFile = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false);
         new Thread(() -> {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
-                Map<String, String> fileNameParams = paramsFromUser;
-                if (fileNameParams == null) {
-                    fileNameParams = new HashMap<>();
-                    ImportService.addFileNameParametersToMap(fileName, fileNameParams);
-                }
-                String result = ImportService.formatUploadedFiles(
+/*                String result = ImportService.formatUploadedFiles(
                         ImportService.importTheFile(loggedInUser, new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false))
-                ).replace("\n", "<br/>");
-                session.setAttribute(ManageDatabasesController.IMPORTRESULT, result);
+                ).replace("\n", "<br/>");*/
+                session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile));
             } catch (Exception e) {
-                session.setAttribute(ManageDatabasesController.IMPORTRESULT, "ERROR : " + CommonReportUtils.getErrorFromServerSideException(e));
+                uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
+                session.setAttribute(ManageDatabasesController.IMPORTRESULT, Collections.singletonList(uploadedFile));
             }
         }).start();
         // edd pasting in here to get the banner colour working
@@ -544,5 +561,93 @@ public class ManageDatabasesController {
         model.addAttribute("bannerColor", bannerColor);
         model.addAttribute("logo", logo);
         return "importrunning";
+    }
+
+    // as it says make something for users to read from a list of uploaded files.
+
+    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles) {
+        StringBuilder toReturn = new StringBuilder();
+        List<String> lastNames = null;
+        for (UploadedFile uploadedFile : uploadedFiles) {
+            List<String> names = new ArrayList<>(uploadedFile.getFileNames()); // copy as I might change it
+            int indent = 0;
+            if (lastNames != null && names.size() == lastNames.size()) { // for formatting don't repeat names (e.g. the zip name)
+                for (int index = 0; index < lastNames.size(); index++) {
+                    if (lastNames.get(index).equals(names.get(index))) {
+                        indent++;
+                    }
+                }
+            }
+            for (int i = 0; i < indent; i++) {
+                toReturn.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+            }
+            for (int index = indent; index < names.size(); index++) {
+                toReturn.append(names.get(index));
+                if ((index + 1) != names.size()) {
+                    toReturn.append("\n<br/>");
+                    for (int i = 0; i <= index; i++) {
+                        toReturn.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+                    }
+                }
+            }
+            StringBuilder indentSb = new StringBuilder();
+            for (int i = 0; i < names.size(); i++) {
+                indentSb.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+            }
+            // jump it out past the end for actual info
+            toReturn.append("\n<br/>");
+
+            if (uploadedFile.getParameters() != null && !uploadedFile.getParameters().isEmpty()) {
+                for (String key : uploadedFile.getParameters().keySet()) {
+                    toReturn.append(indentSb);
+                    toReturn.append(key).append(" = ").append(uploadedFile.getParameters().keySet()).append("\n<br/>");
+                }
+            }
+
+            if (uploadedFile.isConvertedFromWorksheet()) {
+                toReturn.append(indentSb);
+                toReturn.append("Converted from worksheet.\n<br/>");
+            }
+
+            toReturn.append(indentSb);
+            toReturn.append("Time to process : ").append(uploadedFile.getProcessingDuration()).append(" ms\n<br/>");
+
+            toReturn.append(indentSb);
+            toReturn.append("Number of lines imported : ").append(uploadedFile.getNoLinesImported()).append("\n<br/>");
+
+            toReturn.append(indentSb);
+            toReturn.append("Number of valuses adjusted: ").append(uploadedFile.getNoValuesAdjusted()).append("\n<br/>");
+
+            if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
+                toReturn.append(indentSb);
+                toReturn.append("Rejected lines : ").append(uploadedFile.getNoValuesAdjusted()).append("\n<br/>");
+                for (String lineRejected : uploadedFile.getLinesRejected()) {
+                    toReturn.append(indentSb);
+                    toReturn.append(lineRejected).append("\n<br/>");
+                }
+            }
+
+            if (uploadedFile.getError() != null) {
+                toReturn.append(indentSb);
+                toReturn.append("ERROR : ").append(uploadedFile.getError()).append("\n<br/>");
+            }
+
+            if (!uploadedFile.isDataModified()) {
+                toReturn.append(indentSb);
+                toReturn.append("NO DATA MODIFIED.\n<br/>");
+            }
+
+            if (uploadedFile.getReportName() != null) {
+                toReturn.append(indentSb);
+                toReturn.append("Report uploaded : ").append(uploadedFile.getReportName()).append("\n<br/>");
+            }
+
+            if (uploadedFile.getExecute() != null) {
+                toReturn.append(indentSb);
+                toReturn.append("Execute result : ").append(uploadedFile.getExecute()).append("\n<br/>");
+            }
+            lastNames = uploadedFile.getFileNames();
+        }
+        return toReturn.toString();
     }
 }

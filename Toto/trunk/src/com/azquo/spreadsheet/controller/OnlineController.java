@@ -1,15 +1,22 @@
 package com.azquo.spreadsheet.controller;
 
+import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
+import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.DatabaseReportLinkDAO;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.dataimport.SFTPUtilities;
 import com.azquo.dataimport.ImportService;
+import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
+import com.azquo.spreadsheet.transport.CellForDisplay;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.spreadsheet.zk.BookUtils;
@@ -23,17 +30,17 @@ import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
+import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SName;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -45,6 +52,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * The main report online report viewing controller, deals with upload/save/execute and a more graceful loading of reports showing a loading screen online as opposed to simply
  * blocking the response until done.
  * <p>
+ *     Notably it also contains the code for dealing with a report that has been downloaded, the data modified, then uploaded again - todo - move this to another controller
+ *
  */
 
 @Controller
@@ -54,31 +63,39 @@ public class OnlineController {
 
     public static class DisplayHeading {
         private final String id;
-         private final String name;
+        private final String name;
         private final String type;
         private final boolean isset;
         private final boolean hasGrandchildren;
 
-        public DisplayHeading(String id,String name, String type, boolean isset, boolean hasGrandchildren) {
+        public DisplayHeading(String id, String name, String type, boolean isset, boolean hasGrandchildren) {
             this.id = id;
-              this.name = name;
+            this.name = name;
             this.type = type;
             this.isset = isset;
             this.hasGrandchildren = hasGrandchildren;
 
         }
 
-        public String getId() {return id; }
+        public String getId() {
+            return id;
+        }
 
         public String getName() {
             return name;
         }
 
-        public String getType() { return type; }
+        public String getType() {
+            return type;
+        }
 
-        public boolean getIsset() {return isset; }
+        public boolean getIsset() {
+            return isset;
+        }
 
-        public boolean getHasGrandchildren() { return hasGrandchildren; }
+        public boolean getHasGrandchildren() {
+            return hasGrandchildren;
+        }
 
 
     }
@@ -103,7 +120,6 @@ public class OnlineController {
     private static final String EXECUTE = "EXECUTE";
     private static final String TEMPLATE = "TEMPLATE";
     private static final String UPLOAD = "UPLOAD";
-    private static final String UPLOADTEMPLATE = "UPLOADTEMPLATE";
 
     private static final SimpleDateFormat logDf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -124,14 +140,14 @@ public class OnlineController {
             return "redirect:/api/ExcelInterface?" + request.getQueryString();
         }
         try {
-               //long startTime = System.currentTimeMillis();
+            //long startTime = System.currentTimeMillis();
             try {
                 LoggedInUser tempLoggedInUser = null;
-                if (sessionId != null && sessionId.length() > 0){
+                if (sessionId != null && sessionId.length() > 0) {
                     tempLoggedInUser = ExcelController.excelConnections.get(sessionId);
                     request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, tempLoggedInUser); // so it keeps working as they click around!
                 }
-                if (tempLoggedInUser==null){
+                if (tempLoggedInUser == null) {
                     tempLoggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
                 }
                 if (tempLoggedInUser == null) {
@@ -145,23 +161,23 @@ public class OnlineController {
                     if (loggedInUser.getUser().isDeveloper()) { // for the user
                         onlineReport = OnlineReportDAO.findForIdAndUserId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
                     } else { //any for the business for admin
-                        if (reportId.equals("ADHOC")){
+                        if (reportId.equals("ADHOC")) {
                             List<String> databases = new ArrayList<>();
                             List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
-                           for (Database db : databaseList) {
+                            for (Database db : databaseList) {
                                 databases.add(db.getName());
-                           }
-                            model.put("databases",databases);
+                            }
+                            model.put("databases", databases);
                             List<DisplayHeading> displayHeadings = new ArrayList<DisplayHeading>();
-                            for (int i=0;i<10;i++){
-                                displayHeadings.add(new DisplayHeading("heading" +i,"","",false,false));
+                            for (int i = 0; i < 10; i++) {
+                                displayHeadings.add(new DisplayHeading("heading" + i, "", "", false, false));
 
                             }
                             model.put("headings", displayHeadings);
-                            model.put("reportDatabase","");
+                            model.put("reportDatabase", "");
                             return "adHocReport";
 
-                        }else{
+                        } else {
                             onlineReport = OnlineReportDAO.findForIdAndBusinessId(Integer.parseInt(reportId), loggedInUser.getUser().getBusinessId());
                         }
                     }
@@ -170,7 +186,7 @@ public class OnlineController {
                         final List<Integer> databaseIdsForReportId = DatabaseReportLinkDAO.getDatabaseIdsForReportId(onlineReport.getId());
                         for (int dbId : databaseIdsForReportId) {
                             if (dbId == Integer.parseInt(databaseId)) {
-                                 LoginService.switchDatabase(loggedInUser, DatabaseDAO.findById(dbId));
+                                LoginService.switchDatabase(loggedInUser, DatabaseDAO.findById(dbId));
                             }
                         }
                     }
@@ -195,12 +211,12 @@ public class OnlineController {
                         // getting rid of database switch
                         String fileName = uploadfile.getOriginalFilename();
                         if (imageName.length() > 0) {
-                            result = ImportService.uploadImage(loggedInUser, uploadfile, imageName);
+                            result = uploadImage(loggedInUser, uploadfile, imageName);
                         } else {
                             if (fileName.length() > 0) {
                                 File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp the upload to stop overwriting with a file with the same name is uploaded after
                                 uploadfile.transferTo(moved);
-                                result = fileName + " : " + ImportService.uploadDataInReport(loggedInUser, moved.getAbsolutePath());
+                                result = fileName + " : " + uploadDataInReport(loggedInUser, moved.getAbsolutePath());
                             } else {
                                 result = "no file to import";
                             }
@@ -272,9 +288,9 @@ public class OnlineController {
                         model.addAttribute("databaseName", loggedInUser.getDatabase().getName());
                         Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                         String bannerColor = business.getBannerColor();
-                        if (bannerColor==null || bannerColor.length()==0) bannerColor = "#F58030";
+                        if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
                         String logo = business.getLogo();
-                        if (logo==null || logo.length()==0) logo = "logo_alt.png";
+                        if (logo == null || logo.length() == 0) logo = "logo_alt.png";
                         model.addAttribute("bannerColor", bannerColor);
                         model.addAttribute("logo", logo);
                         return "zsshowsheet";// show the sheet
@@ -340,9 +356,9 @@ public class OnlineController {
                     // edd pasting in here to get the banner colour working
                     Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
                     String bannerColor = business.getBannerColor();
-                    if (bannerColor==null || bannerColor.length()==0) bannerColor = "#F58030";
+                    if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
                     String logo = business.getLogo();
-                    if (logo==null || logo.length()==0) logo = "logo_alt.png";
+                    if (logo == null || logo.length() == 0) logo = "logo_alt.png";
                     model.addAttribute("bannerColor", bannerColor);
                     model.addAttribute("logo", logo);
                     return "zsloading";
@@ -374,4 +390,227 @@ public class OnlineController {
     ) {
         return handleRequest(model, request, reportId, databaseId, permissionId, opcode, database, imageName, submit, sessionId, null);
     }
+
+    // these functions probably should be booted into a service but they make more sense in here than the ImportService
+
+    // for when a user has downloaded a report, modified data, then uploaded
+    // uses ZK as it will have to render a copy
+    public static String uploadDataInReport(LoggedInUser loggedInUser, String tempPath) throws Exception {
+        Book book;
+        try {
+            book = Importers.getImporter().imports(new File(tempPath), "Imported");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Import error - " + e.getMessage();
+        }
+        String reportName = null;
+        SName reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
+        if (reportRange == null) {
+            reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZIMPORTNAME);
+        }
+        if (reportRange != null) {
+            reportName = BookUtils.getSnameCell(reportRange).getStringValue().trim();
+        }
+        if (reportName != null) {
+            OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
+            Map<String, String> choices = uploadChoices(book);
+            for (Map.Entry<String, String> choiceAndValue : choices.entrySet()) {
+                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceAndValue.getKey(), choiceAndValue.getValue());
+            }
+            checkEditableSets(book, loggedInUser);
+            final Book reportBook = Importers.getImporter().imports(new File(tempPath), "Report name");
+            reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, tempPath);
+            reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
+            reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
+            // this REALLY should have been commented - the load before will populate the logged in users sent cells correctly, that's
+            ReportRenderer.populateBook(reportBook, 0, false);
+            return fillDataRangesFromCopy(loggedInUser, book, or);
+        }
+        return "file doesn't appear to be an Azquo report";
+    }
+
+    // EFC note - I don't like this, want to remove it.
+    public static String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName) throws Exception {
+        String success = "image uploaded successfully";
+        String sourceName = sourceFile.getOriginalFilename();
+        String suffix = sourceName.substring(sourceName.indexOf("."));
+        DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
+        String pathOffset = loggedInUser.getDatabase().getPersistenceName() + "/images/" + fileName + suffix;
+        String destinationPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + pathOffset;
+        if (databaseServer.getIp().equals(ImportService.LOCALIP)) {
+            Path fullPath = Paths.get(destinationPath);
+            Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
+            Files.copy(sourceFile.getInputStream(), fullPath); // and copy
+        } else {
+            destinationPath = databaseServer.getSftpUrl() + pathOffset;
+            SFTPUtilities.copyFileToDatabaseServer(sourceFile.getInputStream(), destinationPath);
+        }
+        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
+        String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
+        if (imageList != null) {//check if it's already in the list
+            String[] images = imageList.split(",");
+            for (String image : images) {
+                if (image.trim().equals(fileName + suffix)) {
+                    return success;
+                }
+            }
+            imageList += "," + fileName + suffix;
+        } else {
+            imageList = fileName + suffix;
+        }
+        RMIClient.getServerInterface(databaseAccessToken.getServerIp()).setNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images", imageList);
+        return success;
+    }
+
+    private static Map<String, String> uploadChoices(Book book) {
+        //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
+        Map<String, String> choices = new HashMap<>();
+        for (SName sName : book.getInternalBook().getNames()) {
+            String rangeName = sName.getName().toLowerCase();
+            if (rangeName.endsWith("chosen")) {
+                //there is probably a more elegant solution than this....
+                choices.put(rangeName.substring(0, rangeName.length() - 6), ImportService.getCellValue(book.getSheet(sName.getRefersToSheetName()), sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getSecond());
+            }
+        }
+        return choices;
+    }
+
+    private static void checkEditableSets(Book book, LoggedInUser loggedInUser) {
+        for (SName sName : book.getInternalBook().getNames()) {
+            if (sName.getName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
+                String region = sName.getName().substring(ReportRenderer.AZROWHEADINGS.length());
+                org.zkoss.zss.api.model.Sheet sheet = book.getSheet(sName.getRefersToSheetName());
+                String rowHeading = ImportService.getCellValue(sheet, sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getSecond();
+                if (rowHeading.toLowerCase().endsWith(" children editable")) {
+                    String setName = rowHeading.substring(0, rowHeading.length() - " children editable".length()).replace("`", "");
+                    SName displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS + region, sheet);
+                    if (displayName != null) {
+                        StringBuilder editLine = new StringBuilder();
+                        editLine.append("edit:saveset ");
+                        editLine.append("`").append(setName).append("` ");
+                        CellRegion dispRegion = displayName.getRefersToCellRegion();
+                        for (int rowNo = 0; rowNo < dispRegion.getRowCount(); rowNo++) {
+                            editLine.append("`").append(ImportService.getCellValue(sheet, dispRegion.getRow() + rowNo, dispRegion.getColumn()).getSecond()).append("`,");
+                        }
+                        CommonReportUtils.getDropdownListForQuery(loggedInUser, editLine.toString());
+                    }
+                }
+            }
+        }
+    }
+
+    // for the download, modify and upload the report
+    // todo - can we convert to apache poi?
+    private static String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
+        StringBuilder errorMessage = new StringBuilder();
+        int saveCount = 0;
+        for (SName sName : sourceBook.getInternalBook().getNames()) {
+            String name = sName.getName();
+            String regionName = getRegionName(name);
+            org.zkoss.zss.api.model.Sheet sheet = sourceBook.getSheet(sName.getRefersToSheetName());
+            if (regionName != null) {
+                CellRegion sourceRegion = sName.getRefersToCellRegion();
+                if (name.toLowerCase().contains(ReportRenderer.AZREPEATSCOPE)) { // then deal with the multiple data regions sent due to this
+                    // need to gather associated names for calculations, the region and the data region, code copied and changewd from getRegionRowColForRepeatRegion, it needs to work well for a batch of cells not just one
+                    SName repeatRegion = getNameByName(ReportRenderer.AZREPEATREGION + regionName, sheet);
+                    SName repeatDataRegion = getNameByName(ReportRenderer.AZDATAREGION + regionName, sheet);
+                    // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
+                    if (repeatRegion != null && repeatDataRegion != null) {
+                        int regionHeight = repeatRegion.getRefersToCellRegion().getRowCount();
+                        int regionWitdh = repeatRegion.getRefersToCellRegion().getColumnCount();
+                        int dataHeight = repeatDataRegion.getRefersToCellRegion().getRowCount();
+                        int dataWitdh = repeatDataRegion.getRefersToCellRegion().getColumnCount();
+                        // where the data starts in each repeated region
+                        int dataStartRow = repeatDataRegion.getRefersToCellRegion().getRow() - repeatRegion.getRefersToCellRegion().getRow();
+                        int dataStartCol = repeatDataRegion.getRefersToCellRegion().getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
+                        // we can't really do a size comparison as before, we can simply run the region and see where we think there should be repeat reagions in the scope
+                        for (int row = 0; row < sourceRegion.getRowCount(); row++) {
+                            int repeatRow = row / regionHeight;
+                            int rowInRegion = row % regionHeight;
+                            for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
+                                int colInRegion = col % regionWitdh;
+                                int repeatCol = col / regionWitdh;
+                                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), sName.getRefersToSheetName(), regionName + "-" + repeatRow + "-" + repeatCol); // getting each time might be a little inefficient, can optimise if there is a performance problem here
+                                if (colInRegion >= dataStartCol && rowInRegion >= dataStartRow
+                                        && colInRegion <= dataStartCol + dataWitdh
+                                        && rowInRegion <= dataStartRow + dataHeight
+                                        && cellsAndHeadingsForDisplay != null) {
+                                    final List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
+                                    final TypedPair<Double, String> cellValue = ImportService.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewStringValue(cellValue.getSecond());
+                                    // added by Edd, should sort some numbers being ignored!
+                                    if (cellValue.getFirst() != null) {
+                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(cellValue.getFirst());
+                                    } else { // I think defaulting to zero is correct here?
+                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(0.0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return null;
+                } else { // a normal data region. Note that the data region used by a repeat scope should be harmless here as it will return a null on getSentCells, no need to be clever
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), sName.getRefersToSheetName(), regionName);
+                    if (cellsAndHeadingsForDisplay != null) {
+                        //needs to be able to handle repeat regions here....
+                        List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
+                        //NOTE - the import sheet may contain blank lines at the bottom and/or blank columns at the right where the original data region exceeds the size of the data found (row/column headings are sets).  This is acceptable
+                        // TODO - WE SHOULD CHECK THAT THE HEADINGS MATCH
+                        if (data.size() > 0 && data.size() <= sourceRegion.getRowCount() && data.get(0).size() <= sourceRegion.getColumnCount()) {//ignore region sizes which do not match (e.g. on transaction entries showing past entries)
+                            //work on the original data size, not the uploaded size with the blank lines
+                            for (int row = 0; row < data.size(); row++) {
+                                for (int col = 0; col < data.get(0).size(); col++) {
+                                    // note that this function might return a null double but no null string. Perhaps could be mroe consistent? THis area is a bit hacky . . .
+                                    final TypedPair<Double, String> cellValue = ImportService.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
+                                    data.get(row).get(col).setNewStringValue(cellValue.getSecond());
+                                    // added by Edd, should sort some numbers being ignored!
+                                    if (cellValue.getFirst() != null) {
+                                        data.get(row).get(col).setNewDoubleValue(cellValue.getFirst());
+                                    } else { // I think defaulting to zero is correct here?
+                                        data.get(row).get(col).setNewDoubleValue(0.0);
+                                    }
+                                }
+                            }
+                        }
+                        //AND THE ROW HEADINGS IF EDITABLE.
+                    }
+                    try {
+                        final String result = SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), sName.getRefersToSheetName(), regionName);
+                        if (!result.startsWith("true")) {// unlikely to fail here I think but catch it anyway . . .
+                            errorMessage.append("- in region ").append(regionName).append(" -").append(result);
+                        } else {
+                            try {
+                                saveCount += Integer.parseInt(result.substring(5));  //count follows the word 'true'
+                            } catch (Exception ignored) {
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        errorMessage.append("- in region ").append(regionName).append(" -").append(e.getMessage());
+                    }
+                }
+            }
+        }
+        return errorMessage + " - " + saveCount + " data items amended successfully";
+    }
+
+    private static SName getNameByName(String name, org.zkoss.zss.api.model.Sheet sheet) {
+        SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
+        if (toReturn != null) {
+            return toReturn;
+        }
+        // should we check the formula refers to the sheet here? I'm not sure. Applies will have been checked for above.
+        return sheet.getBook().getInternalBook().getNameByName(name);
+    }
+
+    private static String getRegionName(String name) {
+        if (name.toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
+            return name.substring(ReportRenderer.AZDATAREGION.length()).toLowerCase();
+        }
+        if (name.toLowerCase().startsWith(ReportRenderer.AZREPEATSCOPE)) {
+            return name.substring(ReportRenderer.AZREPEATSCOPE.length()).toLowerCase();
+        }
+        return null;
+    }
+
 }

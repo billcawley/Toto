@@ -6,32 +6,25 @@ import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.rmi.RMIClient;
-import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
-import com.azquo.spreadsheet.controller.OnlineController;
-import com.azquo.spreadsheet.transport.CellForDisplay;
-import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportExecutor;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.csvreader.CsvWriter;
 import org.apache.commons.io.FileUtils;
-import org.springframework.web.multipart.MultipartFile;
 import org.zeroturnaround.zip.ZipUtil;
 import org.zkoss.poi.hssf.usermodel.HSSFWorkbook;
 import org.zkoss.poi.openxml4j.opc.OPCPackage;
-import org.zkoss.poi.ss.usermodel.Name;
-import org.zkoss.poi.ss.usermodel.Sheet;
-import org.zkoss.poi.ss.usermodel.Workbook;
+import org.zkoss.poi.ss.format.CellDateFormatter;
+import org.zkoss.poi.ss.usermodel.*;
 import org.zkoss.poi.ss.util.CellReference;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
-import org.zkoss.zss.api.Importers;
-import org.zkoss.zss.api.model.Book;
-import org.zkoss.zss.model.CellRegion;
-import org.zkoss.zss.model.SName;
+import org.zkoss.zss.api.Range;
+import org.zkoss.zss.api.Ranges;
+import org.zkoss.zss.api.model.CellData;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -41,6 +34,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -50,36 +44,59 @@ import java.util.*;
  * Created by bill on 13/12/13.
  * <p>
  * Split and then refactored by EFC - does pre processing such as unzipping and extracting CSVs from sheets before being sent to the DB server.
+ * <p>
+ * Lists of UploadedFile contain both info required to upload a file and the results of an upload.
+ * <p>
+ * Deals with reports, set definitions and data files. Report schedules and users are now dealt with in dedicated classes.
+ *
+ * Uploading of reports is going to stay in here for the mo as they will likely be packaged in zip files along with data.
  */
 
 public final class ImportService {
+
     public static final String dbPath = "/databases/";
     public static final String onlineReportsDir = "/onlinereports/";
+    public static String LOCALIP = "127.0.0.1";
 
-    // will persist after
+    /* external entry point, moves the file to a temp directory in case pre processing is required
+    (decompress or sheets in a book to individual csv files before sending to the db server).
+     After that a little housekeeping.
+     */
     public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile) throws Exception { // setup just to flag it
-        List<UploadedFile> processedUploadedFiles = importTheFileNoPersist(loggedInUser, uploadedFile);
-        SpreadsheetService.databasePersist(loggedInUser);
-        return processedUploadedFiles;
-    }
-
-    // deals with pre processing of the uploaded file before calling readPreparedFile which in turn calls the main functions
-    private static List<UploadedFile> importTheFileNoPersist(final LoggedInUser loggedInUser, final UploadedFile uploadedFile) throws Exception {
         InputStream uploadFile = new FileInputStream(uploadedFile.getPath());
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
         }
         String fileName = uploadedFile.getFileName();
-        // is this overkill? Not a biggy
-        File tempFile = ImportFileUtilities.tempFileWithoutDecoding(uploadFile, fileName); // ok this takes the file and moves it to a temp directory, required for unzipping - maybe only use then?
+
+        // perhaps could make slightly cleaner API calls
+        File tempFile = File.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
+        tempFile.deleteOnExit();
+        FileOutputStream fos = new FileOutputStream(tempFile);
+        org.apache.commons.io.IOUtils.copy(uploadFile, fos);
+        fos.close();
+
         uploadFile.close(); // windows requires this (though windows ideally should not be used in production), perhaps not a bad idea anyway
-        String toReturn;
         UploadedFile uploadedFileWithAdjustedPath = new UploadedFile(tempFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), false);
+        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFileWithAdjustedPath);
+        // persist on the database server
+        SpreadsheetService.databasePersist(loggedInUser);
+        // add to the uploaded list on the Manage Databases page
+        UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
+                , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), uploadedFile.getFileName() + (uploadedFile.getReportName() != null ? " - (" + uploadedFile.getReportName() + ")" : ""), "", "", uploadedFile.getPath());//should record the error? (in comment)
+        UploadRecordDAO.store(uploadRecord);
+        // and update the counts on the manage database page
+        AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
+        return processedUploadedFiles;
+    }
+
+    // deals with unzipping if required - recursive in case there's a zip in a zip
+    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile) throws Exception {
         List<UploadedFile> processedUploadedFiles = new ArrayList<>();
-        if (fileName.endsWith(".zip") || fileName.endsWith(".7z")) {
-            ZipUtil.explode(tempFile);
+        if (uploadedFile.getFileName().endsWith(".zip") || uploadedFile.getFileName().endsWith(".7z")) {
+            ZipUtil.explode(new File(uploadedFile.getPath()));
             // after exploding the original file is replaced with a directory
-            File zipDir = new File(tempFile.getPath());
+            File zipDir = new File(uploadedFile.getPath());
             List<File> files = new ArrayList<>(FileUtils.listFiles(zipDir, null, true));
             // should be sorting by xls first then size ascending
             files.sort((f1, f2) -> {
@@ -100,143 +117,30 @@ public final class ImportService {
                 Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
                 addFileNameParametersToMap(f.getName(), fileNameParams);
                 UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false);
-                if (f.getName().endsWith(".zip") || f.getName().endsWith(".7z")) {
-                    // this is the only recursive call . . .
-                    processedUploadedFiles.addAll(importTheFileNoPersist(loggedInUser, zipEntryUploadFile));
-                } else {
-                    processedUploadedFiles.addAll(readBookOrFile(loggedInUser, zipEntryUploadFile));
-                }
+                processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile));
             }
-        } else { // vanilla
-            processedUploadedFiles.addAll(readBookOrFile(loggedInUser, uploadedFileWithAdjustedPath));
-        }
-        UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
-                , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId(), fileName + (uploadedFile.getReportName() != null ? " - (" + uploadedFile.getReportName() + ")" : ""), "", "", uploadedFile.getPath());//should record the error? (in comment)
-        UploadRecordDAO.store(uploadRecord);
-        for (UploadedFile uf : processedUploadedFiles) {
-            if (uf.getExecute() != null && !uf.isExecuted()) {
-                uf.setExecute(ReportExecutor.runExecute(loggedInUser, uf.getExecute()).toString());
-                uf.setExecuted(true);
+        } else { // nothing to decompress
+            // simple checks in case the wrong type of file is being uploaded here - will probably be removed later
+            if (uploadedFile.getFileName().startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
+                uploadedFile.setError("Please upload the users file in the users tab.");
+                processedUploadedFiles.add(uploadedFile);
+            } else if (uploadedFile.getFileName().equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
+                uploadedFile.setError("Please upload the report schedules file in the schedules tab.");
+                processedUploadedFiles.add(uploadedFile);
+            } else if (uploadedFile.getFileName().contains(".xls")) {
+                processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile));
+            } else {
+                processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile));
             }
         }
-        AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         return processedUploadedFiles;
     }
 
-    // as it says, for when a user has downloaded a report, modified data, then uploaded
-    // uses ZK as it will have to render a copy, third public entry point into the class
-    public static String uploadDataInReport(LoggedInUser loggedInUser, String tempPath) throws Exception {
-        Book book;
-        try {
-            book = Importers.getImporter().imports(new File(tempPath), "Imported");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Import error - " + e.getMessage();
-        }
-        String reportName = null;
-        SName reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
-        if (reportRange == null) {
-            reportRange = book.getInternalBook().getNameByName(ReportRenderer.AZIMPORTNAME);
-        }
-        if (reportRange != null) {
-            reportName = BookUtils.getSnameCell(reportRange).getStringValue().trim();
-        }
-        if (reportName != null) {
-            OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName);
-            Map<String, String> choices = uploadChoices(book);
-            for (Map.Entry<String, String> choiceAndValue : choices.entrySet()) {
-                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceAndValue.getKey(), choiceAndValue.getValue());
-            }
-            checkEditableSets(book, loggedInUser);
-            final Book reportBook = Importers.getImporter().imports(new File(tempPath), "Report name");
-            reportBook.getInternalBook().setAttribute(OnlineController.BOOK_PATH, tempPath);
-            reportBook.getInternalBook().setAttribute(OnlineController.LOGGED_IN_USER, loggedInUser);
-            reportBook.getInternalBook().setAttribute(OnlineController.REPORT_ID, or.getId());
-            // this REALLY should have been commented - the load before will populate the logged in users sent cells correctly, that's
-            ReportRenderer.populateBook(reportBook, 0, false);
-            return fillDataRangesFromCopy(loggedInUser, book, or);
-        }
-        return "file doesn't appear to be an Azquo report";
-    }
-
-    // EFC note - I don't like this, want to remove it. Public entry point
-
-    public static String uploadImage(LoggedInUser loggedInUser, MultipartFile sourceFile, String fileName) throws Exception {
-        String success = "image uploaded successfully";
-        String sourceName = sourceFile.getOriginalFilename();
-        String suffix = sourceName.substring(sourceName.indexOf("."));
-        DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
-        String pathOffset = loggedInUser.getDatabase().getPersistenceName() + "/images/" + fileName + suffix;
-        String destinationPath = SpreadsheetService.getHomeDir() + dbPath + pathOffset;
-        if (databaseServer.getIp().equals(LOCALIP)) {
-            Path fullPath = Paths.get(destinationPath);
-            Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
-            Files.copy(sourceFile.getInputStream(), fullPath); // and copy
-        } else {
-            destinationPath = databaseServer.getSftpUrl() + pathOffset;
-            ImportFileUtilities.copyFileToDatabaseServer(sourceFile.getInputStream(), destinationPath);
-        }
-        DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
-        String imageList = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).getNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images");
-        if (imageList != null) {//check if it's already in the list
-            String[] images = imageList.split(",");
-            for (String image : images) {
-                if (image.trim().equals(fileName + suffix)) {
-                    return success;
-                }
-            }
-            imageList += "," + fileName + suffix;
-        } else {
-            imageList = fileName + suffix;
-        }
-        RMIClient.getServerInterface(databaseAccessToken.getServerIp()).setNameAttribute(databaseAccessToken, loggedInUser.getImageStoreName(), "uploaded images", imageList);
-        return success;
-    }
-
-    private static List<UploadedFile> readBookOrFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile) throws Exception {
-        // going to zap these checks later I think
-        if (uploadedFile.getFileName().startsWith(CreateExcelForDownloadController.USERSFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) { // then it's not a normal import, users/permissions upload. There may be more conditions here if so might need to factor off somewhere
-            uploadedFile.setError("Please upload the users file in the users tab.");
-            return Collections.singletonList(uploadedFile);
-        } else if (uploadedFile.getFileName().equals(CreateExcelForDownloadController.REPORTSCHEDULESFILENAME) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster())) {
-            uploadedFile.setError("Please upload the report schedules file in the schedules tab.");
-            return Collections.singletonList(uploadedFile);
-        } else if (uploadedFile.getFileName().contains(".xls")) { // normal. I'm not entirely sure the code for users etc above should be in this file, maybe a different importer?
-            return readBook(loggedInUser, uploadedFile);
-        } else {
-            return Collections.singletonList(readPreparedFile(loggedInUser, uploadedFile));
-        }
-    }
-
-    private static void uploadReport(LoggedInUser loggedInUser, UploadedFile uploadedFile, String reportName, String identityCell) throws Exception {
-        uploadedFile.setDataModified(true); // I'm not 100% sure this is correct
-        int businessId = loggedInUser.getUser().getBusinessId();
-        int databaseId = loggedInUser.getDatabase().getId();
-        String pathName = loggedInUser.getBusinessDirectory();
-        OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
-        if (or != null) {
-            // zap the old one first
-            try {
-                Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk()));
-            } catch (Exception e) {
-                System.out.println("problem deleting old report");
-                e.printStackTrace();
-            }
-            or.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
-            or.setIdentityCell(identityCell);
-        } else {
-            or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "", identityCell); // default to ZK now
-        }
-        OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
-        Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
-        Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
-        Files.copy(Paths.get(uploadedFile.getPath()), fullPath); // and copy
-        DatabaseReportLinkDAO.link(databaseId, or.getId());
-    }
-
+    // a book will be a report to upload or a workbook which has to be converted into a csv for each sheet
     private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile) throws Exception {
         long time = System.currentTimeMillis();
         Workbook book;
+        // we now use apache POI which is faster than ZK but it has different implementations for .xls and .xlsx files
         try {
             FileInputStream fs = new FileInputStream(new File(uploadedFile.getPath()));
             if (uploadedFile.getFileName().endsWith("xlsx")) {
@@ -245,15 +149,18 @@ public final class ImportService {
             } else {
                 book = new HSSFWorkbook(fs);
             }
-            //book = Importers.getImporter().imports(new File(tempPath), "Imported");
-            System.out.println("millis to read an Excel file for import new way" +
-                    " " + (System.currentTimeMillis() - time));
         } catch (Exception e) {
             e.printStackTrace();
             uploadedFile.setError(e.getMessage());
             return Collections.singletonList(uploadedFile);
         }
         String reportName = null;
+        /*EFC note - this import template stuff relates to extracting data from exel sheets which might not be arranged
+        as standard columns. As of 22/10/18 it is parked as the code that actually uses these settings is commented
+        the code needs to be sorted (it doesn't work with POI) and commented or deleted
+
+        Further comments on this below
+         */
         boolean isImportTemplate = false;
         Name reportRange = BookUtils.getName(book, ReportRenderer.AZREPORTNAME);
         if (reportRange == null) {
@@ -265,7 +172,6 @@ public final class ImportService {
             reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
         }
         if (reportName != null) {
-            // todo sort duplicates later
             CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
             if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                 String identityCell = null;
@@ -273,7 +179,31 @@ public final class ImportService {
                     //identity cell in Excel format
                     identityCell = "" + (char) (sheetNameCell.getCol() + 65) + (sheetNameCell.getRow() + 1);
                 }
-                uploadReport(loggedInUser, uploadedFile, reportName, identityCell);
+                // ---- upload the report (pushing a function back into here)
+                uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly. The report menu will have been modified
+                int businessId = loggedInUser.getUser().getBusinessId();
+                int databaseId = loggedInUser.getDatabase().getId();
+                String pathName = loggedInUser.getBusinessDirectory();
+                OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
+                if (or != null) {
+                    // zap the old one first
+                    try {
+                        Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk()));
+                    } catch (Exception e) {
+                        System.out.println("problem deleting old report");
+                        e.printStackTrace();
+                    }
+                    or.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
+                    or.setIdentityCell(identityCell);
+                } else {
+                    or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "", identityCell); // default to ZK now
+                }
+                OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
+                Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
+                Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
+                Files.copy(Paths.get(uploadedFile.getPath()), fullPath); // and copy
+                DatabaseReportLinkDAO.link(databaseId, or.getId());
+                // ---- end report uploading
                 uploadedFile.setReportName(reportName);
                 uploadedFile.setProcessingDuration(System.currentTimeMillis() - time);
                 return Collections.singletonList(uploadedFile);
@@ -290,7 +220,7 @@ public final class ImportService {
 //        Map<String, String> knownValues = new HashMap<>();
         // add a share of the initial excel load time to each of the sheet convert and processing times
         long sheetExcelLoadTimeShare = (System.currentTimeMillis() - time) / book.getNumberOfSheets();
-        // with sheets to convert this is why the function returns a list
+        // with more than one sheet to convert this is why the function returns a list
         List<UploadedFile> toReturn = new ArrayList<>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
@@ -301,29 +231,22 @@ public final class ImportService {
         return toReturn;
     }
 
-    private static void checkEditableSets(Book book, LoggedInUser loggedInUser) {
-        for (SName sName : book.getInternalBook().getNames()) {
-            if (sName.getName().toLowerCase().startsWith(ReportRenderer.AZROWHEADINGS)) {
-                String region = sName.getName().substring(ReportRenderer.AZROWHEADINGS.length());
-                org.zkoss.zss.api.model.Sheet sheet = book.getSheet(sName.getRefersToSheetName());
-                String rowHeading = ImportFileUtilities.getCellValue(sheet, sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getSecond();
-                if (rowHeading.toLowerCase().endsWith(" children editable")) {
-                    String setName = rowHeading.substring(0, rowHeading.length() - " children editable".length()).replace("`", "");
-                    SName displayName = getNameByName(ReportRenderer.AZDISPLAYROWHEADINGS + region, sheet);
-                    if (displayName != null) {
-                        StringBuilder editLine = new StringBuilder();
-                        editLine.append("edit:saveset ");
-                        editLine.append("`").append(setName).append("` ");
-                        CellRegion dispRegion = displayName.getRefersToCellRegion();
-                        for (int rowNo = 0; rowNo < dispRegion.getRowCount(); rowNo++) {
-                            editLine.append("`").append(ImportFileUtilities.getCellValue(sheet, dispRegion.getRow() + rowNo, dispRegion.getColumn()).getSecond()).append("`,");
-                        }
-                        CommonReportUtils.getDropdownListForQuery(loggedInUser, editLine.toString());
-                    }
-                }
-            }
-        }
-    }
+    /*
+
+    To import standardised workbooks
+
+    A business has a whole lot of data in a given format which is NOT in a format which slots easily into a converted csv
+    with headings/columns. It will have named ranges.
+
+    To make Azquo understand this we upload one of these files with a named range AZIMPORTNAME which is the report name
+    there will be other ranges tagged in that file - pairs of data and column headings currently
+
+    This is used to extract data regions to files. How to detect this without annoying code.
+
+    I shall park this for the moment - I think a generic solution to this is premature.
+
+     */
+
     /*
 
     private static void rangeToCSV(Sheet sheet, CellRegion region, Map<String, String> knownNames, CsvWriter csvW) throws Exception {
@@ -333,7 +256,7 @@ public final class ImportService {
                 //System.out.println("Excel row " + r);
                 //int colCount = 0;
                 for (int cNo = region.getColumn(); cNo < region.getColumn() + region.getColumnCount(); cNo++) {
-                    String val = ImportFileUtilities.getCellValue(sheet, rNo, cNo).getSecond();
+                    String val = getCellValue(sheet, rNo, cNo).getSecond();
                     if (knownNames != null) {
                         for (Map.Entry<String, String> knownNameValue : knownNames.entrySet()) {
                             val = val.replaceAll("`" + knownNameValue.getKey() + "`", knownNameValue.getValue());
@@ -353,7 +276,6 @@ public final class ImportService {
     private static UploadedFile readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, Sheet sheet/*, Map<String, String> knownValues*/) {
         String sheetName = sheet.getSheetName();
         long time = System.currentTimeMillis();
-//        String toReturn = "";
         try {
             /*
             List<OnlineReport> reports = OnlineReportDAO.findForDatabaseId(loggedInUser.getDatabase().getId());
@@ -362,7 +284,7 @@ public final class ImportService {
                 if (cell != null && cell.length() > 0) {
                     int row = Integer.parseInt(cell.substring(1)) - 1;
                     int col = cell.charAt(0) - 65;
-                    if (ImportFileUtilities.getCellValue(sheet, row).getCell( col).getSecond().equals(report.getReportName())) {
+                    if (getCellValue(sheet, row).getCell( col).getSecond().equals(report.getReportName())) {
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + report.getFilenameForDisk();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                         book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
@@ -376,7 +298,7 @@ public final class ImportService {
                             if (name.getRefersToCellRegion().getRowCount() == 1 && name.getRefersToCellRegion().getColumnCount() == 1) {
                                 int rowNo = name.getRefersToCellRegion().getRow();
                                 int colNo = name.getRefersToCellRegion().getColumn();
-                                knownValues.put(name.getName(), ImportFileUtilities.getCellValue(sheet, rowNo, colNo).getSecond());
+                                knownValues.put(name.getName(), getCellValue(sheet, rowNo, colNo).getSecond());
                             }
                         }
                         //now copy across the column headings in full
@@ -412,25 +334,49 @@ public final class ImportService {
                 }
             }*/
 
-            // I think it is path we want here
             File temp = File.createTempFile(uploadedFile.getPath() + sheetName, ".csv");
             String tempPath = temp.getPath();
             temp.deleteOnExit();
-            //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter( new FileOutputStream(tempName), "UTF-8"));
             FileOutputStream fos = new FileOutputStream(tempPath);
             CsvWriter csvW = new CsvWriter(fos, '\t', Charset.forName("UTF-8"));
             csvW.setUseTextQualifier(false);
-            ImportFileUtilities.convertRangeToCSV(sheet, csvW);
+            // poi convert - notably the iterators skip blank rows and cells hence the checking that indexes match
+            int rowIndex = -1;
+            for (Row row : sheet) {
+                // turns out blank lines are important
+                if (++rowIndex != row.getRowNum()) {
+                    while (rowIndex != row.getRowNum()) {
+                        csvW.endRecord();
+                        rowIndex++;
+                    }
+                }
+                int cellIndex = -1;
+                for (Iterator<Cell> ri = row.cellIterator(); ri.hasNext(); ) {
+                    Cell cell = ri.next();
+                    if (++cellIndex != cell.getColumnIndex()) {
+                        while (cellIndex != cell.getColumnIndex()) {
+                            csvW.write("");
+                            cellIndex++;
+                        }
+                    }
+                    final String cellValue = getCellValue(cell);
+                    csvW.write(cellValue.replace("\n", "\\\\n").replace("\r", "")
+                            .replace("\t", "\\\\t"));
+                }
+                csvW.endRecord();
+            }
             csvW.close();
             fos.close();
 
             long convertTime = System.currentTimeMillis() - time;
             List<String> names = new ArrayList<>(uploadedFile.getFileNames());
             names.add(sheetName);
+            // the sheet name might have parameters - try to get them
             Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
             addFileNameParametersToMap(sheetName, fileNameParams);
             UploadedFile fileFromWorksheet = new UploadedFile(tempPath, names, fileNameParams, true); // true, it IS converted from a worksheet
             UploadedFile toReturn = readPreparedFile(loggedInUser, fileFromWorksheet);
+            // the UploadedFile will have the database server processing time, add the Excel stuff to it for better feedback to the user
             toReturn.addToProcessingDuration(convertTime);
             return toReturn;
         } catch (Exception e) {
@@ -440,150 +386,28 @@ public final class ImportService {
         }
     }
 
-    private static String LOCALIP = "127.0.0.1";
-
+    // copy the file to the database server if it's on a different physical machine then tell the database server to process it
     private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile) throws Exception {
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         // right - here we're going to have to move the file if the DB server is not local.
         UploadedFile adjustedUploadedFile = null;
         if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
-            adjustedUploadedFile = new UploadedFile(ImportFileUtilities.copyFileToDatabaseServer(new FileInputStream(uploadedFile.getPath()), databaseServer.getSftpUrl())
+            adjustedUploadedFile = new UploadedFile(SFTPUtilities.copyFileToDatabaseServer(new FileInputStream(uploadedFile.getPath()), databaseServer.getSftpUrl())
                     , uploadedFile.getFileNames(), uploadedFile.getParameters(), uploadedFile.isConvertedFromWorksheet());
         }
-        return RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken
+        UploadedFile processedFile = RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken
                 , adjustedUploadedFile != null ? adjustedUploadedFile : uploadedFile
                 , loggedInUser.getUser().getName());
+        // run any executes defined in the file
+        if (processedFile.getExecute() != null) {
+            processedFile.setExecute(ReportExecutor.runExecute(loggedInUser, processedFile.getExecute()).toString());
+        }
+        return processedFile;
     }
 
-    // for the download, modify and upload the report
-    // todo - can we convert to apache poi?
-    private static String fillDataRangesFromCopy(LoggedInUser loggedInUser, Book sourceBook, OnlineReport onlineReport) {
-        StringBuilder errorMessage = new StringBuilder();
-        int saveCount = 0;
-        for (SName sName : sourceBook.getInternalBook().getNames()) {
-            String name = sName.getName();
-            String regionName = getRegionName(name);
-            org.zkoss.zss.api.model.Sheet sheet = sourceBook.getSheet(sName.getRefersToSheetName());
-            if (regionName != null) {
-                CellRegion sourceRegion = sName.getRefersToCellRegion();
-                if (name.toLowerCase().contains(ReportRenderer.AZREPEATSCOPE)) { // then deal with the multiple data regions sent due to this
-                    // need to gather associated names for calculations, the region and the data region, code copied and changewd from getRegionRowColForRepeatRegion, it needs to work well for a batch of cells not just one
-                    SName repeatRegion = getNameByName(ReportRenderer.AZREPEATREGION + regionName, sheet);
-                    SName repeatDataRegion = getNameByName(ReportRenderer.AZDATAREGION + regionName, sheet);
-                    // deal with repeat regions, it means getting sent cells that have been set as following : loggedInUser.setSentCells(reportId, region + "-" + repeatRow + "-" + repeatColumn, cellsAndHeadingsForDisplay)
-                    if (repeatRegion != null && repeatDataRegion != null) {
-                        int regionHeight = repeatRegion.getRefersToCellRegion().getRowCount();
-                        int regionWitdh = repeatRegion.getRefersToCellRegion().getColumnCount();
-                        int dataHeight = repeatDataRegion.getRefersToCellRegion().getRowCount();
-                        int dataWitdh = repeatDataRegion.getRefersToCellRegion().getColumnCount();
-                        // where the data starts in each repeated region
-                        int dataStartRow = repeatDataRegion.getRefersToCellRegion().getRow() - repeatRegion.getRefersToCellRegion().getRow();
-                        int dataStartCol = repeatDataRegion.getRefersToCellRegion().getColumn() - repeatRegion.getRefersToCellRegion().getColumn();
-                        // we can't really do a size comparison as before, we can simply run the region and see where we think there should be repeat reagions in the scope
-                        for (int row = 0; row < sourceRegion.getRowCount(); row++) {
-                            int repeatRow = row / regionHeight;
-                            int rowInRegion = row % regionHeight;
-                            for (int col = 0; col < sourceRegion.getColumnCount(); col++) {
-                                int colInRegion = col % regionWitdh;
-                                int repeatCol = col / regionWitdh;
-                                CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), sName.getRefersToSheetName(), regionName + "-" + repeatRow + "-" + repeatCol); // getting each time might be a little inefficient, can optimise if there is a performance problem here
-                                if (colInRegion >= dataStartCol && rowInRegion >= dataStartRow
-                                        && colInRegion <= dataStartCol + dataWitdh
-                                        && rowInRegion <= dataStartRow + dataHeight
-                                        && cellsAndHeadingsForDisplay != null) {
-                                    final List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                                    final TypedPair<Double, String> cellValue = ImportFileUtilities.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewStringValue(cellValue.getSecond());
-                                    // added by Edd, should sort some numbers being ignored!
-                                    if (cellValue.getFirst() != null) {
-                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(cellValue.getFirst());
-                                    } else { // I think defaulting to zero is correct here?
-                                        data.get(rowInRegion - dataStartRow).get(colInRegion - dataStartCol).setNewDoubleValue(0.0);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    return null;
-                } else { // a normal data region. Note that the data region used by a repeat scope should be harmless here as it will return a null on getSentCells, no need to be clever
-                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(onlineReport.getId(), sName.getRefersToSheetName(), regionName);
-                    if (cellsAndHeadingsForDisplay != null) {
-                        //needs to be able to handle repeat regions here....
-                        List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
-                        //NOTE - the import sheet may contain blank lines at the bottom and/or blank columns at the right where the original data region exceeds the size of the data found (row/column headings are sets).  This is acceptable
-                        // TODO - WE SHOULD CHECK THAT THE HEADINGS MATCH
-                        if (data.size() > 0 && data.size() <= sourceRegion.getRowCount() && data.get(0).size() <= sourceRegion.getColumnCount()) {//ignore region sizes which do not match (e.g. on transaction entries showing past entries)
-                            //work on the original data size, not the uploaded size with the blank lines
-                            for (int row = 0; row < data.size(); row++) {
-                                for (int col = 0; col < data.get(0).size(); col++) {
-                                    // note that this function might return a null double but no null string. Perhaps could be mroe consistent? THis area is a bit hacky . . .
-                                    final TypedPair<Double, String> cellValue = ImportFileUtilities.getCellValue(sheet, sourceRegion.getRow() + row, sourceRegion.getColumn() + col);
-                                    data.get(row).get(col).setNewStringValue(cellValue.getSecond());
-                                    // added by Edd, should sort some numbers being ignored!
-                                    if (cellValue.getFirst() != null) {
-                                        data.get(row).get(col).setNewDoubleValue(cellValue.getFirst());
-                                    } else { // I think defaulting to zero is correct here?
-                                        data.get(row).get(col).setNewDoubleValue(0.0);
-                                    }
-                                }
-                            }
-                        }
-                        //AND THE ROW HEADINGS IF EDITABLE.
-                    }
-                    try {
-                        final String result = SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), sName.getRefersToSheetName(), regionName);
-                        if (!result.startsWith("true")) {// unlikely to fail here I think but catch it anyway . . .
-                            errorMessage.append("- in region ").append(regionName).append(" -").append(result);
-                        } else {
-                            try {
-                                saveCount += Integer.parseInt(result.substring(5));  //count follows the word 'true'
-                            } catch (Exception ignored) {
-                            }
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        errorMessage.append("- in region ").append(regionName).append(" -").append(e.getMessage());
-                    }
-                }
-            }
-        }
-        return errorMessage + " - " + saveCount + " data items amended successfully";
-    }
-
-    private static SName getNameByName(String name, org.zkoss.zss.api.model.Sheet sheet) {
-        SName toReturn = sheet.getBook().getInternalBook().getNameByName(name, sheet.getSheetName());
-        if (toReturn != null) {
-            return toReturn;
-        }
-        // should we check the formula refers to the sheet here? I'm not sure. Applies will have been checked for above.
-        return sheet.getBook().getInternalBook().getNameByName(name);
-    }
-
-    private static String getRegionName(String name) {
-        if (name.toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
-            return name.substring(ReportRenderer.AZDATAREGION.length()).toLowerCase();
-        }
-        if (name.toLowerCase().startsWith(ReportRenderer.AZREPEATSCOPE)) {
-            return name.substring(ReportRenderer.AZREPEATSCOPE.length()).toLowerCase();
-        }
-        return null;
-    }
-
-    private static Map<String, String> uploadChoices(Book book) {
-        //this routine extracts the useful information from an uploaded copy of a report.  The report will then be loaded and this information inserted.
-        Map<String, String> choices = new HashMap<>();
-        for (SName sName : book.getInternalBook().getNames()) {
-            String rangeName = sName.getName().toLowerCase();
-            if (rangeName.endsWith("chosen")) {
-                //there is probably a more elegant solution than this....
-                choices.put(rangeName.substring(0, rangeName.length() - 6), ImportFileUtilities.getCellValue(book.getSheet(sName.getRefersToSheetName()), sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getSecond());
-            }
-        }
-        return choices;
-    }
-
-
+    /* for parsing parameters out of a file name. Cumulative if files in zips or sheets in workbooks
+     have parameters as well as their "parent" file */
     public static void addFileNameParametersToMap(String fileName, Map<String, String> map) {
         try {
             if (fileName != null && fileName.contains("(") && fileName.contains(")")) { // there are parameters to add.
@@ -604,91 +428,140 @@ public final class ImportService {
         }
     }
 
-    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles) {
-        StringBuilder toReturn = new StringBuilder();
-        List<String> lastNames = null;
-        for (UploadedFile uploadedFile : uploadedFiles) {
-            List<String> names = new ArrayList<>(uploadedFile.getFileNames()); // copy as I might change it
-            int indent = 0;
-            if (lastNames != null && names.size() == lastNames.size()) { // for formatting don't repeat names (e.g. the zip name)
-                for (int index = 0; index < lastNames.size(); index++) {
-                    if (lastNames.get(index).equals(names.get(index))) {
-                        indent++;
+    private static SimpleDateFormat YYYYMMDD = new SimpleDateFormat("yyyy-MM-dd");
+
+    private static DataFormatter df = new DataFormatter();
+
+    // POI Version, used when converting sheets to csv. Essentially get a value of the cell as either an unformatted number or as a string similar to how it
+    // is rendered in Excel, Some hacking to standardise date formats and remove escape characters
+
+    private static String getCellValue(Cell cell) {
+        String returnString = "";
+        //if (colCount++ > 0) bw.write('\t');
+        if (cell.getCellType() == Cell.CELL_TYPE_STRING || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_STRING)) {
+            try {
+                returnString = cell.getStringCellValue();// I assume means formatted text?
+            } catch (Exception ignored) {
+            }
+        } else if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_NUMERIC)) {
+            // first we try to get it without locale - better match on built in formats it seems
+            String dataFormat = BuiltinFormats.getBuiltinFormat(cell.getCellStyle().getDataFormat());
+            if (dataFormat == null){
+                dataFormat = cell.getCellStyle().getDataFormatString();
+            }
+            Double returnNumber = cell.getNumericCellValue();
+            returnString = returnNumber.toString();
+            if (returnString.contains("E")) {
+                returnString = String.format("%f", returnNumber);
+            }
+            if (returnNumber%1 == 0) {
+                // specific condition - integer and format all 000, then actually use the format. For zip codes
+                if (dataFormat.contains("0") && dataFormat.replace("0","").isEmpty()){
+                    returnString = df.formatCellValue(cell);
+                } else {
+                    returnString = returnNumber.longValue() + "";
+                }
+            }
+            if (dataFormat.equals("h:mm") && returnString.length() == 4) {
+                //ZK BUG - reads "hh:mm" as "h:mm"
+                returnString = "0" + returnString;
+            } else {
+                if (dataFormat.toLowerCase().contains("m")) {
+                    if (dataFormat.length() > 6){
+                        try {
+                            returnString = YYYYMMDD.format(cell.getDateCellValue());
+                        } catch (Exception e) {
+                            //not sure what to do here.
+                        }
+                    } else { // it's still a date - match the defauilt format
+                        // this seems to be required as if the date is based off another cell then the normal formatter will return the formula
+                        CellDateFormatter cdf = new CellDateFormatter(dataFormat, Locale.UK);
+                        returnString = cdf.format(cell.getDateCellValue());
                     }
                 }
             }
-            for (int i = 0; i < indent; i++) {
-                toReturn.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+        } else if (cell.getCellType() == Cell.CELL_TYPE_BOOLEAN || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_BOOLEAN)) {
+            returnString = cell.getBooleanCellValue() + "";
+        } else if (cell.getCellType() != Cell.CELL_TYPE_BLANK) {
+            if (cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
+                System.out.println("other forumla cell type : " + cell.getCachedFormulaResultType());
             }
-            for (int index = indent; index < names.size(); index++) {
-                toReturn.append(names.get(index));
-                if ((index + 1) != names.size()) {
-                    toReturn.append("\n");
-                    for (int i = 0; i <= index; i++) {
-                        toReturn.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-                    }
-                }
-            }
-            StringBuilder indentSb = new StringBuilder();
-            for (int i = 0; i < names.size(); i++) {
-                indentSb.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-            }
-            // jump it out past the end for actual info
-            toReturn.append("\n");
-
-            if (uploadedFile.getParameters() != null && !uploadedFile.getParameters().isEmpty()) {
-                for (String key : uploadedFile.getParameters().keySet()) {
-                    toReturn.append(indentSb);
-                    toReturn.append(key).append(" = ").append(uploadedFile.getParameters().keySet() + "\n");
-                }
-            }
-
-            if (uploadedFile.isConvertedFromWorksheet()) {
-                toReturn.append(indentSb);
-                toReturn.append("Converted from worksheet.\n");
-            }
-
-            toReturn.append(indentSb);
-            toReturn.append("Time to process : " + uploadedFile.getProcessingDuration()  + " ms\n");
-
-            toReturn.append(indentSb);
-            toReturn.append("Number of lines imported : " + uploadedFile.getNoLinesImported()  + "\n");
-
-            toReturn.append(indentSb);
-            toReturn.append("Number of valuses adjusted: " + uploadedFile.getNoValuesAdjusted()  + "\n");
-
-            if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()){
-                toReturn.append(indentSb);
-                toReturn.append("Rejected lines : " + uploadedFile.getNoValuesAdjusted()  + "\n");
-                for (String lineRejected : uploadedFile.getLinesRejected()){
-                    toReturn.append(indentSb);
-                    toReturn.append(lineRejected + "\n");
-                }
-            }
-
-            if (uploadedFile.getError() != null){
-                toReturn.append(indentSb);
-                toReturn.append("ERROR : " + uploadedFile.getError()  + "\n");
-            }
-
-            if (!uploadedFile.isDataModified()) {
-                toReturn.append(indentSb);
-                toReturn.append("NO DATA MODIFIED.\n");
-            }
-
-            if (uploadedFile.getReportName() != null) {
-                toReturn.append(indentSb);
-                toReturn.append("Report uploaded : " + uploadedFile.getReportName() + "\n");
-            }
-
-            if (uploadedFile.getExecute() != null) {
-                toReturn.append(indentSb);
-                toReturn.append("Execute result : " + uploadedFile.getExecute() + "\n");
-            }
-
-
-            lastNames = uploadedFile.getFileNames();
+            System.out.println("other cell type : " + cell.getCellType());
         }
-        return toReturn.toString();
+        if (returnString.contains("\"\"") && returnString.startsWith("\"") && returnString.endsWith("\"")) {
+            //remove spurious quote marks
+            returnString = returnString.substring(1, returnString.length() - 1).replace("\"\"", "\"");
+        }
+        if (returnString.startsWith("`") && returnString.indexOf("`", 1) < 0) {
+            returnString = returnString.substring(1);
+        }
+        if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
+            returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
+        return returnString.trim();
+    }
+
+    // ZK version of the above - still used by the "download a report, edit and upload it" functionality. Hopefully removed later.
+
+    public static TypedPair<Double, String> getCellValue(org.zkoss.zss.api.model.Sheet sheet, int r, int c) {
+        Double returnNumber = null;
+        String returnString = null;
+        Range range = Ranges.range(sheet, r, c);
+        CellData cellData = range.getCellData();
+        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
+        //if (colCount++ > 0) bw.write('\t');
+        if (cellData != null) {
+            String stringValue = "";
+            try {
+                stringValue = cellData.getFormatText();// I assume means formatted text
+                if (dataFormat.equals("h:mm") && stringValue.length() == 4) {
+                    //ZK BUG - reads "hh:mm" as "h:mm"
+                    stringValue = "0" + stringValue;
+                } else {
+                    if (dataFormat.toLowerCase().contains("m") && dataFormat.length() > 6) {
+                        try {
+                            Date javaDate = DateUtil.getJavaDate((cellData.getDoubleValue()));
+                            stringValue = YYYYMMDD.format(javaDate);
+                        } catch (Exception e) {
+                            //not sure what to do here.
+                        }
+                    }
+                }
+                if ((stringValue.length() == 6 || stringValue.length() == 8) && stringValue.charAt(3) == ' ' && dataFormat.toLowerCase().contains("mm-")) {//another ZK bug
+                    stringValue = stringValue.replace(" ", "-");//crude replacement of spaces in dates with dashes
+                }
+            } catch (Exception ignored) {
+            }
+            if (stringValue.endsWith("%") || (stringValue.contains(".") || !stringValue.startsWith("0")) && !dataFormat.toLowerCase().contains("m")) {//check that it is not a date or a time
+                //if it's a number, remove all formatting
+                try {
+                    double d = cellData.getDoubleValue();
+                    returnNumber = d;
+                    String newStringValue = d + "";
+                    if (newStringValue.contains("E")) {
+                        newStringValue = String.format("%f", d);
+                    }
+                    if (newStringValue.endsWith(".0")) {
+                        stringValue = newStringValue.substring(0, newStringValue.length() - 2);
+                    } else {
+                        if (!newStringValue.endsWith(".000000")) {
+                            stringValue = newStringValue;
+                        }
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            if (stringValue.contains("\"\"") && stringValue.startsWith("\"") && stringValue.endsWith("\"")) {
+                //remove spuriouse quote marks
+                stringValue = stringValue.substring(1, stringValue.length() - 1).replace("\"\"", "\"");
+            }
+            returnString = stringValue;
+        }
+        assert returnString != null;
+        if (returnString.startsWith("`") && returnString.indexOf("'", 1) < 0) {
+            returnString = returnString.substring(1);
+        }
+        if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
+            returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
+        return new TypedPair<>(returnNumber, returnString.trim());
     }
 }

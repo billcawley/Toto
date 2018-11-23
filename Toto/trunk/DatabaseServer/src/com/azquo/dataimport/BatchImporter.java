@@ -36,8 +36,16 @@ public class BatchImporter implements Callable<Void> {
     private final Map<String, Name> namesFoundCache;
     private final List<String> attributeNames;
     private final Set<String> linesRejected;
+    private final boolean clearData;
 
-    BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection, AtomicInteger valuesModifiedCounter, List<List<ImportCellWithHeading>> dataToLoad, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Set<String> linesRejected) {
+    BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection
+            , AtomicInteger valuesModifiedCounter
+            , List<List<ImportCellWithHeading>> dataToLoad
+            , Map<String, Name> namesFoundCache
+            , List<String> attributeNames
+            , int importLine
+            , Set<String> linesRejected
+            , boolean clearData) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
         this.valuesModifiedCounter = valuesModifiedCounter;
         this.dataToLoad = dataToLoad;
@@ -45,6 +53,7 @@ public class BatchImporter implements Callable<Void> {
         this.attributeNames = attributeNames;
         this.importLine = importLine;
         this.linesRejected = linesRejected;
+        this.clearData = clearData;
     }
 
     @Override
@@ -90,7 +99,7 @@ public class BatchImporter implements Callable<Void> {
                             try {
                                 resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
                                 // valueTracker simply the number of values imported
-                                valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, importLine, linesRejected));
+                                valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, importLine, linesRejected,clearData));
                             } catch (Exception e) {
                                 azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
                                 e.printStackTrace();
@@ -495,7 +504,7 @@ public class BatchImporter implements Callable<Void> {
     }
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
-    private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Set<String> linesRejected) throws Exception {
+    private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Set<String> linesRejected, boolean clearData) throws Exception {
         int valueCount = 0;
         // initial pass to deal spaces that might need removing and local parents
         for (ImportCellWithHeading importCellWithHeading : cells) {
@@ -505,7 +514,7 @@ public class BatchImporter implements Callable<Void> {
         }
         for (ImportCellWithHeading cell : cells) {
             if (cell.getImmutableImportHeading().lineNameRequired) {
-                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, importLine, 0);
+                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, cell, cells, attributeNames, 0);
             }
         }
 
@@ -539,7 +548,7 @@ public class BatchImporter implements Callable<Void> {
                     if (ValueService.storeValueWithProvenanceAndNames(azquoMemoryDBConnection, value, namesForValue, cell.getImmutableImportHeading().replace)) {
                         valueCount++;
                     }
-                } else if (cell.getImmutableImportHeading().clearData) { // only kicks in if the cell is blank
+                } else if (clearData) { // only kicks in if the cell is blank
                     // EFC extracted out of value service, cleaner out here
                     final List<Value> existingValues = ValueService.findForNames(namesForValue);
                     if (existingValues.size() == 1) {
@@ -593,7 +602,7 @@ public class BatchImporter implements Callable<Void> {
      * */
 
     private static void resolveLineNameParentsAndChildForCell(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache,
-                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int importLine, int recursionLevel) throws Exception {
+                                                              ImportCellWithHeading cellWithHeading, List<ImportCellWithHeading> cells, List<String> attributeNames, int recursionLevel) throws Exception {
         /*
              Imagine 3 headings. Town, street, whether it's pedestrianized. Pedestrianized parent of street. Town parent of street local.
              the key here is that the resolveLineNameParentsAndChildForCell has to resolve line Name for both of them - if it's called on "Pedestrianized parent of street" first
@@ -614,7 +623,7 @@ public class BatchImporter implements Callable<Void> {
                 if (recursionLevel == 8) { // arbitrary but not unreasonable
                     throw new Exception("recursion loop on heading " + cellWithHeading.getImmutableImportHeading().heading);
                 }
-                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, parentHeading, cells, attributeNames, importLine, recursionLevel);
+                resolveLineNameParentsAndChildForCell(azquoMemoryDBConnection, namesFoundCache, parentHeading, cells, attributeNames, recursionLevel);
             }
         }
         // in simple terms if a line cell value refers to a name it can now refer to a set of names

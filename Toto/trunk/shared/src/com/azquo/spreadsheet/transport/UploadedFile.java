@@ -46,8 +46,6 @@ public class UploadedFile implements Serializable {
     private boolean dataModified;
     // results of execute if the file had an execute
     private String execute;
-    // whether the execute was run or not - to stop executes being run twice by recursive code
-    private boolean executed;
     // if the upload was a report this was the name found in the excel file
     private String reportName;
 
@@ -68,7 +66,6 @@ public class UploadedFile implements Serializable {
         error = null;
         dataModified = false;
         execute = null;
-        executed = false;
         reportName = null;
     }
 
@@ -159,14 +156,6 @@ public class UploadedFile implements Serializable {
 
     public void setExecute(String execute) {
         this.execute = execute;
-    }
-
-    public boolean isExecuted() {
-        return executed;
-    }
-
-    public void setExecuted(boolean executed) {
-        this.executed = executed;
     }
 
     public String getReportName() {

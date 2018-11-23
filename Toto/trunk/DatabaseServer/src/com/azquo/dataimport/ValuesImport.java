@@ -80,7 +80,7 @@ public class ValuesImport {
                                 new BatchImporter(valuesImportConfig.getAzquoMemoryDBConnection()
                                         , valuesImportConfig.getValuesModifiedCounter(), linesBatched
                                         , namesFoundCache, valuesImportConfig.getLanguages()
-                                        , importLine - valuesImportConfig.getBatchSize(), linesRejected))// line no should be the start
+                                        , importLine - valuesImportConfig.getBatchSize(), linesRejected, valuesImportConfig.getUploadedFile().getParameters().get("cleardata") != null))// line no should be the start
 
                         );
                         linesBatched = new ArrayList<>(valuesImportConfig.getBatchSize());
@@ -92,7 +92,7 @@ public class ValuesImport {
             // load leftovers
             int loadLine = importLine - linesBatched.size(); // NOT batch size! A problem here isn't a functional problem but it makes logging incorrect.
             futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(valuesImportConfig.getAzquoMemoryDBConnection()
-                    , valuesImportConfig.getValuesModifiedCounter(), linesBatched, namesFoundCache, valuesImportConfig.getLanguages(), loadLine, linesRejected)));
+                    , valuesImportConfig.getValuesModifiedCounter(), linesBatched, namesFoundCache, valuesImportConfig.getLanguages(), loadLine, linesRejected, valuesImportConfig.getUploadedFile().getParameters().get("cleardata") != null)));
             // check all work is done and memory is in sync
             for (Future<?> futureBatch : futureBatches) {
                 futureBatch.get(1, TimeUnit.HOURS);

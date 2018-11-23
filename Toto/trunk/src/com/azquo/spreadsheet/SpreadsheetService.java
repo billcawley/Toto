@@ -504,4 +504,7 @@ public class SpreadsheetService {
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
         return RMIClient.getServerInterface(databaseAccessToken.getServerIp()).nameAutoComplete(databaseAccessToken, name, 100);
     }*/
+
+
+
 }

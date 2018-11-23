@@ -14,11 +14,11 @@ import java.util.*;
  */
 
 
-class DictionaryTerm{
+class DictionaryTerm {
     public boolean exclude;
     public List<String> items;
 
-    DictionaryTerm(boolean exclude, List<String> items){
+    DictionaryTerm(boolean exclude, List<String> items) {
         this.exclude = exclude;
         this.items = items;
     }
@@ -26,7 +26,6 @@ class DictionaryTerm{
 
 
 class ImmutableImportHeading {
-
 
 
     final String heading;
@@ -50,15 +49,14 @@ class ImmutableImportHeading {
     final boolean lineNameRequired;
     final String exclusive;
     final boolean existing;
-    final boolean clearData;
     final String splitChar;
     final List<Integer> localParentIndexes;
-     Map<Name,List<DictionaryTerm>> dictionaryMap;
-     Map<String, List<String>> synonyms;
-     String lookupFrom;
-     String lookupTo;
-     String checkList;
-     boolean replace;
+    Map<Name, List<DictionaryTerm>> dictionaryMap;
+    Map<String, List<String>> synonyms;
+    String lookupFrom;
+    String lookupTo;
+    String checkList;
+    boolean replace;
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -81,7 +79,6 @@ class ImmutableImportHeading {
         this.lineNameRequired = mutableImportHeading.lineNameRequired;
         this.exclusive = mutableImportHeading.exclusive;
         this.existing = mutableImportHeading.existing;
-        this.clearData = mutableImportHeading.clearData;
         this.splitChar = mutableImportHeading.splitChar;
         this.localParentIndexes = mutableImportHeading.localParentIndexes;
         this.dictionaryMap = mutableImportHeading.dictionaryMap;

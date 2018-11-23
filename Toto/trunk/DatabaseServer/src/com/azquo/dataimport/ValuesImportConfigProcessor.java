@@ -24,14 +24,12 @@ import static com.azquo.dataimport.ValuesImport.ALLIMPORTSHEETS;
 
 /*
 
-Will process a ValuesImportConfig until it's reasy to be used by Values import.
+Will process a ValuesImportConfig until it's ready to be used by Values import.
 
 Complex stuff such as finding headers which can be in a name or names in the db or attached to the uploaded file
 and then resolving these headers is done or called from here.
 
 Headings are often found in the DB, put there by setup files, to enable importing of client files "as is".
-
-If this class ends as I like it will be a sequence of modifications to valuesImportConfig so that modifying or disabling logic should be easy
 
  */
 
