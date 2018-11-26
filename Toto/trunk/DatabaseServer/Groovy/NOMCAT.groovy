@@ -14,7 +14,7 @@ import com.azquo.dataimport.ValuesImportConfig
 def fileProcess(Object[] args) {
     // loose typing seems to be what's required here
     ValuesImportConfig valuesImportConfig = (ValuesImportConfig) args[0];
-    String filePath = valuesImportConfig.getFilePath();
+    String filePath = valuesImportConfig.getUploadedFile().getPath();
   //    AzquoMemoryDBConnection azquoMemoryDBConnection = (AzquoMemoryDBConnection)args[1];
     File file = new File(filePath);
     def outFile = filePath + "groovyout"

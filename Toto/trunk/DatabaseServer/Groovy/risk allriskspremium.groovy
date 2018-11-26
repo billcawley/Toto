@@ -17,7 +17,7 @@ def fileProcess(Object[] args) {
     def lineNo = 1
     int topLine = 0;
     ValuesImportConfig valuesImportConfig = (ValuesImportConfig) args[0];
-    String filePath = valuesImportConfig.getFilePath();
+    String filePath = valuesImportConfig.getUploadedFile().getPath();
     //AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
     File file = new File(filePath);
     def outFile = filePath + "groovyout"
