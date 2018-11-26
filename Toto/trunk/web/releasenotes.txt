@@ -1,3 +1,12 @@
+26-11-18
+
+
+
+Scroll import error/feedback
+
+! Fix groovy to work with the new uploaded file object
+
+
 21-11-18
 
 Will execute regions 'az_query<regionname>' before populating region

@@ -2,6 +2,8 @@ package com.azquo.admin.controller;
 
 import com.azquo.admin.database.PendingUpload;
 import com.azquo.admin.database.PendingUploadDAO;
+import com.azquo.admin.database.UploadRecord;
+import com.azquo.admin.database.UploadRecordDAO;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.controller.LoginController;
@@ -26,17 +28,27 @@ public class ImportResultsController {
     @RequestMapping
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
             , @RequestParam(value = "id", required = false) String id
-    ) throws Exception
-
+            , @RequestParam(value = "urid", required = false) String urid
+    )
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         String result = "";
         if (loggedInUser != null && loggedInUser.getUser().isAdministrator()) {
-            PendingUpload pendingUpload = PendingUploadDAO.findById(Integer.parseInt(id));
-            if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()){ // ok we're allowed to see it
-                result = pendingUpload.getImportResult();
+            if (urid != null && urid.length() > 0){
+                UploadRecord ur = UploadRecordDAO.findById(Integer.parseInt(urid));
+                if (ur.getBusinessId() == loggedInUser.getUser().getBusinessId()){ // ok we're allowed to see it
+                    result = ur.getComments();
+                }
+                modelMap.addAttribute("memoryReport", result);
+
+            } else {
+                PendingUpload pendingUpload = PendingUploadDAO.findById(Integer.parseInt(id));
+                if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()){ // ok we're allowed to see it
+                    result = pendingUpload.getImportResult();
+                }
+                modelMap.addAttribute("memoryReport", result);
+
             }
-            modelMap.addAttribute("memoryReport", result.replace("\n", "<br/>"));
             return "memoryreport";
         } else {
             return "redirect:/api/Login";

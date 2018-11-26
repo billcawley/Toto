@@ -110,7 +110,7 @@ public final class UploadRecord extends StandardEntity {
             this.userName = userName;
             fileName = ur.fileName;
             fileType = ur.fileType;
-            comments = ur.comments;
+            comments = ur.comments != null ? ur.getComments() : ""; // might NPE
             this.downloadable = downloadable;
         }
 
