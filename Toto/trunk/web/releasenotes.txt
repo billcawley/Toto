@@ -1,6 +1,6 @@
 26-11-18
 
-
+See results of importing on the uploads list
 
 Scroll import error/feedback
 

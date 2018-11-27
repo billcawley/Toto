@@ -12,6 +12,8 @@ import com.azquo.spreadsheet.zk.ReportService;
 import org.apache.pdfbox.util.PDFMergerUtility;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.zkoss.json.JSONObject;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.Desktop;
@@ -21,20 +23,25 @@ import org.zkoss.zss.api.Exporters;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
+import org.zkoss.zss.api.model.CellData;
 import org.zkoss.zss.api.model.Sheet;
 import org.zkoss.zss.jsp.JsonUpdateBridge;
 import org.zkoss.zss.model.CellRegion;
 import org.zkoss.zss.model.SCell;
+import org.zkoss.zss.model.SName;
 import org.zkoss.zss.model.SSheet;
 import org.zkoss.zss.ui.Spreadsheet;
 import org.zkoss.zul.Filedownload;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.Writer;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -171,6 +178,77 @@ public class ZKSpreadsheetCommandController {
                         }
                         loggedInUser.userLog("Download PDF : " + ss.getSelectedSheetName() + ".pdf");
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".pdf", "pdf", "application/pdf", file, true));
+                    }
+
+                    if ("XML".equals(action)) {
+                        // ok try to find the relevant regions
+                        List<SName> namesForSheet = BookUtils.getNamesForSheet(ss.getSelectedSheet());
+                        StringWriter sw = new StringWriter();
+                        for (SName name : namesForSheet) {
+                            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // then we have a data region to deal with here
+                                String region = name.getName().substring(ReportRenderer.AZDATAREGION.length()); // might well be an empty string
+                                // we don't actually need to do anything with this now but we need to switch on the XML button
+                                SName xmlHeadings = BookUtils.getNameByName(ReportRenderer.AZXML + region, ss.getSelectedSheet());
+                                Map<String,Integer> xmlToColMap = new HashMap<>();
+                                if (xmlHeadings != null) {
+                                    for (int col = xmlHeadings.getRefersToCellRegion().column; col <= xmlHeadings.getRefersToCellRegion().lastColumn; col++){
+                                        CellData cellData = Ranges.range(ss.getSelectedSheet(), xmlHeadings.getRefersToCellRegion().row,col).getCellData();
+//                                        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
+                                        //if (colCount++ > 0) bw.write('\t');
+                                        if (cellData != null && cellData.getFormatText().length() > 0) {
+                                            xmlToColMap.put(cellData.getFormatText(), col);// I assume means formatted text
+                                        }
+                                    }
+
+                                    List<String> xmlNames = new ArrayList<>(xmlToColMap.keySet());
+                                    Collections.sort(xmlNames);
+
+                                    DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+                                    DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+                                    Document doc = docBuilder.newDocument();
+                                    Element rootElement = doc.createElement("ROOT");
+                                    doc.appendChild(rootElement);
+                                    // tracking where we are in the xml, what elements we're in
+                                    for (int row = name.getRefersToCellRegion().row; row <= name.getRefersToCellRegion().lastRow; row++) {
+                                        List<Element> xmlContext = new ArrayList<>();
+                                        for (String xmlName : xmlNames){
+                                            CellData cellData = Ranges.range(ss.getSelectedSheet(), row, xmlToColMap.get(xmlName)).getCellData();
+                                            String value = "";
+                                            if (cellData != null) {
+                                                value = cellData.getFormatText();// I assume means formatted text
+                                            }
+                                            // note - this logic assumes he mappings are sorted
+                                            StringTokenizer st = new StringTokenizer(xmlName, "/");
+                                            int i = 0;
+                                            while (st.hasMoreTokens()){
+                                                String nameElement = st.nextToken();
+                                                if (i >= xmlContext.size() || !xmlContext.get(i).getTagName().equals(nameElement)){
+                                                    if (i < xmlContext.size()){ // it didn't match, need to chop
+                                                        xmlContext = xmlContext.subList(0,i);// trim the list of bits we don't need
+                                                    }
+                                                    Element element = doc.createElement(nameElement);
+                                                    if (xmlContext.isEmpty()){
+                                                        rootElement.appendChild(element);
+                                                    } else {
+                                                        xmlContext.get(xmlContext.size() - 1).appendChild(element);
+                                                    }
+                                                    xmlContext.add(element);
+                                                }
+                                                i++;
+                                            }
+                                            xmlContext.get(xmlContext.size() - 1).appendChild(doc.createTextNode(value));
+                                                //test.append(name).append(value).append("\n");
+                                        }
+                                    }
+                                    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+                                    Transformer transformer = transformerFactory.newTransformer();
+                                    DOMSource source = new DOMSource(doc);
+                                    StreamResult result = new StreamResult(sw);
+                                    transformer.transform(source, result);
+                                }
+                            }
+                        }
+                        Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".xml", "xml", "application/xml", sw.getBuffer().toString()));
                     }
 
                     String saveMessage = "";

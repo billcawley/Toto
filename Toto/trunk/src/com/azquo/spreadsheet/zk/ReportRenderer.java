@@ -9,6 +9,7 @@ import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import org.springframework.security.access.method.P;
 import org.zkoss.zss.api.*;
 import org.zkoss.zss.api.model.*;
 import org.zkoss.zss.api.model.Sheet;
@@ -42,6 +43,7 @@ public class ReportRenderer {
     public static final String AZDISPLAYCOLUMNHEADINGS = "az_displaycolumnheadings";
     public static final String AZCOLUMNHEADINGS = "az_columnheadings";
     public static final String AZROWHEADINGS = "az_rowheadings";
+    public static final String AZXML = "az_xml";
     private static final String AZCONTEXT = "az_context";
     static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued
     static final String AZCONTEXTFILTERS = "az_contextfilters";
@@ -212,6 +214,13 @@ public class ReportRenderer {
                     if (BookUtils.getNameByName(AZROWHEADINGS + region, sheet) == null) { // if no row headings then this is an ad hoc region, save possible by default
                         showSave = true;
                     }
+
+                    // we don't actually need to do anything with this now but we need to switch on the XML button
+                    SName xmlHeadings = BookUtils.getNameByName(AZXML + region, sheet);
+                    if (xmlHeadings != null){
+                        sheet.getBook().getInternalBook().setAttribute(OnlineController.XML, true);
+                    }
+
                     SName optionsRegion = BookUtils.getNameByName(AZOPTIONS + region, sheet);
                     String optionsSource = "";
                     if (optionsRegion != null) {

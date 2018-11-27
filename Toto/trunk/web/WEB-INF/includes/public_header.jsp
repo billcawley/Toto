@@ -87,6 +87,7 @@
 						<li ><a href="#" onclick="postAjax('SaveTemplate'); return false;">Save Template</a></li>
 					</c:if>
 					<c:if test="${templateMode == false}">
+						<c:if test="${xml == true}"><li><a href="#" onclick="postAjax('XML');return false;">XML</a></li></c:if>
 						<c:if test="${showTemplate == true}"><li><a href="#" onclick="window.location.assign(window.location.href+='&opcode=template')">View Template</a></li></c:if>
 						<c:if test="${execute == true}"><li><a href="#" onclick="postAjax('ExecuteSave');window.location.assign(window.location.href+='&opcode=execute')">Execute</a></li></c:if>
 						<li id="unlockButton" <c:if test="${showUnlockButton == false}"> style="display:none;"</c:if>><a href="#" onclick="postAjax('Unlock'); return false;">Unlock</a></li>

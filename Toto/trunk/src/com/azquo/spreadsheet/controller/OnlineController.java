@@ -116,6 +116,7 @@ public class OnlineController {
     public static final String CELL_SELECT = "CELL_SELECT";
     public static final String LOCKED = "LOCKED";
     public static final String LOCKED_RESULT = "LOCK_RESULT";
+    public static final String XML = "XML";
 
     private static final String EXECUTE = "EXECUTE";
     private static final String TEMPLATE = "TEMPLATE";
@@ -264,6 +265,7 @@ public class OnlineController {
                         // hmm, is putting attributes agains the book the way to go? I've used session in other places but it would be a pain for these two. Todo : standardise on something that makes sense.
                         model.put("showUnlockButton", book.getInternalBook().getAttribute(LOCKED));
                         model.put("lockedResult", book.getInternalBook().getAttribute(LOCKED_RESULT));
+                        model.put("xml", book.getInternalBook().getAttribute(XML) != null);
                         model.put("showSave", session.getAttribute(reportId + SAVE_FLAG));
                         model.put("masterUser", loggedInUser.getUser().isMaster());
                         model.put("templateMode", "template".equalsIgnoreCase(opcode) && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isMaster() || loggedInUser.getUser().isDeveloper()));
