@@ -69,8 +69,8 @@ class HeadingReader {
     static final String LINEDATA = "linedata";
     static final String SPLIT = "split";
     static final String TOPLINE = "topline";
-    static final String CHECK = "check";
-    static final String REPLACE = "replace";
+    private static final String CHECK = "check";
+    private static final String REPLACE = "replace";
 
     /*DICTIONARY finds a name based on the string value of the cell.  The system will search all names for the attribute given by the 'dictionary' term.  For instance if the phrase is 'dictionary complaint terms'
     the system will look through all the attributes 'complaint terms' to see if any match the value of this cell.

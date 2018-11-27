@@ -46,6 +46,7 @@ public class DSImportService {
             ValuesImportConfigProcessor.prepareValuesImportConfig(valuesImportConfig);
             // when it is done we assume we're ready to batch up lines with headers and import with BatchImporter
             ValuesImport.valuesImport(valuesImportConfig);
+            uploadedFile = valuesImportConfig.getUploadedFile(); // groovy might have overwritten it
             // now look to see if there's a need to execute after import
             // find interpreter being called again - a way not to do this?
             if (valuesImportConfig.getImportInterpreter() != null) {

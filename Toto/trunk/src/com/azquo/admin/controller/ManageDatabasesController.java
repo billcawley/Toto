@@ -600,7 +600,7 @@ public class ManageDatabasesController {
             if (uploadedFile.getParameters() != null && !uploadedFile.getParameters().isEmpty()) {
                 for (String key : uploadedFile.getParameters().keySet()) {
                     toReturn.append(indentSb);
-                    toReturn.append(key).append(" = ").append(uploadedFile.getParameters().keySet()).append("\n<br/>");
+                    toReturn.append(key).append(" = ").append(uploadedFile.getParameters().get(key)).append("\n<br/>");
                 }
             }
 
@@ -616,11 +616,11 @@ public class ManageDatabasesController {
             toReturn.append("Number of lines imported : ").append(uploadedFile.getNoLinesImported()).append("\n<br/>");
 
             toReturn.append(indentSb);
-            toReturn.append("Number of valuses adjusted: ").append(uploadedFile.getNoValuesAdjusted()).append("\n<br/>");
+            toReturn.append("Number of values adjusted: ").append(uploadedFile.getNoValuesAdjusted()).append("\n<br/>");
 
             if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
                 toReturn.append(indentSb);
-                toReturn.append("Rejected lines : ").append(uploadedFile.getNoValuesAdjusted()).append("\n<br/>");
+                toReturn.append("Rejected lines : ").append(uploadedFile.getLinesRejected().size()).append("\n<br/>");
                 for (String lineRejected : uploadedFile.getLinesRejected()) {
                     toReturn.append(indentSb);
                     toReturn.append(lineRejected).append("\n<br/>");

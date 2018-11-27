@@ -50,6 +50,7 @@ public class LoginController {
                     String userAgent = request.getHeader("User-Agent");
                     AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
                     AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
+                    AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
                 }
                 session.removeAttribute(LOGGED_IN_USER_SESSION);
             }
@@ -77,6 +78,7 @@ public class LoginController {
                         String userAgent = request.getHeader("User-Agent");
                         AzquoMailer.sendEMail("nic@azquo.com", "Nic", title, userAgent);
                         AzquoMailer.sendEMail("bruce.cooper@azquo.com", "Bruce", title, userAgent);
+                        AzquoMailer.sendEMail("ed.lennox@azquo.com", "Ed", title, userAgent);
                     }
                     session.setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
                     if (connectionid != null && connectionid.equals("javascript")) {

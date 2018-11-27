@@ -48,8 +48,8 @@ public class ValuesImport {
                 */
                 int cellCount = 0;
                 for (ImmutableImportHeading immutableImportHeading : valuesImportConfig.getHeadings()) {
-                      // Intern may save a little memory if strings are repeated a lot. Column Index could point past line values for things like composite.
-                    String lineValue = (cellCount++< valuesImportConfig.getLineCells() && columnIndex < lineValues.length) ? lineValues[columnIndex].trim().intern() : "";
+                    // Intern may save a little memory if strings are repeated a lot. Column Index could point past line values for things like composite.
+                    String lineValue = (cellCount++ < valuesImportConfig.getLineCells() && columnIndex < lineValues.length) ? lineValues[columnIndex].trim().intern() : "";
                     if (lineValue.length() > 0) blankLine = false;
                     if (lineValue.equals("\"")) {// was a problem, might be worth checking if it is still
                         corrupt = true;
@@ -115,7 +115,15 @@ public class ValuesImport {
             // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
             if (!linesRejected.isEmpty()) {
                 ArrayList<String> lineNumbersList = new ArrayList<>(linesRejected);
-                Collections.sort(lineNumbersList); // should do the basic sort
+                lineNumbersList.sort((s, t1) -> {
+                    try {
+                        if (s.contains(":") && t1.contains(":")) {
+                            return Integer.compare(Integer.parseInt(s.substring(0, s.indexOf(":")).trim()), Integer.parseInt(t1.substring(0, t1.indexOf(":")).trim()));
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    return 0;
+                }); // should do the basic sort
                 valuesImportConfig.getUploadedFile().addToLinesRejected(lineNumbersList);
             }
             valuesImportConfig.getAzquoMemoryDBConnection().addToUserLogNoException("Imported " + (linesImported - linesRejected.size()) + " lines", true); // does the user log require more details??
@@ -132,31 +140,31 @@ public class ValuesImport {
         }
     }
 
-    private static String checkNumeric(String lineValue){
+    private static String checkNumeric(String lineValue) {
         //routine to catch data sent out in accountancy form - beware of data printed with ',' instead of '.'
         lineValue = lineValue.trim();
         if (lineValue.startsWith("0")) return lineValue;//don't bother with zip codes or 0.....
-        if (lineValue.startsWith("(") && lineValue.endsWith(")")){
-            String middle = lineValue.substring(1,lineValue.length() - 1);
+        if (lineValue.startsWith("(") && lineValue.endsWith(")")) {
+            String middle = lineValue.substring(1, lineValue.length() - 1);
             try {
-                double d = Double.parseDouble(middle.replace(",",""));
+                double d = Double.parseDouble(middle.replace(",", ""));
                 lineValue = -d + "";
-                if (lineValue.endsWith(".0")){
-                    lineValue = lineValue.substring(0,lineValue.length() - 2);
+                if (lineValue.endsWith(".0")) {
+                    lineValue = lineValue.substring(0, lineValue.length() - 2);
                 }
-            }catch(Exception ignored){
+            } catch (Exception ignored) {
 
             }
-        }else{
+        } else {
             if (lineValue.toLowerCase().endsWith("f")) return lineValue;
-            try{
+            try {
 
-                double d = Double.parseDouble(lineValue.replace(",",""));
+                double d = Double.parseDouble(lineValue.replace(",", ""));
                 lineValue = d + "";
-                if (lineValue.endsWith(".0")){
-                    lineValue = lineValue.substring(0,lineValue.length() - 2);
+                if (lineValue.endsWith(".0")) {
+                    lineValue = lineValue.substring(0, lineValue.length() - 2);
                 }
-            }catch(Exception ignored){
+            } catch (Exception ignored) {
 
             }
         }

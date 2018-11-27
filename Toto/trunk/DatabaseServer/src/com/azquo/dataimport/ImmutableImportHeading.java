@@ -15,8 +15,8 @@ import java.util.*;
 
 
 class DictionaryTerm {
-    public boolean exclude;
-    public List<String> items;
+    boolean exclude;
+    List<String> items;
 
     DictionaryTerm(boolean exclude, List<String> items) {
         this.exclude = exclude;

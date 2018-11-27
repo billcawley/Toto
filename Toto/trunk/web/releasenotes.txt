@@ -1,3 +1,8 @@
+27-11-18
+
+XML named region option to export data from a report to an XML file
+
+
 26-11-18
 
 See results of importing on the uploads list
