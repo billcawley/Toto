@@ -61,7 +61,7 @@ def fileProcess(Object[] args) {
             } else if (agreementCol >= 0) { // ok we're into data
                 if (lineNo == topLine + 1) {
                     if (agreementCol >= 0 && line.size() > agreementCol && line[agreementCol] != 'B') {
-                        valuesImportConfig.getFileNameParameters().put("import template", "risk allriskspremium1");
+                        valuesImportConfig.getUploadedFile().getParameters().put("import template", "risk allriskspremium1");
                         List<String> languages = new ArrayList<>();
                         languages.add("allriskspremium1");
                         languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
