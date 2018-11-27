@@ -5,7 +5,7 @@ Need to check for where there's more than one contract line and assign a section
 
 */
 import com.azquo.dataimport.ValuesImportConfig
-import com.azquo.memorydb.Constants
+import com.azquo.StringLiterals
 
 import java.text.SimpleDateFormat
 
@@ -64,7 +64,7 @@ def fileProcess(Object[] args) {
                         valuesImportConfig.getFileNameParameters().put("import template", "risk allriskspremium1");
                         List<String> languages = new ArrayList<>();
                         languages.add("allriskspremium1");
-                        languages.add(Constants.DEFAULT_DISPLAY_NAME);
+                        languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
                         valuesImportConfig.setLanguages(languages);
 
                     }
