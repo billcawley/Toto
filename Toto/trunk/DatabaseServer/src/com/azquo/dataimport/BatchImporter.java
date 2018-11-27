@@ -200,8 +200,12 @@ public class BatchImporter implements Callable<Void> {
             adjusted = false;
             for (ImportCellWithHeading cell : cells) {
                 String compositionPattern = cell.getImmutableImportHeading().compositionPattern;
-                if (cell.getImmutableImportHeading().defaultValue != null && (cell.getImmutableImportHeading().override != null || cell.getLineValue().trim().length() == 0)) {
+                if (cell.getImmutableImportHeading().defaultValue != null && (cell.getImmutableImportHeading().override !=null || cell.getLineValue().trim().length() == 0)) {
                     compositionPattern = cell.getImmutableImportHeading().defaultValue;
+                    if (cell.getImmutableImportHeading().override!=null){
+                       cell.setLineValue(cell.getImmutableImportHeading().override);
+
+                    }
                     if (cell.getImmutableImportHeading().lineNameRequired) {
                         for (ImportCellWithHeading cell2 : cells) {
                             // If one of the other cells is referring to this as its attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Customer.Address1 and set the language to Address1
