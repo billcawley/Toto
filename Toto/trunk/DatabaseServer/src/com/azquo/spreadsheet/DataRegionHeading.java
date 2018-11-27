@@ -123,7 +123,11 @@ public class DataRegionHeading {
     }
 
     String getDebugInfo() {
-        return (name != null ? "Name : " + name.getDefaultDisplayName() : "")
+        String nameString = name.getDefaultDisplayName();
+        if (nameString==null && name.getParents()!=null){//temporary set
+            nameString = name.getParents().iterator().next().getDefaultDisplayName();
+        }
+        return (name != null ? "Name : " + nameString : "")
                  + (attribute != null ? " Attribute : " + attribute : "")
                 + (function != null ? " Function : " + function : "");
     }
