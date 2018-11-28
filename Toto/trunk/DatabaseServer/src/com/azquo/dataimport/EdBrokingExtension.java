@@ -20,8 +20,8 @@ class EdBrokingExtension {
 
     static void checkImportFormatterLanguage(ValuesImportConfig valuesImportConfig) {
         // EFC revising logic based off WFC recommendations, set language from the second half of the import format if it's there
-        if (valuesImportConfig.getUploadedFile().getParameters() != null && valuesImportConfig.getUploadedFile().getParameters().get(IMPORT_TEMPLATE) != null) {
-            String importFormat = valuesImportConfig.getUploadedFile().getParameters().get(IMPORT_TEMPLATE);
+        if (valuesImportConfig.getUploadedFile().getParameter(IMPORT_TEMPLATE) != null) {
+            String importFormat = valuesImportConfig.getUploadedFile().getParameter(IMPORT_TEMPLATE);
             if (importFormat.contains(" ")) {
                 List<String> languages = new ArrayList<>();
                 //wfc added ability to put in a list of languages - NOT CURRENTLY USED
@@ -33,15 +33,13 @@ class EdBrokingExtension {
                 valuesImportConfig.setLanguages(languages);
             }
         }
-
     }
 
     // EFC 18/09/2018, moving from using zip name to deduce things to IMPORT_TEMPLATE from fileNameParameters
     static void checkImportFormat(ValuesImportConfig valuesImportConfig) throws Exception {
         // prepares for the more complex "headings as children with attributes" method of importing
-        valuesImportConfig.setAssumptions(valuesImportConfig.getUploadedFile().getParameters());
-        if (valuesImportConfig.getUploadedFile().getParameters() != null && valuesImportConfig.getUploadedFile().getParameters().get(IMPORT_TEMPLATE) != null) {
-            String importFormat = valuesImportConfig.getUploadedFile().getParameters().get(IMPORT_TEMPLATE);
+        if (valuesImportConfig.getUploadedFile().getParameter(IMPORT_TEMPLATE) != null) {
+            String importFormat = valuesImportConfig.getUploadedFile().getParameter(IMPORT_TEMPLATE);
             // this is passed through to preProcessHeadersAndCreatePivotSetsIfRequired
             // it issued as a straight replacement e.g. that Apr-18 in something like
             // so the attribute might be "HEADINGS RISK" assuming the import format was "Risk Apr-18"
@@ -334,7 +332,7 @@ check that the headings that are required are there . . .
                             if (!attribute.toLowerCase().contains(HeadingReader.DEFAULT)
                                     && !attribute.toLowerCase().contains(HeadingReader.COMPOSITION)
                                     && !attribute.toLowerCase().contains(HeadingReader.TOPHEADING)
-                                    && valuesImportConfig.getAssumptions().get(clauses[0].toLowerCase()) == null
+                                    && valuesImportConfig.getUploadedFile().getParameter(clauses[0].toLowerCase()) == null
                             ) {
                                 throw new Exception("headers missing required header: " + name.getDefaultDisplayName());
                             } else {
@@ -405,12 +403,12 @@ check that the headings that are required are there . . .
     // assumptions being a bunch of defaults it seems.
     static void dealWithAssumptions(ValuesImportConfig valuesImportConfig) {
         // internally can further adjust the headings based off a name attributes. See HeadingReader for details.
-        if (valuesImportConfig.getAssumptions() != null && !valuesImportConfig.getAssumptions().isEmpty()) {
+        if (valuesImportConfig.getUploadedFile().getParameters() != null) {
             List<String> headers = valuesImportConfig.getHeaders();
             for (int i = 0; i < headers.size(); i++) {
                 String header = headers.get(i);
                 String[] clauses = header.split(";");
-                String assumption = valuesImportConfig.getAssumptions().get(clauses[0].toLowerCase().trim());
+                String assumption = valuesImportConfig.getUploadedFile().getParameter(clauses[0].toLowerCase().trim());
                 if (assumption != null) {
                     headers.set(i, header + ";override " + assumption);
                 }

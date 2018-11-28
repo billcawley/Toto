@@ -600,7 +600,7 @@ public class ManageDatabasesController {
             if (uploadedFile.getParameters() != null && !uploadedFile.getParameters().isEmpty()) {
                 for (String key : uploadedFile.getParameters().keySet()) {
                     toReturn.append(indentSb);
-                    toReturn.append(key).append(" = ").append(uploadedFile.getParameters().get(key)).append("\n<br/>");
+                    toReturn.append(key).append(" = ").append(uploadedFile.getParameter(key)).append("\n<br/>");
                 }
             }
 

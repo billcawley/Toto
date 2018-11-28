@@ -6,6 +6,7 @@ Need to check for where there's more than one contract line and assign a section
 */
 import com.azquo.dataimport.ValuesImportConfig
 import com.azquo.StringLiterals
+import com.azquo.spreadsheet.transport.UploadedFile
 
 import java.text.SimpleDateFormat
 
@@ -61,7 +62,12 @@ def fileProcess(Object[] args) {
             } else if (agreementCol >= 0) { // ok we're into data
                 if (lineNo == topLine + 1) {
                     if (agreementCol >= 0 && line.size() > agreementCol && line[agreementCol] != 'B') {
-                        valuesImportConfig.getUploadedFile().getParameters().put("import template", "risk allriskspremium1");
+                        Map<String, String> newparams = new HashMap<>(valuesImportConfig.getUploadedFile().getParameters());
+                        newparams.put("import template", "risk allriskspremium1");
+                        valuesImportConfig.setUploadedFile(new UploadedFile(valuesImportConfig.getUploadedFile().getPath()
+                                ,valuesImportConfig.getUploadedFile().getFileNames()
+                                ,newparams
+                                ,valuesImportConfig.getUploadedFile().isConvertedFromWorksheet()));
                         List<String> languages = new ArrayList<>();
                         languages.add("allriskspremium1");
                         languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);

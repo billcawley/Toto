@@ -47,6 +47,7 @@ class ValuesImportConfigProcessor {
     private static final String SKIPLINESSTRING = "SKIPLINES";
 
     static void prepareValuesImportConfig(ValuesImportConfig valuesImportConfig) throws Exception {
+        // currently unused option to override language based on file name
         EdBrokingExtension.checkImportFormatterLanguage(valuesImportConfig);
         // now step through what getHeadersWithIteratorAndBatchSize was doing
         EdBrokingExtension.checkImportFormat(valuesImportConfig);
@@ -98,15 +99,15 @@ class ValuesImportConfigProcessor {
 
     // typically groovy scripts write out to a different file, helps a lot for debugging! Most of the time with no groovy specified will just not modify anything
     private static void checkGroovy(ValuesImportConfig valuesImportConfig) throws Exception {
-        if (valuesImportConfig.getUploadedFile().getParameters() != null && (valuesImportConfig.getUploadedFile().getParameters().get(PREPROCESSOR) != null
-                || valuesImportConfig.getUploadedFile().getParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) != null)) {
+        if (valuesImportConfig.getUploadedFile().getParameter(PREPROCESSOR) != null
+                || valuesImportConfig.getUploadedFile().getParameter(EdBrokingExtension.IMPORT_TEMPLATE) != null) {
             try {
-                File file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getUploadedFile().getParameters().get(PREPROCESSOR));
+                File file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getUploadedFile().getParameter(PREPROCESSOR));
                 if (!file.exists()) {
-                    file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getUploadedFile().getParameters().get(EdBrokingExtension.IMPORT_TEMPLATE));
+                    file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getUploadedFile().getParameter(EdBrokingExtension.IMPORT_TEMPLATE));
                 }
                 if (!file.exists()) {
-                    file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getUploadedFile().getParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) + ".groovy");
+                    file = new File(AzquoMemoryDB.getGroovyDir() + "/" + valuesImportConfig.getUploadedFile().getParameter(EdBrokingExtension.IMPORT_TEMPLATE) + ".groovy");
                 }
                 if (file.exists()) {
                     System.out.println("Groovy found! Running  . . . ");
@@ -293,7 +294,7 @@ class ValuesImportConfigProcessor {
                     headers = oldHeaders;
                 }
             }
-            if (valuesImportConfig.getUploadedFile().isConvertedFromWorksheet() && (valuesImportConfig.getUploadedFile().getParameters() == null || valuesImportConfig.getUploadedFile().getParameters().get(EdBrokingExtension.IMPORT_TEMPLATE) == null)) { // it's saying really is it a template (isSpreadsheet = yes)
+            if (valuesImportConfig.getUploadedFile().isConvertedFromWorksheet() && valuesImportConfig.getUploadedFile().getParameter(EdBrokingExtension.IMPORT_TEMPLATE) == null) { // it's saying really is it a template (isSpreadsheet = yes)
                 // basically if there were no headings in the DB but they were found in the file then put them in the DB to be used by files with the similar names
                 // as in add the headings to the first upload then upload again without headings (assuming the file name is the same!)
                 Name importSheets = NameService.findOrCreateNameInParent(valuesImportConfig.getAzquoMemoryDBConnection(), ALLIMPORTSHEETS, null, false);

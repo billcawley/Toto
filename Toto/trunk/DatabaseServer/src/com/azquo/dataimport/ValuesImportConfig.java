@@ -14,7 +14,7 @@ Gathers objects required to configure and start the import.
 Originally just the iterator and headings and batch size but it will now move config information too
 which should help to factor code in the ValuesImport. Set input params on this object and pass it around
 
-Note : while some fields might be thread safe, this object is not designed to be, a single thread should pass it through numerous
+Note : while some fields might be thread safe, this object as a whole is not designed to be, a single thread should pass it through numerous
 adjusting functions before it's passed to ValuesImport
  */
 
@@ -29,7 +29,6 @@ public class ValuesImportConfig {
     private List<String> languages;
     private String importAttribute;
     private Name importInterpreter;
-    private Map<String, String> assumptions;
     private List<String> headers;
     private int skipLines;
     // held for Ed broking stuff, might be factored in a mo
@@ -45,7 +44,6 @@ public class ValuesImportConfig {
         languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
         importAttribute = null;
         importInterpreter = null;
-        assumptions = null;
         headers = new ArrayList<>();
         skipLines = 0;
         topHeadings = new HashMap<>();
@@ -123,14 +121,6 @@ public class ValuesImportConfig {
         this.importInterpreter = importInterpreter;
     }
 
-    Map<String, String> getAssumptions() {
-        return assumptions;
-    }
-
-    void setAssumptions(Map<String, String> assumptions) {
-        this.assumptions = assumptions;
-    }
-
     List<String> getHeaders() {
         return headers;
     }
@@ -154,4 +144,5 @@ public class ValuesImportConfig {
     int getLineCells() {return lineCells; }
 
     void setLineCells(int lineCells) {this.lineCells = lineCells; }
+
 }
