@@ -46,7 +46,12 @@ public class ReportExecutor {
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
             for (SName sName : namesForSheet) {
                 if (sName.getName().equalsIgnoreCase(sourceNamedRegion)) {
-                    executeCommand = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn()).getStringValue();
+                    executeCommand = "";
+                    //;now allowing executes to be on multiple lines...
+                    CellRegion region = sName.getRefersToCellRegion();
+                    for (int rowNo=0;rowNo < region.getRowCount() ; rowNo++){
+                        executeCommand += sheet.getInternalSheet().getCell(region.getRow() + rowNo, region.getColumn()).getStringValue() + "\n";
+                    }
                     break;
                 }
             }
