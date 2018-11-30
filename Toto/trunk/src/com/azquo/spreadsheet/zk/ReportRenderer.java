@@ -52,6 +52,7 @@ public class ReportRenderer {
     public static final String AZREPORTNAME = "az_reportname";
     public static final String AZIMPORTNAME = "az_importname";
     public static final String EXECUTE = "az_execute";
+    public static final String PREEXECUTE = "az_preexecute";
     static final String FOLLOWON = "az_followon";
     static final String AZSAVE = "az_save";
     static final String AZREPEATSHEET = "az_repeatsheet";

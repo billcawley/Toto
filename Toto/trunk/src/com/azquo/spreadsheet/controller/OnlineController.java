@@ -309,6 +309,7 @@ public class OnlineController {
                         new Thread(() -> {
                             // so in here the new thread we set up the loading as it was originally before
                             try {
+                                boolean executeNow = executeMode;
                                 long oldHeapMarker = (runtime.totalMemory() - runtime.freeMemory());
                                 String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + finalOnlineReport.getFilenameForDisk();
                                 Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
@@ -327,6 +328,9 @@ public class OnlineController {
                                             if (sName.getName().equalsIgnoreCase(ReportRenderer.EXECUTE)) {
                                                 executeName = true;
                                             }
+                                            if (sName.getName().equalsIgnoreCase(ReportRenderer.PREEXECUTE)) {
+                                                executeNow = true;
+                                            }
                                         }
                                     }
                                     // todo, lock check here like execute
@@ -337,7 +341,7 @@ public class OnlineController {
                                     loggedInUser.setImageStoreName(""); // legacy thing to stop null pointer, should be zapped after getting rid of aspose
                                 }
 
-                                if (executeMode) {
+                                if (executeNow) {
                                     book = ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.EXECUTE); // standard, there's the option to execute the contents of a different names
                                     session.setAttribute(finalReportId + SAVE_FLAG, false); // no save button after an execute
                                 }
