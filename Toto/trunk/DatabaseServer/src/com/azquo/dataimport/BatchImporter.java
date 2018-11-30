@@ -204,16 +204,23 @@ public class BatchImporter implements Callable<Void> {
                     compositionPattern = cell.getImmutableImportHeading().defaultValue;
                     if (cell.getImmutableImportHeading().override!=null){
                        cell.setLineValue(cell.getImmutableImportHeading().override);
+                       if (cell.getImmutableImportHeading().lineNameRequired){
+                           Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim()
+                                   , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames));
+                           cell.addToLineNames(compName);
+                           cell.setResolved(true);
 
-                    }
-                    if (cell.getImmutableImportHeading().lineNameRequired) {
-                        for (ImportCellWithHeading cell2 : cells) {
-                            // If one of the other cells is referring to this as its attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Customer.Address1 and set the language to Address1
-                            // of course this logic only is used where default is used so it's a question of whether there's a better option than default if the cell is empty
-                            // So keep the line imported if there's data missing I guess
-                            if (cell2 != cell && cell.getImmutableImportHeading().indexForAttribute == cells.indexOf(cell) && cell2.getLineValue().length() > 0) {
-                                compositionPattern = cell2.getLineValue();
-                                break;
+                       }
+                    }else{
+                        if (cell.getImmutableImportHeading().lineNameRequired) {
+                            for (ImportCellWithHeading cell2 : cells) {
+                                // If one of the other cells is referring to this as its attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Customer.Address1 and set the language to Address1
+                                // of course this logic only is used where default is used so it's a question of whether there's a better option than default if the cell is empty
+                                // So keep the line imported if there's data missing I guess
+                                if (cell2 != cell && cell2.getImmutableImportHeading().indexForAttribute == cells.indexOf(cell) && cell2.getLineValue().length() > 0) {
+                                    compositionPattern = cell2.getLineValue();
+                                    break;
+                                }
                             }
                         }
                     }
@@ -276,9 +283,10 @@ public class BatchImporter implements Callable<Void> {
                                         Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
                                                 , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames));
                                         compCell.addToLineNames(compName);
-                                        if (compName.getDefaultDisplayName().equals(compCell.getLineValue())){
-                                            compCell.setLineValue(compName.getDefaultDisplayName());
-                                        }
+
+                                        //if (!compName.getDefaultDisplayName().equals(compCell.getLineValue())){
+                                        //    compCell.setLineValue(compName.getDefaultDisplayName());
+                                        //}
 
                                     }
                                     if (compCell.getLineNames() != null) {
