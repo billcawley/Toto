@@ -323,7 +323,7 @@ todo - add classification here
             String[] clauses = header.split(";");
             boolean adjusted = false;
             for (String clause : clauses) {
-                if (clause.toLowerCase().startsWith(COMPOSITION)) {
+                if (clause.toLowerCase().startsWith(COMPOSITION) || clause.toLowerCase().startsWith(DEFAULT)) {
                     int startFieldPos = clause.indexOf("`");
                     while (startFieldPos > 0) {
                         int endFieldPos = clause.indexOf("`", ++startFieldPos);
