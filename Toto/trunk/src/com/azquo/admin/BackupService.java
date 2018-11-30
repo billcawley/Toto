@@ -44,7 +44,11 @@ public class BackupService {
 
     public static File createDBandReportsBackup(LoggedInUser loggedInUser) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
-        File temp = File.createTempFile(loggedInUser.getDatabase().getName(), ".db");
+        String dname = loggedInUser.getDatabase().getName();
+        if (dname.length() < 3){
+            dname += "---";
+        }
+        File temp = File.createTempFile(dname, ".db");
         String tempPath = temp.getPath();
         createDBBackupFile(loggedInUser.getDatabase().getName(), loggedInUser.getDataAccessToken(), tempPath, loggedInUser.getDatabaseServer().getIp());
         temp.deleteOnExit();

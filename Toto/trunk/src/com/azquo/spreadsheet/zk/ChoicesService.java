@@ -41,7 +41,7 @@ public class ChoicesService {
 
     // now adds one validation sheet per sheet so to speak - validation in Excel terms, putting validation on a cell adds a dropdown to it
     static List<SName> addValidation(Sheet sheet, LoggedInUser loggedInUser, Book book, Map<String, List<String>> choiceOptionsMap) {
-        String sheetName = sheet.getSheetName().replace(" ","");
+        String sheetName = sheet.getSheetName().replace(" ", "");
         // trim the sheet name as it can't be longer than 31 chars when appended to VALIDATION_SHEET
         // should I be replacing spaces commas etc?
         if (sheetName.length() > 10) {
@@ -82,7 +82,7 @@ public class ChoicesService {
                         boolean dataRegionDropdown = !BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosenRegion.getRow(), chosenRegion.getColumn(), sheet).isEmpty();
                         if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                             // check to make it work for Darren after some recent changes - todo - address what's actually going on here
-                            if (choiceCell.getType() == SCell.CellType.FORMULA){
+                            if (choiceCell.getType() == SCell.CellType.FORMULA) {
                                 choiceCell.clearFormulaResultCache();
                             }
                             String query = choiceCell.getStringValue();
@@ -181,7 +181,7 @@ public class ChoicesService {
             for (SName sName : namesForSheet) {
                 if (sName.getName().endsWith("Chosen")) {
                     CellRegion chosen = sName.getRefersToCellRegion();
-                    if (BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()){
+                    if (BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()) {
 
                         String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length()).toLowerCase();
                         if (chosen != null) {
@@ -223,7 +223,7 @@ public class ChoicesService {
                     String choiceLookup = sName.getName().substring(0, sName.getName().length() - 5);
                     SName choiceName = BookUtils.getNameByName(choiceLookup + "Choice", sheet);
                     SCell choiceCell = BookUtils.getSnameCell(choiceName);
-                    if (choiceName != null){
+                    if (choiceName != null) {
                         // all multi list is is a fancy way of saying to the user what is selected, e.g. all, various, all but or a list of those selected. The actual selection box is created in the composer, onclick
                         // pointless strip and re add of "Multi"? copied, code - todo address
                         BookUtils.setValue(resultCell, multiList(loggedInUser, choiceLookup + "Multi", choiceCell.getStringValue()));
@@ -259,7 +259,7 @@ public class ChoicesService {
         for (SName name : names) {
             //check to create pivot filter choices.... TODO - is this a redundant comment, aren't the filters being sorted anyway?
             if (name.getName().endsWith("Choice") && name.getRefersToCellRegion() != null) {
-                String fieldName = name.getName().substring(0,name.getName().length()-6);
+                String fieldName = name.getName().substring(0, name.getName().length() - 6);
                 // ok I assume choice is a single cell
                 List<String> choiceOptions = new ArrayList<>(); // was null, see no help in that
                 // new lines from edd to try to resolve choice stuff
@@ -268,10 +268,11 @@ public class ChoicesService {
                 if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                     String query;
                     // check to make it work for Darren after some recent changes - todo - address what's actually going on here
-                    if (choiceCell.getType() == SCell.CellType.FORMULA && choiceCell.getFormulaResultType() == SCell.CellType.NUMBER){
-                        choiceCell.clearFormulaResultCache();;
+                    if (choiceCell.getType() == SCell.CellType.FORMULA && choiceCell.getFormulaResultType() == SCell.CellType.NUMBER) {
+                        choiceCell.clearFormulaResultCache();
+                        ;
                     }
-                        query = choiceCell.getStringValue();
+                    query = choiceCell.getStringValue();
                     if (!query.toLowerCase().contains(CONTENTS)) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
                         if (query.toLowerCase().contains(" default")) {
                             query = query.substring(0, query.toLowerCase().indexOf(" default"));
@@ -351,7 +352,7 @@ public class ChoicesService {
                         }
                         optionNo++;
                     }
-                    String lookupRange =  validationSheet.getSheetName() + "!" + BookUtils.rangeToText(0, targetCol) + ":" + BookUtils.rangeToText(maxSize, targetCol + optionNo - 1);
+                    String lookupRange = validationSheet.getSheetName() + "!" + BookUtils.rangeToText(0, targetCol) + ":" + BookUtils.rangeToText(maxSize, targetCol + optionNo - 1);
                     //fill in blanks - they may come through as '0'
                     for (int col = 0; col < optionNo; col++) {
                         for (int row = 1; row < maxSize + 1; row++) {
@@ -392,12 +393,13 @@ public class ChoicesService {
             List<String> chosenOptions;
             // justUser = true meaning server side JUST use the user email in languages. Not 100% sure how important this but as I refactored I wanted to keep the logic
             chosenOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, "`" + filterName + "` children", loggedInUser.getUser().getEmail(), true);
-            if (chosenOptions.size()==1 && chosenOptions.get(0).startsWith("Error")){ // this stops the error on making the drop down list
+            if (chosenOptions.size() == 1 && chosenOptions.get(0).startsWith("Error")) { // this stops the error on making the drop down list
                 chosenOptions = allOptions;
                 // and create the set server side, it will no doubt be referenced
                 RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).createFilterSet(loggedInUser.getDataAccessToken(), filterName, loggedInUser.getUser().getEmail(), sourceSet);
             }
-            if (allOptions.size() < 2) return "[all]"; // EFC - this did return null which I think is inconsistent. If there's only one option should it maybe be all?
+            if (allOptions.size() < 2)
+                return "[all]"; // EFC - this did return null which I think is inconsistent. If there's only one option should it maybe be all?
             if (chosenOptions.size() == 0 || chosenOptions.size() == allOptions.size()) return "[all]";
             if (chosenOptions.size() < 6) {
                 StringBuilder toReturn = new StringBuilder();
@@ -430,8 +432,8 @@ public class ChoicesService {
         }
     }
 
-    static Map<String, String> parseChoicesFromDrillDownContextString(String context){
-        Map<String,String> map = new HashMap<>();
+    static Map<String, String> parseChoicesFromDrillDownContextString(String context) {
+        Map<String, String> map = new HashMap<>();
         int equalsPos = context.indexOf(" = ");
         while (equalsPos > 0) {
             int endParam = context.indexOf(";");
@@ -448,7 +450,7 @@ public class ChoicesService {
 
     static void setChoices(LoggedInUser loggedInUser, String context) {
         Map<String, String> stringStringMap = parseChoicesFromDrillDownContextString(context);
-        for (Map.Entry<String, String> choiceChosen : stringStringMap.entrySet()){
+        for (Map.Entry<String, String> choiceChosen : stringStringMap.entrySet()) {
             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceChosen.getKey(), choiceChosen.getValue());
         }
     }

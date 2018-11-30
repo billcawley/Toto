@@ -597,12 +597,10 @@ public class ManageDatabasesController {
             // jump it out past the end for actual info
             toReturn.append("\n<br/>");
 
-            if (uploadedFile.getParameters() != null && !uploadedFile.getParameters().isEmpty()) {
                 for (String key : uploadedFile.getParameters().keySet()) {
                     toReturn.append(indentSb);
                     toReturn.append(key).append(" = ").append(uploadedFile.getParameter(key)).append("\n<br/>");
                 }
-            }
 
             if (uploadedFile.isConvertedFromWorksheet()) {
                 toReturn.append(indentSb);

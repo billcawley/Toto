@@ -405,6 +405,10 @@ public final class ImportService {
                 , loggedInUser.getUser().getName());
         // run any executes defined in the file
         if (processedFile.getExecute() != null) {
+            // set user choices to file params, could be useful to the execute
+            for (String choice : uploadedFile.getParameters().keySet()){
+                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
+            }
             processedFile.setExecute(ReportExecutor.runExecute(loggedInUser, processedFile.getExecute()).toString());
         }
         return processedFile;
