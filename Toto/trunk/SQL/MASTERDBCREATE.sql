@@ -78,6 +78,18 @@ CREATE TABLE IF NOT EXISTS `online_report` (
 
 ) ENGINE=InnoDB AUTO_INCREMENT=223 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+
+CREATE TABLE IF NOT EXISTS `import_template` (
+                                             `id` int(11) NOT NULL,
+                                             `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                             `business_id` int(11) NOT NULL,
+                                             `user_id` int(11) NOT NULL DEFAULT '0',
+                                             `template_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                             `filename` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                             `notes` text COLLATE utf8_unicode_ci NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+
 --
 -- Table structure for table `online_report`
 --
