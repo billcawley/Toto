@@ -160,6 +160,11 @@ public class SpreadsheetService {
         return getProperty(LOGONPAGEMESSAGE);
     }
 
+    private static final String GROOVYDIR = "groovydir";
+    public static String getGroovyDir() {
+        return getProperty(GROOVYDIR);
+    }
+
     public static void setUserChoice(int userId, String choiceName, String choiceValue) {
         UserChoice userChoice = UserChoiceDAO.findForUserIdAndChoice(userId, choiceName);
         if (choiceValue != null && choiceValue.length() > 0) {

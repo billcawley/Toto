@@ -14,19 +14,7 @@ import java.util.*;
  */
 
 
-class DictionaryTerm {
-    boolean exclude;
-    List<String> items;
-
-    DictionaryTerm(boolean exclude, List<String> items) {
-        this.exclude = exclude;
-        this.items = items;
-    }
-}
-
-
 class ImmutableImportHeading {
-
 
     final String heading;
     final int indexForAttribute;
@@ -88,5 +76,15 @@ class ImmutableImportHeading {
         this.checkList = mutableImportHeading.checkList;
         this.replace = mutableImportHeading.replace;
 
+    }
+
+    static class DictionaryTerm {
+        final boolean exclude;
+        final List<String> items;
+
+        DictionaryTerm(boolean exclude, List<String> items) {
+            this.exclude = exclude;
+            this.items = items;
+        }
     }
 }

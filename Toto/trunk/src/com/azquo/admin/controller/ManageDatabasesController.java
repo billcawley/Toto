@@ -1,5 +1,6 @@
 package com.azquo.admin.controller;
 
+import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
@@ -13,6 +14,7 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.ExcelController;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.CommonReportUtils;
+import com.azquo.spreadsheet.zk.BookUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
@@ -20,10 +22,16 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.zkoss.poi.hssf.usermodel.HSSFWorkbook;
+import org.zkoss.poi.openxml4j.opc.OPCPackage;
+import org.zkoss.poi.ss.usermodel.Sheet;
+import org.zkoss.poi.ss.usermodel.Workbook;
+import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDateTime;
@@ -48,7 +56,7 @@ import java.util.stream.Stream;
  * Current responsibilities :
  * <p>
  * create and delete dbs/upload files and manage uploads/backup/restore/pending uploads
- *
+ * <p>
  * pending uploads should perhaps be taken out of here
  */
 @Controller
@@ -138,6 +146,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "databaseId", required = false) String databaseId
             , @RequestParam(value = "revert", required = false) String revert
             , @RequestParam(value = "commit", required = false) String commit
+            , @RequestParam(value = "deleteTemplateId", required = false) String deleteTemplateId
     ) {
         LoggedInUser possibleUser = null;
         if (sessionId != null) {
@@ -277,11 +286,11 @@ public class ManageDatabasesController {
                         pendingUpload.setImportResult(formatUploadedFiles(importResult));// should html be in here?
                         boolean modified = false;
                         boolean errorInResult = false;
-                        for (UploadedFile uploadedFile : importResult){
-                            if (uploadedFile.isDataModified()){
+                        for (UploadedFile uploadedFile : importResult) {
+                            if (uploadedFile.isDataModified()) {
                                 modified = true;
                             }
-                            if (uploadedFile.getError() != null){
+                            if (uploadedFile.getError() != null) {
                                 errorInResult = true;
                             }
                         }
@@ -320,6 +329,9 @@ public class ManageDatabasesController {
                 }
                 if (NumberUtils.isNumber(deleteId)) {
                     AdminService.removeDatabaseByIdWithBasicSecurity(loggedInUser, Integer.parseInt(deleteId));
+                }
+                if (NumberUtils.isNumber(deleteTemplateId)) {
+                    AdminService.removeImportTemplateByIdWithBasicSecurity(loggedInUser, Integer.parseInt(deleteTemplateId));
                 }
                 if (NumberUtils.isNumber(unloadId)) {
                     AdminService.unloadDatabaseWithBasicSecurity(loggedInUser, Integer.parseInt(unloadId));
@@ -411,25 +423,25 @@ public class ManageDatabasesController {
             }
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, fileSearch);
             if ("database".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getDatabaseName().compareTo(o2.getDatabaseName())));
+                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDatabaseName));
             }
             if ("databasedown".equals(sort)) {
                 uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDatabaseName().compareTo(o1.getDatabaseName())));
             }
             if ("date".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getDate().compareTo(o2.getDate())));
+                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDate));
             }
             if ("datedown".equals(sort)) {
                 uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDate().compareTo(o1.getDate())));
             }
             if ("businessname".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getBusinessName().compareTo(o2.getBusinessName())));
+                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getBusinessName));
             }
             if ("businessnamedown".equals(sort)) {
                 uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getBusinessName().compareTo(o1.getBusinessName())));
             }
             if ("username".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o1.getUserName().compareTo(o2.getUserName())));
+                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getUserName));
             }
             if ("usernamedown".equals(sort)) {
                 uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getUserName().compareTo(o1.getUserName())));
@@ -444,6 +456,7 @@ public class ManageDatabasesController {
             model.put("commit", canCommit.get());
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("developer", loggedInUser.getUser().isDeveloper());
+            model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
             return "managedatabases";
         } else {
@@ -456,6 +469,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
             , @RequestParam(value = "backup", required = false) String backup
+            , @RequestParam(value = "template", required = false) String template
     ) {
         if (database != null) {
             request.getSession().setAttribute("lastSelected", database);
@@ -472,6 +486,38 @@ public class ManageDatabasesController {
                         uploadFile.transferTo(moved);
                         // todo - like a normal import give feedback to the user . . .
                         model.put("error", BackupService.loadBackup(loggedInUser, moved, database));
+                    } else if ("true".equals(template)) {
+                        // todo - like a normal import give feedback to the user . . .
+                        try {
+                            String fileName = uploadFile.getOriginalFilename();
+                            File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
+                            uploadFile.transferTo(moved);
+                            Workbook book;
+                            UploadedFile uploadedFile = new UploadedFile(moved.getAbsolutePath(), Collections.singletonList(fileName), new HashMap<>(), false);
+                            FileInputStream fs = new FileInputStream(new File(uploadedFile.getPath()));
+                            if (uploadedFile.getFileName().endsWith("xlsx")) {
+                                OPCPackage opcPackage = OPCPackage.open(fs);
+                                book = new XSSFWorkbook(opcPackage);
+                            } else {
+                                book = new HSSFWorkbook(fs);
+                            }
+                            // detect an import template by a sheet name
+                            boolean hasRequiredSheet = false;
+                            for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
+                                Sheet sheet = book.getSheetAt(sheetNo);
+                                if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
+                                    hasRequiredSheet = true;
+                                    break;
+                                }
+                            }
+                            if (!hasRequiredSheet) {
+                                model.put("error", "That does not appear to be an import template.");
+                            } else {
+                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser))));
+                            }
+                        } catch (Exception e) {
+                            model.put("error", e.getMessage());
+                        }
                     } else if (database != null) {
                         if (database.isEmpty()) {
                             model.put("error", "Please select a database");
@@ -522,6 +568,7 @@ public class ManageDatabasesController {
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
             model.put("developer", loggedInUser.getUser().isDeveloper());
+            model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
             return "managedatabases";
         } else {
@@ -597,14 +644,62 @@ public class ManageDatabasesController {
             // jump it out past the end for actual info
             toReturn.append("\n<br/>");
 
-                for (String key : uploadedFile.getParameters().keySet()) {
-                    toReturn.append(indentSb);
-                    toReturn.append(key).append(" = ").append(uploadedFile.getParameter(key)).append("\n<br/>");
-                }
+            for (String key : uploadedFile.getParameters().keySet()) {
+                toReturn.append(indentSb);
+                toReturn.append(key).append(" = ").append(uploadedFile.getParameter(key)).append("\n<br/>");
+            }
 
             if (uploadedFile.isConvertedFromWorksheet()) {
                 toReturn.append(indentSb);
                 toReturn.append("Converted from worksheet.\n<br/>");
+            }
+
+            if (uploadedFile.getTopHeadings() != null) {
+                toReturn.append(indentSb);
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings\" style=\"display : none\">");
+                for (TypedPair<Integer, Integer> key : uploadedFile.getTopHeadings().keySet()) {
+                    toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+                    toReturn.append(BookUtils.rangeToText(key.getFirst(), key.getSecond())).append("\t->\t").append(uploadedFile.getTopHeadings().get(key)).append("\n<br/>");
+                }
+                toReturn.append("</div>");
+            }
+
+            if (uploadedFile.getHeadingsByFileHeadingsWithInterimLookup() != null) {
+                toReturn.append(indentSb);
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings'); return false;\">Headings with file headings</a> : \n<br/><div id=\"fileHeadings\" style=\"display : none\">");
+                for (List<String> key : uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet()) {
+                    toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+                    for (String subHeading : key) {
+                        toReturn.append(subHeading).append(" ");
+                    }
+                    TypedPair<String, String> stringStringTypedPair = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(key);
+                    if (stringStringTypedPair.getSecond() != null) {
+                        toReturn.append("\t->\t").append(stringStringTypedPair.getSecond());
+                    }
+                    toReturn.append("\t->\t").append(stringStringTypedPair.getFirst()).append("\n<br/>");
+                }
+                toReturn.append("</div>");
+            }
+
+            if (uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null) {
+                toReturn.append(indentSb);
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings'); return false;\">Headings without file headings</a> : \n<br/><div id=\"noFileHeadings\" style=\"display : none\">");
+                for (TypedPair<String, String> stringStringTypedPair : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
+                    toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+                    toReturn.append(stringStringTypedPair.getSecond());
+                    toReturn.append(" -> ").append(stringStringTypedPair.getFirst()).append("\n<br/>");
+                }
+                toReturn.append("</div>");
+            }
+
+            if (uploadedFile.getSimpleHeadings() != null) {
+                toReturn.append(indentSb);
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('simpleHeadings'); return false;\">Simple Headings</a> : \n<br/><div id=\"simpleHeadings\" style=\"display : none\">");
+                for (String heading : uploadedFile.getSimpleHeadings()) {
+                    toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");;
+                    toReturn.append(heading).append("\n<br/>");
+                }
+                toReturn.append("</div>");
             }
 
             toReturn.append(indentSb);
@@ -618,11 +713,12 @@ public class ManageDatabasesController {
 
             if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
                 toReturn.append(indentSb);
-                toReturn.append("Rejected lines : ").append(uploadedFile.getLinesRejected().size()).append("\n<br/>");
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines'); return false;\">Rejected lines : ").append(uploadedFile.getLinesRejected().size()).append("</a> : \n<br/><div id=\"rejectedLines\" style=\"display : none\">");
                 for (String lineRejected : uploadedFile.getLinesRejected()) {
                     toReturn.append(indentSb);
                     toReturn.append(lineRejected).append("\n<br/>");
                 }
+                toReturn.append("</div>");
             }
 
             if (uploadedFile.getError() != null) {
@@ -640,9 +736,14 @@ public class ManageDatabasesController {
                 toReturn.append("Report uploaded : ").append(uploadedFile.getReportName()).append("\n<br/>");
             }
 
-            if (uploadedFile.getExecute() != null) {
+            if (uploadedFile.isImportTemplate()) {
                 toReturn.append(indentSb);
-                toReturn.append("Execute result : ").append(uploadedFile.getExecute()).append("\n<br/>");
+                toReturn.append("Import template uploaded\n<br/>");
+            }
+
+            if (uploadedFile.getPostProcessingResult() != null) {
+                toReturn.append(indentSb);
+                toReturn.append("Post processing result : ").append(uploadedFile.getPostProcessingResult()).append("\n<br/>");
             }
             lastNames = uploadedFile.getFileNames();
         }

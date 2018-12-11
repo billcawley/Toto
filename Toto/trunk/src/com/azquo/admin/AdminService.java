@@ -26,8 +26,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import static com.azquo.dataimport.ImportService.dbPath;
-import static com.azquo.dataimport.ImportService.onlineReportsDir;
+import static com.azquo.dataimport.ImportService.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -439,6 +438,21 @@ this may now not work at all, perhaps delete?
             for (ReportSchedule reportSchedule : reportSchedules) {
                 ReportScheduleDAO.removeById(reportSchedule);
             }
+        }
+    }
+
+    public static void removeImportTemplateByIdWithBasicSecurity(LoggedInUser loggedInUser, int templateId) {
+        ImportTemplate importTemplate = ImportTemplateDAO.findById(templateId);
+        if (importTemplate != null && (loggedInUser.getUser().isAdministrator() && importTemplate.getBusinessId() == loggedInUser.getUser().getBusinessId())) {
+            Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk());
+            if (Files.exists(fullPath) || Files.isDirectory(fullPath)) {
+                try {
+                    Files.deleteIfExists(fullPath);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            ImportTemplateDAO.removeById(importTemplate);
         }
     }
 

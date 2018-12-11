@@ -89,6 +89,8 @@ CREATE TABLE IF NOT EXISTS `import_template` (
                                              `notes` text COLLATE utf8_unicode_ci NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+ALTER TABLE `import_template`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Table structure for table `online_report`

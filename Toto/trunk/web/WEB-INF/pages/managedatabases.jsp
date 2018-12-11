@@ -12,6 +12,16 @@ Created by IntelliJ IDEA.
 <c:set var="title" scope="request" value="Manage Databases"/>
 <%@ include file="../includes/admin_header.jsp" %>
 
+<script>
+    function showHideDiv(div) {
+        var x = document.getElementById(div);
+        if (x.style.display === "none") {
+            x.style.display = "block";
+        } else {
+            x.style.display = "none";
+        }
+    }
+</script>
 
 <main class="databases">
     <h1>Manage Databases</h1>
@@ -22,6 +32,7 @@ Created by IntelliJ IDEA.
             <li><a href="#tab2">DB Management</a></li>
             <li><a href="#tab3">Maintenance</a></li>
             <c:if test="${pendinguploads.size() > 0}"><li><a href="#tab4">Pending Uploads</a></li></c:if>
+            <li><a href="#tab5">Import Templates</a></li>
         </ul>
         <!-- Uploads -->
         <div id="tab1" style="display:none">
@@ -324,6 +335,47 @@ Created by IntelliJ IDEA.
             </c:if>
         </div>
         <!-- END pending Uploads -->
+        <!-- Import Templates -->
+        <div id="tab5" style="display:none">
+            <h3>Import Templates</h3>
+            <!-- Archive List -->
+            <form action="/api/ManageDatabases?templateupload=1#tab5" method="post" enctype="multipart/form-data">
+                <table>
+                    <tbody>
+                    <tr>
+                        <td><label for="uploadFile">Upload Template:</label> <input type="file" name="uploadFile">
+                        </td>
+                        <td><input type="hidden" name="template" value="true"/></td>
+                        <td><input type="submit" name="Upload" value="Upload" class="button "/></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </form>
+            <table>
+                <thead>
+                <tr>
+                    <td>Uploader</td>
+                    <td>Template Name</td>
+                    <td>Date Uploaded</td>
+                    <td></td>
+                </tr>
+                </thead>
+                <tbody>
+                <c:forEach items="${importTemplates}" var="template">
+                    <tr>
+                        <td>${template.user}</td>
+                        <td>${template.templateName}</td>
+                        <td>${template.dateCreated}</td>
+                        <td>
+                            <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#tab5" onclick="return confirm('Are you sure you want to delete ${template.templateName}?')" class="button small" title="Delete ${template.templateName}"><span class="fa fa-trash" title="Delete"></span> </a>
+                            <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}#tab5" class="button small" title="Download"><span class="fa fa-download" title="Download"></span> </a>
+                        </td>
+                    </tr>
+                </c:forEach>
+                </tbody>
+            </table>
+        </div>
+        <!-- END Uploads -->
     </div>
 </main>
 

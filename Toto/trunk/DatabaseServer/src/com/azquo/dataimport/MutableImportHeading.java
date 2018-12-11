@@ -85,7 +85,7 @@ class MutableImportHeading {
     /*dictionaryTerms used to try to bring order to unrestricted string input.   A table can be uploaded (dictionaryTerms) against items in a list.  Each term element contains a comma-separated list of strings
     the terms are connected by + or - signs to indicate that elements from both sets must be present, or to exclude any item that contains elements from the list respectively.
     */
-    Map<Name,List<DictionaryTerm>> dictionaryMap = null;
+    Map<Name,List<ImmutableImportHeading.DictionaryTerm>> dictionaryMap = null;
     Map<String, List<String>> synonyms = null;
     String lookupFrom = null;
     String lookupTo = null;

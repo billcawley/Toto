@@ -243,14 +243,14 @@ public class DSSpreadsheetService {
         }
         bw.flush();
         bw.close();
-        AtomicInteger valuesModifiedCounter = new AtomicInteger();
-        DSImportService.readPreparedFile(azquoMemoryDBConnection, new UploadedFile(tempPath, Collections.singletonList("csv-" + cellsAndHeadingsForDisplay.getRegion())), valuesModifiedCounter);
+        UploadedFile uploadedFile = new UploadedFile(tempPath, Collections.singletonList("csv-" + cellsAndHeadingsForDisplay.getRegion()));
+        DSImportService.readPreparedFile(azquoMemoryDBConnection, uploadedFile);
         // persist no longer automatic on importing so just do it here
         new Thread(azquoMemoryDBConnection::persist).start();
         if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
         }
-        return valuesModifiedCounter.get();
+        return uploadedFile.getNoValuesAdjusted().get();
     }
 
     public static void persistDatabase(DatabaseAccessToken databaseAccessToken) {

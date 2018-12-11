@@ -1,6 +1,8 @@
 package com.azquo.admin.database;
 
 import com.azquo.admin.StandardEntity;
+import com.azquo.admin.user.User;
+import com.azquo.admin.user.UserDAO;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -17,7 +19,6 @@ public class ImportTemplate extends StandardEntity implements Serializable {
     private LocalDateTime dateCreated;
     private int businessId;
     private int userId;
-    private String database; // for sending parameters only, I think visually, need to think on this given new structure, TODO
     private String templateName;
     private String filename;
     private String notes;
@@ -26,17 +27,14 @@ public class ImportTemplate extends StandardEntity implements Serializable {
             , LocalDateTime dateCreated
             , int businessId
             , int userId
-            , String database
             , String templateName
             , String filename
             , String notes
-
     ) {
         this.id = id;
         this.dateCreated = dateCreated;
         this.businessId = businessId;
         this.userId = userId;
-        this.database = database;
         this.templateName = templateName;
         this.filename = filename;
         this.notes = notes;
@@ -54,6 +52,14 @@ public class ImportTemplate extends StandardEntity implements Serializable {
         return userId;
     }
 
+    public String getUser() {
+        User u = UserDAO.findById(userId);
+        if (u != null){
+            return u.getName();
+        }
+        return null;
+    }
+
     public void setUserId(int userId) {
         this.userId = userId;
     }
@@ -64,14 +70,6 @@ public class ImportTemplate extends StandardEntity implements Serializable {
 
     public void setDateCreated(LocalDateTime dateCreated) {
         this.dateCreated = dateCreated;
-    }
-
-    public String getDatabase() {
-        return database;
-    }
-
-    public void setDatabase(String database) {
-        this.database = database;
     }
 
     public String getFilename() {
@@ -109,7 +107,6 @@ public class ImportTemplate extends StandardEntity implements Serializable {
                 ", dateCreated=" + dateCreated +
                 ", businessId=" + businessId +
                 ", userId=" + userId +
-                ", database='" + database + '\'' +
                 ", templateName='" + templateName + '\'' +
                 ", filename='" + filename + '\'' +
                 ", notes='" + notes + '\'' +

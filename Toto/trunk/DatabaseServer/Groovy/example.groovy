@@ -1,19 +1,18 @@
 // Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
 // just a test file to prove the point that we can preprocess using groovy
 
-import com.azquo.dataimport.ValuesImport
+import com.azquo.spreadsheet.transport.UploadedFile
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.service.*;
 import com.azquo.memorydb.*;
-import com.azquo.dataimport.ValuesImportConfig
 
 def fileProcess(Object[] args) {
     // loose typing seems to be what's required here
-    ValuesImportConfig valuesImportConfig = (ValuesImportConfig) args[0];
-    String filePath = valuesImportConfig.getUploadedFile().getPath();
-    AzquoMemoryDBConnection azquoMemoryDBConnection = valuesImportConfig.getAzquoMemoryDBConnection();
+    UploadedFile uploadedFile = (UploadedFile) args[0];
+    AzquoMemoryDBConnection azquoMemoryDBConnection = (AzquoMemoryDBConnection) args[1];
+    String filePath = uploadedFile.getPath();
     File file = new File(filePath);
     def outFile = filePath + "groovyout"
     File writeFile = new File(outFile);

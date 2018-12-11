@@ -590,7 +590,7 @@ public class ReportRenderer {
                 /*
                 CellRegion dataRegion = getCellRegionForSheetAndName(sheet, "az_DataRegion" + region);// this function should not be called without a valid data region
                 if (dataRegion != null) {
-                    sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching header and context regions for this data region : az_DataRegion" + region + " : " + errorMessage);
+                    sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching heading and context regions for this data region : az_DataRegion" + region + " : " + errorMessage);
                 } else {
                     System.out.println("no region found for az_DataRegion" + region);
                 }
@@ -600,8 +600,8 @@ public class ReportRenderer {
         } else {
             CellRegion dataRegion = BookUtils.getCellRegionForSheetAndName(sheet, AZDATAREGION + region);// this function should not be called without a valid data region
             if (dataRegion != null) {
-                sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching header and context regions for this data region : " + AZDATAREGION + region);
-                return "Unable to find matching header and context regions for this data region : " + AZDATAREGION + region;
+                sheet.getInternalSheet().getCell(dataRegion.getRow(), dataRegion.getColumn()).setStringValue("Unable to find matching heading and context regions for this data region : " + AZDATAREGION + region);
+                return "Unable to find matching heading and context regions for this data region : " + AZDATAREGION + region;
             } else {
                 System.out.println("no region found for " + AZDATAREGION + region);
                 return "no region found for " + AZDATAREGION + region;

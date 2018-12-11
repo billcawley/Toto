@@ -51,7 +51,6 @@ public class ImportTemplateDAO {
                         , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(DATECREATED))
                         , rs.getInt(BUSINESSID)
                         , rs.getInt(USERID)
-                        , ""
                         , rs.getString(TEMPLATE_NAME)
                         , rs.getString(FILENAME)
                         , rs.getString(NOTES)
@@ -94,6 +93,14 @@ public class ImportTemplateDAO {
         namedParams.addValue(USERID, userId);
         return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + TEMPLATE_NAME + " LIKE :" + TEMPLATE_NAME + " and " + USERID + " = :" + USERID, TABLENAME, importTemplateRowMapper, namedParams);
     }
+
+    public static List<ImportTemplate> findForBusinessId(int businessId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        return StandardDAO.findListWithWhereSQLAndParameters("  WHERE " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, importTemplateRowMapper, namedParams);
+    }
+
+
 
     public static ImportTemplate findById(int id) {
         return StandardDAO.findById(id, TABLENAME, importTemplateRowMapper);

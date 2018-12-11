@@ -11,10 +11,10 @@ import java.util.Set;
  *
  * Created by cawley on 03/02/15.
  * <p/>
- * Headers of Rows and Columns and Context fields used to be Names, plain and simple.
+ * Headings of Rows and Columns and Context fields used to be Names, plain and simple.
  * <p/>
  * Now they can be attributes also (and may be other things too), thus this class which will now need to be
- * used to represent these headers and context.
+ * used to represent these headings and context.
  * <p/>
  * See no reason not to make this simple and immutable. Bottom line is that this can be either an attribute or a name
  *

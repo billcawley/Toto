@@ -68,7 +68,7 @@ class NameStackOperators {
         //System.out.println("aft mutable init " + heapMarker);
         //System.out.println("starting / set sizes  nameStack(stackcount)" + nameStack.get(stackCount).getAsCollection().size() + " nameStack(stackcount - 1) " + nameStack.get(stackCount - 1).getAsCollection().size());
         Collection<Name> lastName = nameStack.get(stackCount).getAsCollection();
-        // if filtering brand it means az_brand - this is for the pivot functionality, pivot filter and pivot header
+        // if filtering brand it means az_brand - this is for the pivot functionality, pivot filter and pivot heading
         if (lastName.size() == 1) {
             Name setName = lastName.iterator().next();
             lastName = setName.findAllChildren();

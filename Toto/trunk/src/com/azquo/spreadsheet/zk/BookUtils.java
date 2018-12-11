@@ -140,7 +140,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return aref.getFirstCell();
     }
 
-    static String rangeToText(int row, int col) {
+    public static String rangeToText(int row, int col) {
         if (col > 26) {
             int hbit = (col - 1) / 26;
             return "$" + (char) (hbit + 64) + (char) (col - hbit * 26 + 64) + "$" + (row + 1);
