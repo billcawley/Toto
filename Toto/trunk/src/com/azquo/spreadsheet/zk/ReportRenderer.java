@@ -3,6 +3,7 @@ package com.azquo.spreadsheet.zk;
 import com.azquo.MultidimensionalListUtils;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseServer;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.*;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.controller.OnlineController;
@@ -59,6 +60,7 @@ public class ReportRenderer {
     public static final String AZPDF = "az_pdf";
     public static final String AZTOTALFORMAT = "az_totalformat";
     private static final String AZFASTLOAD = "az_fastload";
+
 
     public static boolean populateBook(Book book, int valueId) {
         return populateBook(book, valueId, false, false, null, true);
@@ -409,8 +411,12 @@ public class ReportRenderer {
     // return the error, executing reports might want it
     private static String populateRegionSet(Sheet sheet, int reportId, final String sheetName, final String region, int valueId, UserRegionOptions userRegionOptions, LoggedInUser loggedInUser, boolean quiet, Set<String> repeatRegionTracker) {
         CellRegion queryRegion = BookUtils.getCellRegionForSheetAndName(sheet,"az_query"+region);
+        SName contextDescription = BookUtils.getNameByName(AZCONTEXT + region, sheet);
         if (queryRegion!=null){
-            ReportService.resolveQuery(loggedInUser,sheet,queryRegion);
+            List<List<String>> contextList = BookUtils.nameToStringLists(contextDescription);
+            loggedInUser.setOnlineReport(OnlineReportDAO.findById(reportId));
+
+            ReportService.resolveQuery(loggedInUser,sheet,queryRegion, contextList);
         }
 
         if (userRegionOptions.getUserLocked()) { // then put the flag on the book, remember to take it off (and unlock!) if there was an error
@@ -418,7 +424,6 @@ public class ReportRenderer {
         }
         SName columnHeadingsDescription = BookUtils.getNameByName(AZCOLUMNHEADINGS + region, sheet);
         SName rowHeadingsDescription = BookUtils.getNameByName(AZROWHEADINGS + region, sheet);
-        SName contextDescription = BookUtils.getNameByName(AZCONTEXT + region, sheet);
         String errorMessage = null;
         // make a blank area for data to be populated from, an upload in the sheet so to speak (ad hoc)
         if ((columnHeadingsDescription != null && rowHeadingsDescription == null)||(rowHeadingsDescription !=null && columnHeadingsDescription==null)) {
@@ -508,7 +513,7 @@ public class ReportRenderer {
                 }
 
                 CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, region, valueId, rowHeadingList, BookUtils.nameToStringLists(columnHeadingsDescription),
-                        contextList, userRegionOptions, quiet);
+                        contextList, userRegionOptions, quiet,null);
                 loggedInUser.setSentCells(reportId, sheetName, region, cellsAndHeadingsForDisplay);
                 // now, put the headings into the sheet!
                 // might be factored into fill range in a bit

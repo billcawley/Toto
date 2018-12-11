@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.DateUtils;
+import com.azquo.StringLiterals;
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
@@ -106,33 +107,83 @@ public class ReportService {
         for (SName name : sheet.getBook().getInternalBook().getNames()) {
             if (name != null && name.getName() != null && name.getName().endsWith("Query")) {
                 //adjusted by WFC to allow a whole range to be the query.
-                resolveQuery(loggedInUser,sheet,name.getRefersToCellRegion());
+                resolveQuery(loggedInUser,sheet,name.getRefersToCellRegion(), null);
               }
         }
     }
 
-    static void resolveQuery(LoggedInUser loggedInUser,Sheet sheet, CellRegion cellRegion){
-        for (int row = 0;row< cellRegion.getRowCount();row++) {
+    static void resolveQuery(LoggedInUser loggedInUser,Sheet sheet, CellRegion cellRegion, List<List<String>>contextSource) {
+        for (int row = 0; row < cellRegion.getRowCount(); row++) {
             for (int col = 0; col < cellRegion.getColumnCount(); col++) {
                 SCell queryCell = sheet.getInternalSheet().getCell(cellRegion.getRow() + row, cellRegion.getColumn() + col);
-                try {
-                    if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR && queryCell.getStringValue().length() > 0)) {
-                        // hack - on resolving a forumlae if the formula is a string but formatted as number get stirng can error unless you do this
-                        if (queryCell.getType() == SCell.CellType.FORMULA) {
-                            queryCell.clearFormulaResultCache();
-                        }
-                        String queryResult = CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue());
-                        if (queryResult.toLowerCase().startsWith("error")) {
-                            BookUtils.setValue(queryCell, queryCell.getStringValue() + " - " + queryResult);
-                            Ranges.range(sheet, queryCell.getRowIndex(), queryCell.getColumnIndex()).notifyChange(); //
-                        }
+                if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR && queryCell.getStringValue().length() > 0)) {
+                    // hack - on resolving a forumlae if the formula is a string but formatted as number get stirng can error unless you do this
+                    if (queryCell.getType() == SCell.CellType.FORMULA) {
+                        queryCell.clearFormulaResultCache();
                     }
-                }catch(Exception e){
-
-                }
+                    String queryResult = null;
+                    String query = queryCell.getStringValue();
+                    if (!resolveFilterQuery(loggedInUser, query, contextSource)) {
+                        queryResult = CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue());
+                    }
+                    if (queryResult!=null && queryResult.toLowerCase().startsWith("error")) {
+                        BookUtils.setValue(queryCell, queryCell.getStringValue() + " - " + queryResult);
+                        Ranges.range(sheet, queryCell.getRowIndex(), queryCell.getColumnIndex()).notifyChange(); //
+                    }
+                 }
             }
         }
     }
+
+    private static boolean resolveFilterQuery(LoggedInUser loggedInUser, String query, List<List<String>>contextSource){
+        String filterSet = null;
+        int nameEnd = 0;
+        if (query.startsWith(StringLiterals.QUOTE+"")) {
+            nameEnd = query.indexOf(StringLiterals.QUOTE, 1);
+        }else {
+            nameEnd = query.indexOf(" ");
+        }
+        if (nameEnd <0) return false;
+        filterSet = query.substring(0, nameEnd + 1).trim();
+        query = query.substring(nameEnd+1).trim();
+        if (!query.toLowerCase().startsWith("where (")) return false;
+        query = query.substring(6);
+        int bracketCount = 1;
+        int pos = 1;
+        while (pos < query.length()){
+            if (query.charAt(pos)=='(') bracketCount++;
+            if (query.charAt(pos)==')') bracketCount--;
+            if (bracketCount==0){
+                String calc = query.substring(0,pos + 1);
+                String remainder = query.substring(pos+1).trim();
+                if (remainder.toLowerCase().startsWith("as ")){
+                    String target = remainder.substring(3);
+                    List<List<String>> rowHeadingSource = new ArrayList<>();
+                    List<List<String>> colHeadingSource = new ArrayList<>();
+                    List<String> rowHeadingsLine = new ArrayList<>();
+                    rowHeadingsLine.add(filterSet + " children");
+                    rowHeadingSource.add(rowHeadingsLine);
+                    List<String> colHeadingsLine = new ArrayList<>();
+                    colHeadingsLine.add(calc);
+                    colHeadingSource.add(colHeadingsLine);
+
+                    try{
+                        UserRegionOptions userRegionOptions = new UserRegionOptions(0,loggedInUser.getUser().getId(),loggedInUser.getOnlineReport().getId(),"---","---");
+                        SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser,"---",0,rowHeadingSource, colHeadingSource, contextSource,userRegionOptions, true,target);
+                    }catch (Exception e){
+                        return false;
+                    }
+                    break;
+
+                }
+            }
+            pos++;
+        }
+        return true;
+
+    }
+
+
 
     private static final DateTimeFormatter df = DateTimeFormatter.ofPattern ("yyyy-MM-dd");
 

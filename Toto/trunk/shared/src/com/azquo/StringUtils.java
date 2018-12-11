@@ -83,6 +83,7 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
     public static String prepareStatement(String statement, List<String> nameNames, List<String> attributeStrings, List<String> stringLiterals) throws Exception {
         // sort the name quotes - will be replaces with !01 !02 etc.
         statement = statement.replace(" " + StringLiterals.ASGLOBAL2 + " ", " " + StringLiterals.ASGLOBAL + " ");
+
         StringBuilder modifiedStatement = new StringBuilder();
         Pattern p = Pattern.compile("" + StringLiterals.QUOTE + ".*?" + StringLiterals.QUOTE + ""); // don't need escaping here I don't think. Possible to add though.
         Matcher matcher = p.matcher(statement);
@@ -149,19 +150,24 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
 
         // now, we want to run validation on what's left really. One problem is that operators might not have spaces
         // ok this is hacky, I don't really care for the moment
+        if (statement.contains(" and ")){
+            int j=1;
+        }
         statement = statement.replace("*", " * ").replace("  ", " ");
         statement = statement.replace("+", " + ").replace("  ", " ");
         statement = statement.replace("-", " - ").replace("  ", " ");
         statement = statement.replace("/", " / ").replace("  ", " ");
+        statement = statement.replace("/", " / ").replace("  ", " ");
         statement = statement.replace("<", " < ").replace("  ", " ");
         statement = statement.replace(">", " > ").replace("  ", " ");
-        statement = statement.replace("<=", " <= ").replace("  ", " ");
-        statement = statement.replace(">=", " >= ").replace("  ", " ");
         statement = statement.replace("=", " = ").replace("  ", " ");
         statement = statement.replace("(", " ( ").replace("  ", " ");
         statement = statement.replace(")", " ) ").replace("  ", " ");
+        statement = statement.replace(" AND ", " & ").replace(" OR "," | ");
+        statement = statement.replace(" and ", " & ").replace(" or "," | ");
         // this assumes that the , will be taken care of after the parsing
-        statement = statement.replace(",", " , ").replace("  ", " ");
+        statement = statement.replace(",", " , ").replace("  ", " ").replace("  "," ");//remove up to two spaces
+        statement = statement.replace("> =",StringLiterals.GREATEROREQUAL+"").replace("< =",StringLiterals.LESSOREQUAL+"");
         statement = statement.replaceAll("(?i)level lowest", "level 100");
         statement = statement.replaceAll("(?i)level highest", "level -100");
         statement = statement.replaceAll("(?i)level all", "level 101");
@@ -220,6 +226,8 @@ I should be ok for StringTokenizer at this point
                 || term.equals("<") || term.equals("=") || term.equals(",")
                 || term.equals("(") || term.equals(")")
                 || term.equals("[") || term.equals("]")
+                || term.equals("&") || term.equals("|")
+                || term.equals(StringLiterals.GREATEROREQUAL+"") || term.equals(StringLiterals.LESSOREQUAL+"")
                 || term.equalsIgnoreCase(StringLiterals.AND)
                 || term.equalsIgnoreCase(StringLiterals.LEVEL) || term.equalsIgnoreCase(StringLiterals.FROM)
                 || term.equalsIgnoreCase(StringLiterals.TO) || term.equalsIgnoreCase(StringLiterals.COUNT)
@@ -241,12 +249,12 @@ I should be ok for StringTokenizer at this point
     */
 
     public static String shuntingYardAlgorithm(String calc) {
-        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + StringLiterals.MATHFUNCTION + StringLiterals.CONTAINSSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
+        Pattern p = Pattern.compile("[" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&|<=>"+ StringLiterals.GREATEROREQUAL + StringLiterals.LESSOREQUAL + StringLiterals.MATHFUNCTION + StringLiterals.CONTAINSSYMBOL + "\\-\\+/\\*\\(\\)&]"); // only simple maths allowed at present
         StringBuilder sb = new StringBuilder();
         String stack = "";
         Matcher m = p.matcher(calc);
         int startPos = 0;
-        final String funcOrder = StringLiterals.CONTAINSSYMBOL + "+-/*" + StringLiterals.MATHFUNCTION;//if a CONTAINS b  then result is  b - a, so CONTAINSSYMBOL has higher priority than + or -)
+        final String funcOrder = "" + StringLiterals.ASSYMBOL + StringLiterals.ASGLOBALSYMBOL + "&|<=>" + StringLiterals.GREATEROREQUAL + StringLiterals.LESSOREQUAL + StringLiterals.CONTAINSSYMBOL + "+-/*" + StringLiterals.MATHFUNCTION;//if a CONTAINS b  then result is  b - a, so CONTAINSSYMBOL has higher priority than + or -)
         while (m.find()) {
             String opfound = m.group();
             char thisOp = opfound.charAt(0);

@@ -185,9 +185,9 @@ public class SpreadsheetService {
 
     public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(LoggedInUser loggedInUser, String regionName, int valueId, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource
-            , UserRegionOptions userRegionOptions, boolean quiet) throws Exception {
+            , UserRegionOptions userRegionOptions, boolean quiet, String filterTargetName) throws Exception {
         return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).getCellsAndHeadingsForDisplay(loggedInUser.getDataAccessToken(), loggedInUser.getUser().getEmail(), regionName, valueId, rowHeadingsSource, colHeadingsSource, contextSource,
-                userRegionOptions.getRegionOptionsForTransport(), quiet);
+                userRegionOptions.getRegionOptionsForTransport(), quiet, filterTargetName);
     }
 
     // ok now this is going to ask the DB, it needs the selection criteria and original row and col for speed (so we don't need to get all the data and sort)

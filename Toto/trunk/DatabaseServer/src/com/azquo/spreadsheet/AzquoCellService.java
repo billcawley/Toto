@@ -45,11 +45,11 @@ class AzquoCellService {
         // ok I can't see a way around this, I'm going to have to check all doubles for a null and if I find one abandon the doublesort
         int doubleSorts = sortCount;
         for (List<TypedPair<Double, String>> check : sortListsMap.values()) {
-             for (int i = 0; i < sortCount; i++) {
+            for (int i = 0; i < sortCount; i++) {
                 TypedPair<Double, String> value = check.get(i);
                 // hack for gaps, make them 0, lets see how it goes (of course one non blank will mean string sorting which is correct)
-                if ("".equals(value.getSecond()) && value.getFirst() == null){
-                    check.set(i, new TypedPair<>(0.0,null));
+                if ("".equals(value.getSecond()) && value.getFirst() == null) {
+                    check.set(i, new TypedPair<>(0.0, null));
                 } else if (value.getFirst() == null) {
                     if (doubleSort.get(i)) {
                         doubleSort.set(i, false);
@@ -65,7 +65,7 @@ class AzquoCellService {
         List<Map.Entry<Integer, List<TypedPair<Double, String>>>> list = new ArrayList<>(sortListsMap.entrySet());
         // sort list based on the list of values in each entry
         try {
-             list.sort((o1, o2) -> {
+            list.sort((o1, o2) -> {
                 int result = 0;
                 if (o1.getValue().size() != o2.getValue().size()) { // the really should match! I'll call it neutral for the moment
                     return 0;
@@ -87,8 +87,8 @@ class AzquoCellService {
                 }
                 return sortRowsUp ? result : -result;
             });
-        }catch (Exception e){
-             //not sure what to do if there are null values in the list that needs to be sorted
+        } catch (Exception e) {
+            //not sure what to do if there are null values in the list that needs to be sorted
         }
         for (Map.Entry<Integer, List<TypedPair<Double, String>>> entry : list) {
             sortedValues.add(entry.getKey());
@@ -108,7 +108,7 @@ class AzquoCellService {
     }
 
     static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, String user, int valueId, boolean quiet) throws Exception {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, String user, int valueId, boolean quiet, String filterTargetName) throws Exception {
         if (!quiet) {
             azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
         }
@@ -130,12 +130,12 @@ class AzquoCellService {
         if (time > threshold) System.out.println("Context parsed in " + time + "ms");
         track = System.currentTimeMillis();
         List<String> defaultLanguages = languages;
-        if (regionOptions.rowLanguage != null && regionOptions.rowLanguage.length() > 0){
+        if (regionOptions.rowLanguage != null && regionOptions.rowLanguage.length() > 0) {
             languages = new ArrayList<>();
             languages.add(regionOptions.rowLanguage);
         }
         final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix, regionOptions.ignoreHeadingErrors);
-         languages = defaultLanguages;
+        languages = defaultLanguages;
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Row headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
@@ -144,7 +144,7 @@ class AzquoCellService {
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Row headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
-        if (regionOptions.columnLanguage != null && regionOptions.columnLanguage.length() > 0){
+        if (regionOptions.columnLanguage != null && regionOptions.columnLanguage.length() > 0) {
             languages = new ArrayList<>();
             languages.add(regionOptions.columnLanguage);
         }
@@ -178,6 +178,20 @@ class AzquoCellService {
             permute = true;
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings
                 , regionOptions, permute);
+        if (filterTargetName!=null){
+            Name target = NameService.findByName(azquoMemoryDBCOnnection, filterTargetName);
+            target.setChildrenWillBePersisted(new ArrayList<>());
+            Iterator rowIt = dataToShow.iterator();
+            for (List<DataRegionHeading>row:rowHeadings){
+                List<AzquoCell> dataRow = (List<AzquoCell>)rowIt.next();
+                DataRegionHeading dataRegionHeading = row.iterator().next();
+                AzquoCell cell = dataRow.iterator().next();
+                if (cell.getDoubleValue()>0){
+                    target.addChildWillBePersisted(dataRegionHeading.getName());
+                }
+            }
+
+        }
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data sort/filter in " + time + "ms");
         System.out.println("region delivered in " + (System.currentTimeMillis() - start) + "ms");
@@ -192,7 +206,7 @@ class AzquoCellService {
         List<Collection<Name>> relevantNameSets = new ArrayList<>();
         // gather names
         for (DataRegionHeading heading : headingList) {
-            if (heading.getName()==null || (heading.getName().getChildren().size()==0 && heading.getName().getValues().size()==0)){
+            if (heading.getName() == null || (heading.getName().getChildren().size() == 0 && heading.getName().getValues().size() == 0)) {
                 return new ArrayList<>();
             }
             if (heading.getName() != null && heading.getName().getChildren().size() > 0) {
@@ -386,13 +400,13 @@ class AzquoCellService {
                                 }
                             }
                             String stringVal = cell.getStringValue();
-                               try{
-                                    LocalDate date = LocalDate.parse("01-"+ stringVal, dateTimeFormatter);
-                                    d = (double)date.toEpochDay();
+                            try {
+                                LocalDate date = LocalDate.parse("01-" + stringVal, dateTimeFormatter);
+                                d = (double) date.toEpochDay();
 
-                                }catch(Exception e){
-                                   //ignore.  If every val produces a double, then the double will be sorted.
-                                }
+                            } catch (Exception e) {
+                                //ignore.  If every val produces a double, then the double will be sorted.
+                            }
 
                             sortRowValues.add(new TypedPair<>(d, cell.getStringValue()));
                         }
@@ -485,7 +499,7 @@ class AzquoCellService {
             while (colNo < toReturn.get(0).size()) {
                 boolean colsBlank = true;
                 for (int j = 0; j < regionOptions.hideCols; j++) {
-                    for (int rowNo = 0; rowNo < toReturn.size();rowNo++) {
+                    for (int rowNo = 0; rowNo < toReturn.size(); rowNo++) {
                         AzquoCell cellToCheck = toReturn.get(rowNo).get(colNo + j);
                         if (cellToCheck.getStringValue() != null && cellToCheck.getStringValue().length() > 0 && !cellToCheck.getStringValue().equals("0.0")) {
                             colsBlank = false;
@@ -498,7 +512,7 @@ class AzquoCellService {
                 }
                 if (colsBlank) {
                     for (int i = 0; i < regionOptions.hideCols; i++) {
-                        for (int j=0;j<toReturn.size();j++){
+                        for (int j = 0; j < toReturn.size(); j++) {
                             toReturn.get(j).remove(colNo);
                         }
                     }
@@ -543,12 +557,12 @@ class AzquoCellService {
     }
 
 
-    private static boolean hasAttribute(AzquoCell cell){
-        for(DataRegionHeading heading:cell.getColumnHeadings()){
+    private static boolean hasAttribute(AzquoCell cell) {
+        for (DataRegionHeading heading : cell.getColumnHeadings()) {
 
-            if (heading != null && heading.getAttribute()!= null && !heading.getAttribute().equals(".")) return true;
+            if (heading != null && heading.getAttribute() != null && !heading.getAttribute().equals(".")) return true;
         }
-        for (DataRegionHeading heading:cell.getRowHeadings()) {
+        for (DataRegionHeading heading : cell.getRowHeadings()) {
             if (heading != null && heading.getAttribute() != null && !heading.getAttribute().equals(".")) return true;
 
         }
@@ -652,4 +666,6 @@ class AzquoCellService {
         }
         return toReturn;
     }
-}
+
+ }
+

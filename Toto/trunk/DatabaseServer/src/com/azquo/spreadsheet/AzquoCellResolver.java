@@ -80,7 +80,7 @@ public class AzquoCellResolver {
         if (hasData) {
             hasData = false;
             for (DataRegionHeading heading : columnHeadings) {
-                if (heading != null && (heading.getName() != null || heading.getAttribute() != null || heading.getFunction() != null)) {
+                if (heading != null && (heading.getName() != null || heading.getAttribute() != null || heading.getFunction() != null || heading.getCalculation()!= null)) {
                     hasData = true;
                     break;
                 }
@@ -215,7 +215,8 @@ public class AzquoCellResolver {
                      List<List<Name>> permutedNames = new ArrayList<>();
                      permuteNames(permutedNames, sharedNames, namesToResolve);
                      for (List<Name> onePermute : permutedNames) {
-                         doubleValue += ValueService.findValueForNames(connection, onePermute, locked, valuesHook, languages, null, nameComboValueCache, debugInfo);
+                         //ASSUMING NO CALCS???
+                         doubleValue += ValueService.findValueForNames(connection, onePermute, null,locked, valuesHook, languages, null, nameComboValueCache, debugInfo);
                      }
                      stringValue = doubleValue + "";
                  }else{
@@ -309,7 +310,7 @@ public class AzquoCellResolver {
                 }
             }
             for (DataRegionHeading heading : headingsForThisCell) {
-                if (heading.getName() == null && heading.getAttribute() == null && heading.getFunction()!= DataRegionHeading.FUNCTION.BESTMATCH) { // a redundant check? todo : confirm
+                if (heading.getName() == null && heading.getAttribute() == null && heading.getFunction()!= DataRegionHeading.FUNCTION.BESTMATCH && heading.getCalculation()==null) { // a redundant check? todo : confirm
                     checked = false;
                 }
                 if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values
@@ -377,7 +378,8 @@ public class AzquoCellResolver {
                                 }
                             }
                         }
-                        doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell), locked, valuesHook, languages, functionHeading, nameComboValueCache, debugInfo);
+                        doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell),
+                                                                                DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, languages, functionHeading, nameComboValueCache, debugInfo);
                         if (function == DataRegionHeading.FUNCTION.BESTMATCH && valueFunctionSet != null && description!=null) { // last lookup: we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             String cutoffString = null;

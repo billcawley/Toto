@@ -19,24 +19,30 @@ class NameFilterFunctions {
     // since what it's passed could be immutable need to return
     static NameSetList filter(NameSetList nameSetList, String condition, List<String> strings, List<String> attributeNames) {
         NameSetList toReturn = nameSetList.mutable ? nameSetList : new NameSetList(nameSetList); // make a new mutable NameSetList if the one passed wasn't mutable
-        //NOT HANDLING 'OR' AT PRESENT
-        int andPos = condition.toLowerCase().indexOf(" and ");
-        // get the correct now mutable member collection to filter
-        Collection<Name> namesToFilter = toReturn.getAsCollection();
+         Collection<Name> namesToFilter = toReturn.getAsCollection();
         int lastPos = 0;
-        while (lastPos < condition.length()) {
-            if (andPos < 0) {
-                andPos = condition.length();
-            }
-            String clause = condition.substring(lastPos, andPos).trim();
-            Pattern p = Pattern.compile("[<=>]+");
-            Matcher m = p.matcher(clause);
+        StringTokenizer st = new StringTokenizer(condition, " ");
+        List<Set<Name>> nameStack = new ArrayList<>();
+        int stackPos = 0;
 
-            if (m.find()) {
-                String opfound = m.group();
-                int pos = m.start();
-                String clauseLhs = clause.substring(0, pos).trim();
-                String clauseRhs = clause.substring(m.end()).trim();
+        while (st.hasMoreTokens()) {
+            String opString = st.nextToken();
+            char op = opString.charAt(0);
+            if (op == '&' || op == '|'){
+                stackPos--;
+                if (op=='&'){
+                    nameStack.get(stackPos - 1).addAll(nameStack.get(stackPos));
+                }else{
+                    nameStack.get(stackPos - 1).removeAll(nameStack.get(stackPos));
+                }
+                nameStack.remove(stackPos);
+
+            }else {
+
+                String clauseLhs = opString;
+                String clauseRhs = st.nextToken();
+                opString = st.nextToken();
+                op = opString.charAt(0);
 
                 // note, given the new parser these clauses will either be literals or begin .
                 // there may be code improvements that can be made knowing this
@@ -76,29 +82,33 @@ class NameFilterFunctions {
                     }
                     boolean OK = false;
                     int comp = valLhs.compareTo(valRhs);
-                    for (int i = 0; i < opfound.length(); i++) {
-                        char op = opfound.charAt(i);
-                        switch (op) {
-                            case '=':
-                                if (comp == 0) OK = true;
-                                break;
-                            case '<':
-                                if (comp < 0) OK = true;
-                                break;
-                            case '>':
-                                if (comp > 0) OK = true;
-                        }
+                    switch (op) {
+                        case '=':
+                            if (comp == 0) OK = true;
+                            break;
+                        case '<':
+                            if (comp < 0) OK = true;
+                            break;
+                        case '>':
+                            if (comp > 0) OK = true;
+                            break;
+                        case StringLiterals.GREATEROREQUAL:
+                            if (comp >= 0) OK = true;
+                            break;
+                        case StringLiterals.LESSOREQUAL:
+                            if (comp <= 0) OK = true;
+                            break;
                     }
                     if (!OK) {
                         namesToRemove.add(name);
                     }
                 }
-                // outside the loop, iterator shouldn't get shirty
-                namesToFilter.removeAll(namesToRemove);
+                nameStack.add(namesToRemove);
+                stackPos++;
             }
-            lastPos = andPos + 5;
-            andPos = condition.toLowerCase().indexOf(" and ", lastPos);
-        }
+            // outside the loop, iterator shouldn't get shirty
+         }
+        namesToFilter.removeAll(nameStack.get(0));
         return toReturn; // its appropriate member collection should have been modified via namesToFilter above, return it
     }
 

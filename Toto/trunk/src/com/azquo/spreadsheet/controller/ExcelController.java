@@ -472,7 +472,7 @@ public class ExcelController {
                         return "Empty space set to ad hoc data : " + excelJsonRequest.region;
                     } else {
                         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, excelJsonRequest.region, 0, excelJsonRequest.rowHeadings, excelJsonRequest.columnHeadings,
-                                excelJsonRequest.context, userRegionOptions, true);
+                                excelJsonRequest.context, userRegionOptions, true, null);
                         RegionOptions holdOptions = cellsAndHeadingsForDisplay.getOptions();//don't want to send these to Excel
                         cellsAndHeadingsForDisplay.setOptions(null);
                         loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);

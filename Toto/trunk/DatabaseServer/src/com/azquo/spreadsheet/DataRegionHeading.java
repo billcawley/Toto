@@ -57,12 +57,18 @@ public class DataRegionHeading {
     private final Collection<Name> valueFunctionSet; // just used for valueparentcount
     private final double doubleParameter; // initially used for percentile, could be others. I think this needs to be rearranged at some point but for the moment make percentile work.
     private final Collection<Name> attributeSet;
+    private final String calculation; //the description having passed through the preparation routines
 
     DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, Set<Name> valueFunctionSet) {
-        this(name, writeAllowed,function,suffix, description, null, valueFunctionSet, 0);
+        this(name, writeAllowed,function,suffix, description, null, valueFunctionSet, 0, null);
     }
 
     DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
+        this(name, writeAllowed,function,suffix, description, offsetHeadings, valueFunctionSet, doubleParameter, null);
+    }
+
+
+    DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter, String calculation) {
         this.name = name;
         this.attribute = null;
         this.writeAllowed = writeAllowed;
@@ -73,6 +79,7 @@ public class DataRegionHeading {
         this.valueFunctionSet = valueFunctionSet;
         this.doubleParameter = doubleParameter;
         this.attributeSet = null;
+        this.calculation = calculation;
      }
 
     // no functions with attributes for the moment
@@ -87,6 +94,7 @@ public class DataRegionHeading {
         this.valueFunctionSet = null;
         this.doubleParameter = 0;
         this.attributeSet = attributeSet;
+        this.calculation = null;
 
     }
 
@@ -155,6 +163,8 @@ public class DataRegionHeading {
     double getDoubleParameter() {
         return doubleParameter;
     }
+
+    public String getCalculation() { return calculation; }
 
 
 }

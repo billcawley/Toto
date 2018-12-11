@@ -56,10 +56,10 @@ public class DSSpreadsheetService {
      */
 
     public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet) throws Exception {
+            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet, String filterTargetName) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = AzquoCellService.getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
-                , regionOptions, user, valueId, quiet);
+                , regionOptions, user, valueId, quiet, filterTargetName);
         if (data.size() == 0) {
             //when contextSource = null there is an error on attempting to save
             return new CellsAndHeadingsForDisplay(regionName, colHeadingsSource, null, null, null, new ArrayList<>(), rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, null);
@@ -308,7 +308,7 @@ public class DSSpreadsheetService {
             // new logic - get this out here and use it for the cells. Means the region is re resolved regardless but we're getting bottlenecks resolving every cell in this
             // function, executes are slowing it down
             List<List<AzquoCell>> currentData = AzquoCellService.getDataRegion(azquoMemoryDBConnection, cellsAndHeadingsForDisplay.getRegion(), cellsAndHeadingsForDisplay.getRowHeadingsSource(), cellsAndHeadingsForDisplay.getColHeadingsSource(), cellsAndHeadingsForDisplay.getContextSource()
-                    , cellsAndHeadingsForDisplay.getOptions(), user, 0, true);
+                    , cellsAndHeadingsForDisplay.getOptions(), user, 0, true, null);
             if (modifiedInTheMeanTime) { // then we need to compare data as sent to what it is now before trying to save - assuming this is not relevant to the import style above
                 List<List<CellForDisplay>> sentData = cellsAndHeadingsForDisplay.getData();
                 if (currentData.size() != sentData.size()&& redundantNames==null) {// overlapping editable ranges change size if there are redundant names
@@ -759,4 +759,5 @@ public class DSSpreadsheetService {
             }
         }
     }
-}
+
+ }

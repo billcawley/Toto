@@ -14,10 +14,10 @@ import java.util.Set;
  * in order to avoid unnecessary collection copying (we could be talking millions of names)
  * I made this little container to move a collection that could be a list or set and possibly mutable
  */
-class NameSetList {
+public class NameSetList {
     public final Set<Name> set;
     public final List<Name> list;
-    final boolean mutable;
+    public final boolean mutable;
 
     NameSetList(Set<Name> set, List<Name> list, boolean mutable) {
         this.set = set;
@@ -26,13 +26,13 @@ class NameSetList {
     }
 
     // make from an existing (probably immutable) one
-    NameSetList(NameSetList nameSetList) {
+    public NameSetList(NameSetList nameSetList) {
         set = nameSetList.set != null ? HashObjSets.newMutableSet(nameSetList.set) : null;
         list = nameSetList.list != null ? new ArrayList<>(nameSetList.list) : null;
         mutable = true;
     }
 
-    Collection<Name> getAsCollection() {
+    public Collection<Name> getAsCollection() {
         return set != null ? set : list;
     }
 }

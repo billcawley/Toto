@@ -464,7 +464,7 @@ public final class ImportService {
             }
             if (returnNumber%1 == 0) {
                 // specific condition - integer and format all 000, then actually use the format. For zip codes
-                if (dataFormat.contains("0") && dataFormat.replace("0","").isEmpty()){
+                if (dataFormat.length() > 1 && dataFormat.contains("0") && dataFormat.replace("0","").isEmpty()){
                     returnString = df.formatCellValue(cell);
                 } else {
                     returnString = returnNumber.longValue() + "";

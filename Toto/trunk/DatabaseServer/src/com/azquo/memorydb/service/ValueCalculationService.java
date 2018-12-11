@@ -23,7 +23,7 @@ public class ValueCalculationService {
 
     private static final Logger logger = Logger.getLogger(ValueCalculationService.class);
 
-    private static final String OPS = "+-*/" + StringLiterals.MATHFUNCTION;
+    private static final String OPS = "&|<=>+-*/" + StringLiterals.MATHFUNCTION + StringLiterals.GREATEROREQUAL + StringLiterals.LESSOREQUAL;
     private static final String INDEPENDENTOF = "INDEPENDENT OF";
     private static final String USELEVEL = "USE LEVEL";
     private static final String DEPENDENTON = "DEPENDENT ON";
@@ -32,7 +32,7 @@ public class ValueCalculationService {
 
     // Factored off to implement "lowest" calculation criteria (resolve for each permutation and sum) without duplicated code
     // fair few params, wonder if there's a way to avoid that?
-    static double resolveCalc(AzquoMemoryDBConnection azquoMemoryDBConnection, String calcString, List<Name> formulaNames, List<Name> calcnames,
+    static double resolveCalc(AzquoMemoryDBConnection azquoMemoryDBConnection, String calcString, List<Name> formulaNames, List<Name> calcnames, List<String> calcs,
                               MutableBoolean locked, AzquoCellResolver.ValuesHook valuesHook, List<String> attributeNames
             , DataRegionHeading functionHeading, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
         if (debugInfo != null) {
@@ -57,21 +57,46 @@ public class ValueCalculationService {
             if (OPS.contains(term)) { // operation
                 valNo--;
                 char charTerm = term.charAt(0);
-                if (charTerm == StringLiterals.MATHFUNCTION) { // function
-                    if (values[valNo] == EXPFUNCTION){
-                        values[valNo - 1] = Math.exp(values[valNo - 1]);
-                    }
-                } else if (charTerm == '+') {
-                    values[valNo - 1] += values[valNo];
-                } else if (charTerm == '-') {
-                    values[valNo - 1] -= values[valNo];
-                } else if (charTerm == '*') {
-                    values[valNo - 1] *= values[valNo];
-                } else if (values[valNo] == 0) {
-                    values[valNo - 1] = 0;
-                } else {
-                    values[valNo - 1] /= values[valNo];
-                }
+                switch (charTerm) {
+                    case StringLiterals.MATHFUNCTION:
+                        if (values[valNo] == EXPFUNCTION) {
+                            values[valNo - 1] = Math.exp(values[valNo - 1]);
+                        }
+                        break;
+                    case '+':
+                        values[valNo - 1] += values[valNo];
+                        break;
+                    case '|':
+                    case '-':
+                        values[valNo - 1] -= values[valNo];
+                        break;
+                    case '&':
+                    case '*':
+                        values[valNo - 1] *= values[valNo];
+                        break;
+                    case '/':
+                        if (values[valNo] > 0) {
+                            values[valNo - 1] /= values[valNo];
+                        } else {
+                            values[valNo - 1] = 0;
+                        }
+                        break;
+                    case '>':
+                       values[valNo-1] = values[valNo - 1] > values[valNo] ? 1 : 0;
+                       break;
+                    case '<':
+                        values[valNo-1] = values[valNo - 1] < values[valNo] ? 1 : 0;
+                        break;
+                    case '=':
+                        values[valNo-1] = values[valNo - 1] == values[valNo] ? 1 : 0;
+                        break;
+                    case StringLiterals.GREATEROREQUAL:
+                        values[valNo-1] = values[valNo - 1] >= values[valNo] ? 1 : 0;
+                        break;
+                    case StringLiterals.LESSOREQUAL:
+                        values[valNo-1] = values[valNo - 1] <= values[valNo] ? 1 : 0;
+                        break;
+                 }
             } else { // a value, not in the Azquo sense, a number or reference to a name
                 if (StringLiterals.EXP.equalsIgnoreCase(term)){ // factor off to something more general later
                     values[valNo++] = EXPFUNCTION;
@@ -156,7 +181,7 @@ public class ValueCalculationService {
                         }
                     }
                     //note - would there be recursion? Resolve order of formulae might be unreliable
-                    double value = ValueService.findValueForNames(azquoMemoryDBConnection, seekList, locked, valuesHook, attributeNames, functionHeading, nameComboValueCache, null);
+                    double value = ValueService.findValueForNames(azquoMemoryDBConnection, seekList, calcs, locked, valuesHook, attributeNames, functionHeading, nameComboValueCache, null);
                     if (debugInfo != null) {
                         debugInfo.append("\t").append(value).append("\t");
                     }

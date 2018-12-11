@@ -17,7 +17,6 @@ public class StringLiterals {
     public static String IN_SPREADSHEET = "in spreadsheet"; // We'll do this by string literal for the moment - might reconsider later. This is shared as currently it's part of the drilldown syntax and provenance, I'm not sure about this!
     public static int UKDATE = 1;
     public static int USDATE = 2;
-
     public static final String CALCULATION = "CALCULATION";
     public static final String DEFINITION = "DEFINITION";
     public static final String DISPLAYROWS = "DISPLAYROWS";
@@ -43,7 +42,7 @@ public class StringLiterals {
     //public static final String LOWEST = "lowest";
     //public static final String ALL = "all";
     public static final char NAMEMARKER = '~';
-    public static final char ATTRIBUTEMARKER = '|';
+    public static final char ATTRIBUTEMARKER = '#';
     public static final String CREATE = "create";
     public static final String EDIT = "edit";
     public static final String NEW = "new";
@@ -62,4 +61,6 @@ public class StringLiterals {
 
     public static final String EXP = "exp"; // new math function for calculation . . , considered a keyword or operator
     public static final char MATHFUNCTION = '⠁';// braille pattern
+    public static final char GREATEROREQUAL = '$';//NOT TOO HAPPY WITH ALL THESE SYMBOLS - USEFUL WHEN DEBUGGING, BUT MAYBE REPLACE WITH NON-PRINTABLES (ascii nos 1-25) later
+    public static final char LESSOREQUAL = '!';
 }

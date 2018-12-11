@@ -192,11 +192,26 @@ class DataRegionHeadingService {
                             try {
                                 // ok due to optimiseation for the jewel hut this is the first place I'm going to tell the query parser that a read only returned collection is fine
                                 // this should provide a decent speed increase since inside the query parser there was an addAll jamming things up
-                                names = NameQueryParser.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames, true);
-                                if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
-                                    throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
+                                boolean sorted = false;
+                                if (sourceCell.endsWith(" sorted")){
+                                    sorted = true;
+                                    sourceCell = sourceCell.substring(0,sourceCell.length() - 7).trim();
                                 }
-                                row.add(dataRegionHeadingsFromNames(names, function, suffix, null, null, 0));
+                                if (sourceCell.startsWith("(") && sourceCell.endsWith(")")){
+                                    List<DataRegionHeading> single = new ArrayList<>();
+                                    sourceCell = sourceCell.substring(1,sourceCell.length()-1);
+
+
+                                    single.add(new DataRegionHeading(null, false, null, null, sorted ? "sorted" : null, null, null, 0, sourceCell));
+                                    row.add(single);
+                                 }else {
+
+                                    names = NameQueryParser.parseQuery(azquoMemoryDBConnection, sourceCell, attributeNames, true);
+                                    if (namesQueryLimit > 0 && names.size() > namesQueryLimit) {
+                                        throw new Exception("While creating headings " + sourceCell + " resulted in " + names.size() + " names, more than the specified limit of " + namesQueryLimit);
+                                    }
+                                    row.add(dataRegionHeadingsFromNames(names, function, suffix, null, null, 0));
+                                }
                             } catch (Exception e) {
                                 if (ignoreHeadingErrors) { // the ignore is only for vanilla queries, functions probably should error regardless
                                     List<DataRegionHeading> single = new ArrayList<>();
@@ -790,6 +805,16 @@ class DataRegionHeadingService {
         return names;
     }
 
+    static List<String> calcsFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
+        // ok some of the data region headings may be attribute, no real harm I don't think VS a whacking great set which would always be names
+        List<String> calcs = new ArrayList<>(dataRegionHeadings.size()); // switching back to list, now I consider I'm not sure if sets help much here and I want ordering
+        for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {
+            if (dataRegionHeading != null && dataRegionHeading.getCalculation() != null) {
+                calcs.add(dataRegionHeading.getCalculation());
+            }
+        }
+        return calcs;
+    }
     static Set<String> attributesFromDataRegionHeadings(Collection<DataRegionHeading> dataRegionHeadings) {
         Set<String> names = HashObjSets.newMutableSet(); // attributes won't ever be big as they're manually defined, leave this to default (16 size table internally?)
         for (DataRegionHeading dataRegionHeading : dataRegionHeadings) {

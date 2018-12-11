@@ -320,17 +320,41 @@ public final class ValueService {
     // the function that populates each cell with a numeric value that could be a value, a calculation etc.
     private static AtomicInteger findValueForNamesCount = new AtomicInteger(0);
 
-    public static double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final MutableBoolean locked
+    public static double findValueForNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, final List<Name> names, final List<String> calcs, final MutableBoolean locked
             , AzquoCellResolver.ValuesHook valuesHook, List<String> attributeNames, DataRegionHeading functionHeading, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
         findValueForNamesCount.incrementAndGet();
         //there are faster methods of discovering whether a calculation applies - maybe have a set of calced names for reference.
         List<Name> calcnames = new ArrayList<>();
         Collection<Name> appliesToNames = null; // used if you want formulae from calc to be resolved at a lower level and the result summed rather than sum each term in the calc formula
         List<Name> formulaNames = new ArrayList<>();
+        List<String> formulaStrings = new ArrayList<>();
+        List<String> nameStrings = new ArrayList<>();
+        List<String> attributeStrings = new ArrayList<>();
+        List<String> remainingCalcs = new ArrayList<>();
         String calcString = null; // whether this is null replaces hasCalc
         // add all names to calcnames except the the one with CALCULATION
         // and here's a thing : if more than one name has CALCULATION then only the first will be used
         boolean lowest = false; // special applies to calc for each permutation of the calc names then sum
+
+        if (calcs!=null && calcs.size()>0) {
+            for (String calc : calcs) {
+                if (calcString == null) {
+                    calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
+                    if (debugInfo != null) {
+                        debugInfo.append("\nCalculation from heading\n");
+                        debugInfo.append("\t").append(calc).append("\n");
+                    }
+                    formulaNames = NameQueryParser.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
+                    calc = StringUtils.fixNumberFunction(calc, StringLiterals.EXP);
+                    calc = StringUtils.shuntingYardAlgorithm(calc);
+                    if (!calc.startsWith("error")) { // there should be a better way to deal with errors
+                        calcString = calc;
+                    }
+                } else
+                    remainingCalcs.add(calc);
+
+            }
+        }
         for (Name name : names) {
             if (calcString == null) {// then try and find one - can only happen once
                 String calc = name.getAttribute(StringLiterals.CALCULATION, false, null); // using extra parameters to stop parent checking for this attribute
@@ -352,10 +376,7 @@ public final class ValueService {
                     }
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
-                    List<String> formulaStrings = new ArrayList<>();
-                    List<String> nameStrings = new ArrayList<>();
-                    List<String> attributeStrings = new ArrayList<>();
-                    calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
+                       calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
                     formulaNames = NameQueryParser.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
                     calc = StringUtils.fixNumberFunction(calc, StringLiterals.EXP);
                     calc = StringUtils.shuntingYardAlgorithm(calc);
@@ -395,7 +416,7 @@ public final class ValueService {
                 if (valuesHook.calcValues == null) {
                     valuesHook.calcValues = new ArrayList<>();
                 }
-                double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, lowLevelCalcNames, locked, valuesHook, attributeNames, functionHeading, nameComboValueCache, debugInfo);
+                double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, lowLevelCalcNames, remainingCalcs, locked, valuesHook, attributeNames, functionHeading, nameComboValueCache, debugInfo);
                 valuesHook.calcValues.add(result);
                 toReturn += result;
             }
@@ -445,7 +466,7 @@ public final class ValueService {
                     if (valuesHook.calcValues == null) {
                         valuesHook.calcValues = new ArrayList<>();
                     }
-                    double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, calcnames, locked, valuesHook, attributeNames, functionHeading, nameComboValueCache, debugInfo);
+                    double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, calcnames, remainingCalcs, locked, valuesHook, attributeNames, functionHeading, nameComboValueCache, debugInfo);
                     valuesHook.calcValues.add(result);
                     toReturn += result;
                     calcnames.remove(appliesToName);
@@ -455,6 +476,7 @@ public final class ValueService {
             }
         }
     }
+
 
     public static void printFunctionCountStats() {
         System.out.println("######### VALUE SERVICE FUNCTION COUNTS");
