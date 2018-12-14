@@ -21,7 +21,7 @@ import java.util.Set;
  */
 public class DataRegionHeading {
     // todo - average min and max use calculation?
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, VALUESET, PERCENTILE, PERCENTILENZ, STDEVA, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT, ALLEXACT, AUDITDATE, AUDITCHANGEDBY, BESTMATCH}
+    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, VALUESET, PERCENTILE, PERCENTILENZ, STDEVA, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT, ALLEXACT, AUDITDATE, AUDITCHANGEDBY, BESTMATCH, BESTNAMEMATCH, BESTVALUEMATCH, BESTNAMEVALUEMATCH}
     /*
     COUNT               Value function      The number of values rather than the sum
     AVERAGE             Value function      The average value
@@ -157,7 +157,20 @@ public class DataRegionHeading {
     }
     // useful to be called outside if an instance
     static boolean isExpressionFunction(FUNCTION function){
-        return function != null && (function == FUNCTION.NAMECOUNT || function == FUNCTION.PATHCOUNT || function == FUNCTION.SET || function == FUNCTION.FIRST || function == FUNCTION.LAST || function == FUNCTION.VALUESET);
+        return function != null && (function == FUNCTION.NAMECOUNT
+                || function == FUNCTION.PATHCOUNT
+                || function == FUNCTION.SET
+                || function == FUNCTION.FIRST
+                || function == FUNCTION.LAST
+                || function == FUNCTION.VALUESET
+                || function == FUNCTION.BESTNAMEMATCH);
+    }
+
+    static boolean isBestMatchFunction(FUNCTION function){
+        return function != null && (function == FUNCTION.BESTMATCH
+                || function == FUNCTION.BESTVALUEMATCH
+                || function == FUNCTION.BESTNAMEMATCH
+                || function == FUNCTION.BESTNAMEVALUEMATCH);
     }
 
     double getDoubleParameter() {

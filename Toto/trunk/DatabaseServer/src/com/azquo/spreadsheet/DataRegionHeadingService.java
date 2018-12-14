@@ -177,7 +177,7 @@ class DataRegionHeadingService {
                             // maybe could have a "true" on returnReadOnlyCollection . . . todo
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
                             row.add(dataRegionHeadingsFromNames(mainSet, function, suffix, null, null, percentileDouble));
-                        } else if (function == DataRegionHeading.FUNCTION.BESTMATCH) {
+                        } else if (DataRegionHeading.isBestMatchFunction(function)) {
                             // todo - this function parameter parsing needs to be factored and be aware of commas in names
                             String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
                             String description = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();

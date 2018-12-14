@@ -100,7 +100,7 @@ public class AzquoCellResolver {
         for (DataRegionHeading columnHeading : columnHeadings) { // try column headings first
             if (columnHeading != null && columnHeading.isExpressionFunction()) {
                 expressionFunctionHeadings.add(columnHeading);
-             }
+            }
         }
          for (DataRegionHeading rowHeading : rowHeadings) {
                 if (rowHeading != null && rowHeading.isExpressionFunction()) {
@@ -279,6 +279,17 @@ public class AzquoCellResolver {
                 for (Name name : set) { //a bit of a lazy way of doing things but it should be fine, plus with only a collection interface not sure of how to get the last!
                     stringValue = name.getDefaultDisplayName();
                 }
+            }else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.BESTNAMEMATCH) {
+                final Collection<Name> list = NameQueryParser.parseQuery(connection, expressions.get(0), languages, true);
+                String bestFit = "";
+                for (Name name:list) {
+                    String toTry = name.getDefaultDisplayName();
+                    String description = expressionFunctionHeadings.get(0).getDescription().replace("\"", "").replace("`", "");//USED ONLY IN LASTLOOKUP
+                    if (toTry.compareTo(bestFit) > 0 && (toTry.compareTo(description) <= 0)) {
+                        bestFit = toTry;
+                        stringValue = toTry;
+                    }
+                }
             }
         } else {// conventional type (sum) or value function
             // changing these collections to lists
@@ -310,7 +321,7 @@ public class AzquoCellResolver {
                 }
             }
             for (DataRegionHeading heading : headingsForThisCell) {
-                if (heading.getName() == null && heading.getAttribute() == null && heading.getFunction()!= DataRegionHeading.FUNCTION.BESTMATCH && heading.getCalculation()==null) { // a redundant check? todo : confirm
+                if (heading.getName() == null && heading.getAttribute() == null && DataRegionHeading.isBestMatchFunction(heading.getFunction())) { // a redundant check? todo : confirm
                     checked = false;
                 }
                 if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values
@@ -340,7 +351,10 @@ public class AzquoCellResolver {
                         if (heading.getDescription()!=null){
                             description = heading.getDescription().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP
                         }
-                        if (function== DataRegionHeading.FUNCTION.BESTMATCH){
+                        if (function== DataRegionHeading.FUNCTION.BESTMATCH
+                                || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH
+                                || function == DataRegionHeading.FUNCTION.BESTVALUEMATCH
+                                || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH){
                             redundantHeading = heading;
                         }
                         if (debugInfo != null) {
@@ -380,7 +394,9 @@ public class AzquoCellResolver {
                         }
                         doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell),
                                                                                 DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, languages, functionHeading, nameComboValueCache, debugInfo);
-                        if (function == DataRegionHeading.FUNCTION.BESTMATCH && valueFunctionSet != null && description!=null) { // last lookup: we're going to override the double value just set
+                        if ((function == DataRegionHeading.FUNCTION.BESTMATCH
+                                || function == DataRegionHeading.FUNCTION.BESTVALUEMATCH
+                                || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH)&& valueFunctionSet != null && description!=null) { // last lookup: we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
                             String cutoffString = null;
                             String bestFit = "";
@@ -390,7 +406,11 @@ public class AzquoCellResolver {
                                         String toTry = n.getDefaultDisplayName();
                                         if (toTry.compareTo(bestFit)>0 && (toTry.compareTo(description)<=0)){
                                             bestFit = toTry;
-                                            stringValue = v.getText();
+                                            if (function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH){
+                                                stringValue = toTry;
+                                            }else{
+                                                stringValue = v.getText();
+                                            }
                                         }
                                     }
                                  }
