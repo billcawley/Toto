@@ -152,7 +152,7 @@ public class DSImportService {
                         String topHeading = uploadedFile.getTopHeadings().get(new TypedPair<>(rowIndex, colIndex));
                         if (topHeading != null && row[colIndex].length() > 0) { // we found the cell
                             if (topHeading.startsWith("`") && topHeading.endsWith("`")) { // we grab the value and store it
-                                topHeadingsValues.put(topHeading, row[colIndex]);
+                                topHeadingsValues.put(topHeading.replace("`", ""), row[colIndex]);
                             } else if (row[colIndex].equalsIgnoreCase(topHeading)) { // I need to check it matches
                                 topHeadingsValues.put(topHeading, "FOUND"); // just something
                             }
@@ -188,7 +188,10 @@ public class DSImportService {
                                 if (i == 0) {
                                     headingsFromTheFile.add(new ArrayList<>());
                                 }
-                                headingsFromTheFile.get(j).add(lineCells[j].replace("\\\\n", "\n").replace("\\\\t", "\t")); // note - jamming blank ones in here
+                                String lineHeading = lineCells[j].replace("\\\\n", "\n").replace("\\\\t", "\t").trim();
+                                if (!lineHeading.isEmpty()){ // not having blanks
+                                    headingsFromTheFile.get(j).add(lineHeading);
+                                }
                             }
                         } else {
                             throw new Exception("Unable to find expected headings on the file");
@@ -200,19 +203,20 @@ public class DSImportService {
                         if (headingsByLookupCopy.get(headingsForAColumn) != null) {
                             TypedPair<String, String> removed = headingsByLookupCopy.remove(headingsForAColumn);// take the used one out - after runnning through the file we need to add the remainder on to the end
                             headings.add(removed.getFirst());
-                            // ok the last of the headings that has a value is the one we want for the fileHeadingCompositeLookup
-                            Collections.reverse(headingsForAColumn);
-                            for (String heading : headingsForAColumn) {
-                                if (!heading.isEmpty()) {
-                                    fileHeadingCompositeLookup.put(heading.toUpperCase(), headings.size() - 1);
-                                    break;
-                                }
-                            }
                             if (removed.getSecond() != null) {
                                 interimCompositeLookup.put(removed.getSecond().toUpperCase(), headings.size() - 1);
                             }
                         } else {
                             headings.add("");
+                        }
+                        // ok the last of the headings that has a value is the one we want for the fileHeadingCompositeLookup
+                        // going to allow composite lookup on all headings whether they're used as a proper heading or not
+                        Collections.reverse(headingsForAColumn);
+                        for (String heading : headingsForAColumn) {
+                            if (!heading.isEmpty()) {
+                                fileHeadingCompositeLookup.put(heading.toUpperCase(), headings.size() - 1);
+                                break;
+                            }
                         }
                     }
                     List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null ? uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() : new ArrayList<>();
@@ -246,21 +250,31 @@ public class DSImportService {
                     headings = new ArrayList<>(Arrays.asList(lineIterator.next()));
                     // older code pasted, could be tidied? Todo
                     boolean hasClauses = false;
+                    boolean blank = true;
                     for (String heading : headings) {
+                        if (!heading.isEmpty()){
+                            blank = false;
+                        }
                         if (heading.contains(".") || heading.contains(";")) {
                             hasClauses = true;
                         }
                     }
+
+                    if (blank){
+                        uploadedFile.setError("Blank first line and no top headings, not loading.");
+                        return uploadedFile;
+                    }
+
                     // no clauses, try to find more
                     if (!hasClauses) {
                         if (!lineIterator.hasNext()) {
                             throw new Exception("Invalid headings on import file - is this a report that required az_ReportName?");
                         }
                         // option to stack the clauses vertically - we are allowing this on annotation, will be useful on set up files
-                        // keep a copy as the code internally mangles what's passed. This could be fixed. Todo - inline this and then zap ValuesImportConfigProcessor
-                        List<String> headingsCopy = new ArrayList<>(headings);
+                        // Todo - inline this and then zap ValuesImportConfigProcessor
                         if (!ValuesImportConfigProcessor.buildHeadingsFromVerticallyListedClauses(headings, lineIterator)) {
-                            headings = headingsCopy;
+                            uploadedFile.setError("Unable to find suitable stacked headings.");
+                            return uploadedFile;
                         }
                     }
                 }
@@ -282,7 +296,7 @@ public class DSImportService {
             // these will want the "pre . replaced with ; attribute" reference to a heading also I think, want to be able to say shop.address
             int index = 0;
             for (String heading : headings) {
-                String headingNameForLookUp = heading.contains(";") ? heading.substring(heading.indexOf(";")).trim() : heading.trim();
+                String headingNameForLookUp = heading.contains(";") ? heading.substring(0,heading.indexOf(";")).trim() : heading.trim();
                 azquoHeadingCompositeLookup.put(headingNameForLookUp.toUpperCase(), index);
                 String assumption = uploadedFile.getParameter(headingNameForLookUp);
                 if (assumption != null) {
@@ -314,7 +328,21 @@ public class DSImportService {
                             lastHeading = heading;
                         }
                     }
-                    heading = heading.replace(".", ";attribute ");//treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
+                    //treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
+                    // ok, the old heading.replace heading.replace(".", ";attribute ") is no good, need to only replace outside of string literals
+                    boolean inStringLiteral = false;
+                    StringBuilder replacedHeading = new StringBuilder();
+                    for (char c : heading.toCharArray()){
+                        if (c == '`'){
+                            inStringLiteral = !inStringLiteral;
+                        }
+                        if (c == '.' && !inStringLiteral){
+                            replacedHeading.append(";attribute ");
+                        } else {
+                            replacedHeading.append(c);
+                        }
+                    }
+                    heading = replacedHeading.toString();
                 /* line heading and data
                 Line heading means that the cell data on the line will be a name that is a parent of the line no
                 Line data means that the cell data on the line will be a value which is attached to the line number name (for when there's not for example an order reference to be a name on the line)

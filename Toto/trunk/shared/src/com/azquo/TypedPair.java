@@ -25,4 +25,19 @@ public class TypedPair<F,S> implements Serializable {
     public S getSecond() {
         return second;
     }
+
+    // these two are hacky
+    @Override
+    public int hashCode() {
+        return (first.toString() + second.toString()).hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof TypedPair){
+            TypedPair tp = (TypedPair)o;
+            return tp.first.equals(first) && tp.second.equals(second);
+        }
+        return super.equals(o);
+    }
 }

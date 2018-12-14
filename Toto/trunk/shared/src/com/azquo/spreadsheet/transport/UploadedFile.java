@@ -237,7 +237,7 @@ public class UploadedFile implements Serializable {
 
     public String getParameter(String key) {
         if (parameters != null && key != null) { // not sure if parameters can be null? not a biggy . . .
-            return parameters.get(key);
+            return parameters.get(key.toLowerCase());
         }
         return null;
     }

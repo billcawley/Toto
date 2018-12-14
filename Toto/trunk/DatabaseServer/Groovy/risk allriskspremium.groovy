@@ -6,7 +6,6 @@ Need to check for where there's more than one contract line and assign a section
 */
 
 import com.azquo.StringLiterals
-import com.azquo.memorydb.AzquoMemoryDBConnection
 import com.azquo.spreadsheet.transport.UploadedFile
 
 import java.text.SimpleDateFormat
@@ -64,7 +63,7 @@ def fileProcess(Object[] args) {
                     if (agreementCol >= 0 && line.size() > agreementCol && line[agreementCol] != 'B') {
                         Map<String, String> newparams = new HashMap<>(uploadedFile.getParameters());
                         // this is a template switch, todo . . . .
-                        newparams.put("import template", "risk allriskspremium1");
+                        newparams.put("importversion", "AllRisksPremium1");
                         uploadedFile.setParameters(newparams);
                         List<String> languages = new ArrayList<>();
                         languages.add("allriskspremium1");
@@ -93,6 +92,9 @@ def fileProcess(Object[] args) {
                     line += "\t" + df.format(c.getTime());
                     linesToSort.add(line);
                 }
+            } else { // preserve the top for top headings checks
+                fileWriter.write(line);
+                fileWriter.write("\r\n");
             }
             lineNo++
         }

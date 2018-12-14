@@ -9,7 +9,6 @@ so we have to make the last column Claim State showing this as appropriate, ther
 Also chop the first 4 lines
 
 */
-import com.azquo.memorydb.AzquoMemoryDBConnection
 import com.azquo.spreadsheet.transport.UploadedFile
 
 
@@ -26,10 +25,15 @@ def fileProcess(Object[] args) {
         while ((line = reader.readLine()) != null) {
             if (line.startsWith("Totals For:")) { // so a line we want to get the state off
                 StringTokenizer st = new StringTokenizer(line, "\t");
-                st.nextToken()
-                state = st.nextToken()
-                println("found a state " + state)
-                states.add(state);
+                while (st.hasMoreElements()){
+                    st.nextToken()
+                    state = st.nextToken()
+                    if (!state.equals("Totals For:")){
+                        println("found a state " + state)
+                        states.add(state);
+                        break;
+                    }
+                }
             }
         }
     }
@@ -46,7 +50,8 @@ def fileProcess(Object[] args) {
             }
             if (lineNo > skipLines){
                 if (lineNo == (skipLines + 1)){ // top line, add the header
-                    fileWriter.write(line.replace("\\\\n", " ") + "\tClaim State");
+//                    fileWriter.write(line.replace("\\\\n", " ") + "\tClaim State"); // don't replace - bugger's up new heading lookups
+                    fileWriter.write(line + "\tClaim State");
                 } else {
                     fileWriter.write(line + "\t" + state);
                 }

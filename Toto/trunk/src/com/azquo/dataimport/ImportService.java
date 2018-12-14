@@ -18,7 +18,6 @@ import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.csvreader.CsvWriter;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
-import javassist.compiler.ast.StringL;
 import org.apache.commons.io.FileUtils;
 import org.zeroturnaround.zip.ZipUtil;
 import org.zkoss.poi.hssf.usermodel.HSSFWorkbook;
@@ -26,6 +25,7 @@ import org.zkoss.poi.openxml4j.opc.OPCPackage;
 import org.zkoss.poi.ss.format.CellDateFormatter;
 import org.zkoss.poi.ss.usermodel.*;
 import org.zkoss.poi.ss.util.AreaReference;
+import org.zkoss.poi.ss.util.CellRangeAddress;
 import org.zkoss.poi.ss.util.CellReference;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 import org.zkoss.zss.api.Range;
@@ -358,7 +358,9 @@ public final class ImportService {
             csvW.setUseTextQualifier(false);
             // poi convert - notably the iterators skip blank rows and cells hence the checking that indexes match
             int rowIndex = -1;
+            boolean emptySheet = true;
             for (Row row : sheet) {
+                emptySheet = false;
                 // turns out blank lines are important
                 if (++rowIndex != row.getRowNum()) {
                     while (rowIndex != row.getRowNum()) {
@@ -391,10 +393,15 @@ public final class ImportService {
             Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
             addFileNameParametersToMap(sheetName, fileNameParams);
             UploadedFile fileFromWorksheet = new UploadedFile(tempPath, names, fileNameParams, true); // true, it IS converted from a worksheet
-            UploadedFile toReturn = readPreparedFile(loggedInUser, fileFromWorksheet);
-            // the UploadedFile will have the database server processing time, add the Excel stuff to it for better feedback to the user
-            toReturn.addToProcessingDuration(convertTime);
-            return toReturn;
+            if (emptySheet) {
+                fileFromWorksheet.setError("Empty sheet : " + sheetName);
+                return fileFromWorksheet;
+            } else {
+                UploadedFile toReturn = readPreparedFile(loggedInUser, fileFromWorksheet);
+                // the UploadedFile will have the database server processing time, add the Excel stuff to it for better feedback to the user
+                toReturn.addToProcessingDuration(convertTime);
+                return toReturn;
+            }
         } catch (Exception e) {
             e.printStackTrace();
             uploadedFile.setError(e.getMessage());
@@ -414,6 +421,7 @@ public final class ImportService {
     private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile) throws Exception {
         if (uploadedFile.getParameter(IMPORTTEMPLATE) != null && ImportTemplateDAO.findForNameAndBusinessId(uploadedFile.getParameter(IMPORTTEMPLATE), loggedInUser.getUser().getBusinessId()) != null) {
             ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(uploadedFile.getParameter(IMPORTTEMPLATE), loggedInUser.getUser().getBusinessId());
+            // todo - import template service?
             Workbook book;
             FileInputStream fs = new FileInputStream(new File(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk()));
             if (importTemplate.getTemplateName().endsWith("xlsx")) {
@@ -443,9 +451,9 @@ public final class ImportService {
             // a "version" - similar to the import model parsing but the headings can be multi level (double decker) and not at the top thus allowing for top headings
             for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
                 Sheet sheet = book.getSheetAt(sheetNo);
-                if (sheet.getSheetName().equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) {
+                if (sheet.getSheetName().trim().equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) {
                     // unlike the "default" mode there can be a named range for the headings here so
-                    Name headingsName = BookUtils.getName(book, "az_Headings" + sheet.getSheetName());
+                    Name headingsName = BookUtils.getName(book, "az_Headings" + sheet.getSheetName().trim());
                     if (headingsName != null) { // we have to have it or don't bother!
                         AreaReference headingsRange = new AreaReference(headingsName.getRefersToFormula());
                         uploadedFile.setSkipLines(headingsRange.getFirstCell().getRow());
@@ -455,16 +463,16 @@ public final class ImportService {
                 }
             }
 
-            if (templateParameters.get(PREPROCESSOR) != null){
+            if (templateParameters.get(PREPROCESSOR) != null) {
                 uploadedFile.setPreProcessor(templateParameters.get(PREPROCESSOR));
             }
-            if (templateParameters.get(ADDITIONALDATAPROCESSOR) != null){
+            if (templateParameters.get(ADDITIONALDATAPROCESSOR) != null) {
                 uploadedFile.setAdditionalDataProcessor(templateParameters.get(ADDITIONALDATAPROCESSOR));
             }
-            if (templateParameters.get(POSTPROCESSOR) != null){
+            if (templateParameters.get(POSTPROCESSOR) != null) {
                 uploadedFile.setPostProcessor(templateParameters.get(POSTPROCESSOR));
             }
-            if (templateParameters.get(LANGUAGE) != null){
+            if (templateParameters.get(LANGUAGE) != null) {
                 String languages = templateParameters.get(LANGUAGE);
                 String[] splitLanguages = languages.split(",");
                 List<String> languagesList = new ArrayList<>(Arrays.asList(splitLanguages));
@@ -520,7 +528,7 @@ public final class ImportService {
                  * */
                 int index = 0;
                 for (List<String> headingReferenceColumn : headingReference) {
-                    if (headingReferenceColumn.size() > 0){
+                    if (headingReferenceColumn.size() > 0) {
                         String reference = headingReferenceColumn.get(0); // the reference is the top one
                         List<String> azquoClauses = new ArrayList<>(); // in here will go the Azquo clauses both looked up from the Import Model and any that might have been added here
                         // ok now we're going to look for this in the standard headings by the "top" heading
@@ -533,7 +541,7 @@ public final class ImportService {
                             }
                         }
                         if (azquoClauses.isEmpty()) {
-                            throw new Exception("On import version sheet " + uploadedFile.getParameter("IMPORTVERSION") + " no headings on Import Model found for " + reference);
+                            throw new Exception("On import version sheet " + uploadedFile.getParameter("IMPORTVERSION") + " no headings on Import Model found for " + reference + " - was this referenced twice?");
                         } else if (headingReference.get(index).size() > 1) { // add the extra ones
                             azquoClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
                         }
@@ -542,11 +550,14 @@ public final class ImportService {
                             if (azquoHeadingsAsString.length() == 0) {
                                 azquoHeadingsAsString = new StringBuilder(clause);
                             } else {
-                                azquoHeadingsAsString.append(";").append(clause);
+                                if (!clause.startsWith(".")) {
+                                    azquoHeadingsAsString.append(";");
+                                }
+                                azquoHeadingsAsString.append(clause);
                             }
                         }
                         // finally get the file headings if applicable
-                        if (versionHeadings.size() > index && !versionHeadings.get(index).isEmpty()){
+                        if (versionHeadings.size() > index && !versionHeadings.get(index).isEmpty()) {
                             headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new TypedPair<>(azquoHeadingsAsString.toString(), reference));
                         } else {
                             headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), reference));
@@ -571,7 +582,10 @@ public final class ImportService {
                             if (azquoHeadingsAsString.length() == 0) {
                                 azquoHeadingsAsString = new StringBuilder(clause);
                             } else {
-                                azquoHeadingsAsString.append(";").append(clause);
+                                if (!clause.startsWith(".")) {
+                                    azquoHeadingsAsString.append(";");
+                                }
+                                azquoHeadingsAsString.append(clause);
                             }
                         }
                         // no headings but it has the other bits - will be jammed on the end after file
@@ -584,25 +598,31 @@ public final class ImportService {
             }
 
             // new thing - pre processor on the report server
-            File file = new File(SpreadsheetService.getGroovyDir() + "/" + uploadedFile.getPreProcessor());
-            if (file.exists()) {
-                String oldImportTemplate = uploadedFile.getParameter(IMPORTTEMPLATE);
-                System.out.println("Groovy pre processor running  . . . ");
-                Object[] groovyParams = new Object[1];
-                groovyParams[0] = uploadedFile;
-                GroovyShell shell = new GroovyShell();
-                final Script script = shell.parse(file);
-                System.out.println("loaded groovy " + file.getPath());
-                // overly wordy way to override the path
-                uploadedFile.setPath((String) script.invokeMethod("fileProcess", groovyParams));
-                if (!oldImportTemplate.equalsIgnoreCase(uploadedFile.getParameter(IMPORTTEMPLATE))){ // the template changed! Call this function again to load the new template
-                    // there is a danger of a circular reference - protect against that?
-                    return readPreparedFile(loggedInUser, uploadedFile);
+            if (uploadedFile.getPreProcessor() != null) {
+                File file = new File(SpreadsheetService.getGroovyDir() + "/" + uploadedFile.getPreProcessor());
+                if (file.exists()) {
+                    String oldImportTemplate = uploadedFile.getParameter(IMPORTTEMPLATE);
+                    String oldImportVersion = uploadedFile.getParameter(IMPORTVERSION);
+                    System.out.println("Groovy pre processor running  . . . ");
+                    Object[] groovyParams = new Object[1];
+                    groovyParams[0] = uploadedFile;
+                    GroovyShell shell = new GroovyShell();
+                    final Script script = shell.parse(file);
+                    System.out.println("loaded groovy " + file.getPath());
+                    // overly wordy way to override the path
+                    uploadedFile.setPath((String) script.invokeMethod("fileProcess", groovyParams));
+                    if (!oldImportTemplate.equalsIgnoreCase(uploadedFile.getParameter(IMPORTTEMPLATE)) || (oldImportVersion != null && !oldImportVersion.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION)))) { // the template changed! Call this function again to load the new template
+                        // there is a danger of a circular reference - protect against that?
+                        // must clear template based parameters, new object
+                        UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true);
+                        return readPreparedFile(loggedInUser, fileToProcessAgain);
+                    }
+                } else {
+                    uploadedFile.setError("unable to find preprocessor : " + uploadedFile.getPreProcessor());
+                    return uploadedFile;
                 }
             }
         }
-
-
 
         DatabaseServer databaseServer = loggedInUser.getDatabaseServer();
         DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
@@ -640,7 +660,6 @@ public final class ImportService {
         // *then* headings which are a lookup to the model and any additional clauses, then params and lookups as usual
         // otherwise standard headings by default
         ImportSheetScanMode mode = customHeadingsRange != null ? ImportSheetScanMode.TOPHEADINGS : ImportSheetScanMode.STANDARDHEADINGS;
-        String currentLookup = null;
         for (Row row : sheet) {
             if (++rowIndex != row.getRowNum()) { // means blank lines were skipped over by POI
                 // a point - what if there are lines but with blank cells which come up in POI? It seems to be acting inconsistently - need to address. Todo
@@ -662,10 +681,12 @@ public final class ImportService {
                 }
             }
             int cellIndex = -1;
-            String firstCellValue = null;
             // unfortuenately while it seems POI might skip blank lines it seems it might also have blank cell values (this may not be a fault of POI, perhaps an Excel quirk)
             // regardless I need to check for a line only having blank cells and adjusting modes accordingly
             boolean blankLine = true;
+
+
+            String firstCellValue = null;
             for (Iterator<Cell> ri = row.cellIterator(); ri.hasNext(); ) {
                 Cell cell = ri.next();
                 // adjust the cell index to be correct - POI doesn't add blank cells to the iterator
@@ -682,7 +703,6 @@ public final class ImportService {
                         topHeadings.put(new TypedPair<>(rowIndex, cellIndex), cellValue);
                     } else if (mode == ImportSheetScanMode.CUSTOMHEADINGS) { // custom headings to be used for lookup on files - need to take account of it being limited by column which could happen
                         if (customHeadingsRange.getFirstCell().getCol() == -1 || (cellIndex >= customHeadingsRange.getFirstCell().getCol() && cellIndex <= customHeadingsRange.getLastCell().getCol())) {
-                            blankLine = false;
                             while (customHeadings.size() <= (cellIndex + 1)) { // make sure there are enough lists to represent the heading columns were adding to
                                 customHeadings.add(new ArrayList<>());
                             }
@@ -765,7 +785,7 @@ public final class ImportService {
             }
             if (returnNumber % 1 == 0) {
                 // specific condition - integer and format all 000, then actually use the format. For zip codes
-                if (dataFormat.length() > 1 && dataFormat.contains("0") && dataFormat.replace("0","").isEmpty()){
+                if (dataFormat.length() > 1 && dataFormat.contains("0") && dataFormat.replace("0", "").isEmpty()) {
                     returnString = df.formatCellValue(cell);
                 } else {
                     returnString = returnNumber.longValue() + "";
@@ -806,6 +826,23 @@ public final class ImportService {
         }
         if (returnString.startsWith("'") && returnString.indexOf("'", 1) < 0)
             returnString = returnString.substring(1);//in Excel some cells are preceded by a ' to indicate that they should be handled as strings
+
+        // Deal with merged cells, not sure if there's a performance issue here? If a heading spans successive cells need to have the span value
+        if (returnString.isEmpty() && cell.getSheet().getNumMergedRegions() > 0) {
+            int rowIndex = cell.getRowIndex();
+            int cellIndex = cell.getColumnIndex();
+            for (int i = 0; i < cell.getSheet().getNumMergedRegions(); i++) {
+                CellRangeAddress region = cell.getSheet().getMergedRegion(i); //Region of merged cells
+                //check first cell of the region
+                if (cellIndex > region.getFirstColumn() // greater than, we're only interested if not the first column
+                        && cellIndex <= region.getLastColumn()
+                        && rowIndex >= region.getFirstRow()
+                        && rowIndex <= region.getLastRow()
+                ) {
+                    returnString = getCellValue(cell.getSheet().getRow(region.getFirstRow()).getCell(region.getFirstColumn()));
+                }
+            }
+        }
         return returnString.trim();
     }
 
@@ -886,7 +923,7 @@ public final class ImportService {
             try {
                 Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + importTemplatesDir + importTemplate.getFilenameForDisk()));
             } catch (Exception e) {
-                System.out.println("problem deleting old report");
+                System.out.println("problem deleting old template");
                 e.printStackTrace();
             }
             importTemplate.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances

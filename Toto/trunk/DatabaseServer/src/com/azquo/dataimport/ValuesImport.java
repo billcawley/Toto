@@ -13,9 +13,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /*
-Edd Aug 2018
-THe importing is becoming quite complex and opaque. I'm hoping that breaking things up will help to bring it under control.
-
 This class batches up data to be loaded doing simple checks on cell values
 The actual loading and complex heading resolution should be done in other classes,
 

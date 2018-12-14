@@ -84,7 +84,7 @@ class ImmutableImportHeading {
 
         DictionaryTerm(boolean exclude, List<String> items) {
             this.exclude = exclude;
-            this.items = items;
+            this.items = Collections.unmodifiableList(items);
         }
     }
 }

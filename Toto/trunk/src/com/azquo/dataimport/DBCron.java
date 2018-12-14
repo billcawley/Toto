@@ -89,25 +89,29 @@ public class DBCron {
                             if (!Files.isDirectory(path)) { // skip any directories
                                 try {
                                     String origName = path.getFileName().toString();
-                                    System.out.println("file : " + origName);
                                     FileTime lastModifiedTime = null;
                                     lastModifiedTime = Files.getLastModifiedTime(path);
                                     long timestamp = System.currentTimeMillis();
-                                    Files.move(path, tagged.resolve(timestamp + origName));
-                                    // ok it's moved now make the pending upload record
-                                    PendingUpload pendingUpload = new PendingUpload(0, b.getId()
-                                            , LocalDateTime.ofInstant(lastModifiedTime.toInstant(), ZoneId.systemDefault())
-                                            , LocalDateTime.now()
-                                            , origName
-                                            , tagged.resolve(timestamp + origName).toString()
-                                            , "fileimport"
-                                            , PendingUpload.WAITING
-                                            , ""
-                                            , 0
-                                            , 0
-                                            , null
-                                            , false);
-                                    PendingUploadDAO.store(pendingUpload);
+                                    if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
+                                        System.out.println("file : " + origName);
+                                        Files.move(path, tagged.resolve(timestamp + origName));
+                                        // ok it's moved now make the pending upload record
+                                        PendingUpload pendingUpload = new PendingUpload(0, b.getId()
+                                                , LocalDateTime.ofInstant(lastModifiedTime.toInstant(), ZoneId.systemDefault())
+                                                , LocalDateTime.now()
+                                                , origName
+                                                , tagged.resolve(timestamp + origName).toString()
+                                                , "fileimport"
+                                                , PendingUpload.WAITING
+                                                , ""
+                                                , 0
+                                                , 0
+                                                , null
+                                                , false);
+                                        PendingUploadDAO.store(pendingUpload);
+                                    } else {
+                                        System.out.println("fine found for pending but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");
+                                    }
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }

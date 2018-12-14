@@ -58,6 +58,8 @@ import java.util.stream.Stream;
  * create and delete dbs/upload files and manage uploads/backup/restore/pending uploads
  * <p>
  * pending uploads should perhaps be taken out of here
+ *
+ * Also deals with import templates
  */
 @Controller
 @RequestMapping("/ManageDatabases")
@@ -355,12 +357,6 @@ public class ManageDatabasesController {
                 for (Database database : databaseList) {
                     boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database);
                     displayDataBases.add(new DisplayDataBase(isLoaded, database));
-/*                    if (isLoaded && (AdminService.getNameCountWithBasicSecurity(loggedInUser, database) != database.getNameCountWithBasicSecurity()
-                            || AdminService.getValueCountWithBasicSecurity(loggedInUser, database) != database.getValueCountWithBasicSecurity())) { // then update the counts
-                        database.setNameCount(AdminService.getNameCountWithBasicSecurity(loggedInUser, database));
-                        database.setValueCount(AdminService.getValueCountWithBasicSecurity(loggedInUser, database));
-                        DatabaseDAO.store(database);
-                    }*/
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -567,6 +563,8 @@ public class ManageDatabasesController {
             }
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
+            AtomicBoolean canCommit = new AtomicBoolean(false);
+            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, canCommit));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
@@ -615,7 +613,9 @@ public class ManageDatabasesController {
     public static String formatUploadedFiles(List<UploadedFile> uploadedFiles) {
         StringBuilder toReturn = new StringBuilder();
         List<String> lastNames = null;
+        int counter = 0;
         for (UploadedFile uploadedFile : uploadedFiles) {
+            counter++;
             List<String> names = new ArrayList<>(uploadedFile.getFileNames()); // copy as I might change it
             int indent = 0;
             if (lastNames != null && names.size() == lastNames.size()) { // for formatting don't repeat names (e.g. the zip name)
@@ -654,9 +654,9 @@ public class ManageDatabasesController {
                 toReturn.append("Converted from worksheet.\n<br/>");
             }
 
-            if (uploadedFile.getTopHeadings() != null) {
+            if (uploadedFile.getTopHeadings() != null && !uploadedFile.getTopHeadings().isEmpty()) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings\" style=\"display : none\">");
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings" + counter + "'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings" + counter + "\" style=\"display : none\">");
                 for (TypedPair<Integer, Integer> key : uploadedFile.getTopHeadings().keySet()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     toReturn.append(BookUtils.rangeToText(key.getFirst(), key.getSecond())).append("\t->\t").append(uploadedFile.getTopHeadings().get(key)).append("\n<br/>");
@@ -666,7 +666,7 @@ public class ManageDatabasesController {
 
             if (uploadedFile.getHeadingsByFileHeadingsWithInterimLookup() != null) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings'); return false;\">Headings with file headings</a> : \n<br/><div id=\"fileHeadings\" style=\"display : none\">");
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings" + counter + "'); return false;\">Headings with file headings</a> : \n<br/><div id=\"fileHeadings" + counter + "\" style=\"display : none\">");
                 for (List<String> key : uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     for (String subHeading : key) {
@@ -683,7 +683,7 @@ public class ManageDatabasesController {
 
             if (uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings'); return false;\">Headings without file headings</a> : \n<br/><div id=\"noFileHeadings\" style=\"display : none\">");
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings" + counter + "'); return false;\">Headings without file headings</a> : \n<br/><div id=\"noFileHeadings" + counter + "\" style=\"display : none\">");
                 for (TypedPair<String, String> stringStringTypedPair : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     toReturn.append(stringStringTypedPair.getSecond());
@@ -694,7 +694,7 @@ public class ManageDatabasesController {
 
             if (uploadedFile.getSimpleHeadings() != null) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('simpleHeadings'); return false;\">Simple Headings</a> : \n<br/><div id=\"simpleHeadings\" style=\"display : none\">");
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('simpleHeadings" + counter + "'); return false;\">Simple Headings</a> : \n<br/><div id=\"simpleHeadings" + counter + "\" style=\"display : none\">");
                 for (String heading : uploadedFile.getSimpleHeadings()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");;
                     toReturn.append(heading).append("\n<br/>");
@@ -713,7 +713,7 @@ public class ManageDatabasesController {
 
             if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines'); return false;\">Rejected lines : ").append(uploadedFile.getLinesRejected().size()).append("</a> : \n<br/><div id=\"rejectedLines\" style=\"display : none\">");
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + counter + "'); return false;\">Rejected lines : ").append(uploadedFile.getLinesRejected().size()).append("</a> : \n<br/><div id=\"rejectedLines" + counter + "\" style=\"display : none\">");
                 for (String lineRejected : uploadedFile.getLinesRejected()) {
                     toReturn.append(indentSb);
                     toReturn.append(lineRejected).append("\n<br/>");

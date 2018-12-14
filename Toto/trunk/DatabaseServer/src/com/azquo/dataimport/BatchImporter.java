@@ -98,7 +98,7 @@ public class BatchImporter implements Callable<Void> {
                     // composite might do things that affect only and existing hence do it before
                     resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine,compositeIndexResolver);
                     String rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
-                    if (rejectionReason == null) {
+                    if (rejectionReason == null) {// todo - zap ignored rejection reason or jam it somewhere else
                         try {
                             resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
                             // valueTracker simply the number of values imported
@@ -276,6 +276,8 @@ public class BatchImporter implements Callable<Void> {
                             int colIndex = compositeIndexResolver.getColumnIndexForHeading(expression.trim());
                             if (colIndex != -1) {
                                 compCell = cells.get(colIndex);
+                            } else {
+                                throw new Exception("Unable to find column : " + expression.trim() + " in composition pattern " + cell.getImmutableImportHeading().compositionPattern + " in heading " + cell.getImmutableImportHeading().heading);
                             }
                             if (compCell != null && compCell.getLineValue() != null && resolved(compCell)) {
                                 String sourceVal = null;
@@ -804,7 +806,5 @@ public class BatchImporter implements Callable<Void> {
             languages.addAll(defaultLanguages);
         }
         return languages;
-
-
     }
 }
