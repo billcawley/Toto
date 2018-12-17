@@ -137,7 +137,13 @@ public class DSImportService {
 
             // read headings off file - under new logic this needs to pay attention to what was passed from the report server
             int skipLines = uploadedFile.getSkipLines();
-            Map<String, String> topHeadingsValues = new HashMap<>();
+            // things might be shifted to the right, hack in support for this but having a list of top headings as they appear at
+            // offsets up to a limit as well as normal
+            int offsetLimit = 20;
+            List<Map<String, String>> topHeadingsValuesByOffset = new ArrayList<>();
+            for (int offset = 0; offset < offsetLimit; offset++){
+                topHeadingsValuesByOffset.add(new HashMap<>());
+            }
             /*
             Two different criteria - without quotes it just wants a match - is that cell there with that value?
             With quotes the value in that cell will be saved against that key to be used in heading clauses
@@ -145,21 +151,39 @@ public class DSImportService {
             Coverholder:
             `Coverholder name`
             */
+
+
             for (int rowIndex = 0; rowIndex < skipLines; rowIndex++) {
                 String[] row = lineIterator.next();
                 if (uploadedFile.getTopHeadings() != null) {
                     for (int colIndex = 0; colIndex < row.length; colIndex++) {
-                        String topHeading = uploadedFile.getTopHeadings().get(new TypedPair<>(rowIndex, colIndex));
-                        if (topHeading != null && row[colIndex].length() > 0) { // we found the cell
-                            if (topHeading.startsWith("`") && topHeading.endsWith("`")) { // we grab the value and store it
-                                topHeadingsValues.put(topHeading.replace("`", ""), row[colIndex]);
-                            } else if (row[colIndex].equalsIgnoreCase(topHeading)) { // I need to check it matches
-                                topHeadingsValues.put(topHeading, "FOUND"); // just something
+                        // as mentioned above, run through a bunch of offests here in case the topheadings have been shifted to the right - note they still have to have the same configuration
+                        for (int offset = 0; offset < offsetLimit; offset++){
+                            String topHeading = uploadedFile.getTopHeadings().get(new TypedPair<>(rowIndex, colIndex - offset)); // yes can be a negative col at least at first - no harm it just won't find anything
+                            if (topHeading != null && row[colIndex].length() > 0) { // we found the cell
+                                if (topHeading.startsWith("`") && topHeading.endsWith("`")) { // we grab the value and store it
+                                    topHeadingsValuesByOffset.get(offset).put(topHeading.replace("`", ""), row[colIndex]);
+                                } else if (row[colIndex].equalsIgnoreCase(topHeading)) { // I need to check it matches
+                                    topHeadingsValuesByOffset.get(offset).put(topHeading, "FOUND"); // just something
+                                }
                             }
                         }
                     }
                 }
             }
+
+            // most of the time the first will have map entries and none of the rest will but it's possible I suppose. Get the most complete set and exception if it's not actually complete
+            Map<String, String> topHeadingsValues = new HashMap<>();
+            for (int offset = 0; offset < offsetLimit; offset++){
+                if (topHeadingsValuesByOffset.get(offset).size() > topHeadingsValues.size()){
+                    if (offset > 0){
+                        System.out.println("Using offset on topheadings : " + offset);
+                    }
+                    topHeadingsValues = topHeadingsValuesByOffset.get(offset);
+                }
+            }
+
+
             if (uploadedFile.getTopHeadings() != null && uploadedFile.getTopHeadings().size() != topHeadingsValues.size()) {
                 throw new Exception("Top headings expected : " + uploadedFile.getTopHeadings().values() + " top headings found " + topHeadingsValues.keySet());
             }

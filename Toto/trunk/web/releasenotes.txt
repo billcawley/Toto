@@ -1,3 +1,13 @@
+17-12-18
+
+The system now uses Import Templates. This is a *major* update which accounts for the gap in deployments.
+
+Can execute multi-line 'az_execute' regions
+
+If the az_Execute range is also called 'az_PreExecute' then the execution will happen every time.
+
+Functions inserted - BESTVALUEMATCH, BESTNAMEMATCH, BESTNAMEVALUEMATCH - defined in Reference Manual
+
 27-11-18-2
 
 ! Groovy script bug fix

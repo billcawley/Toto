@@ -92,6 +92,8 @@ CREATE TABLE IF NOT EXISTS `import_template` (
 ALTER TABLE `import_template`
   ADD PRIMARY KEY (`id`);
 
+ALTER TABLE `import_template`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- Table structure for table `online_report`
 --

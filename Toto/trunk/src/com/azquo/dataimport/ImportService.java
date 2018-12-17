@@ -404,7 +404,11 @@ public final class ImportService {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            uploadedFile.setError(e.getMessage());
+            Throwable t = e;
+            while (t.getCause() != null) { // unwrap as much as possible
+                t = t.getCause();
+            }
+            uploadedFile.setError(t.getMessage());
             return uploadedFile;
         }
     }
