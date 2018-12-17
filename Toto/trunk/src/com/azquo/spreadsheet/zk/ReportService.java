@@ -147,7 +147,12 @@ public class ReportService {
         filterSet = query.substring(0, nameEnd + 1).trim();
         query = query.substring(nameEnd+1).trim();
         if (!query.toLowerCase().startsWith("where (")) return false;
-        query = query.substring(6);
+
+        query = query.substring(6).trim();
+        if (query.startsWith(".")) {// attributes query
+            return false;
+        }
+
         int bracketCount = 1;
         int pos = 1;
         while (pos < query.length()){
