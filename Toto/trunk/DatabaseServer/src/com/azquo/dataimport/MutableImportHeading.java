@@ -28,7 +28,7 @@ class MutableImportHeading {
     String parentOfClause = null;
     // index in the headings array of a child derived from parent of
     int indexForChild = -1;
-    // derived from the "child of" clause, a comma separated list of names
+    // derived from the "child of" clause, a comma separated list of names - Azquo names not a reference to headings
     Set<Name> parentNames = new HashSet<>();
     // result of the attribute clause. Notable that "." is replaced with ;attribute
     String attribute = null;
@@ -38,7 +38,9 @@ class MutableImportHeading {
     int dateForm = 0;
     /* the results of the peers clause are jammed in peers but then we need to know which headings those peers refer to. The heading with the clause can immediately be resolved as a name
     * as can peers referenced in the context, the others come from other columns referred to by their indexes. Peers can be defined in the main heading or context,
-    * there's no difference to how they're used but I'm going to throw an error if they're defined in both as you can't have more than one set of peers defined.*/
+    * there's no difference to how they're used but I'm going to throw an error if they're defined in both as you can't have more than one set of peers defined.
+    * peerNames could be seen as names that are being added to every value on this line
+    * */
     Set<Name> peerNames = new HashSet<>();
     // Indexes of columns to be resolved on each line in the BatchImporter
     Set<Integer> peerIndexes = new HashSet<>();
@@ -50,16 +52,17 @@ class MutableImportHeading {
     List<MutableImportHeading> contextHeadings = new ArrayList<>();
     // Affects child of and parent of clauses - the other heading is local in the case of parent of and this one in the case of child of. Local as in Azquo name logic.
     boolean isLocal = false;
-    // If `only` is specified on the first heading, the import will ignore any line that does not have this line value. Typically to deal with a file of mixed data where we want only some to go in the database.
+    // If `only` is specified on a heading, the import will ignore any line that does not have this line value. Typically to deal with a file of mixed data where we want only some to go in the database.
+    // e.g. only import when there's "AB" on a given line for example
     String only = null;
     /* to make the line value a composite of other values. Syntax is pretty simple replacing anything in quotes with the referenced line value
     `a column name`-`another column name` might make 1233214-1234. Such columns would probably be at the end,
     they are virtual in the sense that these values are made on uploading they are not there in the source file though the components are.
     A newer use of this is to create name->name2->name3, a name structure in a virtual column at the end
-    also supports left, right, mid Excel string functions*/
+    also supports left, right, mid Excel string functions
+    composite can be called by the syntax default also
+    */
     String compositionPattern = null;
-    // a default value if the line value is blank
-    String defaultValue = null;
     //override is the same as default, but it ignores any existing value - used for file parameter assumptions
     String override = null;
     //ignore is the opposite of 'only', omit any lines where this field consists of any element of the string list
@@ -86,6 +89,7 @@ class MutableImportHeading {
     the terms are connected by + or - signs to indicate that elements from both sets must be present, or to exclude any item that contains elements from the list respectively.
     */
     Map<Name,List<ImmutableImportHeading.DictionaryTerm>> dictionaryMap = null;
+    // todo comments on this lot
     Map<String, List<String>> synonyms = null;
     String lookupFrom = null;
     String lookupTo = null;

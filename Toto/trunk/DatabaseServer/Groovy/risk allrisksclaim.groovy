@@ -53,7 +53,9 @@ def fileProcess(Object[] args) {
 //                    fileWriter.write(line.replace("\\\\n", " ") + "\tClaim State"); // don't replace - bugger's up new heading lookups
                     fileWriter.write(line + "\tClaim State");
                 } else {
-                    fileWriter.write(line + "\t" + state);
+                    if (!line.trim().isEmpty()){
+                        fileWriter.write(line + "\t" + state);
+                    }
                 }
                 fileWriter.write("\r\n")
             }

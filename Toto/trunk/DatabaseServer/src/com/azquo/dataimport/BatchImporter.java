@@ -11,6 +11,7 @@ import com.azquo.memorydb.service.ValueService;
 
 import java.text.DecimalFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,6 +32,7 @@ public class BatchImporter implements Callable<Void> {
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
     // just to give a little feedback on the number imported
     private final AtomicInteger valuesModifiedCounter;
+    // what line in the file does this batch start at? for logging
     private int importLine;
     private final List<List<ImportCellWithHeading>> dataToLoad;
     private final Map<String, Name> namesFoundCache;
@@ -72,7 +74,8 @@ public class BatchImporter implements Callable<Void> {
             */
             try {
                 ImportCellWithHeading first = lineToLoad.get(0);
-                if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null || first.getImmutableImportHeading().compositionPattern != null || first.getImmutableImportHeading().attribute != null) {
+                if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null
+                        || first.getImmutableImportHeading().compositionPattern != null || first.getImmutableImportHeading().attribute != null) {
                     //check dates before resolving composite values
                     for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
                         // this basic value checking was outside, I see no reason it shouldn't be in here
@@ -81,6 +84,7 @@ public class BatchImporter implements Callable<Void> {
                             /*
                             interpret the date and change to standard form
                             todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+                            HeaadingReader defines DATELANG and USDATELANG
                             */
                             LocalDate date;
                             if (importCellWithHeading.getImmutableImportHeading().dateForm == StringLiterals.UKDATE) {
@@ -93,10 +97,8 @@ public class BatchImporter implements Callable<Void> {
                             }
                         }
                     }
-                    // default values might now be used by composite
-                    //resolveDefaultValues(lineToLoad);
                     // composite might do things that affect only and existing hence do it before
-                    resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine,compositeIndexResolver);
+                    resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine, compositeIndexResolver);
                     String rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                     if (rejectionReason == null) {// todo - zap ignored rejection reason or jam it somewhere else
                         try {
@@ -197,193 +199,190 @@ public class BatchImporter implements Callable<Void> {
     private static void resolveCompositeValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<String> attributeNames, List<ImportCellWithHeading> cells, int importLine, CompositeIndexResolver compositeIndexResolver) throws Exception {
         boolean adjusted = true;
         //loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
-        // note : a circular reference could cause an infinite loop - hence the counter
-        int counter = 0;
-        while (adjusted && counter < 10) {
+        // note : a circular reference could cause an infinite loop - hence timesLineIsModified limit
+        int timesLineIsModified = 0;
+        // first pass, sort overrides and flag what might need resolving
+        for (ImportCellWithHeading cell : cells) {
+            if (cell.getImmutableImportHeading().compositionPattern == null && cell.getImmutableImportHeading().lookupFrom == null) {
+                cell.needsResolving = false;
+            }
+            if (cell.getImmutableImportHeading().override != null) {
+                // moved the hack over from the heading reader
+                if (cell.getImmutableImportHeading().override.equals("NOW")) {
+                    cell.setLineValue(LocalDateTime.now() + "");
+                } else {
+                    cell.setLineValue(cell.getImmutableImportHeading().override);
+                }
+                if (cell.getImmutableImportHeading().lineNameRequired) {
+                    Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim()
+                            , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames));
+                    cell.addToLineNames(compName);
+                }
+            }
+        }
+        while (adjusted && timesLineIsModified < 10) {
             adjusted = false;
             for (ImportCellWithHeading cell : cells) {
-                String compositionPattern = cell.getImmutableImportHeading().compositionPattern;
-                if (cell.getImmutableImportHeading().defaultValue != null && (cell.getImmutableImportHeading().override != null || cell.getLineValue().trim().length() == 0)) {
-                    compositionPattern = cell.getImmutableImportHeading().defaultValue;
-                    if (cell.getImmutableImportHeading().override != null) {
-                        cell.setLineValue(cell.getImmutableImportHeading().override);
-                        if (cell.getImmutableImportHeading().lineNameRequired) {
-                            Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim()
-                                    , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames));
-                            cell.addToLineNames(compName);
-                            cell.setResolved(true);
-
+                if (cell.needsResolving) {
+                    String compositionPattern = cell.getImmutableImportHeading().compositionPattern;
+                    boolean dependenciesOk = true;
+                    if (compositionPattern != null && (cell.getLineValue() == null || cell.getLineValue().length() == 0)) {
+                        if (compositionPattern.equals("NOW")) {
+                            compositionPattern = LocalDateTime.now() + "";
                         }
-                    } else {
-                        if (cell.getImmutableImportHeading().lineNameRequired) {
-                            for (ImportCellWithHeading cell2 : cells) {
-                                // If one of the other cells is referring to this as its attribute e.g. Customer.Address1 and this cell is Customer and blank then set this value to whatever is in Customer.Address1 and set the language to Address1
-                                // of course this logic only is used where default is used so it's a question of whether there's a better option than default if the cell is empty
-                                // So keep the line imported if there's data missing I guess
-                                if (cell2 != cell && cell2.getImmutableImportHeading().indexForAttribute == cells.indexOf(cell) && cell2.getLineValue().length() > 0) {
-                                    compositionPattern = cell2.getLineValue();
+                        // do line number first, I see no reason not to. Important for pivot.
+                        String LINENO = "LINENO";
+                        compositionPattern = compositionPattern.replace(LINENO, importLine + "");
+                        int headingMarker = compositionPattern.indexOf("`");
+                        while (headingMarker >= 0) {
+                            boolean doublequotes = false;
+                            if (headingMarker < compositionPattern.length() && compositionPattern.charAt(headingMarker + 1) == '`') {
+                                doublequotes = true;
+                                headingMarker++;
+                            }
+                            int headingEnd = compositionPattern.indexOf("`", headingMarker + 1);
+                            if (headingEnd > 0) {
+                                String nameAttribute = null;
+                                String function = null;
+                                int funcInt = 0;
+                                int funcInt2 = 0;
+                                String expression = compositionPattern.substring(headingMarker + 1, headingEnd);
+                                // can now call an attribute of another cell if it's a name.
+                                // More powerful and intuitive than the previous defaulting to the default display name which would sometimes replace the cell value
+                                if (compositionPattern.length() > (headingEnd + 1) && compositionPattern.charAt(headingEnd + 1) == '.' && compositionPattern.charAt(headingEnd + 2) == '`') {
+                                    int start = headingEnd + 3;
+                                    headingEnd = compositionPattern.indexOf("`", start);
+                                    nameAttribute = compositionPattern.substring(start, headingEnd);
+                                } else { // either parse simple fucntions or do name attribute, can't do both
+                                    // fairly standard replace name of column with column value but with string manipulation left right mid
+                                    // checking for things like right(A Column Name, 5). Mid has two numbers.
+                                    if (expression.contains("(")) {
+                                        int bracketpos = expression.indexOf("(");
+                                        function = expression.substring(0, bracketpos);
+                                        int commaPos = expression.indexOf(",", bracketpos + 1);
+                                        int secondComma;
+                                        if (commaPos > 0) {
+                                            secondComma = expression.indexOf(",", commaPos + 1);
+                                            String countString;
+                                            try {
+                                                if (secondComma < 0) {
+                                                    countString = expression.substring(commaPos + 1, expression.length() - 1);
+                                                    funcInt = Integer.parseInt(countString.trim());
+                                                } else {
+                                                    countString = expression.substring(commaPos + 1, secondComma);
+                                                    funcInt = Integer.parseInt(countString.trim());
+                                                    countString = expression.substring(secondComma + 1, expression.length() - 1);
+                                                    funcInt2 = Integer.parseInt(countString);
+                                                }
+                                            } catch (Exception ignore) {
+                                            }
+                                            expression = expression.substring(bracketpos + 1, commaPos);
+                                        }
+                                    }
+                                }
+                                // if there was a function its name and parameters have been extracted and expression should now be a column name (trim?)
+                                // new logic has maps available to find the right column
+                                ImportCellWithHeading compCell;
+                                int colIndex = compositeIndexResolver.getColumnIndexForHeading(expression.trim());
+                                if (colIndex != -1) {
+                                    compCell = cells.get(colIndex);
+                                } else {
+                                    throw new Exception("Unable to find column : " + expression.trim() + " in composition pattern " + cell.getImmutableImportHeading().compositionPattern + " in heading " + cell.getImmutableImportHeading().heading);
+                                }
+                                if (compCell != null && compCell.getLineValue() != null && !compCell.needsResolving) {
+                                    String sourceVal = null;
+                                    // we have a name attribute and it is a column with a name
+                                    if (nameAttribute != null && compCell.getImmutableImportHeading().lineNameRequired) {
+                                        if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
+                                            Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
+                                                    , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames));
+                                            compCell.addToLineNames(compName);
+                                        }
+                                        if (compCell.getLineNames() != null) {
+                                            sourceVal = compCell.getLineNames().iterator().next().getAttribute(nameAttribute);
+                                        }
+                                    } else { // normal
+                                        sourceVal = compCell.getLineValue();
+                                    }
+                                    // the two ints need to be as they are used in excel
+                                    if (sourceVal != null) {
+                                        if (function != null && (funcInt > 0 || funcInt2 > 0) && sourceVal.length() > funcInt) {
+                                            if (function.equalsIgnoreCase("left")) {
+                                                sourceVal = sourceVal.substring(0, funcInt);
+                                            }
+                                            if (function.equalsIgnoreCase("right")) {
+                                                sourceVal = sourceVal.substring(sourceVal.length() - funcInt);
+                                            }
+                                            if (function.equalsIgnoreCase("mid")) {
+                                                //the second parameter of mid is the number of characters, not the end character
+                                                sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
+                                            }
+                                        }
+                                        compositionPattern = compositionPattern.replace(compositionPattern.substring(headingMarker, headingEnd + 1), sourceVal);
+                                        headingMarker = headingMarker + sourceVal.length() - 1;//is increaed before two lines below
+                                        if (doublequotes) headingMarker++;
+                                    } else {
+                                        // can't ger the value . . .
+                                        dependenciesOk = false;
+                                        break;
+                                    }
+                                } else {
+                                    dependenciesOk = false;
                                     break;
                                 }
                             }
+                            // try to find the start of the next column referenced
+                            headingMarker = compositionPattern.indexOf("`", ++headingMarker);
                         }
-                    }
-                }
-                if (!cell.getResolved() && compositionPattern != null && (cell.getLineValue() == null || cell.getLineValue().length() == 0)) {
-                    // do line number first, I see no reason not to. Important for pivot.
-                    String LINENO = "LINENO";
-                    compositionPattern = compositionPattern.replace(LINENO, importLine + "");
-                    int headingMarker = compositionPattern.indexOf("`");
-                    while (headingMarker >= 0) {
-                        boolean doublequotes = false;
-                        if (headingMarker < compositionPattern.length() && compositionPattern.charAt(headingMarker + 1) == '`') {
-                            doublequotes = true;
-                            headingMarker++;
-                        }
-                        int headingEnd = compositionPattern.indexOf("`", headingMarker + 1);
-                        if (headingEnd > 0) {
-                            // fairly standard replace name of column with column value but with string manipulation left right mid
-                            String expression = compositionPattern.substring(headingMarker + 1, headingEnd);
-                            String function = null;
-                            int funcInt = 0;
-                            int funcInt2 = 0;
-                            // checking for things like right(A Column Name, 5). Mid has two numbers.
-                            if (expression.contains("(")) {
-                                int bracketpos = expression.indexOf("(");
-                                function = expression.substring(0, bracketpos);
-                                int commaPos = expression.indexOf(",", bracketpos + 1);
-                                int secondComma;
-                                if (commaPos > 0) {
-                                    secondComma = expression.indexOf(",", commaPos + 1);
-                                    String countString;
-                                    try {
-                                        if (secondComma < 0) {
-                                            countString = expression.substring(commaPos + 1, expression.length() - 1);
-                                            funcInt = Integer.parseInt(countString.trim());
-                                        } else {
-                                            countString = expression.substring(commaPos + 1, secondComma);
-                                            funcInt = Integer.parseInt(countString.trim());
-                                            countString = expression.substring(secondComma + 1, expression.length() - 1);
-                                            funcInt2 = Integer.parseInt(countString);
-                                        }
-                                    } catch (Exception ignore) {
-                                    }
-                                    expression = expression.substring(bracketpos + 1, commaPos);
-                                }
-                            }
-                            // if there was a function its name and parameters have been extracted and expression should now be a column name (trim?)
-                            // new logic has maps available to find the right column
-                            ImportCellWithHeading compCell = null;
-                            int colIndex = compositeIndexResolver.getColumnIndexForHeading(expression.trim());
-                            if (colIndex != -1) {
-                                compCell = cells.get(colIndex);
-                            } else {
-                                throw new Exception("Unable to find column : " + expression.trim() + " in composition pattern " + cell.getImmutableImportHeading().compositionPattern + " in heading " + cell.getImmutableImportHeading().heading);
-                            }
-                            if (compCell != null && compCell.getLineValue() != null && resolved(compCell)) {
-                                String sourceVal = null;
-                                if (compCell.getImmutableImportHeading().lineNameRequired) {
-                                    if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
-                                        Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
-                                                , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames));
-                                        compCell.addToLineNames(compName);
-
-                                        //if (!compName.getDefaultDisplayName().equals(compCell.getLineValue())){
-                                        //    compCell.setLineValue(compName.getDefaultDisplayName());
-                                        //}
+                        // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
+                        if (dependenciesOk && compositionPattern.toLowerCase().startsWith("calc")) {
+                            compositionPattern = compositionPattern.substring(5);
+                            // IntelliJ said escaping  was redundant I shall assume it's correct.
+                            Pattern p = Pattern.compile("[+\\-*/]");
+                            Matcher m = p.matcher(compositionPattern);
+                            if (m.find()) {
+                                double dresult = 0.0;
+                                try {
+                                    double first = Double.parseDouble(compositionPattern.substring(0, m.start()));
+                                    double second = Double.parseDouble(compositionPattern.substring(m.end()));
+                                    char c = m.group().charAt(0);
+                                    switch (c) {
+                                        case '+':
+                                            dresult = first + second;
+                                            break;
+                                        case '-':
+                                            dresult = first - second;
+                                            break;
+                                        case '*':
+                                            dresult = first * second;
+                                            break;
+                                        case '/':
+                                            dresult = first / second;
+                                            break;
 
                                     }
-                                    if (compCell.getLineNames() != null) {
-                                        sourceVal = compCell.getLineNames().iterator().next().getDefaultDisplayName();
-                                    }
-                                } else {
-                                    sourceVal = compCell.getLineValue();
+                                } catch (Exception ignored) {
                                 }
-                                // the two ints need to be as they are used in excel
-                                if (sourceVal != null) {
-                                    if (function != null && (funcInt > 0 || funcInt2 > 0) && sourceVal.length() > funcInt) {
-                                        if (function.equalsIgnoreCase("left")) {
-                                            sourceVal = sourceVal.substring(0, funcInt);
-                                        }
-                                        if (function.equalsIgnoreCase("right")) {
-                                            sourceVal = sourceVal.substring(sourceVal.length() - funcInt);
-                                        }
-                                        if (function.equalsIgnoreCase("mid")) {
-                                            //the second parameter of mid is the number of characters, not the end character
-                                            sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
-                                        }
-                                    }
-                                    compositionPattern = compositionPattern.replace(compositionPattern.substring(headingMarker, headingEnd + 1), sourceVal);
-                                    headingMarker = headingMarker + sourceVal.length() - 1;//is increaed before two lines below
-                                    if (doublequotes) headingMarker++;
-                                } else {
-                                    compositionPattern = "";
-                                    headingMarker = headingEnd;
-                                }
-                            } else {
-                                headingMarker = headingEnd;
-                                compositionPattern = "";
+                                compositionPattern = dresult + "";
                             }
-
                         }
-                        // try to find the start of the next column referenced
-                        headingMarker = compositionPattern.indexOf("`", ++headingMarker);
-                    }
-                    // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
-                    if (compositionPattern.toLowerCase().startsWith("calc")) {
-                        compositionPattern = compositionPattern.substring(5);
-                        // IntelliJ said escaping  was redundant I shall assume it's correct.
-                        Pattern p = Pattern.compile("[+\\-*/]");
-                        Matcher m = p.matcher(compositionPattern);
-                        if (m.find()) {
-                            double dresult = 0.0;
-                            try {
-                                double first = Double.parseDouble(compositionPattern.substring(0, m.start()));
-                                double second = Double.parseDouble(compositionPattern.substring(m.end()));
-                                char c = m.group().charAt(0);
-                                switch (c) {
-                                    case '+':
-                                        dresult = first + second;
-                                        break;
-                                    case '-':
-                                        dresult = first - second;
-                                        break;
-                                    case '*':
-                                        dresult = first * second;
-                                        break;
-                                    case '/':
-                                        dresult = first / second;
-                                        break;
-
-                                }
-                            } catch (Exception ignored) {
-                            }
-                            compositionPattern = dresult + "";
+                        if (cell.getImmutableImportHeading().removeSpaces) {
+                            compositionPattern = compositionPattern.replace(" ", "");
                         }
-                    }
-                    if (cell.getImmutableImportHeading().removeSpaces) {
-                        compositionPattern = compositionPattern.replace(" ", "");
-                    }
-                    if (compositionPattern.length() > 0 && !compositionPattern.equals(cell.getLineValue())) {
-                        cell.setLineValue(compositionPattern);
-                        cell.setResolved(true);
-                        checkLookup(azquoMemoryDBConnection, cell);
-                        adjusted = true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
+                        if (dependenciesOk) {
+                            cell.setLineValue(compositionPattern);
+                            cell.needsResolving = false;
+                            checkLookup(azquoMemoryDBConnection, cell);
+                            adjusted = true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
+                        }
                     }
                 }
             }
-            counter++;
+            timesLineIsModified++;
         }
-        if (counter == 10) {
-            throw new Exception("circular composite references in headings!");
+        if (timesLineIsModified == 10) {
+            throw new Exception("Circular composite references in headings!");
         }
-    }
-
-    private static boolean resolved(ImportCellWithHeading cell) {
-        if (cell.getImmutableImportHeading().compositionPattern != null || cell.getImmutableImportHeading().lookupFrom != null) {
-            return cell.getResolved();
-        }
-
-        return true;
     }
 
     private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<ImportCellWithHeading> cells) throws Exception {
@@ -514,7 +513,7 @@ public class BatchImporter implements Callable<Void> {
     private static void newCellNameValue(ImportCellWithHeading cell, Name name) {
         cell.addToLineNames(name);
         cell.setLineValue(name.getDefaultDisplayName());
-        cell.setResolved(true);
+        cell.needsResolving = false;
     }
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest

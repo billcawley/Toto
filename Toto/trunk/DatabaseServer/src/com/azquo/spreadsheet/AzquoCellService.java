@@ -181,9 +181,9 @@ class AzquoCellService {
         if (filterTargetName!=null){
             Name target = NameService.findByName(azquoMemoryDBCOnnection, filterTargetName);
             target.setChildrenWillBePersisted(new ArrayList<>());
-            Iterator rowIt = dataToShow.iterator();
+            Iterator<List<AzquoCell>> rowIt = dataToShow.iterator();
             for (List<DataRegionHeading>row:rowHeadings){
-                List<AzquoCell> dataRow = (List<AzquoCell>)rowIt.next();
+                List<AzquoCell> dataRow = rowIt.next();
                 DataRegionHeading dataRegionHeading = row.iterator().next();
                 AzquoCell cell = dataRow.iterator().next();
                 if (cell.getDoubleValue()>0){

@@ -16,13 +16,13 @@ class ImportCellWithHeading {
     private final ImmutableImportHeading immutableImportHeading;
     private String lineValue;// prefix  line to try to avoid confusion
     private Set<Name> lineNames; // it could be a comma separated list. Added for PwC, I'm not entirely happy about this but if it's necessary it's necessary - EFC
-    private boolean resolved;
+    public boolean needsResolving;
 
     ImportCellWithHeading(ImmutableImportHeading immutableImportHeading, String value) {
         this.immutableImportHeading = immutableImportHeading;
         this.lineValue = value;
         this.lineNames = null;
-        resolved = false;
+        needsResolving = true;
     }
 
     ImmutableImportHeading getImmutableImportHeading() {
@@ -40,10 +40,6 @@ class ImportCellWithHeading {
     Set<Name> getLineNames() {
         return lineNames;
     }
-
-    void setResolved(boolean resolved){this.resolved = resolved; }
-
-    boolean getResolved() {return resolved; }
 
     // NOT thread safe - I assume that one thread will deal with one line
     void addToLineNames(Name name) {

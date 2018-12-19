@@ -114,7 +114,7 @@ public final class ImportService {
                 if ((f1.getName().endsWith(".xls") || f1.getName().endsWith(".xlsx")) && (!f2.getName().endsWith(".xls") && !f2.getName().endsWith(".xlsx"))) { // one is xls, the other is not
                     return -1;
                 }
-                if ((f2.getName().endsWith(".xls") || f2.getName().endsWith(".xlsx")) && (!f1.getName().endsWith(".xls") && !f1.getName().endsWith(".xlsx"))) { // otehr way round
+                if ((f2.getName().endsWith(".xls") || f2.getName().endsWith(".xlsx")) && (!f1.getName().endsWith(".xls") && !f1.getName().endsWith(".xlsx"))) { // other way round
                     return 1;
                 }
                 //now standard string order
@@ -415,6 +415,7 @@ public final class ImportService {
 
 
     // things that can be read from "Parameters" in an import template sheet
+    public static final String PRE_PROCESSOR = "pre-processor";
     public static final String PREPROCESSOR = "preprocessor";
     public static final String ADDITIONALDATAPROCESSOR = "additionaldataprocessor";
     public static final String POSTPROCESSOR = "postprocessor";
@@ -467,6 +468,9 @@ public final class ImportService {
                 }
             }
 
+            if (templateParameters.get(PRE_PROCESSOR) != null) {
+                uploadedFile.setPreProcessor(templateParameters.get(PRE_PROCESSOR));
+            }
             if (templateParameters.get(PREPROCESSOR) != null) {
                 uploadedFile.setPreProcessor(templateParameters.get(PREPROCESSOR));
             }
@@ -578,8 +582,8 @@ public final class ImportService {
                             break;
                         }
                     }
-
-                    if (required) {
+                    // ok criteria added after (may need refactoring), if a top heading with a value (surrounded by ``) matches a heading on the import model use that also
+                    if (required || (!standardHeadingsColumn.isEmpty() && topHeadings.values().contains("`" + standardHeadingsColumn.get(0) + "`"))) {
                         StringBuilder azquoHeadingsAsString = new StringBuilder();
                         // clauses after the first cell
                         for (String clause : standardHeadingsColumn.subList(1, standardHeadingsColumn.size())) {
@@ -838,10 +842,11 @@ public final class ImportService {
             for (int i = 0; i < cell.getSheet().getNumMergedRegions(); i++) {
                 CellRangeAddress region = cell.getSheet().getMergedRegion(i); //Region of merged cells
                 //check first cell of the region
-                if (cellIndex > region.getFirstColumn() // greater than, we're only interested if not the first column
+                if (rowIndex == region.getFirstRow() && // logic change - only do the merge thing on the first column
+                        cellIndex > region.getFirstColumn() // greater than, we're only interested if not the first column
                         && cellIndex <= region.getLastColumn()
-                        && rowIndex >= region.getFirstRow()
-                        && rowIndex <= region.getLastRow()
+                        /*&& rowIndex >= region.getFirstRow()
+                        && rowIndex <= region.getLastRow()*/
                 ) {
                     returnString = getCellValue(cell.getSheet().getRow(region.getFirstRow()).getCell(region.getFirstColumn()));
                 }
@@ -921,7 +926,7 @@ public final class ImportService {
         uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly. The report menu will have been modified
         int businessId = loggedInUser.getUser().getBusinessId();
         String pathName = loggedInUser.getBusinessDirectory();
-        ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndUserId(uploadedFile.getFileName(), loggedInUser.getUser().getId());
+        ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(uploadedFile.getFileName(), loggedInUser.getUser().getBusinessId());
         if (importTemplate != null) {
             // zap the old one first
             try {

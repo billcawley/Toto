@@ -249,7 +249,9 @@ todo - add classification here
             case ONLY:
                 heading.only = result;
                 break;
+            case DEFAULT: // default = composition in now but we'll leave the syntax support in
             case COMPOSITION:// combine more than one column
+                // as with override this seems a little hacky . . .
                 heading.compositionPattern = result;
                 break;
             case IGNORE:
@@ -270,24 +272,8 @@ todo - add classification here
                 break;
             case COMMENT: // ignore
                 break;
-            case DEFAULT: // if there's no value on the line a default
-                if (result.length() > 0) {
-                    if (result.equals("NOW")) {
-                        heading.defaultValue = LocalDateTime.now() + "";
-                    } else {
-                        heading.defaultValue = result;
-                    }
-                }
-                break;
-            case OVERRIDE: // if there's no value on the line a default
-                if (result.length() > 0) {
-                    if (result.equals("NOW")) {
-                        heading.override = LocalDateTime.now() + "";
-                    } else {
-                        heading.override = result;
-                    }
-                    heading.defaultValue = heading.override;
-                }
+            case OVERRIDE: //
+                heading.override = result;
                 break;
             case PEERS: // in new logic this is the only place that peers are defined in Azquo - previously they were against the Name object
                 heading.name = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, heading.heading, null, false);

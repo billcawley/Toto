@@ -26,7 +26,7 @@ public class ValuesImport {
 
     static void valuesImport(AzquoMemoryDBConnection connection, MappingIterator<String[]> lineIterator
             , UploadedFile uploadedFile, List<ImmutableImportHeading> importHeadings
-            , int batchSize, int noOfFileColumns, CompositeIndexResolver compositeIndexResolver) {
+            , int batchSize, int lastColumnToActuallyRead, CompositeIndexResolver compositeIndexResolver) {
         try {
             long track = System.currentTimeMillis();
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
@@ -51,7 +51,7 @@ public class ValuesImport {
                 int cellCount = 0;
                 for (ImmutableImportHeading immutableImportHeading : importHeadings) {
                     // Intern may save a little memory if strings are repeated a lot. Column Index could point past line values for things like composite.
-                    String lineValue = (cellCount++ < noOfFileColumns && columnIndex < lineValues.length) ? lineValues[columnIndex].trim().intern() : "";
+                    String lineValue = (cellCount++ <= lastColumnToActuallyRead && columnIndex < lineValues.length) ? lineValues[columnIndex].trim().intern() : "";
                     if (lineValue.length() > 0) blankLine = false;
                     if (lineValue.equals("\"")) {// was a problem, might be worth checking if it is still
                         corrupt = true;

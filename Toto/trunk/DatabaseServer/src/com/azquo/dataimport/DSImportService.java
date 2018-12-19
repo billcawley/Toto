@@ -195,8 +195,9 @@ public class DSImportService {
             // to lookup composite columns based on Azquo definitions - the standard old way, looking up what's before the first ; but it will NOT do the dot to "; attribute" replace before
             // so you could reference Shop.Address1 in composite
             Map<String, Integer> azquoHeadingCompositeLookup = new HashMap<>();
+            int lastColumnToActuallyRead = 0;
             if (uploadedFile.getSimpleHeadings() == null) { // if there were simple headings then we read NO headings off the file
-                if (uploadedFile.getHeadingsByFileHeadingsWithInterimLookup() != null) { // then we need to fund the headings specified
+                if (uploadedFile.getHeadingsByFileHeadingsWithInterimLookup() != null) { // then we need to find the headings specified
                     int headingDepth = 1;
                     for (List<String> headingsToFind : uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet()) {
                         if (headingsToFind.size() > headingDepth) {
@@ -223,8 +224,10 @@ public class DSImportService {
                     }
                     // ok now we get to the actual lookup
                     Map<List<String>, TypedPair<String, String>> headingsByLookupCopy = new HashMap<>(uploadedFile.getHeadingsByFileHeadingsWithInterimLookup()); // copy it as we're going to remove things
+                    int currentFileCol = 0;
                     for (List<String> headingsForAColumn : headingsFromTheFile) {// generally headingsForAColumn will just just have one element
                         if (headingsByLookupCopy.get(headingsForAColumn) != null) {
+                            lastColumnToActuallyRead = currentFileCol;
                             TypedPair<String, String> removed = headingsByLookupCopy.remove(headingsForAColumn);// take the used one out - after runnning through the file we need to add the remainder on to the end
                             headings.add(removed.getFirst());
                             if (removed.getSecond() != null) {
@@ -242,6 +245,7 @@ public class DSImportService {
                                 break;
                             }
                         }
+                        currentFileCol++;
                     }
                     List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null ? uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() : new ArrayList<>();
                     headingsNoFileHeadingsWithInterimLookup.addAll(headingsByLookupCopy.values());
@@ -264,7 +268,21 @@ public class DSImportService {
                                 break;
                             }
                         }
-                        headings.add(leftOver.getFirst());
+                        String headingToAdd = leftOver.getFirst();
+                        // most of the time top headings will be jammed in below as a simple default but that default might be against an existing heading in which case
+                        // add the default here and knock it off the list so it's not added again later
+                        // haked in later - todo tidy?
+                        if (!topHeadingsValues.isEmpty()){
+                            String toCheckAgainstTopHeadings = leftOver.getFirst();
+                            if (toCheckAgainstTopHeadings.contains(";")){
+                                toCheckAgainstTopHeadings = toCheckAgainstTopHeadings.substring(0, toCheckAgainstTopHeadings.indexOf(";"));
+                                if (topHeadingsValues.containsKey(toCheckAgainstTopHeadings) && !"FOUND".equals(topHeadingsValues.get(toCheckAgainstTopHeadings))){
+                                    headingToAdd = leftOver.getFirst() + ";default " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
+                                }
+                            }
+                        }
+
+                        headings.add(headingToAdd);
                         if (leftOver.getSecond() != null) {
                             interimCompositeLookup.put(leftOver.getSecond().toUpperCase(), headings.size() - 1);
                         }
@@ -283,7 +301,6 @@ public class DSImportService {
                             hasClauses = true;
                         }
                     }
-
                     if (blank){
                         uploadedFile.setError("Blank first line and no top headings, not loading.");
                         return uploadedFile;
@@ -305,10 +322,9 @@ public class DSImportService {
             } else { // straight simple headings
                 headings = uploadedFile.getSimpleHeadings();
             }
-
-            // currently, to my knowledge, the top headings are the only extras.
-            // do before composite lookup - may well be used there
-            int headingsSizeBeforeExtras = headings.size();
+            if (lastColumnToActuallyRead == 0){
+                lastColumnToActuallyRead = headings.size() - 1; // default to that
+            }
             // now add top headings that have a value
             for (String headingName : topHeadingsValues.keySet()) {
                 if (!topHeadingsValues.get(headingName).equals("FOUND")) {
@@ -355,12 +371,20 @@ public class DSImportService {
                     //treat 'a.b' as 'a;attribute b'  e.g.   london.DEFAULT_DISPLAY_NAME
                     // ok, the old heading.replace heading.replace(".", ";attribute ") is no good, need to only replace outside of string literals
                     boolean inStringLiteral = false;
+                    // and now composite can have . between the literals so watch for that too. Writing parsers is a pain,
+                    boolean inComposition = false;
                     StringBuilder replacedHeading = new StringBuilder();
                     for (char c : heading.toCharArray()){
+                        if (replacedHeading.toString().toLowerCase().endsWith("composition")){
+                            inComposition = true;
+                        }
+                        if (inComposition && !inStringLiteral && c == ';'){
+                            inComposition = false;
+                        }
                         if (c == '`'){
                             inStringLiteral = !inStringLiteral;
                         }
-                        if (c == '.' && !inStringLiteral){
+                        if (c == '.' && !inStringLiteral && !inComposition){
                             replacedHeading.append(";attribute ");
                         } else {
                             replacedHeading.append(c);
@@ -412,7 +436,7 @@ public class DSImportService {
                     , uploadedFile
                     , immutableImportHeadings
                     , batchSize
-                    , headingsSizeBeforeExtras, compositeIndexResolver);
+                    , lastColumnToActuallyRead, compositeIndexResolver);
         }
         return uploadedFile; // it will (should!) have been modified
     }

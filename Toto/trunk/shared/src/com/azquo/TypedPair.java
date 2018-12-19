@@ -8,6 +8,8 @@ import java.io.Serializable;
  * Edd after a generic pair, could be useful in a few places
  *
  * Is being serializeable a problem?
+ *
+ * Notably I need to check that this is not used in places where a more defined function would be better todo
  */
 public class TypedPair<F,S> implements Serializable {
     private final F first;
