@@ -98,8 +98,20 @@ public class BatchImporter implements Callable<Void> {
                         }
                     }
                     // composite might do things that affect only and existing hence do it before
-                    resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine, compositeIndexResolver);
-                    String rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
+                    String rejectionReason = null;
+                    for (ImportCellWithHeading cell : lineToLoad) {
+                        if (cell.getImmutableImportHeading().ignoreList != null) {
+                            for (String ignoreItem : cell.getImmutableImportHeading().ignoreList) {
+                                if (cell.getLineValue().toLowerCase().contains(ignoreItem)) {
+                                    rejectionReason = "ignored";
+                                }
+                            }
+                        }
+                    }
+                    if (rejectionReason==null){
+                        resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine, compositeIndexResolver);
+                        rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
+                    }
                     if (rejectionReason == null) {// todo - zap ignored rejection reason or jam it somewhere else
                         try {
                             resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
@@ -138,13 +150,6 @@ public class BatchImporter implements Callable<Void> {
     private static String checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
         //returns the error
         for (ImportCellWithHeading cell : cells) {
-            if (cell.getImmutableImportHeading().ignoreList != null) {
-                for (String ignoreItem : cell.getImmutableImportHeading().ignoreList) {
-                    if (cell.getLineValue().toLowerCase().contains(ignoreItem)) {
-                        return "ignored";
-                    }
-                }
-            }
             if (cell.getImmutableImportHeading().only != null) {
                 //`only' can have wildcards  '*xxx*'
                 String only = cell.getImmutableImportHeading().only.toLowerCase();
