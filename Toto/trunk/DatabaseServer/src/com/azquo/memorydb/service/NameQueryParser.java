@@ -172,7 +172,10 @@ public class NameQueryParser {
                 nextTerm = m.start() + pos + 2;
                 // PROBLEM!   The name found may have been following 'from ' or 'to ' (e.g. dates contain '-' so need to be encapsulated in quotes)
                 // need to check for this....
-                while (nextTerm < setFormula.length() && (StringUtils.precededBy(setFormula, StringLiterals.ASGLOBAL, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.TO, nextTerm) || StringUtils.precededBy(setFormula, StringLiterals.FROM, nextTerm))) {
+                while (nextTerm < setFormula.length() && (StringUtils.precededBy(setFormula, StringLiterals.ASGLOBAL, nextTerm)
+                        || StringUtils.precededBy(setFormula, StringLiterals.AS, nextTerm)
+                        || StringUtils.precededBy(setFormula, StringLiterals.TO, nextTerm)
+                        || StringUtils.precededBy(setFormula, StringLiterals.FROM, nextTerm))) {
                     int startPos = nextTerm + 1;
                     nextTerm = setFormula.length() + 1;
                     m = p.matcher(setFormula.substring(startPos));
