@@ -321,7 +321,7 @@ public class AzquoCellResolver {
                 }
             }
             for (DataRegionHeading heading : headingsForThisCell) {
-                if (heading.getName() == null && heading.getAttribute() == null && DataRegionHeading.isBestMatchFunction(heading.getFunction())) { // a redundant check? todo : confirm
+                if (heading.getName() == null && heading.getAttribute() == null && !DataRegionHeading.isBestMatchFunction(heading.getFunction())) { // a redundant check? todo : confirm
                     checked = false;
                 }
                 if (!heading.isWriteAllowed()) { // this replaces the isallowed check that was in the functions that resolved the cell values
