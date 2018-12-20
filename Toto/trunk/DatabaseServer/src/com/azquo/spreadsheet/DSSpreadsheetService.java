@@ -166,6 +166,7 @@ public class DSSpreadsheetService {
             }
             index++;
         }
+
         return new CellsAndHeadingsForDisplay(regionName, DataRegionHeadingService.convertDataRegionHeadingsToStrings(columnHeadingsAsArray, user)
                 , DataRegionHeadingService.convertDataRegionHeadingsToStrings(rowHeadingsAsArray, user), zeroSavedColumnIndexes, zeroSavedRowIndexes, displayData, rowHeadingsSource, colHeadingsSource, contextSource, azquoMemoryDBConnection.getDBLastModifiedTimeStamp(), regionOptions, lockCheckResultString);
     }

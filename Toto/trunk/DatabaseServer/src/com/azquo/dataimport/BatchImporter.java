@@ -167,7 +167,7 @@ public class BatchImporter implements Callable<Void> {
                     }
                 }
             }
-            // we could be deriving the name from composite so check existing here
+            // this assumes composite has been run if reqired
             // note that the code assumes there can only be one "existing" per line, it will exit this function on the first one.
             if (cell.getImmutableImportHeading().existing) {
                 boolean cellOk = false;
@@ -198,12 +198,10 @@ public class BatchImporter implements Callable<Void> {
 
     private static void resolveCompositeValues(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<String> attributeNames, List<ImportCellWithHeading> cells, int importLine, CompositeIndexResolver compositeIndexResolver) throws Exception {
         boolean adjusted = true;
-        //loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
-        // note : a circular reference could cause an infinite loop - hence timesLineIsModified limit
         int timesLineIsModified = 0;
         // first pass, sort overrides and flag what might need resolving
         for (ImportCellWithHeading cell : cells) {
-            if (cell.getImmutableImportHeading().compositionPattern == null && cell.getImmutableImportHeading().lookupFrom == null) {
+            if (cell.getImmutableImportHeading().compositionPattern == null) {
                 cell.needsResolving = false;
             }
             if (cell.getImmutableImportHeading().override != null) {
@@ -220,19 +218,21 @@ public class BatchImporter implements Callable<Void> {
                 }
             }
         }
-        while (adjusted && timesLineIsModified < 10) {
+        int loopLimit = 10;
+        // loops in case there are multiple levels of dependencies. The compositionPattern stays the same but on each pass the result may be different.
+        // note : a circular reference could cause an infinite loop - hence timesLineIsModified limit
+        while (adjusted && timesLineIsModified < loopLimit) {
             adjusted = false;
             for (ImportCellWithHeading cell : cells) {
                 if (cell.needsResolving) {
                     String compositionPattern = cell.getImmutableImportHeading().compositionPattern;
                     boolean dependenciesOk = true;
-                    if (compositionPattern != null && (cell.getLineValue() == null || cell.getLineValue().length() == 0)) {
+                    if (cell.getLineValue() == null || cell.getLineValue().length() == 0) {
                         if (compositionPattern.equals("NOW")) {
                             compositionPattern = LocalDateTime.now() + "";
                         }
                         // do line number first, I see no reason not to. Important for pivot.
-                        String LINENO = "LINENO";
-                        compositionPattern = compositionPattern.replace(LINENO, importLine + "");
+                        compositionPattern = compositionPattern.replace("LINENO", importLine + "");
                         int headingMarker = compositionPattern.indexOf("`");
                         while (headingMarker >= 0) {
                             boolean doublequotes = false;
@@ -253,7 +253,7 @@ public class BatchImporter implements Callable<Void> {
                                     int start = headingEnd + 3;
                                     headingEnd = compositionPattern.indexOf("`", start);
                                     nameAttribute = compositionPattern.substring(start, headingEnd);
-                                } else { // either parse simple fucntions or do name attribute, can't do both
+                                } else { // either parse simple functions or do name attribute, can't do both
                                     // fairly standard replace name of column with column value but with string manipulation left right mid
                                     // checking for things like right(A Column Name, 5). Mid has two numbers.
                                     if (expression.contains("(")) {
@@ -280,32 +280,32 @@ public class BatchImporter implements Callable<Void> {
                                         }
                                     }
                                 }
-                                // if there was a function its name and parameters have been extracted and expression should now be a column name (trim?)
+                                // if there was a function its name and parameters have been extracted and expression should now be a column name
                                 // new logic has maps available to find the right column
                                 ImportCellWithHeading compCell;
-                                int colIndex = compositeIndexResolver.getColumnIndexForHeading(expression.trim());
+                                expression = expression.trim();
+                                int colIndex = compositeIndexResolver.getColumnIndexForHeading(expression);
                                 if (colIndex != -1) {
                                     compCell = cells.get(colIndex);
                                 } else {
-                                    throw new Exception("Unable to find column : " + expression.trim() + " in composition pattern " + cell.getImmutableImportHeading().compositionPattern + " in heading " + cell.getImmutableImportHeading().heading);
+                                    throw new Exception("Unable to find column : " + expression + " in composition pattern " + cell.getImmutableImportHeading().compositionPattern + " in heading " + cell.getImmutableImportHeading().heading);
                                 }
-                                if (compCell != null && compCell.getLineValue() != null && !compCell.needsResolving) {
+                                if (compCell != null && compCell.getLineValue() != null && !compCell.needsResolving) {// skip until the referenced cell has been resolved
                                     String sourceVal = null;
-                                    // we have a name attribute and it is a column with a name
+                                    // we have a name attribute and it is a column with a name, we resolve and
                                     if (nameAttribute != null && compCell.getImmutableImportHeading().lineNameRequired) {
                                         if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
                                             Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, compCell.getLineValue().trim()
                                                     , compCell.getImmutableImportHeading().parentNames, compCell.getImmutableImportHeading().isLocal, setLocalLanguage(compCell.getImmutableImportHeading().attribute, attributeNames));
                                             compCell.addToLineNames(compName);
                                         }
-                                        if (compCell.getLineNames() != null) {
-                                            sourceVal = compCell.getLineNames().iterator().next().getAttribute(nameAttribute);
-                                        }
+                                        sourceVal = compCell.getLineNames().iterator().next().getAttribute(nameAttribute);
                                     } else { // normal
                                         sourceVal = compCell.getLineValue();
                                     }
-                                    // the two ints need to be as they are used in excel
                                     if (sourceVal != null) {
+                                        // we have the value, check if there was a function to do to it
+                                        // the two ints need to be as they are used in excel
                                         if (function != null && (funcInt > 0 || funcInt2 > 0) && sourceVal.length() > funcInt) {
                                             if (function.equalsIgnoreCase("left")) {
                                                 sourceVal = sourceVal.substring(0, funcInt);
@@ -318,15 +318,16 @@ public class BatchImporter implements Callable<Void> {
                                                 sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
                                             }
                                         }
+                                        // now replace and move the marker to the next possible place
                                         compositionPattern = compositionPattern.replace(compositionPattern.substring(headingMarker, headingEnd + 1), sourceVal);
                                         headingMarker = headingMarker + sourceVal.length() - 1;//is increaed before two lines below
                                         if (doublequotes) headingMarker++;
                                     } else {
-                                        // can't ger the value . . .
+                                        // can't get the value . . .
                                         dependenciesOk = false;
                                         break;
                                     }
-                                } else {
+                                } else { // couldn't find the cell or the required cell is not yet resolved
                                     dependenciesOk = false;
                                     break;
                                 }
@@ -334,42 +335,42 @@ public class BatchImporter implements Callable<Void> {
                             // try to find the start of the next column referenced
                             headingMarker = compositionPattern.indexOf("`", ++headingMarker);
                         }
-                        // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
-                        if (dependenciesOk && compositionPattern.toLowerCase().startsWith("calc")) {
-                            compositionPattern = compositionPattern.substring(5);
-                            // IntelliJ said escaping  was redundant I shall assume it's correct.
-                            Pattern p = Pattern.compile("[+\\-*/]");
-                            Matcher m = p.matcher(compositionPattern);
-                            if (m.find()) {
-                                double dresult = 0.0;
-                                try {
-                                    double first = Double.parseDouble(compositionPattern.substring(0, m.start()));
-                                    double second = Double.parseDouble(compositionPattern.substring(m.end()));
-                                    char c = m.group().charAt(0);
-                                    switch (c) {
-                                        case '+':
-                                            dresult = first + second;
-                                            break;
-                                        case '-':
-                                            dresult = first - second;
-                                            break;
-                                        case '*':
-                                            dresult = first * second;
-                                            break;
-                                        case '/':
-                                            dresult = first / second;
-                                            break;
-
-                                    }
-                                } catch (Exception ignored) {
-                                }
-                                compositionPattern = dresult + "";
-                            }
-                        }
-                        if (cell.getImmutableImportHeading().removeSpaces) {
-                            compositionPattern = compositionPattern.replace(" ", "");
-                        }
                         if (dependenciesOk) {
+                            // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
+                            if (compositionPattern.toLowerCase().startsWith("calc")) {
+                                compositionPattern = compositionPattern.substring(5);
+                                // IntelliJ said escaping  was redundant I shall assume it's correct.
+                                Pattern p = Pattern.compile("[+\\-*/]");
+                                Matcher m = p.matcher(compositionPattern);
+                                if (m.find()) {
+                                    double dresult = 0.0;
+                                    try {
+                                        double first = Double.parseDouble(compositionPattern.substring(0, m.start()));
+                                        double second = Double.parseDouble(compositionPattern.substring(m.end()));
+                                        char c = m.group().charAt(0);
+                                        switch (c) {
+                                            case '+':
+                                                dresult = first + second;
+                                                break;
+                                            case '-':
+                                                dresult = first - second;
+                                                break;
+                                            case '*':
+                                                dresult = first * second;
+                                                break;
+                                            case '/':
+                                                dresult = first / second;
+                                                break;
+
+                                        }
+                                    } catch (Exception ignored) {
+                                    }
+                                    compositionPattern = dresult + "";
+                                }
+                            }
+                            if (cell.getImmutableImportHeading().removeSpaces) {
+                                compositionPattern = compositionPattern.replace(" ", "");
+                            }
                             cell.setLineValue(compositionPattern);
                             cell.needsResolving = false;
                             checkLookup(azquoMemoryDBConnection, cell);
@@ -380,7 +381,7 @@ public class BatchImporter implements Callable<Void> {
             }
             timesLineIsModified++;
         }
-        if (timesLineIsModified == 10) {
+        if (timesLineIsModified == loopLimit) {
             throw new Exception("Circular composite references in headings!");
         }
     }
