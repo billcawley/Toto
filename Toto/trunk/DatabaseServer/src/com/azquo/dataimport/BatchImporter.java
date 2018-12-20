@@ -108,7 +108,7 @@ public class BatchImporter implements Callable<Void> {
                             }
                         }
                     }
-                    if (rejectionReason==null){
+                    if (rejectionReason == null) {
                         resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine, compositeIndexResolver);
                         rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                     }
@@ -126,7 +126,6 @@ public class BatchImporter implements Callable<Void> {
                         if (now - time > 10) { // 10ms a bit arbitrary
                             System.out.println("line no " + importLine + " time = " + (now - time) + "ms");
                         }
-
                         time = now;
                     } else if (linesRejected.size() < 100) {
                         linesRejected.add(importLine + ": " + rejectionReason);
@@ -135,7 +134,17 @@ public class BatchImporter implements Callable<Void> {
 
             } catch (Exception e) {
                 if (linesRejected.size() < 100) {
-                    linesRejected.add(importLine + ": " + e.getMessage() + "\n");
+                    // I wonder about formatting on this. Maybe add some more object structure?
+                    StringBuilder lineDetails = new StringBuilder();
+                    for (ImportCellWithHeading importCellWithHeading : lineToLoad){
+                        if (importCellWithHeading.getImmutableImportHeading().heading != null && !importCellWithHeading.getImmutableImportHeading().heading.isEmpty()){
+                            lineDetails.append(importCellWithHeading.getImmutableImportHeading().heading).append(importCellWithHeading.getImmutableImportHeading().attribute != null ? "." + importCellWithHeading.getImmutableImportHeading().attribute : "");
+                            lineDetails.append(":");
+                            lineDetails.append(importCellWithHeading.getLineValue());
+                            lineDetails.append("<br/>");
+                        }
+                    }
+                    linesRejected.add(importLine + ": " + e.getMessage() + "<br/>Line details : <br/>" + lineDetails);
                 }
             }
             importLine++;
@@ -206,7 +215,7 @@ public class BatchImporter implements Callable<Void> {
         int timesLineIsModified = 0;
         // first pass, sort overrides and flag what might need resolving
         for (ImportCellWithHeading cell : cells) {
-            if (cell.getImmutableImportHeading().compositionPattern == null) {
+            if (cell.getImmutableImportHeading().compositionPattern == null || (cell.getLineValue() != null && !cell.getLineValue().isEmpty())) {
                 cell.needsResolving = false;
             }
             if (cell.getImmutableImportHeading().override != null) {
@@ -232,7 +241,6 @@ public class BatchImporter implements Callable<Void> {
                 if (cell.needsResolving) {
                     String compositionPattern = cell.getImmutableImportHeading().compositionPattern;
                     boolean dependenciesOk = true;
-                    if (cell.getLineValue() == null || cell.getLineValue().length() == 0) {
                         if (compositionPattern.equals("NOW")) {
                             compositionPattern = LocalDateTime.now() + "";
                         }
@@ -296,7 +304,7 @@ public class BatchImporter implements Callable<Void> {
                                     throw new Exception("Unable to find column : " + expression + " in composition pattern " + cell.getImmutableImportHeading().compositionPattern + " in heading " + cell.getImmutableImportHeading().heading);
                                 }
                                 if (compCell != null && compCell.getLineValue() != null && !compCell.needsResolving) {// skip until the referenced cell has been resolved
-                                    String sourceVal = null;
+                                    String sourceVal;
                                     // we have a name attribute and it is a column with a name, we resolve and
                                     if (nameAttribute != null && compCell.getImmutableImportHeading().lineNameRequired) {
                                         if (compCell.getLineNames() == null && compCell.getLineValue().length() > 0) {
@@ -308,6 +316,7 @@ public class BatchImporter implements Callable<Void> {
                                     } else { // normal
                                         sourceVal = compCell.getLineValue();
                                     }
+                                    // Could be null if a duff attribute was specified, whether this should exception is an interesting one
                                     if (sourceVal != null) {
                                         // we have the value, check if there was a function to do to it
                                         // the two ints need to be as they are used in excel
@@ -382,7 +391,6 @@ public class BatchImporter implements Callable<Void> {
                             adjusted = true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
                         }
                     }
-                }
             }
             timesLineIsModified++;
         }
@@ -390,6 +398,21 @@ public class BatchImporter implements Callable<Void> {
             throw new Exception("Circular composite references in headings!");
         }
     }
+
+    /*
+
+Thd dictionary substitutes free style text with categories from a lookup set.
+
+Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup phrase (e.g.   car + accident - speed)
+ in which if each positive term is found, and no negative term is found, the phrase is replaced by the category.
+  The terms may consist of lists (' car + accident - speed, fast).
+  There may also be a set of 'synonyms' which consists of similar words (e.g.  car : vehicle, auto, motor) to help the definition
+
+    Also see note on MutableImportHeading dictionaryMap
+
+    *** Following discussion 20/12/2018 this will be moved to reporting
+
+     */
 
     private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<ImportCellWithHeading> cells) throws Exception {
         for (ImportCellWithHeading cell : cells) {

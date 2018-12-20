@@ -936,6 +936,7 @@ public final class ImportService {
                 e.printStackTrace();
             }
             importTemplate.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
+            importTemplate.setDateCreated(LocalDateTime.now());
         } else {
             importTemplate = new ImportTemplate(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), uploadedFile.getFileName(), uploadedFile.getFileName(), ""); // default to ZK now
         }
