@@ -87,6 +87,8 @@ class HeadingReader {
 
     the system will find the first element of the set which satisfies the requirements.   'TO' is optional
 
+    any name in the set wih attributes in the range
+
      */
     private static final String LOOKUP = "lookup";
 

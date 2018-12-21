@@ -35,17 +35,19 @@ CREATE TABLE IF NOT EXISTS `business` (
 --
 
 CREATE TABLE IF NOT EXISTS `database` (
-  `id` int(11) NOT NULL,
-  `business_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `mysql_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `name_count` int(11) NOT NULL,
-  `value_count` int(11) NOT NULL,
-  `database_server_id` int(11) NOT NULL,
-  `created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
+                                        `id` int(11) NOT NULL,
+                                        `business_id` int(11) NOT NULL,
+                                        `user_id` int(11) NOT NULL DEFAULT '0',
+                                        `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                        `mysql_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                        `database_type` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+                                        `name_count` int(11) NOT NULL,
+                                        `value_count` int(11) NOT NULL,
+                                        `database_server_id` int(11) NOT NULL,
+                                        `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                        `last_provenance` text COLLATE utf8_unicode_ci,
+                                        `auto_backup` tinyint(1) DEFAULT '0'
+) ENGINE=InnoDB AUTO_INCREMENT=698 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 -- --------------------------------------------------------
 
 --
@@ -59,7 +61,7 @@ CREATE TABLE IF NOT EXISTS `database_server` (
   `sftp_url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-
+ALTER TABLE `database` CHANGE `last_provenance` `last_provenance` TEXT CHARACTER SET utf8 COLLATE utf8_unicode_ci NULL DEFAULT NULL;
 -- --------------------------------------------------------
 
 --

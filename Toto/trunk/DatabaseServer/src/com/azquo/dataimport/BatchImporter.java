@@ -458,7 +458,12 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
         }
     }
 
-    // categorise numeric values, see HeadingReader
+    // categorise numeric values, see HeadingReader.java
+    // lookup assumes that the value in the cell is two values comma separated. The name of a set and the value to look for in its children.
+    // Typically this value is made by a composition though it doesn't have to be
+    // from/to are different attributes to check against in the set
+    // lookup used for finding a contract year off a date . . .
+    // todo - remove after WFC has converted to an execute
 
     private static void checkLookup(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell) throws Exception {
         if (cell.getLineValue() != null && cell.getLineValue().length() > 0 && cell.getImmutableImportHeading().lookupFrom != null && cell.getLineNames() == null) {
@@ -824,7 +829,6 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
 
     private static List<String> setLocalLanguage(String localLanguage, List<String> defaultLanguages) {
         List<String> languages = new ArrayList<>();
-
         if (localLanguage != null) {
             String[] localLangs = localLanguage.split(",");
             for (String localLang : localLangs) {
