@@ -1,3 +1,7 @@
+21-12-18
+
+Bug fixes on importing, further improvements to feedback on importing
+
 20-12-18
 
 The system now uses Import Templates. This is a *major* update which accounts for the gap in deployments.

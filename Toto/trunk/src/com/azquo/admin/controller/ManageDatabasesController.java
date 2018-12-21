@@ -227,9 +227,12 @@ public class ManageDatabasesController {
                     Map<String, String> paramsFromUser = new HashMap<>();
                     while (params.hasMoreElements()) {
                         String param = params.nextElement();
+                        // todo - remove string literals
                         if (param.startsWith("pendingupload-")) {
                             System.out.println("param : " + param.substring("pendingupload-".length()) + " value : " + request.getParameter(param));
-                            paramsFromUser.put(param.substring("pendingupload-".length()).toLowerCase().trim(), request.getParameter(param)); // lower case important, it's the convention when grabbing from the file name
+                            if (!"N/A".equals(request.getParameter(param))){
+                                paramsFromUser.put(param.substring("pendingupload-".length()).toLowerCase().trim(), request.getParameter(param)); // lower case important, it's the convention when grabbing from the file name
+                            }
                         }
                     }
                     // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
@@ -374,6 +377,7 @@ public class ManageDatabasesController {
                         String list = stringTokenizer.nextToken().trim();
                         List<String> values = new ArrayList<>();
                         StringTokenizer stringTokenizer1 = new StringTokenizer(list, ",");
+                        values.add("N/A");
                         while (stringTokenizer1.hasMoreTokens()) {
                             values.add(stringTokenizer1.nextToken().trim());
                         }
@@ -561,6 +565,27 @@ public class ManageDatabasesController {
             } else {
                 model.put("serverList", false);
             }
+            // todo factor
+            // ok, so, for pending uploads we need to know what parameters the user can set
+            Map<String, List<String>> paramsMap = new HashMap<>();
+            String scanParams = SpreadsheetService.getScanParams();
+            if (!scanParams.isEmpty()) {
+                StringTokenizer stringTokenizer = new StringTokenizer(scanParams, "|");
+                while (stringTokenizer.hasMoreTokens()) {
+                    String name = stringTokenizer.nextToken().trim();
+                    if (stringTokenizer.hasMoreTokens()) {
+                        String list = stringTokenizer.nextToken().trim();
+                        List<String> values = new ArrayList<>();
+                        values.add("N/A");
+                        StringTokenizer stringTokenizer1 = new StringTokenizer(list, ",");
+                        while (stringTokenizer1.hasMoreTokens()) {
+                            values.add(stringTokenizer1.nextToken().trim());
+                        }
+                        paramsMap.put(name, values);
+                    }
+                }
+            }
+            model.put("params", paramsMap.entrySet()); // no search for the mo
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
             AtomicBoolean canCommit = new AtomicBoolean(false);
