@@ -427,8 +427,19 @@ public final class ImportService {
 
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
     private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile) throws Exception {
-        if (uploadedFile.getParameter(IMPORTTEMPLATE) != null && ImportTemplateDAO.findForNameAndBusinessId(uploadedFile.getParameter(IMPORTTEMPLATE), loggedInUser.getUser().getBusinessId()) != null) {
-            ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(uploadedFile.getParameter(IMPORTTEMPLATE), loggedInUser.getUser().getBusinessId());
+        String importTemplateName = uploadedFile.getParameter(IMPORTTEMPLATE);
+        // make a guess at the import template if it wasn't explicitly specifies
+        if (importTemplateName == null){
+            importTemplateName = uploadedFile.getFileName();
+            if (importTemplateName.contains(" ")){
+                importTemplateName = importTemplateName.substring(0, importTemplateName.indexOf(" "));
+            } else if (importTemplateName.contains(".")){
+                importTemplateName = importTemplateName.substring(0, importTemplateName.indexOf("."));
+            }
+            importTemplateName += ".xlsx";
+        }
+        if (ImportTemplateDAO.findForNameAndBusinessId(importTemplateName, loggedInUser.getUser().getBusinessId()) != null) {
+            ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(importTemplateName, loggedInUser.getUser().getBusinessId());
             // todo - import template service?
             Workbook book;
             FileInputStream fs = new FileInputStream(new File(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk()));
