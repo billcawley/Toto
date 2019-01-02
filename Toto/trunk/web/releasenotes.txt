@@ -1,3 +1,7 @@
+21-12-18-2
+
+N/A added to pending upload params
+
 21-12-18
 
 Bug fixes on importing, further improvements to feedback on importing

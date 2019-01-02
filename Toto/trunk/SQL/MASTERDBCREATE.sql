@@ -230,7 +230,7 @@ CREATE TABLE if not exists `pending_upload` (
   `parameters` text COLLATE utf8_unicode_ci,
   `database_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `import_result` text COLLATE utf8_unicode_ci,
+  `import_result` longtext COLLATE utf8_unicode_ci,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 

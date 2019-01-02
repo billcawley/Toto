@@ -19,6 +19,7 @@ import com.csvreader.CsvWriter;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.math.NumberUtils;
 import org.zeroturnaround.zip.ZipUtil;
 import org.zkoss.poi.hssf.usermodel.HSSFWorkbook;
 import org.zkoss.poi.openxml4j.opc.OPCPackage;
@@ -419,7 +420,9 @@ public final class ImportService {
     public static final String PREPROCESSOR = "preprocessor";
     public static final String ADDITIONALDATAPROCESSOR = "additionaldataprocessor";
     public static final String POSTPROCESSOR = "postprocessor";
+    public static final String NOFILEHEADINGS = "nofileheadings";
     public static final String LANGUAGE = "language";
+    public static final String SKIPLINES = "skiplines";
 
 
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
@@ -489,13 +492,16 @@ public final class ImportService {
             }
 
             if (versionHeadings.isEmpty()) { // ok we go vanilla, not a version in a template, just the Import Model sheet
+                if (templateParameters.get(SKIPLINES) != null && NumberUtils.isDigits(templateParameters.get(SKIPLINES))) {
+                    uploadedFile.setSkipLines(Integer.parseInt(templateParameters.get(SKIPLINES)));
+                }
                 int maxHeadingsDepth = 0;
                 for (List<String> headings : standardHeadings) {
                     if (headings.size() > maxHeadingsDepth) {
                         maxHeadingsDepth = headings.size();
                     }
                 }
-                if (maxHeadingsDepth == 1) { // simple headings
+                if (maxHeadingsDepth == 1) { // simple headings - todo  - zap as it's irrelevant now we have "NOFILEHEADINGS" ?
                     List<String> simpleHeadings = new ArrayList<>();
                     for (List<String> headings : standardHeadings) {
                         if (headings.isEmpty()) {
@@ -505,26 +511,43 @@ public final class ImportService {
                         }
                     }
                     uploadedFile.setSimpleHeadings(simpleHeadings);
-                } else { // we assume the first line are file headings and anything below needs to be joined together into an Azquo heading
-                    Map<List<String>, TypedPair<String, String>> headingsByLookupWithInterimLookup = new HashMap<>();
-                    for (List<String> headings : standardHeadings) {
-                        String fileHeading = null;
-                        String azquoHeading = null;
-                        for (int i = 0; i < headings.size(); i++) {
-                            if (i == 0) {
-                                fileHeading = headings.get(i);
+                } else {
+                    if (templateParameters.get(NOFILEHEADINGS) != null){ // this parameter allows simple headings to be built from multiple cells
+                        List<String> simpleHeadings = new ArrayList<>();
+                        for (List<String> headings : standardHeadings) {
+                            String azquoHeading = null;
+                            for (int i = 0; i < headings.size(); i++) {
+                                if (i == 0) {
+                                    azquoHeading = headings.get(i);
+                                } else {
+                                    azquoHeading += (";" + headings.get(i));
+                                }
                             }
-                            if (i == 1) {
-                                azquoHeading = headings.get(i);
-                            }
-                            if (i > 1) {
-                                azquoHeading += (";" + headings.get(i));
-                            }
+                            simpleHeadings.add(azquoHeading);
                         }
-                        // there is no second value to the typed pair - that's only used when there's a version. The field says "WithInterimLookup" but there is no interim lookup where there's one sheet
-                        headingsByLookupWithInterimLookup.put(Collections.singletonList(fileHeading), new TypedPair<>(azquoHeading, null));
+                        uploadedFile.setSimpleHeadings(simpleHeadings);
+                    } else {
+                        // we assume the first line are file headings and anything below needs to be joined together into an Azquo heading
+                        Map<List<String>, TypedPair<String, String>> headingsByLookupWithInterimLookup = new HashMap<>();
+                        for (List<String> headings : standardHeadings) {
+                            String fileHeading = null;
+                            String azquoHeading = null;
+                            for (int i = 0; i < headings.size(); i++) {
+                                if (i == 0) {
+                                    fileHeading = headings.get(i);
+                                }
+                                if (i == 1) {
+                                    azquoHeading = headings.get(i);
+                                }
+                                if (i > 1) {
+                                    azquoHeading += (";" + headings.get(i));
+                                }
+                            }
+                            // there is no second value to the typed pair - that's only used when there's a version. The field says "WithInterimLookup" but there is no interim lookup where there's one sheet
+                            headingsByLookupWithInterimLookup.put(Collections.singletonList(fileHeading), new TypedPair<>(azquoHeading, null));
+                        }
+                        uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByLookupWithInterimLookup);
                     }
-                    uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByLookupWithInterimLookup);
                 }
             } else {
                 // the thing here is to add the version headings as file headings looking up the Azquo headings from the Import Model
