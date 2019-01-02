@@ -322,6 +322,10 @@ public class DSImportService {
             } else { // straight simple headings
                 headings = uploadedFile.getSimpleHeadings();
             }
+            // zap any trailing empty headings, can be an issue with the vertically built headings
+            while (!headings.isEmpty() && headings.get(headings.size() - 1).isEmpty()){
+                headings.remove(headings.size() - 1);
+            }
             if (lastColumnToActuallyRead == 0){
                 lastColumnToActuallyRead = headings.size() - 1; // default to that
             }

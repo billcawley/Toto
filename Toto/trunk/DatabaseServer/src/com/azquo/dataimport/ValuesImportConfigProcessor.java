@@ -28,10 +28,12 @@ class ValuesImportConfigProcessor {
             lastfilled = false;
             // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
             for (String heading : nextLine) {
-                if (heading.length() > 0 && !heading.equals("--")) { //ignore "--", can be used to give space below the headers
+                if (!heading.equals("--")) { //ignore "--", can be used to give space below the headers
+                    // logic had to be altered to account for gaps in the headers - blank columns which can be a problem if the top line is sparse
                     if (colNo >= headers.size()) {
                         headers.add(heading);
-                    } else {
+                        lastfilled = true;
+                    } else if (heading.length() > 0){
                         if (heading.startsWith(".")) {
                             headers.set(colNo, headers.get(colNo) + heading);
                         } else {
@@ -45,8 +47,8 @@ class ValuesImportConfigProcessor {
                                 }
                             }
                         }
+                        lastfilled = true;
                     }
-                    lastfilled = true;
                 }
                 colNo++;
             }
