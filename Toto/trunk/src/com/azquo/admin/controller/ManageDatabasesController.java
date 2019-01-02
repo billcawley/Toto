@@ -741,7 +741,7 @@ public class ManageDatabasesController {
 
             if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + counter + "'); return false;\">Rejected lines : ").append(uploadedFile.getLinesRejected().size()).append("</a> : \n<br/><div id=\"rejectedLines" + counter + "\" style=\"display : none\">");
+                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + counter + "'); return false;\">Line Errors : ").append(uploadedFile.getLinesRejected().size()).append("</a> : \n<br/><div id=\"rejectedLines" + counter + "\" style=\"display : none\">");
                 for (String lineRejected : uploadedFile.getLinesRejected()) {
                     toReturn.append(indentSb);
                     toReturn.append(lineRejected).append("\n<br/>");

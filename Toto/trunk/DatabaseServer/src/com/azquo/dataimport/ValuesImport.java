@@ -1,6 +1,7 @@
 package com.azquo.dataimport;
 
 import com.azquo.ThreadPools;
+import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.spreadsheet.transport.UploadedFile;
@@ -30,7 +31,7 @@ public class ValuesImport {
         try {
             long track = System.currentTimeMillis();
             // now, since this will be multi threaded need to make line objects to batch up. Cannot be completely immutable due to the current logic e.g. composite values
-            ArrayList<List<ImportCellWithHeading>> linesBatched = new ArrayList<>(batchSize);
+            ArrayList<TypedPair<Integer, List<ImportCellWithHeading>>> linesBatched = new ArrayList<>(batchSize);
             List<Future> futureBatches = new ArrayList<>();
             // Local cache of names just to speed things up, a name could be referenced millions of times in one file
             final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
@@ -73,7 +74,7 @@ public class ValuesImport {
                     columnIndex++;
                 }
                 if (!corrupt && !blankLine) {
-                    linesBatched.add(importCellsWithHeading);
+                    linesBatched.add(new TypedPair<>(importLine,importCellsWithHeading));
                     // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
                     // batch size is derived by getLineIteratorAndBatchSize
                     if (linesBatched.size() == batchSize) {
@@ -82,7 +83,7 @@ public class ValuesImport {
                                 new BatchImporter(connection
                                         , uploadedFile.getNoValuesAdjusted(), linesBatched
                                         , namesFoundCache, uploadedFile.getLanguages()
-                                        , importLine - batchSize, linesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver))// line no should be the start
+                                        , linesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver))// line no should be the start
 
                         );
                         linesBatched = new ArrayList<>(batchSize);
@@ -91,10 +92,8 @@ public class ValuesImport {
                     linesImported--; // drop it down as we're not even going to try that line
                 }
             }
-            // load leftovers
-            int loadLine = importLine - linesBatched.size(); // NOT batch size! A problem here isn't a functional problem but it makes logging incorrect.
             futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(connection
-                    , uploadedFile.getNoValuesAdjusted(), linesBatched, namesFoundCache, uploadedFile.getLanguages(), loadLine, linesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver)));
+                    , uploadedFile.getNoValuesAdjusted(), linesBatched, namesFoundCache, uploadedFile.getLanguages(), linesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver)));
             // check all work is done and memory is in sync
             for (Future<?> futureBatch : futureBatches) {
                 futureBatch.get(1, TimeUnit.HOURS);
@@ -110,7 +109,12 @@ public class ValuesImport {
                 }
             }
             uploadedFile.setProcessingDuration((System.currentTimeMillis() - track) / 1000);
-            uploadedFile.setNoLinesImported(linesImported - linesRejected.size());
+            // hacky - make a better solution - todo
+            Set<String> linesRejectedTest = new HashSet<>();
+            for (String rejected : linesRejected){
+                linesRejectedTest.add(rejected.substring(0, rejected.indexOf(":")));
+            }
+            uploadedFile.setNoLinesImported(linesImported - linesRejectedTest.size());
 
             // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
             if (!linesRejected.isEmpty()) {

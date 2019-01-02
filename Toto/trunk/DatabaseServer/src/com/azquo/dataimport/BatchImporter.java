@@ -1,6 +1,7 @@
 package com.azquo.dataimport;
 
 import com.azquo.DateUtils;
+import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
@@ -32,9 +33,7 @@ public class BatchImporter implements Callable<Void> {
     private final AzquoMemoryDBConnection azquoMemoryDBConnection;
     // just to give a little feedback on the number imported
     private final AtomicInteger valuesModifiedCounter;
-    // what line in the file does this batch start at? for logging
-    private int importLine;
-    private final List<List<ImportCellWithHeading>> dataToLoad;
+    private final List<TypedPair<Integer, List<ImportCellWithHeading>>> dataToLoad;
     private final Map<String, Name> namesFoundCache;
     private final List<String> attributeNames;
     private final Set<String> linesRejected;
@@ -43,10 +42,9 @@ public class BatchImporter implements Callable<Void> {
 
     BatchImporter(AzquoMemoryDBConnection azquoMemoryDBConnection
             , AtomicInteger valuesModifiedCounter
-            , List<List<ImportCellWithHeading>> dataToLoad
+            , List<TypedPair<Integer, List<ImportCellWithHeading>>> dataToLoad
             , Map<String, Name> namesFoundCache
             , List<String> attributeNames
-            , int importLine
             , Set<String> linesRejected
             , boolean clearData
             , CompositeIndexResolver compositeIndexResolver) {
@@ -55,7 +53,6 @@ public class BatchImporter implements Callable<Void> {
         this.dataToLoad = dataToLoad;
         this.namesFoundCache = namesFoundCache;
         this.attributeNames = attributeNames;
-        this.importLine = importLine;
         this.linesRejected = linesRejected;
         this.clearData = clearData;
         this.compositeIndexResolver = compositeIndexResolver;
@@ -64,7 +61,8 @@ public class BatchImporter implements Callable<Void> {
     @Override
     public Void call() {
         Long time = System.currentTimeMillis();
-        for (List<ImportCellWithHeading> lineToLoad : dataToLoad) {
+        for (TypedPair<Integer, List<ImportCellWithHeading>> lineToLoadWithLineNumber : dataToLoad) {
+            List<ImportCellWithHeading> lineToLoad = lineToLoadWithLineNumber.getSecond();
             /*
             There's a thought that this should be a whole line check rather than the first column
 
@@ -109,14 +107,14 @@ public class BatchImporter implements Callable<Void> {
                         }
                     }
                     if (rejectionReason == null) {
-                        resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, importLine, compositeIndexResolver);
+                        resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, lineToLoadWithLineNumber.getFirst(), compositeIndexResolver);
                         rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                     }
                     if (rejectionReason == null) {// todo - zap ignored rejection reason or jam it somewhere else
                         try {
                             resolveCategories(azquoMemoryDBConnection, namesFoundCache, lineToLoad);
                             // valueTracker simply the number of values imported
-                            valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, importLine, linesRejected, clearData));
+                            valuesModifiedCounter.addAndGet(interpretLine(azquoMemoryDBConnection, lineToLoad, namesFoundCache, attributeNames, lineToLoadWithLineNumber.getFirst(), linesRejected, clearData));
                         } catch (Exception e) {
                             azquoMemoryDBConnection.addToUserLogNoException(e.getMessage(), true);
                             e.printStackTrace();
@@ -124,11 +122,11 @@ public class BatchImporter implements Callable<Void> {
                         }
                         Long now = System.currentTimeMillis();
                         if (now - time > 10) { // 10ms a bit arbitrary
-                            System.out.println("line no " + importLine + " time = " + (now - time) + "ms");
+                            System.out.println("line no " + lineToLoadWithLineNumber.getFirst() + " time = " + (now - time) + "ms");
                         }
                         time = now;
                     } else if (linesRejected.size() < 100) {
-                        linesRejected.add(importLine + ": " + rejectionReason);
+                        linesRejected.add(lineToLoadWithLineNumber.getFirst() + ": " + rejectionReason);
                     }
                 }
 
@@ -144,12 +142,11 @@ public class BatchImporter implements Callable<Void> {
                             lineDetails.append("<br/>");
                         }
                     }
-                    linesRejected.add(importLine + ": " + e.getMessage() + "<br/>Line details : <br/>" + lineDetails);
+                    linesRejected.add(lineToLoadWithLineNumber.getFirst() + ": " + e.getMessage() + "<br/>Line details : <br/>" + lineDetails);
                 }
             }
-            importLine++;
         }
-        azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(importLine) + " imported.", true);
+        azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(dataToLoad.size()) + " imported.", true);
         azquoMemoryDBConnection.addToUserLogNoException("Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
         return null;
     }

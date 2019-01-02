@@ -19,8 +19,7 @@ Headings are often found in the DB, put there by setup files, to enable importin
 class ValuesImportConfigProcessor {
 
     // the idea is that a heading could be followed by successive clauses on cells below and this might be easier to read
-
-    static boolean buildHeadingsFromVerticallyListedClauses(List<String> headings, Iterator<String[]> lineIterator) {
+    static boolean buildHeadingsFromVerticallyListedClauses(List<String> headers, Iterator<String[]> lineIterator) {
         String[] nextLine = lineIterator.next();
         int headingCount = 1;
         boolean lastfilled;
@@ -29,17 +28,21 @@ class ValuesImportConfigProcessor {
             lastfilled = false;
             // while you find known names, insert them in reverse order with separator |.  Then use ; in the usual order
             for (String heading : nextLine) {
-                if (heading.length() > 0 && !heading.equals("--")) { //ignore "--", can be used to give space below the headings
-                    if (colNo >= headings.size()) {
-                        headings.add(heading);
+                if (heading.length() > 0 && !heading.equals("--")) { //ignore "--", can be used to give space below the headers
+                    if (colNo >= headers.size()) {
+                        headers.add(heading);
                     } else {
                         if (heading.startsWith(".")) {
-                            headings.set(colNo, headings.get(colNo) + heading);
+                            headers.set(colNo, headers.get(colNo) + heading);
                         } else {
-                            if (headings.get(colNo).length() == 0) {
-                                headings.set(colNo, heading);
+                            if (headers.get(colNo).length() == 0) {
+                                headers.set(colNo, heading);
                             } else {
-                                headings.set(colNo, headings.get(colNo) + ";" + heading.trim());
+                                if (findReservedWord(heading)) {
+                                    headers.set(colNo, headers.get(colNo) + ";" + heading.trim());
+                                } else {
+                                    headers.set(colNo, heading.trim() + "|" + headers.get(colNo));
+                                }
                             }
                         }
                     }
@@ -55,4 +58,28 @@ class ValuesImportConfigProcessor {
         }
         return headingCount != 11;
     }
-}
+
+    private static boolean findReservedWord(String heading) {
+        heading = heading.toLowerCase();
+        return heading.startsWith(HeadingReader.CHILDOF)
+                || heading.startsWith(HeadingReader.PARENTOF)
+                || heading.startsWith(HeadingReader.ATTRIBUTE)
+                || heading.startsWith(HeadingReader.LANGUAGE)
+                || heading.startsWith(HeadingReader.PEERS)
+                || heading.startsWith(HeadingReader.LOCAL)
+                || heading.startsWith(HeadingReader.COMPOSITION)
+                || heading.startsWith(HeadingReader.IGNORE)
+                || heading.startsWith(HeadingReader.DEFAULT)
+                || heading.startsWith(HeadingReader.NONZERO)
+                || heading.startsWith(HeadingReader.REMOVESPACES)
+                || heading.startsWith(HeadingReader.DATELANG)
+                || heading.startsWith(HeadingReader.ONLY)
+                || heading.startsWith(HeadingReader.EXCLUSIVE)
+                || heading.startsWith(HeadingReader.CLEAR)
+                || heading.startsWith(HeadingReader.COMMENT)
+                || heading.startsWith(HeadingReader.EXISTING)
+                || heading.startsWith(HeadingReader.LINEHEADING)
+                || heading.startsWith(HeadingReader.LINEDATA)
+                || heading.startsWith(HeadingReader.CLASSIFICATION)
+                || heading.startsWith(HeadingReader.SPLIT);
+    }}
