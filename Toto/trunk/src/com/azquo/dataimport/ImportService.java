@@ -428,7 +428,7 @@ public final class ImportService {
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
     private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile) throws Exception {
         String importTemplateName = uploadedFile.getParameter(IMPORTTEMPLATE);
-        // make a guess at the import template if it wasn't explicitly specifies
+        // make a guess at the import template if it wasn't explicitly specified
         if (importTemplateName == null){
             importTemplateName = uploadedFile.getFileName();
             if (importTemplateName.contains(" ")){
@@ -539,25 +539,34 @@ public final class ImportService {
                         uploadedFile.setSimpleHeadings(simpleHeadings);
                     } else {
                         // we assume the first line are file headings and anything below needs to be joined together into an Azquo heading
+                        // we now support headingsNoFileHeadingsWithInterimLookup in a non - version context
+                        List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
                         Map<List<String>, TypedPair<String, String>> headingsByLookupWithInterimLookup = new HashMap<>();
                         for (List<String> headings : standardHeadings) {
-                            String fileHeading = null;
-                            String azquoHeading = null;
-                            for (int i = 0; i < headings.size(); i++) {
-                                if (i == 0) {
-                                    fileHeading = headings.get(i);
+                            if (!headings.isEmpty()){
+                                String fileHeading = null;
+                                String azquoHeading = null;
+                                for (int i = 0; i < headings.size(); i++) {
+                                    if (i == 0) {
+                                        fileHeading = headings.get(i);
+                                    }
+                                    if (i == 1) {
+                                        azquoHeading = headings.get(i);
+                                    }
+                                    if (i > 1) {
+                                        azquoHeading += (";" + headings.get(i));
+                                    }
                                 }
-                                if (i == 1) {
-                                    azquoHeading = headings.get(i);
-                                }
-                                if (i > 1) {
-                                    azquoHeading += (";" + headings.get(i));
+                                // there is no second value to the typed pair - that's only used when there's a version. The field says "WithInterimLookup" but there is no interim lookup where there's one sheet
+                                if (fileHeading.isEmpty()){
+                                    headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeading, null));
+                                } else {
+                                    headingsByLookupWithInterimLookup.put(Collections.singletonList(fileHeading), new TypedPair<>(azquoHeading, null));
                                 }
                             }
-                            // there is no second value to the typed pair - that's only used when there's a version. The field says "WithInterimLookup" but there is no interim lookup where there's one sheet
-                            headingsByLookupWithInterimLookup.put(Collections.singletonList(fileHeading), new TypedPair<>(azquoHeading, null));
                         }
                         uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByLookupWithInterimLookup);
+                        uploadedFile.setHeadingsNoFileHeadingsWithInterimLookup(headingsNoFileHeadingsWithInterimLookup);
                     }
                 }
             } else {
@@ -752,7 +761,12 @@ public final class ImportService {
                         }
                     } else if (mode == ImportSheetScanMode.STANDARDHEADINGS) { // build headings
                         while (standardHeadings.size() <= (cellIndex + 1)) { // make sure there are enough lists to represent the heading columns were adding to
+                            // we're supporting extra not in the file headings as in composition headings in here, this means that if the previous column has more than one entry
+                            // as in we're NOT on the first line of the headings then add a space at the top which will indicate azqo headings but no file headings
                             standardHeadings.add(new ArrayList<>());
+                            if (cellIndex > 0 && standardHeadings.get(cellIndex - 1).size() > 1){
+                                standardHeadings.get(cellIndex).add("");
+                            }
                         }
                         standardHeadings.get(cellIndex).add(cellValue);
                                 /* outside of headings mode we grab the first cell regardless to check for mode switches,

@@ -711,8 +711,11 @@ public class ManageDatabasesController {
                 toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings" + counter + "'); return false;\">Headings without file headings</a> : \n<br/><div id=\"noFileHeadings" + counter + "\" style=\"display : none\">");
                 for (TypedPair<String, String> stringStringTypedPair : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-                    toReturn.append(stringStringTypedPair.getSecond());
-                    toReturn.append(" -> ").append(stringStringTypedPair.getFirst()).append("\n<br/>");
+                    if (stringStringTypedPair.getSecond() != null){ // it could be null now as we support a non file heading azquo heading on the Import Model sheet
+                        toReturn.append(stringStringTypedPair.getSecond());
+                        toReturn.append(" -> ");
+                    }
+                    toReturn.append(stringStringTypedPair.getFirst()).append("\n<br/>");
                 }
                 toReturn.append("</div>");
             }
