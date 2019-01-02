@@ -393,12 +393,13 @@ public final class ImportService {
             // the sheet name might have parameters - try to get them
             Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
             addFileNameParametersToMap(sheetName, fileNameParams);
-            UploadedFile fileFromWorksheet = new UploadedFile(tempPath, names, fileNameParams, true); // true, it IS converted from a worksheet
+            // reassigning uploaded file so the correct object will be passed back on exception
+            uploadedFile = new UploadedFile(tempPath, names, fileNameParams, true); // true, it IS converted from a worksheet
             if (emptySheet) {
-                fileFromWorksheet.setError("Empty sheet : " + sheetName);
-                return fileFromWorksheet;
+                uploadedFile.setError("Empty sheet : " + sheetName);
+                return uploadedFile;
             } else {
-                UploadedFile toReturn = readPreparedFile(loggedInUser, fileFromWorksheet);
+                UploadedFile toReturn = readPreparedFile(loggedInUser, uploadedFile);
                 // the UploadedFile will have the database server processing time, add the Excel stuff to it for better feedback to the user
                 toReturn.addToProcessingDuration(convertTime);
                 return toReturn;
