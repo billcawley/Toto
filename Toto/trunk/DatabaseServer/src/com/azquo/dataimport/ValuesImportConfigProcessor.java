@@ -19,7 +19,7 @@ Headings are often found in the DB, put there by setup files, to enable importin
 class ValuesImportConfigProcessor {
 
     // the idea is that a heading could be followed by successive clauses on cells below and this might be easier to read
-    static boolean buildHeadingsFromVerticallyListedClauses(List<String> headers, Iterator<String[]> lineIterator) {
+    static boolean buildHeadingsFromVerticallyListedClauses(List<String> headings, Iterator<String[]> lineIterator) {
         String[] nextLine = lineIterator.next();
         int headingCount = 1;
         boolean lastfilled;
@@ -30,20 +30,23 @@ class ValuesImportConfigProcessor {
             for (String heading : nextLine) {
                 if (!heading.equals("--")) { //ignore "--", can be used to give space below the headers
                     // logic had to be altered to account for gaps in the headers - blank columns which can be a problem if the top line is sparse
-                    if (colNo >= headers.size()) {
-                        headers.add(heading);
-                        lastfilled = true;
+                    if (colNo >= headings.size()) {
+                        headings.add(heading);
+                        // todo - clean up logic
+                        if (heading.length() > 0){
+                            lastfilled = true;
+                        }
                     } else if (heading.length() > 0){
                         if (heading.startsWith(".")) {
-                            headers.set(colNo, headers.get(colNo) + heading);
+                            headings.set(colNo, headings.get(colNo) + heading);
                         } else {
-                            if (headers.get(colNo).length() == 0) {
-                                headers.set(colNo, heading);
+                            if (headings.get(colNo).length() == 0) {
+                                headings.set(colNo, heading);
                             } else {
                                 if (findReservedWord(heading)) {
-                                    headers.set(colNo, headers.get(colNo) + ";" + heading.trim());
+                                    headings.set(colNo, headings.get(colNo) + ";" + heading.trim());
                                 } else {
-                                    headers.set(colNo, heading.trim() + "|" + headers.get(colNo));
+                                    headings.set(colNo, heading.trim() + "|" + headings.get(colNo));
                                 }
                             }
                         }
