@@ -761,12 +761,21 @@ public final class ImportService {
                             customHeadings.get(cellIndex).add(cellValue);
                         }
                     } else if (mode == ImportSheetScanMode.STANDARDHEADINGS) { // build headings
-                        while (standardHeadings.size() <= (cellIndex + 1)) { // make sure there are enough lists to represent the heading columns were adding to
+                        // todo - double check this logic later, I seem to be having trouble as I write it!
+                        while (standardHeadings.size() <= cellIndex) { // make sure there are enough lists to represent the heading columns we're adding to. While as blank columns could interfere, the cell index could jump more than one
+                            List<String> newColumn = new ArrayList<>();
                             // we're supporting extra not in the file headings as in composition headings in here, this means that if the previous column has more than one entry
                             // as in we're NOT on the first line of the headings then add a space at the top which will indicate azqo headings but no file headings
-                            standardHeadings.add(new ArrayList<>());
-                            if (cellIndex > 0 && standardHeadings.get(cellIndex - 1).size() > 1){
-                                standardHeadings.get(cellIndex).add("");
+                            standardHeadings.add(newColumn);
+                            // cell index greater than 0 so it's not the first column - check the previous column size and add spaces as required
+                            if (cellIndex > 0 && standardHeadings.get(standardHeadings.size() - 2).size() > 1){ // -2 as we just added a column!
+                                for (int i = 1; i < standardHeadings.get(standardHeadings.size() - 2).size(); i++){ // start at one, if the size is two we only add one blank
+                                    newColumn.add("");
+                                }
+                            }
+                            // this means there will be another go on the loop, fill in the space on the bottom cell of the column as the add below won't happen to this column
+                            if (standardHeadings.size() < cellIndex){
+                                newColumn.add("");
                             }
                         }
                         standardHeadings.get(cellIndex).add(cellValue);
