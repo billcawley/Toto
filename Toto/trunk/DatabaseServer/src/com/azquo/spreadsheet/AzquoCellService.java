@@ -107,17 +107,17 @@ class AzquoCellService {
         return sortedValues;
     }
 
-    static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBCOnnection, String regionName, List<List<String>> rowHeadingsSource
+    static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBConnection, String regionName, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, String user, int valueId, boolean quiet, String filterTargetName) throws Exception {
         if (!quiet) {
-            azquoMemoryDBCOnnection.addToUserLog("Getting data for region : " + regionName);
+            azquoMemoryDBConnection.addToUserLog("Getting data for region : " + regionName);
         }
         List<String> languages = NameService.getDefaultLanguagesList(user);
         long track = System.currentTimeMillis();
         long start = track;
         long threshold = 1000;
         // the context is changing to data region headings to support name function permutations - unlike the column and row headings it has to be flat, a resultant one dimensional list from createHeadingArraysFromSpreadsheetRegion
-        final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBCOnnection, contextSource, languages);
+        final List<DataRegionHeading> contextHeadings = DataRegionHeadingService.getContextHeadings(azquoMemoryDBConnection, contextSource, languages);
         // look for context locked/unlokced suffix to apply to col and row headings that don't have suffixes
         DataRegionHeading.SUFFIX contextSuffix = null;
         for (DataRegionHeading contextHeading : contextHeadings) {
@@ -134,7 +134,7 @@ class AzquoCellService {
             languages = new ArrayList<>();
             languages.add(regionOptions.rowLanguage);
         }
-        final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix, regionOptions.ignoreHeadingErrors);
+        final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, rowHeadingsSource, languages, contextSuffix, regionOptions.ignoreHeadingErrors);
         languages = defaultLanguages;
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Row headings parsed in " + time + "ms");
@@ -148,7 +148,7 @@ class AzquoCellService {
             languages = new ArrayList<>();
             languages.add(regionOptions.columnLanguage);
         }
-        final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBCOnnection, colHeadingsSource, languages, AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, regionOptions.ignoreHeadingErrors);
+        final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(azquoMemoryDBConnection, colHeadingsSource, languages, AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, regionOptions.ignoreHeadingErrors);
         languages = defaultLanguages;
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings parsed in " + time + "ms");
@@ -165,7 +165,7 @@ class AzquoCellService {
             rowHeadings.add(new ArrayList<>());
             rowHeadings.get(0).add(new DataRegionHeading(null, false, null));
         }
-        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBCOnnection, rowHeadings, columnHeadings, contextHeadings, languages, valueId, quiet);
+        List<List<AzquoCell>> dataToShow = getAzquoCellsForRowsColumnsAndContext(azquoMemoryDBConnection, rowHeadings, columnHeadings, contextHeadings, languages, valueId, quiet);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("data populated in " + time + "ms");
         if (time > 5000) { // a bit arbitrary
@@ -179,15 +179,15 @@ class AzquoCellService {
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings
                 , regionOptions, permute);
         if (filterTargetName!=null){
-            Name target = NameService.findByName(azquoMemoryDBCOnnection, filterTargetName);
-            target.setChildrenWillBePersisted(new ArrayList<>());
+            Name target = NameService.findByName(azquoMemoryDBConnection, filterTargetName);
+            target.setChildrenWillBePersisted(new ArrayList<>(), azquoMemoryDBConnection);
             Iterator<List<AzquoCell>> rowIt = dataToShow.iterator();
             for (List<DataRegionHeading>row:rowHeadings){
                 List<AzquoCell> dataRow = rowIt.next();
                 DataRegionHeading dataRegionHeading = row.iterator().next();
                 AzquoCell cell = dataRow.iterator().next();
                 if (cell.getDoubleValue()>0){
-                    target.addChildWillBePersisted(dataRegionHeading.getName());
+                    target.addChildWillBePersisted(dataRegionHeading.getName(), azquoMemoryDBConnection);
                 }
             }
 

@@ -4,6 +4,7 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.StringUtils;
+import com.azquo.memorydb.core.Provenance;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
@@ -229,9 +230,9 @@ public final class NameService {
 
     private static AtomicInteger includeInSetCount = new AtomicInteger(0);
 
-    private static void includeInSet(Name name, Name set) throws Exception {
+    private static void includeInSet(Name name, Name set, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         includeInSetCount.incrementAndGet();
-        set.addChildWillBePersisted(name);//ok add as asked
+        set.addChildWillBePersisted(name, azquoMemoryDBConnection);//ok add as asked
         /*  REMOVING THIS CONDITION - CAUSED PROBLEMS IN SETTING UP `Order Entities->Shipping` then `Order Entities->Invoice Total->Shipping` in Magento
         Collection<Name> setParents = set.findAllParents();
         for (Name parent : name.getParents()) { // now check the direct parents and see that none are in the parents of the set we just put it in.
@@ -336,7 +337,7 @@ public final class NameService {
             // I think I was just avoiding a circular reference
             if (parent != null && existing != parent && !existing.findAllParents().contains(parent)) {
                 //only check if the new parent is not already in the parent hierarchy.
-                includeInSet(existing, parent);
+                includeInSet(existing, parent, azquoMemoryDBConnection);
             }
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent5", marker);
             return existing;
@@ -345,13 +346,13 @@ public final class NameService {
             // I think provenance from connection is correct, we should be looking to make a useful provenance when making the connection from the data access token
             Name newName = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance());
             if (!attributeNames.get(0).equals(StringLiterals.DEFAULT_DISPLAY_NAME)) { // we set the leading attribute name, I guess the secondary ones should not be set they are for searches
-                newName.setAttributeWillBePersisted(attributeNames.get(0), storeName);
+                newName.setAttributeWillBePersisted(attributeNames.get(0), storeName, azquoMemoryDBConnection);
             }
-            newName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, storeName); // and set the default regardless
+            newName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, storeName, azquoMemoryDBConnection); // and set the default regardless
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent6", marker);
             if (parent != null) {
                 // and add the new name to the parent of course :)
-                parent.addChildWillBePersisted(newName);
+                parent.addChildWillBePersisted(newName, azquoMemoryDBConnection);
             }
             if (profile) marker = addToTimesForConnection(azquoMemoryDBConnection, "findOrCreateNameInParent7", marker);
             return newName;

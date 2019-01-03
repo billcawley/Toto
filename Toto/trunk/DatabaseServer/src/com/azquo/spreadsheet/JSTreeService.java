@@ -28,7 +28,7 @@ import java.util.*;
  */
 public class JSTreeService {
 
-    public static List<String> getAttributeList(DatabaseAccessToken databaseAccessToken) throws Exception {
+    public static List<String> getAttributeList(DatabaseAccessToken databaseAccessToken)  {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         return NameService.attributeList(azquoMemoryDBConnection);
     }
@@ -41,9 +41,9 @@ public class JSTreeService {
         if (name == null) {
             throw new Exception("Name not found for id " + nameId);
         }
-        name.clearAttributes(); // and just re set them below
+        name.clearAttributes(azquoMemoryDBConnection); // and just re set them below
         for (Map.Entry<String, String> attNameValue : attributes.entrySet()) {
-            name.setAttributeWillBePersisted(attNameValue.getKey(), attNameValue.getValue());
+            name.setAttributeWillBePersisted(attNameValue.getKey(), attNameValue.getValue(),azquoMemoryDBConnection);
         }
         azquoMemoryDBConnection.persist();
     }
@@ -74,7 +74,7 @@ public class JSTreeService {
         final AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name name = NameService.findById(connectionFromAccessToken, nameId); // the parent, will be null if -1 passed in the case of adding to root . . .
         Name newName = NameService.findOrCreateNameInParent(connectionFromAccessToken, "newnewnew", name, true);
-        newName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, "New node");
+        newName.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, "New node",connectionFromAccessToken);
         return new JsonChildren.Node(-1, "New node", false, newName.getId(), nameId);
     }
 
@@ -82,7 +82,7 @@ public class JSTreeService {
     public static void deleteJsTreeNode(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
         final AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name name = NameService.findById(connectionFromAccessToken, nameId);
-        name.delete();
+        name.delete(connectionFromAccessToken);
     }
 
     // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
@@ -191,7 +191,7 @@ public class JSTreeService {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Name name = NameService.findByName(azquoMemoryDBConnection, nameString);
         if (name != null) {
-            name.setAttributeWillBePersisted(attribute, attVal);
+            name.setAttributeWillBePersisted(attribute, attVal,azquoMemoryDBConnection);
         }
     }
 

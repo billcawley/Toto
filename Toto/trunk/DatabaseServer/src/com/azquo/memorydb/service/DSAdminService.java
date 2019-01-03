@@ -5,6 +5,7 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.dao.MySQLDatabaseManager;
 import org.apache.commons.lang.math.NumberUtils;
@@ -171,7 +172,7 @@ public class DSAdminService {
         //consider ALL names as local.  Global names will be found from dictionary
         name2 = NameService.findOrCreateNameInParent(toDB, name.getDefaultDisplayName(), parent, true, languages);
         for (String attName : name.getAttributes().keySet()) {
-            name2.setAttributeWillBePersisted(attName, name.getAttribute(attName));
+            name2.setAttributeWillBePersisted(attName, name.getAttribute(attName), toDB);
         }
         // no peers stuff any more
         for (Name child : name.getChildren()) {

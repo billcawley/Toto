@@ -297,7 +297,7 @@ public class ProvenanceService {
                                             }
                                         }
                                         Name newSetForReport = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, chosenSet, null, false);// simple name create on the new set
-                                        newSetForReport.setChildrenWillBePersisted(chosenSetSet);
+                                        newSetForReport.setChildrenWillBePersisted(chosenSetSet,azquoMemoryDBConnection);
 
                                         StringBuilder context = new StringBuilder();
                                         if (restOfRule != null) {

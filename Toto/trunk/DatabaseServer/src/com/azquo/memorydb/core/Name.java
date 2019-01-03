@@ -1,6 +1,7 @@
 package com.azquo.memorydb.core;
 
 import com.azquo.StringLiterals;
+import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.service.NameService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 
@@ -661,7 +662,8 @@ public final class Name extends AzquoMemoryDBEntity {
     // each add/remove is thread safe but should not allow two to run concurrently
     private static AtomicInteger setChildrenCount = new AtomicInteger(0);
 
-    public synchronized void setChildrenWillBePersisted(Collection<Name> newChildren) throws Exception {
+    // pass conneciton not provenance - we want the conneciton to know if the provenance was used or not
+    public synchronized void setChildrenWillBePersisted(Collection<Name> newChildren, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         setChildrenCount.incrementAndGet();
         Collection<Name> existingChildren = getChildren();
         /* like an equals but the standard equals might trip up on different collection types
@@ -678,23 +680,26 @@ public final class Name extends AzquoMemoryDBEntity {
                 addChildWillBePersisted(child, false); // todo, get rid of the boolean
             }
             clearChildrenCaches();
+            this.provenance = azquoMemoryDBConnection.getProvenance();
             //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
         }
     }
 
     private static AtomicInteger addChildWillBePersistedCount = new AtomicInteger(0);
 
-    public void addChildWillBePersisted(Name child) throws Exception {
+    public void addChildWillBePersisted(Name child, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         addChildWillBePersistedCount.incrementAndGet();
-        addChildWillBePersisted(child, true);
+        if (addChildWillBePersisted(child, true)){
+            this.provenance = azquoMemoryDBConnection.getProvenance();
+        }
     }
 
     private static AtomicInteger addChildWillBePersisted3Count = new AtomicInteger(0);
 
-    private void addChildWillBePersisted(Name child, boolean clearCache) throws Exception {
+    private boolean addChildWillBePersisted(Name child, boolean clearCache) throws Exception {
         addChildWillBePersisted3Count.incrementAndGet();
         checkDatabaseMatches(child);
-        if (child.equals(this)) return;//don't put child into itself
+        if (child.equals(this)) return false;//don't put child into itself
         /*removing this check - it takes far too long - maybe should make it optional
         if (findAllParents().contains(child)) {
             throw new Exception("error cannot assign child due to circular reference, " + child + " cannot be added to " + this);
@@ -741,20 +746,23 @@ public final class Name extends AzquoMemoryDBEntity {
             clearChildrenCaches();
             //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
         }
+        return changed;
     }
 
     private static AtomicInteger removeFromChildrenWillBePersistedCount = new AtomicInteger(0);
 
-    public void removeFromChildrenWillBePersisted(Name name) throws Exception {
+    public void removeFromChildrenWillBePersisted(Name name, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         removeFromChildrenWillBePersistedCount.incrementAndGet();
-        removeFromChildrenWillBePersistedNoCacheClear(name);
-        clearChildrenCaches();
+        if (removeFromChildrenWillBePersistedNoCacheClear(name)){
+            clearChildrenCaches();
+            this.provenance = azquoMemoryDBConnection.getProvenance();
+        }
         //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
     }
 
     private static AtomicInteger removeFromChildrenWillBePersisted2Count = new AtomicInteger(0);
 
-    private void removeFromChildrenWillBePersistedNoCacheClear(Name name) throws Exception {
+    private boolean removeFromChildrenWillBePersistedNoCacheClear(Name name) throws Exception {
         removeFromChildrenWillBePersisted2Count.incrementAndGet();
         checkDatabaseMatches(name);// even if not needed throw the exception!
         // maybe could narrow this a little?
@@ -767,8 +775,10 @@ public final class Name extends AzquoMemoryDBEntity {
                     children = NameUtils.nameArrayRemove(children, name); // note this will fail if it turns out children does not contain the name. Should be ok.
                 }
                 setNeedsPersisting();
+                return true;
             }
         }
+        return false;
     }
 
     // notably, since the map is created on the fly and not canonical I could just return it. A moot point I think.
@@ -789,7 +799,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger setAttributeWillBePersistedCount = new AtomicInteger(0);
 
-    public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue) throws Exception {
+    public synchronized void setAttributeWillBePersisted(String attributeName, String attributeValue, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         setAttributeWillBePersistedCount.incrementAndGet();
         // make safe for new way of persisting attributes
         if (attributeName.contains(StringLiterals.ATTRIBUTEDIVIDER)) {
@@ -817,6 +827,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 //attributes.remove(attributeName);
                 getAzquoMemoryDB().getIndex().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
                 nameAttributes = new NameAttributes(attributeKeys, attributeValues);
+                this.provenance = azquoMemoryDBConnection.getProvenance();
                 setNeedsPersisting();
             }
             return;
@@ -837,12 +848,13 @@ public final class Name extends AzquoMemoryDBEntity {
         nameAttributes = new NameAttributes(attributeKeys, attributeValues);
         // now deal with the DB maps!
         getAzquoMemoryDB().getIndex().setAttributeForNameInAttributeNameMap(attributeName, attributeValue, this);
+        this.provenance = azquoMemoryDBConnection.getProvenance();
         setNeedsPersisting();
     }
 
     private static AtomicInteger removeAttributeWillBePersistedCount = new AtomicInteger(0);
 
-    private synchronized void removeAttributeWillBePersisted(String attributeName) throws Exception {
+    private synchronized void removeAttributeWillBePersisted(String attributeName, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         removeAttributeWillBePersistedCount.incrementAndGet();
         attributeName = attributeName.trim().toUpperCase();
         int index = nameAttributes.getAttributeKeys().indexOf(attributeName);
@@ -853,6 +865,7 @@ public final class Name extends AzquoMemoryDBEntity {
             attributeKeys.remove(index);
             attributeValues.remove(index);
             nameAttributes = new NameAttributes(attributeKeys, attributeValues);
+            this.provenance = azquoMemoryDBConnection.getProvenance();
             setNeedsPersisting();
         }
     }
@@ -860,10 +873,10 @@ public final class Name extends AzquoMemoryDBEntity {
     // convenience - plain clearing of this object won't change the indexes in the memory db. Hence remove on each one.
     private static AtomicInteger clearAttributesCount = new AtomicInteger(0);
 
-    public synchronized void clearAttributes() throws Exception {
+    public synchronized void clearAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         clearAttributesCount.incrementAndGet();
         for (String attribute : nameAttributes.getAttributeKeys()) { // nameAttributes will be reassigned by the function but that should be ok, hang onto the key set as it was at the beginning
-            removeAttributeWillBePersisted(attribute);
+            removeAttributeWillBePersisted(attribute, azquoMemoryDBConnection);
         }
     }
 
@@ -1046,7 +1059,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // want to make it synchronized but I'm calling synchronized functions on other objects. Hmmmmmmmm.
     private static AtomicInteger deleteCount = new AtomicInteger(0);
 
-    public void delete() throws Exception {
+    public void delete(AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         deleteCount.incrementAndGet();
 //        List<Value> values;
 //        List<Name> parents;
@@ -1076,10 +1089,10 @@ public final class Name extends AzquoMemoryDBEntity {
             setNeedsPersisting();
             // remove children - this is using the same lock so do it in here
             for (Name child : getChildren()) {
-                removeFromChildrenWillBePersisted(child);
+                removeFromChildrenWillBePersisted(child, azquoMemoryDBConnection);
             }
             for (String attribute : nameAttributes.getAttributeKeys()) {
-                setAttributeWillBePersisted(attribute, null); // simple way to clear it from the indexes
+                setAttributeWillBePersisted(attribute, null, azquoMemoryDBConnection); // simple way to clear it from the indexes
             }
         }
         // then the actions on other objects - we now delete such values
@@ -1088,7 +1101,7 @@ public final class Name extends AzquoMemoryDBEntity {
         }
         // remove from parents
         for (Name parent : parents) {
-            parent.removeFromChildrenWillBePersisted(this);
+            parent.removeFromChildrenWillBePersisted(this, azquoMemoryDBConnection);
         }
     }
 

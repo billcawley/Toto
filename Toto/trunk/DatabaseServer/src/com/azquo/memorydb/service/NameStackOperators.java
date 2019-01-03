@@ -192,15 +192,15 @@ class NameStackOperators {
             if (totalName.getAttribute(userEmail) == null) { // there is no specific set for this user yet, need to do something
                 Name userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
                 //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
-                userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
-                totalName.addChildWillBePersisted(userSpecificSet);
+                userSpecificSet.setAttributeWillBePersisted(userEmail, totalName.getDefaultDisplayName(),azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
+                totalName.addChildWillBePersisted(userSpecificSet, azquoMemoryDBConnection);
                 totalName = userSpecificSet; // switch the new one in, it will be used as normal
             }
         }
         if (nameStack.get(stackCount - 1).list != null) {
-            totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).list);
+            totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).list,azquoMemoryDBConnection);
         } else {
-            totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection());
+            totalName.setChildrenWillBePersisted(nameStack.get(stackCount - 1).getAsCollection(),azquoMemoryDBConnection);
         }
         nameStack.remove(stackCount);
         Set<Name> totalNameSet = HashObjSets.newMutableSet();

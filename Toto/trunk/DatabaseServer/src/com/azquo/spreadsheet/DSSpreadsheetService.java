@@ -514,16 +514,16 @@ public class DSSpreadsheetService {
                                                 if (exclusive) {
                                                     for (Name existingAtt : attSet.getChildren()) {
                                                         if (!existingAtt.getDefaultDisplayName().equalsIgnoreCase(cell.getNewStringValue()) && existingAtt.getChildren().contains(toChange)) {
-                                                            existingAtt.removeFromChildrenWillBePersisted(toChange);
+                                                            existingAtt.removeFromChildrenWillBePersisted(toChange, azquoMemoryDBConnection);
                                                         }
                                                     }
                                                 }
                                                 if (category != null) {
-                                                    category.addChildWillBePersisted(toChange);
+                                                    category.addChildWillBePersisted(toChange, azquoMemoryDBConnection);
                                                 }
                                             } else {// simple attribute set
                                                 //logger.info("storing attribute value on " + toChange.getDefaultDisplayName() + " attribute " + attribute);
-                                                toChange.setAttributeWillBePersisted(attribute, cell.getNewStringValue());
+                                                toChange.setAttributeWillBePersisted(attribute, cell.getNewStringValue(), azquoMemoryDBConnection);
                                             }
                                             numberOfValuesModified++;
                                         }
@@ -615,12 +615,12 @@ public class DSSpreadsheetService {
         String oldDisplayRows = parentName.getAttribute(StringLiterals.DISPLAYROWS);
         if (!needDisplayRows || displayRows.length() == 0) {
             if (oldDisplayRows != null) {
-                parentName.setAttributeWillBePersisted(StringLiterals.DISPLAYROWS, "");
+                parentName.setAttributeWillBePersisted(StringLiterals.DISPLAYROWS, "", azquoMemoryDBConnection);
                 changed = true;
             }
         } else {
             if (!displayRows.toString().substring(1).equals(oldDisplayRows)) {
-                parentName.setAttributeWillBePersisted(StringLiterals.DISPLAYROWS, displayRows.toString().substring(1));
+                parentName.setAttributeWillBePersisted(StringLiterals.DISPLAYROWS, displayRows.toString().substring(1), azquoMemoryDBConnection);
                 changed = true;
             }
         }
@@ -639,8 +639,8 @@ public class DSSpreadsheetService {
             unusedNames.removeAll(newNames);
             //add to new names
             newNames.addAll(unusedNames);
-            parentName.setChildrenWillBePersisted(Collections.emptyList());
-            parentName.setChildrenWillBePersisted(newNames);
+            parentName.setChildrenWillBePersisted(Collections.emptyList(),azquoMemoryDBConnection);
+            parentName.setChildrenWillBePersisted(newNames,azquoMemoryDBConnection);
             if (unusedNames.size() == 0) {
                 return "";
             }
@@ -695,7 +695,7 @@ public class DSSpreadsheetService {
                     try {
                         Name name = NameService.findByName(azquoMemoryDBConnection, att);
                         if (name != null) {
-                            name.setChildrenWillBePersisted(Collections.emptyList());
+                            name.setChildrenWillBePersisted(Collections.emptyList(),azquoMemoryDBConnection);
                             heading = heading.substring(0, att.length() + 1);//todo  make sure that this does remove the 'clear'
                             headingRow.set(i, heading);
                         }
@@ -753,10 +753,11 @@ public class DSSpreadsheetService {
     // doesn't persist - should it??
     // note : could be issues with reports which use this running concurrently - as in zap temporary names while they're being used. TODO
     public static void clearTemporaryNames(DatabaseAccessToken databaseAccessToken) throws Exception {
-        final Name temporaryNames = NameService.findByName(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), StringLiterals.TEMPORARYNAMES);
+        AzquoMemoryDBConnection connectionFromAccessToken = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        final Name temporaryNames = NameService.findByName(connectionFromAccessToken, StringLiterals.TEMPORARYNAMES);
         if (temporaryNames != null) {
             for (Name temporaryName : temporaryNames.getChildren()) {
-                temporaryName.delete();
+                temporaryName.delete(connectionFromAccessToken);
             }
         }
     }

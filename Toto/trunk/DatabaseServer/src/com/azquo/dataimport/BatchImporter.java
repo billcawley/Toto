@@ -615,11 +615,11 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                         break;
                     } else {
                         for (Name name : identityCell.getLineNames()) {
-                            name.setAttributeWillBePersisted(attribute, cell.getLineValue());
+                            name.setAttributeWillBePersisted(attribute, cell.getLineValue(), azquoMemoryDBConnection);
                             // EFC note - need to check on definition
                             if (attribute.toLowerCase().equals("definition")) {
                                 //work it out now!
-                                name.setChildrenWillBePersisted(NameQueryParser.parseQuery(azquoMemoryDBConnection, cell.getLineValue()));
+                                name.setChildrenWillBePersisted(NameQueryParser.parseQuery(azquoMemoryDBConnection, cell.getLineValue()), azquoMemoryDBConnection);
                             }
                         }
                     }
@@ -693,7 +693,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
         } else { // it existed (created below as child name(s))
             for (Name child : cellWithHeading.getLineNames()) {
                 for (Name parent : cellWithHeading.getImmutableImportHeading().parentNames) { // apparently there can be multiple child ofs, put the name for the line in the appropriate sets, pretty vanilla based off the parents set up
-                    parent.addChildWillBePersisted(child);
+                    parent.addChildWillBePersisted(child, azquoMemoryDBConnection);
                 }
             }
         }
@@ -727,7 +727,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 if (cellWithHeading.getLineNames() != null) { // it can be null, not sure if it should be?? But it can be, stop NPE
                     for (Name parent : cellWithHeading.getLineNames()) {
                         for (Name childCellName : childCell.getLineNames()) {
-                            parent.addChildWillBePersisted(childCellName);
+                            parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
                         }
                     }
                 }
@@ -771,12 +771,12 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                                 if (childCellParent == parent) {
                                     needsAdding = false;
                                 } else if (childCellParent == exclusiveName || exclusiveName.getChildren().contains(childCellParent)) {
-                                    childCellParent.removeFromChildrenWillBePersisted(childCellName);
+                                    childCellParent.removeFromChildrenWillBePersisted(childCellName, azquoMemoryDBConnection);
                                 }
                             }
                             // having hopefully sorted a new name or exclusive add the child
                             if (needsAdding) {
-                                parent.addChildWillBePersisted(childCellName);
+                                parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
                             }
                         }
                     }

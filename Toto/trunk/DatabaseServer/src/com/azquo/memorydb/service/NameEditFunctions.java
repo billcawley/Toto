@@ -3,6 +3,7 @@ package com.azquo.memorydb.service;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
 
 import java.util.*;
@@ -29,7 +30,7 @@ class NameEditFunctions {
         if (setFormula.startsWith("zap ")) {
             Collection<Name> names = NameQueryParser.parseQuery(azquoMemoryDBConnection, setFormula.substring(4), languages, true); // defaulting to list here
             if (names != null) {
-                for (Name name : names) name.delete();
+                for (Name name : names) name.delete(azquoMemoryDBConnection);
                 azquoMemoryDBConnection.persist();
                 return toReturn;
             }
@@ -122,8 +123,8 @@ class NameEditFunctions {
                 Collection<Name> redundantNames = new ArrayList<>(set.getChildren());
                 redundantNames.removeAll(newChildren);
                 newChildren.addAll(redundantNames);//must ensure that there are no 'floating names'
-                set.setChildrenWillBePersisted(newChildren);
-                set.setAttributeWillBePersisted("DISPLAYROWS",dRows);;
+                set.setChildrenWillBePersisted(newChildren,azquoMemoryDBConnection);
+                set.setAttributeWillBePersisted("DISPLAYROWS",dRows,azquoMemoryDBConnection);;
             }
             return toReturn;
         }
@@ -144,13 +145,13 @@ class NameEditFunctions {
         Name attributeName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, attribute, null, false);
         // clear children
         for (Name child : attributeName.getChildren()){
-            child.delete();
+            child.delete(azquoMemoryDBConnection);
         }
         Set<String> valuesForAttribute = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getValuesForAttribute(attribute);
         List<Name> toReturn = new ArrayList<>(valuesForAttribute.size());
         for (String attValue : valuesForAttribute){
             Name attributeValueName = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, attValue, attributeName, true); // local child of the name we just cleared/created
-            attributeValueName.setChildrenWillBePersisted(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, attValue));
+            attributeValueName.setChildrenWillBePersisted(azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttribute(attribute, attValue),azquoMemoryDBConnection);
             toReturn.add(attributeValueName);
         }
         azquoMemoryDBConnection.persist();
@@ -176,19 +177,19 @@ class NameEditFunctions {
 
     private static AtomicInteger dedupeOneCount = new AtomicInteger(0);
 
-    private static void dedupeOne(Name name, Set<Name> possibles, Name rubbishBin) throws Exception {
+    private static void dedupeOne(Name name, Set<Name> possibles, Name rubbishBin, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         dedupeOneCount.incrementAndGet();
         for (Name child2 : possibles) {
             if (child2.getId() != name.getId()) {
                 Set<Name> existingChildren = new HashSet<>(child2.getChildren());
                 for (Name grandchild : existingChildren) {
-                    name.addChildWillBePersisted(grandchild);
-                    child2.removeFromChildrenWillBePersisted(grandchild);
+                    name.addChildWillBePersisted(grandchild, azquoMemoryDBConnection);
+                    child2.removeFromChildrenWillBePersisted(grandchild,azquoMemoryDBConnection);
                 }
                 Set<Name> existingParents = new HashSet<>(child2.getParents());
                 for (Name parentInLaw : existingParents) {
-                    parentInLaw.addChildWillBePersisted(name);
-                    parentInLaw.removeFromChildrenWillBePersisted(child2);
+                    parentInLaw.addChildWillBePersisted(name, azquoMemoryDBConnection);
+                    parentInLaw.removeFromChildrenWillBePersisted(child2, azquoMemoryDBConnection);
                 }
 
                 for (Value v : new ArrayList<>(child2.getValues())) { // make a copy before iterating as values will be removed from the original
@@ -198,8 +199,8 @@ class NameEditFunctions {
                     v.setNamesWillBePersisted(existingForValue);
                 }
 
-                child2.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, "duplicate-" + child2.getDefaultDisplayName());
-                rubbishBin.addChildWillBePersisted(child2);
+                child2.setAttributeWillBePersisted(StringLiterals.DEFAULT_DISPLAY_NAME, "duplicate-" + child2.getDefaultDisplayName(),azquoMemoryDBConnection);
+                rubbishBin.addChildWillBePersisted(child2, azquoMemoryDBConnection);
             }
         }
     }
@@ -240,7 +241,7 @@ class NameEditFunctions {
             }
             for (Set<Name> dupeNames : nameMap.values()) {
                 if (dupeNames.size() > 1) {
-                    dedupeOne(dupeNames.iterator().next(), dupeNames, rubbishBin);
+                    dedupeOne(dupeNames.iterator().next(), dupeNames, rubbishBin, azquoMemoryDBConnection);
                 }
             }
             toReturn.add(rubbishBin);
@@ -251,7 +252,7 @@ class NameEditFunctions {
             if (!rubbishBin.getChildren().contains(child)) {
                 Set<Name> possibles = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST, child.getDefaultDisplayName(), name);
                 if (possibles.size() > 1) {
-                    dedupeOne(child, possibles, rubbishBin);
+                    dedupeOne(child, possibles, rubbishBin, azquoMemoryDBConnection);
                 }
             }
         }

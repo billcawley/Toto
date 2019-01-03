@@ -310,7 +310,7 @@ todo - add classification here
             case CLEAR:
                 if (heading.parentNames != null) {
                     for (Name name : heading.parentNames) {
-                        name.setChildrenWillBePersisted(Collections.emptyList());
+                        name.setChildrenWillBePersisted(Collections.emptyList(),azquoMemoryDBConnection);
                     }
                 }
                 break;

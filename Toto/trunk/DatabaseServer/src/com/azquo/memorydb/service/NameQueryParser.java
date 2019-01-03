@@ -284,15 +284,15 @@ public class NameQueryParser {
                                 if (userSpecificSet == null) {
                                     userSpecificSet = new Name(azquoMemoryDBConnection.getAzquoMemoryDB(), azquoMemoryDBConnection.getProvenance()); // a basic copy of the set
                                     //userSpecificSet.setAttributeWillBePersisted(Constants.DEFAULT_DISPLAY_NAME, userEmail + totalName.getDefaultDisplayName()); // GOing to set the default display name as bits of the suystem really don't like it not being there
-                                    userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName()); // set the name (usually default_display_name) but for the "user email" attribute
-                                    defName.addChildWillBePersisted(userSpecificSet);
+                                    userSpecificSet.setAttributeWillBePersisted(userEmail, defName.getDefaultDisplayName(),azquoMemoryDBConnection); // set the name (usually default_display_name) but for the "user email" attribute
+                                    defName.addChildWillBePersisted(userSpecificSet, azquoMemoryDBConnection);
                                 }
                                 defName = userSpecificSet; // switch the new one in, it will be used as normal
                             }
                         }
                         Collection<Name> defSet = parseQuery(azquoMemoryDBConnection, definition, attributeNames, true); // can be read only
                         if (defSet != null) {
-                            defName.setChildrenWillBePersisted(defSet);
+                            defName.setChildrenWillBePersisted(defSet, azquoMemoryDBConnection);
                         }
                     }
                 }

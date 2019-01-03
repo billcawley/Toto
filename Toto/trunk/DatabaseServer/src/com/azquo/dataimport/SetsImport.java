@@ -52,9 +52,9 @@ class SetsImport {
                         if (set == null) { // assign it - I'm not just grabbing the first cell since there may be cells with spaces or "" at the beginning
                             set = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, null, false, languages);
                             // empty it in case it existed and had children
-                            set.setChildrenWillBePersisted(Collections.emptyList());
+                            set.setChildrenWillBePersisted(Collections.emptyList(),azquoMemoryDBConnection);
                         } else { // set is created or found, so start gathering children
-                            set.addChildWillBePersisted(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, set, false, languages));
+                            set.addChildWillBePersisted(NameService.findOrCreateNameInParent(azquoMemoryDBConnection, cell, set, false, languages), azquoMemoryDBConnection);
                         }
                     }
                 }

@@ -28,11 +28,11 @@ public class UserChoiceService {
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
         if (childrenIds != null) { // it may be if we're just confirming sets exist, in that case don't modify contents
-            set.setChildrenWillBePersisted(Collections.emptyList()); // easiest way to clear them
+            set.setChildrenWillBePersisted(Collections.emptyList(),connectionFromAccessToken); // easiest way to clear them
             for (Integer childId : childrenIds) {
                 Name childName = NameService.findById(connectionFromAccessToken, childId);
                 if (childName != null) { // it really should not be!
-                    set.addChildWillBePersisted(childName); // and that should be it!
+                    set.addChildWillBePersisted(childName, connectionFromAccessToken); // and that should be it!
                 }
             }
         }
@@ -46,7 +46,7 @@ public class UserChoiceService {
         justUserNameLanguages.add(userName);
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
-        set.setChildrenWillBePersisted(NameQueryParser.parseQuery(connectionFromAccessToken, query));
+        set.setChildrenWillBePersisted(NameQueryParser.parseQuery(connectionFromAccessToken, query), connectionFromAccessToken);
     }
 
     // This class and two functions are to make qualified listings on a drop down, adding parents to qualify where necessary.
@@ -188,7 +188,7 @@ public class UserChoiceService {
         if (filterSet.getChildren() == null || filterSet.getChildren().size() == 0) {
             Collection<Name> possibleNames = NameQueryParser.parseQuery(connectionFromAccessToken, query, languages, true);
             for (Name possibleName : possibleNames) {
-                filterSet.addChildWillBePersisted(possibleName);
+                filterSet.addChildWillBePersisted(possibleName, connectionFromAccessToken);
             }
         }
         int dotPos = query.indexOf(".");
