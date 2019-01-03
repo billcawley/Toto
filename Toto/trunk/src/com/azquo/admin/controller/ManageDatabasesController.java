@@ -618,6 +618,7 @@ public class ManageDatabasesController {
                 ).replace("\n", "<br/>");*/
                 session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile));
             } catch (Exception e) {
+//                e.printStackTrace();
                 uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
                 session.setAttribute(ManageDatabasesController.IMPORTRESULT, Collections.singletonList(uploadedFile));
             }

@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Also I'm using Double Checked Locking. With volatile DCL is correct according to the JMM,
  * Given that synchronization is not inherently expensive it might be worth considering how much places where I'm using DCL might actually be contended much.
  * <p>
- * I've extracted NameAttributes and a few static functions but there's still too much code in here. Values and children switching between arrays and sets is a problem.
+ * I've extracted NameAttributes and a few static functions but there's still a fair amount of code in here. Values and children switching between arrays and sets might be a concern.
  */
 public final class Name extends AzquoMemoryDBEntity {
 
@@ -97,7 +97,7 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger newName3Count = new AtomicInteger(0);
 
     public Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, int noParents, int noValues) throws Exception {
-        this(azquoMemoryDB,id,provenanceId,attributes,noParents,noValues,false);
+        this(azquoMemoryDB, id, provenanceId, attributes, noParents, noValues, false);
     }
 
     // package private - BackupTransport can force the ID
@@ -137,21 +137,13 @@ public final class Name extends AzquoMemoryDBEntity {
         return nameAttributes.getAttribute(StringLiterals.DEFAULT_DISPLAY_NAME);
     }
 
-    // todo what was this for, aagh, I know there was something!
-    private static AtomicInteger hasDefaultDisplayNameCount = new AtomicInteger(0);
-
-    public boolean hasDefaultDisplayName() {
-        hasDefaultDisplayNameCount.incrementAndGet();
-        return nameAttributes.hasAttribute(StringLiterals.DEFAULT_DISPLAY_NAME);
-    }
-
     // provenance immutable. If it were not then would need to clone
 
     public Provenance getProvenance() {
         return provenance;
     }
 
-    private synchronized void setProvenanceWillBePersisted(final Provenance provenance) throws Exception {
+    private synchronized void setProvenanceWillBePersisted(final Provenance provenance) {
         if (this.provenance == null || !this.provenance.equals(provenance)) {
             this.provenance = provenance;
             setNeedsPersisting();
@@ -181,7 +173,7 @@ public final class Name extends AzquoMemoryDBEntity {
         return valuesAsSet != null ? Collections.unmodifiableSet(valuesAsSet) : values.length > 0 ? Collections.unmodifiableList(Arrays.asList(values)) : Collections.emptyList();
     }
 
-    public int getValueCount(){
+    public int getValueCount() {
         return getValues().size();
     }
 
@@ -200,11 +192,13 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
-    synchronized void valueArrayCheck() throws Exception {
-        if (valuesAsSet == null){
+    // these two functions used when data in persistence seems to not match (number of values or parents seems wrong)
+
+    synchronized void valueArrayCheck() {
+        if (valuesAsSet == null) {
             ArrayList<Value> newList = new ArrayList<>();
-            for (Value v : values){
-                if (v != null){
+            for (Value v : values) {
+                if (v != null) {
                     newList.add(v);
                 }
             }
@@ -212,14 +206,14 @@ public final class Name extends AzquoMemoryDBEntity {
         }
     }
 
-    synchronized void parentArrayCheck() throws Exception {
-            ArrayList<Name> newList = new ArrayList<>();
-            for (Name n : parents){
-                if (n != null){
-                    newList.add(n);
-                }
+    synchronized void parentArrayCheck() {
+        ArrayList<Name> newList = new ArrayList<>();
+        for (Name n : parents) {
+            if (n != null) {
+                newList.add(n);
             }
-            parents = newList.toArray(new Name[newList.size()]);
+        }
+        parents = newList.toArray(new Name[newList.size()]);
     }
 
     // no duplication is while loading, to reduce work
@@ -228,7 +222,8 @@ public final class Name extends AzquoMemoryDBEntity {
     void addToValues(final Value value) throws Exception {
         addToValues(value, false);
     }
-    void addToValues(final Value value, boolean backupRestore) throws Exception {
+
+    private void addToValues(final Value value, boolean backupRestore) throws Exception {
         addToValuesCount.incrementAndGet();
         boolean databaseIsLoading = getAzquoMemoryDB().getNeedsLoading() || backupRestore;
         checkDatabaseMatches(value);
@@ -262,7 +257,7 @@ public final class Name extends AzquoMemoryDBEntity {
                         // new code to deal with arrays assigned to the correct size on loading
                         // don't trust no_values, compensate and log
                         if (values.length != 0 && values[values.length - 1] == null) {
-                            if (!databaseIsLoading){
+                            if (!databaseIsLoading) {
                                 System.out.println("empty space in values after the database has finished loading - no_values wrong on name id " + getId() + " " + getDefaultDisplayName());
                                 getAzquoMemoryDB().forceNameNeedsPersisting(this);
                             }
@@ -274,7 +269,7 @@ public final class Name extends AzquoMemoryDBEntity {
                                 }
                             }
                         } else { // normal modification
-                            if (databaseIsLoading){
+                            if (databaseIsLoading) {
                                 System.out.println("while loading ran out of values space - no_values wrong on name id " + getId() + " " + getDefaultDisplayName());
                                 getAzquoMemoryDB().forceNameNeedsPersisting(this);
                             }
@@ -292,7 +287,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger removeFromValuesCount = new AtomicInteger(0);
 
-    void removeFromValues(final Value value) throws Exception {
+    void removeFromValues(final Value value) {
         removeFromValuesCount.incrementAndGet();
         if (valuesAsSet != null) {
             if (valuesAsSet.remove(value)) {
@@ -338,7 +333,7 @@ public final class Name extends AzquoMemoryDBEntity {
         return parents.length > 0;
     }
 
-    private void addToParents(final Name name) throws Exception {
+    private void addToParents(final Name name) {
         addToParents(name, false);
     }
     /* don't allow external classes to set the parents I mean by function or otherwise, Name can manage this based on set children
@@ -351,12 +346,12 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger addToParentsCount = new AtomicInteger(0);
 
     // don't trust no_parents, revert to old style but add logging
-    private void addToParents(final Name name, boolean databaseIsLoading) throws Exception {
+    private void addToParents(final Name name, boolean databaseIsLoading) {
         addToParentsCount.incrementAndGet();
         synchronized (this) {
             if (databaseIsLoading || !Arrays.asList(parents).contains(name)) {
                 if (parents.length != 0 && parents[parents.length - 1] == null) {
-                    if (!databaseIsLoading){
+                    if (!databaseIsLoading) {
                         System.out.println("empty space in parents after the database has finished loading - no_parents wrong on name id " + getId() + " " + getDefaultDisplayName());
                         getAzquoMemoryDB().forceNameNeedsPersisting(this);
                     }
@@ -367,7 +362,7 @@ public final class Name extends AzquoMemoryDBEntity {
                         }
                     }
                 } else {
-                    if (databaseIsLoading){
+                    if (databaseIsLoading) {
                         System.out.println("while loading ran out of parents space - no_parents wrong on name id " + getId() + " " + getDefaultDisplayName());
                         getAzquoMemoryDB().forceNameNeedsPersisting(this);
                     }
@@ -381,7 +376,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     private static AtomicInteger removeFromParentsCount = new AtomicInteger(0);
 
-    private void removeFromParents(final Name name) throws Exception {
+    private void removeFromParents(final Name name) {
         removeFromParentsCount.incrementAndGet();
         synchronized (this) { // just sync on this object to protect the lists
             parents = NameUtils.nameArrayRemoveIfExists(parents, name);
@@ -443,7 +438,7 @@ public final class Name extends AzquoMemoryDBEntity {
 
     // was in name service, added in here as a static function to give it direct access to the private arrays. Again an effort to reduce garbage.
     // Used by find all names, this is hammered, efficiency is important
-    public static void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
+    public static void addNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) {
         addNamesCount.incrementAndGet();
         if (!name.hasChildren()) {
             if (level == NameService.LOWEST_LEVEL_INT) {
@@ -470,7 +465,7 @@ public final class Name extends AzquoMemoryDBEntity {
     // to support negative levels on children clause, level is seen as parent level, same as above but moving in the opposite direction
     // more simple as parents are just an array, no parentsAsSet currently
     // Used by find parents at level, this is hammered, efficiency is important
-    public static void addParentNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) throws Exception {
+    public static void addParentNames(final Name name, Collection<Name> namesFound, final int currentLevel, final int level) {
         addNamesCount.incrementAndGet();
         if (!name.hasParents()) {
             if (level == NameService.LOWEST_LEVEL_INT) { // misnomer but same logic
@@ -548,7 +543,7 @@ public final class Name extends AzquoMemoryDBEntity {
             }
         } else if (name.children.length > 0) {
             Name[] childrenRefCopy = name.children; // in case it gets switched out half way through
-            for (Name child: childrenRefCopy) {
+            for (Name child : childrenRefCopy) {
                 if (allChildren.add(child)) {
                     findAllChildren(child, allChildren);
                 }
@@ -600,7 +595,6 @@ public final class Name extends AzquoMemoryDBEntity {
                 localReference = valuesIncludingChildrenCache;
                 if (localReference == null) {
                     localReference = HashObjSets.newUpdatableSet(getValues());
-                    int i;
                     for (Name child : findAllChildren()) {
                         if (child.valuesAsSet != null) {
                             localReference.addAll(child.valuesAsSet);
@@ -1040,10 +1034,8 @@ public final class Name extends AzquoMemoryDBEntity {
                 newChild.addToParents(this, true);
             }
         } else {
-            //noinspection ForLoopReplaceableByForEach, surpressing as I believe this is a little more efficient in terms of not instantiating an Iterator
             // directly hitting the array could cause a problem if it were reassigned while this happened but here it should be fine,
             // loading doesn't alter the array lengths, they're set in preparation.
-            // simpliefied to foreach, should be fine
             for (Name aChildren : children) {
                 aChildren.addToParents(this, true);
             }
@@ -1105,7 +1097,6 @@ public final class Name extends AzquoMemoryDBEntity {
         System.out.println("newNameCount\t\t\t\t" + newNameCount.get());
         System.out.println("newNameCount3\t\t\t\t" + newName3Count.get());
         System.out.println("getDefaultDisplayNameCount\t\t\t\t" + getDefaultDisplayNameCount.get());
-        System.out.println("hasDefaultDisplayNameCount\t\t\t\t" + hasDefaultDisplayNameCount.get());
         System.out.println("getValuesCount\t\t\t\t" + getValuesCount.get());
         System.out.println("addToValuesCount\t\t\t\t" + addToValuesCount.get());
         System.out.println("removeFromValuesCount\t\t\t\t" + removeFromValuesCount.get());
@@ -1147,7 +1138,6 @@ public final class Name extends AzquoMemoryDBEntity {
         newNameCount.set(0);
         newName3Count.set(0);
         getDefaultDisplayNameCount.set(0);
-        hasDefaultDisplayNameCount.set(0);
         getValuesCount.set(0);
         addToValuesCount.set(0);
         removeFromValuesCount.set(0);

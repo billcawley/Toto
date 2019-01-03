@@ -768,7 +768,7 @@ public final class ImportService {
                             // as in we're NOT on the first line of the headings then add a space at the top which will indicate azqo headings but no file headings
                             standardHeadings.add(newColumn);
                             // cell index greater than 0 so it's not the first column - check the previous column size and add spaces as required
-                            if (cellIndex > 0 && standardHeadings.get(standardHeadings.size() - 2).size() > 1){ // -2 as we just added a column!
+                            if (standardHeadings.size() > 1 && standardHeadings.get(standardHeadings.size() - 2).size() > 1){ // -2 as we just added a column!
                                 for (int i = 1; i < standardHeadings.get(standardHeadings.size() - 2).size(); i++){ // start at one, if the size is two we only add one blank
                                     newColumn.add("");
                                 }

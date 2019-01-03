@@ -222,6 +222,7 @@ public class BatchImporter implements Callable<Void> {
                 } else {
                     cell.setLineValue(cell.getImmutableImportHeading().override);
                 }
+                cell.needsResolving = false;
                 if (cell.getImmutableImportHeading().lineNameRequired) {
                     Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim()
                             , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames));
