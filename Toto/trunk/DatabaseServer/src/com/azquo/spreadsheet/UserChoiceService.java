@@ -4,6 +4,7 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.transport.FilterTriple;
@@ -28,7 +29,7 @@ public class UserChoiceService {
         Name filterSets = NameService.findOrCreateNameInParent(connectionFromAccessToken, "Filter sets", null, false); // no languages - typically the set will exist
         Name set = NameService.findOrCreateNameInParent(connectionFromAccessToken, setName, filterSets, true, justUserNameLanguages);//must be a local name in 'Filter sets' and be for this user
         if (childrenIds != null) { // it may be if we're just confirming sets exist, in that case don't modify contents
-            set.setChildrenWillBePersisted(Collections.emptyList(),connectionFromAccessToken); // easiest way to clear them
+            set.setChildrenWillBePersisted(Collections.emptyList(), connectionFromAccessToken); // easiest way to clear them
             for (Integer childId : childrenIds) {
                 Name childName = NameService.findById(connectionFromAccessToken, childId);
                 if (childName != null) { // it really should not be!
@@ -165,7 +166,7 @@ public class UserChoiceService {
 
         List<String> languages = new ArrayList<>();
         languages.add(user);
-        if (!justUser){
+        if (!justUser) {
             languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
         }
         Collection<Name> names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, false);
@@ -176,8 +177,18 @@ public class UserChoiceService {
             names = newNames;
         }
         // I'm not going to check if provenanceId is positive - if they use "updated" in the wrong context nothing should be returned
-        if (constrainToUpdated){
-            names.removeIf(name -> name.getProvenance().getId() != provenanceId);
+        if (constrainToUpdated) {
+            names.removeIf(name -> {
+                if (name.getProvenance().getId() == provenanceId) {
+                    return false;
+                }
+                for (Value v : name.getValues()) {
+                    if (v.getProvenance().getId() == provenanceId) {
+                        return false;
+                    }
+                }
+                return true;
+            });
         }
         return getUniqueNameStrings(getUniqueNames(names, forceFirstLevel));
     }

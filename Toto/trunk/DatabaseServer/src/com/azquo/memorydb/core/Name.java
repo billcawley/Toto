@@ -89,7 +89,7 @@ public final class Name extends AzquoMemoryDBEntity {
         nameAttributes = new NameAttributes(); // attributes will nearly always be written over, this is just a placeholder
         getAzquoMemoryDB().addNameToDb(this);
         newNameCount.incrementAndGet();
-        setProvenanceWillBePersisted(provenance);
+        this.provenance = provenance;
     }
 
     // For loading, it should only be used by the NameDAO, I can't really restrict it and make it non public without rearranging the package I don't think.
@@ -148,6 +148,9 @@ public final class Name extends AzquoMemoryDBEntity {
         if (this.provenance == null || !this.provenance.equals(provenance)) {
             this.provenance = provenance;
             setNeedsPersisting();
+            for (Name n : getParents()){
+                n.setProvenanceWillBePersisted(provenance);
+            }
         }
     }
 
@@ -680,7 +683,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 addChildWillBePersisted(child, false); // todo, get rid of the boolean
             }
             clearChildrenCaches();
-            this.provenance = azquoMemoryDBConnection.getProvenance();
+            setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
             //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
         }
     }
@@ -690,7 +693,7 @@ public final class Name extends AzquoMemoryDBEntity {
     public void addChildWillBePersisted(Name child, AzquoMemoryDBConnection azquoMemoryDBConnection) throws Exception {
         addChildWillBePersistedCount.incrementAndGet();
         if (addChildWillBePersisted(child, true)){
-            this.provenance = azquoMemoryDBConnection.getProvenance();
+            setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
         }
     }
 
@@ -755,7 +758,7 @@ public final class Name extends AzquoMemoryDBEntity {
         removeFromChildrenWillBePersistedCount.incrementAndGet();
         if (removeFromChildrenWillBePersistedNoCacheClear(name)){
             clearChildrenCaches();
-            this.provenance = azquoMemoryDBConnection.getProvenance();
+            setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
         }
         //getAzquoMemoryDB().clearSetAndCountCacheForName(this);
     }
@@ -827,7 +830,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 //attributes.remove(attributeName);
                 getAzquoMemoryDB().getIndex().removeAttributeFromNameInAttributeNameMap(attributeName, existing, this);
                 nameAttributes = new NameAttributes(attributeKeys, attributeValues);
-                this.provenance = azquoMemoryDBConnection.getProvenance();
+                setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
                 setNeedsPersisting();
             }
             return;
@@ -848,7 +851,7 @@ public final class Name extends AzquoMemoryDBEntity {
         nameAttributes = new NameAttributes(attributeKeys, attributeValues);
         // now deal with the DB maps!
         getAzquoMemoryDB().getIndex().setAttributeForNameInAttributeNameMap(attributeName, attributeValue, this);
-        this.provenance = azquoMemoryDBConnection.getProvenance();
+        setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
         setNeedsPersisting();
     }
 
@@ -865,7 +868,7 @@ public final class Name extends AzquoMemoryDBEntity {
             attributeKeys.remove(index);
             attributeValues.remove(index);
             nameAttributes = new NameAttributes(attributeKeys, attributeValues);
-            this.provenance = azquoMemoryDBConnection.getProvenance();
+            setProvenanceWillBePersisted(azquoMemoryDBConnection.getProvenance());
             setNeedsPersisting();
         }
     }

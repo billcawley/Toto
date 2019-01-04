@@ -1,3 +1,15 @@
+04-01-19
+
+Skiplines + nofileheadings allowed in new import templates
+
+Guess an Import Template from a file name
+
+Various Import Template bug fixes
+
+Provenance on a name now changes when a name's attributes or children change
+
+Initial version of "updated" as a syntax option to be used in post import execute routines. For splits between contracts.
+
 21-12-18-2
 
 N/A added to pending upload params
