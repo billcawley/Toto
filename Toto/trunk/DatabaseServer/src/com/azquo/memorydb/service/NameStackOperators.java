@@ -79,7 +79,7 @@ class NameStackOperators {
                 }
             }
         } else {
-            Set<Name> bottomNames = new HashSet<Name>();
+            Set<Name> bottomNames = new HashSet<>();
             for (Name element : lastName) {
                 bottomNames.addAll(element.findAllChildren());
 

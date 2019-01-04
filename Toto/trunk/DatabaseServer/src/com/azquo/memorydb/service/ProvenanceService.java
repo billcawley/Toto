@@ -197,7 +197,6 @@ public class ProvenanceService {
                         oneUpdate = oneUpdate.subList(0, maxSize);
                     }
                     provenanceForDisplay.setValueDetailsForProvenances(getValueDetailsForProvenances(azquoMemoryDBConnection, oneUpdate));
-                    checkAuditSheet(azquoMemoryDBConnection, provenanceForDisplay, oneUpdate);
                     provenanceForDisplays.add(provenanceForDisplay);
                     oneUpdate = new ArrayList<>();
                     oneUpdate.add(value);
@@ -209,138 +208,10 @@ public class ProvenanceService {
                 oneUpdate = oneUpdate.subList(0, maxSize);
             }
             provenanceForDisplay.setValueDetailsForProvenances(getValueDetailsForProvenances(azquoMemoryDBConnection, oneUpdate));
-            checkAuditSheet(azquoMemoryDBConnection, provenanceForDisplay, oneUpdate);
             provenanceForDisplays.add(provenanceForDisplay);
         }
         return new ProvenanceDetailsForDisplay( azquoCell != null ? getProvenanceHeadlineForCell(azquoCell) : "", null, provenanceForDisplays);
     }
-
-    private static final String AUDITSHEET = "AuditSheet";
-
-/*    A normal in spreadsheet provenance might look as follows :
-    {"user":"Bill Cawley","timeStamp":1495554373879,"method":"in spreadsheet","name":"Customer Categorisation","context":"month = May-16;"}
-    An imported one might be
-    {"user":"Bill Cawley","timeStamp":1495521349363,"method":"imported","name":"DG Setup2.xlsx:Mailouts","context":""}
-    This is relevant as there's going to be an option to create a drill down equivalent for imports. The "Mailouts" bit above means that in that database
-    there will be All import sheets -> DataImport Mailouts. The created drilldown will be an attribute AuditSheet against this name, a syntax is as follows :
-
-    <Report Name> with CHOSENSET = <name of chosen set> CHOSEN FROM <choice set>, <Choice> CHOSEN FROM <choice set>,....
-
-    e.g.  `Order Items chosen` with CHOSENSET = `Items chosen` CHOSEN FROM `All Order Items` children, Territory CHOSEN FROM `All countries` children, Month CHOSEN FROM `All months` children*/
-
-    private static void checkAuditSheet(AzquoMemoryDBConnection azquoMemoryDBConnection, ProvenanceForDisplay provenanceForDisplay, List<Value> values) throws Exception {
-        if ("imported".equals(provenanceForDisplay.getMethod())) {
-            if (provenanceForDisplay.getName().contains(":")) {
-                String toSearch = provenanceForDisplay.getName().substring(provenanceForDisplay.getName().lastIndexOf(":") + 1); // so we've got our Mailouts or equivalent
-                Name allImportSheets = azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNameByAttribute(Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME), ValuesImport.ALLIMPORTSHEETS, null);
-                // just check the children, more simple
-                if (allImportSheets != null) {
-                    for (Name child : allImportSheets.getChildren()) {
-                        if (child.getDefaultDisplayName().equals("DataImport " + toSearch)) { // todo - stop such use of string literals . . .
-                            if (child.getAttribute(AUDITSHEET) != null) { // then we have criteria
-                                String auditSheetRule = child.getAttribute(AUDITSHEET);
-                                if (auditSheetRule.contains("with")) { // this parsing could be more robust, also could be factored a bit?
-                                    String reportName = auditSheetRule.substring(0, auditSheetRule.indexOf("with")).replaceAll("`", "").trim();
-                                    provenanceForDisplay.setMethod("in spreadsheet");
-                                    provenanceForDisplay.setInSpreadsheet(true);
-                                    provenanceForDisplay.setName(reportName);
-                                    // todo - parsing a bit more robust here regarding `, escaping names
-                                    // dammit have to deal with character escapes . . .
-                                    String restOfRule = auditSheetRule.substring(auditSheetRule.indexOf("with") + 4).trim();
-                                    String CHOSENFROM = "CHOSEN FROM";
-                                    if (restOfRule.toUpperCase().startsWith("CHOSENSET =")) {
-                                        restOfRule = restOfRule.substring("CHOSENSET =".length()).trim();
-                                        String chosenSet;
-                                        String chosenSetChosenFrom; // new addition - we're not going to try to derive the chosen set from a set of
-                                        // new logic - now chosen set also has a chosen from
-                                        chosenSet = restOfRule.substring(0, restOfRule.indexOf(CHOSENFROM)).trim(); // not stripping quotes actually shouyld be fine for findOrCreateNameInParent
-                                        restOfRule = restOfRule.substring(restOfRule.indexOf(CHOSENFROM) + CHOSENFROM.length());
-/*                                        if (restOfRule.startsWith("`")){ // chosen set has escape quotes
-                                            int endQuote = restOfRule.indexOf("`",1);
-                                            chosenSet = restOfRule.substring(1, endQuote).trim();
-                                            restOfRule = restOfRule.substring(endQuote + 1).trim();
-                                        } else {
-                                            int commaPos = restOfRule.indexOf(",");
-                                            if (commaPos > 0){
-                                                chosenSet = restOfRule.substring(0, commaPos).trim();
-                                                restOfRule = restOfRule.substring(commaPos).trim();
-                                            } else {
-                                                chosenSet = restOfRule.trim();
-                                                restOfRule = null; // no more there
-                                            }
-                                        }*/
-                                        // so now get the chosen from criteria - might be able to factor this with code below - this was added after
-                                        if (restOfRule.contains(CHOSENFROM)) {
-                                            int chosenFromIndex = restOfRule.indexOf(CHOSENFROM);
-                                            int commaPos = restOfRule.substring(0, chosenFromIndex).lastIndexOf(","); // required to stop picking up commas in quoted names
-                                            chosenSetChosenFrom = restOfRule.substring(0, commaPos).trim();
-                                            restOfRule = restOfRule.substring(commaPos).trim();
-                                        } else { // it's just the rest
-                                            chosenSetChosenFrom = restOfRule.trim();
-                                            restOfRule = null; // no more there
-                                        }
-                                        Collection<Name> chosenSetChosenFromSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, chosenSetChosenFrom);
-
-                                        // ok, make the chosen set which are the names shared across all the values
-                                        Set<Name> sharedSet = HashObjSets.newMutableSet();
-                                        Set<Name> chosenSetSet = HashObjSets.newMutableSet(); // no longet spare based off multiple names, we look for names attacehd to the values in this set
-                                        for (Value v : values) {
-                                            if (sharedSet.isEmpty()) { // first one add them all
-                                                sharedSet.addAll(v.getNames());
-                                            } else {
-                                                sharedSet.retainAll(v.getNames());
-                                            }
-                                            for (Name n : v.getNames()) {
-                                                if (chosenSetChosenFromSet.contains(n)) {
-                                                    chosenSetSet.add(n);
-                                                }
-                                            }
-                                        }
-                                        Name newSetForReport = NameService.findOrCreateNameInParent(azquoMemoryDBConnection, chosenSet, null, false);// simple name create on the new set
-                                        newSetForReport.setChildrenWillBePersisted(chosenSetSet,azquoMemoryDBConnection);
-
-                                        StringBuilder context = new StringBuilder();
-                                        if (restOfRule != null) {
-                                            // we want to create a context along the lines of something = something; somethingelse = somethingelse;
-                                            // parsing shouldn't be too difficult except that I need to watch out for commas in escaped names. If I parse around "CHOSEN FROM", assuming that isn't in the strings of course, this should be fairly robust
-                                            // , Territory CHOSEN FROM `All countries` children, Month CHOSEN FROM `All months` children
-                                            while (restOfRule.contains(CHOSENFROM)) {
-                                                int chosenFromIndex = restOfRule.indexOf(CHOSENFROM);
-                                                String choiceName = restOfRule.substring(0, chosenFromIndex);
-                                                choiceName = choiceName.trim();
-                                                if (choiceName.startsWith(",")) {
-                                                    choiceName = choiceName.substring(1).trim();
-                                                }
-                                                String setToSelectFrom;
-                                                restOfRule = restOfRule.substring(chosenFromIndex + CHOSENFROM.length());
-                                                if (restOfRule.contains(CHOSENFROM)) {
-                                                    int nextCommaPos = restOfRule.substring(0, restOfRule.indexOf(CHOSENFROM)).lastIndexOf(","); // the last comma before the next chosenFrom
-                                                    setToSelectFrom = restOfRule.substring(0, nextCommaPos).trim();
-                                                    restOfRule = restOfRule.substring(nextCommaPos);
-                                                } else {
-                                                    // no need to adjust restOfRule we're finished with it
-                                                    setToSelectFrom = restOfRule.trim();
-                                                }
-                                                Collection<Name> setToSelectFromSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, setToSelectFrom);
-                                                // now, there should be ONE crossover between this set and the spare set
-                                                setToSelectFromSet.retainAll(sharedSet);
-                                                if (setToSelectFromSet.size() == 1) { // then we're in business!
-                                                    context.append(choiceName).append(" = ").append(setToSelectFromSet.iterator().next().getDefaultDisplayName()).append(";");
-                                                }
-                                            }
-                                            provenanceForDisplay.setContext(context.toString());
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
 
     // first string is the value, then the names . . .
     // needs the connection to check for historic values

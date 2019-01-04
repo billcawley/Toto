@@ -57,7 +57,7 @@ public class JSTreeService {
     }
 
     // was about 40 lines before jackson though the class above is of course important. Changing name to details not structure which implies many levels.
-    public static JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) throws Exception {
+    public static JsonChildStructure getNameDetailsJson(DatabaseAccessToken databaseAccessToken, int nameId) {
         Name name = NameService.findById(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), nameId);
         Map<String, Object> attributesForJackson = new HashMap<>();
         attributesForJackson.putAll(name.getAttributes());
@@ -86,7 +86,7 @@ public class JSTreeService {
     }
 
     // Ok this now won't deal with the jstree ids (as it should not!), that can be dealt with on the front end
-    public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) throws Exception {
+    public static JsonChildren getJsonChildren(DatabaseAccessToken databaseAccessToken, int jsTreeId, int nameId, boolean parents, String searchTerm, String language, int hundredMore) {
         int childrenLimit = (hundredMore + 1) * 100;
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         Map<String, Boolean> state = new HashMap<>();

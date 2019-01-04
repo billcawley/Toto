@@ -195,9 +195,9 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser) throws RemoteException {
+    public List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser, int provenanceId) throws RemoteException {
         try {
-            return UserChoiceService.getDropDownListForQuery(databaseAccessToken, query, user, justUser);
+            return UserChoiceService.getDropDownListForQuery(databaseAccessToken, query, user, justUser, provenanceId);
         } catch (Exception e) {
             throw new RemoteException(e.getMessage(), e);
         }

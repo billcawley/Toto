@@ -669,7 +669,7 @@ public final class ImportService {
             for (String choice : uploadedFile.getParameters().keySet()) {
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
             }
-            processedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, processedFile.getPostProcessor()).toString());
+            processedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, processedFile.getPostProcessor(), uploadedFile.getProvenanceId()).toString());
         }
         return processedFile;
     }

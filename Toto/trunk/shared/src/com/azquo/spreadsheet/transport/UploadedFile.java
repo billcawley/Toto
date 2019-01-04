@@ -63,27 +63,29 @@ public class UploadedFile implements Serializable {
     private String postProcessingResult;
     private String fileEncoding;
     // heading definitions. At its most simple it would be a list of strings but it can be a lookup based on file headings and there could be multiple headingss so
-    List<String> simpleHeadings;
+    private List<String> simpleHeadings;
     /* more complex - list of strings for lookup as sometimes the headings are double decker or more so to speak
      OK, so there are two strings in the values. The first is the straight value, the heading as it will be used by Azquo, the second is optional, the interim lookup
      where the import sheet had modes. E.g. Allrisks mode defined Address1 as the file heading linked to Risk Address 1 on the main lookup sheet which in turn had the
       Azquo clauses. The interim  Risk Address 1 wasn't being sent to the database server as I thought it irrelevant BUT it can be referenced in compositions
       Also it might not be the worst thing for users to see as feedback on the import
      */
-    Map<List<String>, TypedPair<String, String>> headingsByFileHeadingsWithInterimLookup;
+    private Map<List<String>, TypedPair<String, String>> headingsByFileHeadingsWithInterimLookup;
 
     // ok so the above is where the headings have headings on the file to reference but there might be quite a few headings e.g. with defaults or composite with no
     // file headings. They go in here.
-    List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup;
+    private List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup;
     // ok, so, we need to resolve composite on the report server and send it over which means we need a way to reference headings
 
     // top headings will be the location on the sheet and the name of a value to check for or a value to put aside for the import
     // as in "do we have 'Cover Note' in a given cell" vs "take the value in a given cell and store it under 'Cover Note' to use later"
     // the latter signified by quotes
     // row + col starting index 0. Need to think a little about what to do if they're not found
-    Map<TypedPair<Integer, Integer>, String> topHeadings;
+    private Map<TypedPair<Integer, Integer>, String> topHeadings;
     // languages now set in the template or perhaps overriden by parameters - not sure how necessary this will be
-    List<String> languages;
+    private List<String> languages;
+    // the provenanceId attached to the data in the file
+    private int provenanceId;
 
     public UploadedFile(String path, List<String> names) {
         this(path,names,null,false);
@@ -116,6 +118,7 @@ public class UploadedFile implements Serializable {
         topHeadings = null;
         languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
         headingsNoFileHeadingsWithInterimLookup = null;
+        provenanceId = -1;
     }
 
 
@@ -322,4 +325,11 @@ public class UploadedFile implements Serializable {
         this.languages = languages;
     }
 
+    public int getProvenanceId() {
+        return provenanceId;
+    }
+
+    public void setProvenanceId(int provenanceId) {
+        this.provenanceId = provenanceId;
+    }
 }

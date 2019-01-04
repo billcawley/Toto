@@ -138,7 +138,7 @@ public class UserChoiceService {
         return names.stream().map(uniqueName -> new FilterTriple(uniqueName.bottomName.getId(), uniqueName.description, filterSet.getChildren().contains(uniqueName.bottomName))).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
     }
 
-    public static List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser) throws Exception {
+    public static List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser, int provenanceId) throws Exception {
         //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
         int dotPos = query.indexOf(".");
         if (dotPos > 0) {//todo check that it's not part of a name
@@ -155,6 +155,14 @@ public class UserChoiceService {
             query = query.substring(0, query.indexOf("showparents"));
             forceFirstLevel = true;
         }
+        // another hack to say if we should use the provenance id . . .
+        // of course we need to actually have the provenance id for this to work
+        boolean constrainToUpdated = false;
+        if (query.toLowerCase().trim().endsWith(" updated")) { // a hack to force simple showing of parents regardless
+            query = query.substring(0, query.indexOf(" updated"));
+            constrainToUpdated = true;
+        }
+
         List<String> languages = new ArrayList<>();
         languages.add(user);
         if (!justUser){
@@ -166,6 +174,10 @@ public class UserChoiceService {
             Iterator it = names.iterator();
             for (int i = 0; i < 1000; i++) newNames.add((Name) it.next());
             names = newNames;
+        }
+        // I'm not going to check if provenanceId is positive - if they use "updated" in the wrong context nothing should be returned
+        if (constrainToUpdated){
+            names.removeIf(name -> name.getProvenance().getId() != provenanceId);
         }
         return getUniqueNameStrings(getUniqueNames(names, forceFirstLevel));
     }

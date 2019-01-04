@@ -26,6 +26,8 @@ import java.util.regex.Pattern;
  * The basic file parsing is single threaded but since this can start while later lines are being read I don't think this is a problem.
  * That is to say on a large file the threads will start to stack up fairly quickly
  * Adapted to Callable from Runnable - I like the assurances this gives for memory synchronisation
+ *
+ * Note 04/01/19 - could be easier to understand. Moving dictionary to reports will help.
  * <p>
  */
 public class BatchImporter implements Callable<Void> {

@@ -33,6 +33,7 @@ import java.util.*;
  * <p>
  * Azquo has no schema like an SQL database but to load data a basic set structure needs to be defined
  * and rules for interpreting files need to be also. These two together effectively are the equivalent of an SQL schema.
+ * Notably the rules for interpreting a file are now often configured in ImportTemplates on the report server.
  */
 public class DSImportService {
 
@@ -44,6 +45,7 @@ public class DSImportService {
         // if the provenance is unused I could perhaps zap it but it's not a big deal for the mo
         UploadedFile toReturn = readPreparedFile(azquoMemoryDBConnection, uploadedFile);
         toReturn.setDataModified(!azquoMemoryDBConnection.isUnusedProvenance());
+        toReturn.setProvenanceId(azquoMemoryDBConnection.getProvenance().getId());
         return toReturn;
     }
 
@@ -76,12 +78,12 @@ public class DSImportService {
                 e.printStackTrace();
                 throw new Exception("Groovy error " + uploadedFile.getFileName() + ": " + e.getMessage() + "\n");
             }
+
+
             // checks the first few lines to sort batch size and get a hopefully correctly configured line iterator. Nothing to do with heading interpretation
-
-
             int batchSize = 100_000;
             char delimiter = ',';
-            File sizeTest = new File(uploadedFile.getPath());
+            final File sizeTest = new File(uploadedFile.getPath());
             final long fileLength = sizeTest.length();
             try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), Charset.forName("UTF-8"))) {
                 // grab the first line to check on delimiters
@@ -127,18 +129,17 @@ public class DSImportService {
          */
             MappingIterator<String[]> lineIterator;
             if (uploadedFile.getFileEncoding() != null) {
-                lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(uploadedFile.getPath()), uploadedFile.getFileEncoding()));
                 // so override file encoding.
+                lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(uploadedFile.getPath()), uploadedFile.getFileEncoding()));
             } else {
                 lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(uploadedFile.getPath())));
             }
 
 
-
             // read headings off file - under new logic this needs to pay attention to what was passed from the report server
             int skipLines = uploadedFile.getSkipLines();
-            // things might be shifted to the right, hack in support for this but having a list of top headings as they appear at
-            // offsets up to a limit as well as normal
+            // things might be shifted to the right which would break top headings, hack in support for this by having a
+            // list of top headings as they appear at offsets up to a limit as well as normal
             int offsetLimit = 20;
             List<Map<String, String>> topHeadingsValuesByOffset = new ArrayList<>();
             for (int offset = 0; offset < offsetLimit; offset++){
@@ -189,11 +190,11 @@ public class DSImportService {
             }
             List<String> headings = new ArrayList<>();
             // to lookup composite columns based on the file heading
-            Map<String, Integer> fileHeadingCompositeLookup = new HashMap<>();
+            final Map<String, Integer> fileHeadingCompositeLookup = new HashMap<>();
             // to lookup composite columns based on interim "ModelHeadings" heading names - interim if a "mode" was used e.g. Hiscox on the risk import template
-            Map<String, Integer> interimCompositeLookup = new HashMap<>();
-            // to lookup composite columns based on Azquo definitions - the standard old way, looking up what's before the first ; but it will NOT do the dot to "; attribute" replace before
-            // so you could reference Shop.Address1 in composite
+            final Map<String, Integer> interimCompositeLookup = new HashMap<>();
+            // to lookup composite columns based on Azquo definitions - the standard old way, looking up what's before the first ;
+            // but it will NOT do the dot to "; attribute" replace before so you could reference Shop.Address1 in composite
             Map<String, Integer> azquoHeadingCompositeLookup = new HashMap<>();
             int lastColumnToActuallyRead = 0;
             if (uploadedFile.getSimpleHeadings() == null) { // if there were simple headings then we read NO headings off the file
@@ -223,12 +224,13 @@ public class DSImportService {
                         }
                     }
                     // ok now we get to the actual lookup
-                    Map<List<String>, TypedPair<String, String>> headingsByLookupCopy = new HashMap<>(uploadedFile.getHeadingsByFileHeadingsWithInterimLookup()); // copy it as we're going to remove things
+                    // copy it as we're going to remove things - need to leave the original intact as it's part of feedback to the user
+                    Map<List<String>, TypedPair<String, String>> headingsByLookupCopy = new HashMap<>(uploadedFile.getHeadingsByFileHeadingsWithInterimLookup());
                     int currentFileCol = 0;
                     for (List<String> headingsForAColumn : headingsFromTheFile) {// generally headingsForAColumn will just just have one element
                         if (headingsByLookupCopy.get(headingsForAColumn) != null) {
                             lastColumnToActuallyRead = currentFileCol;
-                            TypedPair<String, String> removed = headingsByLookupCopy.remove(headingsForAColumn);// take the used one out - after runnning through the file we need to add the remainder on to the end
+                            TypedPair<String, String> removed = headingsByLookupCopy.remove(headingsForAColumn);// take the used one out - after running through the file we need to add the remainder on to the end
                             headings.add(removed.getFirst());
                             if (removed.getSecond() != null) {
                                 interimCompositeLookup.put(removed.getSecond().toUpperCase(), headings.size() - 1);
@@ -252,7 +254,22 @@ public class DSImportService {
                     // ok now we add the headings with no file headings or where the file headings couldn't be found
                     for (TypedPair<String, String> leftOver : headingsNoFileHeadingsWithInterimLookup) {
                         // pasted and modified from old code to exeption on required as necessary
-                        String[] clauses = leftOver.getFirst().split(";");
+                        String headingToAdd = leftOver.getFirst();
+
+                        // most of the time top headings will be jammed in below as a simple default but that default might be against an existing heading in which case
+                        // add the default here and knock it off the list so it's not added again later
+                        // note - if a default top heading matched a heading on file the default won't get set
+                        if (!topHeadingsValues.isEmpty()){
+                            String toCheckAgainstTopHeadings = leftOver.getFirst();
+                            if (toCheckAgainstTopHeadings.contains(";")){
+                                toCheckAgainstTopHeadings = toCheckAgainstTopHeadings.substring(0, toCheckAgainstTopHeadings.indexOf(";"));
+                                if (topHeadingsValues.containsKey(toCheckAgainstTopHeadings) && !"FOUND".equals(topHeadingsValues.get(toCheckAgainstTopHeadings))){
+                                    headingToAdd = leftOver.getFirst() + ";default " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
+                                }
+                            }
+                        }
+
+                        String[] clauses = headingToAdd.split(";");
                         for (String clause : clauses) {
                             if (clause.toLowerCase().startsWith("required")) {
                             /*check both the general and specific import attributes
@@ -266,19 +283,6 @@ public class DSImportService {
                                     throw new Exception("headings missing required heading: " + leftOver.getFirst());
                                 }
                                 break;
-                            }
-                        }
-                        String headingToAdd = leftOver.getFirst();
-                        // most of the time top headings will be jammed in below as a simple default but that default might be against an existing heading in which case
-                        // add the default here and knock it off the list so it's not added again later
-                        // haked in later - todo tidy?
-                        if (!topHeadingsValues.isEmpty()){
-                            String toCheckAgainstTopHeadings = leftOver.getFirst();
-                            if (toCheckAgainstTopHeadings.contains(";")){
-                                toCheckAgainstTopHeadings = toCheckAgainstTopHeadings.substring(0, toCheckAgainstTopHeadings.indexOf(";"));
-                                if (topHeadingsValues.containsKey(toCheckAgainstTopHeadings) && !"FOUND".equals(topHeadingsValues.get(toCheckAgainstTopHeadings))){
-                                    headingToAdd = leftOver.getFirst() + ";default " + topHeadingsValues.remove(toCheckAgainstTopHeadings);
-                                }
                             }
                         }
 
@@ -336,7 +340,7 @@ public class DSImportService {
                 }
             }
 
-            // now sort the standard composite map, while we're here can do assumptoions too from parameters
+            // now sort the standard composite map, while we're here can do assumptions too from parameters
             // these will want the "pre . replaced with ; attribute" reference to a heading also I think, want to be able to say shop.address
             int index = 0;
             for (String heading : headings) {

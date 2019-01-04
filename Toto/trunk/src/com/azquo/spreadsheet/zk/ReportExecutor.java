@@ -3,7 +3,6 @@ package com.azquo.spreadsheet.zk;
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
@@ -14,7 +13,6 @@ import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
-import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
@@ -39,6 +37,7 @@ public class ReportExecutor {
     private static final String OUTCOME = "az_Outcome";
 
     // now returns a book as it will need to be reloaded at the end
+    // provenance id means when you select choices they will be constrained to
     public static Book runExecuteCommandForBook(Book book, String sourceNamedRegion) throws Exception {
         String executeCommand = null;
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
@@ -60,7 +59,7 @@ public class ReportExecutor {
             return book; // unchanged, nothing to run
         }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        StringBuilder loops = runExecute(loggedInUser, executeCommand);
+        StringBuilder loops = runExecute(loggedInUser, executeCommand, -1);
 
         final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
@@ -80,7 +79,7 @@ public class ReportExecutor {
         return newBook;
     }
 
-  public static StringBuilder runExecute(LoggedInUser loggedInUser, String executeCommand) throws Exception{
+  public static StringBuilder runExecute(LoggedInUser loggedInUser, String executeCommand, int provenanceId) throws Exception{
       List<String> commands = new ArrayList<>();
       StringTokenizer st = new StringTokenizer(executeCommand, "\n");
       while (st.hasMoreTokens()) {
@@ -92,7 +91,7 @@ public class ReportExecutor {
       //RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
       RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Starting execute");
       StringBuilder loops = new StringBuilder();
-      executeCommands(loggedInUser, commands, loops, new AtomicInteger(0));
+      executeCommands(loggedInUser, commands, loops, new AtomicInteger(0), provenanceId);
       // it won't have cleared while executing
       RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
       SpreadsheetService.databasePersist(loggedInUser);
@@ -102,7 +101,7 @@ public class ReportExecutor {
 
     // we assume cleansed of blank lines
     // now can return the outcome if there's an az_Outcome cell. Assuming a loop or list of "do"s then the String returned is the last.
-    private static TypedPair<String, Double> executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, AtomicInteger count) throws Exception {
+    private static TypedPair<String, Double> executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, AtomicInteger count, int provenanceId) throws Exception {
         TypedPair<String, Double> toReturn = null;
         if (commands.size() > 0 && commands.get(0) != null) {
             String firstLine = commands.get(0);
@@ -130,11 +129,11 @@ public class ReportExecutor {
                         }
                         String choiceQuery = trimmedLine.substring(inPos + 4).trim();
                         loopsLog.append(choiceName).append(" : ").append(choiceQuery).append("\r\n");
-                        final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery);
+                        final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery, loggedInUser.getUser().getEmail(), false, provenanceId);
                         for (String choiceValue : dropdownListForQuery) { // run the for :)
                             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
-                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count);
+                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count,provenanceId);
 
                         }
                     }
@@ -237,7 +236,7 @@ public class ReportExecutor {
                             boolean stop = true; // make the default be to stop e.g. in the case of bad syntax or whatever . . .
                             do {
                                 counter++;
-                                final TypedPair<String, Double> stringDoubleTypedPair = executeCommands(loggedInUser, subCommands, loopsLog, count);
+                                final TypedPair<String, Double> stringDoubleTypedPair = executeCommands(loggedInUser, subCommands, loopsLog, count,provenanceId);
                                 if (stringDoubleTypedPair != null) {
                                     // ok I'm going to assume type matching - if the types don't match then forget the comparison
                                     if ((stringDoubleTypedPair.getFirst() != null && constant != null)) { // string, equals not equals comparison
@@ -315,7 +314,7 @@ public class ReportExecutor {
 
                     if (result.equals("true")) {
                         if (!subCommands.isEmpty()) {
-                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count);
+                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count,provenanceId);
 
                         }
                         if (lastLine.toLowerCase().equals("else")) {
@@ -334,7 +333,7 @@ public class ReportExecutor {
                         }
                         lineNo--; // put line back to where it is now
                         if (!subCommands.isEmpty()) {
-                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count);
+                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count, provenanceId);
 
                         }
 

@@ -3,7 +3,6 @@ package com.azquo.memorydb.service;
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
-import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
 
 import java.util.*;
@@ -42,7 +41,7 @@ class NameEditFunctions {
             String[] foundList = nameList.split("\\*");
             for (String partList : foundList) {
                 Collection<Name> found = NameQueryParser.parseQuery(azquoMemoryDBConnection, partList.trim());
-                Collection<Value> values = new HashSet<Value>();
+                Collection<Value> values = new HashSet<>();
                 for (Name name : found) {
                     values.addAll(name.findValuesIncludingChildren());
                 }
@@ -53,9 +52,8 @@ class NameEditFunctions {
                 }
             }
             if (toZap != null) {
-                Iterator<Value> valueIt = toZap.iterator();
-                while (valueIt.hasNext()){
-                    valueIt.next().delete();
+                for (Value value : toZap) {
+                    value.delete();
                 }
                 azquoMemoryDBConnection.persist();
                 return toReturn;
@@ -69,7 +67,7 @@ class NameEditFunctions {
             formulaPos += skipTwoQuotes(setFormula.substring(formulaPos));
             List<String> children = new ArrayList<>();
             int rowNo = 1;
-            StringBuffer displayRows = new StringBuffer();
+            StringBuilder displayRows = new StringBuilder();
             boolean needsDisplayRows = false;
             boolean hasBlanks = false;
             while (formulaPos < setFormula.length()) {
@@ -80,7 +78,7 @@ class NameEditFunctions {
                     formulaPos = formulaPos + skipTwoQuotes(setFormula.substring(formulaPos));
                     if (child.length() > 0) {
                         children.add(child);
-                        displayRows.append("," + rowNo);
+                        displayRows.append(",").append(rowNo);
                         if (hasBlanks) {
                             needsDisplayRows = true;
                         }
@@ -124,7 +122,7 @@ class NameEditFunctions {
                 redundantNames.removeAll(newChildren);
                 newChildren.addAll(redundantNames);//must ensure that there are no 'floating names'
                 set.setChildrenWillBePersisted(newChildren,azquoMemoryDBConnection);
-                set.setAttributeWillBePersisted("DISPLAYROWS",dRows,azquoMemoryDBConnection);;
+                set.setAttributeWillBePersisted("DISPLAYROWS",dRows,azquoMemoryDBConnection);
             }
             return toReturn;
         }

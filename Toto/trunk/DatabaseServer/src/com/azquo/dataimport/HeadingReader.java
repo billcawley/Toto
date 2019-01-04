@@ -6,7 +6,6 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.transport.UploadedFile;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -14,6 +13,8 @@ import java.util.stream.Collectors;
  * Created by edward on 10/09/16.
  * <p>
  * This class resolves the headings on a data import file. These headings along with lines of data are passed to the BatchImporter.
+ *
+ * Some bits are still a little hard to understand, as of 04/01/19 I think it could be improved a bit
  * <p>
  */
 class HeadingReader {
@@ -42,7 +43,7 @@ class HeadingReader {
     COMPOSITION  <phrase with column heading names enclosed in ``>
     e.g   COMPOSITION  `Name`, `address` Tel No: `Telephone No`
 
-    NOTE the values ofthe fields will be the final values - some fields using 'language' 'dictionary' or 'lookup' will find names, and it is the default value of those names which is used in 'composition'
+    NOTE the values of the fields will be the final values - some fields using 'language' 'dictionary' or 'lookup' will find names, and it is the default value of those names which is used in 'composition'
     */
 
     static final String COMPOSITION = "composition";
@@ -74,6 +75,7 @@ class HeadingReader {
     e.g      'car, bus, van + accident - sunday,saturday' would find any phrase containg 'car' or 'bus' or 'van' AND 'accident' but NOT containing 'saturday' or 'sunday'
     DICTIONARY can be used in conjunction with the set 'SYNONYMS`.  The elements of 'Synonyms` are names witth an attriubte 'sysnonyms'.  The attribute gives a comma-separated list of synonyms.
     e.g  if an element of 'Synonyms' is 'car'    then 'car' may have an attribute 'synonyms' consisting of 'motor, auto, vehicle'  which DICTIONARY  would consider to mean the same as 'car'
+    todo : change to be report functionality
      */
     private static final String DICTIONARY = "dictionary";
     /*

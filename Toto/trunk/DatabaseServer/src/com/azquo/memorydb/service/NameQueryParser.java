@@ -25,7 +25,7 @@ public class NameQueryParser {
     private static final Logger logger = Logger.getLogger(NameQueryParser.class);
 
     // get names from a comma separated list. Well expressions describing names - only used for read and write permissions at the moment.
-    public static List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, String user) throws Exception {
+    static List<Set<Name>> decodeString(AzquoMemoryDBConnection azquoMemoryDBConnection, String searchByNames, String user) throws Exception {
         List<String> attributeNames = NameService.getDefaultLanguagesList(user);
         final List<Set<Name>> toReturn = new ArrayList<>();
         List<String> formulaStrings = new ArrayList<>();
@@ -355,10 +355,8 @@ public class NameQueryParser {
                 namesFound = NameService.findChildrenAtLevel(name, levelString); // reassign names from the find children clause
                 if (languages.size() > 1){//need to check for a list of temporary names
                     List<Name> replacementNames = new ArrayList<Name>();
-                    Iterator <Name> childIt = namesFound.getAsCollection().iterator();
-                    while (childIt.hasNext()) {
-                        Name child = childIt.next();
-                        if (child!=null) {
+                    for (Name child : namesFound.getAsCollection()) {
+                        if (child != null) {
                             if (child.getChildren().size() > 0 && child.getChildren().iterator().next().getDefaultDisplayName() == null) {//we have a temporary name
                                 Name localChild = NameService.findByName(azquoMemoryDBConnection, child.getDefaultDisplayName(), languages);
                                 if (localChild != null) {

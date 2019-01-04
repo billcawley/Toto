@@ -16,7 +16,8 @@ import java.util.*;
  */
 public class CommonReportUtils {
 
-    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, String user, boolean justUser) {
+    // provenance as in only show choices with this provenance
+    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, String user, boolean justUser, int provenenceId) {
         //hack to discover a database name
         query = replaceUserChoicesInQuery(loggedInUser, query);
         int arrowsPos = query.indexOf(">>");
@@ -26,12 +27,12 @@ public class CommonReportUtils {
                 DatabaseServer origDatabaseServer = loggedInUser.getDatabaseServer();
                 LoginService.switchDatabase(loggedInUser, query.substring(0, arrowsPos));
                 List<String> toReturn = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query.substring(arrowsPos + 2), user, justUser);
+                        .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query.substring(arrowsPos + 2), user, justUser, provenenceId);
                 loggedInUser.setDatabaseWithServer(origDatabaseServer, origDatabase);
                 return toReturn;
             }
             return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
-                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, user, justUser);
+                    .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, user, justUser, provenenceId);
         } catch (Exception e) {
             e.printStackTrace();
             List<String> error = new ArrayList<>();
@@ -42,27 +43,27 @@ public class CommonReportUtils {
 
     public static int getNameQueryCount(LoggedInUser loggedInUser, String query) {
         // todo comment that this means there's one figure
-        if (query.toLowerCase().startsWith("count(")){
+        if (query.toLowerCase().startsWith("count(")) {
             return 1;
         }
         try {
             return RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getNameQueryCount(loggedInUser.getDataAccessToken(), query, loggedInUser.getUser().getEmail());
-        } catch (Exception e){
+        } catch (Exception e) {
             // for the moment be "quiet", this function used to help formatting
             e.printStackTrace();
             return 0;
         }
     }
+
     public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String querye) {
-        return getDropdownListForQuery(loggedInUser,querye,null);
+        return getDropdownListForQuery(loggedInUser, querye, null);
     }
 
 
-
-        public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, String fieldName) {// WFC added fieldname taken from the spreadsheet (<fieldName>Choice) to pick chosen values from user selection list
-        if (fieldName!=null) {
+    public static List<String> getDropdownListForQuery(LoggedInUser loggedInUser, String query, String fieldName) {// WFC added fieldname taken from the spreadsheet (<fieldName>Choice) to pick chosen values from user selection list
+        if (fieldName != null) {
             String selectionList = loggedInUser.getUser().getSelections();
-            if (selectionList!=null) {
+            if (selectionList != null) {
                 String[] selections = selectionList.split(";");
                 for (String selection : selections) {
                     int equalPos = selection.indexOf("=");
@@ -77,7 +78,7 @@ public class CommonReportUtils {
             }
         }
 
-        return getDropdownListForQuery(loggedInUser, query, loggedInUser.getUser().getEmail(), false);
+        return getDropdownListForQuery(loggedInUser, query, loggedInUser.getUser().getEmail(), false, -1);
     }
 
     public static Map<String, String> getUserChoicesMap(LoggedInUser loggedInUser) {
@@ -91,10 +92,10 @@ public class CommonReportUtils {
         return userChoices;
     }
 
-    public static String replaceUserChoicesInQuery(LoggedInUser loggedInUser, String query){
+    public static String replaceUserChoicesInQuery(LoggedInUser loggedInUser, String query) {
         if (query.contains("[")) {//items in [] will be replaced by user choices
-            Map<String,String> userChoices = getUserChoicesMap(loggedInUser);
-            int pos=query.indexOf("[");
+            Map<String, String> userChoices = getUserChoicesMap(loggedInUser);
+            int pos = query.indexOf("[");
 
             while (pos >= 0) {
                 int endPos = query.indexOf("]", pos);
@@ -105,11 +106,11 @@ public class CommonReportUtils {
                     userChoiceBasic = userChoice.substring(3);
                 }
                 String replacement = userChoices.get(userChoiceBasic.toLowerCase());
-                if (replacement != null){
-                    query = query.substring(0,pos) + replacement + query.substring(endPos + 1);
+                if (replacement != null) {
+                    query = query.substring(0, pos) + replacement + query.substring(endPos + 1);
                     pos = pos + replacement.length();
 
-                }else{
+                } else {
                     pos = endPos + 1;
                 }
                 pos = query.indexOf("[", pos);
@@ -124,7 +125,7 @@ public class CommonReportUtils {
     public static String resolveQuery(LoggedInUser loggedInUser, String query) {
         query = replaceUserChoicesInQuery(loggedInUser, query);
         try {
-            boolean result =  RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+            boolean result = RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
                     .resolveQuery(loggedInUser.getDataAccessToken(), query, loggedInUser.getUser().getEmail());// sending the same as choice but the goal here is execute server side. Generally to set an "As"
             if (result) return "true";
             return "false";
