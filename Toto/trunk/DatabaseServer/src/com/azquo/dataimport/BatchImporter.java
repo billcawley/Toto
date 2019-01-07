@@ -280,12 +280,12 @@ public class BatchImporter implements Callable<Void> {
                                             try {
                                                 if (secondComma < 0) {
                                                     countString = expression.substring(commaPos + 1, expression.length() - 1);
-                                                    funcInt = Integer.parseInt(countString.trim());
+                                                    funcInt = stringTerm(countString.toLowerCase().trim(),cells,compositeIndexResolver);
                                                 } else {
                                                     countString = expression.substring(commaPos + 1, secondComma);
-                                                    funcInt = Integer.parseInt(countString.trim());
+                                                    funcInt = stringTerm(countString.toLowerCase().trim(),cells,compositeIndexResolver);
                                                     countString = expression.substring(secondComma + 1, expression.length() - 1);
-                                                    funcInt2 = Integer.parseInt(countString);
+                                                    funcInt2 = stringTerm(countString.toLowerCase().trim(),cells,compositeIndexResolver);
                                                 }
                                             } catch (Exception ignore) {
                                             }
@@ -398,6 +398,40 @@ public class BatchImporter implements Callable<Void> {
             throw new Exception("Circular composite references in headings!");
         }
     }
+
+    private static int stringTerm(String string, List<ImportCellWithHeading> cells, CompositeIndexResolver compositeIndexResolver){
+        int lengthPos = string.indexOf("len(");
+        while (lengthPos>=0){
+            int endBrackets = string.indexOf(")",lengthPos);
+            if (endBrackets< 0) return 0;
+            String term = string.substring(lengthPos + 4, endBrackets);
+            int colIndex = compositeIndexResolver.getColumnIndexForHeading(term);
+            if (colIndex>=0){
+                String compString = cells.get(colIndex).getLineValue();
+                if (compString == null || compString.length()==0) {
+                    return 0;
+                }
+                string = string.substring(0, lengthPos) + compString.length() + string.substring(endBrackets+1);
+
+            }else{
+                return 0;
+            }
+            lengthPos = string.indexOf("len(");
+
+        }
+        int minusPos = string.indexOf("-");
+        int minus = 0;
+        if (minusPos > 0){
+            minus = Integer.parseInt(string.substring(minusPos + 1).trim());
+            string = string.substring(0,minusPos).trim();
+        }
+        int toReturn = Integer.parseInt(string);
+        return toReturn - minus;
+
+
+
+     }
+
 
     /*
 
