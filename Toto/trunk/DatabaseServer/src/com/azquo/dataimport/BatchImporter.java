@@ -80,23 +80,8 @@ public class BatchImporter implements Callable<Void> {
                     for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
                         // this basic value checking was outside, I see no reason it shouldn't be in here
                         // attempt to standardise date formats
-                        if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().dateForm > 0) {
-                            /*
-                            interpret the date and change to standard form
-                            todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
-                            HeaadingReader defines DATELANG and USDATELANG
-                            */
-                            LocalDate date;
-                            if (importCellWithHeading.getImmutableImportHeading().dateForm == StringLiterals.UKDATE) {
-                                date = DateUtils.isADate(importCellWithHeading.getLineValue());
-                            } else {
-                                date = DateUtils.isUSDate(importCellWithHeading.getLineValue());
-                            }
-                            if (date != null) {
-                                importCellWithHeading.setLineValue(DateUtils.dateTimeFormatter.format(date));
-                            }
-                        }
-                    }
+                        checkDate(importCellWithHeading);
+                     }
                     // composite might do things that affect only and existing hence do it before
                     String rejectionReason = null;
                     for (ImportCellWithHeading cell : lineToLoad) {
@@ -154,6 +139,27 @@ public class BatchImporter implements Callable<Void> {
     }
 
     // Checking only and existing means "should we import the line at all" based on these criteria
+
+    private static void checkDate(ImportCellWithHeading importCellWithHeading){
+        if (importCellWithHeading.getImmutableImportHeading().attribute != null && importCellWithHeading.getImmutableImportHeading().dateForm > 0) {
+                            /*
+                            interpret the date and change to standard form
+                            todo consider other date formats on import - these may  be covered in setting up dates, but I'm not sure - WFC
+                            HeaadingReader defines DATELANG and USDATELANG
+                            */
+            LocalDate date;
+            if (importCellWithHeading.getImmutableImportHeading().dateForm == StringLiterals.UKDATE) {
+                date = DateUtils.isADate(importCellWithHeading.getLineValue());
+            } else {
+                date = DateUtils.isUSDate(importCellWithHeading.getLineValue());
+            }
+            if (date != null) {
+                importCellWithHeading.setLineValue(DateUtils.dateTimeFormatter.format(date));
+            }
+        }
+
+
+    }
 
     private static String checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
         //returns the error
@@ -388,6 +394,7 @@ public class BatchImporter implements Callable<Void> {
                             cell.setLineValue(compositionPattern);
                             cell.needsResolving = false;
                             checkLookup(azquoMemoryDBConnection, cell);
+                            checkDate(cell);
                             adjusted = true; // if composition did result in the line value being changed we should run the loop again in case dependencies mean the results will change again
                         }
                     }
