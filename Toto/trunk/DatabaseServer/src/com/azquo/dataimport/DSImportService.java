@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.charset.MalformedInputException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -87,29 +88,33 @@ public class DSImportService {
             final long fileLength = sizeTest.length();
             try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), Charset.forName("UTF-8"))) {
                 // grab the first line to check on delimiters
-                String firstLine = br.readLine();
-                String secondLine = null;
-                if (firstLine == null || (firstLine.length() == 0 && (secondLine = br.readLine()) == null)) {
-                    br.close();
+                try {
+                    String firstLine = br.readLine();
+                    String secondLine = null;
+                    if (firstLine == null || (firstLine.length() == 0 && (secondLine = br.readLine()) == null)) {
+                        br.close();
+                        throw new Exception(uploadedFile.getFileName() + ": Unable to read any data (perhaps due to an empty file in a zip or an empty sheet in a workbook)");
+                    }
+                    if (secondLine == null) { // it might have been assigned above in the empty file check - todo clean logic?
+                        secondLine = br.readLine();
+                    }
+                    long linesGuess = fileLength / ((secondLine != null && secondLine.length() > 20) ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
+                    System.out.println("Lines guessed at : " + linesGuess);
+                    if (linesGuess < 100_000 && fileLength > 1_000_000) {
+                        batchSize = 5_000;
+                        System.out.println("less than 100,000, dropping batch size to " + batchSize);
+                    } else if (linesGuess < 1_000_000 && fileLength > 1_000_000) {
+                        System.out.println("less than 1,000,000, dropping batch size to 10k");
+                        batchSize = 10_000;
+                    }
+                    if (firstLine.contains("|")) {
+                        delimiter = '|';
+                    }
+                    if (firstLine.contains("\t")) {
+                        delimiter = '\t';
+                    }
+                } catch (MalformedInputException e){
                     throw new Exception(uploadedFile.getFileName() + ": Unable to read any data (perhaps due to an empty file in a zip or an empty sheet in a workbook)");
-                }
-                if (secondLine == null) { // it might have been assigned above in the empty file check - todo clean logic?
-                    secondLine = br.readLine();
-                }
-                long linesGuess = fileLength / ((secondLine != null && secondLine.length() > 20) ? secondLine.length() : 1_000); // a very rough approximation assuming the second line is a typical length.
-                System.out.println("Lines guessed at : " + linesGuess);
-                if (linesGuess < 100_000 && fileLength > 1_000_000) {
-                    batchSize = 5_000;
-                    System.out.println("less than 100,000, dropping batch size to " + batchSize);
-                } else if (linesGuess < 1_000_000 && fileLength > 1_000_000) {
-                    System.out.println("less than 1,000,000, dropping batch size to 10k");
-                    batchSize = 10_000;
-                }
-                if (firstLine.contains("|")) {
-                    delimiter = '|';
-                }
-                if (firstLine.contains("\t")) {
-                    delimiter = '\t';
                 }
             }
             // now we know the delimiter can CSV read, I've read jackson is pretty quick

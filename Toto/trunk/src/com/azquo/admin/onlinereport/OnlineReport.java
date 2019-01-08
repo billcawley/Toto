@@ -21,7 +21,6 @@ public class OnlineReport extends StandardEntity implements Serializable {
     private String reportName;
     private String filename;
     private String explanation;
-    private String identityCell;
 
     public OnlineReport(int id
             , LocalDateTime dateCreated
@@ -31,8 +30,6 @@ public class OnlineReport extends StandardEntity implements Serializable {
             , String reportName
             , String filename
             , String explanation
-            , String identityCell
-
     ) {
         this.id = id;
         this.dateCreated = dateCreated;
@@ -42,7 +39,6 @@ public class OnlineReport extends StandardEntity implements Serializable {
         this.reportName = reportName;
         this.filename = filename;
         this.explanation = explanation;
-        this.identityCell = identityCell;
     }
 
     public int getBusinessId() {
@@ -109,20 +105,16 @@ public class OnlineReport extends StandardEntity implements Serializable {
         this.explanation = explanation;
     }
 
-    public String getIdentityCell() { return identityCell; }
-
-    public void setIdentityCell(String identityCell) {this.identityCell = identityCell; }
-
-      public String getUntaggedReportName(){
+    public String getUntaggedReportName() {
         int pos = reportName.indexOf(" uploaded by ");
         if (pos < 0) return reportName;
-        return reportName.substring(0,pos);
+        return reportName.substring(0, pos);
     }
 
-    public String getAuthor(){
+    public String getAuthor() {
         int pos = reportName.indexOf(" uploaded by");
         if (pos < 0) return "";
-        return reportName.substring(pos  + " uploaded by ".length());
+        return reportName.substring(pos + " uploaded by ".length());
     }
 
     @Override
@@ -136,7 +128,6 @@ public class OnlineReport extends StandardEntity implements Serializable {
                 ", reportName='" + reportName + '\'' +
                 ", filename='" + filename + '\'' +
                 ", explanation='" + explanation + '\'' +
-                ", identityCell='" + identityCell + '\'' +
                 '}';
     }
 }

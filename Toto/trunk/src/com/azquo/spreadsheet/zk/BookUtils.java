@@ -64,7 +64,7 @@ public class BookUtils {
                     // I assume non null cell has a non null string value, this may not be true. Also will I get another type of exception?
                     try {
                         // boolean required as sometimes there could be a leftover string value
-                            row.add(cell.getStringValue());
+                        row.add(cell.getStringValue());
                     } catch (Exception e) {
                         if (!cell.getType().equals(SCell.CellType.BLANK)) {
                             try {
@@ -84,9 +84,9 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         at com.azquo.spreadsheet.zk.BookUtils.nameToStringLists(BookUtils.java:32)
 
                                  */
-                                try{
+                                try {
                                     row.add(cell.getStringValue());
-                                }catch(Exception e3){
+                                } catch (Exception e3) {
                                     row.add("");
                                 }
                             }
@@ -221,7 +221,19 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
                 names.add(name);
             }
         }
-        names.sort((o1, o2) -> (o1.getName().toUpperCase().compareTo(o2.getName().toUpperCase())));
+        names.sort(Comparator.comparing(o -> o.getName().toUpperCase()));
+        return names;
+    }
+
+    public static List<Name> getNamesForSheet(org.zkoss.poi.ss.usermodel.Sheet sheet) {
+        List<Name> names = new ArrayList<>();
+        for (int i = 0; i < sheet.getWorkbook().getNumberOfNames(); i++) {
+            Name name = sheet.getWorkbook().getNameAt(i);
+            if (sheet.getSheetName().equals(name.getSheetName())) {
+                names.add(name);
+            }
+        }
+        names.sort(Comparator.comparing(o -> o.getNameName().toUpperCase()));
         return names;
     }
 
@@ -284,21 +296,30 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
         return sheet.getBook().getInternalBook().getNameByName(name);
     }
 
-    static void notifyChangeOnRegion(Sheet sheet, CellRegion region){
+    public static Name getNameByName(String name, org.zkoss.poi.ss.usermodel.Sheet sheet) {
+        for (int i = 0; i < sheet.getWorkbook().getNumberOfNames(); i++) {
+            Name possible = sheet.getWorkbook().getNameAt(i);
+            if (sheet.getSheetName().equals(possible.getSheetName()) && possible.getNameName().equalsIgnoreCase(name)) {
+                return possible;
+            }
+        }
+        return null;
+    }
+
+    static void notifyChangeOnRegion(Sheet sheet, CellRegion region) {
         Range selection = Ranges.range(sheet, region.row, region.column, region.lastRow, region.lastColumn);
         selection.notifyChange();
     }
 
     public static Name getName(Workbook book, String stringName) {
-        int i = 0;
         int nameCount = book.getNumberOfNames();
-        for (i=0;i<nameCount;i++){
+        for (int i = 0; i < nameCount; i++) {
             Name name = book.getNameAt(i);
-            if (name.getNameName().equalsIgnoreCase(stringName)){
+            if (name.getNameName().equalsIgnoreCase(stringName)) {
                 return name;
             }
         }
         return null;
-     }
+    }
 
 }

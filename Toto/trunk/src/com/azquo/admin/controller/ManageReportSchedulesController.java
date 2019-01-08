@@ -14,6 +14,7 @@ import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.poi.openxml4j.opc.OPCPackage;
+import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Sheet;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.xssf.usermodel.XSSFName;
@@ -173,7 +175,7 @@ public class ManageReportSchedulesController {
                     if (schedulesSheet != null) {
                         int row = 1;
 //                SName listRegion = book.getInternalBook().getNameByName("data");
-                        XSSFName listRegion = book.getName("data");
+                        Name listRegion = BookUtils.getName(book,"data");
                         if (listRegion != null && listRegion.getRefersToFormula() != null) {
                             AreaReference aref = new AreaReference(listRegion.getRefersToFormula());
                             row = aref.getFirstCell().getRow();

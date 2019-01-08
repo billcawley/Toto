@@ -15,6 +15,7 @@ import com.azquo.spreadsheet.controller.ExcelController;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.zk.BookUtils;
+import com.azquo.spreadsheet.zk.ReportRenderer;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.poi.hssf.usermodel.HSSFWorkbook;
 import org.zkoss.poi.openxml4j.opc.OPCPackage;
+import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Sheet;
 import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
@@ -484,10 +486,8 @@ public class ManageDatabasesController {
                         String fileName = uploadFile.getOriginalFilename();
                         File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                         uploadFile.transferTo(moved);
-                        // todo - like a normal import give feedback to the user . . .
                         model.put("error", BackupService.loadBackup(loggedInUser, moved, database));
                     } else if ("true".equals(template)) {
-                        // todo - like a normal import give feedback to the user . . .
                         try {
                             String fileName = uploadFile.getOriginalFilename();
                             File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
@@ -502,15 +502,20 @@ public class ManageDatabasesController {
                                 book = new HSSFWorkbook(fs);
                             }
                             // detect an import template by a sheet name
-                            boolean hasRequiredSheet = false;
+                            boolean isImportTemplate = false;
                             for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
                                 Sheet sheet = book.getSheetAt(sheetNo);
                                 if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
-                                    hasRequiredSheet = true;
+                                    isImportTemplate = true;
                                     break;
                                 }
                             }
-                            if (!hasRequiredSheet) {
+                            // detect Ben Jones contract style template
+                            Name importName = BookUtils.getName(book,ReportRenderer.AZIMPORTNAME);
+                            if (importName != null){
+                                isImportTemplate = true;
+                            }
+                            if (!isImportTemplate) {
                                 model.put("error", "That does not appear to be an import template.");
                             } else {
                                 model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser))));
@@ -618,7 +623,7 @@ public class ManageDatabasesController {
                 ).replace("\n", "<br/>");*/
                 session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile));
             } catch (Exception e) {
-//                e.printStackTrace();
+                e.printStackTrace();
                 uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
                 session.setAttribute(ManageDatabasesController.IMPORTRESULT, Collections.singletonList(uploadedFile));
             }

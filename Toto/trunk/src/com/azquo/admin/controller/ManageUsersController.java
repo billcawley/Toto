@@ -17,6 +17,7 @@ import com.azquo.spreadsheet.LoginService;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.CreateExcelForDownloadController;
 import com.azquo.spreadsheet.controller.LoginController;
+import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import org.apache.commons.lang.math.NumberUtils;
 import org.springframework.stereotype.Controller;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.zkoss.poi.openxml4j.opc.OPCPackage;
+import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Sheet;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.xssf.usermodel.XSSFName;
@@ -196,7 +198,7 @@ public class ManageUsersController {
                     Sheet userSheet = book.getSheet("Users"); // literals not best practice, could it be factored between this and the xlsx file?
                     if (userSheet != null) {
                         int row;
-                        XSSFName listRegion = book.getName(ReportRenderer.AZLISTSTART);
+                        Name listRegion = BookUtils.getName(book,ReportRenderer.AZLISTSTART);
 //                SName listRegion = book.getInternalBook().getNameByName(ReportRenderer.AZLISTSTART);
                         if (listRegion != null && listRegion.getRefersToFormula() != null) {
                             AreaReference aref = new AreaReference(listRegion.getRefersToFormula());
