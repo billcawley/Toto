@@ -463,6 +463,9 @@ todo - add classification here
                         if (!mutableImportHeading.peerNames.isEmpty() || !mutableImportHeading.peerIndexes.isEmpty()) {
                             throw new Exception("context peers trying to overwrite normal heading peers " + mutableImportHeading.name.getDefaultDisplayName() + ", heading " + contextHeading.heading);
                         }
+                        if (contextHeading.compositionPattern!=null){
+                            mutableImportHeading.compositionPattern = contextHeading.compositionPattern;
+                        }
                         resolvePeers(mutableImportHeading, contextHeading, headings);
                     }
                 }
