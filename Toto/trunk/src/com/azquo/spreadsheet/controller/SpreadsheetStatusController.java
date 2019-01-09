@@ -27,6 +27,14 @@ public class SpreadsheetStatusController {
     @RequestMapping
     @ResponseBody
     public String handleRequest(@RequestParam(value = "action", required = false) String action, @RequestParam(value = "reportid", required = false) String reportid, HttpServletRequest request) throws Exception {
+        // used when preparing a database for download for example
+        if ("working".equals(action)) {
+            if (request.getSession().getAttribute("working") != null) {
+                return "{\"status\":\"" + request.getSession().getAttribute("working") + "\"}";
+            }
+            return "{\"status\":\"\"}";
+        }
+
         if ("sheetReady".equals(action) && reportid != null) {
             if (request.getSession().getAttribute(reportid) != null) {
                 return "true";

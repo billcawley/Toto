@@ -62,11 +62,11 @@ public final class ValueService {
     private static AtomicInteger storeValueWithProvenanceAndNamesCount = new AtomicInteger(0);
 
     public static boolean storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names) throws Exception {
-        return storeValueWithProvenanceAndNames(azquoMemoryDBConnection,valueString,  names, false);
+        return storeValueWithProvenanceAndNames(azquoMemoryDBConnection, valueString, names, false);
     }
 
 
-        public static boolean storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names, boolean override) throws Exception {
+    public static boolean storeValueWithProvenanceAndNames(final AzquoMemoryDBConnection azquoMemoryDBConnection, String valueString, final Set<Name> names, boolean override) throws Exception {
         boolean dataChanged = false;
         storeValueWithProvenanceAndNamesCount.incrementAndGet();
         // ok there's an issue of numbers with "," in them, in that case I should remove on the way in
@@ -85,13 +85,13 @@ public final class ValueService {
         // there's new logic to add values to existing but this only applies to the same provenance and when importing (so same file)
         for (Value existingValue : existingValues) { // really should only be one
             if (existingValue.getProvenance().equals(azquoMemoryDBConnection.getProvenance()) && existingValue.getProvenance().getMethod().equals("imported")) {
-                //new behaviour - add values from same dataimport.
+                // add values from same data import
                 try {
                     Double existingDouble = Double.parseDouble(existingValue.getText());
                     Double newValue = Double.parseDouble(valueString);
-                    if (override){
-                        if (newValue==existingDouble) return false;
-                    }else{
+                    if (override) {
+                        if (newValue.equals(existingDouble)) return false;
+                    } else {
                         valueString = (existingDouble + newValue) + "";
                     }
                     existingValue.setText(valueString);
@@ -336,7 +336,7 @@ public final class ValueService {
         // and here's a thing : if more than one name has CALCULATION then only the first will be used
         boolean lowest = false; // special applies to calc for each permutation of the calc names then sum
 
-        if (calcs!=null && calcs.size()>0) {
+        if (calcs != null && calcs.size() > 0) {
             for (String calc : calcs) {
                 if (calcString == null) {
                     calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
@@ -376,7 +376,7 @@ public final class ValueService {
                     }
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
-                       calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
+                    calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
                     formulaNames = NameQueryParser.getNameListFromStringList(nameStrings, azquoMemoryDBConnection, attributeNames);
                     calc = StringUtils.fixNumberFunction(calc, StringLiterals.EXP);
                     calc = StringUtils.shuntingYardAlgorithm(calc);

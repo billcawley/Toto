@@ -2,6 +2,10 @@ package com.azquo.admin.database;
 
 import com.azquo.admin.StandardEntity;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -96,6 +100,16 @@ public final class PendingUpload extends StandardEntity {
         return source;
     }
 
+    // should it be cached? Don't know if I care . . .
+    public String getSize() {
+        try {
+            return NumberFormat.getInstance().format(Files.size(Paths.get(filePath)));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
     public String getStatus() {
         return status;
     }
@@ -166,6 +180,7 @@ public final class PendingUpload extends StandardEntity {
         final private String fileName;
         final private String filePath; //maybe use a path??
         final private String source;
+        final private String size;
         final private String status;
         final private Map<String, String> parameters;
         final private String databaseName;
@@ -181,6 +196,7 @@ public final class PendingUpload extends StandardEntity {
             this.fileName = pu.fileName;
             this.filePath = pu.filePath;
             this.source = pu.source;
+            this.size = pu.getSize();
             this.status = pu.status;
             this.parameters = pu.parameters;
             this.databaseName = databaseName;
@@ -210,6 +226,10 @@ public final class PendingUpload extends StandardEntity {
 
         public String getSource() {
             return source;
+        }
+
+        public String getSize() {
+            return size;
         }
 
         // perhaps formatting shouldn't be in here

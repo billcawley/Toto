@@ -21,24 +21,71 @@ Created by IntelliJ IDEA.
             x.style.display = "none";
         }
     }
+
+    //this is jquery
+    function showWorking() {
+        $('html,body').scrollTop(0);
+        $('#working').show();
+        setTimeout('checkStatus()', 1000);
+    }
+
+    function checkStatus() {
+        $.ajax({
+            url: "/api/SpreadsheetStatus?action=working",
+            type: "GET",
+            dataType: 'json',
+            success: function (data) {
+                //$('#statusmessage').html(data.message);
+                if (data.status == "working")
+                    setTimeout('checkStatus()', 1000);
+                else
+                    $('#working').hide();
+            }
+        });
+    }
+
+    function revert() {
+        if (confirm('Are you sure you want to revert${revertlist}')) {
+            $('html,body').scrollTop(0);
+            $('#working').show();
+            return true;
+        }
+        return false;
+    }
+
+    function commit() {
+        if (confirm('Are you sure you want to commit changes? Revert backups will be removed!')) {
+            $('html,body').scrollTop(0);
+            $('#working').show();
+            return true;
+        }
+        return false;
+    }
+
 </script>
 
 <main class="databases">
     <h1>Manage Databases</h1>
     <div class="error">${error}</div>
+    <div id="working" class="loading" style="display:none"><h3>Working...</h3>
+        <div class="loader"><span class="fa fa-spin fa-cog"></span></div>
+    </div>
     <div class="tabs">
         <ul>
             <li><a href="#tab1">Uploads</a></li>
             <li><a href="#tab2">DB Management</a></li>
-            <li><a href="#tab3">Maintenance</a></li>
-            <c:if test="${pendinguploads.size() > 0}"><li><a href="#tab4">Pending Uploads</a></li></c:if>
+            <li><a href="#tab3">Restore Backup</a></li>
+            <c:if test="${pendinguploads.size() > 0}">
+                <li><a href="#tab4">Pending Uploads</a></li>
+            </c:if>
             <li><a href="#tab5">Import Templates</a></li>
         </ul>
         <!-- Uploads -->
         <div id="tab1" style="display:none">
             <h3>Uploads</h3>
             <div class="well">
-                <form action="/api/ManageDatabases" method="post" enctype="multipart/form-data">
+                <form action="/api/ManageDatabases" method="post" enctype="multipart/form-data"
+                      onsubmit="$('#working').show();">
                     <table>
                         <tbody>
                         <tr>
@@ -76,7 +123,7 @@ Created by IntelliJ IDEA.
                         <form method="post"> File Name <input size="20" name="fileSearch"></form>
                     </td>
                     <!--				<td>File Type</td> -->
-                                    <td></td>
+                    <td></td>
                     <td></td>
                     <td></td>
                 </tr>
@@ -92,7 +139,8 @@ Created by IntelliJ IDEA.
                         <!--<td>${upload.fileType}</td>-->
                         <td><c:if test="${upload.comments.length() > 0}">
                             <a href="/api/ImportResults?urid=${upload.id}" target="new"
-                               class="button inspect small" data-title="Import Results" title="View Import Results">Import Results</a>
+                               class="button inspect small" data-title="Import Results" title="View Import Results">Import
+                                Results</a>
                         </c:if></td>
 
                         <td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}"
@@ -186,9 +234,11 @@ Created by IntelliJ IDEA.
                                class="button small" title="Delete ${database.name}"><span class="fa fa-trash"
                                                                                           title="Delete"></span> </a>
                         </td>
-                        <td><a href="/api/DownloadBackup?id=${database.id}" class="button small"
+                        <td><a onclick="showWorking();" href="/api/DownloadBackup?id=${database.id}"
+                               class="button small"
                                title="Download Backup for ${database.name}"><span class="fa fa-download"
-                                                                                  title="Backups"></span> </a></td>
+                                                                                  title="Download Backup"></span> </a>
+                        </td>
                         <td><c:if test="${database.loaded}"><a href="/api/ManageDatabases?unloadId=${database.id}"
                                                                class="button small"
                                                                title="Unload ${database.name}"><span class="fa fa-eject"
@@ -207,7 +257,8 @@ Created by IntelliJ IDEA.
             <h3>Restore Backup.</h3>
             WARNING : the database specified internally by the zip or "Database" here will zap a database and associated
             reports and auto backups if they exist before it restores the file contents.
-            <form action="/api/ManageDatabases" method="post" enctype="multipart/form-data">
+            <form onsubmit="$('#working').show();" action="/api/ManageDatabases" method="post"
+                  enctype="multipart/form-data">
                 <table>
                     <tbody>
                     <tr>
@@ -239,9 +290,12 @@ Created by IntelliJ IDEA.
                     <td>Modified On</td>
                     <td>Modified By</td>
                     <td>
-                        <form method="post" action="/api/ManageDatabases#tab4"> File Name <input size="20" name="pendingUploadSearch"></form>
+                        <form method="post" action="/api/ManageDatabases#tab4"> File Name <input size="20"
+                                                                                                 name="pendingUploadSearch">
+                        </form>
                     </td>
                     <td>Source</td>
+                    <td>Size</td>
                     <td>Status</td>
                     <td>Database</td>
                     <c:forEach items="${params}" var="entry">
@@ -253,7 +307,7 @@ Created by IntelliJ IDEA.
                 </thead>
                 <tbody>
                 <c:forEach items="${pendinguploads}" var="pendingupload">
-                    <form action="/api/ManageDatabases#tab4">
+                    <form onsubmit="$('#working').show();" action="/api/ManageDatabases#tab4">
                         <input type="hidden" name="pendingUploadId" value="${pendingupload.id}">
                         <tr>
                             <td>${pendingupload.date}</td>
@@ -261,7 +315,11 @@ Created by IntelliJ IDEA.
                             <td>${pendingupload.userName}</td>
                             <td>${pendingupload.fileName}</td>
                             <td>${pendingupload.source}</td>
-                            <td><span <c:if test="${pendingupload.status == 'Rejected'}">style="background-color: #FF8888; color: #000000"</c:if><c:if test="${pendingupload.status == 'Provisionally Loaded'}">style="background-color: #88FF88; color: #000000"</c:if>>
+                            <td>${pendingupload.size}</td>
+                            <td><span
+                                    <c:if test="${pendingupload.status == 'Rejected'}">style="background-color: #FF8888; color: #000000"
+                                    </c:if>
+                                        <c:if test="${pendingupload.status == 'Provisionally Loaded'}">style="background-color: #88FF88; color: #000000"</c:if>>
                                     ${pendingupload.status}</span>
                             </td>
                             <td><!-- todo - last selected automatically -->
@@ -271,7 +329,8 @@ Created by IntelliJ IDEA.
                                     </c:when>
                                     <c:otherwise>
                                         <select name="databaseId"><c:forEach items="${databases}" var="database">
-                                            <option value="${database.id}" <c:if test="${pendingupload.databaseName == database.name}">selected</c:if>>${database.name}</option>
+                                            <option value="${database.id}"
+                                                    <c:if test="${pendingupload.databaseName == database.name}">selected</c:if>>${database.name}</option>
                                         </c:forEach></select>
                                     </c:otherwise>
                                 </c:choose>
@@ -286,7 +345,8 @@ Created by IntelliJ IDEA.
                                         <c:otherwise>
                                             <select name="pendingupload-${entry.key}"><c:forEach items="${entry.value}"
                                                                                                  var="listitem">
-                                                <option value="${listitem}"<c:if test="${listitem == pendingupload.parameters[fn:toLowerCase(entry.key)]}">selected</c:if>>${listitem}</option>
+                                                <option value="${listitem}"
+                                                        <c:if test="${listitem == pendingupload.parameters[fn:toLowerCase(entry.key)]}">selected</c:if>>${listitem}</option>
                                             </c:forEach></select>
 
                                         </c:otherwise>
@@ -296,13 +356,17 @@ Created by IntelliJ IDEA.
                                 </td>
                             </c:forEach>
                             <td>
-                                    <c:if test="${pendingupload.importResult.length() > 0}">
-                                        <a href="/api/ImportResults?id=${pendingupload.id}" target="new"
-                                           class="button inspect small" data-title="Import Results" title="View Import Results">View <c:if test="${pendingupload.status == 'Waiting'}">Previous </c:if>Import Results</a>
-                                    </c:if>
+                                <c:if test="${pendingupload.importResult.length() > 0}">
+                                    <a href="/api/ImportResults?id=${pendingupload.id}" target="new"
+                                       class="button inspect small" data-title="Import Results"
+                                       title="View Import Results">View <c:if
+                                            test="${pendingupload.status == 'Waiting'}">Previous </c:if>Import
+                                        Results</a>
+                                </c:if>
                                 <c:if test="${pendingupload.status == 'Waiting'}">
                                     <input type="submit" name="Load" value="Load" class="button small"/>
-                                    <a href="/api/ManageDatabases?rejectId=${pendingupload.id}#tab4"
+                                    <a onclick="$('#working').show();"
+                                       href="/api/ManageDatabases?rejectId=${pendingupload.id}#tab4"
                                        class="button small" title="Reject">Reject</a>
                                 </c:if>
                                 <c:if test="${pendingupload.status == 'Rejected'}">
@@ -325,12 +389,12 @@ Created by IntelliJ IDEA.
             </table>
             <c:if test="${revertlist.length() > 0}">
                 <a href="/api/ManageDatabases?revert=true#tab4"
-                   onclick="return confirm('Are you sure you want to revert${revertlist}')"
+                   onclick="return revert()"
                    class="button" title="revert">Revert</a>
             </c:if>
             <c:if test="${commit}">
                 <a href="/api/ManageDatabases?commit=true#tab4"
-                   onclick="return confirm('Are you sure you want to commit changes? Revert backups will be removed!')"
+                   onclick="return commit()"
                    class="button" title="Commit">Commit</a>
             </c:if>
         </div>
@@ -367,8 +431,14 @@ Created by IntelliJ IDEA.
                         <td>${template.templateName}</td>
                         <td>${template.dateCreated}</td>
                         <td>
-                            <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#tab5" onclick="return confirm('Are you sure you want to delete ${template.templateName}?')" class="button small" title="Delete ${template.templateName}"><span class="fa fa-trash" title="Delete"></span> </a>
-                            <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}#tab5" class="button small" title="Download"><span class="fa fa-download" title="Download"></span> </a>
+                            <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#tab5"
+                               onclick="return confirm('Are you sure you want to delete ${template.templateName}?')"
+                               class="button small" title="Delete ${template.templateName}"><span class="fa fa-trash"
+                                                                                                  title="Delete"></span>
+                            </a>
+                            <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}#tab5"
+                               class="button small" title="Download"><span class="fa fa-download"
+                                                                           title="Download"></span> </a>
                         </td>
                     </tr>
                 </c:forEach>

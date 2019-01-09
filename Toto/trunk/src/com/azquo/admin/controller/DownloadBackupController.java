@@ -16,6 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
 
 /*
 Created by EFC 11/09/2018
@@ -35,12 +36,20 @@ public class DownloadBackupController {
     ) throws Exception {
         final LoggedInUser  loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null) {
-            Database db = AdminService.getDatabaseByIdWithBasicSecurityCheck(Integer.parseInt(id), loggedInUser);
-            if (db != null) {
-                DatabaseServer dbs = DatabaseServerDAO.findById(db.getDatabaseServerId());
-                loggedInUser.setDatabaseWithServer(dbs, db);
-                File tempzip = BackupService.createDBandReportsBackup(loggedInUser);
-                DownloadController.streamFileToBrowser(Paths.get(tempzip.getAbsolutePath()), response, db.getName() + ".zip");
+            request.getSession().setAttribute("working", "working");
+            try{
+                Database db = AdminService.getDatabaseByIdWithBasicSecurityCheck(Integer.parseInt(id), loggedInUser);
+                if (db != null) {
+                    DatabaseServer dbs = DatabaseServerDAO.findById(db.getDatabaseServerId());
+                    loggedInUser.setDatabaseWithServer(dbs, db);
+                    File tempzip = BackupService.createDBandReportsBackup(loggedInUser);
+                    DownloadController.streamFileToBrowser(Paths.get(tempzip.getAbsolutePath()), response, db.getName() + ".zip");
+                }
+                request.getSession().removeAttribute("working");
+            } catch (Exception e){
+                // what to do with the error? todo
+                request.getSession().removeAttribute("working");
+                e.printStackTrace();
             }
         }
     }
