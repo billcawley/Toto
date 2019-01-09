@@ -224,16 +224,19 @@ public class BatchImporter implements Callable<Void> {
                 cell.needsResolving = false;
             }
             if (cell.getImmutableImportHeading().override != null) {
+                List<String> languages = setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames);
                 // moved the hack over from the heading reader
                 if (cell.getImmutableImportHeading().override.equals("NOW")) {
                     cell.setLineValue(LocalDateTime.now() + "");
                 } else {
                     cell.setLineValue(cell.getImmutableImportHeading().override);
+                    languages = new ArrayList<>();
+                    languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
                 }
                 cell.needsResolving = false;
                 if (cell.getImmutableImportHeading().lineNameRequired) {
                     Name compName = includeInParents(azquoMemoryDBConnection, namesFoundCache, cell.getLineValue().trim()
-                            , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, setLocalLanguage(cell.getImmutableImportHeading().attribute, attributeNames));
+                            , cell.getImmutableImportHeading().parentNames, cell.getImmutableImportHeading().isLocal, languages);
                     cell.addToLineNames(compName);
                 }
             }
