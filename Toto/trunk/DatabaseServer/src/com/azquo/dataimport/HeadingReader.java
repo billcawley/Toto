@@ -108,16 +108,24 @@ todo - add classification here
         List<String> attributeNames = uploadedFile.getLanguages();
         List<MutableImportHeading> headings = new ArrayList<>();
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
+        String lastClauses = "";
         for (String headingString : headingsAsStrings) {
             // on some spreadsheets, pseudo headings are created because there is text in more than one line.  The divider must also be accompanied by a 'peers' clause
             int dividerPos = headingString.lastIndexOf(headingDivider); // is there context defined here?
-            if (headingString.trim().length() > 0 && (dividerPos < 0 || headingString.toLowerCase().indexOf(PEERS) > 0)) { // miss out blanks also.
+            if (headingString.trim().length() > 0) { // miss out blanks also.
                 // works backwards simply for convenience to chop off the context headings until only the heading is left, there is nothing significant about the ordering in contextHeadings
                 if (dividerPos > 0 || headingString.indexOf(";") > 0) {//any further clauses void context headings
+                    int clausePos = headingString.indexOf(";");
+                    if (clausePos > 0){
+                        lastClauses = headingString.substring(clausePos);
+                    }else{
+                        headingString += lastClauses;
+                    }
                     contextHeadings = new ArrayList<>(); // reset/build the context headings
                 }
                 while (dividerPos >= 0) {
-                    final String contextHeadingString = headingString.substring(dividerPos + 1);
+                    //if there are no clauses, inherit from last
+                      final String contextHeadingString = headingString.substring(dividerPos + 1);
                     // if the heading ends with | the context heading will be blank, ignore it. A way to clear context if you just put a single | at the end of a heading
                     if (contextHeadingString.length() > 0) {
                         // context headings may not use many features but using the standard heading objects and interpreter is fine
@@ -129,6 +137,7 @@ todo - add classification here
                     }
                     headingString = headingString.substring(0, dividerPos);
                     dividerPos = headingString.lastIndexOf(headingDivider);
+
                 }
                 final MutableImportHeading heading = interpretHeading(azquoMemoryDBConnection, headingString, attributeNames);
                 heading.contextHeadings = contextHeadings;
