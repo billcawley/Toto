@@ -431,6 +431,11 @@ public final class ValueService {
                 outerLoopNames = appliesToNames;
                 //System.out.println("Outer loop size : " + appliesToNames.size());
                 for (Name calcName : calcnames) {
+                    // an optimiseation - forget any looping or calcs if one of the calc names has no values, just return
+                    if (calcName.findValuesIncludingChildren().isEmpty()){
+                        valuesHook.values = new ArrayList<>();
+                        return 0;
+                    }
                     // I think the contains is on the second collection which means this way around hsould be fater than the other way around
                     if (!Collections.disjoint(outerLoopNames, calcName.findAllChildren())) { // nagative on disjoint, there were elements in common
                         outerLoopNames.retainAll(calcName.findAllChildren());
