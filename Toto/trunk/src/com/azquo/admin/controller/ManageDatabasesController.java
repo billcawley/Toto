@@ -510,7 +510,12 @@ public class ManageDatabasesController {
                                     break;
                                 }
                             }
+                            //detect from workbook name
+                            if (uploadedFile.getFileName().toLowerCase().endsWith("import templates.xlsx")){
+                                isImportTemplate = true;
+                            }
                             // detect Ben Jones contract style template
+
                             Name importName = BookUtils.getName(book,ReportRenderer.AZIMPORTNAME);
                             if (importName != null){
                                 isImportTemplate = true;
