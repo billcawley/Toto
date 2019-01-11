@@ -265,6 +265,13 @@ todo - add classification here
             case DEFAULT: // default = composition in now but we'll leave the syntax support in
             case COMPOSITION:// combine more than one column
                 // as with override this seems a little hacky . . .
+                if (result.endsWith("%")){
+                    try{
+                        double d = Double.parseDouble(result.substring(0,result.length()-1)) /100;
+                        result = d + "";
+                     }catch(Exception e){
+                     }
+                }
                 heading.compositionPattern = result;
                 break;
             case IGNORE:
