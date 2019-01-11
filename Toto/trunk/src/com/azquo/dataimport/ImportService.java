@@ -424,6 +424,17 @@ public final class ImportService {
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
     private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile, boolean importTemplateUsedAlready) throws
             Exception {
+        String templateName = uploadedFile.getFileName().replace("\\","/");
+        int slashpos = templateName.lastIndexOf("/");
+        if (slashpos < 0){
+            slashpos = 0;
+        }
+        templateName= templateName.substring(slashpos, templateName.lastIndexOf(".")).toLowerCase();
+        int blankPos = templateName.indexOf(" ");
+        if (blankPos > 0){
+            templateName = templateName.substring(0,blankPos);
+        }
+
         if (!importTemplateUsedAlready){
             Workbook book = getImportTemplateForUploadedFile(loggedInUser, uploadedFile);
             if (book != null) {
@@ -433,8 +444,9 @@ public final class ImportService {
                 // scan first for the main model
                 for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
                     Sheet sheet = book.getSheetAt(sheetNo);
-                    if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
+                    if (sheet.getSheetName().equalsIgnoreCase("Import Model") || sheet.getSheetName().equalsIgnoreCase(templateName)) {
                         importSheetScan(sheet, null, standardHeadings, null, templateParameters, null);
+                        break;
                     }
                 }
                 if (standardHeadings.isEmpty()) {
@@ -972,13 +984,7 @@ public final class ImportService {
         String importTemplateName = uploadedFile.getParameter(IMPORTTEMPLATE);
         // make a guess at the import template if it wasn't explicitly specified
         if (importTemplateName == null) {
-            importTemplateName = uploadedFile.getFileName();
-            if (importTemplateName.contains(" ")) {
-                importTemplateName = importTemplateName.substring(0, importTemplateName.indexOf(" "));
-            } else if (importTemplateName.contains(".")) {
-                importTemplateName = importTemplateName.substring(0, importTemplateName.indexOf("."));
-            }
-            importTemplateName += ".xlsx";
+              importTemplateName = loggedInUser.getDatabase().getName() + " import templates.xlsx";
         }
         if (ImportTemplateDAO.findForNameAndBusinessId(importTemplateName, loggedInUser.getUser().getBusinessId()) != null) {
             ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(importTemplateName, loggedInUser.getUser().getBusinessId());
