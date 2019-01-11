@@ -56,6 +56,48 @@ public class ValueCalculationService {
             String term = st.nextToken();
             if (OPS.contains(term)) { // operation
                 valNo--;
+                    /* EFC note : VERY IMPORTANT
+                    *
+                    * There's some nasty concurrency bug which, having investigated it, I think it something to do with the VM
+                    * It would manifest in an array out of bounds exception
+                    *
+                    * here is the test code beneath "case *"
+                    *
+                    *                             try {
+                                values[valNo - 1] *= values[valNo];
+                            } catch (Exception e) {
+                                tracker.append("--------- a very specific error!! val no = " + valNo);
+                                tracker.append(" values size  " + values.length);
+                                tracker.append("val no = " + valNo);
+                                tracker.append(" values[0] ");
+                                tracker.append(values[0]);
+                                tracker.append(" values[1] ");
+                                tracker.append(values[1]);
+                                if (valNo >=0 && valNo < values.length){
+                                    tracker.append(" values[valno] ");
+                                    tracker.append(values[valNo]);
+                                    tracker.append(" values[valNo - 1] " + values[valNo - 1]);
+                                } else {
+                                    tracker.append("valno out of bounds???");
+                                }
+                                throw e;
+                            }
+
+                    *
+                    * which would show a clean nonsensical index out of bounds - val no being "legal" and still throwing the exception even though values and valno
+                    * are local variables. Further to that the error won't be caught by the debugger, it will be there repeating on screen and in the logs,
+                    * you set the break point and poof! it disappears. It might be worth checking if Java 9 has this problem . . .
+                    *
+                    * notably just having these lines fixes the problem, the Exception isn't hit
+                    *
+                    * tl;dr : DELETE THE FOLLOWING SIX LINES OF CODE AT YOUR PERIL
+                    */
+                try{
+                    double value = values[valNo];
+                } catch (Exception e){
+                    System.out.println("correcting nasty concurrency error!");
+                    valNo = new Integer(valNo);
+                }
                 char charTerm = term.charAt(0);
                 switch (charTerm) {
                     case StringLiterals.MATHFUNCTION:

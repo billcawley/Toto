@@ -55,8 +55,9 @@ public class DSSpreadsheetService {
       todo - factor parameters into a passed object?
      */
 
-    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId, List<List<String>> rowHeadingsSource
-            , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, boolean quiet, String filterTargetName) throws Exception {
+    public static CellsAndHeadingsForDisplay getCellsAndHeadingsForDisplay(DatabaseAccessToken databaseAccessToken, String user, String regionName, int valueId
+            , List<List<String>> rowHeadingsSource, List<List<String>> colHeadingsSource, List<List<String>> contextSource
+            , RegionOptions regionOptions, boolean quiet, String filterTargetName) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         List<List<AzquoCell>> data = AzquoCellService.getDataRegion(azquoMemoryDBConnection, regionName, rowHeadingsSource, colHeadingsSource, contextSource
                 , regionOptions, user, valueId, quiet, filterTargetName);
@@ -745,8 +746,7 @@ public class DSSpreadsheetService {
         // now onto the bit to find the specific cell - the column headings were transposed then expanded so they're in the same format as the row headings
         // that is to say : the outside list's size is the number of columns or headings. So, do we have the row and col?
         if (unsortedRow < rowHeadings.size() && unsortedCol < columnHeadings.size()) {
-            return AzquoCellResolver.getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextHeadings, unsortedRow, unsortedCol, languages, 0, null, debugInfo);
-        }
+            return AzquoCellResolver.getAzquoCellForHeadings(azquoMemoryDBCOnnection, rowHeadings.get(unsortedRow), columnHeadings.get(unsortedCol), contextHeadings, unsortedRow, unsortedCol, languages, 0, null, debugInfo);        }
         return null; // no headings match the row/col passed
     }
 
@@ -761,5 +761,4 @@ public class DSSpreadsheetService {
             }
         }
     }
-
- }
+}

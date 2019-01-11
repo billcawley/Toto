@@ -422,21 +422,19 @@ public final class ValueService {
             }
             return toReturn;
         } else {
-            // ok we've populated calc names is applicable, now check if calc names interacts with applies to (applies to is looking for an intersection with calc names e,g, from the row or context NOT the names in the formulae)
-            // this was just for the applied to names but to reduce code duplication we'll get the first calc name and jam it in here to make a single loop
-            List<Name> outerLoopNames = new ArrayList<>();
+            /* new logic - leave the calc names alone, this is about deciding, if we have appliesToNames, how many of these names will go into the outer loop
+            any calc names which cross over with applied names will trim it, any which don't won't. So make outer loops the same as applied names and trim where applicable
+             */
+
+            Collection<Name> outerLoopNames = new ArrayList<>();
             if (appliesToNames != null) { // then try and find the name
-                Iterator<Name> calcNamesIterator = calcnames.iterator(); // for the remove function otherwise a loop might throw a wobbbler (exception)
-                while (calcNamesIterator.hasNext()) { // go through the names and find the first that crosses over with the appliesTo set
-                    Name calcName = calcNamesIterator.next();
-                    for (Name appliesToName : appliesToNames) {
-                        if (calcName.findAllChildren().contains(appliesToName)) { // we have a hit (one of the applies to list is found in the children of the formula names), add to the list that will replace this calc name
-                            outerLoopNames.add(appliesToName);
-                        }
-                    }
-                    if (!outerLoopNames.isEmpty()) {// we have a restricted list for this calc name, remove that calc name and stop looking
-                        calcNamesIterator.remove();
-                        break;
+                outerLoopNames = appliesToNames;
+                //System.out.println("Outer loop size : " + appliesToNames.size());
+                for (Name calcName : calcnames) {
+                    // I think the contains is on the second collection which means this way around hsould be fater than the other way around
+                    if (!Collections.disjoint(outerLoopNames, calcName.findAllChildren())) { // nagative on disjoint, there were elements in common
+                        outerLoopNames.retainAll(calcName.findAllChildren());
+                        //System.out.println("Trim " + calcName.getDefaultDisplayName() + " : outer loop size : " + outerLoopNames.size());
                     }
                 }
             }

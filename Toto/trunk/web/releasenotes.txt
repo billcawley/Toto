@@ -1,6 +1,16 @@
 09-09-19
 
+'len()' function in imports
 
+changed dateformats from dd-MM to d-m throughout
+
+checks the date format on composition cells
+
+Copies clauses from context headings to next heading
+
+UI tweaks to pending upload - mainly feedback so the user knows that the system is processing
+
+Override values are now assumed to be in DEFAULT_DISPLAY_NAME
 
 04-01-19
 

@@ -107,6 +107,8 @@ class AzquoCellService {
         return sortedValues;
     }
 
+    // filterTargetName use a where statement on the data based on values e.g. where linecount > 1, need to clarify the actya
+
     static List<List<AzquoCell>> getDataRegion(AzquoMemoryDBConnection azquoMemoryDBConnection, String regionName, List<List<String>> rowHeadingsSource
             , List<List<String>> colHeadingsSource, List<List<String>> contextSource, RegionOptions regionOptions, String user, int valueId, boolean quiet, String filterTargetName) throws Exception {
         if (!quiet) {
@@ -178,6 +180,7 @@ class AzquoCellService {
             permute = true;
         dataToShow = sortAndFilterCells(dataToShow, rowHeadings
                 , regionOptions, permute);
+        // todo EFC understand properly
         if (filterTargetName!=null){
             Name target = NameService.findByName(azquoMemoryDBConnection, filterTargetName);
             target.setChildrenWillBePersisted(new ArrayList<>(), azquoMemoryDBConnection);

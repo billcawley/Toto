@@ -93,7 +93,7 @@ public class BackupService {
                     fileName = f.getName();
                 }
                 toReturn.append(ManageDatabasesController.formatUploadedFiles(ImportService.importTheFile(loggedInUser
-                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName))))).append("<br/>");
+                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName))), false)).append("<br/>");
             }
         }
         return toReturn.toString();

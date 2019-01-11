@@ -62,6 +62,12 @@ Created by IntelliJ IDEA.
         return false;
     }
 
+    function setDropdownForAll(dropDownName, index){
+<c:forEach items="${pendinguploads}" var="pendingupload">
+        document.getElementById(dropDownName + '${pendingupload.id}').selectedIndex = index;
+        </c:forEach>
+    }
+
 </script>
 
 <main class="databases">
@@ -306,6 +312,33 @@ Created by IntelliJ IDEA.
                 </tr>
                 </thead>
                 <tbody>
+
+                <tr style="background-color: yellow">
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>Select on all files :</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <select name="databaseId" onchange="setDropdownForAll('database', document.getElementById('databaseall').selectedIndex)" id="databaseall"><c:forEach items="${databases}" var="database">
+                            <option value="${database.id}"
+                                    <c:if test="${pendingupload.databaseName == database.name}">selected</c:if>>${database.name}</option>
+                        </c:forEach></select>
+                    </td>
+                    <c:forEach items="${params}" var="entry">
+                        <td>
+                            <select name="pendingupload-${entry.key}" id="pendinguploadall-${entry.key}" onchange="setDropdownForAll('pendingupload-${entry.key}-', document.getElementById('pendinguploadall-${entry.key}').selectedIndex)"><c:forEach items="${entry.value}" var="listitem">
+                                <option value="${listitem}"
+                                        <c:if test="${listitem == pendingupload.parameters[fn:toLowerCase(entry.key)]}">selected</c:if>>${listitem}</option>
+                            </c:forEach></select>
+                        </td>
+                    </c:forEach>
+                    <td></td>
+                    <td></td>
+                </tr>
+
                 <c:forEach items="${pendinguploads}" var="pendingupload">
                     <form onsubmit="$('#working').show();" action="/api/ManageDatabases#tab4">
                         <input type="hidden" name="pendingUploadId" value="${pendingupload.id}">
@@ -318,8 +351,8 @@ Created by IntelliJ IDEA.
                             <td>${pendingupload.size}</td>
                             <td><span
                                     <c:if test="${pendingupload.status == 'Rejected'}">style="background-color: #FF8888; color: #000000"
-                                    </c:if>
-                                        <c:if test="${pendingupload.status == 'Provisionally Loaded'}">style="background-color: #88FF88; color: #000000"</c:if>>
+                            </c:if>
+                                    <c:if test="${pendingupload.status == 'Provisionally Loaded'}">style="background-color: #88FF88; color: #000000"</c:if>>
                                     ${pendingupload.status}</span>
                             </td>
                             <td><!-- todo - last selected automatically -->
@@ -328,7 +361,7 @@ Created by IntelliJ IDEA.
                                         ${pendingupload.databaseName}
                                     </c:when>
                                     <c:otherwise>
-                                        <select name="databaseId"><c:forEach items="${databases}" var="database">
+                                        <select name="databaseId" id="database${pendingupload.id}"><c:forEach items="${databases}" var="database">
                                             <option value="${database.id}"
                                                     <c:if test="${pendingupload.databaseName == database.name}">selected</c:if>>${database.name}</option>
                                         </c:forEach></select>
@@ -337,22 +370,18 @@ Created by IntelliJ IDEA.
                             </td>
                             <c:forEach items="${params}" var="entry">
                                 <td>
-
                                     <c:choose>
                                         <c:when test="${pendingupload.status!='Waiting' && pendingupload.status!='Rejected'}">
                                             ${pendingupload.parameters[fn:toLowerCase(entry.key)]}
                                         </c:when>
                                         <c:otherwise>
-                                            <select name="pendingupload-${entry.key}"><c:forEach items="${entry.value}"
+                                            <select name="pendingupload-${entry.key}" id="pendingupload-${entry.key}-${pendingupload.id}"><c:forEach items="${entry.value}"
                                                                                                  var="listitem">
                                                 <option value="${listitem}"
                                                         <c:if test="${listitem == pendingupload.parameters[fn:toLowerCase(entry.key)]}">selected</c:if>>${listitem}</option>
                                             </c:forEach></select>
-
                                         </c:otherwise>
                                     </c:choose>
-
-
                                 </td>
                             </c:forEach>
                             <td>

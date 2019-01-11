@@ -285,12 +285,12 @@ public class ManageDatabasesController {
                     error.append(request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX)).append("<br/>");
                     request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULTPREFIX);
                 }
-                error.append(formatUploadedFiles(importResult));
+                error.append(formatUploadedFiles(importResult,false));
                 if (request.getSession().getAttribute(ManageDatabasesController.PENDINGUPLOADID) != null) {
                     int pendingUploadImportedId = (Integer) request.getSession().getAttribute(ManageDatabasesController.PENDINGUPLOADID);
                     PendingUpload pendingUpload = PendingUploadDAO.findById(pendingUploadImportedId);
                     if (pendingUpload != null) {
-                        pendingUpload.setImportResult(formatUploadedFiles(importResult));// should html be in here?
+                        pendingUpload.setImportResult(formatUploadedFiles(importResult, true));// should html be in here?
                         boolean modified = false;
                         boolean errorInResult = false;
                         for (UploadedFile uploadedFile : importResult) {
@@ -523,7 +523,7 @@ public class ManageDatabasesController {
                             if (!isImportTemplate) {
                                 model.put("error", "That does not appear to be an import template.");
                             } else {
-                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser))));
+                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser)), false));
                             }
                         } catch (Exception e) {
                             model.put("error", e.getMessage());
@@ -646,7 +646,7 @@ public class ManageDatabasesController {
 
     // as it says make something for users to read from a list of uploaded files.
 
-    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles) {
+    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles, boolean noClickableHeadings) {
         StringBuilder toReturn = new StringBuilder();
         List<String> lastNames = null;
         int counter = 0;
@@ -692,17 +692,27 @@ public class ManageDatabasesController {
 
             if (uploadedFile.getTopHeadings() != null && !uploadedFile.getTopHeadings().isEmpty()) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings" + counter + "'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings" + counter + "\" style=\"display : none\">");
+                if (noClickableHeadings){
+                    toReturn.append("Top headings : \n<br/>");
+                } else {
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings" + counter + "'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings" + counter + "\" style=\"display : none\">");
+                }
                 for (TypedPair<Integer, Integer> key : uploadedFile.getTopHeadings().keySet()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     toReturn.append(BookUtils.rangeToText(key.getFirst(), key.getSecond())).append("\t->\t").append(uploadedFile.getTopHeadings().get(key)).append("\n<br/>");
                 }
-                toReturn.append("</div>");
+                if (!noClickableHeadings){
+                    toReturn.append("</div>");
+                }
             }
 
             if (uploadedFile.getHeadingsByFileHeadingsWithInterimLookup() != null) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings" + counter + "'); return false;\">Headings with file headings</a> : \n<br/><div id=\"fileHeadings" + counter + "\" style=\"display : none\">");
+                if (noClickableHeadings) {
+                    toReturn.append("Headings with file headings : \n<br/>");
+                } else {
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings" + counter + "'); return false;\">Headings with file headings</a> : \n<br/><div id=\"fileHeadings" + counter + "\" style=\"display : none\">");
+                }
                 for (List<String> key : uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     for (String subHeading : key) {
@@ -714,12 +724,18 @@ public class ManageDatabasesController {
                     }
                     toReturn.append("\t->\t").append(stringStringTypedPair.getFirst()).append("\n<br/>");
                 }
-                toReturn.append("</div>");
+                if (!noClickableHeadings) {
+                    toReturn.append("</div>");
+                }
             }
 
             if (uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings" + counter + "'); return false;\">Headings without file headings</a> : \n<br/><div id=\"noFileHeadings" + counter + "\" style=\"display : none\">");
+                if (noClickableHeadings) {
+                    toReturn.append("Headings without file headings : \n<br/>");
+                } else {
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings" + counter + "'); return false;\">Headings without file headings</a> : \n<br/><div id=\"noFileHeadings" + counter + "\" style=\"display : none\">");
+                }
                 for (TypedPair<String, String> stringStringTypedPair : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     if (stringStringTypedPair.getSecond() != null){ // it could be null now as we support a non file heading azquo heading on the Import Model sheet
@@ -728,17 +744,26 @@ public class ManageDatabasesController {
                     }
                     toReturn.append(stringStringTypedPair.getFirst()).append("\n<br/>");
                 }
-                toReturn.append("</div>");
+                if (!noClickableHeadings) {
+                    toReturn.append("</div>");
+                }
             }
 
             if (uploadedFile.getSimpleHeadings() != null) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('simpleHeadings" + counter + "'); return false;\">Simple Headings</a> : \n<br/><div id=\"simpleHeadings" + counter + "\" style=\"display : none\">");
+                if (noClickableHeadings) {
+                    toReturn.append("Simple Headings : \n<br/>");
+                } else {
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('simpleHeadings" + counter + "'); return false;\">Simple Headings</a> : \n<br/><div id=\"simpleHeadings" + counter + "\" style=\"display : none\">");
+                }
+
                 for (String heading : uploadedFile.getSimpleHeadings()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");;
                     toReturn.append(heading).append("\n<br/>");
                 }
-                toReturn.append("</div>");
+                if (!noClickableHeadings) {
+                    toReturn.append("</div>");
+                }
             }
 
             toReturn.append(indentSb);
@@ -752,12 +777,18 @@ public class ManageDatabasesController {
 
             if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
                 toReturn.append(indentSb);
-                toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + counter + "'); return false;\">Line Errors : ").append(uploadedFile.getLinesRejected().size()).append("</a> : \n<br/><div id=\"rejectedLines" + counter + "\" style=\"display : none\">");
+                if (noClickableHeadings) {
+                    toReturn.append("Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(" : \n<br/>");
+                } else {
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + counter + "'); return false;\">Line Errors : ").append(uploadedFile.getLinesRejected().size()).append("</a> : \n<br/><div id=\"rejectedLines" + counter + "\" style=\"display : none\">");
+                }
                 for (String lineRejected : uploadedFile.getLinesRejected()) {
                     toReturn.append(indentSb);
                     toReturn.append(lineRejected).append("\n<br/>");
                 }
-                toReturn.append("</div>");
+                if (!noClickableHeadings) {
+                    toReturn.append("</div>");
+                }
             }
 
             if (uploadedFile.getError() != null) {

@@ -131,12 +131,15 @@ public class DataRegionHeading {
     }
 
     String getDebugInfo() {
-        String nameString = name.getDefaultDisplayName();
-        if (nameString==null && name.getParents()!=null){//temporary set
-            nameString = name.getParents().iterator().next().getDefaultDisplayName();
+        String nameName = "";
+        if (name != null){
+            String nameString = name.getDefaultDisplayName();
+            if (nameString==null && name.getParents()!=null){//temporary set
+                nameString = name.getParents().iterator().next().getDefaultDisplayName();
+            }
+            nameName =  "Name : " + nameString;
         }
-        return (name != null ? "Name : " + nameString : "")
-                 + (attribute != null ? " Attribute : " + attribute : "")
+        return nameName + (attribute != null ? " Attribute : " + attribute : "")
                 + (function != null ? " Function : " + function : "");
     }
 
