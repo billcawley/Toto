@@ -137,19 +137,11 @@ public class ReportService {
 
     private static boolean resolveFilterQuery(LoggedInUser loggedInUser, String query, List<List<String>>contextSource){
         String filterSet = null;
-        int nameEnd = 0;
-        if (query.startsWith(StringLiterals.QUOTE+"")) {
-            nameEnd = query.indexOf(StringLiterals.QUOTE, 1);
-        }else {
-            nameEnd = query.indexOf(" ");
-        }
-        if (nameEnd <0) return false;
-        filterSet = query.substring(0, nameEnd + 1).trim();
-        query = query.substring(nameEnd+1).trim();
-        if (!query.toLowerCase().startsWith("where (")) return false;
-
-        query = query.substring(6).trim();
-        if (query.startsWith(".")) {// attributes query
+        int wherePos = query.toLowerCase().indexOf(" where (");
+        if (wherePos < 0) return false;
+        filterSet = query.substring(0,wherePos).trim();
+       query = query.substring(wherePos + 7).trim();
+       if (query.startsWith(".")) {// attributes query
             return false;
         }
 
@@ -166,7 +158,7 @@ public class ReportService {
                     List<List<String>> rowHeadingSource = new ArrayList<>();
                     List<List<String>> colHeadingSource = new ArrayList<>();
                     List<String> rowHeadingsLine = new ArrayList<>();
-                    rowHeadingsLine.add(filterSet + " children");
+                    rowHeadingsLine.add(filterSet);
                     rowHeadingSource.add(rowHeadingsLine);
                     List<String> colHeadingsLine = new ArrayList<>();
                     colHeadingsLine.add(calc);
