@@ -371,7 +371,7 @@ public final class ValueService {
                         if (name.getAttribute(APPLIESTO).trim().equalsIgnoreCase("lowest")) {
                             lowest = true;
                         } else {
-                            appliesToNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, name.getAttribute(APPLIESTO));
+                            appliesToNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, name.getAttribute(APPLIESTO), attributeNames, false);
                         }
                     }
                     // then get the result of it, this used to be stored in RPCALC
