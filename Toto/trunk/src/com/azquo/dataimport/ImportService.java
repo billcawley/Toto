@@ -426,16 +426,19 @@ public final class ImportService {
             Exception {
         String templateName = uploadedFile.getFileName().replace("\\","/");
         int slashpos = templateName.lastIndexOf("/");
-        if (slashpos < 0){
+        if (slashpos < 0) {
             slashpos = 0;
         }
-        templateName= templateName.substring(slashpos, templateName.lastIndexOf(".")).toLowerCase();
+        int lastDot = templateName.lastIndexOf(".");
+        if (lastDot < 0) lastDot = templateName.length();
+        templateName = templateName.substring(slashpos, lastDot);
         int blankPos = templateName.indexOf(" ");
-        if (blankPos > 0){
-            templateName = templateName.substring(0,blankPos);
+        if (blankPos > 0) {
+            templateName = templateName.substring(0, blankPos);
         }
 
-        if (!importTemplateUsedAlready){
+
+        if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready){
             Workbook book = getImportTemplateForUploadedFile(loggedInUser, uploadedFile);
             if (book != null) {
                 // ok let's check here for the old style of import template as used by Ben Jones
@@ -449,170 +452,169 @@ public final class ImportService {
                         break;
                     }
                 }
-                if (standardHeadings.isEmpty()) {
-                    throw new Exception("Unable to find headings in " + book); // might need to check whether that error is any good,
-                }
-
-                Map<TypedPair<Integer, Integer>, String> topHeadings = new HashMap<>();
-                // specific headings on the file we're loading
-                List<List<String>> versionHeadings = new ArrayList<>();
-                // this *should* be single line, used to lookup information from the Import Model
-                List<List<String>> headingReference = new ArrayList<>();
-                // a "version" - similar to the import model parsing but the headings can be multi level (double decker) and not at the top thus allowing for top headings
-                for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
-                    Sheet sheet = book.getSheetAt(sheetNo);
-                    if (sheet.getSheetName().trim().equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) {
-                        // unlike the "default" mode there can be a named range for the headings here so
-                        Name headingsName = BookUtils.getName(book, "az_Headings" + sheet.getSheetName().trim());
-                        if (headingsName != null) { // we have to have it or don't bother!
-                            AreaReference headingsRange = new AreaReference(headingsName.getRefersToFormula());
-                            uploadedFile.setSkipLines(headingsRange.getFirstCell().getRow());
-                            // parameters and lookups are cumulative, pass through the same maps
-                            importSheetScan(sheet, topHeadings, headingReference, versionHeadings, templateParameters, headingsRange);
-                        }
-                    }
-                }
-
-                if (templateParameters.get(PRE_PROCESSOR) != null) {
-                    uploadedFile.setPreProcessor(templateParameters.get(PRE_PROCESSOR));
-                }
-                if (templateParameters.get(PREPROCESSOR) != null) {
-                    uploadedFile.setPreProcessor(templateParameters.get(PREPROCESSOR));
-                }
-                if (templateParameters.get(ADDITIONALDATAPROCESSOR) != null) {
-                    uploadedFile.setAdditionalDataProcessor(templateParameters.get(ADDITIONALDATAPROCESSOR));
-                }
-                if (templateParameters.get(POSTPROCESSOR) != null) {
-                    uploadedFile.setPostProcessor(templateParameters.get(POSTPROCESSOR));
-                }
-                if (templateParameters.get(LANGUAGE) != null) {
-                    String languages = templateParameters.get(LANGUAGE);
-                    String[] splitLanguages = languages.split(",");
-                    List<String> languagesList = new ArrayList<>(Arrays.asList(splitLanguages));
-                    languagesList.add(StringLiterals.DEFAULT_DISPLAY_NAME);
-                    uploadedFile.setLanguages(languagesList);
-                }
-
-                if (versionHeadings.isEmpty()) { // ok we go vanilla, not a version in a template, just the Import Model sheet
-                    if (templateParameters.get(SKIPLINES) != null && NumberUtils.isDigits(templateParameters.get(SKIPLINES))) {
-                        uploadedFile.setSkipLines(Integer.parseInt(templateParameters.get(SKIPLINES)));
-                    }
-                    if (templateParameters.get(NOFILEHEADINGS) != null) { // this parameter allows simple headings to be built from multiple cells
-                        List<String> simpleHeadings = new ArrayList<>();
-                        for (List<String> headings : standardHeadings) {
-                            StringBuilder azquoHeading = new StringBuilder();
-                            for (int i = 0; i < headings.size(); i++) {
-                                if (i > 0) {
-                                    azquoHeading.append(";");
-                                }
-                                azquoHeading.append(headings.get(i));
+                // if there are no standard headings, then read the file without adjustment
+                if (!standardHeadings.isEmpty()) {
+                    Map<TypedPair<Integer, Integer>, String> topHeadings = new HashMap<>();
+                    // specific headings on the file we're loading
+                    List<List<String>> versionHeadings = new ArrayList<>();
+                    // this *should* be single line, used to lookup information from the Import Model
+                    List<List<String>> headingReference = new ArrayList<>();
+                    // a "version" - similar to the import model parsing but the headings can be multi level (double decker) and not at the top thus allowing for top headings
+                    for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
+                        Sheet sheet = book.getSheetAt(sheetNo);
+                        if (sheet.getSheetName().trim().equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) {
+                            // unlike the "default" mode there can be a named range for the headings here so
+                            Name headingsName = BookUtils.getName(book, "az_Headings" + sheet.getSheetName().trim());
+                            if (headingsName != null) { // we have to have it or don't bother!
+                                AreaReference headingsRange = new AreaReference(headingsName.getRefersToFormula());
+                                uploadedFile.setSkipLines(headingsRange.getFirstCell().getRow());
+                                // parameters and lookups are cumulative, pass through the same maps
+                                importSheetScan(sheet, topHeadings, headingReference, versionHeadings, templateParameters, headingsRange);
                             }
-                            simpleHeadings.add(azquoHeading.toString());
                         }
-                        uploadedFile.setSimpleHeadings(simpleHeadings);
-                    } else {
-                        // we assume the first line are file headings and anything below needs to be joined together into an Azquo heading
-                        // we now support headingsNoFileHeadingsWithInterimLookup in a non - version context
-                        List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
-                        Map<List<String>, TypedPair<String, String>> headingsByLookupWithInterimLookup = new HashMap<>();
-                        for (List<String> headings : standardHeadings) {
-                            if (!headings.isEmpty()) {
-                                String fileHeading = null;
+                    }
+
+                    if (templateParameters.get(PRE_PROCESSOR) != null) {
+                        uploadedFile.setPreProcessor(templateParameters.get(PRE_PROCESSOR));
+                    }
+                    if (templateParameters.get(PREPROCESSOR) != null) {
+                        uploadedFile.setPreProcessor(templateParameters.get(PREPROCESSOR));
+                    }
+                    if (templateParameters.get(ADDITIONALDATAPROCESSOR) != null) {
+                        uploadedFile.setAdditionalDataProcessor(templateParameters.get(ADDITIONALDATAPROCESSOR));
+                    }
+                    if (templateParameters.get(POSTPROCESSOR) != null) {
+                        uploadedFile.setPostProcessor(templateParameters.get(POSTPROCESSOR));
+                    }
+                    if (templateParameters.get(LANGUAGE) != null) {
+                        String languages = templateParameters.get(LANGUAGE);
+                        String[] splitLanguages = languages.split(",");
+                        List<String> languagesList = new ArrayList<>(Arrays.asList(splitLanguages));
+                        languagesList.add(StringLiterals.DEFAULT_DISPLAY_NAME);
+                        uploadedFile.setLanguages(languagesList);
+                    }
+
+                    if (versionHeadings.isEmpty()) { // ok we go vanilla, not a version in a template, just the Import Model sheet
+                        if (templateParameters.get(SKIPLINES) != null && NumberUtils.isDigits(templateParameters.get(SKIPLINES))) {
+                            uploadedFile.setSkipLines(Integer.parseInt(templateParameters.get(SKIPLINES)));
+                        }
+                        if (templateParameters.get(NOFILEHEADINGS) != null) { // this parameter allows simple headings to be built from multiple cells
+                            List<String> simpleHeadings = new ArrayList<>();
+                            for (List<String> headings : standardHeadings) {
                                 StringBuilder azquoHeading = new StringBuilder();
                                 for (int i = 0; i < headings.size(); i++) {
-                                    if (i == 0) {
-                                        fileHeading = headings.get(i);
-                                    } else {
-                                        if (i > 1) {
-                                            azquoHeading.append(";");
+                                    if (i > 0) {
+                                        azquoHeading.append(";");
+                                    }
+                                    azquoHeading.append(headings.get(i));
+                                }
+                                simpleHeadings.add(azquoHeading.toString());
+                            }
+                            uploadedFile.setSimpleHeadings(simpleHeadings);
+                        } else {
+                            // we assume the first line are file headings and anything below needs to be joined together into an Azquo heading
+                            // we now support headingsNoFileHeadingsWithInterimLookup in a non - version context
+                            List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
+                            Map<List<String>, TypedPair<String, String>> headingsByLookupWithInterimLookup = new HashMap<>();
+                            for (List<String> headings : standardHeadings) {
+                                if (!headings.isEmpty()) {
+                                    String fileHeading = null;
+                                    StringBuilder azquoHeading = new StringBuilder();
+                                    for (int i = 0; i < headings.size(); i++) {
+                                        if (i == 0) {
+                                            fileHeading = headings.get(i);
+                                        } else {
+                                            if (i > 1) {
+                                                azquoHeading.append(";");
+                                            }
+                                            azquoHeading.append(headings.get(i));
                                         }
-                                        azquoHeading.append(headings.get(i));
+                                    }
+                                    // there is no second value to the typed pair - that's only used when there's a version. The field says "WithInterimLookup" but there is no interim lookup where there's one sheet
+                                    if (fileHeading.isEmpty()) {
+                                        headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeading.toString(), null));
+                                    } else {
+                                        headingsByLookupWithInterimLookup.put(Collections.singletonList(fileHeading), new TypedPair<>(azquoHeading.toString(), null));
                                     }
                                 }
-                                // there is no second value to the typed pair - that's only used when there's a version. The field says "WithInterimLookup" but there is no interim lookup where there's one sheet
-                                if (fileHeading.isEmpty()) {
-                                    headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeading.toString(), null));
-                                } else {
-                                    headingsByLookupWithInterimLookup.put(Collections.singletonList(fileHeading), new TypedPair<>(azquoHeading.toString(), null));
-                                }
                             }
+                            uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByLookupWithInterimLookup);
+                            uploadedFile.setHeadingsNoFileHeadingsWithInterimLookup(headingsNoFileHeadingsWithInterimLookup);
                         }
-                        uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByLookupWithInterimLookup);
-                        uploadedFile.setHeadingsNoFileHeadingsWithInterimLookup(headingsNoFileHeadingsWithInterimLookup);
-                    }
-                } else {
-                    // the thing here is to add the version headings as file headings looking up the Azquo headings from the Import Model
-                    Map<List<String>, TypedPair<String, String>> headingsByFileHeadingsWithInterimLookup = new HashMap<>();
-                    // and the headings without reference to the
-                    List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
+                    } else {
+                        // the thing here is to add the version headings as file headings looking up the Azquo headings from the Import Model
+                        Map<List<String>, TypedPair<String, String>> headingsByFileHeadingsWithInterimLookup = new HashMap<>();
+                        // and the headings without reference to the
+                        List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
                     /* There may be references without headings but not the other way around (as in we'd just ignore the headings)
                      * hence references needs to be the outer loop adding version headings where it can find them
                      * */
-                    int index = 0;
-                    for (List<String> headingReferenceColumn : headingReference) {
-                        if (headingReferenceColumn.size() > 0 && !headingReferenceColumn.get(0).isEmpty()) {// we fill gaps when parsing the standard headings so there may be blanks in here, ignore them!
-                            String reference = headingReferenceColumn.get(0); // the reference is the top one
-                            List<String> azquoClauses = new ArrayList<>(); // in here will go the Azquo clauses both looked up from the Import Model and any that might have been added here
-                            // ok now we're going to look for this in the standard headings by the "top" heading
-                            Iterator<List<String>> standardHeadingsIterator = standardHeadings.iterator();
-                            while (standardHeadingsIterator.hasNext()) {
-                                List<String> standardHeadingsColumn = standardHeadingsIterator.next();
-                                if (!standardHeadingsColumn.isEmpty() && standardHeadingsColumn.get(0).equalsIgnoreCase(reference)) {
-                                    standardHeadingsIterator.remove(); // later when checking for required we don't want to add any again
-                                    azquoClauses.addAll(standardHeadingsColumn.subList(1, standardHeadingsColumn.size()));
+                        int index = 0;
+                        for (List<String> headingReferenceColumn : headingReference) {
+                            if (headingReferenceColumn.size() > 0 && !headingReferenceColumn.get(0).isEmpty()) {// we fill gaps when parsing the standard headings so there may be blanks in here, ignore them!
+                                String reference = headingReferenceColumn.get(0); // the reference is the top one
+                                List<String> azquoClauses = new ArrayList<>(); // in here will go the Azquo clauses both looked up from the Import Model and any that might have been added here
+                                // ok now we're going to look for this in the standard headings by the "top" heading
+                                Iterator<List<String>> standardHeadingsIterator = standardHeadings.iterator();
+                                while (standardHeadingsIterator.hasNext()) {
+                                    List<String> standardHeadingsColumn = standardHeadingsIterator.next();
+                                    if (!standardHeadingsColumn.isEmpty() && standardHeadingsColumn.get(0).equalsIgnoreCase(reference)) {
+                                        standardHeadingsIterator.remove(); // later when checking for required we don't want to add any again
+                                        azquoClauses.addAll(standardHeadingsColumn.subList(1, standardHeadingsColumn.size()));
+                                    }
                                 }
-                            }
-                            if (azquoClauses.isEmpty()) {
-                                throw new Exception("On import version sheet " + uploadedFile.getParameter("IMPORTVERSION") + " no headings on Import Model found for " + reference + " - was this referenced twice?");
-                            } else if (headingReference.get(index).size() > 1) { // add the extra ones
-                                azquoClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
-                            }
-                            StringBuilder azquoHeadingsAsString = new StringBuilder();
-                            for (String clause : azquoClauses) {
-                                if (azquoHeadingsAsString.length() > 0 && !clause.startsWith(".")) {
-                                    azquoHeadingsAsString.append(";");
+                                if (azquoClauses.isEmpty()) {
+                                    throw new Exception("On import version sheet " + uploadedFile.getParameter("IMPORTVERSION") + " no headings on Import Model found for " + reference + " - was this referenced twice?");
+                                } else if (headingReference.get(index).size() > 1) { // add the extra ones
+                                    azquoClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
                                 }
-                                azquoHeadingsAsString.append(clause);
-                            }
-                            // finally get the file headings if applicable
-                            if (versionHeadings.size() > index && !versionHeadings.get(index).isEmpty()) {
-                                headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new TypedPair<>(azquoHeadingsAsString.toString(), reference));
-                            } else {
-                                headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), reference));
-                            }
-                        }
-                        index++;
-                    }
-                    // and now required
-                    for (List<String> standardHeadingsColumn : standardHeadings) {
-                        boolean required = false;
-                        for (String clause : standardHeadingsColumn) {
-                            if (clause.equalsIgnoreCase("required")) {
-                                required = true;
-                                break;
-                            }
-                        }
-                        // ok criteria added after (may need refactoring), if a top heading with a value (surrounded by ``) matches a heading on the import model use that also
-                        if (required || (!standardHeadingsColumn.isEmpty() && topHeadings.values().contains("`" + standardHeadingsColumn.get(0) + "`"))) {
-                            StringBuilder azquoHeadingsAsString = new StringBuilder();
-                            // clauses after the first cell
-                            for (String clause : standardHeadingsColumn.subList(1, standardHeadingsColumn.size())) {
-                                if (azquoHeadingsAsString.length() == 0) {
-                                    azquoHeadingsAsString = new StringBuilder(clause);
-                                } else {
-                                    if (!clause.startsWith(".")) {
+                                StringBuilder azquoHeadingsAsString = new StringBuilder();
+                                for (String clause : azquoClauses) {
+                                    if (azquoHeadingsAsString.length() > 0 && !clause.startsWith(".")) {
                                         azquoHeadingsAsString.append(";");
                                     }
                                     azquoHeadingsAsString.append(clause);
                                 }
+                                // finally get the file headings if applicable
+                                if (versionHeadings.size() > index && !versionHeadings.get(index).isEmpty()) {
+                                    headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new TypedPair<>(azquoHeadingsAsString.toString(), reference));
+                                } else {
+                                    headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), reference));
+                                }
                             }
-                            // no headings but it has the other bits - will be jammed on the end after file
-                            headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), standardHeadingsColumn.get(0)));
+                            index++;
                         }
+                        // and now required
+                        for (List<String> standardHeadingsColumn : standardHeadings) {
+                            boolean required = false;
+                            for (String clause : standardHeadingsColumn) {
+                                if (clause.equalsIgnoreCase("required")) {
+                                    required = true;
+                                    break;
+                                }
+                            }
+                            // ok criteria added after (may need refactoring), if a top heading with a value (surrounded by ``) matches a heading on the import model use that also
+                            if (required || (!standardHeadingsColumn.isEmpty() && topHeadings.values().contains("`" + standardHeadingsColumn.get(0) + "`"))) {
+                                StringBuilder azquoHeadingsAsString = new StringBuilder();
+                                // clauses after the first cell
+                                for (String clause : standardHeadingsColumn.subList(1, standardHeadingsColumn.size())) {
+                                    if (azquoHeadingsAsString.length() == 0) {
+                                        azquoHeadingsAsString = new StringBuilder(clause);
+                                    } else {
+                                        if (!clause.startsWith(".")) {
+                                            azquoHeadingsAsString.append(";");
+                                        }
+                                        azquoHeadingsAsString.append(clause);
+                                    }
+                                }
+                                // no headings but it has the other bits - will be jammed on the end after file
+                                headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), standardHeadingsColumn.get(0)));
+                            }
+                        }
+                        uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByFileHeadingsWithInterimLookup);
+                        uploadedFile.setHeadingsNoFileHeadingsWithInterimLookup(headingsNoFileHeadingsWithInterimLookup);
+                        uploadedFile.setTopHeadings(topHeadings);
                     }
-                    uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByFileHeadingsWithInterimLookup);
-                    uploadedFile.setHeadingsNoFileHeadingsWithInterimLookup(headingsNoFileHeadingsWithInterimLookup);
-                    uploadedFile.setTopHeadings(topHeadings);
                 }
             }
         }
@@ -775,15 +777,24 @@ public final class ImportService {
      have parameters as well as their "parent" file */
     public static void addFileNameParametersToMap(String fileName, Map<String, String> map) {
         try {
-            if (fileName != null && fileName.contains("(") && fileName.contains(")")) { // there are parameters to add.
-                String parseString = fileName.substring(fileName.indexOf("(") + 1, fileName.indexOf(")"));
-                StringTokenizer stringTokenizer = new StringTokenizer(parseString, ";");
-                while (stringTokenizer.hasMoreTokens()) {
-                    String pair = stringTokenizer.nextToken().trim();
-                    if (pair.contains("=")) {
-                        String left = pair.substring(0, pair.indexOf("=")).trim();
-                        String right = pair.substring(pair.indexOf("=") + 1).trim();
-                        map.put(left.toLowerCase(), right);
+            int bracketPos = 0;
+            while (bracketPos >=0){
+                bracketPos = fileName.indexOf("(",bracketPos + 1);
+                if (bracketPos > 0){
+                    int endBrackets = fileName.indexOf(")",bracketPos);
+                    if (endBrackets >0){
+                        String parseString = fileName.substring(bracketPos + 1, endBrackets);
+                        if (parseString.contains("=")){
+                            StringTokenizer stringTokenizer = new StringTokenizer(parseString, ";");
+                            while (stringTokenizer.hasMoreTokens()) {
+                                String pair = stringTokenizer.nextToken().trim();
+                                if (pair.contains("=")) {
+                                    String left = pair.substring(0, pair.indexOf("=")).trim();
+                                    String right = pair.substring(pair.indexOf("=") + 1).trim();
+                                    map.put(left.toLowerCase(), right);
+                                }
+                            }
+                        }
                     }
                 }
             }
