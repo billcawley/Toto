@@ -177,7 +177,9 @@ todo - add classification here
                 interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading);
                 interpretClause(azquoMemoryDBConnection, heading, "exclusive");
             } else {
-                interpretClause(azquoMemoryDBConnection, heading, clause);
+                if (clause.length() > 0){
+                    interpretClause(azquoMemoryDBConnection, heading, clause);
+                }
             }
         }
         // exclusive error checks
