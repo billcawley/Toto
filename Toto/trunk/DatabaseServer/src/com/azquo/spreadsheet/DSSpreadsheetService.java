@@ -270,21 +270,22 @@ public class DSSpreadsheetService {
     public static String saveData(DatabaseAccessToken databaseAccessToken, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, String reportName, String context, boolean persist) throws Exception {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         boolean changedAtAll = false;
-        for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
-            for (CellForDisplay cell : row) {
-                if (cell.isChanged()) {
-                    changedAtAll = true;
+        if (cellsAndHeadingsForDisplay.getRowHeadingsSource()!=null) {
+            for (List<CellForDisplay> row : cellsAndHeadingsForDisplay.getData()) {
+                for (CellForDisplay cell : row) {
+                    if (cell.isChanged()) {
+                        changedAtAll = true;
+                        break;
+                    }
+                }
+                if (changedAtAll) {
                     break;
                 }
             }
-            if (changedAtAll) {
-                break;
+            if (!changedAtAll) {
+                return "true 0";
             }
         }
-        if (!changedAtAll) {
-            return "true 0";
-        }
-
         int numberOfValuesModified = 0;
         String redundantNames = "";
         //check for any set to be cleared - WFC logic - EFC doesn't own possible problems from this at the moment
