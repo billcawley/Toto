@@ -15,6 +15,7 @@ import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
 import com.azquo.spreadsheet.transport.CellForDisplay;
 import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
+import com.azquo.util.AzquoMailer;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
@@ -305,6 +306,8 @@ public class ReportService {
                     noSave = userRegionOptions.getNoSave();
                 }
                 if (!noSave) {
+                    ReportExecutor.fillSpecialRegions(loggedInUser,book,reportId);
+                    extractEmailInfo(book);
                     final String result = SpreadsheetService.saveData(loggedInUser, reportId, onlineReport != null ? onlineReport.getReportName() : "", name.getRefersToSheetName(), region.toLowerCase());
                     if (!result.startsWith("true")) {
                         Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
@@ -375,6 +378,22 @@ public class ReportService {
             return error;
         } else {
             return error;
+        }
+    }
+
+    public static void extractEmailInfo(Book book) {
+        for (SName name : book.getInternalBook().getNames()) {
+            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZEMAILADDRESS)) {
+                String region = name.getName().substring(ReportRenderer.AZEMAILADDRESS.length());
+                String sheetName = name.getRefersToSheetName();
+                SName emailSubjectName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILSUBJECT + region);
+                SName emailTextName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILTEXT + region);
+                Sheet sheet = book.getSheet(sheetName);
+                String emailAddress = BookUtils.getSnameCell(name).getStringValue();
+                if (emailAddress.length() > 0 && emailSubjectName != null && emailTextName != null ) {
+                     AzquoMailer.sendEMail(emailAddress, null, BookUtils.getSnameCell(emailSubjectName).getStringValue(), BookUtils.getSnameCell(emailTextName).getStringValue(), null, null);
+                }
+            }
         }
     }
 }
