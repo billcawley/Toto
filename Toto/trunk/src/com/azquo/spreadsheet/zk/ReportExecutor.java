@@ -13,6 +13,8 @@ import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.OnlineController;
+import com.azquo.spreadsheet.transport.CellForDisplay;
+import com.azquo.spreadsheet.transport.CellsAndHeadingsForDisplay;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
@@ -168,7 +170,9 @@ public class ReportExecutor {
                             return null;
                             // todo - how to stop all the way to the top? Can set count as -1 but this is hacky
                         }
+                        ReportService.extractEmailInfo(book);
                         if (save) { // so the data was changed and if we save from here it will make changes to the DB
+                              fillSpecialRegions(loggedInUser,book, onlineReport.getId());
                             for (SName name : book.getInternalBook().getNames()) {
                                 if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
                                     String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
@@ -347,6 +351,34 @@ public class ReportExecutor {
         }
         loopsLog.append("\r\n");
         return toReturn;
+    }
+
+    public static void fillSpecialRegions(LoggedInUser loggedInUser, Book book, int reportId){
+        for (SName name : book.getInternalBook().getNames()) {
+            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
+                String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
+                // possibly the nosave check could be factored, in report service around line 230
+                // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
+                SName rowHeadings = book.getInternalBook().getNameByName(ReportRenderer.AZROWHEADINGS + region);
+                if (rowHeadings == null) {
+                    String sheetName = name.getRefersToSheetName();
+                    Sheet sheet = book.getSheet(sheetName);
+                    int top = name.getRefersToCellRegion().getRow();
+                    int left = name.getRefersToCellRegion().getColumn();
+
+                    CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
+                    List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
+                    for (int rowNo = 0; rowNo < data.size(); rowNo++) {
+                        for (int colNo = 0; colNo < data.get(0).size(); colNo++) {
+                            String cellVal = ImportService.getCellValue(sheet, top + rowNo,left + colNo).getSecond();
+                            if (cellVal.length() > 0){
+                                data.get(rowNo).get(colNo).setNewStringValue(cellVal);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private static int findString(String line, String toFind)throws Exception{
