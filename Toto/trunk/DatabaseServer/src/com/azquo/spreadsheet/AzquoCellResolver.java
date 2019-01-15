@@ -280,12 +280,18 @@ public class AzquoCellResolver {
                     stringValue = name.getDefaultDisplayName();
                 }
             }else if (expressionFunctionHeadings.get(0).getFunction() == DataRegionHeading.FUNCTION.BESTNAMEMATCH) {
-                final Collection<Name> list = NameQueryParser.parseQuery(connection, expressions.get(0), languages, true);
+                String[] matchTerms = expressions.get(0).split(",");
+
+                final Collection<Name> list = NameQueryParser.parseQuery(connection, matchTerms[0], languages, true);
                 String bestFit = "";
+                String description = matchTerms[1];
+                int memberPos = description.lastIndexOf(StringLiterals.MEMBEROF);
+                if (memberPos > 0){
+                    description = description.substring((memberPos + 2));
+                }
                 for (Name name:list) {
                     String toTry = name.getDefaultDisplayName();
-                    String description = expressionFunctionHeadings.get(0).getDescription().replace("\"", "").replace("`", "");//USED ONLY IN LASTLOOKUP
-                    if (toTry.compareTo(bestFit) > 0 && (toTry.compareTo(description) <= 0)) {
+                    if (toTry.compareTo(bestFit) >= 0 && (toTry.compareTo(description) <= 0)) {
                         bestFit = toTry;
                         stringValue = toTry;
                     }
