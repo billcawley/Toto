@@ -179,6 +179,10 @@ class DataRegionHeadingService {
                             row.add(dataRegionHeadingsFromNames(mainSet, function, suffix, null, null, percentileDouble));
                         } else if (DataRegionHeading.isBestMatchFunction(function)) {
                             // todo - this function parameter parsing needs to be factored and be aware of commas in names
+                            int commaPos = sourceCell.indexOf(",");
+                            if (commaPos < 0){
+                                throw new Exception("best match functions need two parameters - a set name, and a name to match");
+                            }
                             String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
                             String description = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();
                             // maybe these two could have a "true" on returnReadOnlyCollection . . . todo
