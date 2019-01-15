@@ -249,11 +249,7 @@ public class SpreadsheetService {
     public static String saveData(LoggedInUser loggedInUser, int reportId, String reportName, String sheetName, String region, boolean persist) throws Exception {
         CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay = loggedInUser.getSentCells(reportId, sheetName, region);
         if (cellsAndHeadingsForDisplay != null) {
-            String emailInfo = cellsAndHeadingsForDisplay.getEmailInfo();
-            if (emailInfo != null) {
-                sendEmail(emailInfo);
-            }
-            // maybe go back to this later, currently it will be tripped up by a spreadsheet querying from more than one DB
+              // maybe go back to this later, currently it will be tripped up by a spreadsheet querying from more than one DB
             //if (!cellsAndHeadingsForDisplay.getOptions().noSave) {
             DatabaseAccessToken databaseAccessToken = loggedInUser.getDataAccessToken();
             final String result = RMIClient.getServerInterface(databaseAccessToken.getServerIp()).saveData(databaseAccessToken, cellsAndHeadingsForDisplay, loggedInUser.getUser().getEmail(), reportName, loggedInUser.getContext(), persist);
