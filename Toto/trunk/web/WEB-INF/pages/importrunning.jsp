@@ -1,7 +1,8 @@
-<%-- Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT --%><%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%-- Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT --%>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<c:set var="title" scope="request" value="Loading" />
-<c:set var="requirezss" scope="request" value="true" />
+<c:set var="title" scope="request" value="Loading"/>
+<c:set var="requirezss" scope="request" value="true"/>
 <%@ include file="../includes/basic_header.jsp" %>
 
 <%
@@ -12,18 +13,22 @@
 %>
 
 <script type="text/javascript">
-// edd changed to call every second, no skip maker
-    function updateStatus(){
-        jq.post("/api/SpreadsheetStatus?action=importResult", function(data){
-            var objDiv = document.getElementById("serverStatus");
-            if (data.indexOf("true") == 0){ // the sheet should be ready, note indexof not startswith, support for the former better
-                location.replace("/api/ManageDatabases" + data.substring(4));// nothing added in most cases
-                return;
-            }
-        });
-            jq.post("/api/SpreadsheetStatus?action=log", function(data){
+    // edd changed to call every second, no skip maker
+    var something = true;
+
+    function updateStatus() {
+        if (something) {
+            jq.post("/api/SpreadsheetStatus?action=importResult", function (data) {
                 var objDiv = document.getElementById("serverStatus");
-                if (objDiv.innerHTML != data){ // it was updated
+                if (data.indexOf("true") == 0) { // the sheet should be ready, note indexof not startswith, support for the former better
+                    location.replace("/api/ManageDatabases" + data.substring(4));// nothing added in most cases
+                    something = false;
+                    return;
+                }
+            });
+            jq.post("/api/SpreadsheetStatus?action=log", function (data) {
+                var objDiv = document.getElementById("serverStatus");
+                if (objDiv.innerHTML != data) { // it was updated
                     objDiv.innerHTML = data;
                     objDiv.style.backgroundColor = '#EEFFEE'; // highlight the change
                     objDiv.scrollTop = objDiv.scrollHeight;
@@ -33,16 +38,19 @@
 //                alert("same data, new skip setting : " + window.skipSetting);
                 }
             });
+        }
     }
 
-    setInterval(function(){ updateStatus(); }, 1000);
+    setInterval(function () {
+        updateStatus();
+    }, 1000);
 
 </script>
 
 
 <main class="basicDialog">
     <div class="basic-box-container">
-        <div class="basic-head"  style="background-color:${bannerColor}" >
+        <div class="basic-head" style="background-color:${bannerColor}">
             <div class="logo">
                 <a href="/api/Online?reportid=1"><img src="/images/${logo}" alt="azquo"></a>
             </div>
@@ -53,7 +61,7 @@
                 <span class="fa fa-spin fa-cog"></span>
             </div>
             <div id="serverStatus"></div>
-<!--            <a id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)'>Abort load</a>-->
+            <!--            <a id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)'>Abort load</a>-->
 
         </div>
     </div>

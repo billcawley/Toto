@@ -60,7 +60,7 @@ import java.util.stream.Stream;
  * create and delete dbs/upload files and manage uploads/backup/restore/pending uploads
  * <p>
  * pending uploads should perhaps be taken out of here
- *
+ * <p>
  * Also deals with import templates
  */
 @Controller
@@ -73,7 +73,6 @@ public class ManageDatabasesController {
     public static final String IMPORTRESULT = "importResult";
     public static final String IMPORTURLSUFFIX = "importUrlSuffix";
     private static final String IMPORTRESULTPREFIX = "importResultPrefix";
-    private static final String PENDINGUPLOADID = "pendingUploadId";
 
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
     public static class DisplayDataBase {
@@ -144,10 +143,9 @@ public class ManageDatabasesController {
             , @RequestParam(value = "deleteUploadRecordId", required = false) String deleteUploadRecordId
             , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "sort", required = false) String sort
-            , @RequestParam(value = "pendingUploadId", required = false) String pendingUploadId
             , @RequestParam(value = "pendingUploadSearch", required = false) String pendingUploadSearch
-            , @RequestParam(value = "rejectId", required = false) String rejectId
             , @RequestParam(value = "databaseId", required = false) String databaseId
+            , @RequestParam(value = "pendingUploadSubmit", required = false) String pendingUploadSubmit
             , @RequestParam(value = "revert", required = false) String revert
             , @RequestParam(value = "commit", required = false) String commit
             , @RequestParam(value = "deleteTemplateId", required = false) String deleteTemplateId
@@ -219,61 +217,124 @@ public class ManageDatabasesController {
                     e.printStackTrace();
                 }
             }
-            // can a developer do pending?? todo
-            if (NumberUtils.isNumber(pendingUploadId) && NumberUtils.isNumber(databaseId)) {
-                PendingUpload pendingUpload = PendingUploadDAO.findById(Integer.parseInt(pendingUploadId));
-                if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-                    System.out.println("pending upload id " + pendingUploadId);
-                    System.out.println("database " + databaseId);
-                    Enumeration<String> params = request.getParameterNames();
-                    Map<String, String> paramsFromUser = new HashMap<>();
-                    while (params.hasMoreElements()) {
-                        String param = params.nextElement();
-                        // todo - remove string literals
-                        if (param.startsWith("pendingupload-")) {
-                            System.out.println("param : " + param.substring("pendingupload-".length()) + " value : " + request.getParameter(param));
-                            if (!"N/A".equals(request.getParameter(param))){
-                                paramsFromUser.put(param.substring("pendingupload-".length()).toLowerCase().trim(), request.getParameter(param)); // lower case important, it's the convention when grabbing from the file name
+            // can a developer do pending?? todo also string literals as ever . . .
+            // then the pending form was submitted - will need to extract all passed values by running through the parameter map
+            if ("true".equals(pendingUploadSubmit)) {
+                // same list as the display below but not the "for display" objects
+                List<PendingUpload> pendingUploads = PendingUploadDAO.findForBusinessIdAndComitted(loggedInUser.getUser().getBusinessId(), false);
+                if ("Load".equals(request.getParameter("Load"))) {
+                    List<PendingUpload> toLoad = new ArrayList<>();
+                    StringBuffer importResultPrefix = new StringBuffer();
+                    for (PendingUpload pendingUpload : pendingUploads) {
+                        if (request.getParameter("load" + pendingUpload.getId()) != null) {
+                            String databaseIdForUpload = request.getParameter("database" + pendingUpload.getId());
+                            Map<String, String> paramsFromUser = new HashMap<>();
+                            Enumeration<String> params = request.getParameterNames();
+                            while (params.hasMoreElements()) {
+                                String param = params.nextElement();
+                                // todo - remove string literals
+                                if (param.startsWith("pendingupload-") && param.endsWith("-" + pendingUpload.getId())) {
+                                    System.out.println("param : " + param.substring("pendingupload-".length(), param.length() - ("-" + pendingUpload.getId()).length()) + " value : " + request.getParameter(param));
+                                    if (!"N/A".equals(request.getParameter(param))) {
+                                        paramsFromUser.put(param.substring("pendingupload-".length(), param.length() - ("-" + pendingUpload.getId()).length()).toLowerCase().trim(), request.getParameter(param)); // lower case important, it's the convention when grabbing from the file name
+                                    }
+                                }
+                            }
+                            // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
+                            if (NumberUtils.isDigits(databaseIdForUpload)){
+                                Database byId = DatabaseDAO.findById(Integer.parseInt(databaseIdForUpload));
+                                if (byId != null) {
+                                    LoginService.switchDatabase(loggedInUser, byId);
+                                    // todo backup the db for a revert if it hasn't been already
+                                    Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
+                                    try {
+                                        if (!Files.exists(backups)) {
+                                            Files.createDirectories(backups);
+                                        }
+                                        // now, is there a backup already?
+                                        Path backupFile = backups.resolve(byId.getPersistenceName());
+                                        if (!Files.exists(backupFile)) {
+                                            BackupService.createDBBackupFile(loggedInUser.getDatabase().getName(), loggedInUser.getDataAccessToken(), backupFile.toString(), loggedInUser.getDatabaseServer().getIp());
+                                            importResultPrefix.append("** Created revert backup for database " + byId.getName() + " **<br/>");
+                                        }
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                    pendingUpload.setParameters(paramsFromUser);
+                                    pendingUpload.setDatabaseId(byId.getId());
+                                    pendingUpload.setStatusChangedDate(LocalDateTime.now());
+                                    pendingUpload.setUserId(loggedInUser.getUser().getId());
+                                    PendingUploadDAO.store(pendingUpload);
+                                    toLoad.add(pendingUpload);
+                                }
                             }
                         }
                     }
-                    // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
-                    Database byId = DatabaseDAO.findById(Integer.parseInt(databaseId));
-                    if (byId != null) {
-                        LoginService.switchDatabase(loggedInUser, byId);
-                        // todo backup the db for a revert if it hasn't been already
-                        Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
-                        try {
-                            if (!Files.exists(backups)) {
-                                Files.createDirectories(backups);
+                    final HttpSession session = request.getSession();
+                    // we now need support for multiple files so I'm pasting the handle import code here and modifying it for the list
+                    new Thread(() -> {
+                        // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
+                        List<UploadedFile> multipleFileFeedback = new ArrayList<>();
+                        for (PendingUpload pendingUpload : toLoad) {
+                            UploadedFile uploadedFile = new UploadedFile(pendingUpload.getFilePath(), Collections.singletonList(pendingUpload.getFileName()), pendingUpload.getParameters(), false);
+                            try {
+                                List<UploadedFile> importResult = ImportService.importTheFile(loggedInUser, uploadedFile);
+                                multipleFileFeedback.addAll(importResult);
+                                pendingUpload.setImportResult(formatUploadedFiles(importResult, true));// should html be in here?
+                                boolean modified = false;
+                                boolean errorInResult = false;
+                                for (UploadedFile uf : importResult) {
+                                    if (uf.isDataModified()) {
+                                        modified = true;
+                                    }
+                                    if (uf.getError() != null) {
+                                        errorInResult = true;
+                                    }
+                                }
+                                if (!modified || errorInResult) {
+                                    if (errorInResult) {
+                                        importResultPrefix.append("<span style=\"background-color: #FF8888; color: #000000\">" + pendingUpload.getFileName() + "  marked as rejected due to an error. " + (modified ? "Data may have modified" : "") + "</span><br/>");
+                                    } else if (!modified) {
+                                        importResultPrefix.append("<span style=\"background-color: #FF8888; color: #000000\">" + pendingUpload.getFileName() + " marked as rejected as no data was modified</span><br/>");
+                                    }
+                                    pendingUpload.setStatus(PendingUpload.REJECTED);
+                                } else {
+                                    pendingUpload.setStatus(PendingUpload.PROVISIONALLY_LOADED);
+                                }
+                                pendingUpload.setStatusChangedDate(LocalDateTime.now());
+                                pendingUpload.setUserId(loggedInUser.getUser().getId());
+                                PendingUploadDAO.store(pendingUpload);
+
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
+                                multipleFileFeedback.add(uploadedFile);
                             }
-                            // now, is there a backup already?
-                            Path backupFile = backups.resolve(byId.getPersistenceName());
-                            if (!Files.exists(backupFile)) {
-                                BackupService.createDBBackupFile(loggedInUser.getDatabase().getName(), loggedInUser.getDataAccessToken(), backupFile.toString(), loggedInUser.getDatabaseServer().getIp());
-                                request.getSession().setAttribute(IMPORTRESULTPREFIX, "** Created revert backup for database " + byId.getName() + " **");
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
                         }
-                        request.getSession().setAttribute(IMPORTURLSUFFIX, "#tab4");
-                        request.getSession().setAttribute(PENDINGUPLOADID, pendingUpload.getId());
-                        pendingUpload.setParameters(paramsFromUser);
-                        pendingUpload.setDatabaseId(byId.getId());
-                        pendingUpload.setStatusChangedDate(LocalDateTime.now());
-                        pendingUpload.setUserId(loggedInUser.getUser().getId());
-                        PendingUploadDAO.store(pendingUpload);
-                        return handleImport(loggedInUser, request.getSession(), model, pendingUpload.getFileName(), pendingUpload.getFilePath(), paramsFromUser);
-                    }
+                        session.setAttribute(IMPORTURLSUFFIX, "#tab4");
+                        session.setAttribute(IMPORTRESULTPREFIX, importResultPrefix.toString());
+                        session.setAttribute(ManageDatabasesController.IMPORTRESULT, multipleFileFeedback);
+                    }).start();
+                    // edd pasting in here to get the banner colour working
+                    Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
+                    String bannerColor = business.getBannerColor();
+                    if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
+                    String logo = business.getLogo();
+                    if (logo == null || logo.length() == 0) logo = "logo_alt.png";
+                    model.addAttribute("bannerColor", bannerColor);
+                    model.addAttribute("logo", logo);
+                    return "importrunning";
+
                 }
-            }
-            if (NumberUtils.isNumber(rejectId)) {
-                PendingUpload pendingUpload = PendingUploadDAO.findById(Integer.parseInt(rejectId));
-                if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
-                    pendingUpload.setStatus(PendingUpload.REJECTED);
-                    pendingUpload.setStatusChangedDate(LocalDateTime.now());
-                    pendingUpload.setUserId(loggedInUser.getUser().getId());
-                    PendingUploadDAO.store(pendingUpload);
+                if ("Reject".equals(request.getParameter("Reject"))) {
+                    for (PendingUpload pendingUpload : pendingUploads) {
+                        if (request.getParameter("reject" + pendingUpload.getId()) != null) {
+                            pendingUpload.setStatus(PendingUpload.REJECTED);
+                            pendingUpload.setStatusChangedDate(LocalDateTime.now());
+                            pendingUpload.setUserId(loggedInUser.getUser().getId());
+                            PendingUploadDAO.store(pendingUpload);
+                        }
+                    }
                 }
             }
             StringBuilder error = new StringBuilder();
@@ -285,38 +346,7 @@ public class ManageDatabasesController {
                     error.append(request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX)).append("<br/>");
                     request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULTPREFIX);
                 }
-                error.append(formatUploadedFiles(importResult,false));
-                if (request.getSession().getAttribute(ManageDatabasesController.PENDINGUPLOADID) != null) {
-                    int pendingUploadImportedId = (Integer) request.getSession().getAttribute(ManageDatabasesController.PENDINGUPLOADID);
-                    PendingUpload pendingUpload = PendingUploadDAO.findById(pendingUploadImportedId);
-                    if (pendingUpload != null) {
-                        pendingUpload.setImportResult(formatUploadedFiles(importResult, true));// should html be in here?
-                        boolean modified = false;
-                        boolean errorInResult = false;
-                        for (UploadedFile uploadedFile : importResult) {
-                            if (uploadedFile.isDataModified()) {
-                                modified = true;
-                            }
-                            if (uploadedFile.getError() != null) {
-                                errorInResult = true;
-                            }
-                        }
-                        if (!modified || errorInResult) {
-                            if (!modified) {
-                                error.append("<span style=\"background-color: #FF8888; color: #000000\">** Marked as rejected as no data was modified **</span><br/>");
-                            }
-                            if (errorInResult) {
-                                error.append("<span style=\"background-color: #FF8888; color: #000000\">** Marked as rejected due to an error. Depending on the error data may have modified **</span><br/>");
-                            }
-                            pendingUpload.setStatus(PendingUpload.REJECTED);
-                        } else {
-                            pendingUpload.setStatus(PendingUpload.PROVISIONALLY_LOADED);
-                        }
-                        pendingUpload.setStatusChangedDate(LocalDateTime.now());
-                        pendingUpload.setUserId(loggedInUser.getUser().getId());
-                        PendingUploadDAO.store(pendingUpload);
-                    }
-                }
+                error.append(formatUploadedFiles(importResult, false));
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
             }
             try {
@@ -511,13 +541,13 @@ public class ManageDatabasesController {
                                 }
                             }
                             //detect from workbook name
-                            if (uploadedFile.getFileName().toLowerCase().endsWith("import templates.xlsx")){
+                            if (uploadedFile.getFileName().toLowerCase().endsWith("import templates.xlsx")) {
                                 isImportTemplate = true;
                             }
                             // detect Ben Jones contract style template
 
-                            Name importName = BookUtils.getName(book,ReportRenderer.AZIMPORTNAME);
-                            if (importName != null){
+                            Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
+                            if (importName != null) {
                                 isImportTemplate = true;
                             }
                             if (!isImportTemplate) {
@@ -542,7 +572,7 @@ public class ManageDatabasesController {
                             // always move uplaoded files now, they'll need to be transferred to the DB server after code split
                             File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                             uploadFile.transferTo(moved);
-                            return handleImport(loggedInUser, session, model, fileName, moved.getAbsolutePath(), null);
+                            return handleImport(loggedInUser, session, model, fileName, moved.getAbsolutePath());
                         }
                     }
                 } catch (Exception e) { // now the import has it's on exception catching
@@ -610,15 +640,10 @@ public class ManageDatabasesController {
     }
 
     // factored due to pending uploads, need to check the factoring after the prototype is done
-    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String fileName, String filePath, final Map<String, String> paramsFromUser) {
+    private static String handleImport(LoggedInUser loggedInUser, HttpSession session, ModelMap model, String fileName, String filePath) {
         // need to add in code similar to report loading to give feedback on imports
-        final Map<String, String> fileNameParams;
-        if (paramsFromUser == null) {
-            fileNameParams = new HashMap<>();
-            ImportService.addFileNameParametersToMap(fileName, fileNameParams);
-        } else {
-            fileNameParams = paramsFromUser;
-        }
+        final Map<String, String> fileNameParams = new HashMap<>();
+        ImportService.addFileNameParametersToMap(fileName, fileNameParams);
         UploadedFile uploadedFile = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false);
         new Thread(() -> {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
@@ -654,7 +679,7 @@ public class ManageDatabasesController {
             counter++;
             List<String> names = new ArrayList<>(uploadedFile.getFileNames()); // copy as I might change it
             int indent = 0;
-            if (lastNames != null && names.size() == lastNames.size()) { // for formatting don't repeat names (e.g. the zip name)
+            if (lastNames != null && (names.size() == lastNames.size() && names.get(0).equals(lastNames.get(0)))) { // for formatting don't repeat names (e.g. the zip name)
                 for (int index = 0; index < lastNames.size(); index++) {
                     if (lastNames.get(index).equals(names.get(index))) {
                         indent++;
@@ -692,7 +717,7 @@ public class ManageDatabasesController {
 
             if (uploadedFile.getTopHeadings() != null && !uploadedFile.getTopHeadings().isEmpty()) {
                 toReturn.append(indentSb);
-                if (noClickableHeadings){
+                if (noClickableHeadings) {
                     toReturn.append("Top headings : \n<br/>");
                 } else {
                     toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings" + counter + "'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings" + counter + "\" style=\"display : none\">");
@@ -701,7 +726,7 @@ public class ManageDatabasesController {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     toReturn.append(BookUtils.rangeToText(key.getFirst(), key.getSecond())).append("\t->\t").append(uploadedFile.getTopHeadings().get(key)).append("\n<br/>");
                 }
-                if (!noClickableHeadings){
+                if (!noClickableHeadings) {
                     toReturn.append("</div>");
                 }
             }
@@ -716,13 +741,13 @@ public class ManageDatabasesController {
                 for (List<String> key : uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     for (String subHeading : key) {
-                        toReturn.append(subHeading).append(" ");
+                        toReturn.append(subHeading.replaceAll("\n"," ")).append(" ");
                     }
                     TypedPair<String, String> stringStringTypedPair = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(key);
                     if (stringStringTypedPair.getSecond() != null) {
-                        toReturn.append("\t->\t").append(stringStringTypedPair.getSecond());
+                        toReturn.append("\t->\t").append(stringStringTypedPair.getSecond().replaceAll("\n"," "));
                     }
-                    toReturn.append("\t->\t").append(stringStringTypedPair.getFirst()).append("\n<br/>");
+                    toReturn.append("\t->\t").append(stringStringTypedPair.getFirst().replaceAll("\n"," ")).append("\n<br/>");
                 }
                 if (!noClickableHeadings) {
                     toReturn.append("</div>");
@@ -738,7 +763,7 @@ public class ManageDatabasesController {
                 }
                 for (TypedPair<String, String> stringStringTypedPair : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-                    if (stringStringTypedPair.getSecond() != null){ // it could be null now as we support a non file heading azquo heading on the Import Model sheet
+                    if (stringStringTypedPair.getSecond() != null) { // it could be null now as we support a non file heading azquo heading on the Import Model sheet
                         toReturn.append(stringStringTypedPair.getSecond());
                         toReturn.append(" -> ");
                     }
@@ -758,7 +783,8 @@ public class ManageDatabasesController {
                 }
 
                 for (String heading : uploadedFile.getSimpleHeadings()) {
-                    toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");;
+                    toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+                    ;
                     toReturn.append(heading).append("\n<br/>");
                 }
                 if (!noClickableHeadings) {

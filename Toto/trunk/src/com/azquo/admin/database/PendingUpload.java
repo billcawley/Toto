@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -170,6 +171,7 @@ public final class PendingUpload extends StandardEntity {
         this.committed = committed;
     }
 
+    public static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     // better for display
     public static class PendingUploadForDisplay {
 
@@ -208,12 +210,12 @@ public final class PendingUpload extends StandardEntity {
             return businessName;
         }
 
-        public LocalDateTime getDate() {
-            return date;
+        public String getDate() {
+            return dateFormatter.format(date);
         }
 
-        public LocalDateTime getStatusChangedDate() {
-            return statusChangedDate;
+        public String getStatusChangedDate() {
+            return dateFormatter.format(statusChangedDate);
         }
 
         public String getFileName() {

@@ -56,7 +56,7 @@ div{position:relative; min-width:0px} /* IE 6/7 Picaboo bug fix */
 i, em {font-family: georgia, times, times new roman, serif;}
 b. strong{font-weight:700;}
 
-.error{background:#FFFFCC; text-indent:10px; margin:10px 0px;max-height:240px;overflow:auto;}
+.error{background:#FFFFCC; margin:10px 0px;max-height:240px;overflow:auto;}
 
 
 /* General Table Formating */

@@ -62,11 +62,15 @@ Created by IntelliJ IDEA.
         return false;
     }
 
-    function setDropdownForAll(dropDownName, index){
-<c:forEach items="${pendinguploads}" var="pendingupload">
+    function setDropdownForAll(dropDownName, index) {
+        <c:forEach items="${pendinguploads}" var="pendingupload">
         document.getElementById(dropDownName + '${pendingupload.id}').selectedIndex = index;
         </c:forEach>
     }
+
+    $(window).on("load", function () {
+        $('html,body').scrollTop(0); // hitting a specific tab can make the screen be half way down, we don't want that
+    })
 
 </script>
 
@@ -145,8 +149,7 @@ Created by IntelliJ IDEA.
                         <!--<td>${upload.fileType}</td>-->
                         <td><c:if test="${upload.comments.length() > 0}">
                             <a href="/api/ImportResults?urid=${upload.id}" target="new"
-                               class="button inspect small" data-title="Import Results" title="View Import Results">Import
-                                Results</a>
+                               class="button inspect small" data-title="Import Results" title="View Import Results">Results</a>
                         </c:if></td>
 
                         <td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}"
@@ -307,7 +310,9 @@ Created by IntelliJ IDEA.
                     <c:forEach items="${params}" var="entry">
                         <td>${entry.key}</td>
                     </c:forEach>
-                    <td></td>
+                    <td>Load/<br/>Reload</td>
+                    <td>Reject</td>
+                    <td>Import<br/>Results</td>
                     <td></td>
                 </tr>
                 </thead>
@@ -322,14 +327,18 @@ Created by IntelliJ IDEA.
                     <td>-</td>
                     <td>-</td>
                     <td>
-                        <select name="databaseId" onchange="setDropdownForAll('database', document.getElementById('databaseall').selectedIndex)" id="databaseall"><c:forEach items="${databases}" var="database">
+                        <select name="databaseId"
+                                onchange="setDropdownForAll('database', document.getElementById('databaseall').selectedIndex)"
+                                id="databaseall"><c:forEach items="${databases}" var="database">
                             <option value="${database.id}"
                                     <c:if test="${pendingupload.databaseName == database.name}">selected</c:if>>${database.name}</option>
                         </c:forEach></select>
                     </td>
                     <c:forEach items="${params}" var="entry">
                         <td>
-                            <select name="pendingupload-${entry.key}" id="pendinguploadall-${entry.key}" onchange="setDropdownForAll('pendingupload-${entry.key}-', document.getElementById('pendinguploadall-${entry.key}').selectedIndex)"><c:forEach items="${entry.value}" var="listitem">
+                            <select name="pendingupload-${entry.key}" id="pendinguploadall-${entry.key}"
+                                    onchange="setDropdownForAll('pendingupload-${entry.key}-', document.getElementById('pendinguploadall-${entry.key}').selectedIndex)"><c:forEach
+                                    items="${entry.value}" var="listitem">
                                 <option value="${listitem}"
                                         <c:if test="${listitem == pendingupload.parameters[fn:toLowerCase(entry.key)]}">selected</c:if>>${listitem}</option>
                             </c:forEach></select>
@@ -337,11 +346,12 @@ Created by IntelliJ IDEA.
                     </c:forEach>
                     <td></td>
                     <td></td>
+                    <td></td>
+                    <td></td>
                 </tr>
-
-                <c:forEach items="${pendinguploads}" var="pendingupload">
-                    <form onsubmit="$('#working').show();" action="/api/ManageDatabases#tab4">
-                        <input type="hidden" name="pendingUploadId" value="${pendingupload.id}">
+                <form onsubmit="$('#working').show();" action="/api/ManageDatabases?loadingscreen=true" method="post">
+                    <input type="hidden" name="pendingUploadSubmit" value="true">
+                    <c:forEach items="${pendinguploads}" var="pendingupload">
                         <tr>
                             <td>${pendingupload.date}</td>
                             <td>${pendingupload.statusChangedDate}</td>
@@ -361,7 +371,9 @@ Created by IntelliJ IDEA.
                                         ${pendingupload.databaseName}
                                     </c:when>
                                     <c:otherwise>
-                                        <select name="databaseId" id="database${pendingupload.id}"><c:forEach items="${databases}" var="database">
+                                        <select name="database${pendingupload.id}"
+                                                id="database${pendingupload.id}"><c:forEach items="${databases}"
+                                                                                            var="database">
                                             <option value="${database.id}"
                                                     <c:if test="${pendingupload.databaseName == database.name}">selected</c:if>>${database.name}</option>
                                         </c:forEach></select>
@@ -375,8 +387,10 @@ Created by IntelliJ IDEA.
                                             ${pendingupload.parameters[fn:toLowerCase(entry.key)]}
                                         </c:when>
                                         <c:otherwise>
-                                            <select name="pendingupload-${entry.key}" id="pendingupload-${entry.key}-${pendingupload.id}"><c:forEach items="${entry.value}"
-                                                                                                 var="listitem">
+                                            <select name="pendingupload-${entry.key}-${pendingupload.id}"
+                                                    id="pendingupload-${entry.key}-${pendingupload.id}"><c:forEach
+                                                    items="${entry.value}"
+                                                    var="listitem">
                                                 <option value="${listitem}"
                                                         <c:if test="${listitem == pendingupload.parameters[fn:toLowerCase(entry.key)]}">selected</c:if>>${listitem}</option>
                                             </c:forEach></select>
@@ -385,14 +399,21 @@ Created by IntelliJ IDEA.
                                 </td>
                             </c:forEach>
                             <td>
+                                <div align="center"><input type="checkbox" name="load${pendingupload.id}"/></div>
+                            </td>
+                            <td>
+                                <div align="center"><c:if test="${pendingupload.status == 'Waiting'}"><input
+                                        type="checkbox" name="reject${pendingupload.id}"/></div>
+                                </c:if></td>
+                            <td>
                                 <c:if test="${pendingupload.importResult.length() > 0}">
                                     <a href="/api/ImportResults?id=${pendingupload.id}" target="new"
                                        class="button inspect small" data-title="Import Results"
-                                       title="View Import Results">View <c:if
-                                            test="${pendingupload.status == 'Waiting'}">Previous </c:if>Import
-                                        Results</a>
+                                       title="View Import Results">
+                                        <div align="center">View</div>
+                                    </a>
                                 </c:if>
-                                <c:if test="${pendingupload.status == 'Waiting'}">
+                                <!--                                <c:if test="${pendingupload.status == 'Waiting'}">
                                     <input type="submit" name="Load" value="Load" class="button small"/>
                                     <a onclick="$('#working').show();"
                                        href="/api/ManageDatabases?rejectId=${pendingupload.id}#tab4"
@@ -407,13 +428,42 @@ Created by IntelliJ IDEA.
                                             <input type="submit" name="Load" value="Load" class="button small"/>
                                         </c:otherwise>
                                     </c:choose>
-                                </c:if>
+                                </c:if>-->
                             </td>
-                            <td><a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}" class="button small"
-                                   title="Download"><span class="fa fa-download" titlmae="Download"></span> </a></td>
+                            <td>
+                                <div align="center"><a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}"
+                                                       class="button small"
+                                                       title="Download"><span class="fa fa-download"
+                                                                              titlmae="Download"></span> </a></div>
+                            </td>
                         </tr>
-                    </form>
-                </c:forEach>
+                    </c:forEach>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <c:forEach items="${params}" var="entry">
+                            <td></td>
+                        </c:forEach>
+                        <td>
+                            <div align="center"><input onclick="$('html,body').scrollTop(0);$('#working').show();"
+                                                       type="submit" name="Load" value="Load"
+                                                       class="button small"/></div>
+                        </td>
+                        <td>
+                            <div align="center"><input onclick="$('html,body').scrollTop(0);$('#working').show();"
+                                                       type="submit" name="Reject" value="Reject"
+                                                       class="button small"/></div>
+                        </td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </form>
                 </tbody>
             </table>
             <c:if test="${revertlist.length() > 0}">
@@ -443,36 +493,37 @@ Created by IntelliJ IDEA.
                     </tr>
                     </tbody>
                 </table>
-            </form>
-            <table>
-                <thead>
-                <tr>
-                    <td>Uploader</td>
-                    <td>Template Name</td>
-                    <td>Date Uploaded</td>
-                    <td></td>
-                </tr>
-                </thead>
-                <tbody>
-                <c:forEach items="${importTemplates}" var="template">
+                <table>
+                    <thead>
                     <tr>
-                        <td>${template.user}</td>
-                        <td>${template.templateName}</td>
-                        <td>${template.dateCreated}</td>
-                        <td>
-                            <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#tab5"
-                               onclick="return confirm('Are you sure you want to delete ${template.templateName}?')"
-                               class="button small" title="Delete ${template.templateName}"><span class="fa fa-trash"
-                                                                                                  title="Delete"></span>
-                            </a>
-                            <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}#tab5"
-                               class="button small" title="Download"><span class="fa fa-download"
-                                                                           title="Download"></span> </a>
-                        </td>
+                        <td>Uploader</td>
+                        <td>Template Name</td>
+                        <td>Date Uploaded</td>
+                        <td></td>
                     </tr>
-                </c:forEach>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    <c:forEach items="${importTemplates}" var="template">
+                        <tr>
+                            <td>${template.user}</td>
+                            <td>${template.templateName}</td>
+                            <td>${template.dateCreated}</td>
+                            <td>
+                                <a href="/api/ManageDatabases?deleteTemplateId=${template.id}#tab5"
+                                   onclick="return confirm('Are you sure you want to delete ${template.templateName}?')"
+                                   class="button small" title="Delete ${template.templateName}"><span
+                                        class="fa fa-trash"
+                                        title="Delete"></span>
+                                </a>
+                                <a href="/api/DownloadImportTemplate?importTemplateId=${template.id}#tab5"
+                                   class="button small" title="Download"><span class="fa fa-download"
+                                                                               title="Download"></span> </a>
+                            </td>
+                        </tr>
+                    </c:forEach>
+                    </tbody>
+                </table>
+            </form>
         </div>
         <!-- END Uploads -->
     </div>

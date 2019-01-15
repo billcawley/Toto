@@ -437,6 +437,7 @@ public final class ValueService {
                         return 0;
                     }
                     // I think the contains is on the second collection which means this way around hsould be fater than the other way around
+                    // although of course outer loop names may well be a set too!
                     if (!Collections.disjoint(outerLoopNames, calcName.findAllChildren())) { // nagative on disjoint, there were elements in common
                         outerLoopNames.retainAll(calcName.findAllChildren());
                         //System.out.println("Trim " + calcName.getDefaultDisplayName() + " : outer loop size : " + outerLoopNames.size());
