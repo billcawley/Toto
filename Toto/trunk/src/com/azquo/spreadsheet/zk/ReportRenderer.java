@@ -60,6 +60,9 @@ public class ReportRenderer {
     public static final String AZPDF = "az_pdf";
     public static final String AZTOTALFORMAT = "az_totalformat";
     private static final String AZFASTLOAD = "az_fastload";
+    public static final String AZEMAILADDRESS = "az_emailaddress";
+    public static final String AZEMAILSUBJECT = "az_emailsubject";
+    public static final String AZEMAILTEXT = "az_emailtext";
 
 
     public static boolean populateBook(Book book, int valueId) {
