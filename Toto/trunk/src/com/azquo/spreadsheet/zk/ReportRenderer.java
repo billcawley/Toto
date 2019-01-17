@@ -135,7 +135,7 @@ public class ReportRenderer {
             List<CellRegion> regionsToWatchForMerge = new ArrayList<>();
             // it will return the properly resolved choice options map as well as flagging the regions to merge by adding to the list
             Map<String, List<String>> choiceOptionsMap = ChoicesService.resolveAndSetChoiceOptions(loggedInUser, sheet, regionsToWatchForMerge);
-            ReportService.resolveQueries(sheet, loggedInUser); // after all options sorted should be ok
+            ReportService.resolveQueries(sheet.getBook(), loggedInUser); // after all options sorted should be ok
 
             // start repeat sheet stuff after choices and queries
             // az_RepeatSheet will have a valid name query in it, get the set of names (use choice query for this), then starting with the initial

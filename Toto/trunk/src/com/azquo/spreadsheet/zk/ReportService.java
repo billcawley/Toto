@@ -104,9 +104,10 @@ public class ReportService {
         loggedInUser.setPermissionsFromReport(permissionsFromReports); // re set it in case it was null above
     }
 
-    static void resolveQueries(Sheet sheet, LoggedInUser loggedInUser) {
-        for (SName name : sheet.getBook().getInternalBook().getNames()) {
+    static void resolveQueries(Book book, LoggedInUser loggedInUser) {
+        for (SName name : book.getInternalBook().getNames()) {
             if (name != null && name.getName() != null && name.getName().endsWith("Query")) {
+                Sheet sheet = book.getSheet(name.getRefersToSheetName());
                 //adjusted by WFC to allow a whole range to be the query.
                 resolveQuery(loggedInUser,sheet,name.getRefersToCellRegion(), null);
               }
