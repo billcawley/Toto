@@ -216,7 +216,7 @@ public class AzquoCellResolver {
                      permuteNames(permutedNames, sharedNames, namesToResolve);
                      for (List<Name> onePermute : permutedNames) {
                          //ASSUMING NO CALCS???
-                         doubleValue += ValueService.findValueForNames(connection, onePermute, null,locked, valuesHook, languages, null, nameComboValueCache, debugInfo);
+                         doubleValue += ValueService.findValueForNames(connection, onePermute, null,locked, valuesHook, languages, null, null, nameComboValueCache, debugInfo);
                      }
                      stringValue = doubleValue + "";
                  }else{
@@ -346,10 +346,16 @@ public class AzquoCellResolver {
                 String description = null;
                 double functionDoubleParameter = 0;
                 DataRegionHeading redundantHeading = null;
+                // this used to be dealt with at a lower level but since code in the calculation wants the option
+                // to force a function it's now up here, exactName assigned about 5 lines below then passed thtough
+                Name exactName = null;
                 for (DataRegionHeading heading : headingsForThisCell) {
                     if (heading.getFunction() != null) { // should NOT be a name function, that should have been caught before
-                        functionHeading = heading;
-                        function = functionHeading.getFunction();
+                        function = heading.getFunction();
+                        if (function == DataRegionHeading.FUNCTION.EXACT) {
+                            exactName = heading.getName();
+                        }
+
                         if (function == DataRegionHeading.FUNCTION.PERCENTILE || function == DataRegionHeading.FUNCTION.PERCENTILENZ) { // hacky, any way around that?
                             functionDoubleParameter = heading.getDoubleParameter();
                         }
@@ -357,7 +363,7 @@ public class AzquoCellResolver {
                         if (heading.getDescription()!=null){
                             description = heading.getDescription().replace("\"","").replace("`","");//USED ONLY IN LASTLOOKUP
                         }
-                        if (function== DataRegionHeading.FUNCTION.BESTMATCH
+                        if (function == DataRegionHeading.FUNCTION.BESTMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTVALUEMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH){
@@ -399,7 +405,7 @@ public class AzquoCellResolver {
                             }
                         }
                         doubleValue = ValueService.findValueForNames(connection, DataRegionHeadingService.namesFromDataRegionHeadings(headingsForThisCell),
-                                                                                DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, languages, functionHeading, nameComboValueCache, debugInfo);
+                                                                                DataRegionHeadingService.calcsFromDataRegionHeadings(headingsForThisCell),  locked, valuesHook, languages, function, exactName, nameComboValueCache, debugInfo);
                         if ((function == DataRegionHeading.FUNCTION.BESTMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTVALUEMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH)&& valueFunctionSet != null && description!=null) { // last lookup: we're going to override the double value just set

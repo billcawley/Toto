@@ -2,6 +2,7 @@ package com.azquo.memorydb.service;
 
 import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
+import com.azquo.memorydb.core.AzquoMemoryDB;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.Value;
 import com.azquo.spreadsheet.AzquoCellResolver;
@@ -34,7 +35,7 @@ public class ValueCalculationService {
     // fair few params, wonder if there's a way to avoid that?
     static double resolveCalc(AzquoMemoryDBConnection azquoMemoryDBConnection, String calcString, List<Name> formulaNames, List<Name> calcnames, List<String> calcs,
                               MutableBoolean locked, AzquoCellResolver.ValuesHook valuesHook, List<String> attributeNames
-            , DataRegionHeading functionHeading, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
+            , DataRegionHeading.FUNCTION function, Name exactName, Map<List<Name>, Set<Value>> nameComboValueCache, StringBuilder debugInfo) throws Exception {
         if (debugInfo != null) {
             debugInfo.append("\t");
             boolean first = true;
@@ -186,6 +187,8 @@ public class ValueCalculationService {
                                 changed = true;
                             }
                         }
+                        // important point - dependent on will force exact
+                        function = DataRegionHeading.FUNCTION.EXACT;
                     }
                     if (name.getAttribute(USELEVEL) != null) {// will only be used in context of lowest level (as in calc on lowest level then sum)
                         // what we're saying is check through the calc names at this lowest level and bump any up to the set specified by "USE LEVEL" if possible
@@ -223,7 +226,7 @@ public class ValueCalculationService {
                         }
                     }
                     //note - would there be recursion? Resolve order of formulae might be unreliable
-                    double value = ValueService.findValueForNames(azquoMemoryDBConnection, seekList, calcs, locked, valuesHook, attributeNames, functionHeading, nameComboValueCache, null);
+                    double value = ValueService.findValueForNames(azquoMemoryDBConnection, seekList, calcs, locked, valuesHook, attributeNames, function, exactName, nameComboValueCache, null);
                     if (debugInfo != null) {
                         debugInfo.append("\t").append(value).append("\t");
                     }
@@ -245,7 +248,7 @@ public class ValueCalculationService {
     private static AtomicInteger resolveValuesForNamesIncludeChildrenCount = new AtomicInteger(0);
 
     static double resolveValues(final List<Value> values
-            , AzquoCellResolver.ValuesHook valuesHook, DataRegionHeading functionHeading, MutableBoolean locked) {
+            , AzquoCellResolver.ValuesHook valuesHook, DataRegionHeading.FUNCTION function, MutableBoolean locked) {
         resolveValuesForNamesIncludeChildrenCount.incrementAndGet();
         //System.out.println("resolveValuesForNamesIncludeChildren");
         long start = System.nanoTime();
@@ -303,8 +306,6 @@ public class ValueCalculationService {
         if (values.size() > 1) {
             locked.isTrue = true;
         }
-        if (functionHeading!=null) {
-            DataRegionHeading.FUNCTION function = functionHeading.getFunction();
             if (function == DataRegionHeading.FUNCTION.COUNT) {
                 return values.size();
             }
@@ -331,7 +332,6 @@ public class ValueCalculationService {
                 }
                 return min;
             }
-        }
         return sumValue; // default to sum, no function
     }
 
