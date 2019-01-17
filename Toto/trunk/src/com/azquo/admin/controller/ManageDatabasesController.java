@@ -241,7 +241,7 @@ public class ManageDatabasesController {
                                 }
                             }
                             // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
-                            if (NumberUtils.isDigits(databaseIdForUpload)){
+                            if (NumberUtils.isDigits(databaseIdForUpload)) {
                                 Database byId = DatabaseDAO.findById(Integer.parseInt(databaseIdForUpload));
                                 if (byId != null) {
                                     LoginService.switchDatabase(loggedInUser, byId);
@@ -739,17 +739,24 @@ public class ManageDatabasesController {
                     toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings" + counter + "'); return false;\">Headings with file headings</a> : \n<br/><div id=\"fileHeadings" + counter + "\" style=\"display : none\">");
                 }
 
-                for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
+                Collection<List<String>> toShow;
+                if (uploadedFile.getFileHeadings() != null) {
+                    toShow = uploadedFile.getFileHeadings();
+                } else {
+                    toShow = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet();
+                }
+
+                for (List<String> fileHeading : toShow) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     for (String subHeading : fileHeading) {
-                        toReturn.append(subHeading.replaceAll("\n"," ")).append(" ");
+                        toReturn.append(subHeading.replaceAll("\n", " ")).append(" ");
                     }
                     TypedPair<String, String> stringStringTypedPair = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
-                    if (stringStringTypedPair != null){
+                    if (stringStringTypedPair != null) {
                         if (stringStringTypedPair.getSecond() != null) {
-                            toReturn.append("\t->\t").append(stringStringTypedPair.getSecond().replaceAll("\n"," "));
+                            toReturn.append("\t->\t").append(stringStringTypedPair.getSecond().replaceAll("\n", " "));
                         }
-                        toReturn.append("\t->\t").append(stringStringTypedPair.getFirst().replaceAll("\n"," ")).append("\n<br/>");
+                        toReturn.append("\t->\t").append(stringStringTypedPair.getFirst().replaceAll("\n", " ")).append("\n<br/>");
                     } else {
                         toReturn.append("\t->\t").append(" ** UNUSED ** \n<br/>");
                     }
