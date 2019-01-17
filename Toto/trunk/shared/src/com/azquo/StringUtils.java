@@ -150,9 +150,6 @@ Essentially prepares a statement for functions like interpretSetTerm and shuntin
 
         // now, we want to run validation on what's left really. One problem is that operators might not have spaces
         // ok this is hacky, I don't really care for the moment
-        if (statement.contains(" and ")){
-            int j=1;
-        }
         statement = statement.replace("*", " * ").replace("  ", " ");
         statement = statement.replace("+", " + ").replace("  ", " ");
         statement = statement.replace("-", " - ").replace("  ", " ");
