@@ -40,7 +40,7 @@ public class DataRegionHeading {
     ALLEXACT            Value function      as above for all names in cell
     AUDITDATE           Audit function      the provenance date of the latest value in the cell
     AUDITCHANGEDBY      Audit function      the name of the person who last changed the value
-    BESTMATCH           Value function      the nearest value of the cll to the value given (e.g the latest date of change BESTMATCH(Change dates, 2018-01-01) for i
+    BESTMATCH           Value function      the nearest value of the cell to the value given (e.g the latest date of change BESTMATCH(Change dates, 2018-01-01) for i
      */
     enum SUFFIX {UNLOCKED, LOCKED, SPLIT}
     /*

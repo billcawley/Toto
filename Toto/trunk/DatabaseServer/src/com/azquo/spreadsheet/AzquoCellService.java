@@ -320,7 +320,7 @@ class AzquoCellService {
                 }
             }
         }
-        Integer sortOnRowIndex = findPosition(regionOptions.sortRow); // not used much I don't think but we'll allow a simple numeric left/right sort, possibly on totals
+        int sortOnRowIndex = findPosition(regionOptions.sortRow); // not used much I don't think but we'll allow a simple numeric left/right sort, possibly on totals
         // sorting on row or col totals only happens if a sort row or col hasn't been passed and there are more rows or cols than max rows or cols
         int totalRows = sourceData.size();
         int totalCols = sourceData.get(0).size();

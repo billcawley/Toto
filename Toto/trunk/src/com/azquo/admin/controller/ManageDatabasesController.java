@@ -738,17 +738,23 @@ public class ManageDatabasesController {
                 } else {
                     toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings" + counter + "'); return false;\">Headings with file headings</a> : \n<br/><div id=\"fileHeadings" + counter + "\" style=\"display : none\">");
                 }
-                for (List<String> key : uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().keySet()) {
+
+                for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-                    for (String subHeading : key) {
+                    for (String subHeading : fileHeading) {
                         toReturn.append(subHeading.replaceAll("\n"," ")).append(" ");
                     }
-                    TypedPair<String, String> stringStringTypedPair = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(key);
-                    if (stringStringTypedPair.getSecond() != null) {
-                        toReturn.append("\t->\t").append(stringStringTypedPair.getSecond().replaceAll("\n"," "));
+                    TypedPair<String, String> stringStringTypedPair = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
+                    if (stringStringTypedPair != null){
+                        if (stringStringTypedPair.getSecond() != null) {
+                            toReturn.append("\t->\t").append(stringStringTypedPair.getSecond().replaceAll("\n"," "));
+                        }
+                        toReturn.append("\t->\t").append(stringStringTypedPair.getFirst().replaceAll("\n"," ")).append("\n<br/>");
+                    } else {
+                        toReturn.append("\t->\t").append(" ** UNUSED ** \n<br/>");
                     }
-                    toReturn.append("\t->\t").append(stringStringTypedPair.getFirst().replaceAll("\n"," ")).append("\n<br/>");
                 }
+
                 if (!noClickableHeadings) {
                     toReturn.append("</div>");
                 }

@@ -64,7 +64,9 @@ Created by IntelliJ IDEA.
 
     function setDropdownForAll(dropDownName, index) {
         <c:forEach items="${pendinguploads}" var="pendingupload">
+        <c:if test="${pendingupload.status=='Waiting' || pendingupload.status=='Rejected'}">
         document.getElementById(dropDownName + '${pendingupload.id}').selectedIndex = index;
+        </c:if>
         </c:forEach>
     }
 

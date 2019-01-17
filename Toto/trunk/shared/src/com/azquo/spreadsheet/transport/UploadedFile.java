@@ -64,6 +64,10 @@ public class UploadedFile implements Serializable {
     private String fileEncoding;
     // heading definitions. At its most simple it would be a list of strings but it can be a lookup based on file headings and there could be multiple headingss so
     private List<String> simpleHeadings;
+
+    // not required for importing to work but a copy of the headings we found on the file can dramatically improve feedback to the user
+    private List<List<String>> fileHeadings;
+
     /* more complex - list of strings for lookup as sometimes the headings are double decker or more so to speak
      OK, so there are two strings in the values. The first is the straight value, the heading as it will be used by Azquo, the second is optional, the interim lookup
      where the import sheet had modes. E.g. Allrisks mode defined Address1 as the file heading linked to Risk Address 1 on the main lookup sheet which in turn had the
@@ -114,6 +118,7 @@ public class UploadedFile implements Serializable {
         postProcessingResult = null;
         fileEncoding = null;
         simpleHeadings = null;
+        fileHeadings = null;
         headingsByFileHeadingsWithInterimLookup = null;
         topHeadings = null;
         languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
@@ -291,6 +296,14 @@ public class UploadedFile implements Serializable {
 
     public void setSimpleHeadings(List<String> simpleHeadings) {
         this.simpleHeadings = simpleHeadings;
+    }
+
+    public List<List<String>> getFileHeadings() {
+        return fileHeadings;
+    }
+
+    public void setFileHeadings(List<List<String>> fileHeadings) {
+        this.fileHeadings = fileHeadings;
     }
 
     public Map<List<String>, TypedPair<String, String>> getHeadingsByFileHeadingsWithInterimLookup() {

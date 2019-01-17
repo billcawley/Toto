@@ -1,4 +1,22 @@
-09-09-19
+15-01-19
+
+Converts percentages in 'DEFAULT' to numbers
+
+Will look for worksheets that share a first name with the imported file as 'Import Model'
+
+Will accept that any workbook named '... import templates' is a set of import templates
+
+Bug fixing for "applies to" calc stuff, being used again at Ed Broking
+
+If there are no row headings does not check for changed cells
+
+Includes 'fillSpecialRegions' - these are regions without row headings that will be treated as imports. Currently the save flags are now working on these regions
+
+Pending upload UI work
+
+with routine to send mail on saving the sheet
+
+09-01-19
 
 'len()' function in imports
 

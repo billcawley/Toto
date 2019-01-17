@@ -228,6 +228,9 @@ public class DSImportService {
                             throw new Exception("Unable to find expected headings on the file");
                         }
                     }
+                    // for feedback to the user
+                    uploadedFile.setFileHeadings(headingsFromTheFile);
+
                     // ok now we get to the actual lookup
                     // copy it as we're going to remove things - need to leave the original intact as it's part of feedback to the user
                     Map<List<String>, TypedPair<String, String>> headingsByLookupCopy = new HashMap<>(uploadedFile.getHeadingsByFileHeadingsWithInterimLookup());
