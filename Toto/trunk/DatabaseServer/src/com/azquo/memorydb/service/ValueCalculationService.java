@@ -188,7 +188,7 @@ public class ValueCalculationService {
                             }
                         }
                         // important point - dependent on will force exact
-                        function = DataRegionHeading.FUNCTION.EXACT;
+                        function = DataRegionHeading.FUNCTION.ALLEXACT;
                     }
                     if (name.getAttribute(USELEVEL) != null) {// will only be used in context of lowest level (as in calc on lowest level then sum)
                         // what we're saying is check through the calc names at this lowest level and bump any up to the set specified by "USE LEVEL" if possible
