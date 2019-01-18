@@ -123,7 +123,7 @@ public class BackupService {
             if (db != null) {
                 // hack in a security check, we know the user is an Admin or Developer but if a developer it needs to be their DB
                 if (loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getId() != db.getUserId()) {
-                    throw new Exception("A developer cannot restore to a database that is not thiers");
+                    throw new Exception("A developer cannot restore to a database that is not theirs");
                 }
                 // here's a question - given the hack to move the database id should it just empty instead of delete and delete reports as necessary? Not a biggy but todo
                 if (justEmpty) {

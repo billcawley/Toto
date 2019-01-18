@@ -1,3 +1,19 @@
+16-01-19-2
+
+!bug fix on improved upload feedback
+
+16-01-19
+
+Includes 'fillSpecialRegions' - these are regions without row headings that will be treated as imports. Currently the save flags are now working on these regions
+
+with routine to send mail on saving the sheet
+
+Bug fix on uploaded files list, better feedback on headings used in imported files
+
+Dependant on forces all exact - fix for the contract split problem
+
+Queries executed at book level
+
 15-01-19
 
 Converts percentages in 'DEFAULT' to numbers

@@ -40,18 +40,19 @@ public class ReportService {
 
     static void checkForPermissionsInSheet(LoggedInUser loggedInUser, Sheet sheet) {
         //have a look for "az_AllowableReports", it's read only, getting it here seems as reasonable as anything
-        Map<String, TypedPair<OnlineReport, Database>> permissionsFromReports = loggedInUser.getPermissionsFromReport() != null ? loggedInUser.getPermissionsFromReport() : new ConcurrentHashMap<>(); // cumulative permissions. Might as well make concurrent
         // a repeat call to this function - could be moved outside but I'm not too bothered about it at the moment
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         //current report is always allowable...
-        SName sReportName= sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
-        if (sReportName == null){
+        SName sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
+        if (sReportName == null) {
             sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZIMPORTNAME);
         }
         String thisReportName = BookUtils.getSnameCell(sReportName).getStringValue();
         // todo - null pointer when no database for user? Force db to be set? Or allow it not to?
-        OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(),thisReportName);
-        permissionsFromReports.put(thisReportName.toLowerCase(),new TypedPair<>(or, loggedInUser.getDatabase()));
+        OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), thisReportName);
+        System.out.println("adding a report to permissions : " + or);
+        Map<String, TypedPair<OnlineReport, Database>> permissionsFromReports = loggedInUser.getPermissionsFromReport() != null ? loggedInUser.getPermissionsFromReport() : new ConcurrentHashMap<>(); // cumulative permissions. Might as well make concurrent
+        permissionsFromReports.put(thisReportName.toLowerCase(), new TypedPair<>(or, loggedInUser.getDatabase()));
         for (SName sName : namesForSheet) {
             // run through every cell in any names region unlocking to I can later lock. Setting locking on a large selection seems to zap formatting, do it cell by cell
             if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
@@ -109,12 +110,12 @@ public class ReportService {
             if (name != null && name.getName() != null && name.getName().endsWith("Query")) {
                 Sheet sheet = book.getSheet(name.getRefersToSheetName());
                 //adjusted by WFC to allow a whole range to be the query.
-                resolveQuery(loggedInUser,sheet,name.getRefersToCellRegion(), null);
-              }
+                resolveQuery(loggedInUser, sheet, name.getRefersToCellRegion(), null);
+            }
         }
     }
 
-    static void resolveQuery(LoggedInUser loggedInUser,Sheet sheet, CellRegion cellRegion, List<List<String>>contextSource) {
+    static void resolveQuery(LoggedInUser loggedInUser, Sheet sheet, CellRegion cellRegion, List<List<String>> contextSource) {
         for (int row = 0; row < cellRegion.getRowCount(); row++) {
             for (int col = 0; col < cellRegion.getColumnCount(); col++) {
                 SCell queryCell = sheet.getInternalSheet().getCell(cellRegion.getRow() + row, cellRegion.getColumn() + col);
@@ -128,34 +129,34 @@ public class ReportService {
                     if (!resolveFilterQuery(loggedInUser, query, contextSource)) {
                         queryResult = CommonReportUtils.resolveQuery(loggedInUser, queryCell.getStringValue());
                     }
-                    if (queryResult!=null && queryResult.toLowerCase().startsWith("error")) {
+                    if (queryResult != null && queryResult.toLowerCase().startsWith("error")) {
                         BookUtils.setValue(queryCell, queryCell.getStringValue() + " - " + queryResult);
                         Ranges.range(sheet, queryCell.getRowIndex(), queryCell.getColumnIndex()).notifyChange(); //
                     }
-                 }
+                }
             }
         }
     }
 
-    private static boolean resolveFilterQuery(LoggedInUser loggedInUser, String query, List<List<String>>contextSource){
+    private static boolean resolveFilterQuery(LoggedInUser loggedInUser, String query, List<List<String>> contextSource) {
         String filterSet = null;
         int wherePos = query.toLowerCase().indexOf(" where (");
         if (wherePos < 0) return false;
-        filterSet = query.substring(0,wherePos).trim();
-       query = query.substring(wherePos + 7).trim();
-       if (query.startsWith(".")) {// attributes query
+        filterSet = query.substring(0, wherePos).trim();
+        query = query.substring(wherePos + 7).trim();
+        if (query.startsWith(".")) {// attributes query
             return false;
         }
 
         int bracketCount = 1;
         int pos = 1;
-        while (pos < query.length()){
-            if (query.charAt(pos)=='(') bracketCount++;
-            if (query.charAt(pos)==')') bracketCount--;
-            if (bracketCount==0){
-                String calc = query.substring(0,pos + 1);
-                String remainder = query.substring(pos+1).trim();
-                if (remainder.toLowerCase().startsWith("as ")){
+        while (pos < query.length()) {
+            if (query.charAt(pos) == '(') bracketCount++;
+            if (query.charAt(pos) == ')') bracketCount--;
+            if (bracketCount == 0) {
+                String calc = query.substring(0, pos + 1);
+                String remainder = query.substring(pos + 1).trim();
+                if (remainder.toLowerCase().startsWith("as ")) {
                     String target = remainder.substring(3);
                     List<List<String>> rowHeadingSource = new ArrayList<>();
                     List<List<String>> colHeadingSource = new ArrayList<>();
@@ -166,10 +167,10 @@ public class ReportService {
                     colHeadingsLine.add(calc);
                     colHeadingSource.add(colHeadingsLine);
 
-                    try{
-                        UserRegionOptions userRegionOptions = new UserRegionOptions(0,loggedInUser.getUser().getId(),loggedInUser.getOnlineReport().getId(),"---","---");
-                        SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser,"---",0,rowHeadingSource, colHeadingSource, contextSource,userRegionOptions, true,target);
-                    }catch (Exception e){
+                    try {
+                        UserRegionOptions userRegionOptions = new UserRegionOptions(0, loggedInUser.getUser().getId(), loggedInUser.getOnlineReport().getId(), "---", "---");
+                        SpreadsheetService.getCellsAndHeadingsForDisplay(loggedInUser, "---", 0, rowHeadingSource, colHeadingSource, contextSource, userRegionOptions, true, target);
+                    } catch (Exception e) {
                         return false;
                     }
                     break;
@@ -183,8 +184,7 @@ public class ReportService {
     }
 
 
-
-    private static final DateTimeFormatter df = DateTimeFormatter.ofPattern ("yyyy-MM-dd");
+    private static final DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     // make ZK resolve formulae and the, assuming not fast save check for formulae changing data. Finally snap the charts.
     static boolean checkDataChangeAndSnapCharts(LoggedInUser loggedInUser, int reportId, Book book, Sheet sheet, boolean skipSaveCheck, boolean useSavedValuesOnFormulae) {
@@ -200,7 +200,7 @@ public class ReportService {
                 if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) {
                     String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
                     CellRegion displayDataRegion = BookUtils.getCellRegionForSheetAndName(sheet, ReportRenderer.AZDATAREGION + region);
-                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId,sheet.getSheetName(), region);
+                    final CellsAndHeadingsForDisplay sentCells = loggedInUser.getSentCells(reportId, sheet.getSheetName(), region);
                     if (displayDataRegion != null && sentCells != null) {
                         int startRow = displayDataRegion.getRow();
                         int endRow = displayDataRegion.getLastRow();
@@ -229,7 +229,7 @@ public class ReportService {
                                                 }
                                             }
                                             if (sCell.getCellStyle().getDataFormat().toLowerCase().contains("m") && cellForDisplay.getStringValue().length() == 0) {
-                                                if (sCell.getNumberValue() > 0){
+                                                if (sCell.getNumberValue() > 0) {
                                                     cellForDisplay.setNewStringValue(df.format(DateUtils.getLocalDateTimeFromDate(sCell.getDateValue())));//set a string value as our date for saving purposes
                                                 }
                                             }
@@ -279,12 +279,13 @@ public class ReportService {
         return showSave;
     }
 
-    public static String save(Spreadsheet ss, LoggedInUser loggedInUser) throws Exception{
+    public static String save(Spreadsheet ss, LoggedInUser loggedInUser) throws Exception {
         final Book book = ss.getBook();
         return save(book, loggedInUser);
     }
+
     // factored off from the command controller
-    public static String save(Book book, LoggedInUser loggedInUser) throws Exception{
+    public static String save(Book book, LoggedInUser loggedInUser) throws Exception {
         // todo - provenance?
         long time = System.currentTimeMillis();
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
@@ -307,21 +308,21 @@ public class ReportService {
                     noSave = userRegionOptions.getNoSave();
                 }
                 if (!noSave) {
-                    ReportExecutor.fillSpecialRegions(loggedInUser,book,reportId);
+                    ReportExecutor.fillSpecialRegions(loggedInUser, book, reportId);
                     extractEmailInfo(book);
                     final String result = SpreadsheetService.saveData(loggedInUser, reportId, onlineReport != null ? onlineReport.getReportName() : "", name.getRefersToSheetName(), region.toLowerCase());
                     if (!result.startsWith("true")) {
                         Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
                         error = result;
-                    }else{
+                    } else {
                         String count = result.substring(5);
-                         if (result.contains(REDUNDANT)){
-                             redundant += count.substring(count.indexOf(REDUNDANT));
-                             count = count.substring(0,count.indexOf(REDUNDANT)).trim();
-                         }
-                        try{
+                        if (result.contains(REDUNDANT)) {
+                            redundant += count.substring(count.indexOf(REDUNDANT));
+                            count = count.substring(0, count.indexOf(REDUNDANT)).trim();
+                        }
+                        try {
                             savedItems += Integer.parseInt(count.trim());
-                        } catch(Exception e){
+                        } catch (Exception e) {
 
                         }
                     }
@@ -340,15 +341,15 @@ public class ReportService {
                     for (int row = 0; row < repeatRows; row++) {
                         for (int col = 0; col < repeatCols; col++) {
                             //region + "-" + repeatRow + "-" + repeatColumn
-                            if (loggedInUser.getSentCells(reportId, repeatRegion.getRefersToSheetName(),region.toLowerCase() + "-" + row + "-" + col) != null) { // the last ones on the repeat scope might be blank
+                            if (loggedInUser.getSentCells(reportId, repeatRegion.getRefersToSheetName(), region.toLowerCase() + "-" + row + "-" + col) != null) { // the last ones on the repeat scope might be blank
                                 final String result = SpreadsheetService.saveData(loggedInUser, reportId, onlineReport != null ? onlineReport.getReportName() : "", repeatRegion.getRefersToSheetName(), region.toLowerCase() + "-" + row + "-" + col);
                                 if (!result.startsWith("true")) {
                                     Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
                                     saveOk = false;
-                                }else{
-                                    try{
+                                } else {
+                                    try {
                                         savedItems += Integer.parseInt(result.substring(5));
-                                    } catch(Exception e){
+                                    } catch (Exception e) {
 
                                     }
                                 }
@@ -368,7 +369,7 @@ public class ReportService {
         System.out.println("Save time ms : " + (System.currentTimeMillis() - time));
         if (error == null) {
             error = "Success: " + savedItems + " values saved";
-            if (redundant.length() > 0){
+            if (redundant.length() > 0) {
                 error += " - " + redundant;
             }
 
@@ -391,8 +392,8 @@ public class ReportService {
                 SName emailTextName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILTEXT + region);
                 Sheet sheet = book.getSheet(sheetName);
                 String emailAddress = BookUtils.getSnameCell(name).getStringValue();
-                if (emailAddress.length() > 0 && emailSubjectName != null && emailTextName != null ) {
-                     AzquoMailer.sendEMail(emailAddress, null, BookUtils.getSnameCell(emailSubjectName).getStringValue(), BookUtils.getSnameCell(emailTextName).getStringValue(), null, null);
+                if (emailAddress.length() > 0 && emailSubjectName != null && emailTextName != null) {
+                    AzquoMailer.sendEMail(emailAddress, null, BookUtils.getSnameCell(emailSubjectName).getStringValue(), BookUtils.getSnameCell(emailTextName).getStringValue(), null, null);
                 }
             }
         }

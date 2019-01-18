@@ -113,7 +113,10 @@ public class ReportRenderer {
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
 
             // options and validation now sorted per sheet
-            ReportService.checkForPermissionsInSheet(loggedInUser, sheet);
+            // ignore permissions for developers and admins. A notable todo : zap permissions when reports/databses are edited or deleted
+            if (!loggedInUser.getUser().isDeveloper() && !loggedInUser.getUser().isAdministrator()){
+                ReportService.checkForPermissionsInSheet(loggedInUser, sheet);
+            }
             /* with the protect sheet command below commented this is currently pointless. I think ZK had some misbehavior while locked so leave this for the moment.
             int maxRow = sheet.getLastRow();
             int maxCol = 0;

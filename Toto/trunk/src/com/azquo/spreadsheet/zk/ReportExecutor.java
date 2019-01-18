@@ -155,9 +155,8 @@ public class ReportExecutor {
                         onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
                     }
                     if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
-
                         loopsLog.append("Run : ").append(onlineReport.getReportName());
-                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), count.incrementAndGet() + " " + loggedInUser.getUser().getName() + " Running  " + onlineReport.getReportName() + " ,");
+                        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), count.incrementAndGet() + " " + loggedInUser.getUser().getName() + " Running " + onlineReport.getReportName() + " ,");
                         String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk();
                         final Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
                         book.getInternalBook().setAttribute(OnlineController.BOOK_PATH, bookPath);
@@ -166,7 +165,7 @@ public class ReportExecutor {
                         StringBuilder errorLog = new StringBuilder();
                         final boolean save = ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
                         if (errorLog.length() > 0){
-                            loopsLog.append(" ERROR : " + errorLog.toString());
+                            loopsLog.append(" ERROR : ").append(errorLog.toString());
                             return null;
                             // todo - how to stop all the way to the top? Can set count as -1 but this is hacky
                         }
