@@ -29,6 +29,7 @@ public class ImportResultsController {
     public String handleRequest(ModelMap modelMap, HttpServletRequest request
             , @RequestParam(value = "id", required = false) String id
             , @RequestParam(value = "urid", required = false) String urid
+            , @RequestParam(value = "count", required = false) String count
     )
     {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
@@ -41,7 +42,12 @@ public class ImportResultsController {
                 }
                 modelMap.addAttribute("memoryReport", result);
 
-            } else {
+            } else if (count != null && count.length() > 0){
+                String sessionCache = (String) request.getSession().getAttribute("resultCache" + count);
+                if (sessionCache != null){
+                    modelMap.addAttribute("memoryReport", sessionCache);
+                }
+            }else {
                 PendingUpload pendingUpload = PendingUploadDAO.findById(Integer.parseInt(id));
                 if (pendingUpload.getBusinessId() == loggedInUser.getUser().getBusinessId()){ // ok we're allowed to see it
                     result = pendingUpload.getImportResult();

@@ -632,7 +632,12 @@ public final class ImportService {
                 final Script script = shell.parse(file);
                 System.out.println("loaded groovy " + file.getPath());
                 // overly wordy way to override the path
-                uploadedFile.setPath((String) script.invokeMethod("fileProcess", groovyParams));
+                try{
+                    uploadedFile.setPath((String) script.invokeMethod("fileProcess", groovyParams));
+                } catch (Exception e){
+                    uploadedFile.setError("Preprocessor error in " + uploadedFile.getPreProcessor() + " : " + e.getMessage());
+                    return uploadedFile;
+                }
                 if (!oldImportTemplate.equalsIgnoreCase(uploadedFile.getParameter(IMPORTTEMPLATE)) || (oldImportVersion != null && !oldImportVersion.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION)))) { // the template changed! Call this function again to load the new template
                     // there is a danger of a circular reference - protect against that?
                     // must clear template based parameters, new object

@@ -1,3 +1,7 @@
+18-01-19-2
+
+! Completed changes to make the permissions held against the session more robust
+
 18-01-19
 
 ! Bug fix for rebuilding dev

@@ -234,7 +234,7 @@ public class ManageDatabasesController {
                                 String param = params.nextElement();
                                 // todo - remove string literals
                                 if (param.startsWith("pendingupload-") && param.endsWith("-" + pendingUpload.getId())) {
-                                    System.out.println("param : " + param.substring("pendingupload-".length(), param.length() - ("-" + pendingUpload.getId()).length()) + " value : " + request.getParameter(param));
+//                                    System.out.println("param : " + param.substring("pendingupload-".length(), param.length() - ("-" + pendingUpload.getId()).length()) + " value : " + request.getParameter(param));
                                     if (!"N/A".equals(request.getParameter(param))) {
                                         paramsFromUser.put(param.substring("pendingupload-".length(), param.length() - ("-" + pendingUpload.getId()).length()).toLowerCase().trim(), request.getParameter(param)); // lower case important, it's the convention when grabbing from the file name
                                     }
@@ -292,11 +292,6 @@ public class ManageDatabasesController {
                                     }
                                 }
                                 if (!modified || errorInResult) {
-                                    if (errorInResult) {
-                                        importResultPrefix.append("<span style=\"background-color: #FF8888; color: #000000\">" + pendingUpload.getFileName() + "  marked as rejected due to an error. " + (modified ? "Data may have modified" : "") + "</span><br/>");
-                                    } else if (!modified) {
-                                        importResultPrefix.append("<span style=\"background-color: #FF8888; color: #000000\">" + pendingUpload.getFileName() + " marked as rejected as no data was modified</span><br/>");
-                                    }
                                     pendingUpload.setStatus(PendingUpload.REJECTED);
                                 } else {
                                     pendingUpload.setStatus(PendingUpload.PROVISIONALLY_LOADED);
@@ -342,11 +337,18 @@ public class ManageDatabasesController {
             @SuppressWarnings("unchecked")
             List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
             if (importResult != null) {
-                if (request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX) != null) {
+                if (request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX) != null) { // pending, set the pending summary
+                    int count = 0;
+                    for (UploadedFile uf : importResult){
+                        request.getSession().setAttribute("resultCache" + count, formatUploadedFiles(Collections.singletonList(uf), true));
+                        count++;
+                    }
+                    error.append(formatUploadedFilesForPendingUploads(importResult));
                     error.append(request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX)).append("<br/>");
                     request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULTPREFIX);
+                } else {
+                    error.append(formatUploadedFiles(importResult, false));
                 }
-                error.append(formatUploadedFiles(importResult, false));
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
             }
             try {
@@ -667,6 +669,52 @@ public class ManageDatabasesController {
         model.addAttribute("bannerColor", bannerColor);
         model.addAttribute("logo", logo);
         return "importrunning";
+    }
+
+    // todo - get the "view" (HTML) out of here . . .
+    // A table which is more readable
+    public static String formatUploadedFilesForPendingUploads(List<UploadedFile> uploadedFiles) {
+        StringBuilder toReturn = new StringBuilder();
+        toReturn.append("<table><thead>");
+        toReturn.append("<tr><td>File Name</td><td>Initial Import Result</td><td>Validation Result</td><td>Details</td></tr></thead>");
+        int count = 0;
+        for (UploadedFile uploadedFile : uploadedFiles) {
+            toReturn.append("<tr>");
+            toReturn.append("<td>");
+            for (int index = 0; index < uploadedFile.getFileNames().size(); index++) {
+                if (index > 0){
+                    toReturn.append(" -> ");
+                }
+                toReturn.append(uploadedFile.getFileNames().get(index));
+            }
+            toReturn.append("</td>");
+            toReturn.append("<td>");
+            if (uploadedFile.getError() != null) {
+                toReturn.append("<span style=\"background-color: #FF8888; color: #000000\">Error : ").append(uploadedFile.getError()).append("</span>");
+            } else if (!uploadedFile.isDataModified()) {
+                toReturn.append("<span style=\"background-color: #FF8888; color: #000000\">No data modified.</span>");
+            } else if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
+                toReturn.append("Line Errors : ").append(uploadedFile.getLinesRejected().size());
+            } else {
+                toReturn.append("<span style=\"background-color: #88FF88; color: #000000\">Success.</span>");
+            }
+            toReturn.append("</td>");
+            toReturn.append("<td>");
+            if (uploadedFile.getPostProcessingResult() != null && !uploadedFile.getPostProcessingResult().isEmpty()){
+                toReturn.append(uploadedFile.getPostProcessingResult());
+            } else {
+                toReturn.append("N/A");
+            }
+            toReturn.append("</td>");
+            toReturn.append("<td>");
+            toReturn.append("<a href=\"/api/ImportResults?count=" + count + "\" target=\"new\" class=\"button inspect small\" data-title=\"Import Results\" title=\"View Import Results\">");
+            toReturn.append("<div align=\"center\">View</div></a>");
+            toReturn.append("</td>");
+            toReturn.append("</tr>");
+            count++;
+        }
+        toReturn.append("</table>");
+        return toReturn.toString();
     }
 
     // as it says make something for users to read from a list of uploaded files.
