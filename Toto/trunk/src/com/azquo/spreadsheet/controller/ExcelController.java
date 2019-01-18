@@ -348,9 +348,9 @@ public class ExcelController {
                                 Database db = DatabaseDAO.findForNameAndBusinessId(database, loggedInUser.getUser().getBusinessId());
                                 onlineReport = OnlineReportDAO.findForDatabaseIdAndName(db.getId(), reportName);
                                 boolean allowed = false;
-                                for (String key : loggedInUser.getPermissionsFromReport().keySet()) {
-                                    TypedPair<OnlineReport, Database> dbreport = loggedInUser.getPermissionsFromReport().get(key);
-                                    if (dbreport.getFirst().getId() == onlineReport.getId() && dbreport.getSecond().getId() == db.getId()) {
+                                for (String key : loggedInUser.getReportIdDatabaseIdPermissions().keySet()) {
+                                    TypedPair<OnlineReport, Database> permission = loggedInUser.getPermission(key);
+                                    if (permission.getFirst().getId() == onlineReport.getId() && permission.getSecond().getId() == db.getId()) {
                                         allowed = true;
                                         onlineReport.setDatabase(db.getName());
                                         break;
@@ -426,9 +426,8 @@ public class ExcelController {
                     }
 
                 } else {
-                    Map<String, TypedPair<OnlineReport, Database>> permitted = loggedInUser.getPermissionsFromReport();
-                    for (String st : permitted.keySet()) {
-                        TypedPair<OnlineReport, Database> tp = permitted.get(st);
+                    for (String st : loggedInUser.getReportIdDatabaseIdPermissions().keySet()) {
+                        TypedPair<OnlineReport, Database> tp = loggedInUser.getPermission(st);
                         databaseReports.add(new DatabaseReport(st, tp.getFirst().getAuthor(), tp.getFirst().getUntaggedReportName(), tp.getSecond().getName()));
                     }
                 }

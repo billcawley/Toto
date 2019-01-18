@@ -51,8 +51,7 @@ public class ReportService {
         // todo - null pointer when no database for user? Force db to be set? Or allow it not to?
         OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), thisReportName);
         System.out.println("adding a report to permissions : " + or);
-        Map<String, TypedPair<OnlineReport, Database>> permissionsFromReports = loggedInUser.getPermissionsFromReport() != null ? loggedInUser.getPermissionsFromReport() : new ConcurrentHashMap<>(); // cumulative permissions. Might as well make concurrent
-        permissionsFromReports.put(thisReportName.toLowerCase(), new TypedPair<>(or, loggedInUser.getDatabase()));
+        loggedInUser.setReportDatabasePermission(null, or, loggedInUser.getDatabase());
         for (SName sName : namesForSheet) {
             // run through every cell in any names region unlocking to I can later lock. Setting locking on a large selection seems to zap formatting, do it cell by cell
             if (sName.getName().equalsIgnoreCase(ALLOWABLE_REPORTS)) {
@@ -70,7 +69,7 @@ public class ReportService {
                                 database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
                             }
                             if (report != null && !reportName.equals(thisReportName)) {
-                                permissionsFromReports.put(name.toLowerCase(), new TypedPair<>(report, database));
+                                loggedInUser.setReportDatabasePermission(name.toLowerCase(), report, database);
                             }
                         }
                     }
@@ -85,7 +84,7 @@ public class ReportService {
                                 database = DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId());
                             }
                             if (report != null) {
-                                permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, database));
+                                loggedInUser.setReportDatabasePermission(null, report, database);
                             }
                         }
                     }
@@ -95,14 +94,13 @@ public class ReportService {
                             final String reportName = sheet.getInternalSheet().getCell(row, allowable.getColumn()).getStringValue();
                             final OnlineReport report = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                             if (report != null) {
-                                permissionsFromReports.put(report.getReportName().toLowerCase(), new TypedPair<>(report, DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId())));
+                                loggedInUser.setReportDatabasePermission(null, report, DatabaseDAO.findById(loggedInUser.getUser().getDatabaseId()));
                             }
                         }
                     }
                 }
             }
         }
-        loggedInUser.setPermissionsFromReport(permissionsFromReports); // re set it in case it was null above
     }
 
     static void resolveQueries(Book book, LoggedInUser loggedInUser) {

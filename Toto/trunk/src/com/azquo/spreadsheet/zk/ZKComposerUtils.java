@@ -66,10 +66,8 @@ class ZKComposerUtils {
                 if (or == null) {
                     or = OnlineReportDAO.findForDatabaseIdAndName(0, reportName);
                 }
-            } else if (loggedInUser.getPermissionsFromReport() != null) {
-                if (loggedInUser.getPermissionsFromReport().get(reportName.toLowerCase()) != null) {
-                    permissionId = reportName;
-                }
+            } else if (loggedInUser.getPermission(reportName) != null) {
+                permissionId = reportName;
             }
         } else {
             reportName = "unspecified";

@@ -1,12 +1,16 @@
+18-01-19
+
+! Bug fix for rebuilding dev
+
 16-01-19-2
 
-!bug fix on improved upload feedback
+! Bug fix on improved upload feedback
 
 16-01-19
 
 Includes 'fillSpecialRegions' - these are regions without row headings that will be treated as imports. Currently the save flags are now working on these regions
 
-with routine to send mail on saving the sheet
+With routine to send mail on saving the sheet
 
 Bug fix on uploaded files list, better feedback on headings used in imported files
 
@@ -30,15 +34,15 @@ Includes 'fillSpecialRegions' - these are regions without row headings that will
 
 Pending upload UI work
 
-with routine to send mail on saving the sheet
+With routine to send mail on saving the sheet
 
 09-01-19
 
 'len()' function in imports
 
-changed dateformats from dd-MM to d-m throughout
+Changed dateformats from dd-MM to d-m throughout
 
-checks the date format on composition cells
+Checks the date format on composition cells
 
 Copies clauses from context headings to next heading
 

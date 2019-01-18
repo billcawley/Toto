@@ -2,8 +2,10 @@ package com.azquo.spreadsheet;
 
 import com.azquo.TypedPair;
 import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.database.DatabaseServer;
 import com.azquo.admin.onlinereport.OnlineReport;
+import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.User;
 import com.azquo.dataimport.ImportService;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -56,7 +58,9 @@ public class LoggedInUser implements Serializable {
 
     private final String businessDirectory;
 
-    private Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport; // hold them here after they're set by a "home page" report for linking
+    // now uses ids given the problems of leaving full objects in the session (going out of sync with the database)
+    // report, database, generally set from a home user menu
+    private Map<String, TypedPair<Integer, Integer>> reportIdDatabaseIdPermissions; // hold them here after they're set by a "home page" report for linking
 
     private static final String defaultRegion = "default-region";
     private static final String defaultSheet = "default-sheet";
@@ -94,6 +98,7 @@ public class LoggedInUser implements Serializable {
                 e.printStackTrace(); // fine to just dump the stack
             }
         }
+        reportIdDatabaseIdPermissions = new ConcurrentHashMap<>();
     }
 
     public JsonChildren.Node getFromJsTreeLookupMap(int jsTreeNodeId) {
@@ -200,12 +205,27 @@ public class LoggedInUser implements Serializable {
         return businessDirectory;
     }
 
-    public Map<String, TypedPair<OnlineReport, Database>> getPermissionsFromReport() {
-        return permissionsFromReport;
+    // deliberately look up the permissions each time - we want to be up to date with master_db
+    public TypedPair<OnlineReport, Database> getPermission(String reportName){
+        TypedPair<Integer, Integer> idPair = reportIdDatabaseIdPermissions.get(reportName.toLowerCase());
+        if (idPair != null){
+            Database byId = DatabaseDAO.findById(idPair.getSecond());
+            OnlineReport onlineReport = OnlineReportDAO.findById(idPair.getFirst());
+            if (byId != null && onlineReport != null){
+                new TypedPair<>(onlineReport,byId);
+            } else { // zap reference to records which don't exist!
+                reportIdDatabaseIdPermissions.remove(reportName.toLowerCase());
+            }
+        }
+        return null;
     }
 
-    public void setPermissionsFromReport(Map<String, TypedPair<OnlineReport, Database>> permissionsFromReport) {
-        this.permissionsFromReport = permissionsFromReport;
+    public void setReportDatabasePermission(String key, OnlineReport onlineReport, Database database){
+        reportIdDatabaseIdPermissions.put(key != null ? key.toLowerCase() : onlineReport.getReportName().toLowerCase(), new TypedPair<>(onlineReport.getId(), database.getId()));
+    }
+
+    public Map<String, TypedPair<Integer, Integer>> getReportIdDatabaseIdPermissions() {
+        return reportIdDatabaseIdPermissions;
     }
 
     // just pop it open and closed, should be a little cleaner

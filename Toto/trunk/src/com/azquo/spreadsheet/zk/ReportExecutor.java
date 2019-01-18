@@ -145,11 +145,12 @@ public class ReportExecutor {
                     Database oldDatabase = null;
                     OnlineReport onlineReport;
                     // so, first try to get the report based off permissions, if so it might override the current database
-                    if (loggedInUser.getPermissionsFromReport()!=null && loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()) != null){
-                        onlineReport = loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()).getFirst();
-                        if (loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()).getSecond() != null){
+                    if (loggedInUser.getPermission(reportToRun.toLowerCase()) != null){
+                        TypedPair<OnlineReport, Database> permission = loggedInUser.getPermission(reportToRun.toLowerCase());
+                        onlineReport = permission.getFirst();
+                        if (permission.getSecond() != null){
                             oldDatabase = loggedInUser.getDatabase();
-                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), loggedInUser.getPermissionsFromReport().get(reportToRun.toLowerCase()).getSecond());
+                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getSecond());
                         }
                     } else { // otherwise try a straight lookup - stick on whatever db we're currently on
                         onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
