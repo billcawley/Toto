@@ -23,7 +23,10 @@
     <form method="post" id="names" name="names">
         <div id="js-container" class="js-col2"></div>
 
-        <div class="js-col2">
+        <div id="textwindow" class="js-col2">
+            <div class="closebutton">
+                <a href="#" onclick="document.getElementById('textwindow').style.display='none';"><span class="fa fa-times-circle"></span></a>
+            </div>
             <div id="attributeList">
                 <label for="attributeChosen"> Attribute (language)</label>
                 <select class="simpleselect" id="attributeChosen" onchange="changeLanguage()">
@@ -70,7 +73,7 @@
                 <h3>Property Name</h3>
                 <div class="value">
                     <label for="DEFAULT_DISPLAY_NAME">Name</label>
-                    <input name="DEFAULT_DISPLAY_NAME" id="DEFAULT_DISPLAY_NAME" type="text" value="" class="attvalue">
+                    <input name="DEFAULT_DISPLAY_NAME" id="DEFAULT_DISPLAY_NAME" type="text" value="" class="attvalue" style="width:570px">
                 </div>
             </div>
             <div class="attributes">
