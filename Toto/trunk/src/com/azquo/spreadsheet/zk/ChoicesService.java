@@ -268,9 +268,9 @@ public class ChoicesService {
                 if (choiceCell.getType() != SCell.CellType.ERROR && (choiceCell.getType() != SCell.CellType.FORMULA || choiceCell.getFormulaResultType() != SCell.CellType.ERROR)) {
                     String query;
                     // check to make it work for Darren after some recent changes - todo - address what's actually going on here
-                    if (choiceCell.getType() == SCell.CellType.FORMULA && choiceCell.getFormulaResultType() == SCell.CellType.NUMBER) {
+                    if (choiceCell.getType() == SCell.CellType.FORMULA) {
                         choiceCell.clearFormulaResultCache();
-                        ;
+
                     }
                     query = choiceCell.getStringValue();
                     if (!query.toLowerCase().contains(CONTENTS)) {//FIRST PASS - MISS OUT ANY QUERY CONTAINING 'contents('
