@@ -199,7 +199,8 @@ class DataRegionHeadingService {
                                 boolean sorted = false;
                                 if (sourceCell.endsWith(" sorted")){
                                     sorted = true;
-                                    sourceCell = sourceCell.substring(0,sourceCell.length() - 7).trim();
+                                    // parseQuery needs the 'sorted' instruction for sorting name sets.   Irrelevent if sorting data
+                                    //sourceCell = sourceCell.substring(0,sourceCell.length() - 7).trim();
                                 }
                                 if (sourceCell.startsWith("(") && sourceCell.endsWith(")")){
                                     List<DataRegionHeading> single = new ArrayList<>();
