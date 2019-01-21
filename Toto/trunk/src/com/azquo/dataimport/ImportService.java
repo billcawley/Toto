@@ -77,6 +77,7 @@ public final class ImportService {
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
         }
+        Workbook templateBook = getImportTemplateForUploadedFile(loggedInUser, uploadedFile);
         String fileName = uploadedFile.getFileName();
         String originalFilePath = uploadedFile.getPath();
         // perhaps could make slightly cleaner API calls
@@ -88,7 +89,7 @@ public final class ImportService {
 
         uploadFile.close(); // windows requires this (though windows ideally should not be used in production), perhaps not a bad idea anyway
         uploadedFile.setPath(tempFile.getPath()); // I'm now allowing adjustment of paths like this - having the object immutable became impractical
-        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile);
+        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, templateBook);
         // persist on the database server
         SpreadsheetService.databasePersist(loggedInUser);
         // add to the uploaded list on the Manage Databases page
@@ -104,7 +105,7 @@ public final class ImportService {
     }
 
     // deals with unzipping if required - recursive in case there's a zip in a zip
-    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile) throws Exception {
+    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, Workbook templateBook) throws Exception {
         List<UploadedFile> processedUploadedFiles = new ArrayList<>();
         if (uploadedFile.getFileName().endsWith(".zip") || uploadedFile.getFileName().endsWith(".7z")) {
             ZipUtil.explode(new File(uploadedFile.getPath()));
@@ -132,7 +133,7 @@ public final class ImportService {
                 Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
                 addFileNameParametersToMap(f.getName(), fileNameParams);
                 UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false);
-                processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile));
+                processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, templateBook));
             }
         } else { // nothing to decompress
             // simple checks in case the wrong type of file is being uploaded here - will probably be removed later
@@ -143,16 +144,16 @@ public final class ImportService {
                 uploadedFile.setError("Please upload the report schedules file in the schedules tab.");
                 processedUploadedFiles.add(uploadedFile);
             } else if (uploadedFile.getFileName().toLowerCase().endsWith(".xls") || uploadedFile.getFileName().toLowerCase().endsWith(".xlsx")) {
-                processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile));
+                processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile, templateBook));
             } else {
-                processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false));
+                processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, templateBook));
             }
         }
         return processedUploadedFiles;
     }
 
     // a book will be a report to upload or a workbook which has to be converted into a csv for each sheet
-    private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile) throws Exception {
+    private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, Workbook templateBook) throws Exception {
         long time = System.currentTimeMillis();
         Workbook book;
         // we now use apache POI which is faster than ZK but it has different implementations for .xls and .xlsx files
@@ -236,7 +237,7 @@ public final class ImportService {
         List<UploadedFile> toReturn = new ArrayList<>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues);
+            List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues, templateBook);
             for (UploadedFile uploadedFile1 : uploadedFiles) {
                 uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare / uploadedFiles.size());
             }
@@ -267,7 +268,10 @@ public final class ImportService {
         int endCol = areaReference.getLastCell().getCol();
         for (int rNo = startRow; rNo <= endRow; rNo++) {
             for (int cNo = startCol; cNo <= endCol; cNo++) {
-                String val = getCellValue(sheet.getRow(rNo).getCell(cNo));
+                String val = "";
+                if (sheet.getRow(rNo)!=null) {
+                    val = getCellValue(sheet.getRow(rNo).getCell(cNo));
+                }
                 if (knownNames != null) {
                     for (Map.Entry<String, String> knownNameValue : knownNames.entrySet()) {
                         val = val.replaceAll("`" + knownNameValue.getKey() + "`", knownNameValue.getValue());
@@ -280,29 +284,31 @@ public final class ImportService {
     }
 
 
-    private static List<UploadedFile> readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, Sheet sheet, Map<String, String> knownValues) {
+    private static List<UploadedFile> readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, Sheet sheet, Map<String, String> knownValues, Workbook templateBook) {
         String sheetName = sheet.getSheetName();
         long time = System.currentTimeMillis();
         try {
-            boolean oldImportMode = false;
+            boolean importByNamedRegion = false;
             // reimplementing the old style import templates as used by Ben Jones
-            Workbook book = getImportTemplateForUploadedFile(loggedInUser, uploadedFile);
-            if (book != null) {
-                for (int i = 0; i < book.getNumberOfSheets(); i++){
-                    Sheet templateSheet = book.getSheetAt(i);
+             if (templateBook != null) {
+                for (int i = 0; i < templateBook.getNumberOfSheets(); i++){
+                    Sheet templateSheet = templateBook.getSheetAt(i);
                     Name importName = BookUtils.getNameByName(ReportRenderer.AZIMPORTNAME, templateSheet);
                     if (importName != null) {
-                        oldImportMode = true;
+                        importByNamedRegion = true;
                         AreaReference aref = new AreaReference(importName.getRefersToFormula());
                         int row = aref.getFirstCell().getRow();
                         int col = aref.getFirstCell().getCol();
                         String valueToLookFor = getCellValue(templateSheet.getRow(row).getCell(col));
-                        Cell cell = sheet.getRow(row).getCell(col);
+                        Cell cell = null;
+                        if (sheet.getRow(row)!=null) {
+                            cell = sheet.getRow(row).getCell(col);
+                        }
                         if (cell != null && getCellValue(cell).equals(valueToLookFor)) {// then we have a match
                             //FIRST  glean information from range names
                             List<Name> namesForTemplate = BookUtils.getNamesForSheet(templateSheet);
                             for (Name name : namesForTemplate) {
-                                AreaReference ref = new AreaReference(importName.getRefersToFormula());
+                                AreaReference ref = new AreaReference(name.getRefersToFormula());
                                 if (ref.isSingleCell()) {
                                     int rowNo = ref.getFirstCell().getRow();
                                     int colNo = ref.getFirstCell().getCol();
@@ -313,7 +319,7 @@ public final class ImportService {
                             ArrayList<UploadedFile> toReturn = new ArrayList<>();
                             for (Name name : namesForTemplate) {
                                 if (name.getNameName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
-                                    Name dataRegion = BookUtils.getName(book,ReportRenderer.AZDATAREGION + name.getNameName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
+                                    Name dataRegion = BookUtils.getName(templateBook,ReportRenderer.AZDATAREGION + name.getNameName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
                                     if (dataRegion != null) {
                                         time = System.currentTimeMillis();
                                         File newTempFile = File.createTempFile("from" + uploadedFile.getPath() + sheetName, ".csv");
@@ -332,7 +338,7 @@ public final class ImportService {
                                         // reassigning uploaded file so the correct object will be passed back on exception
                                         uploadedFile = new UploadedFile(newTempFile.getPath(), names, uploadedFile.getParameters(), true);
                                         uploadedFile.addToProcessingDuration(convertTime);
-                                        toReturn.add(readPreparedFile(loggedInUser, uploadedFile, true));
+                                        toReturn.add(readPreparedFile(loggedInUser, uploadedFile, true, templateBook));
                                     }
                                 }
                             }
@@ -341,8 +347,8 @@ public final class ImportService {
                     }
                 }
             }
-            if (oldImportMode){ // don't continue and try with the new method - if it was an old style import template and we got this far then it failed
-                throw new Exception("Unable to import using the old import template method");
+            if (importByNamedRegion){ // don't continue and try with the new method - if it was an old style import template and we got this far then it failed
+                return new ArrayList<>();
             }
             // end check on old style of import templa
 
@@ -394,7 +400,7 @@ public final class ImportService {
                 uploadedFile.setError("Empty sheet : " + sheetName);
                 return Collections.singletonList(uploadedFile);
             } else {
-                UploadedFile toReturn = readPreparedFile(loggedInUser, uploadedFile, false);
+                UploadedFile toReturn = readPreparedFile(loggedInUser, uploadedFile, false, templateBook);
                 // the UploadedFile will have the database server processing time, add the Excel stuff to it for better feedback to the user
                 toReturn.addToProcessingDuration(convertTime);
                 return Collections.singletonList(toReturn);
@@ -422,7 +428,7 @@ public final class ImportService {
 
 
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
-    private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile, boolean importTemplateUsedAlready) throws
+    private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile, boolean importTemplateUsedAlready, Workbook templateBook) throws
             Exception {
         String templateName = uploadedFile.getFileName().replace("\\","/");
         int slashpos = templateName.lastIndexOf("/");
@@ -439,14 +445,13 @@ public final class ImportService {
 
 
         if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready){
-            Workbook book = getImportTemplateForUploadedFile(loggedInUser, uploadedFile);
-            if (book != null) {
+            if (templateBook != null) {
                 // ok let's check here for the old style of import template as used by Ben Jones
                 Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
                 List<List<String>> standardHeadings = new ArrayList<>();
                 // scan first for the main model
-                for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
-                    Sheet sheet = book.getSheetAt(sheetNo);
+                for (int sheetNo = 0; sheetNo < templateBook.getNumberOfSheets(); sheetNo++) {
+                    Sheet sheet = templateBook.getSheetAt(sheetNo);
                     if (sheet.getSheetName().equalsIgnoreCase("Import Model") || sheet.getSheetName().equalsIgnoreCase(templateName)) {
                         importSheetScan(sheet, null, standardHeadings, null, templateParameters, null);
                         break;
@@ -460,11 +465,11 @@ public final class ImportService {
                     // this *should* be single line, used to lookup information from the Import Model
                     List<List<String>> headingReference = new ArrayList<>();
                     // a "version" - similar to the import model parsing but the headings can be multi level (double decker) and not at the top thus allowing for top headings
-                    for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
-                        Sheet sheet = book.getSheetAt(sheetNo);
+                    for (int sheetNo = 0; sheetNo < templateBook.getNumberOfSheets(); sheetNo++) {
+                        Sheet sheet = templateBook.getSheetAt(sheetNo);
                         if (sheet.getSheetName().trim().equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) {
                             // unlike the "default" mode there can be a named range for the headings here so
-                            Name headingsName = BookUtils.getName(book, "az_Headings" + sheet.getSheetName().trim());
+                            Name headingsName = BookUtils.getName(templateBook, "az_Headings" + sheet.getSheetName().trim());
                             if (headingsName != null) { // we have to have it or don't bother!
                                 AreaReference headingsRange = new AreaReference(headingsName.getRefersToFormula());
                                 uploadedFile.setSkipLines(headingsRange.getFirstCell().getRow());
@@ -642,7 +647,7 @@ public final class ImportService {
                     // there is a danger of a circular reference - protect against that?
                     // must clear template based parameters, new object
                     UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true);
-                    return readPreparedFile(loggedInUser, fileToProcessAgain,false);
+                    return readPreparedFile(loggedInUser, fileToProcessAgain,false, templateBook);
                 }
             } else {
                 uploadedFile.setError("unable to find preprocessor : " + uploadedFile.getPreProcessor());
@@ -818,6 +823,9 @@ public final class ImportService {
 
     private static String getCellValue(Cell cell) {
         String returnString = "";
+        if (cell==null){
+            return "";
+        }
         //if (colCount++ > 0) bw.write('\t');
         if (cell.getCellType() == Cell.CELL_TYPE_STRING || (cell.getCellType() == Cell.CELL_TYPE_FORMULA && cell.getCachedFormulaResultType() == Cell.CELL_TYPE_STRING)) {
             try {
@@ -1002,6 +1010,8 @@ public final class ImportService {
         if (importTemplateName == null) {
               importTemplateName = loggedInUser.getDatabase().getName() + " import templates.xlsx";
         }
+        if (importTemplateName.endsWith(".xlsx")) importTemplateName = importTemplateName.replace(".xlsx","");
+
         if (ImportTemplateDAO.findForNameAndBusinessId(importTemplateName, loggedInUser.getUser().getBusinessId()) != null) {
             ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(importTemplateName, loggedInUser.getUser().getBusinessId());
             // todo - import template service?
