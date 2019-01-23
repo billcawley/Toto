@@ -98,24 +98,29 @@ public final class Name extends AzquoMemoryDBEntity {
     private static AtomicInteger newName3Count = new AtomicInteger(0);
 
     public Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, int noParents, int noValues) throws Exception {
-        this(azquoMemoryDB, id, provenanceId, attributes, noParents, noValues, false);
+        this(azquoMemoryDB, id, provenanceId,null, attributes, noParents, noValues, false);
     }
 
     // package private - BackupTransport can force the ID
-    Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, String attributes, int noParents, int noValues, boolean forceIdForbackup) throws Exception {
+    Name(final AzquoMemoryDB azquoMemoryDB, int id, int provenanceId, NameAttributes nameAttributes, String attributes, int noParents, int noValues, boolean forceIdForbackup) throws Exception {
         super(azquoMemoryDB, id, forceIdForbackup);
         newName3Count.incrementAndGet();
         this.provenance = getAzquoMemoryDB().getProvenanceById(provenanceId); // see no reason not to do this here now
         //this.attributes = transport.attributes;
-        String[] attsArray = attributes.split(StringLiterals.ATTRIBUTEDIVIDER);
-        String[] attributeKeys = new String[attsArray.length / 2];
-        String[] attributeValues = new String[attsArray.length / 2];
-        for (int i = 0; i < attributeKeys.length; i++) {
-            attributeKeys[i] = attsArray[i * 2].intern();
-            attributeValues[i] = attsArray[(i * 2) + 1].intern();
-            azquoMemoryDB.getIndex().setAttributeForNameInAttributeNameMap(attributeKeys[i], attributeValues[i], this); // used to be done after, can't se a reason not to do this here
+        // can pass nameAttributes as an optimiseation when making a temporary copy
+        if (nameAttributes != null){
+            this.nameAttributes = nameAttributes;
+        } else {
+            String[] attsArray = attributes.split(StringLiterals.ATTRIBUTEDIVIDER);
+            String[] attributeKeys = new String[attsArray.length / 2];
+            String[] attributeValues = new String[attsArray.length / 2];
+            for (int i = 0; i < attributeKeys.length; i++) {
+                attributeKeys[i] = attsArray[i * 2].intern();
+                attributeValues[i] = attsArray[(i * 2) + 1].intern();
+                azquoMemoryDB.getIndex().setAttributeForNameInAttributeNameMap(attributeKeys[i], attributeValues[i], this); // used to be done after, can't se a reason not to do this here
+            }
+            this.nameAttributes = new NameAttributes(attributeKeys, attributeValues);
         }
-        nameAttributes = new NameAttributes(attributeKeys, attributeValues);
         /* OK I realise that this criteria of greater than or equal to ARRAYTHRESHOLD assigning a set and less than an array is slightly inconsistent with addToValues
         that is to say one could get to an array of 512, save and reload and then that 512 would be a set. I do this because the value loading is a bit of a hack
         and if I copy the criteria then addToValues will crash on the edge case of 512. I don't really see a problem with this under typical operation. It might, I suppose,
@@ -974,6 +979,11 @@ public final class Name extends AzquoMemoryDBEntity {
     public String getAttributesForFastStore() {
         getAttributesForFastStoreCount.incrementAndGet();
         return nameAttributes.getAttributesForFastStore();
+    }
+
+    NameAttributes getRawAttributes() {
+        getAttributesForFastStoreCount.incrementAndGet();
+        return nameAttributes;
     }
 
     public byte[] getChildrenIdsAsBytes() {

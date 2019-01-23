@@ -7,6 +7,7 @@ import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
+import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -134,6 +135,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "createDatabase", required = false) String createDatabase
             , @RequestParam(value = "databaseServerId", required = false) String databaseServerId
             , @RequestParam(value = "emptyId", required = false) String emptyId
+            , @RequestParam(value = "copyId", required = false) String copyId
             , @RequestParam(value = "checkId", required = false) String checkId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "unloadId", required = false) String unloadId
@@ -144,10 +146,6 @@ public class ManageDatabasesController {
             , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "sort", required = false) String sort
             , @RequestParam(value = "pendingUploadSearch", required = false) String pendingUploadSearch
-            , @RequestParam(value = "databaseId", required = false) String databaseId
-            , @RequestParam(value = "pendingUploadSubmit", required = false) String pendingUploadSubmit
-            , @RequestParam(value = "revert", required = false) String revert
-            , @RequestParam(value = "commit", required = false) String commit
             , @RequestParam(value = "deleteTemplateId", required = false) String deleteTemplateId
     ) {
         LoggedInUser possibleUser = null;
@@ -160,178 +158,6 @@ public class ManageDatabasesController {
         // I assume secure until we move to proper spring security
         final LoggedInUser loggedInUser = possibleUser;
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-            if ("true".equalsIgnoreCase(revert)) {
-                for (PendingUpload pendingUpload : PendingUploadDAO.findForBusinessIdAndComitted(loggedInUser.getUser().getBusinessId(), false)) {
-                    pendingUpload.setStatusChangedDate(LocalDateTime.now());
-                    pendingUpload.setUserId(loggedInUser.getUser().getId());
-                    pendingUpload.setStatus(PendingUpload.WAITING);
-                    PendingUploadDAO.store(pendingUpload);
-                }
-                // now restore and delete backups
-                Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
-                try {
-                    if (Files.exists(backups)) {
-                        try (Stream<Path> list = Files.list(backups)) {
-                            list.forEach(path -> {
-                                Database forPersistenceName = DatabaseDAO.findForPersistenceName(path.getFileName().toString());
-                                if (forPersistenceName != null) { // then restore
-                                    loggedInUser.setDatabaseWithServer(DatabaseServerDAO.findById(forPersistenceName.getDatabaseServerId()), forPersistenceName);
-                                    BackupService.loadDBBackup(loggedInUser, path.toFile(), null, new StringBuilder(), true);
-                                }
-                                try {
-                                    Files.deleteIfExists(path);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            });
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            if ("true".equalsIgnoreCase(commit)) {
-                for (PendingUpload pendingUpload : PendingUploadDAO.findForBusinessIdAndComitted(loggedInUser.getUser().getBusinessId(), false)) {
-                    if (!pendingUpload.getStatus().equals(PendingUpload.WAITING)) {
-                        pendingUpload.setStatusChangedDate(LocalDateTime.now());
-                        pendingUpload.setUserId(loggedInUser.getUser().getId());
-                        pendingUpload.setCommitted(true);
-                        PendingUploadDAO.store(pendingUpload);
-                    }
-                }
-                // now restore and delete backups
-                Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
-                try {
-                    if (Files.exists(backups)) {
-                        try (Stream<Path> list = Files.list(backups)) {
-                            list.forEach(path -> {
-                                try {
-                                    Files.deleteIfExists(path);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            });
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            // can a developer do pending?? todo also string literals as ever . . .
-            // then the pending form was submitted - will need to extract all passed values by running through the parameter map
-            if ("true".equals(pendingUploadSubmit)) {
-                // same list as the display below but not the "for display" objects
-                List<PendingUpload> pendingUploads = PendingUploadDAO.findForBusinessIdAndComitted(loggedInUser.getUser().getBusinessId(), false);
-                if ("Load".equals(request.getParameter("Load"))) {
-                    List<PendingUpload> toLoad = new ArrayList<>();
-                    StringBuffer importResultPrefix = new StringBuffer();
-                    for (PendingUpload pendingUpload : pendingUploads) {
-                        if (request.getParameter("load" + pendingUpload.getId()) != null) {
-                            String databaseIdForUpload = request.getParameter("database" + pendingUpload.getId());
-                            Map<String, String> paramsFromUser = new HashMap<>();
-                            Enumeration<String> params = request.getParameterNames();
-                            while (params.hasMoreElements()) {
-                                String param = params.nextElement();
-                                // todo - remove string literals
-                                if (param.startsWith("pendingupload-") && param.endsWith("-" + pendingUpload.getId())) {
-//                                    System.out.println("param : " + param.substring("pendingupload-".length(), param.length() - ("-" + pendingUpload.getId()).length()) + " value : " + request.getParameter(param));
-                                    if (!"N/A".equals(request.getParameter(param))) {
-                                        paramsFromUser.put(param.substring("pendingupload-".length(), param.length() - ("-" + pendingUpload.getId()).length()).toLowerCase().trim(), request.getParameter(param)); // lower case important, it's the convention when grabbing from the file name
-                                    }
-                                }
-                            }
-                            // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
-                            if (NumberUtils.isDigits(databaseIdForUpload)) {
-                                Database byId = DatabaseDAO.findById(Integer.parseInt(databaseIdForUpload));
-                                if (byId != null) {
-                                    LoginService.switchDatabase(loggedInUser, byId);
-                                    // todo backup the db for a revert if it hasn't been already
-                                    Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
-                                    try {
-                                        if (!Files.exists(backups)) {
-                                            Files.createDirectories(backups);
-                                        }
-                                        // now, is there a backup already?
-                                        Path backupFile = backups.resolve(byId.getPersistenceName());
-                                        if (!Files.exists(backupFile)) {
-                                            BackupService.createDBBackupFile(loggedInUser.getDatabase().getName(), loggedInUser.getDataAccessToken(), backupFile.toString(), loggedInUser.getDatabaseServer().getIp());
-                                            importResultPrefix.append("** Created revert backup for database " + byId.getName() + " **<br/>");
-                                        }
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                    }
-                                    pendingUpload.setParameters(paramsFromUser);
-                                    pendingUpload.setDatabaseId(byId.getId());
-                                    pendingUpload.setStatusChangedDate(LocalDateTime.now());
-                                    pendingUpload.setUserId(loggedInUser.getUser().getId());
-                                    PendingUploadDAO.store(pendingUpload);
-                                    toLoad.add(pendingUpload);
-                                }
-                            }
-                        }
-                    }
-                    final HttpSession session = request.getSession();
-                    // we now need support for multiple files so I'm pasting the handle import code here and modifying it for the list
-                    new Thread(() -> {
-                        // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
-                        List<UploadedFile> multipleFileFeedback = new ArrayList<>();
-                        for (PendingUpload pendingUpload : toLoad) {
-                            UploadedFile uploadedFile = new UploadedFile(pendingUpload.getFilePath(), Collections.singletonList(pendingUpload.getFileName()), pendingUpload.getParameters(), false);
-                            try {
-                                List<UploadedFile> importResult = ImportService.importTheFile(loggedInUser, uploadedFile);
-                                multipleFileFeedback.addAll(importResult);
-                                pendingUpload.setImportResult(formatUploadedFiles(importResult, true));// should html be in here?
-                                boolean modified = false;
-                                boolean errorInResult = false;
-                                for (UploadedFile uf : importResult) {
-                                    if (uf.isDataModified()) {
-                                        modified = true;
-                                    }
-                                    if (uf.getError() != null) {
-                                        errorInResult = true;
-                                    }
-                                }
-                                if (!modified || errorInResult) {
-                                    pendingUpload.setStatus(PendingUpload.REJECTED);
-                                } else {
-                                    pendingUpload.setStatus(PendingUpload.PROVISIONALLY_LOADED);
-                                }
-                                pendingUpload.setStatusChangedDate(LocalDateTime.now());
-                                pendingUpload.setUserId(loggedInUser.getUser().getId());
-                                PendingUploadDAO.store(pendingUpload);
-
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
-                                multipleFileFeedback.add(uploadedFile);
-                            }
-                        }
-                        session.setAttribute(IMPORTURLSUFFIX, "#tab4");
-                        session.setAttribute(IMPORTRESULTPREFIX, importResultPrefix.toString());
-                        session.setAttribute(ManageDatabasesController.IMPORTRESULT, multipleFileFeedback);
-                    }).start();
-                    // edd pasting in here to get the banner colour working
-                    Business business = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-                    String bannerColor = business.getBannerColor();
-                    if (bannerColor == null || bannerColor.length() == 0) bannerColor = "#F58030";
-                    String logo = business.getLogo();
-                    if (logo == null || logo.length() == 0) logo = "logo_alt.png";
-                    model.addAttribute("bannerColor", bannerColor);
-                    model.addAttribute("logo", logo);
-                    return "importrunning";
-
-                }
-                if ("Reject".equals(request.getParameter("Reject"))) {
-                    for (PendingUpload pendingUpload : pendingUploads) {
-                        if (request.getParameter("reject" + pendingUpload.getId()) != null) {
-                            pendingUpload.setStatus(PendingUpload.REJECTED);
-                            pendingUpload.setStatusChangedDate(LocalDateTime.now());
-                            pendingUpload.setUserId(loggedInUser.getUser().getId());
-                            PendingUploadDAO.store(pendingUpload);
-                        }
-                    }
-                }
-            }
             StringBuilder error = new StringBuilder();
             // EFC - I can't see a way around this one currently. I want to use @SuppressWarnings very sparingly
             @SuppressWarnings("unchecked")
@@ -362,6 +188,11 @@ public class ManageDatabasesController {
                 }
                 if (NumberUtils.isNumber(emptyId)) {
                     AdminService.emptyDatabaseByIdWithBasicSecurity(loggedInUser, Integer.parseInt(emptyId));
+                }
+                if (NumberUtils.isNumber(copyId)) {
+                    Database db = DatabaseDAO.findById(Integer.parseInt(copyId));
+                    DatabaseServer databaseServer = DatabaseServerDAO.findById(db.getDatabaseServerId());
+                    RMIClient.getServerInterface(databaseServer.getIp()).copyDatabaseTest(loggedInUser.getDatabase().getPersistenceName());
                 }
                 if (NumberUtils.isNumber(checkId)) {
                     AdminService.checkDatabaseByIdWithBasicSecurity(loggedInUser, Integer.parseInt(checkId));
@@ -420,31 +251,6 @@ public class ManageDatabasesController {
                 }
             }
             model.put("params", paramsMap.entrySet()); // no search for the mo
-            // ok revert info - what backups there are and what date they're from
-            Path backups = Paths.get(SpreadsheetService.getScanDir() + "/dbbackups");
-            StringBuilder stringBuilder = new StringBuilder();
-            DateTimeFormatter formatter =
-                    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
-                            .withLocale(Locale.UK)
-                            .withZone(ZoneId.systemDefault());
-            if (Files.exists(backups)) {
-                try (Stream<Path> list = Files.list(backups)) {
-                    list.forEach(path -> {
-                        stringBuilder.append("\\n");
-                        stringBuilder.append(path.getFileName());
-                        stringBuilder.append(" - ");
-                        try {
-                            stringBuilder.append(formatter.format(Files.getLastModifiedTime(path).toInstant()));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            model.put("revertlist", stringBuilder.toString());
-
             if (error.length() > 0) {
                 String exceptionError = error.toString();
                 model.put("error", exceptionError);

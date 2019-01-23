@@ -33,8 +33,8 @@ public class DSAdminService {
         }
     }
 
-    // todo - add code to check relationships so that all parents have matching hildren and vice versa
-    public static void checkDatabase(String persistenceName) throws Exception {
+    // todo - add code to check relationships so that all parents have matching children and vice versa
+    public static void checkDatabase(String persistenceName)  {
         final AzquoMemoryDB azquoMemoryDB = AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null);
         System.out.println("Database check for : " + persistenceName);
         int count = 0;

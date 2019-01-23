@@ -212,7 +212,7 @@ public class LoggedInUser implements Serializable {
             Database byId = DatabaseDAO.findById(idPair.getSecond());
             OnlineReport onlineReport = OnlineReportDAO.findById(idPair.getFirst());
             if (byId != null && onlineReport != null){
-                new TypedPair<>(onlineReport,byId);
+                return new TypedPair<>(onlineReport,byId);
             } else { // zap reference to records which don't exist!
                 reportIdDatabaseIdPermissions.remove(reportName.toLowerCase());
             }

@@ -49,45 +49,26 @@ public class StandardDAO {
         /*
         Update hack - yoinked from https://dba.stackexchange.com/questions/169458/mysql-how-to-create-column-if-not-exists
          */
-        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
-                "    WHERE\n" +
-                "      (table_name = \"database\")\n" +
-                "      AND (table_schema = \"master_db\")\n" +
-                "      AND (column_name = \"last_provenance\")", new HashMap<>(), Integer.class) == 0){
-            jdbcTemplate.update("ALTER TABLE master_db.`database` ADD column last_provenance varchar(255)", new HashMap<>());
-        }
-
-        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
-                "    WHERE\n" +
-                "      (table_name = \"database\")\n" +
-                "      AND (table_schema = \"master_db\")\n" +
-                "      AND (column_name = \"auto_backup\")", new HashMap<>(), Integer.class) == 0){
-            jdbcTemplate.update("ALTER TABLE master_db.`database` ADD column auto_backup boolean default false", new HashMap<>());
-        }
-
-
-        jdbcTemplate.update("CREATE TABLE if not exists `master_db`.`pending_upload` (\n" +
-                "  `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
-                "  `business_id` int(11) NOT NULL,\n" +
-                "  `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
-                "  `status_changed_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
-                "  `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
-                "  `file_path` varchar(255) COLLATE utf8_unicode_ci not null,\n" +
-                "  `source` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
-                "  `status` varchar(50) COLLATE utf8_unicode_ci NOT NULL,\n" +
-                "  `parameters` text COLLATE utf8_unicode_ci,\n" +
-                "  `database_id` int(11) NOT NULL,\n" +
-                "  `user_id` int(11) NOT NULL,\n" +
-                "  `import_result` text COLLATE utf8_unicode_ci,\n" +
-                "  PRIMARY KEY (`id`)\n" +
-                ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n", new HashMap<>());
 
         if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
                 "    WHERE\n" +
                 "      (table_name = \"pending_upload\")\n" +
                 "      AND (table_schema = \"master_db\")\n" +
-                "      AND (column_name = \"committed\")", new HashMap<>(), Integer.class) == 0){
-            jdbcTemplate.update("ALTER TABLE master_db.`pending_upload` ADD column committed boolean default false", new HashMap<>());
+                "      AND (column_name = \"import_result_path\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("drop TABLE master_db.`pending_upload`;", new HashMap<>());
+            jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`pending_upload` (\n" +
+                    "                                              `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
+                    "                                              `business_id` int(11) NOT NULL,\n" +
+                    "                                              `created_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
+                    "                                              `processed_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
+                    "                                              `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                    "                                              `file_path` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
+                    "                                              `created_by_user_id` int(11) NOT NULL,\n" +
+                    "                                              `processed_by_user_id` int(11) DEFAULT NULL,\n" +
+                    "                                              `database_id` int(11) NOT NULL,\n" +
+                    "                                              `import_result_path` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,\n" +
+                    "                                              PRIMARY KEY (`id`)\n" +
+                    ") ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n", new HashMap<>());
         }
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
     }

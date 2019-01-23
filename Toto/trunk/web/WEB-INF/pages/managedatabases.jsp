@@ -44,32 +44,6 @@ Created by IntelliJ IDEA.
         });
     }
 
-    function revert() {
-        if (confirm('Are you sure you want to revert${revertlist}')) {
-            $('html,body').scrollTop(0);
-            $('#working').show();
-            return true;
-        }
-        return false;
-    }
-
-    function commit() {
-        if (confirm('Are you sure you want to commit changes? Revert backups will be removed!')) {
-            $('html,body').scrollTop(0);
-            $('#working').show();
-            return true;
-        }
-        return false;
-    }
-
-    function setDropdownForAll(dropDownName, index) {
-        <c:forEach items="${pendinguploads}" var="pendingupload">
-        <c:if test="${pendingupload.status=='Waiting' || pendingupload.status=='Rejected'}">
-        document.getElementById(dropDownName + '${pendingupload.id}').selectedIndex = index;
-        </c:if>
-        </c:forEach>
-    }
-
     $(window).on("load", function () {
         $('html,body').scrollTop(0); // hitting a specific tab can make the screen be half way down, we don't want that
     })
@@ -297,187 +271,38 @@ Created by IntelliJ IDEA.
             <table>
                 <thead>
                 <tr>
-                    <td>Date</td>
-                    <td>Modified On</td>
-                    <td>Modified By</td>
+                    <td>Created</td>
+                    <td>User</td>
                     <td>
                         <form method="post" action="/api/ManageDatabases#tab4"> File Name <input size="20"
                                                                                                  name="pendingUploadSearch">
                         </form>
                     </td>
-                    <td>Source</td>
                     <td>Size</td>
-                    <td>Status</td>
                     <td>Database</td>
-                    <c:forEach items="${params}" var="entry">
-                        <td>${entry.key}</td>
-                    </c:forEach>
-                    <td>Load/<br/>Reload</td>
-                    <td>Reject</td>
-                    <td>Import<br/>Results</td>
                     <td></td>
                 </tr>
                 </thead>
                 <tbody>
 
-                <tr style="background-color: yellow">
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>Select on all files :</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>
-                        <select name="databaseId"
-                                onchange="setDropdownForAll('database', document.getElementById('databaseall').selectedIndex)"
-                                id="databaseall"><c:forEach items="${databases}" var="database">
-                            <option value="${database.id}"
-                                    <c:if test="${pendingupload.databaseName == database.name}">selected</c:if>>${database.name}</option>
-                        </c:forEach></select>
-                    </td>
-                    <c:forEach items="${params}" var="entry">
-                        <td>
-                            <select name="pendingupload-${entry.key}" id="pendinguploadall-${entry.key}"
-                                    onchange="setDropdownForAll('pendingupload-${entry.key}-', document.getElementById('pendinguploadall-${entry.key}').selectedIndex)"><c:forEach
-                                    items="${entry.value}" var="listitem">
-                                <option value="${listitem}"
-                                        <c:if test="${listitem == pendingupload.parameters[fn:toLowerCase(entry.key)]}">selected</c:if>>${listitem}</option>
-                            </c:forEach></select>
-                        </td>
-                    </c:forEach>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-                <form onsubmit="$('#working').show();" action="/api/ManageDatabases?loadingscreen=true" method="post">
-                    <input type="hidden" name="pendingUploadSubmit" value="true">
                     <c:forEach items="${pendinguploads}" var="pendingupload">
                         <tr>
-                            <td>${pendingupload.date}</td>
-                            <td>${pendingupload.statusChangedDate}</td>
-                            <td>${pendingupload.userName}</td>
+                            <td>${pendingupload.createdDate}</td>
+                            <td>${pendingupload.createdByUserName}</td>
                             <td>${pendingupload.fileName}</td>
-                            <td>${pendingupload.source}</td>
                             <td>${pendingupload.size}</td>
-                            <td><span
-                                    <c:if test="${pendingupload.status == 'Rejected'}">style="background-color: #FF8888; color: #000000"
-                            </c:if>
-                                    <c:if test="${pendingupload.status == 'Provisionally Loaded'}">style="background-color: #88FF88; color: #000000"</c:if>>
-                                    ${pendingupload.status}</span>
-                            </td>
-                            <td><!-- todo - last selected automatically -->
-                                <c:choose>
-                                    <c:when test="${pendingupload.status!='Waiting' && pendingupload.status!='Rejected'}">
-                                        ${pendingupload.databaseName}
-                                    </c:when>
-                                    <c:otherwise>
-                                        <select name="database${pendingupload.id}"
-                                                id="database${pendingupload.id}"><c:forEach items="${databases}"
-                                                                                            var="database">
-                                            <option value="${database.id}"
-                                                    <c:if test="${pendingupload.databaseName == database.name}">selected</c:if>>${database.name}</option>
-                                        </c:forEach></select>
-                                    </c:otherwise>
-                                </c:choose>
-                            </td>
-                            <c:forEach items="${params}" var="entry">
-                                <td>
-                                    <c:choose>
-                                        <c:when test="${pendingupload.status!='Waiting' && pendingupload.status!='Rejected'}">
-                                            ${pendingupload.parameters[fn:toLowerCase(entry.key)]}
-                                        </c:when>
-                                        <c:otherwise>
-                                            <select name="pendingupload-${entry.key}-${pendingupload.id}"
-                                                    id="pendingupload-${entry.key}-${pendingupload.id}"><c:forEach
-                                                    items="${entry.value}"
-                                                    var="listitem">
-                                                <option value="${listitem}"
-                                                        <c:if test="${listitem == pendingupload.parameters[fn:toLowerCase(entry.key)]}">selected</c:if>>${listitem}</option>
-                                            </c:forEach></select>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </td>
-                            </c:forEach>
+                            <td>${pendingupload.databaseName}</td>
                             <td>
-                                <div align="center"><input type="checkbox" name="load${pendingupload.id}"/></div>
-                            </td>
-                            <td>
-                                <div align="center"><c:if test="${pendingupload.status == 'Waiting'}"><input
-                                        type="checkbox" name="reject${pendingupload.id}"/></div>
-                                </c:if></td>
-                            <td>
-                                <c:if test="${pendingupload.importResult.length() > 0}">
-                                    <a href="/api/ImportResults?id=${pendingupload.id}" target="new"
-                                       class="button inspect small" data-title="Import Results"
-                                       title="View Import Results">
-                                        <div align="center">View</div>
+                                    <a href="/api/PendingUpload?id=${pendingupload.id}"
+                                       class="button inspect small"
+                                       title="Validate and Load">
+                                        Validate and Load
                                     </a>
-                                </c:if>
-                                <!--                                <c:if test="${pendingupload.status == 'Waiting'}">
-                                    <input type="submit" name="Load" value="Load" class="button small"/>
-                                    <a onclick="$('#working').show();"
-                                       href="/api/ManageDatabases?rejectId=${pendingupload.id}#tab4"
-                                       class="button small" title="Reject">Reject</a>
-                                </c:if>
-                                <c:if test="${pendingupload.status == 'Rejected'}">
-                                    <c:choose>
-                                        <c:when test="${pendingupload.importResult.length() > 0}">
-                                            <input type="submit" name="Load" value="Reload" class="button small"/>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <input type="submit" name="Load" value="Load" class="button small"/>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </c:if>-->
-                            </td>
-                            <td>
-                                <div align="center"><a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}"
-                                                       class="button small"
-                                                       title="Download"><span class="fa fa-download"
-                                                                              titlmae="Download"></span> </a></div>
                             </td>
                         </tr>
                     </c:forEach>
-                    <tr>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <c:forEach items="${params}" var="entry">
-                            <td></td>
-                        </c:forEach>
-                        <td>
-                            <div align="center"><input onclick="$('html,body').scrollTop(0);$('#working').show();"
-                                                       type="submit" name="Load" value="Load"
-                                                       class="button small"/></div>
-                        </td>
-                        <td>
-                            <div align="center"><input onclick="$('html,body').scrollTop(0);$('#working').show();"
-                                                       type="submit" name="Reject" value="Reject"
-                                                       class="button small"/></div>
-                        </td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                </form>
                 </tbody>
             </table>
-            <c:if test="${revertlist.length() > 0}">
-                <a href="/api/ManageDatabases?revert=true#tab4"
-                   onclick="return revert()"
-                   class="button" title="revert">Revert</a>
-            </c:if>
-            <c:if test="${commit}">
-                <a href="/api/ManageDatabases?commit=true#tab4"
-                   onclick="return commit()"
-                   class="button" title="Commit">Commit</a>
-            </c:if>
         </div>
         <!-- END pending Uploads -->
         <!-- Import Templates -->

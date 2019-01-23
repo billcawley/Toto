@@ -1,3 +1,9 @@
+21-01-19
+
+Initial version of query validation feedback (on pending uploads)
+
+Checks for the start of the template name, rather than the whole name
+
 18-01-19-2
 
 ! Completed changes to make the permissions held against the session more robust

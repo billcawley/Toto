@@ -353,32 +353,14 @@ this may now not work at all, perhaps delete?
     }
 
     public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch, AtomicBoolean commit) {
-        if (loggedInUser.getUser().isAdministrator()) { // juat admin
-            List<PendingUpload> pendingUploads = PendingUploadDAO.findForBusinessIdAndComitted(loggedInUser.getUser().getBusinessId(), false);
-            String businessName = BusinessDAO.findById(loggedInUser.getUser().getBusinessId()).getBusinessName();
+        if (loggedInUser.getUser().isAdministrator()) { // just admin for the mo - maybe will be changed
+            List<PendingUpload> pendingUploads = PendingUploadDAO.findForBusinessIdNotProcessed(loggedInUser.getUser().getBusinessId());
             List<PendingUpload.PendingUploadForDisplay> pendingUploadForDisplays = new ArrayList<>();
             int count = 0;
             for (PendingUpload pendingUpload : pendingUploads) {
                 if (fileSearch == null || fileSearch.equals("") || (pendingUpload.getFileName().toLowerCase().contains(fileSearch.toLowerCase()))) {
                     count++;
-                    String dbName = "";
-                    if (pendingUpload.getDatabaseId() > 0) {
-                        Database database = DatabaseDAO.findById(pendingUpload.getDatabaseId());
-                        if (database != null) {
-                            dbName = database.getName();
-                        }
-                    }
-                    String userName = "";
-                    if (pendingUpload.getUserId() > 0) {
-                        User user = UserDAO.findById(pendingUpload.getUserId());
-                        if (user != null) {
-                            userName = user.getName();
-                        }
-                    }
-                    if (!pendingUpload.getStatus().equals(PendingUpload.WAITING)){
-                        commit.set(true);
-                    }
-                    pendingUploadForDisplays.add(new PendingUpload.PendingUploadForDisplay(pendingUpload, businessName, dbName, userName));
+                    pendingUploadForDisplays.add(new PendingUpload.PendingUploadForDisplay(pendingUpload));
                     if (count > 100) {
                         break;
                     }

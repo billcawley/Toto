@@ -98,16 +98,13 @@ public class DBCron {
                                         // ok it's moved now make the pending upload record
                                         PendingUpload pendingUpload = new PendingUpload(0, b.getId()
                                                 , LocalDateTime.ofInstant(lastModifiedTime.toInstant(), ZoneId.systemDefault())
-                                                , LocalDateTime.now()
+                                                , null
                                                 , origName
                                                 , tagged.resolve(timestamp + origName).toString()
-                                                , "fileimport"
-                                                , PendingUpload.WAITING
-                                                , ""
-                                                , 0
-                                                , 0
-                                                , null
-                                                , false);
+                                                , -1
+                                                , -1
+                                                , 1 // todo - database id!!
+                                                , null);
                                         PendingUploadDAO.store(pendingUpload);
                                     } else {
                                         System.out.println("fine found for pending but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");

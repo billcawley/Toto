@@ -117,6 +117,7 @@ public class DSDataLoadService {
         AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         azquoMemoryDBConnection.setProvenance(user, "imported from Magento", "", "");
+
         Map<String, List<Map<String, String>>> tableMap = HashObjObjMaps.newMutableMap();
         BufferedReader br = Files.newBufferedReader(Paths.get(filePath), Charset.forName("UTF-8"));//changed for Windows.....
         long marker = System.currentTimeMillis();

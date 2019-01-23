@@ -32,7 +32,7 @@ class AzquoMemoryDBTransport {
 
     // I figure these should be final, you initialise the transport against a given persistence store and memory db and that's that
     private final String persistenceName;
-    private final AzquoMemoryDB azquoMemoryDB;
+    final AzquoMemoryDB azquoMemoryDB;
 
     // Used to be a map of sets for all entities but since speeding up storing of names and values with custom DAOs I figure it's best to simply have three sets
     private final Map<String, Set<AzquoMemoryDBEntity>> jsonEntitiesToPersist;
@@ -98,6 +98,8 @@ class AzquoMemoryDBTransport {
             return null;
         }
     }
+
+    // todo - inconsistent use of memdb azquoMemoryDB
 
     private class NameBatchLoader implements Callable<Void> {
         private final int minId;
@@ -174,7 +176,7 @@ class AzquoMemoryDBTransport {
         }
     }
 
-    private void logInSessionLogAndSystem(String s) {
+    void logInSessionLogAndSystem(String s) {
         if (sessionLog != null) {
             sessionLog.append(s).append("\n");
         }
@@ -265,7 +267,7 @@ class AzquoMemoryDBTransport {
                 System.out.println("Used Memory after list load:"
                         + (runtime.totalMemory() - runtime.freeMemory()) / mb);
             }
-            linkEntities();
+            linkEntities(false);
             if (memoryTrack) {
                 System.out.println("Used Memory after init names :"
                         + (runtime.totalMemory() - runtime.freeMemory()) / mb);
@@ -296,7 +298,7 @@ class AzquoMemoryDBTransport {
     going to try a basic multi-thread - it was 100,000 but I wonder if this is as efficient as it could be given that at the end leftover threads
     can hang around (particularly hefty child sets). Trying for 50,000 */
 
-    private void linkEntities() throws Exception {
+    void linkEntities(boolean skipCheck) throws Exception {
         // there may be a certain overhead to building the batches but otherwise it's dealing with millions of callables
         int batchLinkSize = 50_000;
         ArrayList<Name> batchLink = new ArrayList<>(batchLinkSize);
@@ -318,53 +320,53 @@ class AzquoMemoryDBTransport {
             linkFuture.get(1, TimeUnit.HOURS);
         }
         azquoMemoryDB.nameChildrenLoadingCache.clear(); // free the memory. If it was really tight we could clear as we went along I suppose.
-        int counter = 0;
-        long marker = System.currentTimeMillis();
-        for (Name name : azquoMemoryDB.getAllNames()) {
-            if (name.hasParents() && name.getParents().get(name.getParents().size() - 1) == null) {
-                int number = 0;
-                for (Name parent : name.getParents()) {
-                    if (parent == null) {
-                        break;
-                    }
-                    number++;
-                }
-//                System.out.print("update fast_name set no_parents = " + number + " where id = " + name.getId() + ";     ");
-                System.out.println("parent problem on : " + name.getDefaultDisplayName() + " space = " + name.getParents().size() + ", number : " + number);
-                counter++;
-                name.parentArrayCheck();
-                azquoMemoryDB.forceNameNeedsPersisting(name);
-                if (counter > 10000) {
-                    System.out.println("10k breaking;");
-                    break;
-                }
-            }
-        }
-        for (Name name : azquoMemoryDB.getAllNames()) {
-            if (name.hasValues()) {
-                int number = 0;
-                for (Value v : name.getValues()) {
-                    if (v != null) {
+        if (!skipCheck){
+            int counter = 0;
+            long marker = System.currentTimeMillis();
+            for (Name name : azquoMemoryDB.getAllNames()) {
+                if (name.hasParents() && name.getParents().get(name.getParents().size() - 1) == null) {
+                    int number = 0;
+                    for (Name parent : name.getParents()) {
+                        if (parent == null) {
+                            break;
+                        }
                         number++;
                     }
-                }
-                if (number != name.getValues().size()) {
-//                    System.out.print("update fast_name set no_values = " + number + " where id = " + name.getId() + ";      ");
-                    System.out.println("value problem on : " + name.getDefaultDisplayName() + " space = " + name.getValues().size() + ", number : " + number);
-                    name.valueArrayCheck();
-                    azquoMemoryDB.forceNameNeedsPersisting(name);
+//                System.out.print("update fast_name set no_parents = " + number + " where id = " + name.getId() + ";     ");
+                    System.out.println("parent problem on : " + name.getDefaultDisplayName() + " space = " + name.getParents().size() + ", number : " + number);
                     counter++;
+                    name.parentArrayCheck();
+                    azquoMemoryDB.forceNameNeedsPersisting(name);
                     if (counter > 10000) {
                         System.out.println("10k breaking;");
                         break;
                     }
                 }
             }
+            for (Name name : azquoMemoryDB.getAllNames()) {
+                if (name.hasValues()) {
+                    int number = 0;
+                    for (Value v : name.getValues()) {
+                        if (v != null) {
+                            number++;
+                        }
+                    }
+                    if (number != name.getValues().size()) {
+//                    System.out.print("update fast_name set no_values = " + number + " where id = " + name.getId() + ";      ");
+                        System.out.println("value problem on : " + name.getDefaultDisplayName() + " space = " + name.getValues().size() + ", number : " + number);
+                        name.valueArrayCheck();
+                        azquoMemoryDB.forceNameNeedsPersisting(name);
+                        counter++;
+                        if (counter > 10000) {
+                            System.out.println("10k breaking;");
+                            break;
+                        }
+                    }
+                }
+            }
+            System.out.println("Name integrity check took " + (System.currentTimeMillis() - marker) + "ms");
         }
-        System.out.println("Name integrity check took " + (System.currentTimeMillis() - marker) + "ms");
     }
-
-
 
     /* Json then custom ones, maybe refactor later*/
 

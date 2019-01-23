@@ -15,18 +15,16 @@ import java.util.Map;
  * <p>
  * Created by cawley on 23/10/18.
  *
- `id` int(11) NOT NULL AUTO_INCREMENT,
+ `id` int(11) NOT NULL,
  `business_id` int(11) NOT NULL,
- `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
- `statusChangedDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ `created_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ `processed_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
- `file_path` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
- `source` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
- `status` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
- `parameters` text COLLATE utf8_unicode_ci NOT NULL,
+ `file_path` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+ `created_by_user_id` int(11) NOT NULL,
+ `processed_by_user_id` int(11) DEFAULT NULL,
  `database_id` int(11) NOT NULL,
- `user_id` int(11) NOT NULL,
- PRIMARY KEY (`id`)
+ `import_result_path` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
  *
  *
  */
@@ -37,33 +35,27 @@ public final class PendingUploadDAO {
     // column names except ID which is in the superclass
 
     private static final String BUSINESSID = "business_id";
-    private static final String DATE = "date";
-    private static final String STATUSCHANGEDDATE = "status_changed_date";
+    private static final String CREATEDDATE = "created_date";
+    private static final String PROCESSEDDATE = "processed_date";
     private static final String FILENAME = "file_name";
     private static final String FILEPATH = "file_path";
-    private static final String SOURCE = "source";
-    private static final String STATUS = "status";
-    private static final String PARAMETERS = "parameters";
+    private static final String CREATEDBYUSERID = "created_by_user_id";
+    private static final String PROCESSEDBYUSERID = "processed_by_user_id";
     private static final String DATABASEID = "database_id";
-    private static final String USERID = "user_id";
-    private static final String IMPORTRESULT = "import_result";
-    private static final String COMMITTED = "committed";
+    private static final String IMPORTRESULTPATH = "import_result_path";
 
     public static Map<String, Object> getColumnNameValueMap(final PendingUpload pendingUpload) {
         final Map<String, Object> toReturn = new HashMap<>();
         toReturn.put(StandardDAO.ID, pendingUpload.getId());
         toReturn.put(BUSINESSID, pendingUpload.getBusinessId());
-        toReturn.put(DATE, DateUtils.getDateFromLocalDateTime(pendingUpload.getDate()));
-        toReturn.put(STATUSCHANGEDDATE, DateUtils.getDateFromLocalDateTime(pendingUpload.getStatusChangedDate()));
+        toReturn.put(CREATEDDATE, DateUtils.getDateFromLocalDateTime(pendingUpload.getCreatedDate()));
+        toReturn.put(PROCESSEDDATE, DateUtils.getDateFromLocalDateTime(pendingUpload.getProcessedDate()));
         toReturn.put(FILENAME, pendingUpload.getFileName());
         toReturn.put(FILEPATH, pendingUpload.getFilePath());
-        toReturn.put(SOURCE, pendingUpload.getSource());
-        toReturn.put(STATUS, pendingUpload.getStatus());
-        toReturn.put(PARAMETERS, pendingUpload.getParametersAsString());
+        toReturn.put(CREATEDBYUSERID, pendingUpload.getCreatedByUserId());
+        toReturn.put(PROCESSEDBYUSERID, pendingUpload.getProcessedByUserId());
         toReturn.put(DATABASEID, pendingUpload.getDatabaseId());
-        toReturn.put(USERID, pendingUpload.getUserId());
-        toReturn.put(IMPORTRESULT, pendingUpload.getImportResult());
-        toReturn.put(COMMITTED, pendingUpload.getCommitted());
+        toReturn.put(IMPORTRESULTPATH, pendingUpload.getImportResultPath());
         return toReturn;
     }
 
@@ -74,17 +66,14 @@ public final class PendingUploadDAO {
             try {
                 return new PendingUpload(rs.getInt(StandardDAO.ID)
                         , rs.getInt(BUSINESSID)
-                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(DATE))
-                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(STATUSCHANGEDDATE))
+                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(CREATEDDATE))
+                        , DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(PROCESSEDDATE))
                         , rs.getString(FILENAME)
                         , rs.getString(FILEPATH)
-                        , rs.getString(SOURCE)
-                        , rs.getString(STATUS)
-                        , rs.getString(PARAMETERS)
+                        , rs.getInt(CREATEDBYUSERID)
+                        , rs.getInt(PROCESSEDBYUSERID)
                         , rs.getInt(DATABASEID)
-                        , rs.getInt(USERID)
-                        , rs.getString(IMPORTRESULT)
-                        , rs.getBoolean(COMMITTED)
+                        , rs.getString(IMPORTRESULTPATH)
                 );
             } catch (Exception e) {
                 e.printStackTrace();
@@ -95,18 +84,10 @@ public final class PendingUploadDAO {
 
     private static final PendingUploadRowMapper pendingUploadRowMapper = new PendingUploadRowMapper();
 
-    public static List<PendingUpload> findForBusinessIdAndComitted(final int businessId, boolean committed) {
+    public static List<PendingUpload> findForBusinessIdNotProcessed(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        namedParams.addValue(COMMITTED, committed);
-        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + COMMITTED + " = :" + COMMITTED + " order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
-    }
-
-    public static List<PendingUpload> findForBusinessIdAndComittedAndFileNameSearch(final int businessId, boolean committed, String fileNameSearch) {
-        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
-        namedParams.addValue(BUSINESSID, businessId);
-        namedParams.addValue(COMMITTED, committed);
-        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + COMMITTED + " = :" + COMMITTED + " order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + IMPORTRESULTPATH + " is null order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
     }
 
     public static void removeForDatabaseId(int databaseId) {

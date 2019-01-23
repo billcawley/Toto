@@ -216,22 +216,19 @@ CREATE TABLE IF NOT EXISTS `user_region_options` (
 
 -- Made for Ed Broking - but perhaps useful for all
 
-CREATE TABLE if not exists `pending_upload` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `business_id` int(11) NOT NULL,
-  `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `status_changed_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `file_path` varchar(255) COLLATE utf8_unicode_ci not null,
-  `source` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `status` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
-  `parameters` text COLLATE utf8_unicode_ci,
-  `database_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `import_result` longtext COLLATE utf8_unicode_ci,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
+CREATE TABLE IF NOT EXISTS `pending_upload` (
+                                              `id` int(11) NOT NULL AUTO_INCREMENT,
+                                              `business_id` int(11) NOT NULL,
+                                              `created_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                              `processed_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                              `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                              `file_path` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+                                              `created_by_user_id` int(11) NOT NULL,
+                                              `processed_by_user_id` int(11) DEFAULT NULL,
+                                              `database_id` int(11) NOT NULL,
+                                              `import_result_path` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+                                              PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Indexes for dumped tables

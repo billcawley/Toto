@@ -78,17 +78,41 @@ public final class AzquoMemoryDB {
     private static final ConcurrentHashMap<String, AzquoMemoryDB> memoryDatabaseMap = new ConcurrentHashMap<>(); // by data store name. Will be unique
 
     // vanilla use of ConcurrentHashMap, should be fine
-    public static AzquoMemoryDB getAzquoMemoryDB(String persistenceName, StringBuffer sessionLog)  {
-        return memoryDatabaseMap.computeIfAbsent(persistenceName, t -> new AzquoMemoryDB(persistenceName, sessionLog));
+    public static AzquoMemoryDB getAzquoMemoryDB(String persistenceName, StringBuffer sessionLog) {
+        return memoryDatabaseMap.computeIfAbsent(persistenceName, t -> new AzquoMemoryDB(persistenceName, null, sessionLog));
         // open database logging could maybe be added back in client side
     }
 
+    private static String copyPrefix = "  COPY"; // spaces shouldn't be there for normal persistence names
+
+    // vanilla use of ConcurrentHashMap, should be fine
+    public static AzquoMemoryDB getCopyOfAzquoMemoryDB(String persistenceName, StringBuffer sessionLog) {
+        return memoryDatabaseMap.computeIfAbsent(copyPrefix + persistenceName, t -> {
+            AzquoMemoryDB sourceDB = getAzquoMemoryDB(persistenceName, sessionLog);
+            Provenance mostRecentProvenance = sourceDB.getMostRecentProvenance();
+            AzquoMemoryDB toReturn = new AzquoMemoryDB(null, sourceDB, sessionLog);
+            while (mostRecentProvenance != sourceDB.getMostRecentProvenance()){
+                System.out.println("Copying again as source DB changed " + persistenceName);
+                // this means the source db changed in the mean time, try again
+                mostRecentProvenance = sourceDB.getMostRecentProvenance();
+                toReturn = new AzquoMemoryDB(null, sourceDB, sessionLog);
+            }
+            return toReturn;
+                }
+        );
+    }
+
+    // *should* make it available for garbage collection
+    public static AzquoMemoryDB zapCopyOfAzquoMemoryDB(String persistenceName) {
+        return memoryDatabaseMap.remove(copyPrefix + persistenceName);
+    }
+
     // worth being aware that if the db is still referenced somewhere then the garbage collector won't chuck it (which is what we want)
-    public static void removeDBFromMap(String persistenceName)  {
+    public static void removeDBFromMap(String persistenceName) {
         memoryDatabaseMap.remove(persistenceName);
     }
 
-    public static boolean isDBLoaded(String persistenceName)  {
+    public static boolean isDBLoaded(String persistenceName) {
         return memoryDatabaseMap.containsKey(persistenceName);
     }
 
@@ -124,6 +148,8 @@ public final class AzquoMemoryDB {
     private static AtomicInteger newDatabaseCount = new AtomicInteger(0);
 
     private volatile boolean checkValueLengths;
+
+    private final boolean isATemporaryCopy;
     /*
 
     I need to consider this https://www.securecoding.cert.org/confluence/display/java/TSM03-J.+Do+not+publish+partially+initialized+objects
@@ -140,16 +166,27 @@ public final class AzquoMemoryDB {
 
     Of course this has to escape here unless we init all the entities without a reference to the azquo memory db then add it in after.
     I've moved the memory db map in here so the constructor can now be private. I think this is no bad thing.
+
+    There are times we want a temporary copy of a database. It is passed a source database and uses TemporaryAzquoMemoryDBTransport
+    , it cannot persist. This load doesn't do an integrity check and jams the pointers to NameAttributes through as they're immutable
+    , saving a bit on memory and a lot on name load time.
      */
 
-    private AzquoMemoryDB(String persistenceName, StringBuffer sessionLog) {
+    private AzquoMemoryDB(String persistenceName, AzquoMemoryDB sourceDB, StringBuffer sessionLog) {
         newDatabaseCount.incrementAndGet();
         index = new AzquoMemoryDBIndex();
         needsLoading = true;
         // is it dodgy letting "this" escape here? As a principle yes but these objects that use "this" are held against the instance this constructor is making
         // to put it another way - AzquoMemoryDBTransport could be an inner class but I'm trying to factor such stuff off.
-        azquoMemoryDBTransport = new AzquoMemoryDBTransport(this, persistenceName, sessionLog);
-        backupTransport = new BackupTransport(this);
+        if (sourceDB != null) {
+            azquoMemoryDBTransport = new TemporaryAzquoMemoryDBTransport(this, sourceDB, sessionLog);
+            backupTransport = null;
+            isATemporaryCopy = true;
+        } else {
+            azquoMemoryDBTransport = new AzquoMemoryDBTransport(this, persistenceName, sessionLog);
+            backupTransport = new BackupTransport(this);
+            isATemporaryCopy = false;
+        }
         nameByIdMap = new ConcurrentHashMap<>();
         valueByIdMap = new ConcurrentHashMap<>();
         provenanceByIdMap = new ConcurrentHashMap<>();
@@ -163,14 +200,15 @@ public final class AzquoMemoryDB {
         azquoMemoryDBTransport.loadData(memoryTrack);
         nextId.incrementAndGet(); // bump it up one, the logic later is get and increment;
         needsLoading = false;
-        if (azquoMemoryDBTransport.hasNamesToPersist()){
+        if (azquoMemoryDBTransport.hasNamesToPersist()) {
             System.out.println("***************** name integrity problems detected/fixed on load, persisting fixes");
             persistToDataStore();
         }
         checkValueLengths = false;
     }
 
-    public void checkValueLengths(){
+
+    public void checkValueLengths() {
         checkValueLengths = true;
     }
 
@@ -237,6 +275,7 @@ public final class AzquoMemoryDB {
     Collection<Provenance> getAllProvenances() {
         return Collections.unmodifiableCollection(provenanceByIdMap.values());
     }
+
     // these two for database integrity check
     public Collection<Integer> getAllNameIds() {
         return Collections.unmodifiableCollection(nameByIdMap.keySet());
@@ -331,7 +370,6 @@ public final class AzquoMemoryDB {
     }
 
 
-
     private static AtomicInteger setValueNeedsPersistingCount = new AtomicInteger(0);
 
     void setValueNeedsPersisting(Value value) {
@@ -341,11 +379,11 @@ public final class AzquoMemoryDB {
         }
     }
 
-    public List<Value> getValuesChanged(){
+    public List<Value> getValuesChanged() {
         return azquoMemoryDBTransport.getValuesChanged();
     }
 
-    public BackupTransport getBackupTransport(){
+    public BackupTransport getBackupTransport() {
         return backupTransport;
     }
 
@@ -419,6 +457,10 @@ public final class AzquoMemoryDB {
             return anotherUser + ", time : " + valueLockTimes.get(anotherUser); // maybe we can pass the formatting to the client later, or this could be considered a db message
         }
         return null;
+    }
+
+    public boolean isATemporaryCopy() {
+        return isATemporaryCopy;
     }
 
     // I may change these later, for the mo I just want to stop drops and clears at the same time as persistToDataStore

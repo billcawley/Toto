@@ -46,6 +46,16 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
+    public void copyDatabaseTest(String persistenceName) throws RemoteException {
+        try {
+            AzquoMemoryDB.getCopyOfAzquoMemoryDB(persistenceName, null);
+            AzquoMemoryDB.zapCopyOfAzquoMemoryDB(persistenceName);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);// I think this is reasonable for the mo?
+        }
+    }
+
+    @Override
     public void checkDatabase(String persistenceName) throws RemoteException {
         try {
             DSAdminService.checkDatabase(persistenceName);
