@@ -659,7 +659,7 @@ public final class ImportService {
                     uploadedFile.setError("Preprocessor error in " + uploadedFile.getPreProcessor() + " : " + e.getMessage());
                     return uploadedFile;
                 }
-                if (!oldImportTemplate.equalsIgnoreCase(uploadedFile.getParameter(IMPORTTEMPLATE)) || (oldImportVersion != null && !oldImportVersion.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION)))) { // the template changed! Call this function again to load the new template
+                if (oldImportVersion != null && !oldImportVersion.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) { // the template changed! Call this function again to load the new template
                     // there is a danger of a circular reference - protect against that?
                     // must clear template based parameters, new object
                     UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
