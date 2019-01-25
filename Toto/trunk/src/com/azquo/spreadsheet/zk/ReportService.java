@@ -44,9 +44,6 @@ public class ReportService {
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         //current report is always allowable...
         SName sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
-        if (sReportName == null) {
-            sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZIMPORTNAME);
-        }
         String thisReportName = BookUtils.getSnameCell(sReportName).getStringValue();
         // todo - null pointer when no database for user? Force db to be set? Or allow it not to?
         OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), thisReportName);
