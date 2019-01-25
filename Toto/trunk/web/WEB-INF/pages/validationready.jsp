@@ -6,7 +6,7 @@
 <%@ include file="../includes/basic_header.jsp" %>
 
 <%
-    // a tweaked copy of zsloading - factor?
+    // a tweaked copy of zsloading - now I have two copies I really must factor
     // prevent page cache in browser side
     response.setHeader("Pragma", "no-cache");
     response.setHeader("Cache-Control", "no-store, no-cache");
@@ -18,10 +18,10 @@
 
     function updateStatus() {
         if (something) {
-            jq.post("/api/SpreadsheetStatus?action=importResult", function (data) {
+            jq.post("/api/SpreadsheetStatus?action=pendingReady", function (data) {
                 var objDiv = document.getElementById("serverStatus");
                 if (data.indexOf("true") == 0) { // the sheet should be ready, note indexof not startswith, support for the former better
-                    location.replace("/api/ManageDatabases" + data.substring(4));// nothing added in most cases
+                    location.reload();
                     something = false;
                     return;
                 }
@@ -52,11 +52,11 @@
     <div class="basic-box-container">
         <div class="basic-head" style="background-color:${bannerColor}">
             <div class="logo">
-                <a href="/api/Online?reportid=1"><img src="/images/${logo}" alt="azquo"></a>
+                <img src="/images/${logo}" alt="azquo">
             </div>
         </div>
         <div class="basic-box">
-            <h3>Importing Data...</h3>
+            <h3>Running validation...</h3>
             <div class="loader">
                 <span class="fa fa-spin fa-cog"></span>
             </div>

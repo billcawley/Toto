@@ -281,6 +281,7 @@ Created by IntelliJ IDEA.
                     <td>Size</td>
                     <td>Database</td>
                     <td></td>
+                    <td></td>
                 </tr>
                 </thead>
                 <tbody>
@@ -292,9 +293,12 @@ Created by IntelliJ IDEA.
                             <td>${pendingupload.fileName}</td>
                             <td>${pendingupload.size}</td>
                             <td>${pendingupload.databaseName}</td>
+                            <td><a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}"
+                                                                       class="button small" title="Download"><span
+                                    class="fa fa-download" title="Download"></span> </a></td>
                             <td>
                                     <a href="/api/PendingUpload?id=${pendingupload.id}"
-                                       class="button inspect small"
+                                       class="button"
                                        title="Validate and Load">
                                         Validate and Load
                                     </a>

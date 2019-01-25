@@ -71,6 +71,7 @@ public final class ImportService {
     /* external entry point, moves the file to a temp directory in case pre processing is required
     (decompress or sheets in a book to individual csv files before sending to the db server).
      After that a little housekeeping.
+     Added support for validation importing against a temporary copied database, a flag on
      */
     public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile) throws Exception { // setup just to flag it
         InputStream uploadFile = new FileInputStream(uploadedFile.getPath());
@@ -90,17 +91,29 @@ public final class ImportService {
         uploadFile.close(); // windows requires this (though windows ideally should not be used in production), perhaps not a bad idea anyway
         uploadedFile.setPath(tempFile.getPath()); // I'm now allowing adjustment of paths like this - having the object immutable became impractical
         List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, templateBook);
-        // persist on the database server
-        SpreadsheetService.databasePersist(loggedInUser);
-        // add to the uploaded list on the Manage Databases page
-        // now jamming the import feedback in the comments
+        if (!uploadedFile.isValidationTest()){
+            // persist on the database server
+            SpreadsheetService.databasePersist(loggedInUser);
+            // add to the uploaded list on the Manage Databases page
+            // now jamming the import feedback in the comments
 
-        UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
-                , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId()
-                , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), "", ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, true), originalFilePath);
-        UploadRecordDAO.store(uploadRecord);
-        // and update the counts on the manage database page
-        AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
+            UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
+                    , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId()
+                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), "", ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, true), originalFilePath);
+            UploadRecordDAO.store(uploadRecord);
+            // and update the counts on the manage database page
+            AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
+        } else {
+            // important todo - SOMEHOW CHECK IF THE SOURCE DB WAS UPDATED IN THE MEAN TIME AND IF SO RUN THE VALIDATION AGAIN
+            System.out.println("***");
+            System.out.println("***");
+            System.out.println("***");
+            System.out.println("Zapping temporary copy");
+            RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).zapTemporaryCopy(loggedInUser.getDataAccessToken());
+            System.out.println("***");
+            System.out.println("***");
+            System.out.println("***");
+        }
         return processedUploadedFiles;
     }
 
@@ -132,7 +145,7 @@ public final class ImportService {
                 names.add(f.getName());
                 Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
                 addFileNameParametersToMap(f.getName(), fileNameParams);
-                UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false);
+                UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
                 processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, templateBook));
             }
         } else { // nothing to decompress
@@ -170,62 +183,64 @@ public final class ImportService {
             uploadedFile.setError(e.getMessage());
             return Collections.singletonList(uploadedFile);
         }
-
-        for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
-            Sheet sheet = book.getSheetAt(sheetNo);
-            if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
+        if (!uploadedFile.isValidationTest()){
+            for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
+                Sheet sheet = book.getSheetAt(sheetNo);
+                if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
+                    if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+                        return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser));
+                    }
+                }
+            }
+            // is it the type of import template as required by Ben Jones
+            Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
+            if (importName != null) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
                     return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser));
                 }
             }
-        }
-        // is it the type of import template as required by Ben Jones
-        Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
-        if (importName != null) {
-            if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-                return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser));
+
+
+            String reportName = null;
+            // a misleading name now we have the ImportTemplate object
+            Name reportRange = BookUtils.getName(book, ReportRenderer.AZREPORTNAME);
+            if (reportRange != null) {
+                CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
+                reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
             }
-        }
-
-
-        String reportName = null;
-        // a misleading name now we have the ImportTemplate object
-        Name reportRange = BookUtils.getName(book, ReportRenderer.AZREPORTNAME);
-        if (reportRange != null) {
-            CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
-            reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
-        }
-        if (reportName != null) {
-            if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-                // ---- upload the report (pushing a function back into here)
-                uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly. The report menu will have been modified
-                int businessId = loggedInUser.getUser().getBusinessId();
-                int databaseId = loggedInUser.getDatabase().getId();
-                String pathName = loggedInUser.getBusinessDirectory();
-                OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
-                if (or != null) {
-                    // zap the old one first
-                    try {
-                        Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk()));
-                    } catch (Exception e) {
-                        System.out.println("problem deleting old report");
-                        e.printStackTrace();
+            if (reportName != null) {
+                if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
+                    // ---- upload the report (pushing a function back into here)
+                    uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly. The report menu will have been modified
+                    int businessId = loggedInUser.getUser().getBusinessId();
+                    int databaseId = loggedInUser.getDatabase().getId();
+                    String pathName = loggedInUser.getBusinessDirectory();
+                    OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
+                    if (or != null) {
+                        // zap the old one first
+                        try {
+                            Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk()));
+                        } catch (Exception e) {
+                            System.out.println("problem deleting old report");
+                            e.printStackTrace();
+                        }
+                        or.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
+                    } else {
+                        or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "");
                     }
-                    or.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
-                } else {
-                    or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "");
+                    OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
+                    Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
+                    Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
+                    Files.copy(Paths.get(uploadedFile.getPath()), fullPath); // and copy
+                    DatabaseReportLinkDAO.link(databaseId, or.getId());
+                    // ---- end report uploading
+                    uploadedFile.setReportName(reportName);
+                    uploadedFile.setProcessingDuration(System.currentTimeMillis() - time);
+                    return Collections.singletonList(uploadedFile);
                 }
-                OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
-                Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
-                Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
-                Files.copy(Paths.get(uploadedFile.getPath()), fullPath); // and copy
-                DatabaseReportLinkDAO.link(databaseId, or.getId());
-                // ---- end report uploading
-                uploadedFile.setReportName(reportName);
-                uploadedFile.setProcessingDuration(System.currentTimeMillis() - time);
-                return Collections.singletonList(uploadedFile);
             }
         }
+
         if (loggedInUser.getDatabase() == null) {
             uploadedFile.setError("no database set");
             return Collections.singletonList(uploadedFile);
@@ -336,7 +351,7 @@ public final class ImportService {
                                         List<String> names = new ArrayList<>(uploadedFile.getFileNames());
                                         names.add(name.getNameName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
                                         // reassigning uploaded file so the correct object will be passed back on exception
-                                        uploadedFile = new UploadedFile(newTempFile.getPath(), names, uploadedFile.getParameters(), true);
+                                        uploadedFile = new UploadedFile(newTempFile.getPath(), names, uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
                                         uploadedFile.addToProcessingDuration(convertTime);
                                         toReturn.add(readPreparedFile(loggedInUser, uploadedFile, true, templateBook));
                                     }
@@ -395,7 +410,7 @@ public final class ImportService {
             Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
             addFileNameParametersToMap(sheetName, fileNameParams);
             // reassigning uploaded file so the correct object will be passed back on exception
-            uploadedFile = new UploadedFile(tempPath, names, fileNameParams, true); // true, it IS converted from a worksheet
+            uploadedFile = new UploadedFile(tempPath, names, fileNameParams, true, uploadedFile.isValidationTest()); // true, it IS converted from a worksheet
             if (emptySheet) {
                 uploadedFile.setError("Empty sheet : " + sheetName);
                 return Collections.singletonList(uploadedFile);
@@ -443,6 +458,7 @@ public final class ImportService {
             templateName = templateName.substring(0, blankPos);
         }
 
+        // todo - cache the scanned info? Might save some time if POI becomes a bottleneck
 
         if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready){
             if (templateBook != null) {
@@ -646,7 +662,7 @@ public final class ImportService {
                 if (!oldImportTemplate.equalsIgnoreCase(uploadedFile.getParameter(IMPORTTEMPLATE)) || (oldImportVersion != null && !oldImportVersion.equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION)))) { // the template changed! Call this function again to load the new template
                     // there is a danger of a circular reference - protect against that?
                     // must clear template based parameters, new object
-                    UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true);
+                    UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
                     return readPreparedFile(loggedInUser, fileToProcessAgain,false, templateBook);
                 }
             } else {
@@ -665,12 +681,13 @@ public final class ImportService {
                 , uploadedFile
                 , loggedInUser.getUser().getName());
         // run any executes defined in the file
+        List<List<List<String>>> systemData2DArrays = new ArrayList<>();
         if (processedFile.getPostProcessor() != null) {
             // set user choices to file params, could be useful to the execute
             for (String choice : uploadedFile.getParameters().keySet()) {
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
             }
-            processedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, processedFile.getPostProcessor(), uploadedFile.getProvenanceId()).toString());
+            processedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, processedFile.getPostProcessor(), systemData2DArrays, uploadedFile.getProvenanceId()).toString());
         }
         return processedFile;
     }

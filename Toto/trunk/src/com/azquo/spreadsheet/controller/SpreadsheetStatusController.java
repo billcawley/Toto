@@ -1,6 +1,7 @@
 package com.azquo.spreadsheet.controller;
 
 import com.azquo.admin.controller.ManageDatabasesController;
+import com.azquo.admin.controller.PendingUploadController;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import org.springframework.stereotype.Controller;
@@ -37,6 +38,12 @@ public class SpreadsheetStatusController {
 
         if ("sheetReady".equals(action) && reportid != null) {
             if (request.getSession().getAttribute(reportid) != null) {
+                return "true";
+            }
+        }
+        // be more specific? todo
+        if ("pendingReady".equals(action)) {
+            if (request.getSession().getAttribute(PendingUploadController.PENDINGREADY) != null) {
                 return "true";
             }
         }

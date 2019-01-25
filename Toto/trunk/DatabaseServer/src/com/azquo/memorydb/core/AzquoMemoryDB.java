@@ -83,28 +83,32 @@ public final class AzquoMemoryDB {
         // open database logging could maybe be added back in client side
     }
 
-    private static String copyPrefix = "  COPY"; // spaces shouldn't be there for normal persistence names
+    private static String copyPrefix = "TEMPORARY COPY"; // spaces shouldn't be there for normal persistence names so shouldn't clash
+
+    public static boolean copyExists(String persistenceName){
+        return memoryDatabaseMap.contains(copyPrefix + persistenceName);
+    }
 
     // vanilla use of ConcurrentHashMap, should be fine
-    public static AzquoMemoryDB getCopyOfAzquoMemoryDB(String persistenceName, StringBuffer sessionLog) {
+    public static AzquoMemoryDB getCopyOfAzquoMemoryDB(String persistenceName) {
         return memoryDatabaseMap.computeIfAbsent(copyPrefix + persistenceName, t -> {
-            AzquoMemoryDB sourceDB = getAzquoMemoryDB(persistenceName, sessionLog);
-            Provenance mostRecentProvenance = sourceDB.getMostRecentProvenance();
-            AzquoMemoryDB toReturn = new AzquoMemoryDB(null, sourceDB, sessionLog);
-            while (mostRecentProvenance != sourceDB.getMostRecentProvenance()){
-                System.out.println("Copying again as source DB changed " + persistenceName);
-                // this means the source db changed in the mean time, try again
-                mostRecentProvenance = sourceDB.getMostRecentProvenance();
-                toReturn = new AzquoMemoryDB(null, sourceDB, sessionLog);
-            }
-            return toReturn;
+                    AzquoMemoryDB sourceDB = getAzquoMemoryDB(persistenceName, null);
+                    Provenance mostRecentProvenance = sourceDB.getMostRecentProvenance();
+                    AzquoMemoryDB toReturn = new AzquoMemoryDB(null, sourceDB, null);
+                    while (mostRecentProvenance != sourceDB.getMostRecentProvenance()) {
+                        System.out.println("Copying again as source DB changed " + persistenceName);
+                        // this means the source db changed in the mean time, try again
+                        mostRecentProvenance = sourceDB.getMostRecentProvenance();
+                        toReturn = new AzquoMemoryDB(null, sourceDB, null);
+                    }
+                    return toReturn;
                 }
         );
     }
 
     // *should* make it available for garbage collection
-    public static AzquoMemoryDB zapCopyOfAzquoMemoryDB(String persistenceName) {
-        return memoryDatabaseMap.remove(copyPrefix + persistenceName);
+    public static void zapTemporarayCopyOfAzquoMemoryDB(String persistenceName) {
+        memoryDatabaseMap.remove(copyPrefix + persistenceName);
     }
 
     // worth being aware that if the db is still referenced somewhere then the garbage collector won't chuck it (which is what we want)
@@ -179,7 +183,7 @@ public final class AzquoMemoryDB {
         // is it dodgy letting "this" escape here? As a principle yes but these objects that use "this" are held against the instance this constructor is making
         // to put it another way - AzquoMemoryDBTransport could be an inner class but I'm trying to factor such stuff off.
         if (sourceDB != null) {
-            azquoMemoryDBTransport = new TemporaryAzquoMemoryDBTransport(this, sourceDB, sessionLog);
+            azquoMemoryDBTransport = new TemporaryAzquoMemoryDBTransport(this, sourceDB);
             backupTransport = null;
             isATemporaryCopy = true;
         } else {

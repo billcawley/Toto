@@ -46,16 +46,6 @@ class RMIImplementation implements RMIInterface {
     }
 
     @Override
-    public void copyDatabaseTest(String persistenceName) throws RemoteException {
-        try {
-            AzquoMemoryDB.getCopyOfAzquoMemoryDB(persistenceName, null);
-            AzquoMemoryDB.zapCopyOfAzquoMemoryDB(persistenceName);
-        } catch (Exception e) {
-            throw new RemoteException("Database Server Exception", e);// I think this is reasonable for the mo?
-        }
-    }
-
-    @Override
     public void checkDatabase(String persistenceName) throws RemoteException {
         try {
             DSAdminService.checkDatabase(persistenceName);
@@ -575,5 +565,10 @@ class RMIImplementation implements RMIInterface {
     @Override
     public String getMostRecentProvenance(String persistenceName) {
         return AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null).getMostRecentProvenance() != null ? AzquoMemoryDB.getAzquoMemoryDB(persistenceName, null).getMostRecentProvenance().getProvenanceForDisplay().toString() : "";
+    }
+
+    @Override
+    public void zapTemporaryCopy(DatabaseAccessToken databaseAccessToken) {
+        AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).zapTemporaryCopy();
     }
 }

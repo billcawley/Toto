@@ -352,7 +352,7 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch, AtomicBoolean commit) {
+    public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch) {
         if (loggedInUser.getUser().isAdministrator()) { // just admin for the mo - maybe will be changed
             List<PendingUpload> pendingUploads = PendingUploadDAO.findForBusinessIdNotProcessed(loggedInUser.getUser().getBusinessId());
             List<PendingUpload.PendingUploadForDisplay> pendingUploadForDisplays = new ArrayList<>();

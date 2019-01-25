@@ -37,6 +37,9 @@ public class ReportExecutor {
 
     private static final String EXECUTERESULTS = "az_ExecuteResults";
     private static final String OUTCOME = "az_Outcome";
+    // worth explaining. One use of executing is to gather information e.g. for Ed Broking Query Validation
+    // in simple terms if we see this region grab its contents
+    private static final String SYSTEMDATA = "az_SystemData";
 
     // now returns a book as it will need to be reloaded at the end
     // provenance id means when you select choices they will be constrained to
@@ -50,7 +53,7 @@ public class ReportExecutor {
                     executeCommand = "";
                     //;now allowing executes to be on multiple lines...
                     CellRegion region = sName.getRefersToCellRegion();
-                    for (int rowNo=0;rowNo < region.getRowCount() ; rowNo++){
+                    for (int rowNo = 0; rowNo < region.getRowCount(); rowNo++) {
                         executeCommand += sheet.getInternalSheet().getCell(region.getRow() + rowNo, region.getColumn()).getStringValue() + "\n";
                     }
                     break;
@@ -61,7 +64,7 @@ public class ReportExecutor {
             return book; // unchanged, nothing to run
         }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        StringBuilder loops = runExecute(loggedInUser, executeCommand, -1);
+        StringBuilder loops = runExecute(loggedInUser, executeCommand, null, -1);
 
         final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
@@ -81,29 +84,29 @@ public class ReportExecutor {
         return newBook;
     }
 
-  public static StringBuilder runExecute(LoggedInUser loggedInUser, String executeCommand, int provenanceId) throws Exception{
-      List<String> commands = new ArrayList<>();
-      StringTokenizer st = new StringTokenizer(executeCommand, "\n");
-      while (st.hasMoreTokens()) {
-          String line = st.nextToken();
-          if (!line.trim().isEmpty()) {
-              commands.add(line);
-          }
-      }
-      //RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
-      RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Starting execute");
-      StringBuilder loops = new StringBuilder();
-      executeCommands(loggedInUser, commands, loops, new AtomicInteger(0), provenanceId);
-      // it won't have cleared while executing
-      RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
-      SpreadsheetService.databasePersist(loggedInUser);
-      return loops;
-  }
+    public static StringBuilder runExecute(LoggedInUser loggedInUser, String executeCommand, List<List<List<String>>> systemData2DArrays, int provenanceId) throws Exception {
+        List<String> commands = new ArrayList<>();
+        StringTokenizer st = new StringTokenizer(executeCommand, "\n");
+        while (st.hasMoreTokens()) {
+            String line = st.nextToken();
+            if (!line.trim().isEmpty()) {
+                commands.add(line);
+            }
+        }
+        //RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearTemporaryNames(loggedInUser.getDataAccessToken());
+        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), "Starting execute");
+        StringBuilder loops = new StringBuilder();
+        executeCommands(loggedInUser, commands, loops, systemData2DArrays, new AtomicInteger(0), provenanceId);
+        // it won't have cleared while executing
+        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
+        SpreadsheetService.databasePersist(loggedInUser);
+        return loops;
+    }
 
 
     // we assume cleansed of blank lines
     // now can return the outcome if there's an az_Outcome cell. Assuming a loop or list of "do"s then the String returned is the last.
-    private static TypedPair<String, Double> executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, AtomicInteger count, int provenanceId) throws Exception {
+    private static TypedPair<String, Double> executeCommands(LoggedInUser loggedInUser, List<String> commands, StringBuilder loopsLog, List<List<List<String>>> systemData2DArrays, AtomicInteger count, int provenanceId) throws Exception {
         TypedPair<String, Double> toReturn = null;
         if (commands.size() > 0 && commands.get(0) != null) {
             String firstLine = commands.get(0);
@@ -124,10 +127,10 @@ public class ReportExecutor {
                     }
                     lineNo = onwardLineNo - 1; // put line back to where it is now
                     if (!subCommands.isEmpty()) { // then we have something to run for the for each!
-                        int inPos = findString(trimmedLine," in ");
-                        String choiceName = trimmedLine.substring("for each".length(), inPos). trim();
-                        if (choiceName.startsWith("`") || choiceName.startsWith("[")){
-                            choiceName = choiceName.substring(1,choiceName.length()-1);
+                        int inPos = findString(trimmedLine, " in ");
+                        String choiceName = trimmedLine.substring("for each".length(), inPos).trim();
+                        if (choiceName.startsWith("`") || choiceName.startsWith("[")) {
+                            choiceName = choiceName.substring(1, choiceName.length() - 1);
                         }
                         String choiceQuery = trimmedLine.substring(inPos + 4).trim();
                         loopsLog.append(choiceName).append(" : ").append(choiceQuery).append("\r\n");
@@ -135,7 +138,7 @@ public class ReportExecutor {
                         for (String choiceValue : dropdownListForQuery) { // run the for :)
                             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
-                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count,provenanceId);
+                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, systemData2DArrays, count, provenanceId);
 
                         }
                     }
@@ -145,10 +148,10 @@ public class ReportExecutor {
                     Database oldDatabase = null;
                     OnlineReport onlineReport;
                     // so, first try to get the report based off permissions, if so it might override the current database
-                    if (loggedInUser.getPermission(reportToRun.toLowerCase()) != null){
+                    if (loggedInUser.getPermission(reportToRun.toLowerCase()) != null) {
                         TypedPair<OnlineReport, Database> permission = loggedInUser.getPermission(reportToRun.toLowerCase());
                         onlineReport = permission.getFirst();
-                        if (permission.getSecond() != null){
+                        if (permission.getSecond() != null) {
                             oldDatabase = loggedInUser.getDatabase();
                             loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getSecond());
                         }
@@ -165,14 +168,14 @@ public class ReportExecutor {
                         book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
                         StringBuilder errorLog = new StringBuilder();
                         final boolean save = ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
-                        if (errorLog.length() > 0){
+                        if (errorLog.length() > 0) {
                             loopsLog.append(" ERROR : ").append(errorLog.toString());
                             return null;
                             // todo - how to stop all the way to the top? Can set count as -1 but this is hacky
                         }
                         ReportService.extractEmailInfo(book);
                         if (save) { // so the data was changed and if we save from here it will make changes to the DB
-                              fillSpecialRegions(loggedInUser,book, onlineReport.getId());
+                            fillSpecialRegions(loggedInUser, book, onlineReport.getId());
                             for (SName name : book.getInternalBook().getNames()) {
                                 if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
                                     String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
@@ -206,8 +209,13 @@ public class ReportExecutor {
                             }
                         }
                         // revert database if
-                        if (oldDatabase != null){
-                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(),oldDatabase);
+                        if (oldDatabase != null) {
+                            loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), oldDatabase);
+                        }
+
+                        SName systemDataName = book.getInternalBook().getNameByName(SYSTEMDATA);
+                        if (systemDataName != null && systemData2DArrays != null) {
+                            systemData2DArrays.add(BookUtils.nameToStringLists(systemDataName));
                         }
                     }
                 } else if (trimmedLine.toLowerCase().startsWith("repeat until outcome")) { // new conditional logic
@@ -240,7 +248,7 @@ public class ReportExecutor {
                             boolean stop = true; // make the default be to stop e.g. in the case of bad syntax or whatever . . .
                             do {
                                 counter++;
-                                final TypedPair<String, Double> stringDoubleTypedPair = executeCommands(loggedInUser, subCommands, loopsLog, count,provenanceId);
+                                final TypedPair<String, Double> stringDoubleTypedPair = executeCommands(loggedInUser, subCommands, loopsLog, systemData2DArrays, count, provenanceId);
                                 if (stringDoubleTypedPair != null) {
                                     // ok I'm going to assume type matching - if the types don't match then forget the comparison
                                     if ((stringDoubleTypedPair.getFirst() != null && constant != null)) { // string, equals not equals comparison
@@ -293,15 +301,15 @@ public class ReportExecutor {
                     }
                 } else if (trimmedLine.toLowerCase().startsWith("delete ")) {
                     // zapdata is put through to the name query parser - this is not great practice really . . . .
-                  RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
-                            .getJsonChildren(loggedInUser.getDataAccessToken(),0, 0, false, "edit:zapdata " + trimmedLine.substring(7), StringLiterals.DEFAULT_DISPLAY_NAME, 0);
+                    RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp())
+                            .getJsonChildren(loggedInUser.getDataAccessToken(), 0, 0, false, "edit:zapdata " + trimmedLine.substring(7), StringLiterals.DEFAULT_DISPLAY_NAME, 0);
 
                 } else if (trimmedLine.toLowerCase().startsWith("set ")) {
                     String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
                     if (result.toLowerCase().startsWith("error")) {
                         throw (new Exception(result));
                     }
-                }else if (trimmedLine.toLowerCase().startsWith("if ")) {
+                } else if (trimmedLine.toLowerCase().startsWith("if ")) {
                     String result = CommonReportUtils.resolveQuery(loggedInUser, trimmedLine.substring(4));
                     if (result.toLowerCase().startsWith("error")) {
                         throw (new Exception(result));
@@ -318,7 +326,7 @@ public class ReportExecutor {
 
                     if (result.equals("true")) {
                         if (!subCommands.isEmpty()) {
-                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count,provenanceId);
+                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, systemData2DArrays, count, provenanceId);
 
                         }
                         if (lastLine.toLowerCase().equals("else")) {
@@ -327,8 +335,7 @@ public class ReportExecutor {
                             }
                         }
                         lineNo--;
-
-                    }else{
+                    } else {
                         subCommands = new ArrayList<>();
                         while (lineNo < commands.size() && getIndent(commands.get(lineNo)) > startingIndent) {
                             lastLine = commands.get(lineNo);
@@ -337,15 +344,11 @@ public class ReportExecutor {
                         }
                         lineNo--; // put line back to where it is now
                         if (!subCommands.isEmpty()) {
-                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, count, provenanceId);
-
+                            toReturn = executeCommands(loggedInUser, subCommands, loopsLog, systemData2DArrays, count, provenanceId);
                         }
-
                     }
-
-
-                }else{
-                        loopsLog.append("badly formed execute line  : ").append(trimmedLine);
+                } else {
+                    loopsLog.append("badly formed execute line  : ").append(trimmedLine);
                 }
             }
         }
@@ -353,7 +356,7 @@ public class ReportExecutor {
         return toReturn;
     }
 
-    public static void fillSpecialRegions(LoggedInUser loggedInUser, Book book, int reportId){
+    public static void fillSpecialRegions(LoggedInUser loggedInUser, Book book, int reportId) {
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
@@ -370,8 +373,8 @@ public class ReportExecutor {
                     List<List<CellForDisplay>> data = cellsAndHeadingsForDisplay.getData();
                     for (int rowNo = 0; rowNo < data.size(); rowNo++) {
                         for (int colNo = 0; colNo < data.get(0).size(); colNo++) {
-                            String cellVal = ImportService.getCellValue(sheet, top + rowNo,left + colNo).getSecond();
-                            if (cellVal.length() > 0){
+                            String cellVal = ImportService.getCellValue(sheet, top + rowNo, left + colNo).getSecond();
+                            if (cellVal.length() > 0) {
                                 data.get(rowNo).get(colNo).setNewStringValue(cellVal);
                             }
                         }
@@ -381,14 +384,14 @@ public class ReportExecutor {
         }
     }
 
-    private static int findString(String line, String toFind)throws Exception{
+    private static int findString(String line, String toFind) throws Exception {
         //checks whether string to find is part of a name enclosed in ``
         int quotePos = 0;
         int foundPos = line.indexOf(toFind);
-        if (foundPos > 0 ) {
+        if (foundPos > 0) {
             while (quotePos >= 0) {
                 quotePos = line.indexOf("`", quotePos + 1);
-                if (quotePos < 0 || quotePos > foundPos)  return foundPos;
+                if (quotePos < 0 || quotePos > foundPos) return foundPos;
                 int endPos = line.indexOf("`", quotePos + 1);
                 if (endPos < 0) quotePos = endPos;
                 else {
@@ -400,8 +403,10 @@ public class ReportExecutor {
                 }
             }
         }
-        throw(new Exception("not understood: " + line));
-     };
+        throw (new Exception("not understood: " + line));
+    }
+
+    ;
 
     private static int getIndent(String s) {
         int indent = 0;

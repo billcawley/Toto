@@ -41,7 +41,10 @@ public class DSImportService {
     // called by RMIImplementation, the entry point from the report server
     public static UploadedFile readPreparedFile(final DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, final String user) throws Exception {
         System.out.println("Reading file " + uploadedFile.getPath());
-        AzquoMemoryDBConnection azquoMemoryDBConnection = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
+        // we have the temporary db if it's a validation test, this is zapped at the end
+        AzquoMemoryDBConnection azquoMemoryDBConnection = uploadedFile.isValidationTest()
+                ? AzquoMemoryDBConnection.getTemporaryCopyConnectionFromAccessToken(databaseAccessToken)
+                : AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
         azquoMemoryDBConnection.setProvenance(user, "imported", uploadedFile.getFileNamessAsString(), "");
         // if the provenance is unused I could perhaps zap it but it's not a big deal for the mo
         UploadedFile toReturn = readPreparedFile(azquoMemoryDBConnection, uploadedFile);
@@ -139,7 +142,6 @@ public class DSImportService {
             } else {
                 lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(uploadedFile.getPath())));
             }
-
 
             // read headings off file - under new logic this needs to pay attention to what was passed from the report server
             int skipLines = uploadedFile.getSkipLines();

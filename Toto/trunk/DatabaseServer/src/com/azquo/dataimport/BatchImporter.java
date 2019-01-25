@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,7 +39,7 @@ public class BatchImporter implements Callable<Void> {
     private final List<TypedPair<Integer, List<ImportCellWithHeading>>> dataToLoad;
     private final Map<String, Name> namesFoundCache;
     private final List<String> attributeNames;
-    private final Set<String> linesRejected;
+    private final Map<Integer, List<String>> linesRejected;
     private final boolean clearData;
     private final CompositeIndexResolver compositeIndexResolver;
 
@@ -47,7 +48,7 @@ public class BatchImporter implements Callable<Void> {
             , List<TypedPair<Integer, List<ImportCellWithHeading>>> dataToLoad
             , Map<String, Name> namesFoundCache
             , List<String> attributeNames
-            , Set<String> linesRejected
+            , Map<Integer, List<String>> linesRejected
             , boolean clearData
             , CompositeIndexResolver compositeIndexResolver) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
@@ -113,23 +114,13 @@ public class BatchImporter implements Callable<Void> {
                         }
                         time = now;
                     } else if (linesRejected.size() < 100) {
-                        linesRejected.add(lineToLoadWithLineNumber.getFirst() + ": " + rejectionReason);
+                        linesRejected.computeIfAbsent(lineToLoadWithLineNumber.getFirst(), t -> new CopyOnWriteArrayList<>()).add(rejectionReason);
                     }
                 }
 
             } catch (Exception e) {
                 if (linesRejected.size() < 100) {
-                    // I wonder about formatting on this. Maybe add some more object structure?
-                    StringBuilder lineDetails = new StringBuilder();
-                    for (ImportCellWithHeading importCellWithHeading : lineToLoad){
-                        if (importCellWithHeading.getImmutableImportHeading().heading != null && !importCellWithHeading.getImmutableImportHeading().heading.isEmpty()){
-                            lineDetails.append(importCellWithHeading.getImmutableImportHeading().heading).append(importCellWithHeading.getImmutableImportHeading().attribute != null ? "." + importCellWithHeading.getImmutableImportHeading().attribute : "");
-                            lineDetails.append(":");
-                            lineDetails.append(importCellWithHeading.getLineValue());
-                            lineDetails.append("<br/>");
-                        }
-                    }
-                    linesRejected.add(lineToLoadWithLineNumber.getFirst() + ": " + e.getMessage() + "<br/>Line details : <br/>" + lineDetails);
+                    linesRejected.computeIfAbsent(lineToLoadWithLineNumber.getFirst(), t -> new CopyOnWriteArrayList<>()).add(e.getMessage());
                 }
             }
         }
@@ -566,7 +557,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 }
             }
             if (!found) {
-                throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " on " + setName + " and " + valueToTest);
+                throw new Exception("lookup for " + cell.getImmutableImportHeading().heading + " on " + setName + " and " + valueToTest + " not found");
             }
         }
     }
@@ -595,7 +586,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
     }
 
     // peers in the headings might have caused some database modification but really it is here that things start to be modified in earnest
-    private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Set<String> linesRejected, boolean clearData) throws Exception {
+    private static int interpretLine(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, Map<String, Name> namesFoundCache, List<String> attributeNames, int importLine, Map<Integer, List<String>> linesRejected, boolean clearData) throws Exception {
         int valueCount = 0;
         // initial pass to deal spaces that might need removing and local parents
         for (ImportCellWithHeading importCellWithHeading : cells) {
@@ -630,7 +621,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 }
             }
             if (!peersOk) {
-                linesRejected.add(importLine + ":Missing peers for" + cell.getImmutableImportHeading().heading); // new logic to mark unstored values in the lines rejected
+                linesRejected.computeIfAbsent(importLine, t -> new CopyOnWriteArrayList<>()).add(":Missing peers for" + cell.getImmutableImportHeading().heading);
             } else if (!namesForValue.isEmpty()) { // no point storing if peers not ok or no names for value (the latter shouldn't happen, braces and a belt I suppose)
                 // now we have the set of names for that name with peers get the value from that headingNo it's a heading for
                 String value = cell.getLineValue();
@@ -657,7 +648,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                     // handle attribute was here, we no longer require creating the line name so it can in lined be cut down a lot
                     ImportCellWithHeading identityCell = cells.get(cell.getImmutableImportHeading().indexForAttribute); // get our source cell
                     if (identityCell.getLineNames() == null) {
-                        linesRejected.add(importLine + " No name for attribute " + cell.getImmutableImportHeading().attribute + " of " + cell.getImmutableImportHeading().heading);
+                        linesRejected.computeIfAbsent(importLine, t -> new CopyOnWriteArrayList<>()).add("No name for attribute " + cell.getImmutableImportHeading().attribute + " of " + cell.getImmutableImportHeading().heading);
                         break;
                     } else {
                         for (Name name : identityCell.getLineNames()) {

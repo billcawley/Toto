@@ -23,8 +23,6 @@ public interface RMIInterface extends Remote {
 
     void emptyDatabase(String persistenceName) throws RemoteException;
 
-    void copyDatabaseTest(String persistenceName) throws RemoteException;
-
     void checkDatabase(String persistenceName) throws RemoteException;
 
     void dropDatabase(String persistenceName) throws RemoteException;
@@ -87,6 +85,8 @@ public interface RMIInterface extends Remote {
     void unlockData(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
     void persistDatabase(DatabaseAccessToken databaseAccessToken) throws RemoteException;
+
+    void zapTemporaryCopy(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 
     String getSessionLog(DatabaseAccessToken databaseAccessToken) throws RemoteException;
 

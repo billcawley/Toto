@@ -20,8 +20,8 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
 
     final private AzquoMemoryDB source;
 
-    TemporaryAzquoMemoryDBTransport(AzquoMemoryDB azquoMemoryDB, AzquoMemoryDB source, StringBuffer sessionLog) {
-        super(azquoMemoryDB, null, sessionLog);
+    TemporaryAzquoMemoryDBTransport(AzquoMemoryDB azquoMemoryDB, AzquoMemoryDB source) {
+        super(azquoMemoryDB, null, null);
         this.source = source;
     }
 
@@ -42,7 +42,6 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
                 azquoMemoryDB.setNextId(name.getId());
             }
             loadTracker.addAndGet(sourceNames.size());
-            logInSessionLogAndSystem("loaded " + loadTracker.get());
             return null;
         }
     }
@@ -63,7 +62,6 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
                 azquoMemoryDB.setNextId(value.getId());
             }
             loadTracker.addAndGet(sourceValues.size());
-            logInSessionLogAndSystem("loaded " + loadTracker.get());
             return null;
         }
     }
@@ -73,7 +71,6 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
     // It should be noted that a fair amount of effort has been put into optimising this, consider carefully before making changes
     void loadData(boolean memoryTrack) {
         long startTime = System.currentTimeMillis();
-        logInSessionLogAndSystem("loading data for COPY OF " + source.getPersistenceName());
         long marker = System.currentTimeMillis();
         Runtime runtime = Runtime.getRuntime();
         long usedMB = 0;
@@ -118,7 +115,6 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
             for (Future future : futureBatches) {
                 future.get(1, TimeUnit.HOURS);
             }
-            logInSessionLogAndSystem("Names loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
             marker = System.currentTimeMillis();
             futureBatches = new ArrayList<>();
             ArrayList<Value> valueBatch = new ArrayList<>(step);
@@ -133,7 +129,6 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
             for (Future future : futureBatches) {
                 future.get(1, TimeUnit.HOURS);
             }
-            logInSessionLogAndSystem("Values loaded in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
             marker = System.currentTimeMillis();
             // wait until all are loaded before linking
             System.out.println(provenanceLoaded.get() + valuesLoaded.get() + namesLoaded.get() + " unlinked entities loaded in " + (System.currentTimeMillis() - startTime) / 1000 + " second(s)");
@@ -146,7 +141,6 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
                 System.out.println("Used Memory after init names :"
                         + (runtime.totalMemory() - runtime.freeMemory()) / mb);
             }
-            logInSessionLogAndSystem("Names init/linked in " + (System.currentTimeMillis() - marker) / 1000f + " second(s)");
         } catch (Exception e) {
             logInSessionLogAndSystem("could not load data for COPY OF " + source.getPersistenceName() + "!");
             e.printStackTrace();

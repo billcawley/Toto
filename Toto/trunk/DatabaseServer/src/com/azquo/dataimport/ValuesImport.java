@@ -7,7 +7,11 @@ import com.azquo.memorydb.core.Name;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.fasterxml.jackson.databind.MappingIterator;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -22,8 +26,6 @@ The cell on a line can be a value or an attribute or a name - or a part of anoth
  */
 public class ValuesImport {
 
-    // where we store import specs for different file types
-    public static final String ALLIMPORTSHEETS = "All import sheets";
 
     static void valuesImport(AzquoMemoryDBConnection connection, MappingIterator<String[]> lineIterator
             , UploadedFile uploadedFile, List<ImmutableImportHeading> importHeadings
@@ -35,12 +37,11 @@ public class ValuesImport {
             List<Future> futureBatches = new ArrayList<>();
             // Local cache of names just to speed things up, a name could be referenced millions of times in one file
             final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
-            final Set<String> linesRejected = Collections.newSetFromMap(new ConcurrentHashMap<>(0)); // track line numbers rejected
+            // new format. Line number, the line itself and then a list of errors
+            final Map<Integer, List<String>> linesRejected = new ConcurrentHashMap<>(); // track line numbers rejected
             int linesImported = 0; // just for some feedback at the end
-            int importLine = 0; // for error checking etc. Generally the first line of data is line 2, this is incremented at the beginning of the loop. Might be inaccurate if there are vertically stacked headings.
             while (lineIterator.hasNext()) { // the main line reading loop
                 String[] lineValues = lineIterator.next();
-                importLine++;
                 linesImported++;
                 List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
                 int columnIndex = 0;
@@ -74,7 +75,7 @@ public class ValuesImport {
                     columnIndex++;
                 }
                 if (!corrupt && !blankLine) {
-                    linesBatched.add(new TypedPair<>(importLine,importCellsWithHeading));
+                    linesBatched.add(new TypedPair<>(lineIterator.getCurrentLocation().getLineNr() - 1,importCellsWithHeading)); // line no - 1 as we want where it was, not where it's waiting now
                     // Start processing this batch. As the file is read the active threads will rack up to the maximum number allowed rather than starting at max. Store the futures to confirm all are done after all lines are read.
                     // batch size is derived by getLineIteratorAndBatchSize
                     if (linesBatched.size() == batchSize) {
@@ -109,28 +110,39 @@ public class ValuesImport {
                 }
             }
             uploadedFile.setProcessingDuration((System.currentTimeMillis() - track) / 1000);
-            // hacky - make a better solution - todo
-            Set<String> linesRejectedTest = new HashSet<>();
-            for (String rejected : linesRejected){
-                linesRejectedTest.add(rejected.substring(0, rejected.indexOf(":")));
-            }
-            uploadedFile.setNoLinesImported(linesImported - linesRejectedTest.size());
-
-            // add a bit of feedback for rejected lines. Factor? It's not complex stuff.
-            if (!linesRejected.isEmpty()) {
-                ArrayList<String> lineNumbersList = new ArrayList<>(linesRejected);
-                lineNumbersList.sort((s, t1) -> {
-                    try {
-                        if (s.contains(":") && t1.contains(":")) {
-                            return Integer.compare(Integer.parseInt(s.substring(0, s.indexOf(":")).trim()), Integer.parseInt(t1.substring(0, t1.indexOf(":")).trim()));
-                        }
-                    } catch (Exception ignored) {
-                    }
-                    return 0;
-                }); // should do the basic sort
-                uploadedFile.addToLinesRejected(lineNumbersList);
-            }
+            uploadedFile.setNoLinesImported(linesImported - linesRejected.size());
             connection.addToUserLogNoException("Imported " + (linesImported - linesRejected.size()) + " lines", true); // does the user log require more details??
+            if (!linesRejected.isEmpty()) {
+                // I'm going to have to go through the file and fine the rejected lines if they're there, can't really use the iterator before I don't think.
+                // I guess watch for possible performance issues . . .
+                ArrayList<UploadedFile.RejectedLine> rejectedLinesForUserFeedback = new ArrayList<>();
+                // this try should gracefully release the resources
+                long time = System.currentTimeMillis();
+                try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), Charset.forName("UTF-8"))) {
+                    int lineNo = 0;
+                    String line;
+                    // I assume the line no as given by the json iterator starts at line 1, might have to check this . . .
+                    while ((line = br.readLine()) != null){
+                        lineNo++;
+                        if (linesRejected.containsKey(lineNo)){
+                            List<String> errors = linesRejected.remove(lineNo);
+                            StringBuilder sb = new StringBuilder();
+                            for (String error : errors){
+                                if (sb.length() > 0){
+                                    sb.append(", ");
+                                }
+                                sb.append(error);
+                            }
+                            rejectedLinesForUserFeedback.add(new UploadedFile.RejectedLine(lineNo, line, sb.toString()));
+                            if (linesRejected.isEmpty()){ // we've grabbed all the rejected lines (removed above  . . .)
+                                break;
+                            }
+                        }
+                    }
+                }
+                System.out.println("millis to scan for error lines : " + (System.currentTimeMillis() - time));
+                uploadedFile.addToLinesRejected(rejectedLinesForUserFeedback);
+            }
             System.out.println("---------- names found cache size " + namesFoundCache.size());
         } catch (Exception e) {
             // the point of this is to add the file name to the exception message - I wonder if I should just leave a vanilla exception here and deal with this client side?

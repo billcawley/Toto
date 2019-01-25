@@ -7,7 +7,6 @@ import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
-import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -35,15 +34,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
-import java.nio.file.*;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Stream;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -135,7 +127,6 @@ public class ManageDatabasesController {
             , @RequestParam(value = "createDatabase", required = false) String createDatabase
             , @RequestParam(value = "databaseServerId", required = false) String databaseServerId
             , @RequestParam(value = "emptyId", required = false) String emptyId
-            , @RequestParam(value = "copyId", required = false) String copyId
             , @RequestParam(value = "checkId", required = false) String checkId
             , @RequestParam(value = "deleteId", required = false) String deleteId
             , @RequestParam(value = "unloadId", required = false) String unloadId
@@ -163,18 +154,7 @@ public class ManageDatabasesController {
             @SuppressWarnings("unchecked")
             List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
             if (importResult != null) {
-                if (request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX) != null) { // pending, set the pending summary
-                    int count = 0;
-                    for (UploadedFile uf : importResult){
-                        request.getSession().setAttribute("resultCache" + count, formatUploadedFiles(Collections.singletonList(uf), true));
-                        count++;
-                    }
-                    error.append(formatUploadedFilesForPendingUploads(importResult));
-                    error.append(request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULTPREFIX)).append("<br/>");
-                    request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULTPREFIX);
-                } else {
-                    error.append(formatUploadedFiles(importResult, false));
-                }
+                error.append(formatUploadedFiles(importResult, false));
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
             }
             try {
@@ -188,11 +168,6 @@ public class ManageDatabasesController {
                 }
                 if (NumberUtils.isNumber(emptyId)) {
                     AdminService.emptyDatabaseByIdWithBasicSecurity(loggedInUser, Integer.parseInt(emptyId));
-                }
-                if (NumberUtils.isNumber(copyId)) {
-                    Database db = DatabaseDAO.findById(Integer.parseInt(copyId));
-                    DatabaseServer databaseServer = DatabaseServerDAO.findById(db.getDatabaseServerId());
-                    RMIClient.getServerInterface(databaseServer.getIp()).copyDatabaseTest(loggedInUser.getDatabase().getPersistenceName());
                 }
                 if (NumberUtils.isNumber(checkId)) {
                     AdminService.checkDatabaseByIdWithBasicSecurity(loggedInUser, Integer.parseInt(checkId));
@@ -231,26 +206,6 @@ public class ManageDatabasesController {
                 error.append(e.getMessage());
             }
 
-            // ok, so, for pending uploads we need to know what parameters the user can set
-            Map<String, List<String>> paramsMap = new HashMap<>();
-            String scanParams = SpreadsheetService.getScanParams();
-            if (!scanParams.isEmpty()) {
-                StringTokenizer stringTokenizer = new StringTokenizer(scanParams, "|");
-                while (stringTokenizer.hasMoreTokens()) {
-                    String name = stringTokenizer.nextToken().trim();
-                    if (stringTokenizer.hasMoreTokens()) {
-                        String list = stringTokenizer.nextToken().trim();
-                        List<String> values = new ArrayList<>();
-                        StringTokenizer stringTokenizer1 = new StringTokenizer(list, ",");
-                        values.add("N/A");
-                        while (stringTokenizer1.hasMoreTokens()) {
-                            values.add(stringTokenizer1.nextToken().trim());
-                        }
-                        paramsMap.put(name, values);
-                    }
-                }
-            }
-            model.put("params", paramsMap.entrySet()); // no search for the mo
             if (error.length() > 0) {
                 String exceptionError = error.toString();
                 model.put("error", exceptionError);
@@ -291,9 +246,7 @@ public class ManageDatabasesController {
             model.put("businessnamesort", "businessname".equals(sort) ? "businessnamedown" : "businessname");
             model.put("usernamesort", "username".equals(sort) ? "usernamedown" : "username");
             model.put("uploads", uploadRecordsForDisplayForBusiness);
-            AtomicBoolean canCommit = new AtomicBoolean(false);
-            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, pendingUploadSearch, canCommit)); // no search for the mo
-            model.put("commit", canCommit.get());
+            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, pendingUploadSearch)); // no search for the mo
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
@@ -331,7 +284,7 @@ public class ManageDatabasesController {
                             File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
                             uploadFile.transferTo(moved);
                             Workbook book;
-                            UploadedFile uploadedFile = new UploadedFile(moved.getAbsolutePath(), Collections.singletonList(fileName), new HashMap<>(), false);
+                            UploadedFile uploadedFile = new UploadedFile(moved.getAbsolutePath(), Collections.singletonList(fileName), new HashMap<>(), false, false);
                             FileInputStream fs = new FileInputStream(new File(uploadedFile.getPath()));
                             if (uploadedFile.getFileName().endsWith("xlsx")) {
                                 OPCPackage opcPackage = OPCPackage.open(fs);
@@ -436,8 +389,7 @@ public class ManageDatabasesController {
             model.put("params", paramsMap.entrySet()); // no search for the mo
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
-            AtomicBoolean canCommit = new AtomicBoolean(false);
-            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, canCommit));
+            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);
@@ -452,13 +404,10 @@ public class ManageDatabasesController {
         // need to add in code similar to report loading to give feedback on imports
         final Map<String, String> fileNameParams = new HashMap<>();
         ImportService.addFileNameParametersToMap(fileName, fileNameParams);
-        UploadedFile uploadedFile = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false);
+        UploadedFile uploadedFile = new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false, false);
         new Thread(() -> {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
-/*                String result = ImportService.formatUploadedFiles(
-                        ImportService.importTheFile(loggedInUser, new UploadedFile(filePath, Collections.singletonList(fileName), fileNameParams, false))
-                ).replace("\n", "<br/>");*/
                 session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile));
             } catch (Exception e) {
                 e.printStackTrace();
@@ -488,7 +437,7 @@ public class ManageDatabasesController {
             toReturn.append("<tr>");
             toReturn.append("<td>");
             for (int index = 0; index < uploadedFile.getFileNames().size(); index++) {
-                if (index > 0){
+                if (index > 0) {
                     toReturn.append(" -> ");
                 }
                 toReturn.append(uploadedFile.getFileNames().get(index));
@@ -506,7 +455,7 @@ public class ManageDatabasesController {
             }
             toReturn.append("</td>");
             toReturn.append("<td>");
-            if (uploadedFile.getPostProcessingResult() != null && !uploadedFile.getPostProcessingResult().isEmpty()){
+            if (uploadedFile.getPostProcessingResult() != null && !uploadedFile.getPostProcessingResult().isEmpty()) {
                 toReturn.append(uploadedFile.getPostProcessingResult());
             } else {
                 toReturn.append("N/A");
@@ -671,14 +620,31 @@ public class ManageDatabasesController {
             if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
                 toReturn.append(indentSb);
                 if (noClickableHeadings) {
-                    toReturn.append("Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(" : \n<br/>");
+                    toReturn.append("Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(uploadedFile.getLinesRejected().size() == 100 ? "+" : "").append("\n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + counter + "'); return false;\">Line Errors : ").append(uploadedFile.getLinesRejected().size()).append("</a> : \n<br/><div id=\"rejectedLines" + counter + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + counter + "'); return false;\">Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(uploadedFile.getLinesRejected().size() == 100 ? "+" : "").append("</a> : \n<br/><div id=\"rejectedLines" + counter + "\" style=\"display : none\">");
                 }
-                for (String lineRejected : uploadedFile.getLinesRejected()) {
-                    toReturn.append(indentSb);
-                    toReturn.append(lineRejected).append("\n<br/>");
+                int maxLineWidth = 0;
+                for (UploadedFile.RejectedLine lineRejected : uploadedFile.getLinesRejected()) {
+                    if (lineRejected.getLine().split("\t").length > maxLineWidth){
+                        maxLineWidth = lineRejected.getLine().split("\t").length;
+                    }
                 }
+
+                toReturn.append("<div style='overflow-x: auto;overflow: auto;height:400px'><table style='font-size:90%'><tr><td>Error</td><td>#</td><td colspan=\"" + maxLineWidth + "\"></td></tr>");
+                for (UploadedFile.RejectedLine lineRejected : uploadedFile.getLinesRejected()) {
+                    toReturn.append("<tr><td nowrap><span style=\"background-color: #FFAAAA; color: #000000\">" + lineRejected.getErrors() + "</span></td><td>" + lineRejected.getLineNo() + "</td>");
+                    String[] split = lineRejected.getLine().split("\t");
+                    for (String cell : split){
+                        toReturn.append("<td nowrap>").append(cell).append("</td>");
+                    }
+                    int leftOver = maxLineWidth - split.length;
+                    for (int i = 0; i < leftOver; i++){
+                        toReturn.append("<td nowrap></td>");
+                    }
+                    toReturn.append("</tr>");
+                }
+                toReturn.append("\n</table></div><br/>");
                 if (!noClickableHeadings) {
                     toReturn.append("</div>");
                 }

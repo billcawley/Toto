@@ -45,7 +45,7 @@ public class UploadedFile implements Serializable {
 
     private int noLinesImported;
     private final AtomicInteger noValuesAdjusted;
-    private final ArrayList<String> linesRejected;
+    private final ArrayList<RejectedLine> linesRejected;
     private String error;
     // as in "was data modified?"
     private boolean dataModified;
@@ -90,17 +90,44 @@ public class UploadedFile implements Serializable {
     private List<String> languages;
     // the provenanceId attached to the data in the file
     private int provenanceId;
+    // for validation support - this file goes into a temporary copy of the database
+    private final boolean isValidationTest;
 
-    public UploadedFile(String path, List<String> names) {
-        this(path,names,null,false);
+    public static class RejectedLine implements Serializable{
+        final int lineNo;
+        final String line;
+        final String  errors;
+
+        public RejectedLine(int lineNo, String line, String errors) {
+            this.lineNo = lineNo;
+            this.line = line;
+            this.errors = errors;
+        }
+
+        public int getLineNo() {
+            return lineNo;
+        }
+
+        public String getLine() {
+            return line;
+        }
+
+        public String getErrors() {
+            return errors;
+        }
     }
 
-    public UploadedFile(String path, List<String> names, Map<String, String> parameters, boolean convertedFromWorksheet) {
+    public UploadedFile(String path, List<String> names, boolean isValidationTest) {
+        this(path,names,null,false, isValidationTest);
+    }
+
+    public UploadedFile(String path, List<String> names, Map<String, String> parameters, boolean convertedFromWorksheet, boolean isValidationTest) {
         this.path = path;
         // keeping immutable should avoid some nasty bugs
         this.fileNames = Collections.unmodifiableList(names);
         this.parameters = parameters != null ? Collections.unmodifiableMap(parameters) : Collections.emptyMap();
         this.convertedFromWorksheet = convertedFromWorksheet;
+        this.isValidationTest = isValidationTest;
         processingDuration = 0;
         noLinesImported = 0;
         noValuesAdjusted = new AtomicInteger(0);
@@ -191,11 +218,11 @@ public class UploadedFile implements Serializable {
         return noValuesAdjusted;
     }
 
-    public List<String> getLinesRejected() {
+    public List<RejectedLine> getLinesRejected() {
         return linesRejected;
     }
 
-    public void addToLinesRejected(Collection<String> lines) {
+    public void addToLinesRejected(Collection<RejectedLine> lines) {
         linesRejected.addAll(lines);
     }
 
@@ -344,5 +371,9 @@ public class UploadedFile implements Serializable {
 
     public void setProvenanceId(int provenanceId) {
         this.provenanceId = provenanceId;
+    }
+
+    public boolean isValidationTest() {
+        return isValidationTest;
     }
 }

@@ -5,7 +5,6 @@ import com.azquo.MultidimensionalListUtils;
 import com.azquo.StringLiterals;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.StringLiterals;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.*;
 import com.azquo.memorydb.service.*;
@@ -17,9 +16,7 @@ import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.log4j.Logger;
 
 import java.io.*;
-import java.text.NumberFormat;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 /*
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  *
@@ -245,7 +242,7 @@ public class DSSpreadsheetService {
         }
         bw.flush();
         bw.close();
-        UploadedFile uploadedFile = new UploadedFile(tempPath, Collections.singletonList("csv-" + cellsAndHeadingsForDisplay.getRegion()));
+        UploadedFile uploadedFile = new UploadedFile(tempPath, Collections.singletonList("csv-" + cellsAndHeadingsForDisplay.getRegion()), false);
         DSImportService.readPreparedFile(azquoMemoryDBConnection, uploadedFile);
         // persist no longer automatic on importing so just do it here
         new Thread(azquoMemoryDBConnection::persist).start();

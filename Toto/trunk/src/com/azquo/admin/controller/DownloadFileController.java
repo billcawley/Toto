@@ -71,7 +71,6 @@ public class DownloadFileController {
                         ex.printStackTrace();
                     }
                 }
-
             }
         }
     }
