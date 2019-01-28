@@ -264,7 +264,7 @@ public class SpreadsheetService {
             return result;
             //}
         }
-        return "no data passed for that region " + region + " and report " + reportName;
+        return "no data passed for the region " + region + " and report " + reportName;
     }
 
     public static void unlockData(LoggedInUser loggedInUser) throws Exception {
