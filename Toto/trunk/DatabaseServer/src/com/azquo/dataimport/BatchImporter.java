@@ -290,6 +290,12 @@ public class BatchImporter implements Callable<Void> {
                                             } catch (Exception ignore) {
                                             }
                                             expression = expression.substring(bracketpos + 1, commaPos);
+                                            //only testing for default display name at present - need to work out what might happen if name contained '.'
+                                            int dotPos = expression.toUpperCase().indexOf("."+StringLiterals.DEFAULT_DISPLAY_NAME);
+                                            if (dotPos > 0){
+                                                nameAttribute = StringLiterals.DEFAULT_DISPLAY_NAME;
+                                                expression = expression.substring(0,dotPos);
+                                            }
                                         }
                                     }
                                 }
