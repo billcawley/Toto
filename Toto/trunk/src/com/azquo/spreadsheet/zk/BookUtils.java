@@ -2,11 +2,11 @@ package com.azquo.spreadsheet.zk;
 
 import com.azquo.DateUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import org.zkoss.poi.ss.usermodel.DateUtil;
 import org.zkoss.poi.ss.usermodel.Name;
 import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.ss.util.AreaReference;
 import org.zkoss.poi.ss.util.CellReference;
-import org.zkoss.poi.xssf.usermodel.XSSFName;
 import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.Book;
@@ -17,6 +17,7 @@ import org.zkoss.zss.model.SCell;
 import org.zkoss.zss.model.SName;
 import org.zkoss.zss.model.SSheet;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -69,11 +70,16 @@ public class BookUtils {
                         if (!cell.getType().equals(SCell.CellType.BLANK)) {
                             try {
                                 String numberGuess = cell.getNumberValue() + "";
-                                if (numberGuess.endsWith(".0")) {
+                                   if (numberGuess.endsWith(".0")) {
                                     numberGuess = numberGuess.substring(0, numberGuess.length() - 2);
                                 }
                                 if (numberGuess.equals("0")) numberGuess = "";
-                                row.add(numberGuess);
+                                if (cell.getCellStyle().getDataFormat().contains("mm")){
+                                    Date javaDate= DateUtil.getJavaDate((double)cell.getNumberValue());
+                                    row.add(new SimpleDateFormat("yyyy-MM-dd").format(javaDate));
+                                }else{
+                                    row.add(numberGuess);
+                                }
                             } catch (Exception e2) {
                                 /*
                                 todo, sort this
