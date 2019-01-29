@@ -1,5 +1,6 @@
 package com.azquo.rmi;
 
+import com.azquo.TypedPair;
 import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
 import com.azquo.memorydb.*;
@@ -124,6 +125,16 @@ class RMIImplementation implements RMIInterface {
     public UploadedFile readPreparedFile(DatabaseAccessToken databaseAccessToken, UploadedFile uploadedFile, String user) throws RemoteException {
         try {
             return DSImportService.readPreparedFile(databaseAccessToken, uploadedFile, user);
+        } catch (Exception e) {
+            throw new RemoteException("Database Server Exception", e);
+        }
+    }
+
+    // to lookup error lines based off report feedback, for Ed Broking pending uploads
+    @Override
+    public Map<Integer, TypedPair<String, String>> getLinesWithValuesInColumn(UploadedFile uploadedFile, int columnIndex, Set<String> valuesToCheck) throws RemoteException {
+        try {
+            return DSImportService.getLinesWithValuesInColumn(uploadedFile, columnIndex, valuesToCheck);
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);
         }

@@ -7,6 +7,7 @@ transport class and
 
  */
 
+import com.azquo.StringLiterals;
 import com.azquo.ThreadPools;
 
 import java.text.NumberFormat;
@@ -96,6 +97,7 @@ class TemporaryAzquoMemoryDBTransport extends AzquoMemoryDBTransport {
             marker = System.currentTimeMillis();
             // I'm not going to bother multi threading provenance loading here
             for (Provenance sourceProvenance : source.getAllProvenances()){
+                azquoMemoryDB.setNextId(sourceProvenance.getId());
                 new Provenance(azquoMemoryDB, sourceProvenance.getId(), sourceProvenance.getAsJson(), false);
                 provenanceLoaded.incrementAndGet();
             }

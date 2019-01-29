@@ -42,6 +42,12 @@ public class ValuesImport {
             int linesImported = 0; // just for some feedback at the end
             while (lineIterator.hasNext()) { // the main line reading loop
                 String[] lineValues = lineIterator.next();
+                // I'm currently working on the principle that the line no is the current location -1
+                if (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().contains(lineIterator.getCurrentLocation().getLineNr() - 1) && lineIterator.hasNext()){
+                    System.out.println("Deliberately skipping line " + (lineIterator.getCurrentLocation().getLineNr() - 1) + ", " + lineValues);
+                    lineValues = lineIterator.next();
+                }
+
                 linesImported++;
                 List<ImportCellWithHeading> importCellsWithHeading = new ArrayList<>();
                 int columnIndex = 0;

@@ -34,6 +34,7 @@ import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.CellData;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -64,16 +65,17 @@ public final class ImportService {
     public static final String onlineReportsDir = "/onlinereports/";
     public static final String importTemplatesDir = "/importtemplates/";
     public static String LOCALIP = "127.0.0.1";
-    private static final String IMPORTTEMPLATE = "importtemplate";
-    private static final String IMPORTVERSION = "importversion";
+    public static final String IMPORTTEMPLATE = "importtemplate";
+    public static final String IMPORTVERSION = "importversion";
 
 
     /* external entry point, moves the file to a temp directory in case pre processing is required
     (decompress or sheets in a book to individual csv files before sending to the db server).
      After that a little housekeeping.
      Added support for validation importing against a temporary copied database, a flag on
+     the last field is a little hacky - down to the file (not sheet!) check for parameters that have been set in a big chunk on the pending uploads screen
      */
-    public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile) throws Exception { // setup just to flag it
+    public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, Map<String, Map<String, String>> parametersPerFile) throws Exception { // setup just to flag it
         InputStream uploadFile = new FileInputStream(uploadedFile.getPath());
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
@@ -90,8 +92,8 @@ public final class ImportService {
 
         uploadFile.close(); // windows requires this (though windows ideally should not be used in production), perhaps not a bad idea anyway
         uploadedFile.setPath(tempFile.getPath()); // I'm now allowing adjustment of paths like this - having the object immutable became impractical
-        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, templateBook);
-        if (!uploadedFile.isValidationTest()){
+        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, templateBook, parametersPerFile);
+        if (!uploadedFile.isValidationTest()) {
             // persist on the database server
             SpreadsheetService.databasePersist(loggedInUser);
             // add to the uploaded list on the Manage Databases page
@@ -105,20 +107,16 @@ public final class ImportService {
             AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
         } else {
             // important todo - SOMEHOW CHECK IF THE SOURCE DB WAS UPDATED IN THE MEAN TIME AND IF SO RUN THE VALIDATION AGAIN
-            System.out.println("***");
-            System.out.println("***");
-            System.out.println("***");
             System.out.println("Zapping temporary copy");
             RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).zapTemporaryCopy(loggedInUser.getDataAccessToken());
-            System.out.println("***");
-            System.out.println("***");
-            System.out.println("***");
         }
         return processedUploadedFiles;
     }
 
+    public static String DONTLOAD = "DONTLOAD";
+
     // deals with unzipping if required - recursive in case there's a zip in a zip
-    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, Workbook templateBook) throws Exception {
+    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, Workbook templateBook, Map<String, Map<String, String>> parametersPerFile) throws Exception {
         List<UploadedFile> processedUploadedFiles = new ArrayList<>();
         if (uploadedFile.getFileName().endsWith(".zip") || uploadedFile.getFileName().endsWith(".7z")) {
             ZipUtil.explode(new File(uploadedFile.getPath()));
@@ -145,8 +143,18 @@ public final class ImportService {
                 names.add(f.getName());
                 Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
                 addFileNameParametersToMap(f.getName(), fileNameParams);
-                UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
-                processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, templateBook));
+                // bit hacky to stop the loading but otherwise there'd just be another map
+                boolean dontLoad = false;
+                if (parametersPerFile != null && parametersPerFile.get(f.getName()) != null) {
+                    if (DONTLOAD.equalsIgnoreCase(parametersPerFile.get(f.getName()).get(DONTLOAD))){
+                        dontLoad = true;
+                    }
+                    fileNameParams.putAll(parametersPerFile.get(f.getName()));
+                }
+                if (!dontLoad){
+                    UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
+                    processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, templateBook, parametersPerFile));
+                }
             }
         } else { // nothing to decompress
             // simple checks in case the wrong type of file is being uploaded here - will probably be removed later
@@ -183,7 +191,7 @@ public final class ImportService {
             uploadedFile.setError(e.getMessage());
             return Collections.singletonList(uploadedFile);
         }
-        if (!uploadedFile.isValidationTest()){
+        if (!uploadedFile.isValidationTest()) {
             for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
                 Sheet sheet = book.getSheetAt(sheetNo);
                 if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
@@ -275,7 +283,6 @@ public final class ImportService {
 
      */
 
-
     private static void rangeToCSV(Sheet sheet, AreaReference areaReference, Map<String, String> knownNames, CsvWriter csvW) throws Exception {
         int startRow = areaReference.getFirstCell().getRow();
         int endRow = areaReference.getLastCell().getRow();
@@ -284,7 +291,7 @@ public final class ImportService {
         for (int rNo = startRow; rNo <= endRow; rNo++) {
             for (int cNo = startCol; cNo <= endCol; cNo++) {
                 String val = "";
-                if (sheet.getRow(rNo)!=null) {
+                if (sheet.getRow(rNo) != null) {
                     val = getCellValue(sheet.getRow(rNo).getCell(cNo));
                 }
                 if (knownNames != null) {
@@ -305,8 +312,8 @@ public final class ImportService {
         try {
             boolean importByNamedRegion = false;
             // reimplementing the old style import templates as used by Ben Jones
-             if (templateBook != null) {
-                for (int i = 0; i < templateBook.getNumberOfSheets(); i++){
+            if (templateBook != null) {
+                for (int i = 0; i < templateBook.getNumberOfSheets(); i++) {
                     Sheet templateSheet = templateBook.getSheetAt(i);
                     Name importName = BookUtils.getNameByName(ReportRenderer.AZIMPORTNAME, templateSheet);
                     if (importName != null) {
@@ -316,7 +323,7 @@ public final class ImportService {
                         int col = aref.getFirstCell().getCol();
                         String valueToLookFor = getCellValue(templateSheet.getRow(row).getCell(col));
                         Cell cell = null;
-                        if (sheet.getRow(row)!=null) {
+                        if (sheet.getRow(row) != null) {
                             cell = sheet.getRow(row).getCell(col);
                         }
                         if (cell != null && getCellValue(cell).equals(valueToLookFor)) {// then we have a match
@@ -334,7 +341,7 @@ public final class ImportService {
                             ArrayList<UploadedFile> toReturn = new ArrayList<>();
                             for (Name name : namesForTemplate) {
                                 if (name.getNameName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
-                                    Name dataRegion = BookUtils.getName(templateBook,ReportRenderer.AZDATAREGION + name.getNameName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
+                                    Name dataRegion = BookUtils.getName(templateBook, ReportRenderer.AZDATAREGION + name.getNameName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
                                     if (dataRegion != null) {
                                         time = System.currentTimeMillis();
                                         File newTempFile = File.createTempFile("from" + uploadedFile.getPath() + sheetName, ".csv");
@@ -362,7 +369,7 @@ public final class ImportService {
                     }
                 }
             }
-            if (importByNamedRegion){ // don't continue and try with the new method - if it was an old style import template and we got this far then it failed
+            if (importByNamedRegion) { // don't continue and try with the new method - if it was an old style import template and we got this far then it failed
                 return new ArrayList<>();
             }
             // end check on old style of import templa
@@ -443,9 +450,10 @@ public final class ImportService {
 
 
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
+    // todo - check importtemplate used already
     private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile, boolean importTemplateUsedAlready, Workbook templateBook) throws
             Exception {
-        String templateName = uploadedFile.getFileName().replace("\\","/");
+        String templateName = uploadedFile.getFileName().replace("\\", "/");
         int slashpos = templateName.lastIndexOf("/");
         if (slashpos < 0) {
             slashpos = 0;
@@ -460,8 +468,8 @@ public final class ImportService {
 
         // todo - cache the scanned info? Might save some time if POI becomes a bottleneck
 
-        if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready){
-            if (templateBook != null) {
+        if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready) {
+            if (templateBook != null && uploadedFile.getParameter(IMPORTVERSION) != null) { // new logic - we must have an import version
                 // ok let's check here for the old style of import template as used by Ben Jones
                 Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
                 List<List<String>> standardHeadings = new ArrayList<>();
@@ -481,6 +489,7 @@ public final class ImportService {
                     // this *should* be single line, used to lookup information from the Import Model
                     List<List<String>> headingReference = new ArrayList<>();
                     // a "version" - similar to the import model parsing but the headings can be multi level (double decker) and not at the top thus allowing for top headings
+                    boolean found = false;
                     for (int sheetNo = 0; sheetNo < templateBook.getNumberOfSheets(); sheetNo++) {
                         Sheet sheet = templateBook.getSheetAt(sheetNo);
                         if (sheet.getSheetName().trim().equalsIgnoreCase(uploadedFile.getParameter(IMPORTVERSION))) {
@@ -491,8 +500,14 @@ public final class ImportService {
                                 uploadedFile.setSkipLines(headingsRange.getFirstCell().getRow());
                                 // parameters and lookups are cumulative, pass through the same maps
                                 importSheetScan(sheet, topHeadings, headingReference, versionHeadings, templateParameters, headingsRange);
+                                found = true;
+                            } else {
+                                throw new Exception("Import version sheet " + uploadedFile.getParameter(IMPORTVERSION) + " found but couldn't find az_Headings" + sheet.getSheetName().trim());
                             }
                         }
+                    }
+                    if (!found) {
+                        throw new Exception("Import version sheet " + uploadedFile.getParameter(IMPORTVERSION) + " not found.");
                     }
 
                     if (templateParameters.get(PRE_PROCESSOR) != null) {
@@ -515,127 +530,78 @@ public final class ImportService {
                         uploadedFile.setLanguages(languagesList);
                     }
 
-                    if (versionHeadings.isEmpty()) { // ok we go vanilla, not a version in a template, just the Import Model sheet
-                        if (templateParameters.get(SKIPLINES) != null && NumberUtils.isDigits(templateParameters.get(SKIPLINES))) {
-                            uploadedFile.setSkipLines(Integer.parseInt(templateParameters.get(SKIPLINES)));
-                        }
-                        if (templateParameters.get(NOFILEHEADINGS) != null) { // this parameter allows simple headings to be built from multiple cells
-                            List<String> simpleHeadings = new ArrayList<>();
-                            for (List<String> headings : standardHeadings) {
-                                StringBuilder azquoHeading = new StringBuilder();
-                                for (int i = 0; i < headings.size(); i++) {
-                                    if (i > 0) {
-                                        azquoHeading.append(";");
-                                    }
-                                    azquoHeading.append(headings.get(i));
-                                }
-                                simpleHeadings.add(azquoHeading.toString());
-                            }
-                            uploadedFile.setSimpleHeadings(simpleHeadings);
-                        } else {
-                            // we assume the first line are file headings and anything below needs to be joined together into an Azquo heading
-                            // we now support headingsNoFileHeadingsWithInterimLookup in a non - version context
-                            List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
-                            Map<List<String>, TypedPair<String, String>> headingsByLookupWithInterimLookup = new HashMap<>();
-                            for (List<String> headings : standardHeadings) {
-                                if (!headings.isEmpty()) {
-                                    String fileHeading = null;
-                                    StringBuilder azquoHeading = new StringBuilder();
-                                    for (int i = 0; i < headings.size(); i++) {
-                                        if (i == 0) {
-                                            fileHeading = headings.get(i);
-                                        } else {
-                                            if (i > 1) {
-                                                azquoHeading.append(";");
-                                            }
-                                            azquoHeading.append(headings.get(i));
-                                        }
-                                    }
-                                    // there is no second value to the typed pair - that's only used when there's a version. The field says "WithInterimLookup" but there is no interim lookup where there's one sheet
-                                    if (fileHeading.isEmpty()) {
-                                        headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeading.toString(), null));
-                                    } else {
-                                        headingsByLookupWithInterimLookup.put(Collections.singletonList(fileHeading), new TypedPair<>(azquoHeading.toString(), null));
-                                    }
-                                }
-                            }
-                            uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByLookupWithInterimLookup);
-                            uploadedFile.setHeadingsNoFileHeadingsWithInterimLookup(headingsNoFileHeadingsWithInterimLookup);
-                        }
-                    } else {
-                        // the thing here is to add the version headings as file headings looking up the Azquo headings from the Import Model
-                        Map<List<String>, TypedPair<String, String>> headingsByFileHeadingsWithInterimLookup = new HashMap<>();
-                        // and the headings without reference to the
-                        List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
+                    // the thing here is to add the version headings as file headings looking up the Azquo headings from the Import Model
+                    Map<List<String>, TypedPair<String, String>> headingsByFileHeadingsWithInterimLookup = new HashMap<>();
+                    // and the headings without reference to the
+                    List<TypedPair<String, String>> headingsNoFileHeadingsWithInterimLookup = new ArrayList<>();
                     /* There may be references without headings but not the other way around (as in we'd just ignore the headings)
                      * hence references needs to be the outer loop adding version headings where it can find them
                      * */
-                        int index = 0;
-                        for (List<String> headingReferenceColumn : headingReference) {
-                            if (headingReferenceColumn.size() > 0 && !headingReferenceColumn.get(0).isEmpty()) {// we fill gaps when parsing the standard headings so there may be blanks in here, ignore them!
-                                String reference = headingReferenceColumn.get(0); // the reference is the top one
-                                List<String> azquoClauses = new ArrayList<>(); // in here will go the Azquo clauses both looked up from the Import Model and any that might have been added here
-                                // ok now we're going to look for this in the standard headings by the "top" heading
-                                Iterator<List<String>> standardHeadingsIterator = standardHeadings.iterator();
-                                while (standardHeadingsIterator.hasNext()) {
-                                    List<String> standardHeadingsColumn = standardHeadingsIterator.next();
-                                    if (!standardHeadingsColumn.isEmpty() && standardHeadingsColumn.get(0).equalsIgnoreCase(reference)) {
-                                        standardHeadingsIterator.remove(); // later when checking for required we don't want to add any again
-                                        azquoClauses.addAll(standardHeadingsColumn.subList(1, standardHeadingsColumn.size()));
-                                    }
+                    int index = 0;
+                    for (List<String> headingReferenceColumn : headingReference) {
+                        if (headingReferenceColumn.size() > 0 && !headingReferenceColumn.get(0).isEmpty()) {// we fill gaps when parsing the standard headings so there may be blanks in here, ignore them!
+                            String reference = headingReferenceColumn.get(0); // the reference is the top one
+                            List<String> azquoClauses = new ArrayList<>(); // in here will go the Azquo clauses both looked up from the Import Model and any that might have been added here
+                            // ok now we're going to look for this in the standard headings by the "top" heading
+                            Iterator<List<String>> standardHeadingsIterator = standardHeadings.iterator();
+                            while (standardHeadingsIterator.hasNext()) {
+                                List<String> standardHeadingsColumn = standardHeadingsIterator.next();
+                                if (!standardHeadingsColumn.isEmpty() && standardHeadingsColumn.get(0).equalsIgnoreCase(reference)) {
+                                    standardHeadingsIterator.remove(); // later when checking for required we don't want to add any again
+                                    azquoClauses.addAll(standardHeadingsColumn.subList(1, standardHeadingsColumn.size()));
                                 }
-                                if (azquoClauses.isEmpty()) {
-                                    throw new Exception("On import version sheet " + uploadedFile.getParameter("IMPORTVERSION") + " no headings on Import Model found for " + reference + " - was this referenced twice?");
-                                } else if (headingReference.get(index).size() > 1) { // add the extra ones
-                                    azquoClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
+                            }
+                            if (azquoClauses.isEmpty()) {
+                                throw new Exception("On import version sheet " + uploadedFile.getParameter("IMPORTVERSION") + " no headings on Import Model found for " + reference + " - was this referenced twice?");
+                            } else if (headingReference.get(index).size() > 1) { // add the extra ones
+                                azquoClauses.addAll(headingReference.get(index).subList(1, headingReference.get(index).size()));
+                            }
+                            StringBuilder azquoHeadingsAsString = new StringBuilder();
+                            for (String clause : azquoClauses) {
+                                if (azquoHeadingsAsString.length() > 0 && !clause.startsWith(".")) {
+                                    azquoHeadingsAsString.append(";");
                                 }
-                                StringBuilder azquoHeadingsAsString = new StringBuilder();
-                                for (String clause : azquoClauses) {
-                                    if (azquoHeadingsAsString.length() > 0 && !clause.startsWith(".")) {
+                                azquoHeadingsAsString.append(clause);
+                            }
+                            // finally get the file headings if applicable
+                            if (versionHeadings.size() > index && !versionHeadings.get(index).isEmpty()) {
+                                headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new TypedPair<>(azquoHeadingsAsString.toString(), reference));
+                            } else {
+                                headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), reference));
+                            }
+                        }
+                        index++;
+                    }
+                    // and now required
+                    for (List<String> standardHeadingsColumn : standardHeadings) {
+                        boolean required = false;
+                        for (String clause : standardHeadingsColumn) {
+                            if (clause.equalsIgnoreCase("required")) {
+                                required = true;
+                                break;
+                            }
+                        }
+                        // ok criteria added after (may need refactoring), if a top heading with a value (surrounded by ``) matches a heading on the import model use that also
+                        if (required || (!standardHeadingsColumn.isEmpty() && topHeadings.values().contains("`" + standardHeadingsColumn.get(0) + "`"))) {
+                            StringBuilder azquoHeadingsAsString = new StringBuilder();
+                            // clauses after the first cell
+                            for (String clause : standardHeadingsColumn.subList(1, standardHeadingsColumn.size())) {
+                                if (azquoHeadingsAsString.length() == 0) {
+                                    azquoHeadingsAsString = new StringBuilder(clause);
+                                } else {
+                                    if (!clause.startsWith(".")) {
                                         azquoHeadingsAsString.append(";");
                                     }
                                     azquoHeadingsAsString.append(clause);
                                 }
-                                // finally get the file headings if applicable
-                                if (versionHeadings.size() > index && !versionHeadings.get(index).isEmpty()) {
-                                    headingsByFileHeadingsWithInterimLookup.put(versionHeadings.get(index), new TypedPair<>(azquoHeadingsAsString.toString(), reference));
-                                } else {
-                                    headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), reference));
-                                }
                             }
-                            index++;
+                            // no headings but it has the other bits - will be jammed on the end after file
+                            headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), standardHeadingsColumn.get(0)));
                         }
-                        // and now required
-                        for (List<String> standardHeadingsColumn : standardHeadings) {
-                            boolean required = false;
-                            for (String clause : standardHeadingsColumn) {
-                                if (clause.equalsIgnoreCase("required")) {
-                                    required = true;
-                                    break;
-                                }
-                            }
-                            // ok criteria added after (may need refactoring), if a top heading with a value (surrounded by ``) matches a heading on the import model use that also
-                            if (required || (!standardHeadingsColumn.isEmpty() && topHeadings.values().contains("`" + standardHeadingsColumn.get(0) + "`"))) {
-                                StringBuilder azquoHeadingsAsString = new StringBuilder();
-                                // clauses after the first cell
-                                for (String clause : standardHeadingsColumn.subList(1, standardHeadingsColumn.size())) {
-                                    if (azquoHeadingsAsString.length() == 0) {
-                                        azquoHeadingsAsString = new StringBuilder(clause);
-                                    } else {
-                                        if (!clause.startsWith(".")) {
-                                            azquoHeadingsAsString.append(";");
-                                        }
-                                        azquoHeadingsAsString.append(clause);
-                                    }
-                                }
-                                // no headings but it has the other bits - will be jammed on the end after file
-                                headingsNoFileHeadingsWithInterimLookup.add(new TypedPair<>(azquoHeadingsAsString.toString(), standardHeadingsColumn.get(0)));
-                            }
-                        }
-                        uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByFileHeadingsWithInterimLookup);
-                        uploadedFile.setHeadingsNoFileHeadingsWithInterimLookup(headingsNoFileHeadingsWithInterimLookup);
-                        uploadedFile.setTopHeadings(topHeadings);
                     }
+                    uploadedFile.setHeadingsByFileHeadingsWithInterimLookup(headingsByFileHeadingsWithInterimLookup);
+                    uploadedFile.setHeadingsNoFileHeadingsWithInterimLookup(headingsNoFileHeadingsWithInterimLookup);
+                    uploadedFile.setTopHeadings(topHeadings);
                 }
             }
         }
@@ -644,7 +610,6 @@ public final class ImportService {
         if (uploadedFile.getPreProcessor() != null) {
             File file = new File(SpreadsheetService.getGroovyDir() + "/" + uploadedFile.getPreProcessor());
             if (file.exists()) {
-                String oldImportTemplate = uploadedFile.getParameter(IMPORTTEMPLATE);
                 String oldImportVersion = uploadedFile.getParameter(IMPORTVERSION);
                 System.out.println("Groovy pre processor running  . . . ");
                 Object[] groovyParams = new Object[1];
@@ -653,9 +618,9 @@ public final class ImportService {
                 final Script script = shell.parse(file);
                 System.out.println("loaded groovy " + file.getPath());
                 // overly wordy way to override the path
-                try{
+                try {
                     uploadedFile.setPath((String) script.invokeMethod("fileProcess", groovyParams));
-                } catch (Exception e){
+                } catch (Exception e) {
                     uploadedFile.setError("Preprocessor error in " + uploadedFile.getPreProcessor() + " : " + e.getMessage());
                     return uploadedFile;
                 }
@@ -663,7 +628,7 @@ public final class ImportService {
                     // there is a danger of a circular reference - protect against that?
                     // must clear template based parameters, new object
                     UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
-                    return readPreparedFile(loggedInUser, fileToProcessAgain,false, templateBook);
+                    return readPreparedFile(loggedInUser, fileToProcessAgain, false, templateBook);
                 }
             } else {
                 uploadedFile.setError("unable to find preprocessor : " + uploadedFile.getPreProcessor());
@@ -677,19 +642,93 @@ public final class ImportService {
         if (!databaseServer.getIp().equals(LOCALIP)) {// the call via RMI is the same the question is whether the path refers to this machine or another
             uploadedFile.setPath(SFTPUtilities.copyFileToDatabaseServer(new FileInputStream(uploadedFile.getPath()), databaseServer.getSftpUrl()));
         }
-        UploadedFile processedFile = RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken
+        // used to be processed file, I see no advantage to that
+        uploadedFile = RMIClient.getServerInterface(databaseServer.getIp()).readPreparedFile(databaseAccessToken
                 , uploadedFile
                 , loggedInUser.getUser().getName());
         // run any executes defined in the file
         List<List<List<String>>> systemData2DArrays = new ArrayList<>();
-        if (processedFile.getPostProcessor() != null) {
+        if (uploadedFile.getPostProcessor() != null) {
             // set user choices to file params, could be useful to the execute
             for (String choice : uploadedFile.getParameters().keySet()) {
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
             }
-            processedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, processedFile.getPostProcessor(), systemData2DArrays, uploadedFile.getProvenanceId()).toString());
+            loggedInUser.copyMode = uploadedFile.isValidationTest();
+            uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getPostProcessor(), systemData2DArrays, uploadedFile.getProvenanceId()).toString());
         }
-        return processedFile;
+        loggedInUser.copyMode = false;
+        if (!systemData2DArrays.isEmpty()) {
+            // then we had some validation results, need to identify lines in the file with problems
+            // ok leaving this for the mo. I have all the data I need it's just a question of the structure to store it, as we have rejected lines in Uploaded file so we'll have warning lines and possibly
+            // error descriptions. Leaving the warning lines as a map as they may not be added in order, will sort the lines and repackage after
+            // todo - typedpair is being used too much - it's causing obscurity. Roll more small classes . . .
+            Map<Integer, UploadedFile.WarningLine> warningLineMap = new HashMap<>();
+            for (List<List<String>> systemData2DArray : systemData2DArrays) {
+                if (systemData2DArray.size() > 1) { // no point doing anything if it's not!
+                    Map<String, Map<String, String>> errorLines = new HashMap<>();
+                    String keyColumn = systemData2DArray.get(0).get(0); // that will define what we want to lookup in the file e.g. policy number
+                    ArrayList<String> errorHeadings = new ArrayList<>();
+                    if (!keyColumn.isEmpty()) {
+                        // ok there might be multiple columns of errors - the heading will include the short code in [] and the error may be specific to the line
+                        List<String> headings = systemData2DArray.get(0);
+                        for (int i = 1; i < headings.size(); i++) { // rest of the headings after the keyColumn
+                            if (headings.get(i).isEmpty()) {
+                                break;
+                            }
+                            errorHeadings.add(headings.get(i));
+                        }
+                        for (int i = 1; i < systemData2DArray.size(); i++) {// start from the second row
+                            List<String> row = systemData2DArray.get(i);
+                            if (!row.get(0).isEmpty()) { // if there's nothing in the key column we can't look up the line
+                                int colIndex = 1;
+                                for (String errorHeading : errorHeadings) {
+                                    if (!row.get(colIndex).isEmpty()) {
+                                        errorLines.computeIfAbsent(row.get(0).toLowerCase(), t -> new HashMap<>()).put(errorHeading, row.get(colIndex));
+                                    }
+                                    colIndex++;
+                                }
+                            }
+                        }
+                    }
+                    if (!errorLines.isEmpty()) { // then I need to find them. First thing to do is find the relevant column
+                        // going to try based on feedback in the processed file
+                        if (uploadedFile.getFileHeadings() != null) { // if we don't have the original set of headings we won't be able to check the file
+                            int index = 0;
+                            for (List<String> fileHeading : uploadedFile.getFileHeadings()) {
+//                            for (String subHeading : fileHeading) { // currently looking up against the model reference not the file reference
+                                TypedPair<String, String> stringStringTypedPair = uploadedFile.getHeadingsByFileHeadingsWithInterimLookup().get(fileHeading);
+                                // so the current criteria - it's a heading which looked up something on the model and it's the lookup which is the name we're interested in. Import Model having the canonical name for there purposes
+                                // that lookup name is the second of the typed pair
+                                if (stringStringTypedPair != null && stringStringTypedPair.getSecond() != null && stringStringTypedPair.getSecond().equalsIgnoreCase(keyColumn.trim())) {
+                                    // we have a winner
+                                    break;
+                                }
+                                index++;
+                            }
+                            if (index < uploadedFile.getFileHeadings().size()) { // then we found the relevant column
+                                // I'm going to go to the server code to look this up
+                                Map<Integer, TypedPair<String, String>> linesWithValuesInColumn = RMIClient.getServerInterface(databaseServer.getIp()).getLinesWithValuesInColumn(uploadedFile, index, new HashSet<>(errorLines.keySet()));// new hash set to be serializable . . .
+                                // ok so we should now finally have the information we need across the two maps (linesWithValuesInColumn and errorLines)
+                                // What needs to go into a table is the line number, the line itself and error(s) for that line, there could be multiple errors for the line
+                                for (Integer key : linesWithValuesInColumn.keySet()) {
+                                    warningLineMap.computeIfAbsent(key, t -> new UploadedFile.WarningLine(key, linesWithValuesInColumn.get(key).getSecond())).addErrors(errorLines.get(linesWithValuesInColumn.get(key).getFirst().toLowerCase()));
+                                }
+                            }// else error?
+                        }
+                    }
+
+                }
+            }
+            if (!warningLineMap.isEmpty()) {
+                ArrayList<Integer> sort = new ArrayList<>(warningLineMap.keySet());
+                Collections.sort(sort);
+                for (Integer lineNo : sort) {
+                    uploadedFile.addToWarningLines(warningLineMap.get(lineNo));
+                }
+            }
+        }
+
+        return uploadedFile;
     }
 
     // in this context the custom headings range is for when there are multiple versions of an importer based off a master sheet -
@@ -748,7 +787,7 @@ public final class ImportService {
                     blankLine = false;
                     if (mode == ImportSheetScanMode.TOPHEADINGS) {
                         // pretty simple really - jam any values found in the map!
-                        if (!topHeadings.values().contains(cellValue)){ // not allowing multiple identical top headings. Typically can happen from a merge spreading across cells
+                        if (!topHeadings.values().contains(cellValue)) { // not allowing multiple identical top headings. Typically can happen from a merge spreading across cells
                             topHeadings.put(new TypedPair<>(rowIndex, cellIndex), cellValue);
                         }
                     } else if (mode == ImportSheetScanMode.CUSTOMHEADINGS) { // custom headings to be used for lookup on files - I'll watch for limiting by column though it hasn't been used yet
@@ -805,13 +844,13 @@ public final class ImportService {
     public static void addFileNameParametersToMap(String fileName, Map<String, String> map) {
         try {
             int bracketPos = 0;
-            while (bracketPos >=0){
-                bracketPos = fileName.indexOf("(",bracketPos + 1);
-                if (bracketPos > 0){
-                    int endBrackets = fileName.indexOf(")",bracketPos);
-                    if (endBrackets >0){
+            while (bracketPos >= 0) {
+                bracketPos = fileName.indexOf("(", bracketPos + 1);
+                if (bracketPos > 0) {
+                    int endBrackets = fileName.indexOf(")", bracketPos);
+                    if (endBrackets > 0) {
                         String parseString = fileName.substring(bracketPos + 1, endBrackets);
-                        if (parseString.contains("=")){
+                        if (parseString.contains("=")) {
                             StringTokenizer stringTokenizer = new StringTokenizer(parseString, ";");
                             while (stringTokenizer.hasMoreTokens()) {
                                 String pair = stringTokenizer.nextToken().trim();
@@ -838,9 +877,9 @@ public final class ImportService {
     // POI Version, used when converting sheets to csv. Essentially get a value of the cell as either an unformatted number or as a string similar to how it
     // is rendered in Excel, Some hacking to standardise date formats and remove escape characters
 
-    private static String getCellValue(Cell cell) {
+    public static String getCellValue(Cell cell) {
         String returnString = "";
-        if (cell==null){
+        if (cell == null) {
             return "";
         }
         //if (colCount++ > 0) bw.write('\t');
@@ -1020,14 +1059,14 @@ public final class ImportService {
         return uploadedFile;
     }
 
-    private static Workbook getImportTemplateForUploadedFile(LoggedInUser loggedInUser, UploadedFile uploadedFile) throws
+    public static Workbook getImportTemplateForUploadedFile(LoggedInUser loggedInUser, UploadedFile uploadedFile) throws
             Exception {
-        String importTemplateName = uploadedFile.getParameter(IMPORTTEMPLATE);
+        String importTemplateName = uploadedFile != null ? uploadedFile.getParameter(IMPORTTEMPLATE) : null;
         // make a guess at the import template if it wasn't explicitly specified
         if (importTemplateName == null) {
-              importTemplateName = loggedInUser.getDatabase().getName() + " import templates.xlsx";
+            importTemplateName = loggedInUser.getDatabase().getName() + " import templates.xlsx";
         }
-        if (importTemplateName.endsWith(".xlsx")) importTemplateName = importTemplateName.replace(".xlsx","");
+        if (importTemplateName.endsWith(".xlsx")) importTemplateName = importTemplateName.replace(".xlsx", "");
 
         if (ImportTemplateDAO.findForNameAndBusinessId(importTemplateName, loggedInUser.getUser().getBusinessId()) != null) {
             ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(importTemplateName, loggedInUser.getUser().getBusinessId());

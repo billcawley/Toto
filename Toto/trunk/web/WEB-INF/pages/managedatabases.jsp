@@ -189,7 +189,6 @@ Created by IntelliJ IDEA.
                     <td></td>
                     <td></td>
                     <td></td>
-                    <td></td>
                 </tr>
                 </thead>
                 <tbody>
@@ -229,8 +228,6 @@ Created by IntelliJ IDEA.
                                                                title="Unload ${database.name}"><span class="fa fa-eject"
                                                                                                      title="Unload"></span></a></c:if>
                         </td>
-                        <td><a href="/api/CopyDatabase?databaseId=${database.id}#tab2" class="button small"
-                               title="Copy ${database.name}"><span class="fa fa-copy" title="Copy"></span> </a></td>
                     </tr>
                 </c:forEach>
                 </tbody>

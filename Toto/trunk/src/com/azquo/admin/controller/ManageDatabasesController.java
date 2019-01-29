@@ -367,26 +367,6 @@ public class ManageDatabasesController {
                 model.put("serverList", false);
             }
             // todo factor
-            // ok, so, for pending uploads we need to know what parameters the user can set
-            Map<String, List<String>> paramsMap = new HashMap<>();
-            String scanParams = SpreadsheetService.getScanParams();
-            if (!scanParams.isEmpty()) {
-                StringTokenizer stringTokenizer = new StringTokenizer(scanParams, "|");
-                while (stringTokenizer.hasMoreTokens()) {
-                    String name = stringTokenizer.nextToken().trim();
-                    if (stringTokenizer.hasMoreTokens()) {
-                        String list = stringTokenizer.nextToken().trim();
-                        List<String> values = new ArrayList<>();
-                        values.add("N/A");
-                        StringTokenizer stringTokenizer1 = new StringTokenizer(list, ",");
-                        while (stringTokenizer1.hasMoreTokens()) {
-                            values.add(stringTokenizer1.nextToken().trim());
-                        }
-                        paramsMap.put(name, values);
-                    }
-                }
-            }
-            model.put("params", paramsMap.entrySet()); // no search for the mo
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
             model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
@@ -408,7 +388,7 @@ public class ManageDatabasesController {
         new Thread(() -> {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
-                session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile));
+                session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile, null));
             } catch (Exception e) {
                 e.printStackTrace();
                 uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
@@ -426,60 +406,13 @@ public class ManageDatabasesController {
         return "importrunning";
     }
 
-    // todo - get the "view" (HTML) out of here . . .
-    // A table which is more readable
-    public static String formatUploadedFilesForPendingUploads(List<UploadedFile> uploadedFiles) {
-        StringBuilder toReturn = new StringBuilder();
-        toReturn.append("<table><thead>");
-        toReturn.append("<tr><td>File Name</td><td>Initial Import Result</td><td>Validation Result</td><td>Details</td></tr></thead>");
-        int count = 0;
-        for (UploadedFile uploadedFile : uploadedFiles) {
-            toReturn.append("<tr>");
-            toReturn.append("<td>");
-            for (int index = 0; index < uploadedFile.getFileNames().size(); index++) {
-                if (index > 0) {
-                    toReturn.append(" -> ");
-                }
-                toReturn.append(uploadedFile.getFileNames().get(index));
-            }
-            toReturn.append("</td>");
-            toReturn.append("<td>");
-            if (uploadedFile.getError() != null) {
-                toReturn.append("<span style=\"background-color: #FF8888; color: #000000\">Error : ").append(uploadedFile.getError()).append("</span>");
-            } else if (!uploadedFile.isDataModified()) {
-                toReturn.append("<span style=\"background-color: #FF8888; color: #000000\">No data modified.</span>");
-            } else if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
-                toReturn.append("Line Errors : ").append(uploadedFile.getLinesRejected().size());
-            } else {
-                toReturn.append("<span style=\"background-color: #88FF88; color: #000000\">Success.</span>");
-            }
-            toReturn.append("</td>");
-            toReturn.append("<td>");
-            if (uploadedFile.getPostProcessingResult() != null && !uploadedFile.getPostProcessingResult().isEmpty()) {
-                toReturn.append(uploadedFile.getPostProcessingResult());
-            } else {
-                toReturn.append("N/A");
-            }
-            toReturn.append("</td>");
-            toReturn.append("<td>");
-            toReturn.append("<a href=\"/api/ImportResults?count=" + count + "\" target=\"new\" class=\"button inspect small\" data-title=\"Import Results\" title=\"View Import Results\">");
-            toReturn.append("<div align=\"center\">View</div></a>");
-            toReturn.append("</td>");
-            toReturn.append("</tr>");
-            count++;
-        }
-        toReturn.append("</table>");
-        return toReturn.toString();
-    }
-
     // as it says make something for users to read from a list of uploaded files.
 
     public static String formatUploadedFiles(List<UploadedFile> uploadedFiles, boolean noClickableHeadings) {
         StringBuilder toReturn = new StringBuilder();
         List<String> lastNames = null;
-        int counter = 0;
         for (UploadedFile uploadedFile : uploadedFiles) {
-            counter++;
+            int id = uploadedFile.hashCode(); // stop clash with other div ids
             List<String> names = new ArrayList<>(uploadedFile.getFileNames()); // copy as I might change it
             int indent = 0;
             if (lastNames != null && (names.size() == lastNames.size() && names.get(0).equals(lastNames.get(0)))) { // for formatting don't repeat names (e.g. the zip name)
@@ -523,7 +456,7 @@ public class ManageDatabasesController {
                 if (noClickableHeadings) {
                     toReturn.append("Top headings : \n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings" + counter + "'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings" + counter + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings" + id + "'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings" + id + "\" style=\"display : none\">");
                 }
                 for (TypedPair<Integer, Integer> key : uploadedFile.getTopHeadings().keySet()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
@@ -539,7 +472,7 @@ public class ManageDatabasesController {
                 if (noClickableHeadings) {
                     toReturn.append("Headings with file headings : \n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings" + counter + "'); return false;\">Headings with file headings</a> : \n<br/><div id=\"fileHeadings" + counter + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings" + id + "'); return false;\">Headings with file headings</a> : \n<br/><div id=\"fileHeadings" + id + "\" style=\"display : none\">");
                 }
 
                 Collection<List<String>> toShow;
@@ -575,7 +508,7 @@ public class ManageDatabasesController {
                 if (noClickableHeadings) {
                     toReturn.append("Headings without file headings : \n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings" + counter + "'); return false;\">Headings without file headings</a> : \n<br/><div id=\"noFileHeadings" + counter + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings" + id + "'); return false;\">Headings without file headings</a> : \n<br/><div id=\"noFileHeadings" + id + "\" style=\"display : none\">");
                 }
                 for (TypedPair<String, String> stringStringTypedPair : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
@@ -595,12 +528,10 @@ public class ManageDatabasesController {
                 if (noClickableHeadings) {
                     toReturn.append("Simple Headings : \n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('simpleHeadings" + counter + "'); return false;\">Simple Headings</a> : \n<br/><div id=\"simpleHeadings" + counter + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('simpleHeadings" + id + "'); return false;\">Simple Headings</a> : \n<br/><div id=\"simpleHeadings" + id + "\" style=\"display : none\">");
                 }
-
                 for (String heading : uploadedFile.getSimpleHeadings()) {
                     toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-                    ;
                     toReturn.append(heading).append("\n<br/>");
                 }
                 if (!noClickableHeadings) {
@@ -617,12 +548,12 @@ public class ManageDatabasesController {
             toReturn.append(indentSb);
             toReturn.append("Number of values adjusted: ").append(uploadedFile.getNoValuesAdjusted()).append("\n<br/>");
 
-            if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
+            if (!uploadedFile.getLinesRejected().isEmpty()) {
                 toReturn.append(indentSb);
                 if (noClickableHeadings) {
                     toReturn.append("Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(uploadedFile.getLinesRejected().size() == 100 ? "+" : "").append("\n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + counter + "'); return false;\">Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(uploadedFile.getLinesRejected().size() == 100 ? "+" : "").append("</a> : \n<br/><div id=\"rejectedLines" + counter + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + id + "'); return false;\">Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(uploadedFile.getLinesRejected().size() == 100 ? "+" : "").append("</a> : \n<br/><div id=\"rejectedLines" + id + "\" style=\"display : none\">");
                 }
                 int maxLineWidth = 0;
                 for (UploadedFile.RejectedLine lineRejected : uploadedFile.getLinesRejected()) {
@@ -631,10 +562,69 @@ public class ManageDatabasesController {
                     }
                 }
 
-                toReturn.append("<div style='overflow-x: auto;overflow: auto;height:400px'><table style='font-size:90%'><tr><td>Error</td><td>#</td><td colspan=\"" + maxLineWidth + "\"></td></tr>");
+                toReturn.append("<div style='overflow: auto;max-height:400px;width:90vw'><table style='font-size:90%'><tr><td>Error</td><td>#</td><td colspan=\"" + maxLineWidth + "\"></td></tr>");
                 for (UploadedFile.RejectedLine lineRejected : uploadedFile.getLinesRejected()) {
                     toReturn.append("<tr><td nowrap><span style=\"background-color: #FFAAAA; color: #000000\">" + lineRejected.getErrors() + "</span></td><td>" + lineRejected.getLineNo() + "</td>");
                     String[] split = lineRejected.getLine().split("\t");
+                    for (String cell : split){
+                        toReturn.append("<td nowrap>").append(cell).append("</td>");
+                    }
+                    int leftOver = maxLineWidth - split.length;
+                    for (int i = 0; i < leftOver; i++){
+                        toReturn.append("<td nowrap></td>");
+                    }
+                    toReturn.append("</tr>");
+                }
+                toReturn.append("\n</table></div><br/>");
+                if (!noClickableHeadings) {
+                    toReturn.append("</div>");
+                }
+            }
+
+            // now the warning lines that will be a little more complex and have tickboxes
+            // todo - factor later!
+            if (!uploadedFile.getWarningLines().isEmpty()) {
+                // We're going to need descriptions of the errors, put them all in a set
+                Set<String> errorsSet = new HashSet<>();
+                for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
+                    errorsSet.addAll(warningLine.getErrors().keySet());
+                }
+                List<String> errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
+
+                toReturn.append(indentSb);
+                if (noClickableHeadings) {
+                    toReturn.append("Line Warnings : ").append(uploadedFile.getWarningLines().size()).append("\n<br/>");
+                } else {
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('warningLines" + id + "'); return false;\">Line Warnings : ").append(uploadedFile.getWarningLines().size()).append("</a> : \n<br/><div id=\"warningLines" + id + "\" style=\"display : none\">");
+                }
+
+                for (String error : errors){
+                    toReturn.append(error).append("\n<br/>");
+                }
+
+                int maxLineWidth = 0;
+                for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
+                    if (warningLine.getLine().split("\t").length > maxLineWidth){
+                        maxLineWidth = warningLine.getLine().split("\t").length;
+                    }
+                }
+
+                toReturn.append("<div style='overflow: auto;max-height:400px;width:90vw'><table style='font-size:90%'><tr>");
+
+                for (String error : errors){
+                    if (error.contains("[") && error.indexOf("]", error.indexOf("[")) > 0){
+                        error = error.substring(error.indexOf("[") + 1, error.indexOf("]", error.indexOf("[")));
+                    }
+                    toReturn.append("<td>" + error + "</td>");
+                }
+
+                toReturn.append("<td>#</td><td colspan=\"" + maxLineWidth + "\"></td></tr>");
+                for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
+                    for (String error : errors){
+                        toReturn.append("<td nowrap>" + (warningLine.getErrors().containsKey(error) ? "<span style=\"background-color: #FFAAAA; color: #000000\">" + warningLine.getErrors().get(error) + "</span>" : "") + "</td>");
+                    }
+
+                    String[] split = warningLine.getLine().split("\t");
                     for (String cell : split){
                         toReturn.append("<td nowrap>").append(cell).append("</td>");
                     }

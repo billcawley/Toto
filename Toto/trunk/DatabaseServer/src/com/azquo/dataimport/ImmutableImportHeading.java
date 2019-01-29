@@ -73,7 +73,6 @@ class ImmutableImportHeading {
         this.lookupTo = mutableImportHeading.lookupTo;
         this.checkList = mutableImportHeading.checkList;
         this.replace = mutableImportHeading.replace;
-
     }
 
     static class DictionaryTerm {

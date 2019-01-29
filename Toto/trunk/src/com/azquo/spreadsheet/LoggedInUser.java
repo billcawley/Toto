@@ -1,5 +1,6 @@
 package com.azquo.spreadsheet;
 
+import com.azquo.StringLiterals;
 import com.azquo.TypedPair;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
@@ -197,9 +198,13 @@ public class LoggedInUser implements Serializable {
         return databaseServer;
     }
 
+    // todo - fix this hack later! Get code out of dsimport service - make use of copy set here
+    public boolean copyMode = false;
+
     public DatabaseAccessToken getDataAccessToken() {
-        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), database.getPersistenceName());
+        return new DatabaseAccessToken(sessionId, user.getEmail(), databaseServer.getIp(), (copyMode ? StringLiterals.copyPrefix : "") + database.getPersistenceName());
     }
+
 
     public String getBusinessDirectory() {
         return businessDirectory;

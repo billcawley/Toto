@@ -1,5 +1,6 @@
 package com.azquo.memorydb.core;
 
+import com.azquo.StringLiterals;
 import com.azquo.memorydb.service.DSAdminService;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
@@ -83,15 +84,13 @@ public final class AzquoMemoryDB {
         // open database logging could maybe be added back in client side
     }
 
-    private static String copyPrefix = "TEMPORARY COPY"; // spaces shouldn't be there for normal persistence names so shouldn't clash
-
     public static boolean copyExists(String persistenceName){
-        return memoryDatabaseMap.contains(copyPrefix + persistenceName);
+        return memoryDatabaseMap.containsKey(StringLiterals.copyPrefix + persistenceName);
     }
 
     // vanilla use of ConcurrentHashMap, should be fine
     public static AzquoMemoryDB getCopyOfAzquoMemoryDB(String persistenceName) {
-        return memoryDatabaseMap.computeIfAbsent(copyPrefix + persistenceName, t -> {
+        return memoryDatabaseMap.computeIfAbsent(StringLiterals.copyPrefix + persistenceName, t -> {
                     AzquoMemoryDB sourceDB = getAzquoMemoryDB(persistenceName, null);
                     Provenance mostRecentProvenance = sourceDB.getMostRecentProvenance();
                     AzquoMemoryDB toReturn = new AzquoMemoryDB(null, sourceDB, null);
@@ -108,7 +107,7 @@ public final class AzquoMemoryDB {
 
     // *should* make it available for garbage collection
     public static void zapTemporarayCopyOfAzquoMemoryDB(String persistenceName) {
-        memoryDatabaseMap.remove(copyPrefix + persistenceName);
+        memoryDatabaseMap.remove(StringLiterals.copyPrefix + persistenceName);
     }
 
     // worth being aware that if the db is still referenced somewhere then the garbage collector won't chuck it (which is what we want)

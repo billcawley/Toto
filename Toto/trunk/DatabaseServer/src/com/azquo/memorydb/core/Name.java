@@ -110,6 +110,10 @@ public final class Name extends AzquoMemoryDBEntity {
         // can pass nameAttributes as an optimiseation when making a temporary copy
         if (nameAttributes != null){
             this.nameAttributes = nameAttributes;
+            // perhaps breaks the optimiseationa  little but hey ho
+            for (String key : nameAttributes.getAttributeKeys()){
+                azquoMemoryDB.getIndex().setAttributeForNameInAttributeNameMap(key, nameAttributes.getAttribute(key), this); // used to be done after, can't se a reason not to do this here
+            }
         } else {
             String[] attsArray = attributes.split(StringLiterals.ATTRIBUTEDIVIDER);
             String[] attributeKeys = new String[attsArray.length / 2];

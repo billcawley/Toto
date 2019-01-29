@@ -14,8 +14,8 @@
 
 </script>
     <main>
-    <h1>Import Validation - ${filename}</h1>
-    <form>
+    <h1>Import Validation for ${filename}</h1>
+    <form action="/api/PendingUpload" method="post">
         <input type="hidden" name="id" value="${id}"/>
         <c:choose>
             <c:when test="${dbselect == true}">
@@ -25,28 +25,15 @@
                 </c:forEach></select>
             </c:when>
             <c:otherwise>
-                <h2>Database - ${database}</h2>
+                <h2>Database : ${database}</h2>
             </c:otherwise>
         </c:choose>
-
+        <h2>Import Version : ${importVersion}</h2>
+        <h2>Month : ${month}</h2>
+        <div class="error">${error}</div>
         <!-- params passed if they need to be set-->
 <c:if test="${setparams == true}">
-    The upload does not have sufficient parameters set, please assign them to continue :
-    <table>
-        <tr>
-            <c:forEach items="${params}" var="entry">
-                <td>${entry.key}</td>
-            </c:forEach>
-        </tr>
-        <tr>
-            <c:forEach items="${params}" var="entry">
-                <td><select name="param-${entry.key}"><c:forEach
-                        items="${entry.value}"
-                        var="listitem">
-                    <option value="${listitem}">${listitem}</option>
-                </c:forEach></select></td>            </c:forEach>
-        </tr>
-    </table>
+    <h2>Please confirm parameters :</h2>
 </c:if>
         ${maintext}
     <div class="centeralign">

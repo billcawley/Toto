@@ -46,6 +46,7 @@ public class UploadedFile implements Serializable {
     private int noLinesImported;
     private final AtomicInteger noValuesAdjusted;
     private final ArrayList<RejectedLine> linesRejected;
+    private final ArrayList<WarningLine> warningLines;
     private String error;
     // as in "was data modified?"
     private boolean dataModified;
@@ -93,6 +94,8 @@ public class UploadedFile implements Serializable {
     // for validation support - this file goes into a temporary copy of the database
     private final boolean isValidationTest;
 
+    private Set<Integer> ignoreLines;
+
     public static class RejectedLine implements Serializable{
         final int lineNo;
         final String line;
@@ -117,6 +120,36 @@ public class UploadedFile implements Serializable {
         }
     }
 
+    // this has distinct errors - maybe I should use it for both? Todo
+
+    public static class WarningLine implements Serializable{
+        final int lineNo;
+        final String line;
+        final Map<String, String>  errors;
+
+        public WarningLine(int lineNo, String line) {
+            this.lineNo = lineNo;
+            this.line = line;
+            this.errors = new HashMap<>();
+        }
+
+        public int getLineNo() {
+            return lineNo;
+        }
+
+        public String getLine() {
+            return line;
+        }
+
+        public Map<String, String> getErrors() {
+            return errors;
+        }
+
+        public void addErrors(Map<String, String> errors){
+            this.errors.putAll(errors);
+        }
+    }
+
     public UploadedFile(String path, List<String> names, boolean isValidationTest) {
         this(path,names,null,false, isValidationTest);
     }
@@ -132,6 +165,7 @@ public class UploadedFile implements Serializable {
         noLinesImported = 0;
         noValuesAdjusted = new AtomicInteger(0);
         linesRejected = new ArrayList<>();
+        warningLines = new ArrayList<>();
         error = null;
         dataModified = false;
         reportName = null;
@@ -151,6 +185,7 @@ public class UploadedFile implements Serializable {
         languages = StringLiterals.DEFAULT_DISPLAY_NAME_AS_LIST;
         headingsNoFileHeadingsWithInterimLookup = null;
         provenanceId = -1;
+        ignoreLines = null;
     }
 
 
@@ -166,7 +201,7 @@ public class UploadedFile implements Serializable {
         return fileNames;
     }
 
-    public String getFileNamessAsString() {
+    public String getFileNamesAsString() {
         StringBuilder sb = new StringBuilder();
         for (String name : fileNames){
             sb.append(name).append(", ");
@@ -224,6 +259,14 @@ public class UploadedFile implements Serializable {
 
     public void addToLinesRejected(Collection<RejectedLine> lines) {
         linesRejected.addAll(lines);
+    }
+
+    public List<WarningLine> getWarningLines() {
+        return warningLines;
+    }
+
+    public void addToWarningLines(WarningLine line) {
+        warningLines.add(line);
     }
 
     public String getError() {
@@ -375,5 +418,13 @@ public class UploadedFile implements Serializable {
 
     public boolean isValidationTest() {
         return isValidationTest;
+    }
+
+    public Set<Integer> getIgnoreLines() {
+        return ignoreLines;
+    }
+
+    public void setIgnoreLines(Set<Integer> ignoreLines) {
+        this.ignoreLines = ignoreLines;
     }
 }

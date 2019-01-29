@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.StringLiterals;
 import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
@@ -15,10 +16,7 @@ import groovy.lang.GroovyRuntimeException;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.MalformedInputException;
 import java.nio.file.Files;
@@ -45,13 +43,14 @@ public class DSImportService {
         AzquoMemoryDBConnection azquoMemoryDBConnection = uploadedFile.isValidationTest()
                 ? AzquoMemoryDBConnection.getTemporaryCopyConnectionFromAccessToken(databaseAccessToken)
                 : AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken);
-        azquoMemoryDBConnection.setProvenance(user, "imported", uploadedFile.getFileNamessAsString(), "");
+        azquoMemoryDBConnection.setProvenance(user, "imported", uploadedFile.getFileNamesAsString(), "");
         // if the provenance is unused I could perhaps zap it but it's not a big deal for the mo
         UploadedFile toReturn = readPreparedFile(azquoMemoryDBConnection, uploadedFile);
         toReturn.setDataModified(!azquoMemoryDBConnection.isUnusedProvenance());
         toReturn.setProvenanceId(azquoMemoryDBConnection.getProvenance().getId());
         return toReturn;
     }
+    // todo - take into account that we now NEVER are without an import version, skiplines etc can be zapped
 
     // Called by above but also directly from SSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     public static UploadedFile readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile) throws Exception {
@@ -457,5 +456,55 @@ public class DSImportService {
                     , lastColumnToActuallyRead, compositeIndexResolver);
         }
         return uploadedFile; // it will (should!) have been modified
+    }
+
+    // top chunk pasted from above and modified, check factoring. Todo
+
+    // return line number, the thing we were looking for and the line
+    public static Map<Integer, TypedPair<String, String>> getLinesWithValuesInColumn(UploadedFile uploadedFile, int columnIndex, Set<String> valuesToCheck) throws IOException {
+        char delimiter = ',';
+        try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), Charset.forName("UTF-8"))) {
+            // grab the first line to check on delimiters
+                String firstLine = br.readLine();
+                if (firstLine.contains("|")) {
+                    delimiter = '|';
+                }
+                if (firstLine.contains("\t")) {
+                    delimiter = '\t';
+                }
+        }
+        CsvMapper csvMapper = new CsvMapper();
+        csvMapper.enable(CsvParser.Feature.WRAP_AS_ARRAY);
+        CsvSchema schema = csvMapper.schemaFor(String[].class)
+                .withColumnSeparator(delimiter)
+                .withLineSeparator("\n");
+        if (delimiter == '\t') {
+            schema = schema.withoutQuoteChar();
+        }
+        MappingIterator<String[]> lineIterator;
+        if (uploadedFile.getFileEncoding() != null) {
+            // so override file encoding.
+            lineIterator = csvMapper.readerFor(String[].class).with(schema).readValues(new InputStreamReader(new FileInputStream(uploadedFile.getPath()), uploadedFile.getFileEncoding()));
+        } else {
+            lineIterator = (csvMapper.readerFor(String[].class).with(schema).readValues(new File(uploadedFile.getPath())));
+        }
+        Map<Integer, TypedPair<String, String>> toReturn = new HashMap<>();
+        // ok, run the check
+        while (lineIterator.hasNext()){
+            String[] row = lineIterator.next();
+            // will make it case insensetive
+            if (columnIndex < row.length && valuesToCheck.contains(row[columnIndex].toLowerCase())){
+                StringBuilder sb = new StringBuilder();
+                // rebuild the line, seems a little stupid :P
+                for (int i = 0; i < row.length; i++){
+                    if (sb.length() > 0){
+                        sb.append(delimiter);
+                    }
+                    sb.append(row[i]);
+                }
+                toReturn.put(lineIterator.getCurrentLocation().getLineNr() - 1, new TypedPair<>(row[columnIndex], sb.toString()));
+            }
+        }
+        return toReturn;
     }
 }
