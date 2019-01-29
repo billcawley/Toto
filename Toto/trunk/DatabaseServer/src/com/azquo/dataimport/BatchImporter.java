@@ -113,7 +113,7 @@ public class BatchImporter implements Callable<Void> {
                             System.out.println("line no " + lineToLoadWithLineNumber.getFirst() + " time = " + (now - time) + "ms");
                         }
                         time = now;
-                    } else if (linesRejected.size() < 100) {
+                    } else if (linesRejected.size() < 100 && !"ignored".equalsIgnoreCase(rejectionReason)) {
                         linesRejected.computeIfAbsent(lineToLoadWithLineNumber.getFirst(), t -> new CopyOnWriteArrayList<>()).add(rejectionReason);
                     }
                 }

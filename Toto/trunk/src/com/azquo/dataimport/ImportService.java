@@ -149,7 +149,10 @@ public final class ImportService {
                     if (DONTLOAD.equalsIgnoreCase(parametersPerFile.get(f.getName()).get(DONTLOAD))){
                         dontLoad = true;
                     }
-                    fileNameParams.putAll(parametersPerFile.get(f.getName()));
+                    // don't change this to entries - the keys are converted to lower case
+                    for (String key : parametersPerFile.get(f.getName()).keySet()){
+                        fileNameParams.put(key.toLowerCase(), parametersPerFile.get(f.getName()).get(key));
+                    }
                 }
                 if (!dontLoad){
                     UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
@@ -172,7 +175,7 @@ public final class ImportService {
         }
         return processedUploadedFiles;
     }
-
+    //302200K
     // a book will be a report to upload or a workbook which has to be converted into a csv for each sheet
     private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, Workbook templateBook) throws Exception {
         long time = System.currentTimeMillis();
