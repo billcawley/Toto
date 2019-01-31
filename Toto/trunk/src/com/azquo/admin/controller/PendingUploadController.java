@@ -4,6 +4,7 @@ import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
+import com.azquo.dataimport.ImportTemplateData;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
@@ -92,26 +93,27 @@ public class PendingUploadController {
                 DatabaseServer databaseServer = DatabaseServerDAO.findById(db.getDatabaseServerId());
                 loggedInUser.setDatabaseWithServer(databaseServer, db);
                 // we've got the database but how about the import template?
-                Workbook importTemplate = ImportService.getImportTemplateForUploadedFile(loggedInUser, null);
-                Sheet lookupSheet = null;
-                if (importTemplate == null) {
+                // we're going to need to move to an import template object I think
+                ImportTemplateData importTemplateForUploadedFile = ImportService.getImportTemplateForUploadedFile(loggedInUser, null, null);
+                List<List<String>> lookupSheet = null;
+                if (importTemplateForUploadedFile == null) {
                     model.put("error", "Import template not found for " + database.getName() + ", please upload one for it.");
                     return "pendingupload";
                 } else {
                     boolean found = false;
-                    for (int sheetNo = 0; sheetNo < importTemplate.getNumberOfSheets(); sheetNo++) {
-                        if (importTemplate.getSheetAt(sheetNo).getSheetName().trim().equalsIgnoreCase(importVersion)) {
+                    for (String sheetName : importTemplateForUploadedFile.getSheets().keySet()) {
+                        if (sheetName.equalsIgnoreCase(importVersion)) {
                             found = true;
                         }
-                        if (importTemplate.getSheetAt(sheetNo).getSheetName().trim().equalsIgnoreCase(LOOKUPS + importVersion)) {
-                            lookupSheet = importTemplate.getSheetAt(sheetNo);
+                        if (sheetName.equalsIgnoreCase(LOOKUPS + importVersion)) {
+                            lookupSheet = importTemplateForUploadedFile.getSheets().get(sheetName);
                         }
                     }
                     if (!found) {
                         model.put("error", "Import version " + importVersion + " not found.");
                         return "pendingupload";
                     }
-                    model.put("importVersion", importVersion);
+                    model.put(ImportService.IMPORTVERSION, importVersion);
                 }
                 final HashMap<String, String> params = new HashMap<>();
                 params.put(ImportService.IMPORTVERSION, importVersion);
@@ -123,15 +125,14 @@ public class PendingUploadController {
                     List<String> lookupHeadings = new ArrayList<>();
                     // could probably be a list but anyway. Prepare what I can from the lookup file
                     Map<String, List<String>> lookUpMap = new HashMap<>();
-                    for (Row row : lookupSheet) {
+                    for (List<String> row : lookupSheet) {
                         boolean first = true;
                         if (lookupHeadings.isEmpty()) {
                             // top row we assume
-                            for (Cell cell : row) {
+                            for (String cell : row) {
                                 if (!first) {
-                                    String heading = ImportService.getCellValue(cell);
-                                    if (!heading.isEmpty()) {// I guess there may be some space straggling at the end
-                                        lookupHeadings.add(heading);
+                                    if (!cell.isEmpty()) {// I guess there may be some space straggling at the end
+                                        lookupHeadings.add(cell);
                                     }
                                 }
                                 first = false;
@@ -139,11 +140,11 @@ public class PendingUploadController {
                         } else { // a lookup line
                             String[] keys = null;
                             List<String> values = new ArrayList<>();
-                            for (Cell cell : row) {
+                            for (String cell : row) {
                                 if (first) {
-                                    keys = ImportService.getCellValue(cell).split(",");
+                                    keys = cell.split(",");
                                 } else {
-                                    values.add(ImportService.getCellValue(cell));
+                                    values.add(cell);
                                 }
                                 first = false;
                             }

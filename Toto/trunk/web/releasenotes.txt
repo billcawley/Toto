@@ -1,3 +1,7 @@
+19-01-19
+
+Considerable work on query validation, initial version
+
 23-01-19
 
 Starting work based off the Alex/Oliver meetings, temporary memory copy of a DB and revisions to the pending upload table. Old revert/commit stuff removed

@@ -184,36 +184,35 @@ public class ChoicesService {
                     if (BookUtils.getNamedDataRegionForRowAndColumnSelectedSheet(chosen.getRow(), chosen.getColumn(), sheet).isEmpty()) {
 
                         String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length()).toLowerCase();
-                        if (chosen != null) {
-                            if (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1) { // I think I may keep this constraint even after
-                                // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
-                                List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
-                                String userChoice = userChoices.get(choiceName);
-                                LocalDate date = ReportUtils.isADate(userChoice);
-                                if (validOptions != null) {
-                                    if (SpreadsheetService.FIRST_PLACEHOLDER.equals(userChoice)) {
+                        if (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1) { // I think I may keep this constraint even after
+                            // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
+                            List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
+                            String userChoice = userChoices.get(choiceName.startsWith("az_") ? choiceName.substring(3) : choiceName);
+                            LocalDate date = ReportUtils.isADate(userChoice);
+                            if (validOptions != null) {
+                                if (SpreadsheetService.FIRST_PLACEHOLDER.equals(userChoice)) {
+                                    userChoice = validOptions.get(0);
+                                }
+                                if (SpreadsheetService.LAST_PLACEHOLDER.equals(userChoice)) {
+                                    userChoice = validOptions.get(validOptions.size() - 1);
+                                }
+                                // todo, case insensetivity - surely dec-18 should be allowed if Dec-18 is in the list? A concern . . .
+                                while (userChoice != null && !validOptions.contains(userChoice) && userChoice.contains("->")) {
+                                    //maybe the user choice is over -specified. (e.g from drilldown or removal of conflicting names)  Try removing the super-sets
+                                    userChoice = userChoice.substring(userChoice.indexOf("->") + 2);
+                                }
+                                if ((userChoice == null || !validOptions.contains(userChoice)) && !validOptions.isEmpty()) { // just set the first for the mo.
+                                    //check that userChoice is not a valid date...
+                                    if (date == null || !validOptions.contains(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))) {
                                         userChoice = validOptions.get(0);
                                     }
-                                    if (SpreadsheetService.LAST_PLACEHOLDER.equals(userChoice)) {
-                                        userChoice = validOptions.get(validOptions.size() - 1);
-                                    }
-                                    while (userChoice != null && !validOptions.contains(userChoice) && userChoice.contains("->")) {
-                                        //maybe the user choice is over -specified. (e.g from drilldown or removal of conflicting names)  Try removing the super-sets
-                                        userChoice = userChoice.substring(userChoice.indexOf("->") + 2);
-                                    }
-                                    if ((userChoice == null || !validOptions.contains(userChoice)) && !validOptions.isEmpty()) { // just set the first for the mo.
-                                        //check that userChoice is not a valid date...
-                                        if (date == null || !validOptions.contains(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))) {
-                                            userChoice = validOptions.get(0);
-                                        }
-                                    }
                                 }
-                                if (userChoice != null) {
-                                    SCell sCell = sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn());
-                                    BookUtils.setValue(sCell, userChoice);
-                                    Ranges.range(sheet, sCell.getRowIndex(), sCell.getColumnIndex()).notifyChange(); // might well be formulae related to the choice setting
-                                    context += choiceName + " = " + userChoice + ";";
-                                }
+                            }
+                            if (userChoice != null) {
+                                SCell sCell = sheet.getInternalSheet().getCell(chosen.getRow(), chosen.getColumn());
+                                BookUtils.setValue(sCell, userChoice);
+                                Ranges.range(sheet, sCell.getRowIndex(), sCell.getColumnIndex()).notifyChange(); // might well be formulae related to the choice setting
+                                context += choiceName + " = " + userChoice + ";";
                             }
                         }
                         regionsToWatchForMerge.add(chosen);

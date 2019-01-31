@@ -463,6 +463,8 @@ public class DSImportService {
     // return line number, the thing we were looking for and the line
     public static Map<Integer, TypedPair<String, String>> getLinesWithValuesInColumn(UploadedFile uploadedFile, int columnIndex, Set<String> valuesToCheck) throws IOException {
         char delimiter = ',';
+        System.out.println("get lines with values and column, col index : " + columnIndex);
+        System.out.println("get lines with values and column, values to check : " + valuesToCheck);
         try (BufferedReader br = Files.newBufferedReader(Paths.get(uploadedFile.getPath()), Charset.forName("UTF-8"))) {
             // grab the first line to check on delimiters
                 String firstLine = br.readLine();

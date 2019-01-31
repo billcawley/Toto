@@ -156,7 +156,10 @@ public class ReportExecutor {
                             loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), permission.getSecond());
                         }
                     } else { // otherwise try a straight lookup - stick on whatever db we're currently on
-                        onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
+                        onlineReport = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportToRun);
+                        if (onlineReport == null){
+                            onlineReport = OnlineReportDAO.findForNameAndBusinessId(reportToRun, loggedInUser.getUser().getBusinessId());
+                        }
                     }
                     if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
                         loopsLog.append("Run : ").append(onlineReport.getReportName());

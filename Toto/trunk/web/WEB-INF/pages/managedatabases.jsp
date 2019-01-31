@@ -294,7 +294,7 @@ Created by IntelliJ IDEA.
                                                                        class="button small" title="Download"><span
                                     class="fa fa-download" title="Download"></span> </a></td>
                             <td>
-                                    <a onclick="showWorking();" href="/api/PendingUpload?id=${pendingupload.id}"
+                                    <a onclick="showHideDiv('working');" href="/api/PendingUpload?id=${pendingupload.id}"
                                        class="button"
                                        title="Validate and Load">
                                         Validate and Load
