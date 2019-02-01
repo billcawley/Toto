@@ -1,23 +1,18 @@
 package com.azquo.admin.controller;
 
-import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
 import com.azquo.dataimport.ImportTemplateData;
 import com.azquo.spreadsheet.LoggedInUser;
-import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import org.apache.commons.lang.math.NumberUtils;
+import org.springframework.security.access.method.P;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.zkoss.poi.ss.usermodel.Cell;
-import org.zkoss.poi.ss.usermodel.Row;
-import org.zkoss.poi.ss.usermodel.Sheet;
-import org.zkoss.poi.ss.usermodel.Workbook;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -37,6 +32,7 @@ import java.util.zip.ZipFile;
 public class PendingUploadController {
 
     public static final String PENDINGREADY = "PENDINGREADY";
+    public static final String PARAMSPASSTHROUGH = "PARAMSPASSTHROUGH";
     public static final String LOOKUPS = "LOOKUPS ";
 
     //    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
@@ -45,6 +41,8 @@ public class PendingUploadController {
             , @RequestParam(value = "id", required = false) String id
             , @RequestParam(value = "databaseId", required = false) String databaseId
             , @RequestParam(value = "paramssubmit", required = false) String paramssubmit
+            , @RequestParam(value = "finalsubmit", required = false) String finalsubmit
+            , @RequestParam(value = "maxcounter", required = false) String maxcounter
     ) throws Exception {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
@@ -63,8 +61,8 @@ public class PendingUploadController {
                     pu.setDatabaseId(Integer.parseInt(databaseId));
                     PendingUploadDAO.store(pu);
                 }
-                String month = null;
-                String importVersion = null;
+                String month;
+                String importVersion;
                 String[] fileSplit = mainFileName.split(" ");
                 if (fileSplit.length < 3) {
                     model.put("error", "Filename in unknown format.");
@@ -72,7 +70,7 @@ public class PendingUploadController {
                 } else {
                     importVersion = fileSplit[0] + fileSplit[1];
                     month = fileSplit[2];
-                    if (month.contains(".")){
+                    if (month.contains(".")) {
                         month = month.substring(0, month.indexOf("."));
                     }
                 }
@@ -120,9 +118,10 @@ public class PendingUploadController {
                 params.put("month", month);
 
                 Map<String, Map<String, String>> lookupValuesForFiles = null;
+                List<String> files = new ArrayList<>();
+                List<String> lookupHeadings = new ArrayList<>();
                 if (lookupSheet != null) {
                     lookupValuesForFiles = new HashMap<>();
-                    List<String> lookupHeadings = new ArrayList<>();
                     // could probably be a list but anyway. Prepare what I can from the lookup file
                     Map<String, List<String>> lookUpMap = new HashMap<>();
                     for (List<String> row : lookupSheet) {
@@ -159,7 +158,6 @@ public class PendingUploadController {
                     }
                     // now apply to the file names
                     // todo - standardize API calls?
-                    List<String> files = new ArrayList<>();
                     if (mainFileName.endsWith(".zip")) { // I'm going to go down one level for the moment
                         ZipFile zipFile = new ZipFile(pu.getFilePath());
                         zipFile.stream().map(ZipEntry::getName).forEach(files::add);
@@ -189,7 +187,7 @@ public class PendingUploadController {
                             Map<String, String> mapForFile = lookupValuesForFiles.get(file);
                             int counter2 = 0;
                             for (String heading : lookupHeadings) {
-                                if (request.getParameter(counter + "-" + counter2) != null){
+                                if (request.getParameter(counter + "-" + counter2) != null) {
                                     mapForFile.put(heading, request.getParameter(counter + "-" + counter2));
                                 }
                                 counter2++;
@@ -230,6 +228,35 @@ public class PendingUploadController {
                     }
                 }
 
+                // note, unlike the lookup parameters I cna't do this by file name, it will be per spreadsheet and there may be more than one . . .
+                Map<Integer,Boolean> fileLoadFlags = new HashMap<>();
+                Map<Integer,Set<Integer>> fileRejectLines = new HashMap<>();
+                // as in go ahead and import
+                if ("finalsubmit".equals(finalsubmit)) {
+                    // so we have load-counter where counter is the files in order, the order should be reliable
+                    // then counter-lines, a comma separated list of lines that will be rejected UNLESS
+                    // counter-linenumber checkbox is checked
+                    // I guess grabbing in a map would be a starter, will need maxcounter to help I think
+                    int maxCounter = Integer.parseInt(maxcounter);
+                    for (int i = 0; i <= maxCounter; i++){
+                        fileLoadFlags.put(i, request.getParameter("load-" + i) != null);
+
+                        String rejectedLinesString = request.getParameter(i +"-lines");
+                        if (rejectedLinesString != null){
+                            Set<Integer> rejectedLines = new HashSet<>();
+                            String[] split = rejectedLinesString.split(",");
+                            for (int j = 0; j < split.length; j++){
+                                if (request.getParameter(i + "-" + split[j]) == null){ // if that line was selected then *don't* reject it
+                                    rejectedLines.add(Integer.parseInt(split[j]));
+                                }
+                            }
+                            if (!rejectedLines.isEmpty()){
+                                fileRejectLines.put(i, rejectedLines);
+                            }
+                        }
+                    }
+                }
+
                 if (session.getAttribute(PENDINGREADY) != null) {
                     StringBuilder maintext = new StringBuilder();
                     session.removeAttribute(PENDINGREADY);
@@ -237,11 +264,18 @@ public class PendingUploadController {
                     List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
                     if (importResult != null) {
                         request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
+                        String paramsPassThrough = (String) session.getAttribute(PARAMSPASSTHROUGH);
+                        session.removeAttribute(PARAMSPASSTHROUGH);
+                        if (paramsPassThrough != null) {
+                            maintext.append(paramsPassThrough);
+                        }
                         maintext.append("<input name=\"finalsubmit\" value=\"finalsubmit\" type=\"hidden\" />");
+                        maintext.append("<input name=\"maxcounter\" value=\"" + (importResult.size() - 1) + "\" type=\"hidden\" />");
                         maintext.append("<table>");
                         maintext.append("<tr>");
                         maintext.append("<td>Name</td>");
                         maintext.append("<td>Status</td>");
+                        maintext.append("<td><div align=\"center\">Load</div></td>");
                         maintext.append("<td></td>");
                         //maintext.append(ManageDatabasesController.formatUploadedFiles(Collections.singletonList(uploadedFile), false));
                         maintext.append("</tr>");
@@ -282,12 +316,16 @@ public class PendingUploadController {
                             }
                             maintext.append("<td>" + fileName + "</td>");
                             maintext.append("<td>" + (quickFeedback.isEmpty() ? "Success" : quickFeedback) + "</td>");
-                            // <input name="excel" type="checkbox" id="excelinterface" checked/>
+                            maintext.append("<td>");
+                            if (uploadedFile.getError() == null && uploadedFile.isDataModified()) {
+                                maintext.append("<div align=\"center\"><input type=\"checkbox\" name=\"load-" + counter + "\" checked/></div>");
+                            }
+                            maintext.append("</td>");
                             maintext.append("<td><a href=\"#\" class=\"button\" title=\"Details\"  onclick=\"showHideDiv('details" + counter + "'); return false;\" >Details</a></td>");
                             // there will be a
                             maintext.append("</tr>");
                             maintext.append("<tr>");
-                            maintext.append("<td colspan=\"3\"><div id=\"details" + counter + "\" style=\"overflow-x: auto;display : none\">" + ManageDatabasesController.formatUploadedFiles(Collections.singletonList(uploadedFile), false) + "</div></td>");
+                            maintext.append("<td colspan=\"3\"><div id=\"details" + counter + "\" style=\"overflow-x: auto;display : none\">" + ManageDatabasesController.formatUploadedFiles(Collections.singletonList(uploadedFile), counter, false) + "</div></td>");
                             maintext.append("</tr>");
                             counter++;
                         }
@@ -300,21 +338,41 @@ public class PendingUploadController {
 
                 // so we can go on this pending upload
                 // new thread and then defer to import running as we do stuff
+                StringBuilder lookupValuesForFilesHTML = new StringBuilder();
+                lookupValuesForFilesHTML.append("<input name=\"paramssubmit\" value=\"paramssubmit\" type=\"hidden\" />");
+                int counter = 0;
+                // if no lookups  files will be empty, a moot point
+                // to push the lookup values through the validation screen
+                for (String file : files) {
+                    Map<String, String> mapForFile = lookupValuesForFiles.get(file);
+                    int counter2 = 0;
+                    for (String heading : lookupHeadings) {
+                        lookupValuesForFilesHTML.append("<input type=\"hidden\" name=\"" + counter + "-" + counter2 + "\" value=\"" + (mapForFile.get(heading) != null ? mapForFile.get(heading) : "") + "\"/>\n");
+                        counter2++;
+                    }
+                    counter++;
+                }
+
                 final Map<String, Map<String, String>> finalLookupValuesForFiles = lookupValuesForFiles;
                 new Thread(() -> {
                     try {
-                        if (finalLookupValuesForFiles != null && finalLookupValuesForFiles.get(pu.getFileName()) != null){ // could happen on a single xlsx upload. Apparently always zips but I'm concerned it may not be . . .
+                        if (finalLookupValuesForFiles != null && finalLookupValuesForFiles.get(pu.getFileName()) != null) { // could happen on a single xlsx upload. Apparently always zips but I'm concerned it may not be . . .
                             params.putAll(finalLookupValuesForFiles.get(pu.getFileName()));
                         }
                         UploadedFile uploadedFile = new UploadedFile(pu.getFilePath(), Collections.singletonList(pu.getFileName()), params, false, true);
                         List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, finalLookupValuesForFiles);
-                        session.setAttribute(PENDINGREADY, "done");
+
+                        session.setAttribute(PARAMSPASSTHROUGH, lookupValuesForFilesHTML.toString());
                         session.setAttribute(ManageDatabasesController.IMPORTRESULT, uploadedFiles);
+                        session.setAttribute(PENDINGREADY, "done");
                     } catch (Exception e) {
                         e.printStackTrace();
                         session.setAttribute(PENDINGREADY, "problem!");
                     }
                 }).start();
+                model.put("id", id);
+                // will be nothing if there's no manual paramteres
+                model.put("paramspassthrough", lookupValuesForFilesHTML.toString());
                 return "validationready";
             }
         }

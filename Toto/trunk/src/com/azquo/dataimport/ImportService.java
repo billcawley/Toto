@@ -56,6 +56,7 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -105,7 +106,7 @@ public final class ImportService {
 
         uploadFile.close(); // windows requires this (though windows ideally should not be used in production), perhaps not a bad idea anyway
         uploadedFile.setPath(tempFile.getPath()); // I'm now allowing adjustment of paths like this - having the object immutable became impractical
-        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, new HashMap<>(), parametersPerFile);
+        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, new HashMap<>(), parametersPerFile, new AtomicInteger(0));
         if (!uploadedFile.isValidationTest()) {
             // persist on the database server
             SpreadsheetService.databasePersist(loggedInUser);
@@ -114,7 +115,7 @@ public final class ImportService {
 
             UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
                     , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId()
-                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), "", ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, true), originalFilePath);
+                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), "", ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, -1,true), originalFilePath);
             UploadRecordDAO.store(uploadRecord);
             // and update the counts on the manage database page
             AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
@@ -129,7 +130,7 @@ public final class ImportService {
     public static String DONTLOAD = "DONTLOAD";
 
     // deals with unzipping if required - recursive in case there's a zip in a zip
-    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache, Map<String, Map<String, String>> parametersPerFile) throws Exception {
+    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache, Map<String, Map<String, String>> parametersPerFile, AtomicInteger count) throws Exception {
         List<UploadedFile> processedUploadedFiles = new ArrayList<>();
         if (uploadedFile.getFileName().endsWith(".zip") || uploadedFile.getFileName().endsWith(".7z")) {
             ZipUtil.explode(new File(uploadedFile.getPath()));
@@ -169,7 +170,7 @@ public final class ImportService {
                 }
                 if (!dontLoad) {
                     UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
-                    processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, templateCache, parametersPerFile));
+                    processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, templateCache, parametersPerFile, count));
                 }
             }
         } else { // nothing to decompress
@@ -181,9 +182,9 @@ public final class ImportService {
                 uploadedFile.setError("Please upload the report schedules file in the schedules tab.");
                 processedUploadedFiles.add(uploadedFile);
             } else if (uploadedFile.getFileName().toLowerCase().endsWith(".xls") || uploadedFile.getFileName().toLowerCase().endsWith(".xlsx")) {
-                processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile, templateCache));
+                processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile, templateCache,count));
             } else {
-                processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, templateCache));
+                processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, templateCache, count));
             }
         }
         return processedUploadedFiles;
@@ -191,7 +192,7 @@ public final class ImportService {
 
     //302200K
     // a book will be a report to upload or a workbook which has to be converted into a csv for each sheet
-    private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache) throws Exception {
+    private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache, AtomicInteger count) throws Exception {
         long time = System.currentTimeMillis();
         Workbook book;
         OPCPackage opcPackage = null;
@@ -280,7 +281,7 @@ public final class ImportService {
         List<UploadedFile> toReturn = new ArrayList<>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues, templateCache);
+            List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues, templateCache, count);
             for (UploadedFile uploadedFile1 : uploadedFiles) {
                 uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare / uploadedFiles.size());
             }
@@ -302,9 +303,10 @@ public final class ImportService {
 
     This is used to extract data regions to files. How to detect this without annoying code.
 
+    Known names not relevant on this data bit, now there's a split to the template source for the headings we just have it there
      */
 
-    private static void rangeToCSV(Sheet sheet, AreaReference areaReference, Map<String, String> knownNames, CsvWriter csvW) throws Exception {
+    private static void rangeToCSV(Sheet sheet, AreaReference areaReference, CsvWriter csvW) throws Exception {
         int startRow = areaReference.getFirstCell().getRow();
         int endRow = areaReference.getLastCell().getRow();
         int startCol = areaReference.getFirstCell().getCol();
@@ -314,6 +316,25 @@ public final class ImportService {
                 String val = "";
                 if (sheet.getRow(rNo) != null) {
                     val = getCellValue(sheet.getRow(rNo).getCell(cNo));
+                }
+                csvW.write(val.replace("\n", "\\\\n").replace("\t", "\\\\t"));//nullify the tabs and carriage returns.  Note that the double slash is deliberate so as not to confuse inserted \\n with existing \n
+            }
+            csvW.endRecord();
+        }
+    }
+
+    private static void rangeToCSV(List<List<String>> templateSource, AreaReference areaReference, Map<String, String> knownNames, CsvWriter csvW) throws Exception {
+        int startRow = areaReference.getFirstCell().getRow();
+        int endRow = areaReference.getLastCell().getRow();
+        int startCol = areaReference.getFirstCell().getCol();
+        int endCol = areaReference.getLastCell().getCol();
+        for (int rNo = startRow; rNo <= endRow; rNo++) {
+            for (int cNo = startCol; cNo <= endCol; cNo++) {
+                String val = "";
+                if (templateSource.size() > rNo) {
+                    if (templateSource.get(rNo).size() > cNo){
+                        val = templateSource.get(rNo).get(cNo);
+                    }
                 }
                 if (knownNames != null) {
                     for (Map.Entry<String, String> knownNameValue : knownNames.entrySet()) {
@@ -327,44 +348,47 @@ public final class ImportService {
     }
 
 
-    private static List<UploadedFile> readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, Sheet sheet, Map<String, String> knownValues, HashMap<String, ImportTemplateData> templateCache) {
+    private static List<UploadedFile> readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, Sheet sheet, Map<String, String> knownValues, HashMap<String, ImportTemplateData> templateCache, AtomicInteger count) {
         String sheetName = sheet.getSheetName();
         long time = System.currentTimeMillis();
         try {
             boolean importByNamedRegion = false;
             // reimplementing the old style import templates as used by Ben Jones
-            /* commenting old style just for the mo!
+            // this could perhaps be tidied, is a mix of API calls as the data is a workbook but the template is the new style,
+            // variable names could be better what with ,ap entries being used. TODO clean
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
             if (importTemplateData != null) {
-                for (int i = 0; i < templateBook.getNumberOfSheets(); i++) {
-                    Sheet templateSheet = templateBook.getSheetAt(i);
-                    Name importName = BookUtils.getNameByName(ReportRenderer.AZIMPORTNAME, templateSheet);
+                for (String templateSheetName : importTemplateData.getSheets().keySet()) {
+                    AreaReference importName = importTemplateData.getName(ReportRenderer.AZIMPORTNAME, templateSheetName);
                     if (importName != null) {
                         importByNamedRegion = true;
-                        AreaReference aref = new AreaReference(importName.getRefersToFormula());
-                        int row = aref.getFirstCell().getRow();
-                        int col = aref.getFirstCell().getCol();
-                        String valueToLookFor = getCellValue(templateSheet.getRow(row).getCell(col));
+                        int row = importName.getFirstCell().getRow();
+                        int col = importName.getFirstCell().getCol();
+                        String valueToLookFor = null;
+                        List<List<String>> sheetData = importTemplateData.getSheets().get(templateSheetName);
+                        if (sheetData.size() > row && sheetData.get(row).size() > col){
+                            valueToLookFor = sheetData.get(row).get(col);
+                        }
                         Cell cell = null;
                         if (sheet.getRow(row) != null) {
                             cell = sheet.getRow(row).getCell(col);
                         }
                         if (cell != null && getCellValue(cell).equals(valueToLookFor)) {// then we have a match
                             //FIRST  glean information from range names
-                            List<Name> namesForTemplate = BookUtils.getNamesForSheet(templateSheet);
-                            for (Name name : namesForTemplate) {
-                                AreaReference ref = new AreaReference(name.getRefersToFormula());
+                            Map<String, AreaReference> namesForTemplate = importTemplateData.getNamesForSheet(templateSheetName);
+                            for (Map.Entry<String, AreaReference> entry : namesForTemplate.entrySet()) {
+                                AreaReference ref = entry.getValue();
                                 if (ref.isSingleCell()) {
                                     int rowNo = ref.getFirstCell().getRow();
                                     int colNo = ref.getFirstCell().getCol();
-                                    knownValues.put(name.getNameName(), getCellValue(sheet.getRow(rowNo).getCell(colNo)));
+                                    knownValues.put(entry.getKey(), getCellValue(sheet.getRow(rowNo).getCell(colNo)));
                                 }
                             }
                             //now copy across the column headings in full
                             ArrayList<UploadedFile> toReturn = new ArrayList<>();
-                            for (Name name : namesForTemplate) {
-                                if (name.getNameName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
-                                    Name dataRegion = BookUtils.getName(templateBook, ReportRenderer.AZDATAREGION + name.getNameName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
+                            for (Map.Entry<String, AreaReference> entry : namesForTemplate.entrySet()) {
+                                if (entry.getKey().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
+                                    AreaReference dataRegion = importTemplateData.getName(ReportRenderer.AZDATAREGION + entry.getKey().toLowerCase().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
                                     if (dataRegion != null) {
                                         time = System.currentTimeMillis();
                                         File newTempFile = File.createTempFile("from" + uploadedFile.getPath() + sheetName, ".csv");
@@ -373,17 +397,17 @@ public final class ImportService {
                                         CsvWriter csvW = new CsvWriter(newTempFile.toString(), '\t', Charset.forName("UTF-8"));
                                         csvW.setUseTextQualifier(false);
                                         // this is called twice, for the column headers and then the data itself
-                                        rangeToCSV(templateSheet, new AreaReference(name.getRefersToFormula()), knownValues, csvW);
-                                        rangeToCSV(sheet, new AreaReference(dataRegion.getRefersToFormula()), null, csvW);
+                                        rangeToCSV(importTemplateData.getSheets().get(sheetName), entry.getValue(), knownValues, csvW);
+                                        rangeToCSV(sheet, dataRegion, csvW);
                                         csvW.close();
                                         long convertTime = System.currentTimeMillis() - time;
 //                                fos.close();
                                         List<String> names = new ArrayList<>(uploadedFile.getFileNames());
-                                        names.add(name.getNameName().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
+                                        names.add(entry.getKey().substring(ReportRenderer.AZCOLUMNHEADINGS.length()));
                                         // reassigning uploaded file so the correct object will be passed back on exception
                                         uploadedFile = new UploadedFile(newTempFile.getPath(), names, uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
                                         uploadedFile.addToProcessingDuration(convertTime);
-                                        toReturn.add(readPreparedFile(loggedInUser, uploadedFile, true, templateCache));
+                                        toReturn.add(readPreparedFile(loggedInUser, uploadedFile, true, templateCache,count));
                                     }
                                 }
                             }
@@ -395,7 +419,6 @@ public final class ImportService {
             if (importByNamedRegion) { // don't continue and try with the new method - if it was an old style import template and we got this far then it failed
                 return new ArrayList<>();
             }
-            */
             // end check on Ben Jones style import
             long test = System.currentTimeMillis();
             File temp = File.createTempFile(uploadedFile.getPath() + sheetName, ".csv");
@@ -446,7 +469,7 @@ public final class ImportService {
                 uploadedFile.setError("Empty sheet : " + sheetName);
                 return Collections.singletonList(uploadedFile);
             } else {
-                UploadedFile toReturn = readPreparedFile(loggedInUser, uploadedFile, false, templateCache);
+                UploadedFile toReturn = readPreparedFile(loggedInUser, uploadedFile, false, templateCache,count);
                 // the UploadedFile will have the database server processing time, add the Excel stuff to it for better feedback to the user
                 toReturn.addToProcessingDuration(convertTime);
                 return Collections.singletonList(toReturn);
@@ -474,8 +497,7 @@ public final class ImportService {
 
 
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
-    // todo - check importtemplate used already
-    private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile, boolean importTemplateUsedAlready, HashMap<String, ImportTemplateData> templateCache) throws
+    private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile,  boolean importTemplateUsedAlready, HashMap<String, ImportTemplateData> templateCache, AtomicInteger count) throws
             Exception {
         String templateName = uploadedFile.getFileName().replace("\\", "/");
         int slashpos = templateName.lastIndexOf("/");
@@ -489,8 +511,6 @@ public final class ImportService {
         if (blankPos > 0) {
             templateName = templateName.substring(0, blankPos);
         }
-
-        // todo - cache the scanned info? Might save some time if POI becomes a bottleneck
 
         if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready) {
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
@@ -688,6 +708,7 @@ public final class ImportService {
                     uploadedFile.setPath((String) script.invokeMethod("fileProcess", groovyParams));
                 } catch (Exception e) {
                     uploadedFile.setError("Preprocessor error in " + uploadedFile.getPreProcessor() + " : " + e.getMessage());
+                    count.incrementAndGet();
                     return uploadedFile;
                 }
                 // todo - the import version switching will be broken!
@@ -695,10 +716,11 @@ public final class ImportService {
                     // there is a danger of a circular reference - protect against that?
                     // must clear template based parameters, new object
                     UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
-                    return readPreparedFile(loggedInUser, fileToProcessAgain, false, templateCache);
+                    return readPreparedFile(loggedInUser, fileToProcessAgain,false, templateCache, count);
                 }
             } else {
                 uploadedFile.setError("unable to find preprocessor : " + uploadedFile.getPreProcessor());
+                count.incrementAndGet();
                 return uploadedFile;
             }
         }
@@ -795,7 +817,7 @@ public final class ImportService {
                 }
             }
         }
-
+        count.incrementAndGet();
         return uploadedFile;
     }
 
@@ -1238,7 +1260,6 @@ fr.close();
 //        System.out.println(IOUtils.toString(xssfReader.getWorkbookData()));
             Document workbookXML = builder.parse(xssfReader.getWorkbookData());
             workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
-            System.out.println("Root element :" + workbookXML.getDocumentElement().getNodeName());
             NodeList nList = workbookXML.getElementsByTagName("definedName");
             for (int temp = 0; temp < nList.getLength(); temp++) {
                 Node nNode = nList.item(temp);
@@ -1267,7 +1288,6 @@ fr.close();
 //        System.out.println(IOUtils.toString(xssfReader.getWorkbookData()));
         Document workbookXML = builder.parse(xssfReader.getWorkbookData());
         workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
-        System.out.println("Root element :" + workbookXML.getDocumentElement().getNodeName());
         NodeList nList = workbookXML.getElementsByTagName("definedName");
         for (int temp = 0; temp < nList.getLength(); temp++) {
             Node nNode = nList.item(temp);

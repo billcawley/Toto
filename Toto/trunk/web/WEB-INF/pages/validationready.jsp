@@ -21,7 +21,8 @@
             jq.post("/api/SpreadsheetStatus?action=pendingReady", function (data) {
                 var objDiv = document.getElementById("serverStatus");
                 if (data.indexOf("true") == 0) { // the sheet should be ready, note indexof not startswith, support for the former better
-                    location.reload();
+                    document.getElementById("mainform").submit();
+                    //location.reload();
                     something = false;
                     return;
                 }
@@ -46,6 +47,10 @@
     }, 1000);
 
 </script>
+<form action="/api/PendingUpload" method="post" id="mainform">
+    <input type="hidden" name="id" value="${id}"/>
+    ${paramspassthrough}
+</form>
 
 
 <main class="basicDialog">

@@ -591,7 +591,7 @@ class AzquoCellService {
             connection.addToUserLog("Size = " + totalRows + " * " + totalCols);
             connection.addToUserLog("1%--------25%---------50%---------75%--------100%");
         }
-        int maxRegionSize = 2000000;//random!  set by WFC 29/6/15
+        int maxRegionSize = 5000000;//EFC 1/2/19
         if (totalRows * totalCols > maxRegionSize) {
             throw new Exception("Data region too large - " + totalRows + " * " + totalCols + ", max cells " + maxRegionSize);
         }

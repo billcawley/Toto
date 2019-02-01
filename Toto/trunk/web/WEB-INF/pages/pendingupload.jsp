@@ -28,7 +28,7 @@
                 <h2>Database : ${database}</h2>
             </c:otherwise>
         </c:choose>
-        <h2>Import Version : ${importVersion}</h2>
+        <h2>Import Version : ${importversion}</h2>
         <h2>Month : ${month}</h2>
         <div class="error">${error}</div>
         <!-- params passed if they need to be set-->

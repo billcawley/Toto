@@ -39,21 +39,21 @@ import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- * <p>
+ *
  * Created by cawley on 24/04/15.
- * <p>
+ *
  * New HTML admin, upload files and manage databases
- * <p>
+ *
  * CRUD type stuff though databases will be created/deleted etc. server side.
- * <p>
+ *
  * Edd note 24/10/2018 - this is getting a little cluttered, should it be refactored? todo
- * <p>
+ *
  * Current responsibilities :
- * <p>
+ *
  * create and delete dbs/upload files and manage uploads/backup/restore/pending uploads
- * <p>
+ *
  * pending uploads should perhaps be taken out of here
- * <p>
+ *
  * Also deals with import templates
  */
 @Controller
@@ -154,7 +154,7 @@ public class ManageDatabasesController {
             @SuppressWarnings("unchecked")
             List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
             if (importResult != null) {
-                error.append(formatUploadedFiles(importResult, false));
+                error.append(formatUploadedFiles(importResult, -1, false));
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
             }
             try {
@@ -314,7 +314,7 @@ public class ManageDatabasesController {
                             if (!isImportTemplate) {
                                 model.put("error", "That does not appear to be an import template.");
                             } else {
-                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser)), false));
+                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser)), -1, false));
                             }
                         } catch (Exception e) {
                             model.put("error", e.getMessage());
@@ -408,58 +408,49 @@ public class ManageDatabasesController {
 
     // as it says make something for users to read from a list of uploaded files.
 
-    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles, boolean noClickableHeadings) {
+    //
+    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles, int checkboxId, boolean noClickableHeadings) {
         StringBuilder toReturn = new StringBuilder();
-        List<String> lastNames = null;
         for (UploadedFile uploadedFile : uploadedFiles) {
             int id = uploadedFile.hashCode(); // stop clash with other div ids
             List<String> names = new ArrayList<>(uploadedFile.getFileNames()); // copy as I might change it
-            int indent = 0;
-            if (lastNames != null && (names.size() == lastNames.size() && names.get(0).equals(lastNames.get(0)))) { // for formatting don't repeat names (e.g. the zip name)
-                for (int index = 0; index < lastNames.size(); index++) {
-                    if (lastNames.get(index).equals(names.get(index))) {
-                        indent++;
-                    }
+            boolean first = true;
+            toReturn.append("<b>");
+            for (String name : names) {
+                if (!first){
+                    toReturn.append(", ");
                 }
+                toReturn.append(name);
+                first = false;
             }
-            for (int i = 0; i < indent; i++) {
-                toReturn.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-            }
-            for (int index = indent; index < names.size(); index++) {
-                toReturn.append(names.get(index));
-                if ((index + 1) != names.size()) {
-                    toReturn.append("\n<br/>");
-                    for (int i = 0; i <= index; i++) {
-                        toReturn.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-                    }
-                }
-            }
-            StringBuilder indentSb = new StringBuilder();
-            for (int i = 0; i < names.size(); i++) {
-                indentSb.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
-            }
-            // jump it out past the end for actual info
-            toReturn.append("\n<br/>");
-
-            for (String key : uploadedFile.getParameters().keySet()) {
-                toReturn.append(indentSb);
-                toReturn.append(key).append(" = ").append(uploadedFile.getParameter(key)).append("\n<br/>");
-            }
-
+            toReturn.append("</b>");
             if (uploadedFile.isConvertedFromWorksheet()) {
-                toReturn.append(indentSb);
-                toReturn.append("Converted from worksheet.\n<br/>");
+                toReturn.append(" - Converted from worksheet");
             }
+
+            toReturn.append("<br/>\n");
+            // jump it out past the end for actual info
+            first = true;
+            for (String key : uploadedFile.getParameters().keySet()) {
+                if (!first){
+                    toReturn.append(", ");
+                }
+                toReturn.append(key).append(" = ").append(uploadedFile.getParameter(key));
+                first = false;
+            }
+            toReturn.append("<br/>\n");
+            toReturn.append("Time to process : ").append(uploadedFile.getProcessingDuration()).append(" ms, ");
+            toReturn.append("Number of lines imported : ").append(uploadedFile.getNoLinesImported()).append(", ");
+            toReturn.append("Number of values adjusted: ").append(uploadedFile.getNoValuesAdjusted()).append("\n<br/>");
+
 
             if (uploadedFile.getTopHeadings() != null && !uploadedFile.getTopHeadings().isEmpty()) {
-                toReturn.append(indentSb);
                 if (noClickableHeadings) {
                     toReturn.append("Top headings : \n<br/>");
                 } else {
                     toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings" + id + "'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings" + id + "\" style=\"display : none\">");
                 }
                 for (TypedPair<Integer, Integer> key : uploadedFile.getTopHeadings().keySet()) {
-                    toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     toReturn.append(BookUtils.rangeToText(key.getFirst(), key.getSecond())).append("\t->\t").append(uploadedFile.getTopHeadings().get(key)).append("\n<br/>");
                 }
                 if (!noClickableHeadings) {
@@ -468,11 +459,10 @@ public class ManageDatabasesController {
             }
 
             if (uploadedFile.getHeadingsByFileHeadingsWithInterimLookup() != null) {
-                toReturn.append(indentSb);
                 if (noClickableHeadings) {
                     toReturn.append("Headings with file headings : \n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings" + id + "'); return false;\">Headings with file headings</a> : \n<br/><div id=\"fileHeadings" + id + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('fileHeadings" + id + "'); return false;\">Headings with file headings</a>\n<br/><div id=\"fileHeadings" + id + "\" style=\"display : none\">");
                 }
 
                 Collection<List<String>> toShow;
@@ -483,7 +473,6 @@ public class ManageDatabasesController {
                 }
 
                 for (List<String> fileHeading : toShow) {
-                    toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     for (String subHeading : fileHeading) {
                         toReturn.append(subHeading.replaceAll("\n", " ")).append(" ");
                     }
@@ -504,14 +493,12 @@ public class ManageDatabasesController {
             }
 
             if (uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null) {
-                toReturn.append(indentSb);
                 if (noClickableHeadings) {
                     toReturn.append("Headings without file headings : \n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings" + id + "'); return false;\">Headings without file headings</a> : \n<br/><div id=\"noFileHeadings" + id + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('noFileHeadings" + id + "'); return false;\">Headings without file headings</a>\n<br/><div id=\"noFileHeadings" + id + "\" style=\"display : none\">");
                 }
                 for (TypedPair<String, String> stringStringTypedPair : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
-                    toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     if (stringStringTypedPair.getSecond() != null) { // it could be null now as we support a non file heading azquo heading on the Import Model sheet
                         toReturn.append(stringStringTypedPair.getSecond());
                         toReturn.append(" -> ");
@@ -524,14 +511,12 @@ public class ManageDatabasesController {
             }
 
             if (uploadedFile.getSimpleHeadings() != null) {
-                toReturn.append(indentSb);
                 if (noClickableHeadings) {
                     toReturn.append("Simple Headings : \n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('simpleHeadings" + id + "'); return false;\">Simple Headings</a> : \n<br/><div id=\"simpleHeadings" + id + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('simpleHeadings" + id + "'); return false;\">Simple Headings</a>\n<br/><div id=\"simpleHeadings" + id + "\" style=\"display : none\">");
                 }
                 for (String heading : uploadedFile.getSimpleHeadings()) {
-                    toReturn.append(indentSb).append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
                     toReturn.append(heading).append("\n<br/>");
                 }
                 if (!noClickableHeadings) {
@@ -539,25 +524,15 @@ public class ManageDatabasesController {
                 }
             }
 
-            toReturn.append(indentSb);
-            toReturn.append("Time to process : ").append(uploadedFile.getProcessingDuration()).append(" ms\n<br/>");
-
-            toReturn.append(indentSb);
-            toReturn.append("Number of lines imported : ").append(uploadedFile.getNoLinesImported()).append("\n<br/>");
-
-            toReturn.append(indentSb);
-            toReturn.append("Number of values adjusted: ").append(uploadedFile.getNoValuesAdjusted()).append("\n<br/>");
-
             if (!uploadedFile.getLinesRejected().isEmpty()) {
-                toReturn.append(indentSb);
                 if (noClickableHeadings) {
                     toReturn.append("Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(uploadedFile.getLinesRejected().size() == 100 ? "+" : "").append("\n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + id + "'); return false;\">Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(uploadedFile.getLinesRejected().size() == 100 ? "+" : "").append("</a> : \n<br/><div id=\"rejectedLines" + id + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + id + "'); return false;\">Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(uploadedFile.getLinesRejected().size() == 100 ? "+" : "").append("</a>\n<br/><div id=\"rejectedLines" + id + "\" style=\"display : none\">");
                 }
                 int maxLineWidth = 0;
                 for (UploadedFile.RejectedLine lineRejected : uploadedFile.getLinesRejected()) {
-                    if (lineRejected.getLine().split("\t").length > maxLineWidth){
+                    if (lineRejected.getLine().split("\t").length > maxLineWidth) {
                         maxLineWidth = lineRejected.getLine().split("\t").length;
                     }
                 }
@@ -566,11 +541,11 @@ public class ManageDatabasesController {
                 for (UploadedFile.RejectedLine lineRejected : uploadedFile.getLinesRejected()) {
                     toReturn.append("<tr><td nowrap><span style=\"background-color: #FFAAAA; color: #000000\">" + lineRejected.getErrors() + "</span></td><td>" + lineRejected.getLineNo() + "</td>");
                     String[] split = lineRejected.getLine().split("\t");
-                    for (String cell : split){
+                    for (String cell : split) {
                         toReturn.append("<td nowrap>").append(cell).append("</td>");
                     }
                     int leftOver = maxLineWidth - split.length;
-                    for (int i = 0; i < leftOver; i++){
+                    for (int i = 0; i < leftOver; i++) {
                         toReturn.append("<td nowrap></td>");
                     }
                     toReturn.append("</tr>");
@@ -580,7 +555,15 @@ public class ManageDatabasesController {
                     toReturn.append("</div>");
                 }
             }
+            if (uploadedFile.getPostProcessingResult() != null) {
 
+                if (noClickableHeadings) {
+                    toReturn.append("Post processing result : ").append(uploadedFile.getPostProcessingResult()).append("\n<br/>");
+                } else {
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('ppr" + id + "'); return false;\">Post processing result</a>\n<br/><div id=\"ppr" + id + "\" style=\"display : none\">").append(uploadedFile.getPostProcessingResult()).append("</div>");
+                }
+
+            }
             // now the warning lines that will be a little more complex and have tickboxes
             // todo - factor later!
             if (!uploadedFile.getWarningLines().isEmpty()) {
@@ -591,45 +574,66 @@ public class ManageDatabasesController {
                 }
                 List<String> errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
 
-                toReturn.append(indentSb);
                 if (noClickableHeadings) {
                     toReturn.append("Line Warnings : ").append(uploadedFile.getWarningLines().size()).append("\n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('warningLines" + id + "'); return false;\">Line Warnings : ").append(uploadedFile.getWarningLines().size()).append("</a> : \n<br/><div id=\"warningLines" + id + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('warningLines" + id + "'); return false;\">Line Warnings : ").append(uploadedFile.getWarningLines().size()).append("</a>\n<br/><div id=\"warningLines" + id + "\" style=\"display : none\">");
                 }
 
-                for (String error : errors){
+                for (String error : errors) {
                     toReturn.append(error).append("\n<br/>");
                 }
 
                 int maxLineWidth = 0;
                 for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
-                    if (warningLine.getLine().split("\t").length > maxLineWidth){
+                    if (warningLine.getLine().split("\t").length > maxLineWidth) {
                         maxLineWidth = warningLine.getLine().split("\t").length;
                     }
                 }
 
                 toReturn.append("<div style='overflow: auto;max-height:400px;width:90vw'><table style='font-size:90%'><tr>");
+                if (checkboxId != -1) {
+                    toReturn.append("<td>Load</td>");
+                }
 
-                for (String error : errors){
-                    if (error.contains("[") && error.indexOf("]", error.indexOf("[")) > 0){
+                for (String error : errors) {
+                    if (error.contains("[") && error.indexOf("]", error.indexOf("[")) > 0) {
                         error = error.substring(error.indexOf("[") + 1, error.indexOf("]", error.indexOf("[")));
                     }
                     toReturn.append("<td>" + error + "</td>");
                 }
 
-                toReturn.append("<td>#</td><td colspan=\"" + maxLineWidth + "\"></td></tr>");
+                toReturn.append("<td>#</td>");
+
+                toReturn.append("<td colspan=\"" + maxLineWidth + "\"></td></tr>");
+                if (checkboxId != -1 && !uploadedFile.getWarningLines().isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    first = true;
+                    for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
+                        if (!first){
+                            sb.append(",");
+                        }
+                        sb.append(warningLine.getLineNo());
+                        first = false;
+                    }
+                    toReturn.append("<input type=\"hidden\" name=\"" + checkboxId + "-lines\" value=\"" + sb.toString() + "\"/>");
+                }
+
                 for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
-                    for (String error : errors){
+                    toReturn.append("<tr>");
+                    if (checkboxId != -1) {
+                        toReturn.append("<td><div align=\"center\"><input type=\"checkbox\" name=\"" + checkboxId + "-" + warningLine.getLineNo() + "\" /></div></td>");
+                    }
+                    for (String error : errors) {
                         toReturn.append("<td nowrap>" + (warningLine.getErrors().containsKey(error) ? "<span style=\"background-color: #FFAAAA; color: #000000\">" + warningLine.getErrors().get(error) + "</span>" : "") + "</td>");
                     }
-
+                    toReturn.append("<td nowrap>").append(warningLine.getLineNo()).append("</td>");
                     String[] split = warningLine.getLine().split("\t");
-                    for (String cell : split){
+                    for (String cell : split) {
                         toReturn.append("<td nowrap>").append(cell).append("</td>");
                     }
                     int leftOver = maxLineWidth - split.length;
-                    for (int i = 0; i < leftOver; i++){
+                    for (int i = 0; i < leftOver; i++) {
                         toReturn.append("<td nowrap></td>");
                     }
                     toReturn.append("</tr>");
@@ -641,30 +645,20 @@ public class ManageDatabasesController {
             }
 
             if (uploadedFile.getError() != null) {
-                toReturn.append(indentSb);
                 toReturn.append("ERROR : ").append(uploadedFile.getError()).append("\n<br/>");
             }
 
             if (!uploadedFile.isDataModified()) {
-                toReturn.append(indentSb);
                 toReturn.append("NO DATA MODIFIED.\n<br/>");
             }
 
             if (uploadedFile.getReportName() != null) {
-                toReturn.append(indentSb);
                 toReturn.append("Report uploaded : ").append(uploadedFile.getReportName()).append("\n<br/>");
             }
 
             if (uploadedFile.isImportTemplate()) {
-                toReturn.append(indentSb);
                 toReturn.append("Import template uploaded\n<br/>");
             }
-
-            if (uploadedFile.getPostProcessingResult() != null) {
-                toReturn.append(indentSb);
-                toReturn.append("Post processing result : ").append(uploadedFile.getPostProcessingResult()).append("\n<br/>");
-            }
-            lastNames = uploadedFile.getFileNames();
         }
         return toReturn.toString();
     }
