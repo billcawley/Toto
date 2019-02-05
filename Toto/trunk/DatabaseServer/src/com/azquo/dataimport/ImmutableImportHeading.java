@@ -44,6 +44,7 @@ class ImmutableImportHeading {
     String lookupTo;
     String checkList;
     boolean replace;
+    boolean provisional;
 
     ImmutableImportHeading(MutableImportHeading mutableImportHeading) {
         this.heading = mutableImportHeading.heading;
@@ -73,6 +74,7 @@ class ImmutableImportHeading {
         this.lookupTo = mutableImportHeading.lookupTo;
         this.checkList = mutableImportHeading.checkList;
         this.replace = mutableImportHeading.replace;
+        this.provisional = mutableImportHeading.provisional;
     }
 
     static class DictionaryTerm {

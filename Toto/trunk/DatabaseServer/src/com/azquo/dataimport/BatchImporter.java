@@ -770,7 +770,9 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 if (cellWithHeading.getLineNames() != null) { // it can be null, not sure if it should be?? But it can be, stop NPE
                     for (Name parent : cellWithHeading.getLineNames()) {
                         for (Name childCellName : childCell.getLineNames()) {
-                            parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
+                            if (!cellWithHeading.getImmutableImportHeading().provisional || !alreadyCategorised(parent,childCellName)){//checking whether the child is already in the set under another
+                                parent.addChildWillBePersisted(childCellName, azquoMemoryDBConnection);
+                            }
                         }
                     }
                 }
@@ -826,6 +828,19 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
                 }
             }
         }
+    }
+
+    private static boolean alreadyCategorised(Name parent, Name child){
+        //this routine is for the specific case where a categorisation is only to be done if the child is not already categorised
+        //when importing Ed Broking premium data the premiums need to be categorised, but the information available is such that the categorisation is sometimes false
+        //so the categorisation must not override other categorisations
+
+        for (Name grandparent:parent.getParents()){
+            if (child.getAttribute(grandparent.getDefaultDisplayName())!=null){
+                return true;
+            }
+        }
+        return false;
     }
 
     // The cache is purely a performance thing though it's used for a little logging later (total number of names inserted)

@@ -68,6 +68,7 @@ class HeadingReader {
     static final String SPLIT = "split";
     private static final String CHECK = "check";
     private static final String REPLACE = "replace";
+    private static final String PROVISIONAL = "provisional";//used with 'parent of' to indicate that the parent child relationship should only be created if none esists already (originally for Ed Broking Premium imports)
 
     /*DICTIONARY finds a name based on the string value of the cell.  The system will search all names for the attribute given by the 'dictionary' term.  For instance if the phrase is 'dictionary complaint terms'
     the system will look through all the attributes 'complaint terms' to see if any match the value of this cell.
@@ -129,7 +130,7 @@ todo - add classification here
                     // if the heading ends with | the context heading will be blank, ignore it. A way to clear context if you just put a single | at the end of a heading
                     if (contextHeadingString.length() > 0) {
                         // context headings may not use many features but using the standard heading objects and interpreter is fine
-                        MutableImportHeading contextHeading = interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames);
+                        MutableImportHeading contextHeading = interpretHeading(azquoMemoryDBConnection, contextHeadingString, attributeNames, uploadedFile.getFileName());
                         if (contextHeading.attribute != null) {
                             attributeNames.add(contextHeading.attribute);//not sure when this should be removed.  It must apply until the context is changed THIS IS AN ADDITIONAL LANGUAGE USED TO UNDERSTAND THE HEADINGS - NOT THE DATA!
                         }
@@ -139,7 +140,8 @@ todo - add classification here
                     dividerPos = headingString.lastIndexOf(headingDivider);
 
                 }
-                final MutableImportHeading heading = interpretHeading(azquoMemoryDBConnection, headingString, attributeNames);
+
+                final MutableImportHeading heading = interpretHeading(azquoMemoryDBConnection, headingString, attributeNames, uploadedFile.getFileName());
                 heading.contextHeadings = contextHeadings;
                 headings.add(heading);
             } else {// add an empty one, the headings ArrayList should match the number of headings even if that heading is empty
@@ -155,7 +157,7 @@ todo - add classification here
 
     //headings are clauses separated by semicolons, first is the heading name then onto the extra stuff
     //essentially parsing through all the relevant things in a heading to populate a MutableImportHeading
-    private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames) throws Exception {
+    private static MutableImportHeading interpretHeading(AzquoMemoryDBConnection azquoMemoryDBConnection, String headingString, List<String> attributeNames, String fileName) throws Exception {
         MutableImportHeading heading = new MutableImportHeading();
         List<String> clauses = new ArrayList<>(Arrays.asList(headingString.split(";")));
         Iterator clauseIt = clauses.iterator();
@@ -173,12 +175,12 @@ todo - add classification here
             // classification just being shorthand. According to this code it needs to be the first of the clauses
             // should classificaltion go inside interpretClause?
             if (clause.toLowerCase().startsWith(CLASSIFICATION)) {
-                interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring(CLASSIFICATION.length()));
-                interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading);
-                interpretClause(azquoMemoryDBConnection, heading, "exclusive");
+                interpretClause(azquoMemoryDBConnection, heading, "parent of " + clause.substring(CLASSIFICATION.length()), fileName);
+                interpretClause(azquoMemoryDBConnection, heading, "child of " + heading.heading, fileName);
+                interpretClause(azquoMemoryDBConnection, heading, "exclusive", fileName);
             } else {
                 if (clause.length() > 0){
-                    interpretClause(azquoMemoryDBConnection, heading, clause);
+                    interpretClause(azquoMemoryDBConnection, heading, clause, fileName);
                 }
             }
         }
@@ -194,7 +196,7 @@ todo - add classification here
     /* This is called for all the ; separated clauses in a heading e.g. Gender; parent of Customer; child of Genders
     Called multiple times per heading. I assume clause is trimmed!  Simple initial parsing, greater resolution happens
     in resolvePeersAttributesAndParentOf where relationships between headings are handled*/
-    private static void interpretClause(final AzquoMemoryDBConnection azquoMemoryDBConnection, final MutableImportHeading heading, final String clause) throws Exception {
+    private static void interpretClause(final AzquoMemoryDBConnection azquoMemoryDBConnection, final MutableImportHeading heading, final String clause, String fileName) throws Exception {
         String firstWord = clause.toLowerCase(); // default, what it could legitimately be in the case of blank clauses (local, exclusive, non zero)
         // I have to add special cases for parent of and child of as they have spaces in them. A bit boring
         if (firstWord.startsWith(PARENTOF)) { // a blank won't match here as its trailing space would be trimmed but no matter, blank not allowed anyway
@@ -215,7 +217,8 @@ todo - add classification here
                 && !firstWord.equals(EXCLUSIVE)
                 && !firstWord.equals(CLEAR)
                 && !firstWord.equals(REPLACE)
-                && !firstWord.equals(EXISTING)) { // empty clause, exception unless one which allows blank
+                && !firstWord.equals(EXISTING)
+                && !firstWord.equals(PROVISIONAL)) { // empty clause, exception unless one which allows blank
             throw new Exception(clause + " empty in " + heading.heading + " in headings"); // other clauses cannot be blank!
         }
         String result = clause.substring(firstWord.length()).trim();
@@ -274,7 +277,8 @@ todo - add classification here
                      }catch(Exception e){
                      }
                 }
-                heading.compositionPattern = result;
+
+                heading.compositionPattern = result.replace("FILENAME", fileName);
                 break;
             case IGNORE:
                 heading.ignoreList = new ArrayList<>();
@@ -444,8 +448,12 @@ todo - add classification here
             case REPLACE:
                 heading.replace = true;
                 break;
+            case PROVISIONAL:
+                heading.provisional = true;
+                break;
             default:
                 throw new Exception(firstWord + " not understood in heading '" + heading.heading + "'");
+
         }
     }
 
