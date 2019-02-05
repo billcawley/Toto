@@ -33,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -263,7 +264,7 @@ public class PendingUploadController {
                 // as in go ahead and import
                 boolean actuallyImport = false;
                 if ("finalsubmit".equals(finalsubmit)) {
-                    //actuallyImport = true;
+                    actuallyImport = true;
                     // so we have load-counter where counter is the files in order, the order should be reliable
                     // then counter-lines, a comma separated list of lines that will be rejected UNLESS
                     // counter-linenumber checkbox is checked
@@ -422,70 +423,69 @@ public class PendingUploadController {
                 }
 
                 final Map<String, Map<String, String>> finalLookupValuesForFiles = lookupValuesForFiles;
+                boolean finalActuallyImport = actuallyImport;
                 new Thread(() -> {
                     if (finalLookupValuesForFiles != null && finalLookupValuesForFiles.get(pu.getFileName()) != null) { // could happen on a single xlsx upload. Apparently always zips but I'm concerned it may not be . . .
                         params.putAll(finalLookupValuesForFiles.get(pu.getFileName()));
                     }
-                    UploadedFile uploadedFile = new UploadedFile(pu.getFilePath(), Collections.singletonList(pu.getFileName()), params, false, !actuallyImport);
+                    UploadedFile uploadedFile = new UploadedFile(pu.getFilePath(), Collections.singletonList(pu.getFileName()), params, false, /*!actuallyImport*/ true);
                     try {
                         List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, finalLookupValuesForFiles, fileLoadFlags, fileRejectLines);
-                        if (!actuallyImport) {
+                        if (!finalActuallyImport) {
                             session.setAttribute(PARAMSPASSTHROUGH, lookupValuesForFilesHTML.toString());
                         } else {
-                            session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "#tab4"); // if actually importing will land back on the pending uploads page
-                        }
-                        // will be moved to "actuallyImport"
+                            // will be moved to "actuallyImport"
 
-                        Workbook wb = new XSSFWorkbook();
-                        Sheet summarySheet = wb.createSheet("Summary");
-                        summaryUploadFeedbackForSheet(uploadedFiles, summarySheet, pu);
-                        Sheet sheet = wb.createSheet("Details");
-                        formatUploadedFilesForSheet(pu, uploadedFiles, sheet);
-                        // so we have the details sheet sheet but now we need to zip it up along with any files that were rejected.
-                        // notably individual sheets in an xlsx file could be rejected so it's about collecting files from the original zip where any sheet might have been rejected
-                        // also nested zips might not work at the mo
-                        Set<String> filesRejected = new HashSet<>(); // gather level two files - those that will be zip entries. Set due to the point above - if there are multiple sheets in a file
-                        for (UploadedFile rejectCheck : uploadedFiles) {
-                            if (rejectCheck.getFileNames().size() > 1 && "Rejected by user".equalsIgnoreCase(rejectCheck.getError())) {// todo - string literals
-                                filesRejected.add(rejectCheck.getFileNames().get(1));
-                            }
-                        }
-//                        System.out.println(filesRejected);
-                        // now, we need to make a new zip. A directory in the temp directory is probably the thing
-                        Path zipforpendinguploadresult = Files.createTempDirectory("zipforpendinguploadresult");
-                        // Write the output to a file
-                        try (OutputStream fileOut = Files.newOutputStream(zipforpendinguploadresult.resolve("uploadreport.xlsx"))) {
-                            wb.write(fileOut);
-                        }
-                        if (uploadedFile.getFileName().endsWith(".zip") || uploadedFile.getFileName().endsWith(".7z")) { // it will have been exploded already - just need to move relevant files in it
-                            Files.list(Paths.get(uploadedFile.getPath())).forEach(path ->
-                            {
-                                if (filesRejected.contains(path.getFileName().toString())) {
-                                    try {
-                                        Files.copy(path, zipforpendinguploadresult.resolve(path.getFileName()));
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
+                            Workbook wb = new XSSFWorkbook();
+                            Sheet summarySheet = wb.createSheet("Summary");
+                            summaryUploadFeedbackForSheet(uploadedFiles, summarySheet, pu);
+                            Sheet sheet = wb.createSheet("Details");
+                            formatUploadedFilesForSheet(pu, uploadedFiles, sheet);
+                            // so we have the details sheet sheet but now we need to zip it up along with any files that were rejected.
+                            // notably individual sheets in an xlsx file could be rejected so it's about collecting files from the original zip where any sheet might have been rejected
+                            // also nested zips might not work at the mo
+                            Set<String> filesRejected = new HashSet<>(); // gather level two files - those that will be zip entries. Set due to the point above - if there are multiple sheets in a file
+                            for (UploadedFile rejectCheck : uploadedFiles) {
+                                if (rejectCheck.getFileNames().size() > 1 && "Rejected by user".equalsIgnoreCase(rejectCheck.getError())) {// todo - string literals
+                                    filesRejected.add(rejectCheck.getFileNames().get(1));
                                 }
-                            });
-                        } else { // just copy the file into there if it wasn't a zip
-                            Files.copy(Paths.get(uploadedFile.getPath()), zipforpendinguploadresult.resolve(uploadedFile.getFileName()));
+                            }
+//                        System.out.println(filesRejected);
+                            // now, we need to make a new zip. A directory in the temp directory is probably the thing
+                            Path zipforpendinguploadresult = Files.createTempDirectory("zipforpendinguploadresult");
+                            // Write the output to a file
+                            try (OutputStream fileOut = Files.newOutputStream(zipforpendinguploadresult.resolve("uploadreport.xlsx"))) {
+                                wb.write(fileOut);
+                            }
+                            if (uploadedFile.getFileName().endsWith(".zip") || uploadedFile.getFileName().endsWith(".7z")) { // it will have been exploded already - just need to move relevant files in it
+                                Files.list(Paths.get(uploadedFile.getPath())).forEach(path ->
+                                {
+                                    if (filesRejected.contains(path.getFileName().toString())) {
+                                        try {
+                                            Files.copy(path, zipforpendinguploadresult.resolve(path.getFileName()));
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                });
+                            } else { // just copy the file into there if it wasn't a zip
+                                Files.copy(Paths.get(uploadedFile.getPath()), zipforpendinguploadresult.resolve(uploadedFile.getFileName()));
+                            }
+                            // pack up the directory
+                            ZipUtil.unexplode(zipforpendinguploadresult.toFile());
+                            Path loaded = Paths.get(SpreadsheetService.getScanDir() + "/loaded");
+                            if (!Files.exists(loaded)) {
+                                Files.createDirectories(loaded);
+                            }
+                            // then move it somewhere useful
+                            Files.copy(zipforpendinguploadresult, loaded.resolve(pu.getFileName() + "results.zip"), StandardCopyOption.REPLACE_EXISTING);
+                            // then adjust the pending upload record to have the report
+                            pu.setImportResultPath(loaded.resolve(pu.getFileName() + "results.zip").toString());
+                            pu.setProcessedByUserId(loggedInUser.getUser().getId());
+                            pu.setProcessedDate(LocalDateTime.now());
+                            PendingUploadDAO.store(pu);
+                            session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab4"); // if actually importing will land back on the pending uploads page
                         }
-                        // pack up the directory
-                        ZipUtil.unexplode(zipforpendinguploadresult.toFile());
-                        Path loaded = Paths.get(SpreadsheetService.getScanDir() + "/loaded");
-                        if (!Files.exists(loaded)) {
-                            Files.createDirectories(loaded);
-                        }
-                        /* just commented for easy testing
-                        // then move it somewhere useful
-                        Files.copy(zipforpendinguploadresult, loaded.resolve(pu.getFileName() + "results.zip"), StandardCopyOption.REPLACE_EXISTING);
-                        // then adjust the pending upload record to have the report
-                        pu.setImportResultPath(loaded.resolve(pu.getFileName() + "results.zip").toString());
-                        PendingUploadDAO.store(pu);*/
-
-                        // end move to actually import??
-
                         session.setAttribute(ManageDatabasesController.IMPORTRESULT, uploadedFiles);
                     } catch (Exception e) {
                         uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
@@ -497,7 +497,7 @@ public class PendingUploadController {
                 // will be nothing if there's no manual paramteres
                 model.put("paramspassthrough", lookupValuesForFilesHTML.toString());
                 if (actuallyImport) {
-                    return "importresult";
+                    return "importrunning";
                 } else {
                     return "validationready";
                 }

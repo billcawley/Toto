@@ -6,7 +6,6 @@ import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.*;
 import com.azquo.admin.user.*;
 import com.azquo.dataimport.DBCron;
-import com.azquo.dataimport.ImportService;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -23,8 +22,6 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import static com.azquo.dataimport.ImportService.*;
 
@@ -353,13 +350,22 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
-    public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch) {
+    // only short but perhaps logic could be cleaned up a little
+    public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch, boolean allteams, boolean uploaded) {
         if (loggedInUser.getUser().isAdministrator()) { // just admin for the mo - maybe will be changed
             List<PendingUpload> pendingUploads;
-            if (loggedInUser.getUser().getTeam() != null && loggedInUser.getUser().getTeam().length() > 0){
-                pendingUploads = PendingUploadDAO.findForBusinessIdAndTeamNotProcessed(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getTeam());
+            if (fileSearch != null && fileSearch.length() > 0){
+                pendingUploads = PendingUploadDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
             } else {
-                pendingUploads = PendingUploadDAO.findForBusinessIdNotProcessed(loggedInUser.getUser().getBusinessId());
+                if (uploaded){
+                    pendingUploads = PendingUploadDAO.findForBusinessIdAndProcessed(loggedInUser.getUser().getBusinessId());
+                } else {
+                    if (loggedInUser.getUser().getTeam() != null && loggedInUser.getUser().getTeam().length() > 0 && !allteams){
+                        pendingUploads = PendingUploadDAO.findForBusinessIdAndTeamNotProcessed(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getTeam());
+                    } else {
+                        pendingUploads = PendingUploadDAO.findForBusinessIdNotProcessed(loggedInUser.getUser().getBusinessId());
+                    }
+                }
             }
 
             List<PendingUpload.PendingUploadForDisplay> pendingUploadForDisplays = new ArrayList<>();

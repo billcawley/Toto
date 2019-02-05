@@ -64,9 +64,17 @@ public class DownloadFileController {
             if (pendingUploadId != null && !pendingUploadId.isEmpty() && loggedInUser.getUser().isAdministrator()){ // only admin on this stuff
                 final PendingUpload byId = PendingUploadDAO.findById(Integer.parseInt(pendingUploadId));
                 if (byId != null && byId.getBusinessId() == loggedInUser.getUser().getBusinessId()){
-                    Path filePath = Paths.get(byId.getFilePath());
+                    Path filePath;
+                    String name;
+                    if (byId.getImportResultPath() != null){
+                        filePath = Paths.get(byId.getImportResultPath());
+                        name = filePath.getFileName().toString();
+                    } else {
+                        filePath = Paths.get(byId.getFilePath());
+                        name = byId.getFileName();
+                    }
                     try {
-                        DownloadController.streamFileToBrowser(filePath, response, byId.getFileName());
+                        DownloadController.streamFileToBrowser(filePath, response, name);
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }

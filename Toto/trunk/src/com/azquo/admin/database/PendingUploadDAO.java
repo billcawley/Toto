@@ -103,7 +103,13 @@ public final class PendingUploadDAO {
     public static List<PendingUpload> findForBusinessIdAndProcessed(final int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
-        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + IMPORTRESULTPATH + " is not null order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + IMPORTRESULTPATH + " is not null order by `" + PROCESSEDDATE + "` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
+    }
+
+    public static List<PendingUpload> findForBusinessId(final int businessId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
     }
 
     public static void removeForDatabaseId(int databaseId) {

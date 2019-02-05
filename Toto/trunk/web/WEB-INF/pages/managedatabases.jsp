@@ -61,9 +61,7 @@ Created by IntelliJ IDEA.
             <li><a href="#tab1">Uploads</a></li>
             <li><a href="#tab2">DB Management</a></li>
             <li><a href="#tab3">Restore Backup</a></li>
-            <c:if test="${pendinguploads.size() > 0}">
-                <li><a href="#tab4">Pending Uploads</a></li>
-            </c:if>
+            <li><a href="#tab4">Pending Uploads</a></li>
             <li><a href="#tab5">Import Templates</a></li>
         </ul>
         <!-- Uploads -->
@@ -269,7 +267,9 @@ Created by IntelliJ IDEA.
                 <thead>
                 <tr>
                     <td>Created</td>
-                    <td>User</td>
+                    <td>By user</td>
+                    <td>Processed</td>
+                    <td>By user</td>
                     <td>
                         <form method="post" action="/api/ManageDatabases#tab4"> File Name <input size="20"
                                                                                                  name="pendingUploadSearch">
@@ -287,23 +287,31 @@ Created by IntelliJ IDEA.
                         <tr>
                             <td>${pendingupload.createdDate}</td>
                             <td>${pendingupload.createdByUserName}</td>
+                            <td>${pendingupload.processedDate}</td>
+                            <td>${pendingupload.processedByUserName}</td>
                             <td>${pendingupload.fileName}</td>
                             <td>${pendingupload.size}</td>
                             <td>${pendingupload.databaseName}</td>
-                            <td><a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}"
+                            <td>
+                                <a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}"
                                                                        class="button small" title="Download"><span
                                     class="fa fa-download" title="Download"></span> </a></td>
                             <td>
-                                    <a onclick="showHideDiv('working');" href="/api/PendingUpload?id=${pendingupload.id}"
+                                <c:if test="${!pendingupload.loaded}"><a onclick="showHideDiv('working');" href="/api/PendingUpload?id=${pendingupload.id}"
                                        class="button"
                                        title="Validate and Load">
                                         Validate and Load
-                                    </a>
+                                </a></c:if>
                             </td>
                         </tr>
                     </c:forEach>
                 </tbody>
             </table>
+            <div class="centeralign">
+                <a href="/api/ManageDatabases#tab4" class="button">Normal View</a>&nbsp;
+                <a href="/api/ManageDatabases?allteams=true#tab4" class="button">Show for all teams</a>&nbsp;
+                <a href="/api/ManageDatabases?uploadreports=true#tab4" class="button">Show completed uploads</a>
+            </div>
         </div>
         <!-- END pending Uploads -->
         <!-- Import Templates -->

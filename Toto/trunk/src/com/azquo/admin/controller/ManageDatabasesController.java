@@ -245,7 +245,7 @@ public class ManageDatabasesController {
             model.put("businessnamesort", "businessname".equals(sort) ? "businessnamedown" : "businessname");
             model.put("usernamesort", "username".equals(sort) ? "usernamedown" : "username");
             model.put("uploads", uploadRecordsForDisplayForBusiness);
-            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, pendingUploadSearch)); // no search for the mo
+            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, pendingUploadSearch, request.getParameter("allteams") != null, request.getParameter("uploadreports") != null)); // no search for the mo
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
@@ -368,7 +368,7 @@ public class ManageDatabasesController {
             // todo factor
             model.put("lastSelected", request.getSession().getAttribute("lastSelected"));
             model.put("uploads", AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
-            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null));
+            model.put("pendinguploads", AdminService.getPendingUploadsForDisplayForBusinessWithBasicSecurity(loggedInUser, null, request.getParameter("allteams") != null, request.getParameter("uploadedreports") != null));
             model.put("developer", loggedInUser.getUser().isDeveloper());
             model.put("importTemplates", ImportTemplateDAO.findForBusinessId(loggedInUser.getUser().getBusinessId()));
             AdminService.setBanner(model, loggedInUser);

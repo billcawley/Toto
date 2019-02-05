@@ -38,7 +38,7 @@ public final class PendingUpload extends StandardEntity {
 
     final private int businessId;
     final private LocalDateTime createdDate;
-    final private LocalDateTime processedDate;
+    private LocalDateTime processedDate;
     final private String fileName;
     final private String filePath;
     private int createdByUserId;
@@ -135,6 +135,10 @@ public final class PendingUpload extends StandardEntity {
         this.team = team;
     }
 
+    public void setProcessedDate(LocalDateTime processedDate) {
+        this.processedDate = processedDate;
+    }
+
     public static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     // better for display
@@ -216,5 +220,11 @@ public final class PendingUpload extends StandardEntity {
         public String getSize() {
             return size;
         }
+
+        public boolean getLoaded(){
+            return importResultPath != null;
+        }
     }
+
+
 }
