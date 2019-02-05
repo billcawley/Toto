@@ -268,11 +268,13 @@ public final class ImportService {
         List<UploadedFile> toReturn = new ArrayList<>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues, templateCache, count,filesToReject,fileRejectLines);
-            for (UploadedFile uploadedFile1 : uploadedFiles) {
-                uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare / uploadedFiles.size());
+            if (!book.isSheetHidden(sheetNo)) {
+                List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues, templateCache, count, filesToReject, fileRejectLines);
+                for (UploadedFile uploadedFile1 : uploadedFiles) {
+                    uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare / uploadedFiles.size());
+                }
+                toReturn.addAll(uploadedFiles);
             }
-            toReturn.addAll(uploadedFiles);
         }
 
         return toReturn;
