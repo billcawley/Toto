@@ -436,6 +436,10 @@ public final class ValueService {
                         valuesHook.values = new ArrayList<>();
                         return 0;
                     }
+                    if (outerLoopNames.contains(calcName)){
+                        outerLoopNames = new HashSet<>();
+                        outerLoopNames.add(calcName);
+                    }
                     // I think the contains is on the second collection which means this way around hsould be fater than the other way around
                     // although of course outer loop names may well be a set too!
                     if (!Collections.disjoint(outerLoopNames, calcName.findAllChildren())) { // nagative on disjoint, there were elements in common
