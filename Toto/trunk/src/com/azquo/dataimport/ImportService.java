@@ -50,9 +50,7 @@ import org.zkoss.zss.api.model.CellData;
 import javax.xml.parsers.*;
 import java.io.*;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -88,25 +86,20 @@ public final class ImportService {
     (decompress or sheets in a book to individual csv files before sending to the db server).
      After that a little housekeeping.
      Added support for validation importing against a temporary copied database, a flag on
-     the last field is a little hacky - down to the file (not sheet!) check for parameters that have been set in a big chunk on the pending uploads screen
+     last three params for Pending Uploads, perhaps could be consolidatesd? todo - pending uploads info
+     parameters per file down to the file (not sheet!) check for parameters that have been set in a big chunk on the pending uploads screen
      */
-    public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, Map<String, Map<String, String>> parametersPerFile) throws Exception { // setup just to flag it
-        InputStream uploadFile = new FileInputStream(uploadedFile.getPath());
+    public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, Map<String, Map<String, String>> parametersPerFile, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines) throws Exception { // setup just to flag it
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
         }
         String fileName = uploadedFile.getFileName();
         String originalFilePath = uploadedFile.getPath();
-        // perhaps could make slightly cleaner API calls
-        File tempFile = File.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
-        tempFile.deleteOnExit();
-        FileOutputStream fos = new FileOutputStream(tempFile);
-        org.apache.commons.io.IOUtils.copy(uploadFile, fos);
-        fos.close();
-
-        uploadFile.close(); // windows requires this (though windows ideally should not be used in production), perhaps not a bad idea anyway
-        uploadedFile.setPath(tempFile.getPath()); // I'm now allowing adjustment of paths like this - having the object immutable became impractical
-        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, new HashMap<>(), parametersPerFile, new AtomicInteger(0));
+        Path tempFile = Files.createTempFile(fileName.substring(0, fileName.length() - 4) + "_", fileName.substring(fileName.length() - 4));
+        tempFile.toFile().deleteOnExit();
+        Files.copy(Paths.get(uploadedFile.getPath()), tempFile, StandardCopyOption.REPLACE_EXISTING);
+        uploadedFile.setPath(tempFile.toString()); // I'm now allowing adjustment of paths like this - having the object immutable became impractical
+        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, new HashMap<>(), parametersPerFile, new AtomicInteger(0),filesToReject,fileRejectLines);
         if (!uploadedFile.isValidationTest()) {
             // persist on the database server
             SpreadsheetService.databasePersist(loggedInUser);
@@ -115,7 +108,7 @@ public final class ImportService {
 
             UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
                     , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId()
-                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), "", ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, -1,true), originalFilePath);
+                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), "", ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, -1, true, null), originalFilePath);
             UploadRecordDAO.store(uploadRecord);
             // and update the counts on the manage database page
             AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
@@ -127,15 +120,15 @@ public final class ImportService {
         return processedUploadedFiles;
     }
 
-    public static String DONTLOAD = "DONTLOAD";
-
     // deals with unzipping if required - recursive in case there's a zip in a zip
-    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache, Map<String, Map<String, String>> parametersPerFile, AtomicInteger count) throws Exception {
+    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache, Map<String, Map<String, String>> parametersPerFile, AtomicInteger count, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines) throws Exception {
         List<UploadedFile> processedUploadedFiles = new ArrayList<>();
         if (uploadedFile.getFileName().endsWith(".zip") || uploadedFile.getFileName().endsWith(".7z")) {
             ZipUtil.explode(new File(uploadedFile.getPath()));
             // after exploding the original file is replaced with a directory
             File zipDir = new File(uploadedFile.getPath());
+            zipDir.deleteOnExit();
+            // todo - go to Files.list()?
             List<File> files = new ArrayList<>(FileUtils.listFiles(zipDir, null, true));
             // should be sorting by xls first then size ascending
             files.sort((f1, f2) -> {
@@ -158,20 +151,14 @@ public final class ImportService {
                 Map<String, String> fileNameParams = new HashMap<>(uploadedFile.getParameters());
                 addFileNameParametersToMap(f.getName(), fileNameParams);
                 // bit hacky to stop the loading but otherwise there'd just be another map
-                boolean dontLoad = false;
                 if (parametersPerFile != null && parametersPerFile.get(f.getName()) != null) {
-                    if (DONTLOAD.equalsIgnoreCase(parametersPerFile.get(f.getName()).get(DONTLOAD))) {
-                        dontLoad = true;
-                    }
                     // don't change this to entries - the keys are converted to lower case
                     for (String key : parametersPerFile.get(f.getName()).keySet()) {
                         fileNameParams.put(key.toLowerCase(), parametersPerFile.get(f.getName()).get(key));
                     }
                 }
-                if (!dontLoad) {
-                    UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
-                    processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, templateCache, parametersPerFile, count));
-                }
+                UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
+                processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, templateCache, parametersPerFile, count,filesToReject,fileRejectLines));
             }
         } else { // nothing to decompress
             // simple checks in case the wrong type of file is being uploaded here - will probably be removed later
@@ -182,9 +169,9 @@ public final class ImportService {
                 uploadedFile.setError("Please upload the report schedules file in the schedules tab.");
                 processedUploadedFiles.add(uploadedFile);
             } else if (uploadedFile.getFileName().toLowerCase().endsWith(".xls") || uploadedFile.getFileName().toLowerCase().endsWith(".xlsx")) {
-                processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile, templateCache,count));
+                processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile, templateCache, count,filesToReject,fileRejectLines));
             } else {
-                processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, templateCache, count));
+                processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, templateCache, count,filesToReject,fileRejectLines));
             }
         }
         return processedUploadedFiles;
@@ -192,16 +179,15 @@ public final class ImportService {
 
     //302200K
     // a book will be a report to upload or a workbook which has to be converted into a csv for each sheet
-    private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache, AtomicInteger count) throws Exception {
+    private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache, AtomicInteger count, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines) throws Exception {
         long time = System.currentTimeMillis();
         Workbook book;
-        OPCPackage opcPackage = null;
         // we now use apache POI which is faster than ZK but it has different implementations for .xls and .xlsx files
         try {
             FileInputStream fs = new FileInputStream(new File(uploadedFile.getPath()));
             if (uploadedFile.getFileName().toLowerCase().endsWith("xlsx")) {
                 long quicktest = System.currentTimeMillis();
-                opcPackage = OPCPackage.open(fs);
+                OPCPackage opcPackage = OPCPackage.open(fs);
                 book = new XSSFWorkbook(opcPackage);
                 System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
             } else {
@@ -210,6 +196,7 @@ public final class ImportService {
         } catch (Exception e) {
             e.printStackTrace();
             uploadedFile.setError(e.getMessage());
+            count.incrementAndGet();
             return Collections.singletonList(uploadedFile);
         }
         if (!uploadedFile.isValidationTest()) {
@@ -281,7 +268,7 @@ public final class ImportService {
         List<UploadedFile> toReturn = new ArrayList<>();
         for (int sheetNo = 0; sheetNo < book.getNumberOfSheets(); sheetNo++) {
             Sheet sheet = book.getSheetAt(sheetNo);
-            List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues, templateCache, count);
+            List<UploadedFile> uploadedFiles = readSheet(loggedInUser, uploadedFile, sheet, knownValues, templateCache, count,filesToReject,fileRejectLines);
             for (UploadedFile uploadedFile1 : uploadedFiles) {
                 uploadedFile1.addToProcessingDuration(sheetExcelLoadTimeShare / uploadedFiles.size());
             }
@@ -332,7 +319,7 @@ public final class ImportService {
             for (int cNo = startCol; cNo <= endCol; cNo++) {
                 String val = "";
                 if (templateSource.size() > rNo) {
-                    if (templateSource.get(rNo).size() > cNo){
+                    if (templateSource.get(rNo).size() > cNo) {
                         val = templateSource.get(rNo).get(cNo);
                     }
                 }
@@ -348,7 +335,7 @@ public final class ImportService {
     }
 
 
-    private static List<UploadedFile> readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, Sheet sheet, Map<String, String> knownValues, HashMap<String, ImportTemplateData> templateCache, AtomicInteger count) {
+    private static List<UploadedFile> readSheet(LoggedInUser loggedInUser, UploadedFile uploadedFile, Sheet sheet, Map<String, String> knownValues, HashMap<String, ImportTemplateData> templateCache, AtomicInteger count, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines) {
         String sheetName = sheet.getSheetName();
         long time = System.currentTimeMillis();
         try {
@@ -366,7 +353,7 @@ public final class ImportService {
                         int col = importName.getFirstCell().getCol();
                         String valueToLookFor = null;
                         List<List<String>> sheetData = importTemplateData.getSheets().get(templateSheetName);
-                        if (sheetData.size() > row && sheetData.get(row).size() > col){
+                        if (sheetData.size() > row && sheetData.get(row).size() > col) {
                             valueToLookFor = sheetData.get(row).get(col);
                         }
                         Cell cell = null;
@@ -407,7 +394,7 @@ public final class ImportService {
                                         // reassigning uploaded file so the correct object will be passed back on exception
                                         uploadedFile = new UploadedFile(newTempFile.getPath(), names, uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
                                         uploadedFile.addToProcessingDuration(convertTime);
-                                        toReturn.add(readPreparedFile(loggedInUser, uploadedFile, true, templateCache,count));
+                                        toReturn.add(readPreparedFile(loggedInUser, uploadedFile, true, templateCache, count,filesToReject,fileRejectLines));
                                     }
                                 }
                             }
@@ -469,7 +456,7 @@ public final class ImportService {
                 uploadedFile.setError("Empty sheet : " + sheetName);
                 return Collections.singletonList(uploadedFile);
             } else {
-                UploadedFile toReturn = readPreparedFile(loggedInUser, uploadedFile, false, templateCache,count);
+                UploadedFile toReturn = readPreparedFile(loggedInUser, uploadedFile, false, templateCache, count,filesToReject,fileRejectLines);
                 // the UploadedFile will have the database server processing time, add the Excel stuff to it for better feedback to the user
                 toReturn.addToProcessingDuration(convertTime);
                 return Collections.singletonList(toReturn);
@@ -481,6 +468,7 @@ public final class ImportService {
                 t = t.getCause();
             }
             uploadedFile.setError(t.getMessage());
+            count.incrementAndGet();
             return Collections.singletonList(uploadedFile);
         }
     }
@@ -497,8 +485,16 @@ public final class ImportService {
 
 
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
-    private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile,  boolean importTemplateUsedAlready, HashMap<String, ImportTemplateData> templateCache, AtomicInteger count) throws
+    private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile, boolean importTemplateUsedAlready, HashMap<String, ImportTemplateData> templateCache, AtomicInteger count, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines) throws
             Exception {
+        if (filesToReject != null && filesToReject.contains(count.get())){
+            count.incrementAndGet();
+            uploadedFile.setError("Rejected by user");
+            return uploadedFile;
+        }
+        if (fileRejectLines != null && fileRejectLines.containsKey(count.get())){
+            uploadedFile.setIgnoreLines(fileRejectLines.get(count.get()));
+        }
         String templateName = uploadedFile.getFileName().replace("\\", "/");
         int slashpos = templateName.lastIndexOf("/");
         if (slashpos < 0) {
@@ -716,7 +712,7 @@ public final class ImportService {
                     // there is a danger of a circular reference - protect against that?
                     // must clear template based parameters, new object
                     UploadedFile fileToProcessAgain = new UploadedFile(uploadedFile.getPath(), uploadedFile.getFileNames(), uploadedFile.getParameters(), true, uploadedFile.isValidationTest());
-                    return readPreparedFile(loggedInUser, fileToProcessAgain,false, templateCache, count);
+                    return readPreparedFile(loggedInUser, fileToProcessAgain, false, templateCache, count,filesToReject,fileRejectLines);
                 }
             } else {
                 uploadedFile.setError("unable to find preprocessor : " + uploadedFile.getPreProcessor());
@@ -801,7 +797,7 @@ public final class ImportService {
                                 // ok so we should now finally have the information we need across the two maps (linesWithValuesInColumn and errorLines)
                                 // What needs to go into a table is the line number, the line itself and error(s) for that line, there could be multiple errors for the line
                                 for (Integer key : linesWithValuesInColumn.keySet()) {
-                                    warningLineMap.computeIfAbsent(key, t -> new UploadedFile.WarningLine(key, linesWithValuesInColumn.get(key).getSecond())).addErrors(errorLines.get(linesWithValuesInColumn.get(key).getFirst().toLowerCase()));
+                                    warningLineMap.computeIfAbsent(key, t -> new UploadedFile.WarningLine(key, keyColumn + ":" + linesWithValuesInColumn.get(key).getFirst(), linesWithValuesInColumn.get(key).getSecond())).addErrors(errorLines.get(linesWithValuesInColumn.get(key).getFirst().toLowerCase()));
                                 }
                             }// else error?
                         }

@@ -18,7 +18,7 @@
 
     function updateStatus() {
         if (something) {
-            jq.post("/api/SpreadsheetStatus?action=pendingReady", function (data) {
+            jq.post("/api/SpreadsheetStatus?action=importResult", function (data) {
                 var objDiv = document.getElementById("serverStatus");
                 if (data.indexOf("true") == 0) { // the sheet should be ready, note indexof not startswith, support for the former better
                     document.getElementById("mainform").submit();

@@ -65,7 +65,6 @@ public class ManageDatabasesController {
 
     public static final String IMPORTRESULT = "importResult";
     public static final String IMPORTURLSUFFIX = "importUrlSuffix";
-    private static final String IMPORTRESULTPREFIX = "importResultPrefix";
 
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
     public static class DisplayDataBase {
@@ -154,7 +153,7 @@ public class ManageDatabasesController {
             @SuppressWarnings("unchecked")
             List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
             if (importResult != null) {
-                error.append(formatUploadedFiles(importResult, -1, false));
+                error.append(formatUploadedFiles(importResult, -1, false, null));
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
             }
             try {
@@ -314,7 +313,7 @@ public class ManageDatabasesController {
                             if (!isImportTemplate) {
                                 model.put("error", "That does not appear to be an import template.");
                             } else {
-                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser)), -1, false));
+                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser)), -1, false, null));
                             }
                         } catch (Exception e) {
                             model.put("error", e.getMessage());
@@ -388,7 +387,7 @@ public class ManageDatabasesController {
         new Thread(() -> {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
-                session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile, null));
+                session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile, null, null, null));
             } catch (Exception e) {
                 e.printStackTrace();
                 uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
@@ -407,9 +406,7 @@ public class ManageDatabasesController {
     }
 
     // as it says make something for users to read from a list of uploaded files.
-
-    //
-    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles, int checkboxId, boolean noClickableHeadings) {
+    public static String formatUploadedFiles(List<UploadedFile> uploadedFiles, int checkboxId, boolean noClickableHeadings, Set<String> comments) {
         StringBuilder toReturn = new StringBuilder();
         for (UploadedFile uploadedFile : uploadedFiles) {
             int id = uploadedFile.hashCode(); // stop clash with other div ids
@@ -537,7 +534,30 @@ public class ManageDatabasesController {
                     }
                 }
 
-                toReturn.append("<div style='overflow: auto;max-height:400px;width:90vw'><table style='font-size:90%'><tr><td>Error</td><td>#</td><td colspan=\"" + maxLineWidth + "\"></td></tr>");
+                toReturn.append("<div style='overflow: auto;max-height:400px;width:90vw'><table style='font-size:90%'><thead><tr>");
+                toReturn.append("<th style='position: sticky; top: 0;'>Error</th>");
+                toReturn.append("<th style='position: sticky; top: 0;'>#</th>");
+                if (uploadedFile.getFileHeadings() != null){
+                    for (List<String> headingCol : uploadedFile.getFileHeadings()){
+                        toReturn.append("<th style='position: sticky; top: 0;'>");
+                        first = true;
+                        for (String heading : headingCol){
+                            if (!first){
+                                toReturn.append("<br/>");
+                            }
+                            toReturn.append(heading);
+                            first = false;
+                        }
+                        toReturn.append("</th>");
+                    }
+                    int leftOver = maxLineWidth - uploadedFile.getFileHeadings().size();
+                    for (int i = 0; i < leftOver; i++) {
+                        toReturn.append("<th></th>");
+                    }
+                } else {
+                    toReturn.append("<th style='position: sticky; top: 0;' colspan=\"" + maxLineWidth + "\"></th>");
+                }
+                toReturn.append("</tr></thead><tbody>");
                 for (UploadedFile.RejectedLine lineRejected : uploadedFile.getLinesRejected()) {
                     toReturn.append("<tr><td nowrap><span style=\"background-color: #FFAAAA; color: #000000\">" + lineRejected.getErrors() + "</span></td><td>" + lineRejected.getLineNo() + "</td>");
                     String[] split = lineRejected.getLine().split("\t");
@@ -550,7 +570,7 @@ public class ManageDatabasesController {
                     }
                     toReturn.append("</tr>");
                 }
-                toReturn.append("\n</table></div><br/>");
+                toReturn.append("\n</tbody></table></div><br/>");
                 if (!noClickableHeadings) {
                     toReturn.append("</div>");
                 }
@@ -584,28 +604,49 @@ public class ManageDatabasesController {
                     toReturn.append(error).append("\n<br/>");
                 }
 
-                int maxLineWidth = 0;
+                int maxLineWidth = uploadedFile.getFileHeadings() != null ? uploadedFile.getFileHeadings().size() : 0;
                 for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
                     if (warningLine.getLine().split("\t").length > maxLineWidth) {
                         maxLineWidth = warningLine.getLine().split("\t").length;
                     }
                 }
 
-                toReturn.append("<div style='overflow: auto;max-height:400px;width:90vw'><table style='font-size:90%'><tr>");
+                toReturn.append("<div style='overflow: auto;max-height:400px;width:90vw'><table style='font-size:90%'><thead><tr>");
                 if (checkboxId != -1) {
-                    toReturn.append("<td>Load</td>");
+                    toReturn.append("<th style='position: sticky; top: 0; z-index: 1;'>Load</th>");
+                    toReturn.append("<th style='position: sticky; top: 0;'>Comment</th>");
                 }
 
                 for (String error : errors) {
                     if (error.contains("[") && error.indexOf("]", error.indexOf("[")) > 0) {
                         error = error.substring(error.indexOf("[") + 1, error.indexOf("]", error.indexOf("[")));
                     }
-                    toReturn.append("<td>" + error + "</td>");
+                    toReturn.append("<th style='position: sticky; top: 0;'>" + error + "</th>");
                 }
 
-                toReturn.append("<td>#</td>");
+                toReturn.append("<th style='position: sticky; top: 0;'>#</th>");
+                if (uploadedFile.getFileHeadings() != null){
+                    for (List<String> headingCol : uploadedFile.getFileHeadings()){
+                        toReturn.append("<th style='position: sticky; top: 0;'>");
+                        first = true;
+                        for (String heading : headingCol){
+                            if (!first){
+                                toReturn.append("<br/>");
+                            }
+                            toReturn.append(heading);
+                            first = false;
+                        }
+                        toReturn.append("</th>");
+                    }
+                    int leftOver = maxLineWidth - uploadedFile.getFileHeadings().size();
+                    for (int i = 0; i < leftOver; i++) {
+                        toReturn.append("<th></th>");
+                    }
 
-                toReturn.append("<td colspan=\"" + maxLineWidth + "\"></td></tr>");
+                } else {
+                    toReturn.append("<th  style='position: sticky; top: 0;' colspan=\"" + maxLineWidth + "\"></th>");
+                }
+                toReturn.append("</tr></thead><tbody>");
                 if (checkboxId != -1 && !uploadedFile.getWarningLines().isEmpty()) {
                     StringBuilder sb = new StringBuilder();
                     first = true;
@@ -623,6 +664,7 @@ public class ManageDatabasesController {
                     toReturn.append("<tr>");
                     if (checkboxId != -1) {
                         toReturn.append("<td><div align=\"center\"><input type=\"checkbox\" name=\"" + checkboxId + "-" + warningLine.getLineNo() + "\" /></div></td>");
+                        toReturn.append("<td nowrap><a href=\"#\" onclick=\"doComment('" + checkboxId + "-" + warningLine.getLineNo() + "'); return false;\">" + (comments != null && comments.contains(warningLine.getIdentifier()) ?  "See Comment(s)" : "Add Comment") + "</a></td>");
                     }
                     for (String error : errors) {
                         toReturn.append("<td nowrap>" + (warningLine.getErrors().containsKey(error) ? "<span style=\"background-color: #FFAAAA; color: #000000\">" + warningLine.getErrors().get(error) + "</span>" : "") + "</td>");
@@ -638,7 +680,7 @@ public class ManageDatabasesController {
                     }
                     toReturn.append("</tr>");
                 }
-                toReturn.append("\n</table></div><br/>");
+                toReturn.append("\n</tbody></table></div><br/>");
                 if (!noClickableHeadings) {
                     toReturn.append("</div>");
                 }

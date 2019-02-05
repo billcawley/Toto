@@ -75,7 +75,7 @@ public class AdminService {
         }
         BusinessDAO.store(business);
         final String salt = shaHash(System.currentTimeMillis() + "salt");
-        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0, 0, null);// Admin with
+        final User user = new User(0, LocalDateTime.now().plusYears(30), business.getId(), email, userName, User.STATUS_ADMINISTRATOR, encrypt(password, salt), salt, "register business", 0, 0, null, null);// Admin with
         UserDAO.store(user);
         /*
         azquoMailer.sendEMail(user.getEmail()
@@ -174,10 +174,11 @@ this may now not work at all, perhaps delete?
             , int databaseId
             , int userId
             , String selections
+            , String team
     ) throws Exception {
         if (loggedInUser.getUser().isAdministrator()) {
             final String salt = shaHash(System.currentTimeMillis() + "salt");
-            final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail(), databaseId, userId, selections);
+            final User user = new User(0, endDate, loggedInUser.getUser().getBusinessId(), email, userName, status, encrypt(password, salt), salt, loggedInUser.getUser().getEmail(), databaseId, userId, selections, team);
             UserDAO.store(user);
         } else {
             throw new Exception("You do not have permission to create a user");
@@ -270,7 +271,7 @@ this may now not work at all, perhaps delete?
                 reportList.addAll(reports);
             }
         }
-        if (loggedInUser.getUser().isAdministrator()){
+        if (loggedInUser.getUser().isAdministrator()) {
             List<OnlineReport> reports = OnlineReportDAO.findForBusinessIdWithNoDatabase(loggedInUser.getUser().getBusinessId());
             for (OnlineReport report : reports) {
                 report.setDatabase("None");
@@ -354,7 +355,13 @@ this may now not work at all, perhaps delete?
 
     public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch) {
         if (loggedInUser.getUser().isAdministrator()) { // just admin for the mo - maybe will be changed
-            List<PendingUpload> pendingUploads = PendingUploadDAO.findForBusinessIdNotProcessed(loggedInUser.getUser().getBusinessId());
+            List<PendingUpload> pendingUploads;
+            if (loggedInUser.getUser().getTeam() != null && loggedInUser.getUser().getTeam().length() > 0){
+                pendingUploads = PendingUploadDAO.findForBusinessIdAndTeamNotProcessed(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getTeam());
+            } else {
+                pendingUploads = PendingUploadDAO.findForBusinessIdNotProcessed(loggedInUser.getUser().getBusinessId());
+            }
+
             List<PendingUpload.PendingUploadForDisplay> pendingUploadForDisplays = new ArrayList<>();
             int count = 0;
             for (PendingUpload pendingUpload : pendingUploads) {

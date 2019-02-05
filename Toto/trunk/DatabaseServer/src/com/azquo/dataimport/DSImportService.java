@@ -50,8 +50,6 @@ public class DSImportService {
         toReturn.setProvenanceId(azquoMemoryDBConnection.getProvenance().getId());
         return toReturn;
     }
-    // todo - take into account that we now NEVER are without an import version, skiplines etc can be zapped
-
     // Called by above but also directly from SSpreadsheet service when it has prepared a CSV from data entered ad-hoc into a sheet
     public static UploadedFile readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this

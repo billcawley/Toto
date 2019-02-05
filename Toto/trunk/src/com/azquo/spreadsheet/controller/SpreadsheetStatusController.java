@@ -43,7 +43,7 @@ public class SpreadsheetStatusController {
         }
         // be more specific? todo
         if ("pendingReady".equals(action)) {
-            if (request.getSession().getAttribute(PendingUploadController.PENDINGREADY) != null) {
+            if (request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT) != null) {
                 return "true";
             }
         }

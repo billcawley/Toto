@@ -13,6 +13,12 @@
     }
 
 </script>
+<div id="dialog" title="" style="display:none;">
+    <input type="hidden" name="commentId" id="commentId" value=""/>
+<textarea id="comment" name="comment" rows="20" cols="80"></textarea>
+    <a href="#" class="button" onclick="saveComment(); $('#dialog').dialog('close'); return false;">Save</a>
+    <a href="#" class="button" onclick="$('#dialog').dialog('close'); return false;">Cancel</a>
+</div>
     <main>
     <h1>Import Validation for ${filename}</h1>
     <form action="/api/PendingUpload" method="post">

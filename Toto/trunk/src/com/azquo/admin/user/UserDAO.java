@@ -37,6 +37,7 @@ public class UserDAO {
     private static final String DATABASEID = "database_id";
     private static final String REPORTID = "report_id";
     private static final String SELECTIONS = "selections";
+    private static final String TEAM = "team";
 
 
     public static Map<String, Object> getColumnNameValueMap(final User user) {
@@ -53,6 +54,7 @@ public class UserDAO {
         toReturn.put(DATABASEID, user.getDatabaseId());
         toReturn.put(REPORTID, user.getReportId());
         toReturn.put(SELECTIONS, user.getSelections());
+        toReturn.put(TEAM, user.getTeam());
         return toReturn;
     }
 
@@ -72,6 +74,7 @@ public class UserDAO {
                         , rs.getInt(DATABASEID)
                         , rs.getInt(REPORTID)
                         , rs.getString(SELECTIONS)
+                        , rs.getString(TEAM)
                 );
             } catch (Exception e) {
                 e.printStackTrace();

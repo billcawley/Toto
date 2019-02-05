@@ -43,6 +43,7 @@ public final class PendingUploadDAO {
     private static final String PROCESSEDBYUSERID = "processed_by_user_id";
     private static final String DATABASEID = "database_id";
     private static final String IMPORTRESULTPATH = "import_result_path";
+    private static final String TEAM = "team";
 
     public static Map<String, Object> getColumnNameValueMap(final PendingUpload pendingUpload) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -56,6 +57,7 @@ public final class PendingUploadDAO {
         toReturn.put(PROCESSEDBYUSERID, pendingUpload.getProcessedByUserId());
         toReturn.put(DATABASEID, pendingUpload.getDatabaseId());
         toReturn.put(IMPORTRESULTPATH, pendingUpload.getImportResultPath());
+        toReturn.put(TEAM, pendingUpload.getTeam());
         return toReturn;
     }
 
@@ -74,6 +76,7 @@ public final class PendingUploadDAO {
                         , rs.getInt(PROCESSEDBYUSERID)
                         , rs.getInt(DATABASEID)
                         , rs.getString(IMPORTRESULTPATH)
+                        , rs.getString(TEAM)
                 );
             } catch (Exception e) {
                 e.printStackTrace();
@@ -88,6 +91,19 @@ public final class PendingUploadDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + IMPORTRESULTPATH + " is null order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
+    }
+
+    public static List<PendingUpload> findForBusinessIdAndTeamNotProcessed(final int businessId, String team) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        namedParams.addValue(TEAM, team);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + TEAM + " = :" + TEAM + " AND " + IMPORTRESULTPATH + " is null order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
+    }
+
+    public static List<PendingUpload> findForBusinessIdAndProcessed(final int businessId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(BUSINESSID, businessId);
+        return StandardDAO.findListWithWhereSQLAndParameters("WHERE " + BUSINESSID + " = :" + BUSINESSID + " AND " + IMPORTRESULTPATH + " is not null order by `id` desc", TABLENAME, pendingUploadRowMapper, namedParams, 0, 10000);
     }
 
     public static void removeForDatabaseId(int databaseId) {

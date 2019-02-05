@@ -43,8 +43,15 @@ public class ValuesImport {
             while (lineIterator.hasNext()) { // the main line reading loop
                 String[] lineValues = lineIterator.next();
                 // I'm currently working on the principle that the line no is the current location -1
-                if (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().contains(lineIterator.getCurrentLocation().getLineNr() - 1) && lineIterator.hasNext()){
-                    System.out.println("Deliberately skipping line " + (lineIterator.getCurrentLocation().getLineNr() - 1) + ", " + lineValues);
+                // while as rejected lines could well be sequential!
+                while (uploadedFile.getIgnoreLines() != null && uploadedFile.getIgnoreLines().contains(lineIterator.getCurrentLocation().getLineNr() - 1) && lineIterator.hasNext()){
+                    StringBuffer sb = new StringBuffer();
+                    sb.append("Deliberately skipping line " + (lineIterator.getCurrentLocation().getLineNr() - 1) + ", ");
+                    for (String cell : lineValues){
+                        sb.append("\t").append(cell);
+                    }
+                    System.out.println(sb.toString());
+                    uploadedFile.getIgnoreLinesValues().put(lineIterator.getCurrentLocation().getLineNr() - 1, sb.toString());
                     lineValues = lineIterator.next();
                 }
 

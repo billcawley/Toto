@@ -35,8 +35,9 @@ public final class User extends StandardEntity implements Serializable {
     private int databaseId;
     private int reportId;
     private String selections;
+    private String team;
 
-    public User(int id, LocalDateTime endDate, int businessId, String email, String name, String status, String password, String salt, String createdBy, int databaseId, int reportId, String selections) {
+    public User(int id, LocalDateTime endDate, int businessId, String email, String name, String status, String password, String salt, String createdBy, int databaseId, int reportId, String selections, String team) {
         this.id = id;
         this.endDate = endDate;
         this.businessId = businessId;
@@ -49,6 +50,7 @@ public final class User extends StandardEntity implements Serializable {
         this.databaseId = databaseId;
         this.reportId = reportId;
         this.selections = selections;
+        this.team = team;
     }
 
     public boolean isAdministrator() {
@@ -158,6 +160,14 @@ public final class User extends StandardEntity implements Serializable {
     public String getSelections(){ return this.selections; }
 
     public void setSelections(String selections){this.selections = selections; }
+
+    public String getTeam() {
+        return team;
+    }
+
+    public void setTeam(String team) {
+        this.team = team;
+    }
 
     @Override
     public String toString() {

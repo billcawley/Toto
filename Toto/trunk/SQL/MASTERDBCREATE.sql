@@ -173,7 +173,8 @@ CREATE TABLE IF NOT EXISTS `user` (
   `created_by` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `database_id` int(11) NOT NULL,
   `report_id` int(11) NOT NULL,
-  `selections` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL
+  `selections` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+    `team` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL
 
 
 ) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
@@ -227,6 +228,7 @@ CREATE TABLE IF NOT EXISTS `pending_upload` (
                                               `processed_by_user_id` int(11) DEFAULT NULL,
                                               `database_id` int(11) NOT NULL,
                                               `import_result_path` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+                                              `team` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
                                               PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
@@ -351,3 +353,15 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 ALTER TABLE `user_region_options`
 MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+-- Made for Ed Broking - not sure it will have use for anyone else. . .
+
+CREATE TABLE IF NOT EXISTS `comment` (
+                                              `id` int(11) NOT NULL AUTO_INCREMENT,
+                                              `business_id` int(11) NOT NULL,
+                                              `identifier` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+                                              `team` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
+                                              `text` text COLLATE utf8_unicode_ci DEFAULT NULL,
+                                              PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+

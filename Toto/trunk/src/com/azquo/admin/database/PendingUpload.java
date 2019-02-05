@@ -45,8 +45,9 @@ public final class PendingUpload extends StandardEntity {
     private int processedByUserId;
     private int databaseId;
     private String importResultPath;
+    private String team;
 
-    public PendingUpload(int id, int businessId, LocalDateTime createdDate, LocalDateTime processedDate, String fileName, String filePath, int createdByUserId, int processedByUserId, int databaseId, String importResultPath) {
+    public PendingUpload(int id, int businessId, LocalDateTime createdDate, LocalDateTime processedDate, String fileName, String filePath, int createdByUserId, int processedByUserId, int databaseId, String importResultPath, String team) {
         this.id = id;
         this.businessId = businessId;
         this.createdDate = createdDate;
@@ -57,6 +58,7 @@ public final class PendingUpload extends StandardEntity {
         this.processedByUserId = processedByUserId;
         this.databaseId = databaseId;
         this.importResultPath = importResultPath;
+        this.team = team;
     }
 
     public int getBusinessId() {
@@ -125,6 +127,14 @@ public final class PendingUpload extends StandardEntity {
         return "";
     }
 
+    public String getTeam() {
+        return team;
+    }
+
+    public void setTeam(String team) {
+        this.team = team;
+    }
+
     public static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     // better for display
@@ -141,6 +151,7 @@ public final class PendingUpload extends StandardEntity {
         final private String processedByUserName;
         final private String importResultPath;
         final private String size;
+        final private String team;
 
 
         public PendingUploadForDisplay(PendingUpload pu) {
@@ -159,6 +170,7 @@ public final class PendingUpload extends StandardEntity {
             this.processedByUserName = byId1 != null ? byId1.getName() : "";
             this.importResultPath = pu.importResultPath;
             this.size = pu.getSize();
+            this.team = pu.team;
         }
 
         public int getId() {

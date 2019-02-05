@@ -96,6 +96,7 @@ public class DBCron {
                                         System.out.println("file : " + origName);
                                         Files.move(path, tagged.resolve(timestamp + origName));
                                         // ok it's moved now make the pending upload record
+                                        // todo - assign the database and team automatically!
                                         PendingUpload pendingUpload = new PendingUpload(0, b.getId()
                                                 , LocalDateTime.ofInstant(lastModifiedTime.toInstant(), ZoneId.systemDefault())
                                                 , null
@@ -103,8 +104,8 @@ public class DBCron {
                                                 , tagged.resolve(timestamp + origName).toString()
                                                 , -1
                                                 , -1
-                                                , 1 // todo - database id!!
-                                                , null);
+                                                , 1
+                                                , null, null);
                                         PendingUploadDAO.store(pendingUpload);
                                     } else {
                                         System.out.println("fine found for pending but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");

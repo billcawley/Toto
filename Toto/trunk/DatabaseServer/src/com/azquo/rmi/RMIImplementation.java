@@ -1,5 +1,6 @@
 package com.azquo.rmi;
 
+import com.azquo.StringLiterals;
 import com.azquo.TypedPair;
 import com.azquo.app.magento.DSDataLoadService;
 import com.azquo.dataimport.DSImportService;
@@ -318,7 +319,13 @@ class RMIImplementation implements RMIInterface {
         try {
             // get back to the user straight away. Should not be a problem, multiple persists would be queued.
             new Thread(
-                    () -> DSSpreadsheetService.persistDatabase(databaseAccessToken)
+                    () -> {
+                        // braces and a belt, as this is in a new thread its possible a persist might be called on a copied database when it's been zapped so check here
+                        // more careful handling of temporary databases will hopefully make this redundant
+                        if (!databaseAccessToken.getPersistenceName().startsWith(StringLiterals.copyPrefix)){
+                            DSSpreadsheetService.persistDatabase(databaseAccessToken);
+                        }
+                    }
             ).start();
         } catch (Exception e) {
             throw new RemoteException("Database Server Exception", e);

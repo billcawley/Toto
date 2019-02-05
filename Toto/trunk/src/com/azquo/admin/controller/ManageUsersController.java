@@ -66,6 +66,7 @@ public class ManageUsersController {
             , @RequestParam(value = "name", required = false) String name
             , @RequestParam(value = "status", required = false) String status
             , @RequestParam(value = "password", required = false) String password
+            , @RequestParam(value = "team", required = false) String team
             , @RequestParam(value = "databaseId", required = false) String databaseId
             , @RequestParam(value = "reportId", required = false) String reportId
             , @RequestParam(value = "selections", required = false) String selections
@@ -115,12 +116,13 @@ public class ManageUsersController {
                             // Have to use  a LocalDate on the parse which is annoying http://stackoverflow.com/questions/27454025/unable-to-obtain-localdatetime-from-temporalaccessor-when-parsing-localdatetime
                             AdminService.createUser(email, name, LocalDate.parse(endDate, formatter).atStartOfDay(), status, password, loggedInUser
                                     , NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0
-                                    , NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0, selections);
+                                    , NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0, selections, team);
                         } else {
                             toEdit.setEndDate(LocalDate.parse(endDate, formatter).atStartOfDay());
                             toEdit.setEmail(email);
                             toEdit.setName(name);
                             toEdit.setStatus(status);
+                            toEdit.setTeam(team);
                             toEdit.setDatabaseId(NumberUtils.isDigits(databaseId) ? Integer.parseInt(databaseId) : 0);
                             toEdit.setReportId(NumberUtils.isDigits(reportId) ? Integer.parseInt(reportId) : 0);
                             if (password != null && !password.isEmpty()) {
@@ -142,6 +144,7 @@ public class ManageUsersController {
                     model.put("email", email);
                     model.put("name", name);
                     model.put("status", status);
+                    model.put("team", team);
                 } else {
                     if (toEdit != null) {
                         model.put("id", toEdit.getId());
@@ -151,6 +154,7 @@ public class ManageUsersController {
                         model.put("status", toEdit.getStatus());
                         model.put("user", toEdit);
                         model.put("selections", toEdit.getSelections());
+                        model.put("team", toEdit.getTeam());
                     } else {
                         model.put("id", "0");
                     }
@@ -265,6 +269,8 @@ public class ManageUsersController {
                                 if (!status.equalsIgnoreCase(User.STATUS_ADMINISTRATOR) && !status.equalsIgnoreCase(User.STATUS_DEVELOPER) && or == null) {
                                     throw new Exception("Unable to find report " + userSheet.getRow(row).getCell(6).getStringCellValue());
                                 }
+                                String team = userSheet.getRow(row).getCell(7).getStringCellValue();
+
                                 // todo - master and user types need to check for a report and error if it's not there
                                 if (!loggedInUser.getUser().isAdministrator()) { // then I need to check against the session for allowable reports and databases
                                     boolean stored = false;
@@ -272,7 +278,7 @@ public class ManageUsersController {
                                         final Map<String, TypedPair<Integer, Integer>> reportIdDatabaseIdPermissionsFromReport = loggedInUser.getReportIdDatabaseIdPermissions();
                                         for (TypedPair<Integer, Integer> allowedCombo : reportIdDatabaseIdPermissionsFromReport.values()) {
                                             if (allowedCombo.getFirst() == or.getId() && allowedCombo.getSecond() == d.getId()) { // then we can add the user with this info
-                                                User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId(), selections);
+                                                User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d.getId(), or.getId(), selections, team);
                                                 UserDAO.store(user1);
                                                 stored = true;
                                                 break;
@@ -281,11 +287,11 @@ public class ManageUsersController {
                                     }
                                     if (!stored) { // default to the current users home menu
                                         User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status,
-                                                password, salt, loggedInUser.getUser().getEmail(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getReportId(), selections);
+                                                password, salt, loggedInUser.getUser().getEmail(), loggedInUser.getDatabase().getId(), loggedInUser.getUser().getReportId(), selections, team);
                                         UserDAO.store(user1);
                                     }
                                 } else {
-                                    User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d != null ? d.getId() : 0, or != null ? or.getId() : 0, selections);
+                                    User user1 = new User(0, end.atStartOfDay(), loggedInUser.getUser().getBusinessId(), email, user, status, password, salt, loggedInUser.getUser().getEmail(), d != null ? d.getId() : 0, or != null ? or.getId() : 0, selections, team);
                                     UserDAO.store(user1);
                                 }
                             }

@@ -1,6 +1,6 @@
-19-01-19
+01-02-19
 
-Considerable work on query validation, initial version
+Pending uploads optimizeation, UI tweaks, Region size limit pushed to 5 million for big risk data summary
 
 23-01-19
 
@@ -11,6 +11,10 @@ Starting work based off the Alex/Oliver meetings, temporary memory copy of a DB 
 Initial version of query validation feedback (on pending uploads)
 
 Checks for the start of the template name, rather than the whole name
+
+19-01-19
+
+Considerable work on query validation, initial version
 
 18-01-19-2
 

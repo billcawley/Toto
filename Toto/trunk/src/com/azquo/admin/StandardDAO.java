@@ -54,22 +54,23 @@ public class StandardDAO {
                 "    WHERE\n" +
                 "      (table_name = \"pending_upload\")\n" +
                 "      AND (table_schema = \"master_db\")\n" +
-                "      AND (column_name = \"import_result_path\")", new HashMap<>(), Integer.class) == 0){
-            jdbcTemplate.update("drop TABLE master_db.`pending_upload`;", new HashMap<>());
-            jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`pending_upload` (\n" +
-                    "                                              `id` int(11) NOT NULL AUTO_INCREMENT,\n" +
-                    "                                              `business_id` int(11) NOT NULL,\n" +
-                    "                                              `created_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
-                    "                                              `processed_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n" +
-                    "                                              `file_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
-                    "                                              `file_path` varchar(255) COLLATE utf8_unicode_ci NOT NULL,\n" +
-                    "                                              `created_by_user_id` int(11) NOT NULL,\n" +
-                    "                                              `processed_by_user_id` int(11) DEFAULT NULL,\n" +
-                    "                                              `database_id` int(11) NOT NULL,\n" +
-                    "                                              `import_result_path` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,\n" +
-                    "                                              PRIMARY KEY (`id`)\n" +
-                    ") ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n", new HashMap<>());
+                "      AND (column_name = \"team\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`pending_upload` ADD `team` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
         }
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"user\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"team\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`user` ADD `team` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
+        }
+
+        jdbcTemplate.update("CREATE TABLE IF NOT EXISTS `master_db`.`comment` (" +
+                "`id` int(11) NOT NULL AUTO_INCREMENT" +
+                ",`business_id` int(11) NOT NULL,`identifier` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`team` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL" +
+                ",`text` text COLLATE utf8_unicode_ci DEFAULT NULL,PRIMARY KEY (`id`)) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;", new HashMap<>());
+
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
     }
 

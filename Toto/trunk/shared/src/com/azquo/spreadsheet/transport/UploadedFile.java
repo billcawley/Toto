@@ -93,8 +93,10 @@ public class UploadedFile implements Serializable {
     private int provenanceId;
     // for validation support - this file goes into a temporary copy of the database
     private final boolean isValidationTest;
-
+    // tells the upload to ignore certain lines (probably due to warnings about the lines)
     private Set<Integer> ignoreLines;
+    // what the ignored lines actually were - for user feedback
+    private Map<Integer, String> ignoreLinesValues;
 
     public static class RejectedLine implements Serializable{
         final int lineNo;
@@ -124,11 +126,13 @@ public class UploadedFile implements Serializable {
 
     public static class WarningLine implements Serializable{
         final int lineNo;
+        final String identifier;
         final String line;
         final Map<String, String>  errors;
 
-        public WarningLine(int lineNo, String line) {
+        public WarningLine(int lineNo, String identifier, String line) {
             this.lineNo = lineNo;
+            this.identifier = identifier;
             this.line = line;
             this.errors = new HashMap<>();
         }
@@ -139,6 +143,10 @@ public class UploadedFile implements Serializable {
 
         public String getLine() {
             return line;
+        }
+
+        public String getIdentifier() {
+            return identifier;
         }
 
         public Map<String, String> getErrors() {
@@ -186,6 +194,7 @@ public class UploadedFile implements Serializable {
         headingsNoFileHeadingsWithInterimLookup = null;
         provenanceId = -1;
         ignoreLines = null;
+        ignoreLinesValues = null;
     }
 
 
@@ -426,5 +435,10 @@ public class UploadedFile implements Serializable {
 
     public void setIgnoreLines(Set<Integer> ignoreLines) {
         this.ignoreLines = ignoreLines;
+        this.ignoreLinesValues = new HashMap<>();
+    }
+
+    public Map<Integer, String> getIgnoreLinesValues() {
+        return ignoreLinesValues;
     }
 }
