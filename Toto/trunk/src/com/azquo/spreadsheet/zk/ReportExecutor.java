@@ -64,7 +64,7 @@ public class ReportExecutor {
             return book; // unchanged, nothing to run
         }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        StringBuilder loops = runExecute(loggedInUser, executeCommand, null, -1);
+        StringBuilder loops = runExecute(loggedInUser, executeCommand, null, -1, true);
 
         final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
@@ -84,7 +84,7 @@ public class ReportExecutor {
         return newBook;
     }
 
-    public static StringBuilder runExecute(LoggedInUser loggedInUser, String executeCommand, List<List<List<String>>> systemData2DArrays, int provenanceId) throws Exception {
+    public static StringBuilder runExecute(LoggedInUser loggedInUser, String executeCommand, List<List<List<String>>> systemData2DArrays, int provenanceId, boolean persist) throws Exception {
         List<String> commands = new ArrayList<>();
         StringTokenizer st = new StringTokenizer(executeCommand, "\n");
         while (st.hasMoreTokens()) {
@@ -98,8 +98,10 @@ public class ReportExecutor {
         StringBuilder loops = new StringBuilder();
         executeCommands(loggedInUser, commands, loops, systemData2DArrays, new AtomicInteger(0), provenanceId);
         // it won't have cleared while executing
-        RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
-        SpreadsheetService.databasePersist(loggedInUser);
+        if (persist){
+            RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).clearSessionLog(loggedInUser.getDataAccessToken());
+            SpreadsheetService.databasePersist(loggedInUser);
+        }
         return loops;
     }
 
