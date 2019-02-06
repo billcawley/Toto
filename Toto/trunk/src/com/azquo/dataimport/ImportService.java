@@ -189,6 +189,7 @@ public final class ImportService {
                 long quicktest = System.currentTimeMillis();
                 OPCPackage opcPackage = OPCPackage.open(fs);
                 book = new XSSFWorkbook(opcPackage);
+                loggedInUser.userLog("Opening:" + uploadedFile.getFileName());
                 System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
             } else {
                 book = new HSSFWorkbook(fs);
@@ -518,7 +519,7 @@ public final class ImportService {
                 List<List<String>> standardHeadings = new ArrayList<>();
                 // scan first for the main model
                 for (String sheetName : importTemplateData.getSheets().keySet()) {
-                    if (sheetName.equalsIgnoreCase("Import Model")|| sheetName.equalsIgnoreCase(templateName)) {
+                    if (sheetName.equalsIgnoreCase("Import Model")|| (uploadedFile.getParameter(IMPORTVERSION)==    null && sheetName.equalsIgnoreCase(templateName))) {
                         importSheetScan(importTemplateData.getSheets().get(sheetName), null, standardHeadings, null, templateParameters, null);
                         break;
                     }
@@ -741,7 +742,7 @@ public final class ImportService {
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
             }
             loggedInUser.copyMode = uploadedFile.isValidationTest();
-            uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getPostProcessor(), systemData2DArrays, uploadedFile.getProvenanceId()).toString());
+            uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getPostProcessor(), systemData2DArrays, uploadedFile.getProvenanceId(), false).toString());
         }
         loggedInUser.copyMode = false;
         if (!systemData2DArrays.isEmpty()) {
