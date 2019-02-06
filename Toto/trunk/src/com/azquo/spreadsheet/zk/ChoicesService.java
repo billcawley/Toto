@@ -201,7 +201,9 @@ public class ChoicesService {
                                     //maybe the user choice is over -specified. (e.g from drilldown or removal of conflicting names)  Try removing the super-sets
                                     userChoice = userChoice.substring(userChoice.indexOf("->") + 2);
                                 }
-                                if ((userChoice == null || !validOptions.contains(userChoice)) && !validOptions.isEmpty()) { // just set the first for the mo.
+                                //set the upper/lower case as in the database
+                                userChoice = findIgnoreCase(validOptions, userChoice);
+                                if (userChoice == null  && !validOptions.isEmpty()) { // just set the first for the mo.
                                     //check that userChoice is not a valid date...
                                     if (date == null || !validOptions.contains(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))) {
                                         userChoice = validOptions.get(0);
@@ -247,6 +249,16 @@ public class ChoicesService {
         }
         loggedInUser.setContext(context);
         return choiceOptionsMap;
+    }
+
+    public static String findIgnoreCase(List<String>list, String  searchStr)     {
+        if(list == null || searchStr == null || searchStr.length()==0) return null;
+
+        for (String str:list) {
+            if (str.equalsIgnoreCase(searchStr))
+                return str;
+        }
+        return null;
     }
 
     /* This did return a map with the query as the key but I'm going to change this to the name, it will save unnecessary query look ups later.
