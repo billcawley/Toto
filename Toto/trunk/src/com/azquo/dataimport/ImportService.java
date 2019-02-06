@@ -512,13 +512,13 @@ public final class ImportService {
 
         if (!templateName.toLowerCase().startsWith("sets") && !importTemplateUsedAlready) {
             ImportTemplateData importTemplateData = getImportTemplateForUploadedFile(loggedInUser, uploadedFile, templateCache);
-            if (importTemplateData != null) { // new logic - we must have an import version
+            if (importTemplateData != null&& uploadedFile.getParameter(IMPORTVERSION)!=null) { // new logic - we must have an import version
                 // ok let's check here for the old style of import template as used by Ben Jones
                 Map<String, String> templateParameters = new HashMap<>(); // things like pre processor, file encoding etc
                 List<List<String>> standardHeadings = new ArrayList<>();
                 // scan first for the main model
                 for (String sheetName : importTemplateData.getSheets().keySet()) {
-                    if (sheetName.equalsIgnoreCase("Import Model") || sheetName.equalsIgnoreCase(templateName)) {
+                    if (sheetName.equalsIgnoreCase("Import Model")|| sheetName.equalsIgnoreCase(templateName)) {
                         importSheetScan(importTemplateData.getSheets().get(sheetName), null, standardHeadings, null, templateParameters, null);
                         break;
                     }
