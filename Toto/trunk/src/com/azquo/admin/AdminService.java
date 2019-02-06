@@ -281,11 +281,9 @@ this may now not work at all, perhaps delete?
             reportList.add(notFound);
         } else {
             for (OnlineReport or : reportList) {
-                if (or.getUserId() != 0 && or.getUserId() != loggedInUser.getUser().getId()) {
-                    User otherUser = UserDAO.findById(or.getUserId());
+                     User otherUser = UserDAO.findById(or.getUserId());
                     or.setReportName(or.getReportName() + " uploaded by " + (otherUser != null ? otherUser.getName() : "?")); // I'm assuming the report isn't saved after - just for
-                }
-            }
+             }
         }
         reportList.sort((o1, o2) -> {
             // adding isempty here as empty is the same as null for our sorting purposes
