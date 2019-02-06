@@ -91,7 +91,8 @@ public class ImportTemplateDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(TEMPLATE_NAME, name + "%");
         namedParams.addValue(USERID, userId);
-        return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + TEMPLATE_NAME + " LIKE :" + TEMPLATE_NAME + " and " + USERID + " = :" + USERID, TABLENAME, importTemplateRowMapper, namedParams);
+        return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + TEMPLATE_NAME + " LIKE :" + TEMPLATE_NAME + " and " + USERID + " = :" + USERID  + " order by template_name desc"
+                , TABLENAME, importTemplateRowMapper, namedParams);
     }
 
     public static List<ImportTemplate> findForBusinessId(int businessId) {
