@@ -1017,7 +1017,7 @@ public final class Name extends AzquoMemoryDBEntity {
                 return buffer.array();
             }
         } catch (BufferOverflowException e) {
-            if (tries < 5) { // a bit arbitrary
+            if (tries < 50) { // a bit arbitrary
                 tries++;
                 System.out.println("retrying after buffer overflow in getChildrenIdsAsBytes on " + getDefaultDisplayName() + " try number " + tries);
                 return getChildrenIdsAsBytes(tries);
