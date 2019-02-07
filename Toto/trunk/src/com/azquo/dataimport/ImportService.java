@@ -171,7 +171,7 @@ public final class ImportService {
             } else if (uploadedFile.getFileName().toLowerCase().endsWith(".xls") || uploadedFile.getFileName().toLowerCase().endsWith(".xlsx")) {
                 processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile, templateCache, count,filesToReject,fileRejectLines));
             } else {
-                processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, templateCache, count,filesToReject,fileRejectLines));
+                 processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, templateCache, count,filesToReject,fileRejectLines));
             }
         }
         return processedUploadedFiles;
@@ -184,7 +184,6 @@ public final class ImportService {
         Workbook book;
         // we now use apache POI which is faster than ZK but it has different implementations for .xls and .xlsx files
         try {
-            loggedInUser.userLog("Opening:" + uploadedFile.getFileName());
             FileInputStream fs = new FileInputStream(new File(uploadedFile.getPath()));
             if (uploadedFile.getFileName().toLowerCase().endsWith("xlsx")) {
                 long quicktest = System.currentTimeMillis();
@@ -519,11 +518,12 @@ public final class ImportService {
                 List<List<String>> standardHeadings = new ArrayList<>();
                 // scan first for the main model
                 for (String sheetName : importTemplateData.getSheets().keySet()) {
-                    if (sheetName.equalsIgnoreCase("Import Model")|| sheetName.equalsIgnoreCase(templateName)) {
+                    if ((sheetName.equalsIgnoreCase("Import Model") && uploadedFile.getParameter(IMPORTVERSION)!=null)|| (uploadedFile.getParameter(IMPORTVERSION)==    null && sheetName.equalsIgnoreCase(templateName))) {
                         importSheetScan(importTemplateData.getSheets().get(sheetName), null, standardHeadings, null, templateParameters, null);
                         break;
                     }
-                }                // if there are no standard headings, then read the file without adjustment
+                }
+                // if there are no standard headings, then read the file without adjustment
                 if (!standardHeadings.isEmpty()) {
                     Map<TypedPair<Integer, Integer>, String> topHeadings = new HashMap<>();
                     // specific headings on the file we're loading
