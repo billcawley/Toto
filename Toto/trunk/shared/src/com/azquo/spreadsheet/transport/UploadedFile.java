@@ -460,4 +460,14 @@ public class UploadedFile implements Serializable {
     public boolean getPostProcessFlag() {return this.postProcessFlag; }
 
     public void setPostProcessFlag(boolean postProcessFlag){this.postProcessFlag = postProcessFlag; }
+
+    public String getFullFileName(){
+        List<String> fileNames = getFileNames();
+        String fullFileName = "";
+        for (String fileName:fileNames){
+            fullFileName+=":" + fileName;
+        }
+        return fullFileName.substring(1);
+
+    }
 }
