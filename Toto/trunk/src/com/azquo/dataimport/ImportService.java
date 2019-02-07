@@ -778,6 +778,7 @@ public final class ImportService {
                             }
                         }
                     }
+                    uploadedFile.addToErrorHeadings(errorHeadings);
                     if (!errorLines.isEmpty()) { // then I need to find them. First thing to do is find the relevant column
                         // going to try based on feedback in the processed file
                         if (uploadedFile.getFileHeadings() != null) { // if we don't have the original set of headings we won't be able to check the file

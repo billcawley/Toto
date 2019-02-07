@@ -1,3 +1,9 @@
+07-02-19
+
+Case insensitive choices - allow dec-18 if a list has Dec-18, latest MySQL driver, double check query names are ordered, properties for new Ed Broking windows server
+
+SHould be improved error messages
+
 05-02-19
 
 Single import process work. UI improvements, zip feedback, list pending uploads based on the user's team

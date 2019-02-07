@@ -47,6 +47,7 @@ public class UploadedFile implements Serializable {
     private final AtomicInteger noValuesAdjusted;
     private final ArrayList<RejectedLine> linesRejected;
     private final ArrayList<WarningLine> warningLines;
+    private final Set<String> errorHeadings;
     private String error;
     // as in "was data modified?"
     private boolean dataModified;
@@ -178,6 +179,7 @@ public class UploadedFile implements Serializable {
         noValuesAdjusted = new AtomicInteger(0);
         linesRejected = new ArrayList<>();
         warningLines = new ArrayList<>();
+        errorHeadings = new HashSet<>();
         error = null;
         dataModified = false;
         reportName = null;
@@ -281,6 +283,14 @@ public class UploadedFile implements Serializable {
 
     public void addToWarningLines(WarningLine line) {
         warningLines.add(line);
+    }
+
+    public Set<String> getErrorHeadings() {
+        return errorHeadings;
+    }
+
+    public void addToErrorHeadings(List<String> toAdd) {
+        errorHeadings.addAll(toAdd);
     }
 
     public String getError() {

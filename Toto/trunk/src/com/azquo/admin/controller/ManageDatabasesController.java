@@ -426,6 +426,27 @@ public class ManageDatabasesController {
             }
 
             toReturn.append("<br/>\n");
+            toReturn.append("Validation Summary<br/>\n");
+            // improved list
+            if (!uploadedFile.getErrorHeadings().isEmpty()){
+                for (String errorHeading : uploadedFile.getErrorHeadings()){
+                    int linesWithThatError = 0;
+                    for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
+                        if (warningLine.getErrors().keySet().contains(errorHeading)){
+                            linesWithThatError++;
+                        }
+                    }
+                    toReturn.append(errorHeading).append(" : ");
+                    if (linesWithThatError > 0){
+                        toReturn.append("<span style=\"background-color: #FFAAAA; color: #000000\">" + linesWithThatError + " Warnings</span>");
+                    } else {
+                        toReturn.append("<span style=\"background-color: #AAFFAA; color: #000000\">Pass</span>");
+                    }
+                    toReturn.append("\n<br/>");
+                }
+            }
+
+
             // jump it out past the end for actual info
             first = true;
             for (String key : uploadedFile.getParameters().keySet()) {
@@ -588,6 +609,7 @@ public class ManageDatabasesController {
             // todo - factor later!
             if (!uploadedFile.getWarningLines().isEmpty()) {
                 // We're going to need descriptions of the errors, put them all in a set
+                // todo factor with error summary above
                 Set<String> errorsSet = new HashSet<>();
                 for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
                     errorsSet.addAll(warningLine.getErrors().keySet());
@@ -598,10 +620,6 @@ public class ManageDatabasesController {
                     toReturn.append("Line Warnings : ").append(uploadedFile.getWarningLines().size()).append("\n<br/>");
                 } else {
                     toReturn.append("<a href=\"#\" onclick=\"showHideDiv('warningLines" + id + "'); return false;\">Line Warnings : ").append(uploadedFile.getWarningLines().size()).append("</a>\n<br/><div id=\"warningLines" + id + "\" style=\"display : none\">");
-                }
-
-                for (String error : errors) {
-                    toReturn.append(error).append("\n<br/>");
                 }
 
                 int maxLineWidth = uploadedFile.getFileHeadings() != null ? uploadedFile.getFileHeadings().size() : 0;
