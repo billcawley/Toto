@@ -1,6 +1,5 @@
 package com.azquo.dataimport;
 
-
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -520,12 +519,11 @@ public final class ImportService {
                 List<List<String>> standardHeadings = new ArrayList<>();
                 // scan first for the main model
                 for (String sheetName : importTemplateData.getSheets().keySet()) {
-                    if ((sheetName.equalsIgnoreCase("Import Model") && uploadedFile.getParameter(IMPORTVERSION)!=null)|| (uploadedFile.getParameter(IMPORTVERSION)==    null && sheetName.equalsIgnoreCase(templateName))) {
+                    if (sheetName.equalsIgnoreCase("Import Model")|| sheetName.equalsIgnoreCase(templateName)) {
                         importSheetScan(importTemplateData.getSheets().get(sheetName), null, standardHeadings, null, templateParameters, null);
                         break;
                     }
-                }
-                // if there are no standard headings, then read the file without adjustment
+                }                // if there are no standard headings, then read the file without adjustment
                 if (!standardHeadings.isEmpty()) {
                     Map<TypedPair<Integer, Integer>, String> topHeadings = new HashMap<>();
                     // specific headings on the file we're loading
@@ -737,7 +735,7 @@ public final class ImportService {
                 , loggedInUser.getUser().getName());
         // run any executes defined in the file
         List<List<List<String>>> systemData2DArrays = new ArrayList<>();
-        if (uploadedFile.getPostProcessFlag() && uploadedFile.getPostProcessor() != null) {
+        if (uploadedFile.getPostProcessor() != null) {
             // set user choices to file params, could be useful to the execute
             for (String choice : uploadedFile.getParameters().keySet()) {
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
@@ -855,7 +853,6 @@ public final class ImportService {
 
 
             String firstCellValue = null;
-            String parameterName = null;
             for (String cellValue : row) {
                 cellIndex++;
                 if (!cellValue.isEmpty()) {
@@ -895,7 +892,7 @@ public final class ImportService {
                                 /* outside of headings mode we grab the first cell regardless to check for mode switches,
                                 it will also be used as the key in key/pair parsing for lookups and import template parameters
                                  */
-                    } else if (firstCellValue == null && mode!=ImportSheetScanMode.PARAMETERS) {
+                    } else if (firstCellValue == null) {
                         firstCellValue = cellValue;
                         if ("PARAMETERS".equalsIgnoreCase(firstCellValue)) { // string literal move?
                             mode = ImportSheetScanMode.PARAMETERS;
@@ -903,13 +900,7 @@ public final class ImportService {
                     } else { // after the first cell when not headings
                         // yes extra cells will ovrride subsequent key pair values. Since this would be an incorrect sheet I'm not currently bothered by this
                         if (mode == ImportSheetScanMode.PARAMETERS) { // gathering parameters
-                            if (firstCellValue!=null){
-                                parameterName = firstCellValue;
-                                templateParameters.put(firstCellValue.toLowerCase(), cellValue);
-                            }else{
-                                //add to existing
-                                templateParameters.put(parameterName,templateParameters.get(parameterName)+"\n" + cellValue);
-                            }
+                            templateParameters.put(firstCellValue.toLowerCase(), cellValue);
                         }
                     }
                 }
