@@ -97,6 +97,9 @@ public class UploadedFile implements Serializable {
     private Set<Integer> ignoreLines;
     // what the ignored lines actually were - for user feedback
     private Map<Integer, String> ignoreLinesValues;
+    //flag to suppress postprocessing except for pending imports
+    private boolean postProcessFlag;
+
 
     public static class RejectedLine implements Serializable{
         final int lineNo;
@@ -120,6 +123,7 @@ public class UploadedFile implements Serializable {
         public String getErrors() {
             return errors;
         }
+
     }
 
     // this has distinct errors - maybe I should use it for both? Todo
@@ -195,6 +199,7 @@ public class UploadedFile implements Serializable {
         provenanceId = -1;
         ignoreLines = null;
         ignoreLinesValues = null;
+        postProcessFlag = false;
     }
 
 
@@ -441,4 +446,8 @@ public class UploadedFile implements Serializable {
     public Map<Integer, String> getIgnoreLinesValues() {
         return ignoreLinesValues;
     }
+
+    public boolean getPostProcessFlag() {return this.postProcessFlag; }
+
+    public void setPostProcessFlag(boolean postProcessFlag){this.postProcessFlag = postProcessFlag; }
 }
