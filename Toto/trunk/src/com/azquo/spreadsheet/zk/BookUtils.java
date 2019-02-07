@@ -50,6 +50,11 @@ public class BookUtils {
         CellRegion region = sName.getRefersToCellRegion();
         if (region == null) return toReturn;
         SSheet sheet = sName.getBook().getSheetByName(sName.getRefersToSheetName());
+        regionToStringList(toReturn,region,sheet,rowOffset,colOffset);
+        return toReturn;
+    }
+
+    static void regionToStringList(List<List<String>> toReturn, CellRegion region, SSheet sheet, int rowOffset, int colOffset){
         for (int rowIndex = region.getRow() + rowOffset; rowIndex <= region.getLastRow() + rowOffset; rowIndex++) {
             List<String> row = new ArrayList<>();
             toReturn.add(row);
@@ -70,7 +75,7 @@ public class BookUtils {
                         if (!cell.getType().equals(SCell.CellType.BLANK)) {
                             try {
                                 String numberGuess = cell.getNumberValue() + "";
-                                   if (numberGuess.endsWith(".0")) {
+                                if (numberGuess.endsWith(".0")) {
                                     numberGuess = numberGuess.substring(0, numberGuess.length() - 2);
                                 }
                                 if (numberGuess.equals("0")) numberGuess = "";
@@ -105,7 +110,7 @@ java.lang.IllegalStateException: is ERROR, not the one of [STRING, BLANK]
                 }
             }
         }
-        return toReturn;
+
     }
 
     static String getRegionValue(Sheet sheet, CellRegion region) {

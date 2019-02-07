@@ -90,6 +90,7 @@ public final class ImportService {
      parameters per file down to the file (not sheet!) check for parameters that have been set in a big chunk on the pending uploads screen
      */
     public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, Map<String, Map<String, String>> parametersPerFile, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines) throws Exception { // setup just to flag it
+        loggedInUser.copyMode = false; // an exception might have left it true
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
         }
@@ -805,7 +806,6 @@ public final class ImportService {
                             }// else error?
                         }
                     }
-
                 }
             }
             if (!warningLineMap.isEmpty()) {

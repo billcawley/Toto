@@ -37,9 +37,9 @@
     <orderEntry type="library" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.4.3" level="project" />
     <orderEntry type="library" name="net.openhft:koloboke-impl-jdk8:0.6.7" level="project" />
     <orderEntry type="library" name="org.codehaus.groovy:groovy-all:2.4.3" level="project" />
-    <orderEntry type="library" name="org.mariadb.jdbc:mariadb-java-client:1.4.3" level="project" />
     <orderEntry type="library" name="org.apache.commons:commons-math3:3.6.1" level="project" />
     <orderEntry type="library" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.2" level="project" />
     <orderEntry type="library" name="com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.2" level="project" />
+    <orderEntry type="library" name="org.mariadb.jdbc:mariadb-java-client:2.4.0" level="project" />
   </component>
 </module>

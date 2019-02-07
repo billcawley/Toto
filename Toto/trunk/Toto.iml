@@ -44,12 +44,12 @@
     <orderEntry type="library" name="org.apache.pdfbox:pdfbox:1.8.10" level="project" />
     <orderEntry type="library" name="org.apache.commons:commons-vfs2:2.0" level="project" />
     <orderEntry type="library" name="com.jcraft:jsch:0.1.50" level="project" />
-    <orderEntry type="library" name="org.mariadb.jdbc:mariadb-java-client:1.4.3" level="project" />
     <orderEntry type="library" name="com.springsource.javax.servlet.jsp.jstl-1.2.0" level="project" />
     <orderEntry type="library" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.2" level="project" />
     <orderEntry type="library" name="com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.2" level="project" />
     <orderEntry type="library" name="org.zeroturnaround:zt-zip:1.13" level="project" />
     <orderEntry type="library" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.4.3" level="project" />
     <orderEntry type="library" name="org.codehaus.groovy:groovy-all:2.4.3" level="project" />
+    <orderEntry type="library" name="org.mariadb.jdbc:mariadb-java-client:2.4.0" level="project" />
   </component>
 </module>

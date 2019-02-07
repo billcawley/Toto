@@ -24,7 +24,6 @@
           <element id="library" level="project" name="org.apache.pdfbox:pdfbox:1.8.10" />
           <element id="library" level="project" name="org.apache.commons:commons-vfs2:2.0" />
           <element id="library" level="project" name="com.jcraft:jsch:0.1.50" />
-          <element id="library" level="project" name="org.mariadb.jdbc:mariadb-java-client:1.4.3" />
           <element id="library" level="project" name="com.springsource.javax.servlet.jsp.jstl-1.2.0" />
           <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.2" />
           <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.2" />
@@ -32,6 +31,7 @@
           <element id="library" level="project" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.4.3" />
           <element id="library" level="project" name="org.apache.commons:commons-math3:3.6.1" />
           <element id="library" level="project" name="org.codehaus.groovy:groovy-all:2.4.3" />
+          <element id="library" level="project" name="org.mariadb.jdbc:mariadb-java-client:2.4.0" />
         </element>
       </element>
     </root>

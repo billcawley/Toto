@@ -137,11 +137,10 @@ public class ReportExecutor {
                         String choiceQuery = trimmedLine.substring(inPos + 4).trim();
                         loopsLog.append(choiceName).append(" : ").append(choiceQuery).append("\r\n");
                         final List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choiceQuery, loggedInUser.getUser().getEmail(), false, provenanceId);
-                        for (String choiceValue : dropdownListForQuery) { // run the for :)
+                        for (String choiceValue : dropdownListForQuery) { // run the "for" :)
                             RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp()).addToLog(loggedInUser.getDataAccessToken(), choiceName + " : " + choiceValue);
                             SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choiceName.replace("`", ""), choiceValue);
                             toReturn = executeCommands(loggedInUser, subCommands, loopsLog, systemData2DArrays, count, provenanceId);
-
                         }
                     }
                     // if not a for each I guess we just execute? Will check for "do"
@@ -150,6 +149,7 @@ public class ReportExecutor {
                     Database oldDatabase = null;
                     OnlineReport onlineReport;
                     // so, first try to get the report based off permissions, if so it might override the current database
+                    // note this is a BAD idea e.g. for temporary databases, todo, stop it then
                     if (loggedInUser.getPermission(reportToRun.toLowerCase()) != null) {
                         TypedPair<OnlineReport, Database> permission = loggedInUser.getPermission(reportToRun.toLowerCase());
                         onlineReport = permission.getFirst();
@@ -213,13 +213,15 @@ public class ReportExecutor {
                                 toReturn = new TypedPair<>(outcomeCell.getStringValue(), null);
                             }
                         }
-                        // revert database if
+                        // revert database if it was changed
                         if (oldDatabase != null) {
                             loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), oldDatabase);
                         }
 
                         SName systemDataName = book.getInternalBook().getNameByName(SYSTEMDATA);
                         if (systemDataName != null && systemData2DArrays != null) {
+                            // gather debug info
+
                             systemData2DArrays.add(BookUtils.nameToStringLists(systemDataName));
                         }
                     }

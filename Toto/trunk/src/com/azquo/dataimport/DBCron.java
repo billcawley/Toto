@@ -108,7 +108,7 @@ public class DBCron {
                                                 , null, null);
                                         PendingUploadDAO.store(pendingUpload);
                                     } else {
-                                        System.out.println("fine found for pending but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");
+                                        System.out.println("file found for pending but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");
                                     }
                                 } catch (IOException e) {
                                     e.printStackTrace();

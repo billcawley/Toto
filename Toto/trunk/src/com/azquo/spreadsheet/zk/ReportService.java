@@ -102,6 +102,8 @@ public class ReportService {
     }
 
     static void resolveQueries(Book book, LoggedInUser loggedInUser) {
+        List<SName> names = new ArrayList<>(book.getInternalBook().getNames());
+        names.sort(Comparator.comparing(SName::getName)); // they may be anyway but be sure
         for (SName name : book.getInternalBook().getNames()) {
             if (name != null && name.getName() != null && name.getName().endsWith("Query")) {
                 Sheet sheet = book.getSheet(name.getRefersToSheetName());
@@ -380,18 +382,23 @@ public class ReportService {
     }
 
     public static void extractEmailInfo(Book book) {
-        for (SName name : book.getInternalBook().getNames()) {
-            if (name.getName().toLowerCase().startsWith(ReportRenderer.AZEMAILADDRESS)) {
-                String region = name.getName().substring(ReportRenderer.AZEMAILADDRESS.length());
-                String sheetName = name.getRefersToSheetName();
-                SName emailSubjectName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILSUBJECT + region);
-                SName emailTextName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILTEXT + region);
-                Sheet sheet = book.getSheet(sheetName);
-                String emailAddress = BookUtils.getSnameCell(name).getStringValue();
-                if (emailAddress.length() > 0 && emailSubjectName != null && emailTextName != null) {
-                    AzquoMailer.sendEMail(emailAddress, null, BookUtils.getSnameCell(emailSubjectName).getStringValue(), BookUtils.getSnameCell(emailTextName).getStringValue(), null, null);
+        // EFC - it's exceptioning - going to try catch it for the mo
+        try{
+            for (SName name : book.getInternalBook().getNames()) {
+                if (name.getName().toLowerCase().startsWith(ReportRenderer.AZEMAILADDRESS)) {
+                    String region = name.getName().substring(ReportRenderer.AZEMAILADDRESS.length());
+                    String sheetName = name.getRefersToSheetName();
+                    SName emailSubjectName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILSUBJECT + region);
+                    SName emailTextName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILTEXT + region);
+                    Sheet sheet = book.getSheet(sheetName);
+                    String emailAddress = BookUtils.getSnameCell(name).getStringValue();
+                    if (emailAddress.length() > 0 && emailSubjectName != null && emailTextName != null) {
+                        AzquoMailer.sendEMail(emailAddress, null, BookUtils.getSnameCell(emailSubjectName).getStringValue(), BookUtils.getSnameCell(emailTextName).getStringValue(), null, null);
+                    }
                 }
             }
+        } catch (Exception e){
+            System.out.println("Email exception : " + e.getMessage());
         }
     }
 }

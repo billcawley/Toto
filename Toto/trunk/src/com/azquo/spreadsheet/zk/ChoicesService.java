@@ -186,9 +186,10 @@ public class ChoicesService {
                         String choiceName = sName.getName().substring(0, sName.getName().length() - "Chosen".length()).toLowerCase();
                         if (chosen.getRowCount() == 1 && chosen.getColumnCount() == 1) { // I think I may keep this constraint even after
                             // need to check that this choice is actually valid, so we need the choice query - should this be using the query as a cache?
-                            List<String> validOptions = choiceOptionsMap.get(choiceName + "choice");
+                            List<String> validOptions = choiceOptionsMap.get(choiceName + "choice") != null ? new ArrayList<>(choiceOptionsMap.get(choiceName + "choice")) : null;
                             String userChoice = userChoices.get(choiceName.startsWith("az_") ? choiceName.substring(3) : choiceName);
                             LocalDate date = ReportUtils.isADate(userChoice);
+                            // todo - tidy after the valid motpions ower case thing
                             if (validOptions != null) {
                                 if (SpreadsheetService.FIRST_PLACEHOLDER.equals(userChoice)) {
                                     userChoice = validOptions.get(0);
@@ -196,17 +197,19 @@ public class ChoicesService {
                                 if (SpreadsheetService.LAST_PLACEHOLDER.equals(userChoice)) {
                                     userChoice = validOptions.get(validOptions.size() - 1);
                                 }
-                                // todo, case insensetivity - surely dec-18 should be allowed if Dec-18 is in the list? A concern . . .
-                                while (userChoice != null && !validOptions.contains(userChoice) && userChoice.contains("->")) {
+                                String first = !validOptions.isEmpty() ? validOptions.get(0) : null; // before lower case
+                                // hack - valid options needs to be case insensitive. Allow dec-18 for Dec-18
+                                for (int i = 0; i < validOptions.size(); i++){
+                                    validOptions.set(i, validOptions.get(i).toLowerCase());
+                                }
+                                while (userChoice != null && !validOptions.contains(userChoice.toLowerCase()) && userChoice.contains("->")) {
                                     //maybe the user choice is over -specified. (e.g from drilldown or removal of conflicting names)  Try removing the super-sets
                                     userChoice = userChoice.substring(userChoice.indexOf("->") + 2);
                                 }
-                                //set the upper/lower case as in the database
-                                userChoice = findIgnoreCase(validOptions, userChoice);
-                                if (userChoice == null  && !validOptions.isEmpty()) { // just set the first for the mo.
+                                if ((userChoice == null || !validOptions.contains(userChoice.toLowerCase())) && !validOptions.isEmpty()) { // just set the first for the mo.
                                     //check that userChoice is not a valid date...
-                                    if (date == null || !validOptions.contains(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))) {
-                                        userChoice = validOptions.get(0);
+                                    if (date == null || !validOptions.contains(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")).toLowerCase())) {
+                                        userChoice = first;
                                     }
                                 }
                             }
@@ -249,16 +252,6 @@ public class ChoicesService {
         }
         loggedInUser.setContext(context);
         return choiceOptionsMap;
-    }
-
-    public static String findIgnoreCase(List<String>list, String  searchStr)     {
-        if(list == null || searchStr == null || searchStr.length()==0) return null;
-
-        for (String str:list) {
-            if (str.equalsIgnoreCase(searchStr))
-                return str;
-        }
-        return null;
     }
 
     /* This did return a map with the query as the key but I'm going to change this to the name, it will save unnecessary query look ups later.

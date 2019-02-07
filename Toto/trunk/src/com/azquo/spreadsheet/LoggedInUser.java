@@ -242,4 +242,23 @@ public class LoggedInUser implements Serializable {
             e.printStackTrace();
         }
     }
+
+    @Override
+    public String toString() {
+        return "LoggedInUser{" +
+                "sessionId='" + sessionId + '\'' +
+                ", user=" + user +
+                ", sentCellsMaps=" + sentCellsMaps +
+                ", database=" + database +
+                ", onlineReport=" + onlineReport +
+                ", databaseServer=" + databaseServer +
+                ", imageStoreName='" + imageStoreName + '\'' +
+                ", context='" + context + '\'' +
+                ", businessDirectory='" + businessDirectory + '\'' +
+                ", reportIdDatabaseIdPermissions=" + reportIdDatabaseIdPermissions +
+                ", lastJSTreeNodeId=" + lastJSTreeNodeId +
+                ", jsTreeLookupMap=" + jsTreeLookupMap +
+                ", copyMode=" + copyMode +
+                '}';
+    }
 }

@@ -227,4 +227,13 @@ public class AzquoMemoryDBConnection {
         }
     }
 
+    @Override
+    public String toString() {
+        return "AzquoMemoryDBConnection{" +
+                "azquoMemoryDB=" + azquoMemoryDB +
+                ", azquoMemoryDBIndex=" + azquoMemoryDBIndex +
+                ", provenance=" + provenance +
+                ", unusedProvenance=" + unusedProvenance +
+                '}';
+    }
 }

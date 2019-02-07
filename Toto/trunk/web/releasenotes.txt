@@ -1,3 +1,11 @@
+05-02-19
+
+Single import process work. UI improvements, zip feedback, list pending uploads based on the user's team
+
+with new 'provisional' clause (provisional = only insert into set if not already categorised as some other element of the set)
+
+Does not import hidden sheets
+
 01-02-19
 
 Pending uploads optimizeation, UI tweaks, Region size limit pushed to 5 million for big risk data summary

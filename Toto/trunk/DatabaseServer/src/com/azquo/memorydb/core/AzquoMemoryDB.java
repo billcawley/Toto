@@ -89,6 +89,7 @@ public final class AzquoMemoryDB {
     }
 
     // vanilla use of ConcurrentHashMap, should be fine
+    // todo - copy just for that user!!
     public static AzquoMemoryDB getCopyOfAzquoMemoryDB(String persistenceName) {
         return memoryDatabaseMap.computeIfAbsent(StringLiterals.copyPrefix + persistenceName, t -> {
                     AzquoMemoryDB sourceDB = getAzquoMemoryDB(persistenceName, null);
@@ -321,7 +322,7 @@ public final class AzquoMemoryDB {
 
     // trying for a basic count and set cache
 
-    Provenance getProvenanceById(final int id) {
+    public Provenance getProvenanceById(final int id) {
         return provenanceByIdMap.get(id);
     }
 

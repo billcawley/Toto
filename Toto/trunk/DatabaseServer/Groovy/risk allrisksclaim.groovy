@@ -29,7 +29,7 @@ def fileProcess(Object[] args) {
                     st.nextToken()
                     state = st.nextToken()
                     if (!state.equals("Totals For:")){
-                        println("found a state " + state)
+                        //println("found a state " + state)
                         states.add(state);
                         break;
                     }
