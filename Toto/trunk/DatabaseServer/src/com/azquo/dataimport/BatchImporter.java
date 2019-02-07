@@ -124,8 +124,8 @@ public class BatchImporter implements Callable<Void> {
                 }
             }
         }
-        azquoMemoryDBConnection.addToUserLogNoException("Batch finishing : " + DecimalFormat.getInstance().format(dataToLoad.size()) + " imported.", true);
-        azquoMemoryDBConnection.addToUserLogNoException("Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
+        azquoMemoryDBConnection.addToUserLogNoException("..Batch finishing : " + DecimalFormat.getInstance().format(dataToLoad.size()) + " imported.", true);
+        azquoMemoryDBConnection.addToUserLogNoException("..Values Imported/Modified : " + DecimalFormat.getInstance().format(valuesModifiedCounter), true);
         return null;
     }
 
