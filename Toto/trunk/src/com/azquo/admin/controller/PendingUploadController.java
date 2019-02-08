@@ -2,7 +2,6 @@ package com.azquo.admin.controller;
 
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
-import com.azquo.admin.StandardDAO;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
 import com.azquo.dataimport.ImportTemplateData;
@@ -13,18 +12,15 @@ import com.azquo.spreadsheet.controller.LoginController;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.zk.BookUtils;
 import org.apache.commons.lang.math.NumberUtils;
-import org.springframework.security.access.method.P;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.zeroturnaround.zip.ZipEntryCallback;
 import org.zeroturnaround.zip.ZipUtil;
 import org.zkoss.poi.ss.usermodel.Row;
 import org.zkoss.poi.ss.usermodel.Sheet;
 import org.zkoss.poi.ss.usermodel.Workbook;
 import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
-import sun.misc.IOUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -49,8 +45,8 @@ import java.util.zip.ZipFile;
 @RequestMapping("/PendingUpload")
 public class PendingUploadController {
 
-    public static final String PARAMSPASSTHROUGH = "PARAMSPASSTHROUGH";
-    public static final String LOOKUPS = "LOOKUPS ";
+    private static final String PARAMSPASSTHROUGH = "PARAMSPASSTHROUGH";
+    private static final String LOOKUPS = "LOOKUPS ";
 
     //    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
     @RequestMapping
@@ -105,7 +101,6 @@ public class PendingUploadController {
                     }
                 }
                 model.put("month", month);
-
 
                 // before starting an import thread check we have database and parameters
                 Database database = DatabaseDAO.findById(pu.getDatabaseId());
@@ -430,13 +425,10 @@ public class PendingUploadController {
                     }
                     UploadedFile uploadedFile = new UploadedFile(pu.getFilePath(), Collections.singletonList(pu.getFileName()), params, false, !finalActuallyImport);
                     try {
-                        uploadedFile.setPostProcessFlag(true);
                         List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, finalLookupValuesForFiles, fileLoadFlags, fileRejectLines);
                         if (!finalActuallyImport) {
                             session.setAttribute(PARAMSPASSTHROUGH, lookupValuesForFilesHTML.toString());
                         } else {
-                            // will be moved to "actuallyImport"
-
                             Workbook wb = new XSSFWorkbook();
                             Sheet summarySheet = wb.createSheet("Summary");
                             summaryUploadFeedbackForSheet(uploadedFiles, summarySheet, pu);
@@ -518,7 +510,7 @@ public class PendingUploadController {
                 row.createCell(cellIndex++).setCellValue(name);
             }
             if (uploadedFile.isConvertedFromWorksheet()) {
-                row.createCell(cellIndex++).setCellValue("Converted from worksheet");
+                row.createCell(cellIndex).setCellValue("Converted from worksheet");
             }
 
             cellIndex = 0;
@@ -536,34 +528,34 @@ public class PendingUploadController {
             cellIndex = 0;
             row = sheet.createRow(rowIndex++);
             row.createCell(cellIndex++).setCellValue("Time to process");
-            row.createCell(cellIndex++).setCellValue(uploadedFile.getProcessingDuration() + " ms");
+            row.createCell(cellIndex).setCellValue(uploadedFile.getProcessingDuration() + " ms");
             cellIndex = 0;
             row = sheet.createRow(rowIndex++);
             row.createCell(cellIndex++).setCellValue("Time to Number of lines imported");
-            row.createCell(cellIndex++).setCellValue(uploadedFile.getNoLinesImported());
+            row.createCell(cellIndex).setCellValue(uploadedFile.getNoLinesImported());
             cellIndex = 0;
             row = sheet.createRow(rowIndex++);
             row.createCell(cellIndex++).setCellValue("Number of values adjusted");
-            row.createCell(cellIndex++).setCellValue(uploadedFile.getNoValuesAdjusted().get());
+            row.createCell(cellIndex).setCellValue(uploadedFile.getNoValuesAdjusted().get());
 
             cellIndex = 0;
             sheet.createRow(rowIndex++);
             row = sheet.createRow(rowIndex++);
 
             if (uploadedFile.getTopHeadings() != null && !uploadedFile.getTopHeadings().isEmpty()) {
-                row.createCell(cellIndex++).setCellValue("Top headings");
+                row.createCell(cellIndex).setCellValue("Top headings");
                 for (TypedPair<Integer, Integer> key : uploadedFile.getTopHeadings().keySet()) {
                     cellIndex = 0;
                     row = sheet.createRow(rowIndex++);
                     row.createCell(cellIndex++).setCellValue(BookUtils.rangeToText(key.getFirst(), key.getSecond()));
-                    row.createCell(cellIndex++).setCellValue(uploadedFile.getTopHeadings().get(key));
+                    row.createCell(cellIndex).setCellValue(uploadedFile.getTopHeadings().get(key));
                 }
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
             }
 
             if (uploadedFile.getHeadingsByFileHeadingsWithInterimLookup() != null) {
-                row.createCell(cellIndex++).setCellValue("Headings with file headings");
+                row.createCell(cellIndex).setCellValue("Headings with file headings");
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
                 Collection<List<String>> toShow;
@@ -582,9 +574,9 @@ public class PendingUploadController {
                         if (stringStringTypedPair.getSecond() != null) {
                             row.createCell(cellIndex++).setCellValue(stringStringTypedPair.getSecond());
                         }
-                        row.createCell(cellIndex++).setCellValue(stringStringTypedPair.getFirst());
+                        row.createCell(cellIndex).setCellValue(stringStringTypedPair.getFirst());
                     } else {
-                        row.createCell(cellIndex++).setCellValue("** UNUSED **");
+                        row.createCell(cellIndex).setCellValue("** UNUSED **");
                     }
                     cellIndex = 0;
                     row = sheet.createRow(rowIndex++);
@@ -592,38 +584,35 @@ public class PendingUploadController {
             }
 
             if (uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup() != null) {
-                cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex++).setCellValue("Headings without file headings");
+                row.createCell(cellIndex).setCellValue("Headings without file headings");
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
                 for (TypedPair<String, String> stringStringTypedPair : uploadedFile.getHeadingsNoFileHeadingsWithInterimLookup()) {
                     if (stringStringTypedPair.getSecond() != null) { // it could be null now as we support a non file heading azquo heading on the Import Model sheet
                         row.createCell(cellIndex++).setCellValue(stringStringTypedPair.getSecond());
                     }
-                    row.createCell(cellIndex++).setCellValue(stringStringTypedPair.getFirst());
+                    row.createCell(cellIndex).setCellValue(stringStringTypedPair.getFirst());
                     cellIndex = 0;
                     row = sheet.createRow(rowIndex++);
                 }
             }
 
             if (uploadedFile.getSimpleHeadings() != null) {
-                cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex++).setCellValue("Simple Headings");
+                row.createCell(cellIndex).setCellValue("Simple Headings");
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
                 for (String heading : uploadedFile.getSimpleHeadings()) {
-                    row.createCell(cellIndex++).setCellValue(heading);
+                    row.createCell(cellIndex).setCellValue(heading);
                     cellIndex = 0;
                     row = sheet.createRow(rowIndex++);
                 }
             }
 
             if (!uploadedFile.getLinesRejected().isEmpty()) {
-                cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex++).setCellValue("Line Errors");
+                row.createCell(cellIndex).setCellValue("Line Errors");
                 cellIndex = 0;
 
 
@@ -675,16 +664,16 @@ public class PendingUploadController {
                         row.createCell(cellIndex++).setCellValue(cell);
                     }
                     cellIndex = 0;
-                    row = sheet.createRow(rowIndex++);
+                    sheet.createRow(rowIndex++);
                 }
             }
             if (uploadedFile.getPostProcessingResult() != null) {
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
                 row.createCell(cellIndex++).setCellValue("Post processing result");
-                row.createCell(cellIndex++).setCellValue(uploadedFile.getPostProcessingResult());
+                row.createCell(cellIndex).setCellValue(uploadedFile.getPostProcessingResult());
                 cellIndex = 0;
-                row = sheet.createRow(rowIndex++);
+                sheet.createRow(rowIndex++);
             }
             // now the warning lines that will be a little more complex and have tickboxes
             // todo - factor later!
@@ -697,11 +686,11 @@ public class PendingUploadController {
                 List<String> errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex++).setCellValue("Line Warnings");
+                row.createCell(cellIndex).setCellValue("Line Warnings");
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
                 for (String error : errors) {
-                    row.createCell(cellIndex++).setCellValue(error);
+                    row.createCell(cellIndex).setCellValue(error);
                     cellIndex = 0;
                     row = sheet.createRow(rowIndex++);
                 }
@@ -754,7 +743,7 @@ public class PendingUploadController {
                         }
                         row.createCell(cellIndex++).setCellValue(error);
                     }
-                    row.createCell(cellIndex++).setCellValue("#");
+                    row.createCell(cellIndex).setCellValue("#");
                 }
 
                 cellIndex = 0;
@@ -783,17 +772,17 @@ public class PendingUploadController {
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
                 row.createCell(cellIndex++).setCellValue("ERROR");
-                row.createCell(cellIndex++).setCellValue(uploadedFile.getError());
+                row.createCell(cellIndex).setCellValue(uploadedFile.getError());
                 cellIndex = 0;
-                row = sheet.createRow(rowIndex++);
+                sheet.createRow(rowIndex++);
             }
 
             if (!uploadedFile.isDataModified()) {
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex++).setCellValue("NO DATA MODIFIED");
+                row.createCell(cellIndex).setCellValue("NO DATA MODIFIED");
                 cellIndex = 0;
-                row = sheet.createRow(rowIndex++);
+                sheet.createRow(rowIndex++);
             }
         }
     }
@@ -810,7 +799,7 @@ public class PendingUploadController {
                 row.createCell(cellIndex++).setCellValue(name);
             }
             if (uploadedFile.getError() != null) {
-                row.createCell(cellIndex++).setCellValue(uploadedFile.getError());
+                row.createCell(cellIndex).setCellValue(uploadedFile.getError());
                 sheet.createRow(rowIndex++);
                 sheet.createRow(rowIndex++);
                 continue; // necessary?
@@ -828,17 +817,14 @@ public class PendingUploadController {
                 }
                 errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex++).setCellValue("Line Warnings");
+                row.createCell(cellIndex).setCellValue("Line Warnings");
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
                 for (String error : errors) {
-                    row.createCell(cellIndex++).setCellValue(error);
+                    row.createCell(cellIndex).setCellValue(error);
                     cellIndex = 0;
                     row = sheet.createRow(rowIndex++);
                 }
-
-
-
 
                 int maxHeadingsDepth = 0;
                 if (uploadedFile.getFileHeadings() != null) {
@@ -887,7 +873,7 @@ public class PendingUploadController {
                         }
                         row.createCell(cellIndex++).setCellValue(error);
                     }
-                    row.createCell(cellIndex++).setCellValue("#");
+                    row.createCell(cellIndex).setCellValue("#");
                 }
 
                 cellIndex = 0;
@@ -915,11 +901,11 @@ public class PendingUploadController {
             if (uploadedFile.getIgnoreLinesValues() != null) {
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex++).setCellValue("Manually Rejected Lines");
+                row.createCell(cellIndex).setCellValue("Manually Rejected Lines");
                 // jumping the cell index across align it with the table above
                 cellIndex = errors != null ? errors.size() : 1;
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex++).setCellValue("#");
+                row.createCell(cellIndex).setCellValue("#");
                 cellIndex = errors != null ? errors.size() : 1;
                 row = sheet.createRow(rowIndex++);
                 ArrayList<Integer> sort = new ArrayList<>(uploadedFile.getIgnoreLinesValues().keySet());

@@ -28,6 +28,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.zeroturnaround.zip.ZipUtil;
+import org.zkoss.poi.openxml4j.opc.OPCPackage;
+import org.zkoss.poi.ss.usermodel.Name;
+import org.zkoss.poi.ss.usermodel.Workbook;
+import org.zkoss.poi.xssf.usermodel.XSSFWorkbook;
 import org.zkoss.zss.api.Importers;
 import org.zkoss.zss.api.model.Book;
 import org.zkoss.zss.api.model.Sheet;
@@ -139,6 +143,15 @@ public class ExcelController {
         } else {
             op = "";
         }
+        // hacky, fix later todo
+        if (reportName == null){
+            reportName = "";
+        } else {
+            reportName = reportName.trim();
+            if (reportName.contains(" uploaded by")) {
+                reportName = reportName.substring(0, reportName.indexOf(" uploaded by"));
+            }
+        }
 
         try {
             LoggedInUser loggedInUser = null;
@@ -196,7 +209,7 @@ public class ExcelController {
                 LoginService.switchDatabase(loggedInUser, database);
             }
 
-            if (reportName != null && reportName.length() > 0) {
+            if (reportName.length() > 0) {
                 reportName = java.net.URLDecoder.decode(reportName, "UTF-8");
                 loggedInUser.setOnlineReport(OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), reportName.trim()));
             }
@@ -296,7 +309,6 @@ public class ExcelController {
                 return CommonReportUtils.resolveQuery(loggedInUser, chosen);
             }
             if (op.equals("getdropdownlistforquery")) {
-                System.out.println("choice query : " + choice);
                 return jacksonMapper.writeValueAsString(CommonReportUtils.getDropdownListForQuery(loggedInUser, choice));
             }
 
@@ -313,7 +325,7 @@ public class ExcelController {
                 try {
                     File file = null;
                     OnlineReport onlineReport = null;
-                    if ((reportName == null || reportName.length() == 0) && (database == null || database.length() == 0)) {
+                    if ((reportName.length() == 0) && (database == null || database.length() == 0)) {
                         //get initial menu
                         List<OnlineReport> reports = AdminService.getReportList(loggedInUser);
                         if (reports.size() == 1 && !reports.get(0).getReportName().equals("No reports found")) {
@@ -325,11 +337,7 @@ public class ExcelController {
                             downloadName = "Available reports";
                         }
                     } else {
-                        reportName = reportName.trim();
-                        if (reportName.contains(" uploaded by")) {
-                            reportName = reportName.substring(0, reportName.indexOf(" uploaded by"));
-                        }
-                        if (reportName == null || reportName.length() == 0) {
+                        if (reportName.length() == 0) {
                             onlineReport = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
                             if (onlineReport != null) {
                                 onlineReport.setDatabase(loggedInUser.getDatabase().getName());
@@ -385,10 +393,25 @@ public class ExcelController {
                         suffix = file.getPath().substring(dotPos);
                     }
                     if (base64) {
-                        // ok new thing - we want the xlsx file to auto open a plugin pane, there's a function to add this in
-                        String convertedFile = createAutoOpenIfRequired(file.getAbsolutePath());
-                        byte[] bytes = Files.readAllBytes(Paths.get(convertedFile));
-                        byte[] encodedBytes = Base64.getEncoder().encode(bytes);
+//                        byte[] bytes = Files.readAllBytes(Paths.get(file.getAbsolutePath()));
+                        // will this mess up the file?? who knows!
+                        OPCPackage opcPackage = OPCPackage.open(file.getAbsolutePath());
+                        Workbook book = new XSSFWorkbook(opcPackage);
+                        for (int i = 0; i < book.getNumberOfNames(); i++){
+                            Name nameAt = book.getNameAt(i);
+                            if (!nameAt.getSheetName().isEmpty()){
+                                if (nameAt.getSheetIndex() == -1){
+                                    int lookup = book.getSheetIndex(nameAt.getSheetName());
+                                    if (lookup != -1){
+                                        nameAt.setSheetIndex(lookup);
+                                    }
+                                }
+                            }
+                        }
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        book.write(baos);
+                        byte[] encodedBytes = Base64.getEncoder().encode(baos.toByteArray());
+                        baos.close();
                         String string64 = new String(encodedBytes);
                         int sliceSize = 8000;
 
@@ -474,6 +497,8 @@ public class ExcelController {
                                 excelJsonRequest.context, userRegionOptions, true, null);
                         RegionOptions holdOptions = cellsAndHeadingsForDisplay.getOptions();//don't want to send these to Excel
                         cellsAndHeadingsForDisplay.setOptions(null);
+                        System.out.println("NPE checking : " + loggedInUser.getOnlineReport());
+                        System.out.println("NPE checking : " + excelJsonRequest);
                         loggedInUser.setSentCells(loggedInUser.getOnlineReport().getId(), excelJsonRequest.sheetName, excelJsonRequest.region, cellsAndHeadingsForDisplay);
                         result = jacksonMapper.writeValueAsString(new CellsAndHeadingsForExcel(cellsAndHeadingsForDisplay));
                         cellsAndHeadingsForDisplay.setOptions(holdOptions);
@@ -543,86 +568,6 @@ public class ExcelController {
             result = e.getMessage();
         }
         return jsonError(result);
-    }
-    // for dev this was simple but now there's an issue of the patch to the file being dependant on how the manifest is deployed
-
-    public String createAutoOpenIfRequired(String sourceFile) throws IOException {
-        File check = new File(sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf(".")));
-        // need to do this at the moment as I'm not sure how we deal with reports being updated . . .
-        // question is - if there is an autoopen version has the original been updated in the mean time? Some kind of timestamp against the original file
-        if (check.exists()) {
-            check.delete();
-        }
-
-        // this needs to be somewhere better. Todo.
-        String patchFilesSource = SpreadsheetService.getPatchFilesSource();
-        if (patchFilesSource == null || patchFilesSource.isEmpty()) {
-            return "no patch files";
-        }
-        //String zipFile = "/home/edward/Downloads/xlsxbreakdown/tomodify.xlsx";
-        FileUtils.copyFile(new File(sourceFile), new File(sourceFile + ".bak")); // worth making a backup as the .explode below will zap the original it seems
-        ZipUtil.explode(new File(sourceFile));
-                /* right, in here I need to hack the XML files
-                Based off a diff between files with the bits we need and files which don't :
-                1. [Content_Types].xml] - add
-
-                <Override PartName="/xl/webextensions/taskpanes.xml" ContentType="application/vnd.ms-office.webextensiontaskpanes+xml"/>
-                <Override PartName="/xl/webextensions/webextension1.xml" ContentType="application/vnd.ms-office.webextension+xml"/>
-
-                in the root <Types> element, presumably order is not important so jam it before the </Types>?
-
-                .rels has added a relationship reference, need to add something like
-                <Relationship Id="rId2" Type="http://schemas.microsoft.com/office/2011/relationships/webextensiontaskpanes" Target="xl/webextensions/taskpanes.xml"/>
-                bur presumably not interfere with other relationships
-
-                Three files added to /xl/webextensions
-                taskpanes.xml
-                webextension1.xml
-                _rels/taskpanes.xml.rels
-
-                The first two represent what the link below says needs to be added. I guess adding the third won't hurt though I have no idea if it is necessary.
-
-                https://docs.microsoft.com/en-us/office/dev/add-ins/develop/automatically-open-a-task-pane-with-a-document
-                 */
-
-        File xmlFileToPatch = new File(sourceFile + "/[Content_Types].xml");
-        String xml = FileUtils.readFileToString(xmlFileToPatch);
-        xml = xml.substring(0, xml.indexOf("</Types>"))
-                + "<Override PartName=\"/xl/webextensions/taskpanes.xml\" ContentType=\"application/vnd.ms-office.webextensiontaskpanes+xml\"/>"
-                + "<Override PartName=\"/xl/webextensions/webextension1.xml\" ContentType=\"application/vnd.ms-office.webextension+xml\"/>"
-                + xml.substring(xml.indexOf("</Types>"));
-        FileUtils.deleteQuietly(xmlFileToPatch);
-        FileUtils.write(xmlFileToPatch, xml);
-
-        // now patch the .rels file
-
-        File relsFileToPatch = new File(sourceFile + "/_rels/.rels");
-        String rels = FileUtils.readFileToString(relsFileToPatch);
-                /* ok find the point at which existing relationships stop and add
-                 <Relationship Id="rId2" Type="http://schemas.microsoft.com/office/2011/relationships/webextensiontaskpanes" Target="xl/webextensions/taskpanes.xml"/>
-                with a non taken id
-                */
-        int i;
-        for (i = 1; i < 20; i++) { // arbitrary stop at 20, I'm looking for the first spare
-            if (!rels.contains("Relationship Id=\"rId" + i + "\"")) {
-                break;
-            }
-        }
-        // jam it right before </Relationships>
-        rels = rels.substring(0, rels.indexOf("</Relationships>"))
-                + "<Relationship Id=\"rId" + i + "\" Type=\"http://schemas.microsoft.com/office/2011/relationships/webextensiontaskpanes\" Target=\"xl/webextensions/taskpanes.xml\"/>"
-                + rels.substring(rels.indexOf("</Relationships>"));
-        FileUtils.deleteQuietly(relsFileToPatch);
-        FileUtils.write(relsFileToPatch, rels);
-        // now copy in the patch files . . .
-        FileUtils.copyDirectory(new File(patchFilesSource), new File(sourceFile + "/xl/webextensions/"));
-        ZipUtil.pack(new File(sourceFile), new File(sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf("."))));
-        FileUtils.deleteDirectory(new File(sourceFile));
-        //restore the backup
-        FileUtils.copyFile(new File(sourceFile + ".bak"), new File(sourceFile));
-        FileUtils.deleteQuietly(new File(sourceFile + ".bak"));
-        return sourceFile.substring(0, sourceFile.lastIndexOf(".")) + "autoopen" + sourceFile.substring(sourceFile.lastIndexOf("."));
-
     }
 
     private boolean isEqual(String s1, String s2) {

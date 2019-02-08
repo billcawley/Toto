@@ -502,8 +502,8 @@ class AzquoCellService {
             while (colNo < toReturn.get(0).size()) {
                 boolean colsBlank = true;
                 for (int j = 0; j < regionOptions.hideCols; j++) {
-                    for (int rowNo = 0; rowNo < toReturn.size(); rowNo++) {
-                        AzquoCell cellToCheck = toReturn.get(rowNo).get(colNo + j);
+                    for (List<AzquoCell> azquoCells : toReturn) {
+                        AzquoCell cellToCheck = azquoCells.get(colNo + j);
                         if (cellToCheck.getStringValue() != null && cellToCheck.getStringValue().length() > 0 && !cellToCheck.getStringValue().equals("0.0")) {
                             colsBlank = false;
                             break;
@@ -515,8 +515,8 @@ class AzquoCellService {
                 }
                 if (colsBlank) {
                     for (int i = 0; i < regionOptions.hideCols; i++) {
-                        for (int j = 0; j < toReturn.size(); j++) {
-                            toReturn.get(j).remove(colNo);
+                        for (List<AzquoCell> azquoCells : toReturn) {
+                            azquoCells.remove(colNo);
                         }
                     }
                 } else {

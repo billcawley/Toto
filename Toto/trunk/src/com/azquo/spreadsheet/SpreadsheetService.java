@@ -82,7 +82,6 @@ public class SpreadsheetService {
     private static final String ALIAS = "alias";
     private static final String SCANDIR = "scandir";
     private static final String SCANBUSINESS = "scanbusiness";
-    private static final String PATCHFILESSOURCE = "patchfilessource";
 
     private static String getProperty(String key) {
         if (properties.get(key) == null) {
@@ -133,10 +132,6 @@ public class SpreadsheetService {
 
     public static String getScanBusiness() {
         return getProperty(SCANBUSINESS);
-    }
-
-    public static String getPatchFilesSource() {
-        return getProperty(PATCHFILESSOURCE);
     }
 
     private static final String LOGONPAGEOVERRIDE = "logonpageoverride";

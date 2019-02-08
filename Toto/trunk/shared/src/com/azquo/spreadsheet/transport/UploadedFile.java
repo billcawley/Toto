@@ -38,7 +38,7 @@ public class UploadedFile implements Serializable {
     private Map<String, String> parameters;
 
     // as it says - server side this can change how headings are looked up. Legacy logic that could be clarified.
-    private boolean convertedFromWorksheet;
+    private final boolean convertedFromWorksheet;
 
     // how ling it took to process - I said duration as "time" is ambiguous in this context
     private long processingDuration;
@@ -63,7 +63,7 @@ public class UploadedFile implements Serializable {
     private String postProcessor;
     // result of the execute from postProcessor
     private String postProcessingResult;
-    private String fileEncoding;
+    private final String fileEncoding;
     // heading definitions. At its most simple it would be a list of strings but it can be a lookup based on file headings and there could be multiple headingss so
     private List<String> simpleHeadings;
 
@@ -98,8 +98,6 @@ public class UploadedFile implements Serializable {
     private Set<Integer> ignoreLines;
     // what the ignored lines actually were - for user feedback
     private Map<Integer, String> ignoreLinesValues;
-    //flag to suppress postprocessing except for pending imports
-    private boolean postProcessFlag;
 
 
     public static class RejectedLine implements Serializable{
@@ -201,7 +199,6 @@ public class UploadedFile implements Serializable {
         provenanceId = -1;
         ignoreLines = null;
         ignoreLinesValues = null;
-        postProcessFlag = false;
     }
 
 
@@ -243,10 +240,6 @@ public class UploadedFile implements Serializable {
 
     public boolean isConvertedFromWorksheet() {
         return convertedFromWorksheet;
-    }
-
-    public void setConvertedFromWorksheet(boolean convertedFromWorksheet) {
-        this.convertedFromWorksheet = convertedFromWorksheet;
     }
 
     public long getProcessingDuration() {
@@ -380,10 +373,6 @@ public class UploadedFile implements Serializable {
         return fileEncoding;
     }
 
-    public void setFileEncoding(String fileEncoding) {
-        this.fileEncoding = fileEncoding;
-    }
-
     public List<String> getSimpleHeadings() {
         return simpleHeadings;
     }
@@ -457,9 +446,6 @@ public class UploadedFile implements Serializable {
         return ignoreLinesValues;
     }
 
-    public boolean getPostProcessFlag() {return this.postProcessFlag; }
-
-    public void setPostProcessFlag(boolean postProcessFlag){this.postProcessFlag = postProcessFlag; }
 
     public String getFullFileName(){
         List<String> fileNames = getFileNames();

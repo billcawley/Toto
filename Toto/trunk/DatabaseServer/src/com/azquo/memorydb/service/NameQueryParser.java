@@ -320,7 +320,6 @@ public class NameQueryParser {
         String countString = StringUtils.getInstruction(setTerm, StringLiterals.COUNT);
         final String compareWithString = StringUtils.getInstruction(setTerm, StringLiterals.COMPAREWITH);
         String selectString = StringUtils.getInstruction(setTerm, StringLiterals.SELECT);
-        String containsString = StringUtils.getInstruction(setTerm, StringLiterals.CONTAINS);
         // now attribute set goes in here
         final String attributeSetString = StringUtils.getInstruction(setTerm, StringLiterals.ATTRIBUTESET);
 
@@ -354,7 +353,7 @@ public class NameQueryParser {
             } else {
                 namesFound = NameService.findChildrenAtLevel(name, levelString); // reassign names from the find children clause
                 if (languages.size() > 1){//need to check for a list of temporary names
-                    List<Name> replacementNames = new ArrayList<Name>();
+                    List<Name> replacementNames = new ArrayList<>();
                     for (Name child : namesFound.getAsCollection()) {
                         if (child != null) {
                             if (child.getChildren().size() > 0 && child.getChildren().iterator().next().getDefaultDisplayName() == null) {//we have a temporary name

@@ -943,14 +943,14 @@ public final class ImportService {
         }
     }
 
-    public static SimpleDateFormat YYYYMMDD = new SimpleDateFormat("yyyy-MM-dd");
+    static SimpleDateFormat YYYYMMDD = new SimpleDateFormat("yyyy-MM-dd");
 
     private static DataFormatter df = new DataFormatter();
 
     // POI Version, used when converting sheets to csv. Essentially get a value of the cell as either an unformatted number or as a string similar to how it
     // is rendered in Excel, Some hacking to standardise date formats and remove escape characters
 
-    public static String getCellValue(Cell cell) {
+    private static String getCellValue(Cell cell) {
         String returnString = "";
         if (cell == null) {
             return "";
@@ -1315,7 +1315,7 @@ fr.close();
 
     }
 
-    public static void processSheet(
+    private static void processSheet(
             StylesTable styles,
             ReadOnlySharedStringsTable strings,
             InputStream sheetInputStream, List<String> merges, POIEventDataRecipient poiEventDataRecipient)
@@ -1350,16 +1350,10 @@ fr.close();
         }
     }
 
-    // will leave this internal for the mo and move out later
-
-    /*
-
-     */
-
     public static class MergedCellsHandler extends DefaultHandler {
         private final ArrayList<String> merges;
 
-        public MergedCellsHandler(ArrayList<String> merges) {
+        MergedCellsHandler(ArrayList<String> merges) {
             this.merges = merges;
         }
 

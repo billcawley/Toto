@@ -150,18 +150,6 @@ this may now not work at all, perhaps delete?
         RMIClient.getServerInterface(databaseServer.getIp()).emptyDatabase(loggedInUser.getDatabase().getPersistenceName());
     }
 
-    public static void copyDatabase(LoggedInUser loggedInUser, Database source, String newName) throws Exception {
-        final Business b = BusinessDAO.findById(loggedInUser.getUser().getBusinessId());
-        if (b == null) {
-            throw new Exception("That business does not exist");
-        }
-        final String persistenceName = getSQLDatabaseName(DatabaseServerDAO.findById(source.getDatabaseServerId()), b, newName);
-        final Database database = new Database(0, source.getBusinessId(), loggedInUser.getUser().getId(), newName, persistenceName, source.getNameCount(), source.getValueCount(), source.getDatabaseServerId(), null, null, false);
-        DatabaseDAO.store(database);
-        DatabaseServer server = DatabaseServerDAO.findById(database.getDatabaseServerId());
-        RMIClient.getServerInterface(server.getIp()).copyDatabase(source.getPersistenceName(), database.getPersistenceName());
-    }
-
     public static void createUser(final String email
             , final String userName
             , final LocalDateTime endDate

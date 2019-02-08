@@ -44,27 +44,27 @@ public class ReportExecutor {
     // now returns a book as it will need to be reloaded at the end
     // provenance id means when you select choices they will be constrained to
     public static Book runExecuteCommandForBook(Book book, String sourceNamedRegion) throws Exception {
-        String executeCommand = null;
+        StringBuilder executeCommand = null;
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             Sheet sheet = book.getSheetAt(sheetNumber);
             List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
             for (SName sName : namesForSheet) {
                 if (sName.getName().equalsIgnoreCase(sourceNamedRegion)) {
-                    executeCommand = "";
+                    executeCommand = new StringBuilder();
                     //;now allowing executes to be on multiple lines...
                     CellRegion region = sName.getRefersToCellRegion();
                     for (int rowNo = 0; rowNo < region.getRowCount(); rowNo++) {
-                        executeCommand += sheet.getInternalSheet().getCell(region.getRow() + rowNo, region.getColumn()).getStringValue() + "\n";
+                        executeCommand.append(sheet.getInternalSheet().getCell(region.getRow() + rowNo, region.getColumn()).getStringValue()).append("\n");
                     }
                     break;
                 }
             }
         }
-        if (executeCommand == null || executeCommand.isEmpty()) { // just return false for the moment, no executing
+        if (executeCommand == null || (executeCommand.length() == 0)) { // just return false for the moment, no executing
             return book; // unchanged, nothing to run
         }
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
-        StringBuilder loops = runExecute(loggedInUser, executeCommand, null, -1, true);
+        StringBuilder loops = runExecute(loggedInUser, executeCommand.toString(), null, -1, true);
 
         final Book newBook = Importers.getImporter().imports(new File((String) book.getInternalBook().getAttribute(OnlineController.BOOK_PATH)), "Report name");
         for (String key : book.getInternalBook().getAttributes().keySet()) {// copy the attributes overt
@@ -363,7 +363,7 @@ public class ReportExecutor {
         return toReturn;
     }
 
-    public static void fillSpecialRegions(LoggedInUser loggedInUser, Book book, int reportId) {
+    static void fillSpecialRegions(LoggedInUser loggedInUser, Book book, int reportId) {
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // I'm saving on all sheets, this should be fine with zk
                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());

@@ -39,28 +39,28 @@ import java.util.*;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
- *
+ * <p>
  * Created by cawley on 24/04/15.
- *
+ * <p>
  * New HTML admin, upload files and manage databases
- *
+ * <p>
  * CRUD type stuff though databases will be created/deleted etc. server side.
- *
+ * <p>
  * Edd note 24/10/2018 - this is getting a little cluttered, should it be refactored? todo
- *
+ * <p>
  * Current responsibilities :
- *
+ * <p>
  * create and delete dbs/upload files and manage uploads/backup/restore/pending uploads
- *
+ * <p>
  * pending uploads should perhaps be taken out of here
- *
+ * <p>
  * Also deals with import templates
  */
 @Controller
 @RequestMapping("/ManageDatabases")
 public class ManageDatabasesController {
 
-    private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
+    //    private static final Logger logger = Logger.getLogger(ManageDatabasesController.class);
     private static DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yy-HH:mm");
 
     public static final String IMPORTRESULT = "importResult";
@@ -196,9 +196,11 @@ public class ManageDatabasesController {
             List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
             try {
-                for (Database database : databaseList) {
-                    boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database);
-                    displayDataBases.add(new DisplayDataBase(isLoaded, database));
+                if (databaseList != null) {
+                    for (Database database : databaseList) {
+                        boolean isLoaded = AdminService.isDatabaseLoaded(loggedInUser, database);
+                        displayDataBases.add(new DisplayDataBase(isLoaded, database));
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -216,30 +218,33 @@ public class ManageDatabasesController {
                 model.put("serverList", false);
             }
             List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForBusinessWithBasicSecurity(loggedInUser, fileSearch);
-            if ("database".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDatabaseName));
+            if (uploadRecordsForDisplayForBusiness != null) {
+                if ("database".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDatabaseName));
+                }
+                if ("databasedown".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDatabaseName().compareTo(o1.getDatabaseName())));
+                }
+                if ("date".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDate));
+                }
+                if ("datedown".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDate().compareTo(o1.getDate())));
+                }
+                if ("businessname".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getBusinessName));
+                }
+                if ("businessnamedown".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getBusinessName().compareTo(o1.getBusinessName())));
+                }
+                if ("username".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getUserName));
+                }
+                if ("usernamedown".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getUserName().compareTo(o1.getUserName())));
+                }
             }
-            if ("databasedown".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDatabaseName().compareTo(o1.getDatabaseName())));
-            }
-            if ("date".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDate));
-            }
-            if ("datedown".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDate().compareTo(o1.getDate())));
-            }
-            if ("businessname".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getBusinessName));
-            }
-            if ("businessnamedown".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getBusinessName().compareTo(o1.getBusinessName())));
-            }
-            if ("username".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getUserName));
-            }
-            if ("usernamedown".equals(sort)) {
-                uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getUserName().compareTo(o1.getUserName())));
-            }
+
             model.put("dbsort", "database".equals(sort) ? "databasedown" : "database");
             model.put("datesort", "date".equals(sort) ? "datedown" : "date");
             model.put("businessnamesort", "businessname".equals(sort) ? "businessnamedown" : "businessname");
@@ -414,7 +419,7 @@ public class ManageDatabasesController {
             boolean first = true;
             toReturn.append("<b>");
             for (String name : names) {
-                if (!first){
+                if (!first) {
                     toReturn.append(", ");
                 }
                 toReturn.append(name);
@@ -428,17 +433,17 @@ public class ManageDatabasesController {
             toReturn.append("<br/>\n");
             toReturn.append("Validation Summary<br/>\n");
             // improved list
-            if (!uploadedFile.getErrorHeadings().isEmpty()){
-                for (String errorHeading : uploadedFile.getErrorHeadings()){
+            if (!uploadedFile.getErrorHeadings().isEmpty()) {
+                for (String errorHeading : uploadedFile.getErrorHeadings()) {
                     int linesWithThatError = 0;
                     for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
-                        if (warningLine.getErrors().keySet().contains(errorHeading)){
+                        if (warningLine.getErrors().keySet().contains(errorHeading)) {
                             linesWithThatError++;
                         }
                     }
                     toReturn.append(errorHeading).append(" : ");
-                    if (linesWithThatError > 0){
-                        toReturn.append("<span style=\"background-color: #FFAAAA; color: #000000\">" + linesWithThatError + " Warnings</span>");
+                    if (linesWithThatError > 0) {
+                        toReturn.append("<span style=\"background-color: #FFAAAA; color: #000000\">").append(linesWithThatError).append(" Warnings</span>");
                     } else {
                         toReturn.append("<span style=\"background-color: #AAFFAA; color: #000000\">Pass</span>");
                     }
@@ -446,11 +451,10 @@ public class ManageDatabasesController {
                 }
             }
 
-
             // jump it out past the end for actual info
             first = true;
             for (String key : uploadedFile.getParameters().keySet()) {
-                if (!first){
+                if (!first) {
                     toReturn.append(", ");
                 }
                 toReturn.append(key).append(" = ").append(uploadedFile.getParameter(key));
@@ -461,12 +465,11 @@ public class ManageDatabasesController {
             toReturn.append("Number of lines imported : ").append(uploadedFile.getNoLinesImported()).append(", ");
             toReturn.append("Number of values adjusted: ").append(uploadedFile.getNoValuesAdjusted()).append("\n<br/>");
 
-
             if (uploadedFile.getTopHeadings() != null && !uploadedFile.getTopHeadings().isEmpty()) {
                 if (noClickableHeadings) {
                     toReturn.append("Top headings : \n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings" + id + "'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings" + id + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('topHeadings").append(id).append("'); return false;\">Top headings</a> : \n<br/><div id=\"topHeadings").append(id).append("\" style=\"display : none\">");
                 }
                 for (TypedPair<Integer, Integer> key : uploadedFile.getTopHeadings().keySet()) {
                     toReturn.append(BookUtils.rangeToText(key.getFirst(), key.getSecond())).append("\t->\t").append(uploadedFile.getTopHeadings().get(key)).append("\n<br/>");
@@ -558,12 +561,12 @@ public class ManageDatabasesController {
                 toReturn.append("<div style='overflow: auto;max-height:400px;width:90vw'><table style='font-size:90%'><thead><tr>");
                 toReturn.append("<th style='position: sticky; top: 0;'>Error</th>");
                 toReturn.append("<th style='position: sticky; top: 0;'>#</th>");
-                if (uploadedFile.getFileHeadings() != null){
-                    for (List<String> headingCol : uploadedFile.getFileHeadings()){
+                if (uploadedFile.getFileHeadings() != null) {
+                    for (List<String> headingCol : uploadedFile.getFileHeadings()) {
                         toReturn.append("<th style='position: sticky; top: 0;'>");
                         first = true;
-                        for (String heading : headingCol){
-                            if (!first){
+                        for (String heading : headingCol) {
+                            if (!first) {
                                 toReturn.append("<br/>");
                             }
                             toReturn.append(heading);
@@ -643,12 +646,12 @@ public class ManageDatabasesController {
                 }
 
                 toReturn.append("<th style='position: sticky; top: 0;'>#</th>");
-                if (uploadedFile.getFileHeadings() != null){
-                    for (List<String> headingCol : uploadedFile.getFileHeadings()){
+                if (uploadedFile.getFileHeadings() != null) {
+                    for (List<String> headingCol : uploadedFile.getFileHeadings()) {
                         toReturn.append("<th style='position: sticky; top: 0;'>");
                         first = true;
-                        for (String heading : headingCol){
-                            if (!first){
+                        for (String heading : headingCol) {
+                            if (!first) {
                                 toReturn.append("<br/>");
                             }
                             toReturn.append(heading);
@@ -669,7 +672,7 @@ public class ManageDatabasesController {
                     StringBuilder sb = new StringBuilder();
                     first = true;
                     for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
-                        if (!first){
+                        if (!first) {
                             sb.append(",");
                         }
                         sb.append(warningLine.getLineNo());
@@ -682,7 +685,7 @@ public class ManageDatabasesController {
                     toReturn.append("<tr>");
                     if (checkboxId != -1) {
                         toReturn.append("<td><div align=\"center\"><input type=\"checkbox\" name=\"" + checkboxId + "-" + warningLine.getLineNo() + "\" /></div></td>");
-                        toReturn.append("<td nowrap><a href=\"#\" onclick=\"doComment('" + checkboxId + "-" + warningLine.getLineNo() + "'); return false;\">" + (comments != null && comments.contains(warningLine.getIdentifier()) ?  "See Comment(s)" : "Add Comment") + "</a></td>");
+                        toReturn.append("<td nowrap><a href=\"#\" onclick=\"doComment('" + checkboxId + "-" + warningLine.getLineNo() + "'); return false;\">" + (comments != null && comments.contains(warningLine.getIdentifier()) ? "See Comment(s)" : "Add Comment") + "</a></td>");
                     }
                     for (String error : errors) {
                         toReturn.append("<td nowrap>" + (warningLine.getErrors().containsKey(error) ? "<span style=\"background-color: #FFAAAA; color: #000000\">" + warningLine.getErrors().get(error) + "</span>" : "") + "</td>");

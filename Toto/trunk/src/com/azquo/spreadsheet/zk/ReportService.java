@@ -1,8 +1,6 @@
 package com.azquo.spreadsheet.zk;
 
 import com.azquo.DateUtils;
-import com.azquo.StringLiterals;
-import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.database.DatabaseDAO;
@@ -25,7 +23,6 @@ import org.zkoss.zss.ui.Spreadsheet;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by edward on 09/01/17.
@@ -137,10 +134,9 @@ public class ReportService {
     }
 
     private static boolean resolveFilterQuery(LoggedInUser loggedInUser, String query, List<List<String>> contextSource) {
-        String filterSet = null;
         int wherePos = query.toLowerCase().indexOf(" where (");
         if (wherePos < 0) return false;
-        filterSet = query.substring(0, wherePos).trim();
+        String filterSet = query.substring(0, wherePos).trim();
         query = query.substring(wherePos + 7).trim();
         if (query.startsWith(".")) {// attributes query
             return false;
@@ -288,17 +284,16 @@ public class ReportService {
         long time = System.currentTimeMillis();
         int reportId = (Integer) book.getInternalBook().getAttribute(OnlineController.REPORT_ID);
         OnlineReport onlineReport = OnlineReportDAO.findById(reportId);
-        boolean saveOk = true;
         String error = null;
         int savedItems = 0;
-        String redundant = "";
+        StringBuilder redundant = new StringBuilder();
         for (SName name : book.getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION.toLowerCase())) { // I'm saving on all sheets, this should be fine with zk
                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length());
                 // todo - factor this chunk? - about to put it in the execute code
                 // this is a bit annoying given that I should be able to get the options from the sent cells but there may be no sent cells. Need to investigate this - nosave is currently being used for different databases, that's the problem
                 SName optionsRegion = book.getInternalBook().getNameByName(ReportRenderer.AZOPTIONS + region);
-                String optionsSource = "";
+                String optionsSource;
                 boolean noSave = false;
                 if (optionsRegion != null) {
                     optionsSource = BookUtils.getSnameCell(optionsRegion).getStringValue();
@@ -315,12 +310,12 @@ public class ReportService {
                     } else {
                         String count = result.substring(5);
                         if (result.contains(REDUNDANT)) {
-                            redundant += count.substring(count.indexOf(REDUNDANT));
+                            redundant.append(count.substring(count.indexOf(REDUNDANT)));
                             count = count.substring(0, count.indexOf(REDUNDANT)).trim();
                         }
                         try {
                             savedItems += Integer.parseInt(count.trim());
-                        } catch (Exception e) {
+                        } catch (Exception ignored) {
 
                         }
                     }
@@ -343,12 +338,10 @@ public class ReportService {
                                 final String result = SpreadsheetService.saveData(loggedInUser, reportId, onlineReport != null ? onlineReport.getReportName() : "", repeatRegion.getRefersToSheetName(), region.toLowerCase() + "-" + row + "-" + col);
                                 if (!result.startsWith("true")) {
                                     Clients.evalJavaScript("alert(\"Save error : " + result + "\")");
-                                    saveOk = false;
                                 } else {
                                     try {
                                         savedItems += Integer.parseInt(result.substring(5));
-                                    } catch (Exception e) {
-
+                                    } catch (Exception ignored) {
                                     }
                                 }
                             }
@@ -371,7 +364,7 @@ public class ReportService {
                 error += " - " + redundant;
             }
 
-            loggedInUser.userLog("Save : " + onlineReport.getReportName());
+            loggedInUser.userLog("Save : " + (onlineReport != null ? onlineReport.getReportName() : ""));
             ReportExecutor.runExecuteCommandForBook(book, ReportRenderer.FOLLOWON); // that SHOULD do it. It will fail gracefully in the vast majority of times there is no followon
             // unlock here makes sense think, if duff save probably leave locked
             SpreadsheetService.unlockData(loggedInUser);
@@ -381,16 +374,14 @@ public class ReportService {
         }
     }
 
-    public static void extractEmailInfo(Book book) {
+    static void extractEmailInfo(Book book) {
         // EFC - it's exceptioning - going to try catch it for the mo
         try{
             for (SName name : book.getInternalBook().getNames()) {
                 if (name.getName().toLowerCase().startsWith(ReportRenderer.AZEMAILADDRESS)) {
                     String region = name.getName().substring(ReportRenderer.AZEMAILADDRESS.length());
-                    String sheetName = name.getRefersToSheetName();
                     SName emailSubjectName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILSUBJECT + region);
                     SName emailTextName = book.getInternalBook().getNameByName(ReportRenderer.AZEMAILTEXT + region);
-                    Sheet sheet = book.getSheet(sheetName);
                     String emailAddress = BookUtils.getSnameCell(name).getStringValue();
                     if (emailAddress.length() > 0 && emailSubjectName != null && emailTextName != null) {
                         AzquoMailer.sendEMail(emailAddress, null, BookUtils.getSnameCell(emailSubjectName).getStringValue(), BookUtils.getSnameCell(emailTextName).getStringValue(), null, null);
