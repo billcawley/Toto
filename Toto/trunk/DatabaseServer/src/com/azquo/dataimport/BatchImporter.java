@@ -183,16 +183,13 @@ public class BatchImporter implements Callable<Void> {
                 boolean cellOk = false;
                 if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
                     languages = new ArrayList<>();
-                    languages.add(cell.getImmutableImportHeading().attribute);
+                    String newLanguages = cell.getImmutableImportHeading().attribute;
+                    for (String newLanguage:newLanguages.split(",")){
+                        languages.add(newLanguage);
+                    }
                 }
                 if (languages == null) { // same logic as used when creating the line names, not sure of this
                     languages = Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME);
-                }else{
-                    try{
-                        languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
-                    }catch (Exception e){
-                        //already there
-                    }
                 }
                 // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
                 for (Name parent : cell.getImmutableImportHeading().parentNames) { // try to find any names from anywhere
@@ -897,8 +894,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
             for (String localLang : localLangs) {
                 languages.add(localLang.trim());
             }
-            languages.addAll(defaultLanguages);
-        } else {
+         } else {
             languages.addAll(defaultLanguages);
         }
         return languages;
