@@ -188,7 +188,11 @@ public class BatchImporter implements Callable<Void> {
                 if (languages == null) { // same logic as used when creating the line names, not sure of this
                     languages = Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME);
                 }else{
-                    languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
+                    try{
+                        languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
+                    }catch (Exception e){
+                        //already there
+                    }
                 }
                 // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
                 for (Name parent : cell.getImmutableImportHeading().parentNames) { // try to find any names from anywhere
