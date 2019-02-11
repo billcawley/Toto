@@ -1,3 +1,9 @@
+08-02-19
+
+attributes allow commas
+
+tidying, Excel plugin work
+
 07-02-19
 
 Case insensitive choices - allow dec-18 if a list has Dec-18, latest MySQL driver, double check query names are ordered, properties for new Ed Broking windows server

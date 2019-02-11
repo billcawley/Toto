@@ -4,6 +4,7 @@ import com.azquo.StringLiterals;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.core.Name;
+import com.azquo.memorydb.core.Provenance;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
@@ -177,18 +178,36 @@ public class UserChoiceService {
             names = newNames;
         }
         // I'm not going to check if provenanceId is positive - if they use "updated" in the wrong context nothing should be returned
+        int count = 0;
         if (constrainToUpdated) {
-            names.removeIf(name -> {
-                if (name.getProvenance().getId() == provenanceId) {
-                    return false;
+            Provenance toLookFor = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getProvenanceById(provenanceId);
+/*            System.out.println("UPDATED SEARCH : Provenance we're looking for : " + toLookFor);
+            System.out.println("First 100 : " + toLookFor);*/
+            Iterator<Name> iterator = names.iterator();
+            while (iterator.hasNext()){
+                Name name = iterator.next();
+                boolean remove = true;
+                // ok the provenance id >= looks a bit hacky - if something updated it after (e.g. a validation sheet) then it's fair game also
+                if (name.getProvenance().getId() >= provenanceId) {
+                    remove = false;
                 }
-                for (Value v : name.getValues()) {
-                    if (v.getProvenance().getId() == provenanceId) {
-                        return false;
+                if (remove){
+                    for (Value v : name.getValues()) {
+                        if (v.getProvenance().getId() >= provenanceId) {
+                            remove = false;
+                            break;
+                        }
                     }
                 }
-                return true;
-            });
+/*                if (count < 100){
+                    System.out.println("name : " + name.getDefaultDisplayName() + " provenance : " + name.getProvenance());
+                    System.out.println("matched (may be true due to values) : " + !remove);
+                }*/
+                if (remove){
+                    iterator.remove();
+                }
+                count++;
+            }
         }
         return getUniqueNameStrings(getUniqueNames(names, forceFirstLevel));
     }
