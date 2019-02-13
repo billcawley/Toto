@@ -178,9 +178,9 @@ public class UserChoiceService {
             names = newNames;
         }
         // I'm not going to check if provenanceId is positive - if they use "updated" in the wrong context nothing should be returned
-        int count = 0;
+//        int count = 0;
         if (constrainToUpdated) {
-            Provenance toLookFor = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getProvenanceById(provenanceId);
+//            Provenance toLookFor = AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).getAzquoMemoryDB().getProvenanceById(provenanceId);
 /*            System.out.println("UPDATED SEARCH : Provenance we're looking for : " + toLookFor);
             System.out.println("First 100 : " + toLookFor);*/
             Iterator<Name> iterator = names.iterator();
@@ -206,7 +206,7 @@ public class UserChoiceService {
                 if (remove){
                     iterator.remove();
                 }
-                count++;
+//                count++;
             }
         }
         return getUniqueNameStrings(getUniqueNames(names, forceFirstLevel));

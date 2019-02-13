@@ -8,9 +8,7 @@ Report server logic for creating and restoring backups
  */
 
 import com.azquo.admin.controller.ManageDatabasesController;
-import com.azquo.admin.database.Database;
-import com.azquo.admin.database.DatabaseDAO;
-import com.azquo.admin.database.DatabaseServerDAO;
+import com.azquo.admin.database.*;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.User;
@@ -42,7 +40,7 @@ import java.util.List;
 
 public class BackupService {
 
-    public static File createDBandReportsBackup(LoggedInUser loggedInUser) throws Exception {
+    public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
         String dname = loggedInUser.getDatabase().getName();
         if (dname.length() < 3){
@@ -54,13 +52,23 @@ public class BackupService {
         temp.deleteOnExit();
         // so we've got the DB backup - now gather the reports and zip 'em up
         List<OnlineReport> onlineReports = OnlineReportDAO.findForDatabaseId(loggedInUser.getDatabase().getId());
-        File[] filesToPack = new File[onlineReports.size() + 1];// +1 as it's the reports + the db . . .
+        int filesToPackSize = onlineReports.size() + 1;// +1 as it's the reports + the db . . .
+        ImportTemplate importTemplate = loggedInUser.getDatabase().getImportTemplateId() != -1 ? ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId()) : null;
+        if (importTemplate != null){
+            filesToPackSize++; // we'll have the import template too!
+        }
+
+
+        File[] filesToPack = new File[filesToPackSize];
         filesToPack[0] = temp;
         int index = 1;
         for (OnlineReport onlineReport : onlineReports) {
             // todo - can we chop the id prefix?
             filesToPack[index] = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk());
             index++;
+        }
+        if (importTemplate != null){
+            filesToPack[index] = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk());
         }
         File tempzip = File.createTempFile(loggedInUser.getDatabase().getName(), ".zip");
         System.out.println("temp zip " + tempzip.getPath());
@@ -93,7 +101,7 @@ public class BackupService {
                     fileName = f.getName();
                 }
                 toReturn.append(ManageDatabasesController.formatUploadedFiles(ImportService.importTheFile(loggedInUser
-                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null, null),-1, false, null)).append("<br/>");
+                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null, null, null),-1, false, null)).append("<br/>");
             }
         }
         return toReturn.toString();

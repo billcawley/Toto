@@ -19,12 +19,13 @@
     function updateStatus() {
         if (something) {
             jq.post("/api/SpreadsheetStatus?action=importResult", function (data) {
-                var objDiv = document.getElementById("serverStatus");
                 if (data.indexOf("true") == 0) { // the sheet should be ready, note indexof not startswith, support for the former better
                     document.getElementById("mainform").submit();
                     //location.reload();
                     something = false;
                     return;
+                } else { // possible headline info
+                    document.getElementById("headline").innerHTML = "<h1>" + data + "</h1>"
                 }
             });
             jq.post("/api/SpreadsheetStatus?action=log", function (data) {
@@ -51,9 +52,7 @@
     <input type="hidden" name="id" value="${id}"/>
     ${paramspassthrough}
 </form>
-
-
-<main class="basicDialog">
+<main class="basicDialog" style="max-width: 800px">
     <div class="basic-box-container">
         <div class="basic-head" style="background-color:${bannerColor}">
             <div class="logo">
@@ -61,12 +60,10 @@
             </div>
         </div>
         <div class="basic-box">
-            <h3>Running validation...</h3>
-            <div class="loader">
-                <span class="fa fa-spin fa-cog"></span>
+            <h3>Running validation... <span class="fa fa-spin fa-cog"></span></h3>
+            <div id="headline">
             </div>
-            <div id="serverStatus"></div>
-            <!--            <a id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)'>Abort load</a>-->
+            <div id="serverStatus" style="height: 500px"></div>
 
         </div>
     </div>

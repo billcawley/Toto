@@ -5,6 +5,8 @@ import com.azquo.admin.AdminService;
 import com.azquo.admin.database.*;
 import com.azquo.dataimport.ImportService;
 import com.azquo.dataimport.ImportTemplateData;
+import com.azquo.rmi.RMIClient;
+import com.azquo.rmi.RMIInterface;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -46,6 +48,7 @@ import java.util.zip.ZipFile;
 public class PendingUploadController {
 
     private static final String PARAMSPASSTHROUGH = "PARAMSPASSTHROUGH";
+    private static final String LATESTPROVENANCE = "LATESTPROVENANCE";
     private static final String LOOKUPS = "LOOKUPS ";
 
     //    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
@@ -55,6 +58,8 @@ public class PendingUploadController {
             , @RequestParam(value = "databaseId", required = false) String databaseId
             , @RequestParam(value = "paramssubmit", required = false) String paramssubmit
             , @RequestParam(value = "finalsubmit", required = false) String finalsubmit
+            , @RequestParam(value = "reject", required = false) String reject
+            , @RequestParam(value = "dbcheck", required = false) String dbcheck
             , @RequestParam(value = "maxcounter", required = false) String maxcounter
             , @RequestParam(value = "commentsave", required = false) String commentSave
             , @RequestParam(value = "commentid", required = false) String commentId
@@ -69,6 +74,23 @@ public class PendingUploadController {
             HttpSession session = request.getSession();
             // todo - pending upload security for non admin users?
             if (pu.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+                if ("true".equalsIgnoreCase(reject)){
+                    Path loaded = Paths.get(SpreadsheetService.getScanDir() + "/loaded");
+                    if (!Files.exists(loaded)) {
+                        Files.createDirectories(loaded);
+                    }
+                    long timestamp = System.currentTimeMillis();
+                    String newFileName = pu.getFileName().substring(0, pu.getFileName().lastIndexOf(".")) + "rejected" + pu.getFileName().substring(pu.getFileName().lastIndexOf("."));
+                    Path rejectedDestination = loaded.resolve(timestamp + newFileName);
+                    Files.copy(Paths.get(pu.getFilePath()), rejectedDestination, StandardCopyOption.REPLACE_EXISTING);
+                    // then adjust the pending upload record to have the report
+                    pu.setImportResultPath(rejectedDestination.toString());
+                    pu.setFileName(newFileName);
+                    pu.setProcessedByUserId(loggedInUser.getUser().getId());
+                    pu.setProcessedDate(LocalDateTime.now());
+                    PendingUploadDAO.store(pu);
+                    return "redirect:/api/ManageDatabases?uploadreports=true#tab4";
+                }
                 if (commentSave != null && commentId != null) {
                     Comment forBusinessIdAndIdentifierAndTeam = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), commentId, pu.getTeam());
                     if (forBusinessIdAndIdentifierAndTeam != null) {
@@ -76,6 +98,18 @@ public class PendingUploadController {
                         CommentDAO.store(forBusinessIdAndIdentifierAndTeam);
                     } else {
                         CommentDAO.store(new Comment(0, pu.getBusinessId(), commentId, pu.getTeam(), commentSave));
+                    }
+                    return "utf8page"; // stop it there, work is done
+                }
+                if ("true".equals(dbcheck)){
+                    String lastProvenance = (String) session.getAttribute(LATESTPROVENANCE);
+                    // not actually going to remove the last provenance until we actually import - someone could close the dialog which calls this
+                    String provenanceAfterValidation = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getMostRecentProvenance(loggedInUser.getDatabase().getPersistenceName());
+                    // what if last provenance is null? Can it be?
+                    if (lastProvenance != null && !lastProvenance.equals(provenanceAfterValidation)){ // then we need to warn the user, how to do this without losing any settings?
+                        model.addAttribute("content", provenanceAfterValidation);
+                    } else {
+                        model.addAttribute("content", "ok");
                     }
                     return "utf8page"; // stop it there, work is done
                 }
@@ -318,23 +352,8 @@ public class PendingUploadController {
                         }
                         count++;
                     }
-                    maintext.append("function doComment(commentId){\n" +
-                            "document.getElementById('comment').value = commentValues[commentId];\n" +
-                            "document.getElementById('commentId').value = commentId;\n" +
-                            "$( '#dialog' ).dialog(); \n" +
-                            "$('#dialog').dialog('option', 'width', 800);" +
-                            "$('#dialog').dialog('option', 'title', commentIds[commentId]);" +
-                            "}\n" +
-                            "function saveComment(){\n" +
-                            "            $.post(\"/api/PendingUpload\", {id:\"" + id + "\", commentid:commentIds[document.getElementById('commentId').value], commentsave:document.getElementById('comment').value});\n" +
-                            "commentValues[document.getElementById('commentId').value] = document.getElementById('comment').value; // or it will reset when clicked on even if saved\n" +
-                            "\n" +
-                            "\n" +
-                            "\n" +
-                            "}\n" +
-                            "");
                     maintext.append("</script>\n");
-                    maintext.append("<input name=\"finalsubmit\" value=\"finalsubmit\" type=\"hidden\" />\n");
+                    maintext.append("<input name=\"finalsubmit\" id=\"finalsubmit\" value=\"finalsubmit\" type=\"hidden\" />\n");
                     maintext.append("<input name=\"maxcounter\" value=\"" + (importResult.size() - 1) + "\" type=\"hidden\" />\n");
                     maintext.append("<table>\n");
                     maintext.append("<tr>\n");
@@ -418,6 +437,11 @@ public class PendingUploadController {
                 }
 
                 final Map<String, Map<String, String>> finalLookupValuesForFiles = lookupValuesForFiles;
+                if (!actuallyImport){ // before running validation grab the latest provenance - if it doesn't match when the actual import happens then warn the user about concurrent modification
+                    session.setAttribute(LATESTPROVENANCE, RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getMostRecentProvenance(loggedInUser.getDatabase().getPersistenceName()));
+                } else {
+                    session.removeAttribute(LATESTPROVENANCE);
+                }
                 boolean finalActuallyImport = actuallyImport;
                 new Thread(() -> {
                     if (finalLookupValuesForFiles != null && finalLookupValuesForFiles.get(pu.getFileName()) != null) { // could happen on a single xlsx upload. Apparently always zips but I'm concerned it may not be . . .
@@ -425,7 +449,7 @@ public class PendingUploadController {
                     }
                     UploadedFile uploadedFile = new UploadedFile(pu.getFilePath(), Collections.singletonList(pu.getFileName()), params, false, !finalActuallyImport);
                     try {
-                        List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, finalLookupValuesForFiles, fileLoadFlags, fileRejectLines);
+                        List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, finalLookupValuesForFiles, fileLoadFlags, fileRejectLines, session);
                         if (!finalActuallyImport) {
                             session.setAttribute(PARAMSPASSTHROUGH, lookupValuesForFilesHTML.toString());
                         } else {
@@ -471,9 +495,10 @@ public class PendingUploadController {
                                 Files.createDirectories(loaded);
                             }
                             // then move it somewhere useful
-                            Files.copy(zipforpendinguploadresult, loaded.resolve(pu.getFileName() + "results.zip"), StandardCopyOption.REPLACE_EXISTING);
+                            long timestamp = System.currentTimeMillis();
+                            Files.copy(zipforpendinguploadresult, loaded.resolve(timestamp + pu.getFileName() + "results.zip"), StandardCopyOption.REPLACE_EXISTING);
                             // then adjust the pending upload record to have the report
-                            pu.setImportResultPath(loaded.resolve(pu.getFileName() + "results.zip").toString());
+                            pu.setImportResultPath(loaded.resolve(timestamp + pu.getFileName() + "results.zip").toString());
                             pu.setProcessedByUserId(loggedInUser.getUser().getId());
                             pu.setProcessedDate(LocalDateTime.now());
                             PendingUploadDAO.store(pu);

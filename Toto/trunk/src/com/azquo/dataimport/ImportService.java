@@ -46,6 +46,7 @@ import org.zkoss.zss.api.Range;
 import org.zkoss.zss.api.Ranges;
 import org.zkoss.zss.api.model.CellData;
 
+import javax.servlet.http.HttpSession;
 import javax.xml.parsers.*;
 import java.io.*;
 import java.nio.charset.Charset;
@@ -88,7 +89,10 @@ public final class ImportService {
      last three params for Pending Uploads, perhaps could be consolidatesd? todo - pending uploads info
      parameters per file down to the file (not sheet!) check for parameters that have been set in a big chunk on the pending uploads screen
      */
-    public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, Map<String, Map<String, String>> parametersPerFile, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines) throws Exception { // setup just to flag it
+    public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, Map<String, Map<String, String>> parametersPerFile, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines, HttpSession session) throws Exception { // setup just to flag it
+        if (session != null){
+            session.removeAttribute(ManageDatabasesController.IMPORTSTATUS);
+        }
         loggedInUser.copyMode = false; // an exception might have left it true
         if (loggedInUser.getDatabase() == null) {
             throw new Exception("No database set");
@@ -99,7 +103,7 @@ public final class ImportService {
         tempFile.toFile().deleteOnExit();
         Files.copy(Paths.get(uploadedFile.getPath()), tempFile, StandardCopyOption.REPLACE_EXISTING);
         uploadedFile.setPath(tempFile.toString()); // I'm now allowing adjustment of paths like this - having the object immutable became impractical
-        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, new HashMap<>(), parametersPerFile, new AtomicInteger(0),filesToReject,fileRejectLines);
+        List<UploadedFile> processedUploadedFiles = checkForCompressionAndImport(loggedInUser, uploadedFile, new HashMap<>(), parametersPerFile, new AtomicInteger(0),filesToReject,fileRejectLines, session);
         if (!uploadedFile.isValidationTest()) {
             // persist on the database server
             SpreadsheetService.databasePersist(loggedInUser);
@@ -121,7 +125,7 @@ public final class ImportService {
     }
 
     // deals with unzipping if required - recursive in case there's a zip in a zip
-    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache, Map<String, Map<String, String>> parametersPerFile, AtomicInteger count, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines) throws Exception {
+    private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache, Map<String, Map<String, String>> parametersPerFile, AtomicInteger count, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines, HttpSession session) throws Exception {
         List<UploadedFile> processedUploadedFiles = new ArrayList<>();
         if (uploadedFile.getFileName().endsWith(".zip") || uploadedFile.getFileName().endsWith(".7z")) {
             ZipUtil.explode(new File(uploadedFile.getPath()));
@@ -144,7 +148,11 @@ public final class ImportService {
                 //now standard string order
                 return f1.getName().compareTo(f2.getName());
             });
+            int counter = 1;
             for (File f : files) {
+                if (files.size() > 1 && session != null){
+                    session.setAttribute(ManageDatabasesController.IMPORTSTATUS, counter + "/" + files.size());
+                }
                 // need new upload file object now!
                 List<String> names = new ArrayList<>(uploadedFile.getFileNames());
                 names.add(f.getName());
@@ -158,7 +166,8 @@ public final class ImportService {
                     }
                 }
                 UploadedFile zipEntryUploadFile = new UploadedFile(f.getPath(), names, fileNameParams, false, uploadedFile.isValidationTest());
-                processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, templateCache, parametersPerFile, count,filesToReject,fileRejectLines));
+                processedUploadedFiles.addAll(checkForCompressionAndImport(loggedInUser, zipEntryUploadFile, templateCache, parametersPerFile, count,filesToReject,fileRejectLines, session));
+                counter++;
             }
         } else { // nothing to decompress
             // simple checks in case the wrong type of file is being uploaded here - will probably be removed later
@@ -204,7 +213,7 @@ public final class ImportService {
                 Sheet sheet = book.getSheetAt(sheetNo);
                 if (sheet.getSheetName().equalsIgnoreCase("Import Model")) {
                     if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-                        return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser));
+                        return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
                     }
                 }
             }
@@ -212,7 +221,7 @@ public final class ImportService {
             Name importName = BookUtils.getName(book, ReportRenderer.AZIMPORTNAME);
             if (importName != null) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-                    return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser));
+                    return Collections.singletonList(uploadImportTemplate(uploadedFile, loggedInUser, true));
                 }
             }
 
@@ -741,7 +750,12 @@ public final class ImportService {
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
             }
             loggedInUser.copyMode = uploadedFile.isValidationTest();
-            uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getPostProcessor(), systemData2DArrays, uploadedFile.getProvenanceId(), false).toString());
+            try{
+                uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getPostProcessor(), systemData2DArrays, uploadedFile.getProvenanceId(), false).toString());
+            } catch (Exception e){
+                loggedInUser.copyMode = false;
+                throw e;
+            }
         }
         loggedInUser.copyMode = false;
         if (!systemData2DArrays.isEmpty()) {
@@ -1102,7 +1116,7 @@ public final class ImportService {
     }
 
     // similar to uploading a report
-    public static UploadedFile uploadImportTemplate(UploadedFile uploadedFile, LoggedInUser loggedInUser) throws
+    public static UploadedFile uploadImportTemplate(UploadedFile uploadedFile, LoggedInUser loggedInUser, boolean assignToLoggedInUserDB) throws
             IOException {
         long time = System.currentTimeMillis();
         uploadedFile.setDataModified(true); // ok so it's not technically data modified but the file has been processed correctly.
@@ -1123,6 +1137,9 @@ public final class ImportService {
             importTemplate = new ImportTemplate(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), uploadedFile.getFileName(), uploadedFile.getFileName(), ""); // default to ZK now
         }
         ImportTemplateDAO.store(importTemplate);
+        Database database = loggedInUser.getDatabase();
+        database.setImportTemplateId(importTemplate.getId());
+        DatabaseDAO.store(database);
         Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + importTemplatesDir + importTemplate.getFilenameForDisk());
         Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
         Files.copy(Paths.get(uploadedFile.getPath()), fullPath); // and copy
@@ -1134,24 +1151,45 @@ public final class ImportService {
 
     public static ImportTemplateData getImportTemplateForUploadedFile(LoggedInUser loggedInUser, UploadedFile uploadedFile, HashMap<String, ImportTemplateData> templateCache) throws Exception {
         String importTemplateName = uploadedFile != null ? uploadedFile.getParameter(IMPORTTEMPLATE) : null;
-        // make a guess at the import template if it wasn't explicitly specified
-        if (importTemplateName == null) {
-            importTemplateName = loggedInUser.getDatabase().getName() + " import templates";
-        }
-        if (importTemplateName.endsWith(".xlsx")) importTemplateName = importTemplateName.replace(".xlsx", "");
-        // todo - quick event based POI lookup to check for an import version and associated bits if the file has an import sheet
-        String finalImportTemplateName = importTemplateName;
-        if (templateCache != null) {
-            return templateCache.computeIfAbsent(importTemplateName, t -> {
-                        try {
-                            return getImportTemplate(finalImportTemplateName, loggedInUser);
-                        } catch (Exception e) {
-                            e.printStackTrace();
+        if (importTemplateName != null) { // priority to a manually specified import name
+            if (importTemplateName.endsWith(".xlsx")) importTemplateName = importTemplateName.replace(".xlsx", "");
+            String finalImportTemplateName = importTemplateName;
+            if (templateCache != null) {
+                return templateCache.computeIfAbsent(importTemplateName, t -> {
+                            try {
+                                ImportTemplate importTemplate = ImportTemplateDAO.findForNameBeginningAndBusinessId(finalImportTemplateName, loggedInUser.getUser().getBusinessId());
+                                return getImportTemplateData(importTemplate, loggedInUser);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            return null;
                         }
-                        return null;
-                    }
-            );
-        } else return getImportTemplate(importTemplateName, loggedInUser);
+                );
+            } else {
+                ImportTemplate importTemplate = ImportTemplateDAO.findForNameBeginningAndBusinessId(importTemplateName, loggedInUser.getUser().getBusinessId());
+                return getImportTemplateData(importTemplate, loggedInUser);
+            }
+        }
+        // if no import template specified see if there is a database one - todo - could probably factor with above a little
+        if (loggedInUser.getDatabase().getImportTemplateId() != -1){
+            if (templateCache != null) {
+                return templateCache.computeIfAbsent(loggedInUser.getDatabase().getImportTemplateId() + "", t -> {
+                            try {
+                                ImportTemplate importTemplate = ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId());
+                                return getImportTemplateData(importTemplate, loggedInUser);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            return null;
+                        }
+                );
+            } else {
+                ImportTemplate importTemplate = ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId());
+                return getImportTemplateData(importTemplate, loggedInUser);
+            }
+
+        }
+        return null;
     }
 
     // is returning a string the best idea?
@@ -1185,8 +1223,7 @@ public final class ImportService {
     }
 
 
-    private static ImportTemplateData getImportTemplate(String importTemplateName, LoggedInUser loggedInUser) throws Exception {
-        ImportTemplate importTemplate = ImportTemplateDAO.findForNameAndBusinessId(importTemplateName, loggedInUser.getUser().getBusinessId());
+    private static ImportTemplateData getImportTemplateData(ImportTemplate importTemplate, LoggedInUser loggedInUser) throws Exception {
         if (importTemplate != null) {
 
             // chunks of this will be factored off later when I want faster data file conversion

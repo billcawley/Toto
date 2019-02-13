@@ -65,6 +65,7 @@ public class ManageDatabasesController {
 
     public static final String IMPORTRESULT = "importResult";
     public static final String IMPORTURLSUFFIX = "importUrlSuffix";
+    public static final String IMPORTSTATUS = "importStatus";
 
     // to play nice with velocity or JSP - so I don't want it to be private as Intellij suggests
     public static class DisplayDataBase {
@@ -119,6 +120,14 @@ public class ManageDatabasesController {
         public String getCreated() {
             return format.format(database.getCreated());
         }
+
+        public String getImportTemplate() {
+            ImportTemplate importTemplate = database.getImportTemplateId() != -1 ? ImportTemplateDAO.findById(database.getImportTemplateId()) : null;
+            if (importTemplate != null){
+                return importTemplate.getTemplateName();
+            }
+            return "";
+        }
     }
 
     @RequestMapping
@@ -137,6 +146,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "sort", required = false) String sort
             , @RequestParam(value = "pendingUploadSearch", required = false) String pendingUploadSearch
             , @RequestParam(value = "deleteTemplateId", required = false) String deleteTemplateId
+            , @RequestParam(value = "templateassign", required = false) String templateassign
     ) {
         LoggedInUser possibleUser = null;
         if (sessionId != null) {
@@ -156,6 +166,22 @@ public class ManageDatabasesController {
                 error.append(formatUploadedFiles(importResult, -1, false, null));
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
             }
+            if ("1".equals(templateassign)){
+                List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
+                for (Database db : databaseList){
+                    String templateName = request.getParameter("templateName-" + db.getId());
+                    if (templateName != null){
+                        ImportTemplate it = ImportTemplateDAO.findForNameAndBusinessId(templateName, loggedInUser.getUser().getBusinessId());
+                        if (it == null){
+                            db.setImportTemplateId(-1);
+                        } else {
+                            db.setImportTemplateId(it.getId());
+                        }
+                        DatabaseDAO.store(db);
+                    }
+                }
+            }
+
             try {
                 final List<DatabaseServer> allServers = DatabaseServerDAO.findAll();
                 if (createDatabase != null && !createDatabase.isEmpty() && (allServers.size() == 1 || (databaseServerId != null && !databaseServerId.isEmpty()))) {
@@ -315,10 +341,16 @@ public class ManageDatabasesController {
                             if (importName != null) {
                                 isImportTemplate = true;
                             }
+                            boolean assignTemplateToDatabase = false;
+                            if (database != null && !database.isEmpty()){
+                                LoginService.switchDatabase(loggedInUser, database); // could be blank now
+                                assignTemplateToDatabase = true;
+                            }
+
                             if (!isImportTemplate) {
                                 model.put("error", "That does not appear to be an import template.");
                             } else {
-                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser)), -1, false, null));
+                                model.put("error", formatUploadedFiles(Collections.singletonList(ImportService.uploadImportTemplate(uploadedFile, loggedInUser, assignTemplateToDatabase)), -1, false, null));
                             }
                         } catch (Exception e) {
                             model.put("error", e.getMessage());
@@ -392,7 +424,7 @@ public class ManageDatabasesController {
         new Thread(() -> {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
-                session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile, null, null, null));
+                session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile, null, null, null, session));
             } catch (Exception e) {
                 e.printStackTrace();
                 uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));

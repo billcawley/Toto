@@ -177,6 +177,7 @@ class NameStackOperators {
         nameStack.remove(stackCount);
     }
 
+    // todo - if not global then don't use the most recent provenance
     // "As" assign the results of a query as a certain name
     static void assignSetAsName(AzquoMemoryDBConnection azquoMemoryDBConnection, List<String> attributeNames, final List<NameSetList> nameStack, int stackCount, boolean global) throws Exception {
         // if it's empty we'll get no such element . . .

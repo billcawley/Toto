@@ -33,6 +33,7 @@ public final class DatabaseDAO {
     private static final String CREATED = "created";
     private static final String LASTPROVENANCE = "last_provenance";
     private static final String AUTOBACKUP = "auto_backup";
+    private static final String IMPORTTEMPLATEID = "import_template_id";
 
     public static Map<String, Object> getColumnNameValueMap(Database database) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -47,6 +48,7 @@ public final class DatabaseDAO {
         toReturn.put(CREATED, DateUtils.getDateFromLocalDateTime(database.getCreated()));
         toReturn.put(LASTPROVENANCE, database.getLastProvenance());
         toReturn.put(AUTOBACKUP, database.getAutoBackup());
+        toReturn.put(IMPORTTEMPLATEID, database.getImportTemplateId());
         return toReturn;
     }
 
@@ -61,9 +63,11 @@ public final class DatabaseDAO {
                         , rs.getString(MYSQLNAME)
                         , rs.getInt(NAMECOUNT)
                         , rs.getInt(VALUECOUNT)
-                        , rs.getInt(DATABASESERVERID),
-                        DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(CREATED)),
-                        rs.getString(LASTPROVENANCE), rs.getBoolean(AUTOBACKUP));
+                        , rs.getInt(DATABASESERVERID)
+                        ,DateUtils.getLocalDateTimeFromDate(rs.getTimestamp(CREATED))
+                        ,rs.getString(LASTPROVENANCE)
+                        , rs.getBoolean(AUTOBACKUP)
+                        , rs.getInt(IMPORTTEMPLATEID));
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -77,6 +81,12 @@ public final class DatabaseDAO {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(BUSINESSID, businessId);
         return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + BUSINESSID + "` = :" + BUSINESSID + " order by " + NAME, DATABASE, databaseRowMapper, namedParams);
+    }
+
+    public static List<Database> findForImportTemplateId(final int templateId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(IMPORTTEMPLATEID, templateId);
+        return StandardDAO.findListWithWhereSQLAndParameters(" WHERE `" + IMPORTTEMPLATEID + "` = :" + IMPORTTEMPLATEID, DATABASE, databaseRowMapper, namedParams);
     }
 
     public static List<Database> findForUserId(final int userId) {

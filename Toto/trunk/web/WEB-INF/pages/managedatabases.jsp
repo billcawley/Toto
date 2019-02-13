@@ -283,28 +283,29 @@ Created by IntelliJ IDEA.
                 </thead>
                 <tbody>
 
-                    <c:forEach items="${pendinguploads}" var="pendingupload">
-                        <tr>
-                            <td>${pendingupload.createdDate}</td>
-                            <td>${pendingupload.createdByUserName}</td>
-                            <td>${pendingupload.processedDate}</td>
-                            <td>${pendingupload.processedByUserName}</td>
-                            <td>${pendingupload.fileName}</td>
-                            <td>${pendingupload.size}</td>
-                            <td>${pendingupload.databaseName}</td>
-                            <td>
-                                <a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}"
-                                                                       class="button small" title="Download"><span
+                <c:forEach items="${pendinguploads}" var="pendingupload">
+                    <tr>
+                        <td>${pendingupload.createdDate}</td>
+                        <td>${pendingupload.createdByUserName}</td>
+                        <td>${pendingupload.processedDate}</td>
+                        <td>${pendingupload.processedByUserName}</td>
+                        <td>${pendingupload.fileName}</td>
+                        <td>${pendingupload.size}</td>
+                        <td>${pendingupload.databaseName}</td>
+                        <td>
+                            <a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}"
+                               class="button small" title="Download"><span
                                     class="fa fa-download" title="Download"></span> </a></td>
-                            <td>
-                                <c:if test="${!pendingupload.loaded}"><a onclick="showHideDiv('working');" href="/api/PendingUpload?id=${pendingupload.id}"
-                                       class="button"
-                                       title="Validate and Load">
-                                        Validate and Load
-                                </a></c:if>
-                            </td>
-                        </tr>
-                    </c:forEach>
+                        <td>
+                            <c:if test="${!pendingupload.loaded}"><a onclick="showHideDiv('working');"
+                                                                     href="/api/PendingUpload?id=${pendingupload.id}"
+                                                                     class="button"
+                                                                     title="Validate and Load">
+                                Validate and Load
+                            </a></c:if>
+                        </td>
+                    </tr>
+                </c:forEach>
                 </tbody>
             </table>
             <div class="centeralign">
@@ -317,12 +318,21 @@ Created by IntelliJ IDEA.
         <!-- Import Templates -->
         <div id="tab5" style="display:none">
             <h3>Import Templates</h3>
-            <!-- Archive List -->
             <form action="/api/ManageDatabases?templateupload=1#tab5" method="post" enctype="multipart/form-data">
                 <table>
                     <tbody>
                     <tr>
                         <td><label for="uploadFile">Upload Template:</label> <input type="file" name="uploadFile">
+                        </td>
+                        <td>
+                            <label for="uploadDatabase1">Database:</label>
+                            <select name="database" id="uploadDatabase1">
+                                <option value="">None</option>
+                                <c:forEach items="${databases}" var="database">
+                                    <option value="${database.name}" <c:if
+                                            test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
+                                </c:forEach>
+                            </select>
                         </td>
                         <td><input type="hidden" name="template" value="true"/></td>
                         <td><input type="submit" name="Upload" value="Upload" class="button "/></td>
@@ -360,6 +370,38 @@ Created by IntelliJ IDEA.
                     </tbody>
                 </table>
             </form>
+            <br/>
+            <br/>
+            <h3>Assign Templates to Databases</h3>
+            <form action="/api/ManageDatabases?templateassign=1#tab5" method="post">
+                <table>
+                    <thead>
+                    <tr>
+                        <td>Database</td>
+                        <td>Template</td>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <c:forEach items="${databases}" var="database">
+                        <tr>
+                            <td>${database.name}</td>
+                            <td>
+                                <select name="templateName-${database.id}">
+                                    <option value="">None</option>
+                                    <c:forEach items="${importTemplates}" var="template">
+                                        <option value="${template.templateName}" <c:if
+                                                test="${template.templateName == database.importTemplate}"> selected </c:if>>${template.templateName}</option>
+                                    </c:forEach>
+                                </select>
+                            </td>
+                        </tr>
+                    </c:forEach>
+
+                    </tbody>
+                </table>
+                <td><input type="submit" name="Save Changes" value="Save Changes" class="button "/></td>
+            </form>
+
         </div>
         <!-- END Uploads -->
     </div>

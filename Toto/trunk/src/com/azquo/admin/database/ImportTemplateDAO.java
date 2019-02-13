@@ -80,11 +80,18 @@ public class ImportTemplateDAO {
     }
 
     // case insensetive - todo - is this a security concern??
-    public static ImportTemplate findForNameAndBusinessId(final String name, int businessId) {
+    public static ImportTemplate findForNameBeginningAndBusinessId(final String name, int businessId) {
         final MapSqlParameterSource namedParams = new MapSqlParameterSource();
         namedParams.addValue(TEMPLATE_NAME, name + "%");
         namedParams.addValue(BUSINESSID, businessId);
         return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + TEMPLATE_NAME + " LIKE :" + TEMPLATE_NAME + " and " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, importTemplateRowMapper, namedParams);
+    }
+
+    public static ImportTemplate findForNameAndBusinessId(final String name, int businessId) {
+        final MapSqlParameterSource namedParams = new MapSqlParameterSource();
+        namedParams.addValue(TEMPLATE_NAME, name);
+        namedParams.addValue(BUSINESSID, businessId);
+        return StandardDAO.findOneWithWhereSQLAndParameters("  WHERE " + TEMPLATE_NAME + " = :" + TEMPLATE_NAME + " and " + BUSINESSID + " = :" + BUSINESSID, TABLENAME, importTemplateRowMapper, namedParams);
     }
 
     public static ImportTemplate findForNameAndUserId(final String name, int userId) {

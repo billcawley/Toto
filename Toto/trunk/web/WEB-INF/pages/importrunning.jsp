@@ -19,11 +19,12 @@
     function updateStatus() {
         if (something) {
             jq.post("/api/SpreadsheetStatus?action=importResult", function (data) {
-                var objDiv = document.getElementById("serverStatus");
                 if (data.indexOf("true") == 0) { // the sheet should be ready, note indexof not startswith, support for the former better
                     location.replace("/api/ManageDatabases" + data.substring(4));// nothing added in most cases
                     something = false;
                     return;
+                } else { // possible headline info
+                    document.getElementById("headline").innerHTML = "<h1>" + data + "</h1>"
                 }
             });
             jq.post("/api/SpreadsheetStatus?action=log", function (data) {
@@ -48,7 +49,7 @@
 </script>
 
 
-<main class="basicDialog">
+<main class="basicDialog" style="max-width: 800px">
     <div class="basic-box-container">
         <div class="basic-head" style="background-color:${bannerColor}">
             <div class="logo">
@@ -56,13 +57,11 @@
             </div>
         </div>
         <div class="basic-box">
-            <h3>Importing Data...</h3>
-            <div class="loader">
-                <span class="fa fa-spin fa-cog"></span>
+            <h3>Importing Data...<span class="fa fa-spin fa-cog"></span></h3>
+            <div id="headline">
             </div>
-            <div id="serverStatus"></div>
+            <div id="serverStatus" style="height: 500px"></div>
             <!--            <a id="abort" onclick='jq.post("/api/SpreadsheetStatus?action=stop", null)'>Abort load</a>-->
-
         </div>
     </div>
 </main>

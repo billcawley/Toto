@@ -14,6 +14,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.zeroturnaround.zip.ZipUtil;
 import org.zkoss.json.JSONObject;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.Desktop;
@@ -37,11 +38,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 /**
@@ -179,11 +184,11 @@ public class ZKSpreadsheetCommandController {
                         loggedInUser.userLog("Download PDF : " + ss.getSelectedSheetName() + ".pdf");
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".pdf", "pdf", "application/pdf", file, true));
                     }
-
                     if ("XML".equals(action)) {
                         // ok try to find the relevant regions
                         List<SName> namesForSheet = BookUtils.getNamesForSheet(ss.getSelectedSheet());
-                        StringWriter sw = new StringWriter();
+                        Path zipforxmlfiles = Files.createTempDirectory("zipforxmlfiles");
+                        int count = 0;
                         for (SName name : namesForSheet) {
                             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // then we have a data region to deal with here
                                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length()); // might well be an empty string
@@ -200,16 +205,48 @@ public class ZKSpreadsheetCommandController {
                                         }
                                     }
 
+                                    boolean rootInSheet = true;
+
+                                    String rootCandidate = null;
+
+                                    for (String xmlName : xmlToColMap.keySet()){
+                                        String test;
+                                        if (xmlName.indexOf("/", 1) > 0){
+                                            test = xmlName.substring(0, xmlName.indexOf("/", 1));
+                                        } else {
+                                            test = xmlName;
+                                        }
+                                        if (rootCandidate == null){
+                                            rootCandidate = test;
+                                        } else if (!rootCandidate.equals(test)){
+                                            rootInSheet = false;
+                                        }
+                                    }
+
+                                    if (rootInSheet){ // then strip off the first tag, it will be used as root
+                                        for (String xmlName : new ArrayList<>(xmlToColMap.keySet())) { // copy the keys, I'm going to modify them!
+                                            Integer remove = xmlToColMap.remove(xmlName);
+                                            xmlToColMap.put(xmlName.substring(xmlName.indexOf("/", 1)), remove);
+                                        }
+                                    }
+
                                     List<String> xmlNames = new ArrayList<>(xmlToColMap.keySet());
                                     Collections.sort(xmlNames);
 
                                     DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
                                     DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-                                    Document doc = docBuilder.newDocument();
-                                    Element rootElement = doc.createElement("ROOT");
-                                    doc.appendChild(rootElement);
+                                    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+                                    Transformer transformer = transformerFactory.newTransformer();
+                                    // matching brekasure example
+                                    transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
+                                    // going for one file per line as per brokersure, zip at the end
                                     // tracking where we are in the xml, what elements we're in
                                     for (int row = name.getRefersToCellRegion().row; row <= name.getRefersToCellRegion().lastRow; row++) {
+                                        count++;
+                                        Document doc = docBuilder.newDocument();
+                                        doc.setXmlStandalone(true);
+                                        Element rootElement = doc.createElement(rootInSheet ? rootCandidate.replace("/","") : "ROOT");
+                                        doc.appendChild(rootElement);
                                         List<Element> xmlContext = new ArrayList<>();
                                         for (String xmlName : xmlNames){
                                             CellData cellData = Ranges.range(ss.getSelectedSheet(), row, xmlToColMap.get(xmlName)).getCellData();
@@ -239,16 +276,17 @@ public class ZKSpreadsheetCommandController {
                                             xmlContext.get(xmlContext.size() - 1).appendChild(doc.createTextNode(value));
                                                 //test.append(name).append(value).append("\n");
                                         }
+                                        DOMSource source = new DOMSource(doc);
+                                        BufferedWriter bufferedWriter = Files.newBufferedWriter(zipforxmlfiles.resolve(count + ".xml"));
+                                        StreamResult result = new StreamResult(bufferedWriter);
+                                        transformer.transform(source, result);
+                                        bufferedWriter.close();
                                     }
-                                    TransformerFactory transformerFactory = TransformerFactory.newInstance();
-                                    Transformer transformer = transformerFactory.newTransformer();
-                                    DOMSource source = new DOMSource(doc);
-                                    StreamResult result = new StreamResult(sw);
-                                    transformer.transform(source, result);
                                 }
                             }
                         }
-                        Filedownload.save(new AMedia(ss.getSelectedSheetName() + ".xml", "xml", "application/xml", sw.getBuffer().toString()));
+                        ZipUtil.unexplode(zipforxmlfiles.toFile());
+                        Filedownload.save(new AMedia(ss.getSelectedSheetName() + "xml.zip", "zip", "application/zip", zipforxmlfiles.toFile(), true));
                     }
 
                     String saveMessage = "";

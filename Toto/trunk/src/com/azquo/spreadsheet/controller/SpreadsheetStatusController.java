@@ -54,6 +54,11 @@ public class SpreadsheetStatusController {
                 String toReturn = "true" + (request.getSession().getAttribute(ManageDatabasesController.IMPORTURLSUFFIX) != null ? request.getSession().getAttribute(ManageDatabasesController.IMPORTURLSUFFIX) : "");
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTURLSUFFIX); // it will cause trouble if left!!
                 return toReturn;
+            } else { // a kind of headline on status - currently used for a number of files being processed in a zip
+                if (request.getSession().getAttribute(ManageDatabasesController.IMPORTSTATUS) != null){
+                    return (String) request.getSession().getAttribute(ManageDatabasesController.IMPORTSTATUS);
+                }
+                return "";
             }
         }
         if ("log".equals(action)) {

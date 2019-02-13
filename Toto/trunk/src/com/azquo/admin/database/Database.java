@@ -26,6 +26,7 @@ public final class Database extends StandardEntity implements Serializable {
     private final LocalDateTime created;
     private String lastProvenance;
     private boolean autoBackup;
+    private int importTemplateId;
 
 
     public Database(int id
@@ -36,7 +37,7 @@ public final class Database extends StandardEntity implements Serializable {
             , int nameCount
             , int valueCount
             , int databaseServerId
-            , LocalDateTime created, String lastProvenance, boolean autoBackup) {
+            , LocalDateTime created, String lastProvenance, boolean autoBackup, int importTemplateId) {
         this.lastProvenance = lastProvenance;
         this.autoBackup = autoBackup;
         this.id = id;
@@ -48,6 +49,7 @@ public final class Database extends StandardEntity implements Serializable {
         this.valueCount = valueCount;
         this.databaseServerId = databaseServerId;
         this.created = created != null ? created : LocalDateTime.now();
+        this.importTemplateId = importTemplateId;
     }
 
     public int getBusinessId() {
@@ -133,6 +135,14 @@ public final class Database extends StandardEntity implements Serializable {
         this.autoBackup = autoBackup;
     }
 
+    public int getImportTemplateId() {
+        return importTemplateId;
+    }
+
+    public void setImportTemplateId(int importTemplateId) {
+        this.importTemplateId = importTemplateId;
+    }
+
     @Override
     public String toString() {
         return "Database{" +
@@ -143,6 +153,11 @@ public final class Database extends StandardEntity implements Serializable {
                 ", nameCount=" + nameCount +
                 ", valueCount=" + valueCount +
                 ", databaseServerId=" + databaseServerId +
+                ", created=" + created +
+                ", lastProvenance='" + lastProvenance + '\'' +
+                ", autoBackup=" + autoBackup +
+                ", importTemplateId=" + importTemplateId +
+                ", id=" + id +
                 '}';
     }
 }

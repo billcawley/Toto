@@ -132,7 +132,7 @@ this may now not work at all, perhaps delete?
                 throw new Exception("That business does not exist");
             }
             final String persistenceName = getSQLDatabaseName(databaseServer, b, databaseName);
-            final Database database = new Database(0, b.getId(), loggedInUser.getUser().getId(), databaseName, persistenceName, 0, 0, databaseServer.getId(), null, null, false);
+            final Database database = new Database(0, b.getId(), loggedInUser.getUser().getId(), databaseName, persistenceName, 0, 0, databaseServer.getId(), null, null, false, -1);
             DatabaseDAO.store(database);
             // will be over to the DB side
             RMIClient.getServerInterface(databaseServer.getIp()).createDatabase(database.getPersistenceName());
@@ -451,6 +451,15 @@ this may now not work at all, perhaps delete?
                     removeReportByIdWithBasicSecurity(loggedInUser, or.getId());
                 }
             }
+            // if there is a template associated with this database and no others then zap it
+            ImportTemplate importTemplate = loggedInUser.getDatabase().getImportTemplateId() != -1 ? ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId()) : null;
+            if (importTemplate != null) {
+                if (DatabaseDAO.findForImportTemplateId(importTemplate.getId()).size() == 1){
+                    ImportTemplateDAO.removeById(importTemplate);
+                    Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk()));
+                }
+            }
+
             OpenDatabaseDAO.removeForDatabaseId(db.getId());
             UploadRecordDAO.removeForDatabaseId(db.getId());
             // zap the backups also

@@ -42,7 +42,7 @@ public class DownloadBackupController {
                 if (db != null) {
                     DatabaseServer dbs = DatabaseServerDAO.findById(db.getDatabaseServerId());
                     loggedInUser.setDatabaseWithServer(dbs, db);
-                    File tempzip = BackupService.createDBandReportsBackup(loggedInUser);
+                    File tempzip = BackupService.createDBandReportsAndTemplateBackup(loggedInUser);
                     DownloadController.streamFileToBrowser(Paths.get(tempzip.getAbsolutePath()), response, db.getName() + ".zip");
                 }
                 request.getSession().removeAttribute("working");
