@@ -23,7 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
-/**
+/**top
  * Copyright (C) 2018 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
  * <p>
  * Created by Edd on 20/05/15.
@@ -284,7 +284,7 @@ public class DSImportService {
                             so it is required and not composition or top heading and it doesn't have a default value
                             *then* we exception. Note that this isn't talking about the value on a line it's asking if the heading itself exists
                             so a problem in here is a heading config problem I think rather than a data problem */
-                                if (!leftOver.getFirst().toLowerCase().contains(HeadingReader.DEFAULT)
+                                if (!headingToAdd.toLowerCase().contains(HeadingReader.DEFAULT)
                                         && !leftOver.getFirst().toLowerCase().contains(HeadingReader.COMPOSITION)
                                         && uploadedFile.getParameter(clauses[0].trim().toLowerCase()) == null
                                 ) {
