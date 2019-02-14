@@ -57,6 +57,9 @@ def fileProcess(Object[] args) {
                 if (expDateCol> 0) {
                     fileWriter.write(line + "\tInception_date\tLine");
                     fileWriter.write("\r\n");
+                } else {
+                    fileWriter.write(line);
+                    fileWriter.write("\r\n");
                 }
             } else if (agreementCol >= 0) { // ok we're into data
                 if (lineNo == topLine + 1) {
