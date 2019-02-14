@@ -262,7 +262,27 @@ Created by IntelliJ IDEA.
         <!-- END Maintenance -->
         <!-- Pending Uploads -->
         <div id="tab4" style="display:none">
-            <!-- Archive List -->
+            <form action="/api/ManageDatabases#tab4" method="post" enctype="multipart/form-data">
+                <table>
+                    <tbody>
+                    <tr>
+                        <td><label for="uploadFile">Manually add file for validation : </label> <input type="file" name="uploadFile"></td>
+                        <td>Team <input type="text" name="team"/></td>
+                        <td>
+                            <label for="uploadDatabase2">Database:</label>
+                            <select name="database" id="uploadDatabase2">
+                                <c:forEach items="${databases}" var="database">
+                                    <option value="${database.name}" <c:if
+                                            test="${database.name == lastSelected}"> selected </c:if>>${database.name}</option>
+                                </c:forEach>
+                            </select>
+                        </td>
+                        <td><input type="submit" name="Upload" value="Upload" class="button"/></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </form>
+
             <table>
                 <thead>
                 <tr>
@@ -318,7 +338,7 @@ Created by IntelliJ IDEA.
         <!-- Import Templates -->
         <div id="tab5" style="display:none">
             <h3>Import Templates</h3>
-            <form action="/api/ManageDatabases?templateupload=1#tab5" method="post" enctype="multipart/form-data">
+            <form action="/api/ManageDatabases#tab5" method="post" enctype="multipart/form-data">
                 <table>
                     <tbody>
                     <tr>

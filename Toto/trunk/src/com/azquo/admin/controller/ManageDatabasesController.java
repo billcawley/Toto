@@ -34,6 +34,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.FileInputStream;
+import java.nio.file.Files;
+import java.nio.file.attribute.FileTime;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -123,7 +127,7 @@ public class ManageDatabasesController {
 
         public String getImportTemplate() {
             ImportTemplate importTemplate = database.getImportTemplateId() != -1 ? ImportTemplateDAO.findById(database.getImportTemplateId()) : null;
-            if (importTemplate != null){
+            if (importTemplate != null) {
                 return importTemplate.getTemplateName();
             }
             return "";
@@ -166,13 +170,13 @@ public class ManageDatabasesController {
                 error.append(formatUploadedFiles(importResult, -1, false, null));
                 request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
             }
-            if ("1".equals(templateassign)){
+            if ("1".equals(templateassign)) {
                 List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
-                for (Database db : databaseList){
+                for (Database db : databaseList) {
                     String templateName = request.getParameter("templateName-" + db.getId());
-                    if (templateName != null){
+                    if (templateName != null) {
                         ImportTemplate it = ImportTemplateDAO.findForNameAndBusinessId(templateName, loggedInUser.getUser().getBusinessId());
-                        if (it == null){
+                        if (it == null) {
                             db.setImportTemplateId(-1);
                         } else {
                             db.setImportTemplateId(it.getId());
@@ -293,6 +297,7 @@ public class ManageDatabasesController {
             , @RequestParam(value = "uploadFile", required = false) MultipartFile uploadFile
             , @RequestParam(value = "backup", required = false) String backup
             , @RequestParam(value = "template", required = false) String template
+            , @RequestParam(value = "team", required = false) String team
     ) {
         if (database != null) {
             request.getSession().setAttribute("lastSelected", database);
@@ -300,7 +305,7 @@ public class ManageDatabasesController {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
-            if (uploadFile != null) {
+            if (uploadFile != null && !uploadFile.isEmpty()) {
                 try {
                     if ("true".equals(backup)) {
                         // duplicated fragment, could maybe be factored
@@ -342,7 +347,7 @@ public class ManageDatabasesController {
                                 isImportTemplate = true;
                             }
                             boolean assignTemplateToDatabase = false;
-                            if (database != null && !database.isEmpty()){
+                            if (database != null && !database.isEmpty()) {
                                 LoginService.switchDatabase(loggedInUser, database); // could be blank now
                                 assignTemplateToDatabase = true;
                             }
@@ -358,18 +363,35 @@ public class ManageDatabasesController {
                     } else if (database != null) {
                         if (database.isEmpty()) {
                             model.put("error", "Please select a database");
-                        } else if (uploadFile.isEmpty()) {
-                            model.put("error", "Please select a file to upload");
                         } else {
-                            HttpSession session = request.getSession();
+                            // data file or zip. New thing - it can be added to the Pending Uploads manually
                             // todo - security hole here, a developer could hack a file onto a different db by manually editing the database parameter. . .
                             LoginService.switchDatabase(loggedInUser, database); // could be blank now
-                            String fileName = uploadFile.getOriginalFilename();
-                            loggedInUser.userLog("Upload file : " + fileName);
-                            // always move uplaoded files now, they'll need to be transferred to the DB server after code split
-                            File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
-                            uploadFile.transferTo(moved);
-                            return handleImport(loggedInUser, session, model, fileName, moved.getAbsolutePath());
+                            if (team != null) { // Pending uploads
+                                String targetPath = SpreadsheetService.getScanDir() + "/tagged/" + System.currentTimeMillis() + uploadFile.getOriginalFilename();
+                                uploadFile.transferTo(new File(targetPath));
+                                // ok it's moved now make the pending upload record
+                                // todo - assign the database and team automatically!
+                                PendingUpload pendingUpload = new PendingUpload(0, loggedInUser.getUser().getBusinessId()
+                                        , LocalDateTime.now()
+                                        , null
+                                        , uploadFile.getOriginalFilename()
+                                        , targetPath
+                                        , loggedInUser.getUser().getId()
+                                        , -1
+                                        , loggedInUser.getDatabase().getId()
+                                        , null, team);
+                                PendingUploadDAO.store(pendingUpload);
+
+                            } else {
+                                HttpSession session = request.getSession();
+                                String fileName = uploadFile.getOriginalFilename();
+                                loggedInUser.userLog("Upload file : " + fileName);
+                                // always move uplaoded files now, they'll need to be transferred to the DB server after code split
+                                File moved = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName); // timestamp to stop file overwriting
+                                uploadFile.transferTo(moved);
+                                return handleImport(loggedInUser, session, model, fileName, moved.getAbsolutePath());
+                            }
                         }
                     }
                 } catch (Exception e) { // now the import has it's on exception catching
@@ -377,6 +399,8 @@ public class ManageDatabasesController {
                     e.printStackTrace();
                     model.put("error", exceptionError);
                 }
+            } else {
+                model.put("error", "Please select a file to upload");
             }
             List<Database> databaseList = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
             List<DisplayDataBase> displayDataBases = new ArrayList<>();
