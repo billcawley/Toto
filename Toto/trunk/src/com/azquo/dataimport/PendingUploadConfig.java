@@ -16,10 +16,10 @@ public class PendingUploadConfig {
 
     private final Map<String, Map<String, String>> parametersPerFile;
     private final Set<Integer> filesToReject;
-    private final Map<Integer, java.util.Set<Integer>> fileRejectLines;
+    private final Map<Integer, Map<Integer, String>> fileRejectLines;
     private final AtomicInteger counter;
 
-    public PendingUploadConfig(Map<String, Map<String, String>> parametersPerFile, Set<Integer> filesToReject, Map<Integer, Set<Integer>> fileRejectLines) {
+    public PendingUploadConfig(Map<String, Map<String, String>> parametersPerFile, Set<Integer> filesToReject, Map<Integer, Map<Integer, String>> fileRejectLines) {
         this.parametersPerFile = parametersPerFile;
         this.filesToReject = filesToReject;
         this.fileRejectLines = fileRejectLines;
@@ -30,7 +30,7 @@ public class PendingUploadConfig {
         return filesToReject.contains(counter.get());
     }
 
-    public Set<Integer> getFileRejectLines() {
+    public Map<Integer, String> getFileRejectLines() {
         return fileRejectLines.get(counter.get());
     }
 
@@ -39,6 +39,9 @@ public class PendingUploadConfig {
     }
 
     public Map<String, String> getParametersForFile(String name) {
+        if (parametersPerFile == null){
+            return null;
+        }
         return parametersPerFile.get(name);
     }
 }
