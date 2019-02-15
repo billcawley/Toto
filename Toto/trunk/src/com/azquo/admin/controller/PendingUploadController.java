@@ -287,7 +287,7 @@ public class PendingUploadController {
 
                 // note, unlike the lookup parameters I cna't do this by file name, it will be per spreadsheet and there may be more than one . . .
                 Set<Integer> fileLoadFlags = new HashSet<>();
-                Map<Integer, Set<Integer>> fileRejectLines = new HashMap<>();
+                Map<Integer, Map<Integer, String>> fileRejectLines = new HashMap<>();
                 // as in go ahead and import
                 boolean actuallyImport = false;
                 if ("finalsubmit".equals(finalsubmit)) {
@@ -301,16 +301,20 @@ public class PendingUploadController {
                         if (request.getParameter("load-" + i) == null) { // not ticked to save it . . .
                             fileLoadFlags.add(i);
                         }
-
+                        // todo - string literals . . . :|
                         String rejectedLinesString = request.getParameter(i + "-lines");
+                        String identifiersString = request.getParameter(i + "-identifier");
                         if (rejectedLinesString != null) {
-                            Set<Integer> rejectedLines = new HashSet<>();
+                            Map<Integer, String> rejectedLines = new HashMap<>(); // this is now going to hold the identifier too - this way I can have the comments available on rejected lines. If I don't get the identidifiers here it's difficult
                             String[] split = rejectedLinesString.split(",");
-                            for (int j = 0; j < split.length; j++) {
-                                if (request.getParameter(i + "-" + split[j]) == null) { // if that line was selected then *don't* reject it
-                                    rejectedLines.add(Integer.parseInt(split[j]));
+                            String[] identifiersSplit = identifiersString.split("||");
+                            if (split.length == identifiersSplit.length){
+                                for (int j = 0; j < split.length; j++) {
+                                    if (request.getParameter(i + "-" + split[j]) == null) { // if that line was selected then *don't* reject it
+                                        rejectedLines.put(Integer.parseInt(split[j]), identifiersSplit[j]);
+                                    }
                                 }
-                            }
+                            } // if it's not then what?
                             if (!rejectedLines.isEmpty()) {
                                 fileRejectLines.put(i, rejectedLines);
                             }

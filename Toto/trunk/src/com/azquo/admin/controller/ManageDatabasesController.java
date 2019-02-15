@@ -724,15 +724,19 @@ public class ManageDatabasesController {
 //                todo - add in the identifiers then I can jam them on ignored lines and extract the comments. Since it's stored like so warningLine.getIdentifier().replace("\"", "") it will superficially be safe in HTML.
                 if (checkboxId != -1 && !uploadedFile.getWarningLines().isEmpty()) {
                     StringBuilder sb = new StringBuilder();
+                    StringBuilder identifierSb = new StringBuilder();
                     first = true;
                     for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
                         if (!first) {
                             sb.append(",");
+                            identifierSb.append("||"); // I'm assuming double pipe won't be used in loaded data
                         }
                         sb.append(warningLine.getLineNo());
+                        identifierSb.append(warningLine.getIdentifier());
                         first = false;
                     }
                     toReturn.append("<input type=\"hidden\" name=\"" + checkboxId + "-lines\" value=\"" + sb.toString() + "\"/>");
+                    toReturn.append("<input type=\"hidden\" name=\"" + checkboxId + "-identifier\" value=\"" + identifierSb.toString() + "\"/>");
                 }
 
                 for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {

@@ -94,8 +94,8 @@ public class UploadedFile implements Serializable {
     private int provenanceId;
     // for validation support - this file goes into a temporary copy of the database
     private final boolean isValidationTest;
-    // tells the upload to ignore certain lines (probably due to warnings about the lines)
-    private Set<Integer> ignoreLines;
+    // tells the upload to ignore certain lines (probably due to warnings about the lines) - I'm jamming the identifier against here too as it will be required to get comments later. Hence Map not Set
+    private Map<Integer, String> ignoreLines;
     // what the ignored lines actually were - for user feedback
     private Map<Integer, String> ignoreLinesValues;
 
@@ -433,11 +433,11 @@ public class UploadedFile implements Serializable {
         return isValidationTest;
     }
 
-    public Set<Integer> getIgnoreLines() {
+    public Map<Integer, String> getIgnoreLines() {
         return ignoreLines;
     }
 
-    public void setIgnoreLines(Set<Integer> ignoreLines) {
+    public void setIgnoreLines(Map<Integer, String> ignoreLines) {
         this.ignoreLines = ignoreLines;
         this.ignoreLinesValues = new HashMap<>();
     }
