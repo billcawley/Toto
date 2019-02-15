@@ -14,6 +14,8 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.User;
 import com.azquo.admin.user.UserDAO;
 import com.azquo.dataimport.ImportService;
+import com.azquo.dataimport.ImportTemplate;
+import com.azquo.dataimport.ImportTemplateDAO;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.NameForBackup;
 import com.azquo.memorydb.ProvenanceForBackup;
@@ -101,7 +103,7 @@ public class BackupService {
                     fileName = f.getName();
                 }
                 toReturn.append(ManageDatabasesController.formatUploadedFiles(ImportService.importTheFile(loggedInUser
-                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null, null, null),-1, false, null)).append("<br/>");
+                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null),-1, false, null)).append("<br/>");
             }
         }
         return toReturn.toString();

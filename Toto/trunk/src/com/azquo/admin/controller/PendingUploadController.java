@@ -3,10 +3,8 @@ package com.azquo.admin.controller;
 import com.azquo.TypedPair;
 import com.azquo.admin.AdminService;
 import com.azquo.admin.database.*;
-import com.azquo.dataimport.ImportService;
-import com.azquo.dataimport.ImportTemplateData;
+import com.azquo.dataimport.*;
 import com.azquo.rmi.RMIClient;
-import com.azquo.rmi.RMIInterface;
 import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -321,6 +319,8 @@ public class PendingUploadController {
                 }
 
                 if (session.getAttribute(ManageDatabasesController.IMPORTRESULT) != null) {
+                    // todo I need to make the interface available as Excel and for it to be uploadable again . . hhhhhnnnnnnngh, also I think the comments need to be on the rejected lines, need a pending upload config object I think
+
                     StringBuilder maintext = new StringBuilder();
                     @SuppressWarnings("unchecked")
                     List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
@@ -345,7 +345,7 @@ public class PendingUploadController {
                                 Comment comment = CommentDAO.findForBusinessIdAndIdentifierAndTeam(loggedInUser.getUser().getBusinessId(), warningLine.getIdentifier().replace("\"", ""), pu.getTeam());
                                 if (comment != null) {
                                     hasComments.add(warningLine.getIdentifier());
-                                    commentValue = comment.getText().replace("\n", "\\n"); // don't break lines on JS
+                                    commentValue = comment.getText().replace("\n", "\\n"); // don't break lines on JS todo - escape other things e.g. ' " !
                                 }
                                 maintext.append("commentValues[\"" + count + "-" + warningLine.getLineNo() + "\"] = \"" + commentValue + "\";\n");
                             }
@@ -359,7 +359,7 @@ public class PendingUploadController {
                     maintext.append("<tr>\n");
                     maintext.append("<td>Name</td>\n");
                     maintext.append("<td>Status</td>\n");
-                    maintext.append("<td><div align=\"center\">Load</div></td>\n");
+                    maintext.append("<td><div aflign=\"center\">Load</div></td>\n");
                     maintext.append("<td></td>\n");
                     //maintext.append(ManageDatabasesController.formatUploadedFiles(Collections.singletonList(uploadedFile), false));
                     maintext.append("</tr>");
@@ -449,7 +449,8 @@ public class PendingUploadController {
                     }
                     UploadedFile uploadedFile = new UploadedFile(pu.getFilePath(), Collections.singletonList(pu.getFileName()), params, false, !finalActuallyImport);
                     try {
-                        List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, finalLookupValuesForFiles, fileLoadFlags, fileRejectLines, session);
+                        PendingUploadConfig puc = new PendingUploadConfig(finalLookupValuesForFiles,fileLoadFlags,fileRejectLines);
+                        List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, session, puc);
                         if (!finalActuallyImport) {
                             session.setAttribute(PARAMSPASSTHROUGH, lookupValuesForFilesHTML.toString());
                         } else {

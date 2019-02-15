@@ -1,8 +1,10 @@
-package com.azquo.admin.database;
+package com.azquo.dataimport;
 
 import com.azquo.admin.StandardEntity;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
+import com.azquo.admin.database.Database;
+import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.admin.user.User;
 import com.azquo.admin.user.UserDAO;
 
@@ -12,8 +14,6 @@ import java.nio.file.Paths;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Copyright (C) 2018 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT

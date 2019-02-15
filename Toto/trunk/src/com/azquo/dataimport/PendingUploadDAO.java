@@ -1,4 +1,4 @@
-package com.azquo.admin.database;
+package com.azquo.dataimport;
 
 import com.azquo.DateUtils;
 import com.azquo.admin.StandardDAO;

@@ -6,7 +6,7 @@ import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
-import com.azquo.dataimport.ImportService;
+import com.azquo.dataimport.*;
 import com.azquo.spreadsheet.transport.UploadedFile;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.LoginService;
@@ -17,7 +17,6 @@ import com.azquo.spreadsheet.CommonReportUtils;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,10 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.FileInputStream;
-import java.nio.file.Files;
-import java.nio.file.attribute.FileTime;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -448,7 +444,7 @@ public class ManageDatabasesController {
         new Thread(() -> {
             // so in here the new thread we set up the loading as it was originally before and then redirect the user straight to the logging page
             try {
-                session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile, null, null, null, session));
+                session.setAttribute(ManageDatabasesController.IMPORTRESULT, ImportService.importTheFile(loggedInUser, uploadedFile, session, null));
             } catch (Exception e) {
                 e.printStackTrace();
                 uploadedFile.setError(CommonReportUtils.getErrorFromServerSideException(e));
@@ -724,6 +720,8 @@ public class ManageDatabasesController {
                     toReturn.append("<th  style='position: sticky; top: 0;' colspan=\"" + maxLineWidth + "\"></th>");
                 }
                 toReturn.append("</tr></thead><tbody>");
+
+//                todo - add in the identifiers then I can jam them on ignored lines and extract the comments. Since it's stored like so warningLine.getIdentifier().replace("\"", "") it will superficially be safe in HTML.
                 if (checkboxId != -1 && !uploadedFile.getWarningLines().isEmpty()) {
                     StringBuilder sb = new StringBuilder();
                     first = true;

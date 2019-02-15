@@ -1,13 +1,9 @@
-package com.azquo.admin.database;
+package com.azquo.dataimport;
 
 import com.azquo.admin.StandardEntity;
 
-import java.text.SimpleDateFormat;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT

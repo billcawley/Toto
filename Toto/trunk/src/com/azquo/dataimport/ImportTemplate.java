@@ -1,4 +1,4 @@
-package com.azquo.admin.database;
+package com.azquo.dataimport;
 
 import com.azquo.admin.StandardEntity;
 import com.azquo.admin.user.User;
