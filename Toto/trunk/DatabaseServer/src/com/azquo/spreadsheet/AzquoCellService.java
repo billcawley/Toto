@@ -209,7 +209,7 @@ class AzquoCellService {
         List<Collection<Name>> relevantNameSets = new ArrayList<>();
         // gather names
         for (DataRegionHeading heading : headingList) {
-            if (heading.getName() == null || (heading.getName().getChildren().size() == 0 && heading.getName().getValues().size() == 0)) {
+            if (heading.getName() == null || (heading.getName().getAttribute("CALCULATION")== null && (heading.getName().getChildren().size() == 0 && heading.getName().getValues().size() == 0))) {
                 return new ArrayList<>();
             }
             if (heading.getName() != null && heading.getName().getChildren().size() > 0) {
