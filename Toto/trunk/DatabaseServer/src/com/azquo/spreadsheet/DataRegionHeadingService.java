@@ -605,6 +605,7 @@ class DataRegionHeadingService {
     // last 2 params only for permute - a concern?
     static List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames, boolean noPermuteTotals) throws Exception {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
+        if (headingLists.size()==0) return toReturn;
         if (headingLists.get(0).size() > 1) {
             Iterator<List<List<DataRegionHeading>>> it = headingLists.iterator();
             List<List<List<DataRegionHeading>>> subHeadings = null;
