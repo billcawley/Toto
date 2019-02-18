@@ -16,7 +16,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.zeroturnaround.zip.ZipUtil;
+import org.zkoss.poi.openxml4j.opc.OPCPackage;
+import org.zkoss.poi.ss.usermodel.Cell;
 import org.zkoss.poi.ss.usermodel.Row;
 import org.zkoss.poi.ss.usermodel.Sheet;
 import org.zkoss.poi.ss.usermodel.Workbook;
@@ -47,9 +50,10 @@ public class PendingUploadController {
 
     private static final String PARAMSPASSTHROUGH = "PARAMSPASSTHROUGH";
     private static final String LATESTPROVENANCE = "LATESTPROVENANCE";
+    public static final String WARNINGSWORKBOOK = "WARNINGSWORKBOOK";
     private static final String LOOKUPS = "LOOKUPS ";
 
-    //    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
+    // perhaps use this pattern in other places? Could tidy the ManageDatabasesController a littleMonday 8th
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "id", required = false) String id
@@ -62,6 +66,22 @@ public class PendingUploadController {
             , @RequestParam(value = "commentsave", required = false) String commentSave
             , @RequestParam(value = "commentid", required = false) String commentId
     ) throws Exception {
+        return handleRequest(model,request,id,databaseId,paramssubmit,finalsubmit,reject,dbcheck,maxcounter,commentSave,commentId,null);
+    }
+    //    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
+    @RequestMapping(headers = "content-type=multipart/*")
+    public String handleRequest(ModelMap model, HttpServletRequest request
+            , @RequestParam(value = "id", required = false) String id
+            , @RequestParam(value = "databaseId", required = false) String databaseId
+            , @RequestParam(value = "paramssubmit", required = false) String paramssubmit
+            , @RequestParam(value = "finalsubmit", required = false) String finalsubmit
+            , @RequestParam(value = "reject", required = false) String reject
+            , @RequestParam(value = "dbcheck", required = false) String dbcheck
+            , @RequestParam(value = "maxcounter", required = false) String maxcounter
+            , @RequestParam(value = "commentsave", required = false) String commentSave
+            , @RequestParam(value = "commentid", required = false) String commentId
+            , @RequestParam(value = "amendmentsFile", required = false) MultipartFile amendmentsFile
+    ) throws Exception {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
         if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
@@ -72,6 +92,8 @@ public class PendingUploadController {
             HttpSession session = request.getSession();
             // todo - pending upload security for non admin users?
             if (pu.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+                // on general principle
+                session.removeAttribute(WARNINGSWORKBOOK);
                 if ("true".equalsIgnoreCase(reject)){
                     Path loaded = Paths.get(SpreadsheetService.getScanDir() + "/loaded");
                     if (!Files.exists(loaded)) {
@@ -90,15 +112,10 @@ public class PendingUploadController {
                     return "redirect:/api/ManageDatabases?uploadreports=true#tab4";
                 }
                 if (commentSave != null && commentId != null) {
-                    Comment forBusinessIdAndIdentifierAndTeam = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), commentId, pu.getTeam());
-                    if (forBusinessIdAndIdentifierAndTeam != null) {
-                        forBusinessIdAndIdentifierAndTeam.setText(commentSave);
-                        CommentDAO.store(forBusinessIdAndIdentifierAndTeam);
-                    } else {
-                        CommentDAO.store(new Comment(0, pu.getBusinessId(), commentId, pu.getTeam(), commentSave));
-                    }
+                    dealWithComment(pu, commentId, commentSave);
                     return "utf8page"; // stop it there, work is done
                 }
+
                 if ("true".equals(dbcheck)){
                     String lastProvenance = (String) session.getAttribute(LATESTPROVENANCE);
                     // not actually going to remove the last provenance until we actually import - someone could close the dialog which calls this
@@ -285,7 +302,7 @@ public class PendingUploadController {
                     }
                 }
 
-                // note, unlike the lookup parameters I cna't do this by file name, it will be per spreadsheet and there may be more than one . . .
+                // note, unlike the lookup parameters I can't do this by file name, it will be per spreadsheet and there may be more than one . . .
                 Set<Integer> fileLoadFlags = new HashSet<>();
                 Map<Integer, Map<Integer, String>> fileRejectLines = new HashMap<>();
                 // as in go ahead and import
@@ -296,38 +313,115 @@ public class PendingUploadController {
                     // then counter-lines, a comma separated list of lines that will be rejected UNLESS
                     // counter-linenumber checkbox is checked
                     // I guess grabbing in a map would be a starter, will need maxcounter to help I think
+
+                    if (amendmentsFile != null){
+                        // I need to collect comments and which lines to load
+                        OPCPackage opcPackage = OPCPackage.open(amendmentsFile.getInputStream());
+                        Workbook book = new XSSFWorkbook(opcPackage);
+                        Sheet warnings = book.getSheet("Warnings");
+                        if (warnings != null){
+                            boolean inData = false;
+                            // first two always load and comment, look up the other two
+                            int fileIndexIndex = 0;
+                            int lineIndexIndex = 0;
+                            int identifierIndex = 0;
+                            for (Row row : warnings){
+                                if (inData){
+
+                                    int fileIndex = Integer.parseInt(ImportService.getCellValue(row.getCell(fileIndexIndex)));
+                                    int lineIndex = Integer.parseInt(ImportService.getCellValue(row.getCell(lineIndexIndex)));
+                                    String identifier = ImportService.getCellValue(row.getCell(identifierIndex));
+                                    // load and comment will always be the first and second cells
+                                    String load = ImportService.getCellValue(row.getCell(0));
+                                    String comment = ImportService.getCellValue(row.getCell(1));
+                                    // ok first deal with the comment
+                                    dealWithComment(pu, identifier, comment);
+                                    // now the line, the question being whether it's to be rejected
+                                    if (load.isEmpty()){
+                                        fileRejectLines.computeIfAbsent(fileIndex, HashMap::new).put(lineIndex, identifier);
+                                    }
+                                } else if (row.getCell(0).getStringCellValue().equalsIgnoreCase("load")){
+                                    for (Cell cell : row){
+                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("file index")){
+                                            fileIndexIndex = cell.getColumnIndex();
+                                        }
+                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("line no")){
+                                            lineIndexIndex = cell.getColumnIndex();
+                                        }
+                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("identifier")){
+                                            identifierIndex = cell.getColumnIndex();
+                                        }
+                                    }
+                                    if (lineIndexIndex == 0 || fileIndexIndex == 0){
+                                        throw new Exception("couldn't find line no and file index headings in amended warnings upload");
+                                    }
+                                    inData = true;
+                                }
+                            }
+                        }
+                    }
                     int maxCounter = Integer.parseInt(maxcounter);
                     for (int i = 0; i <= maxCounter; i++) {
                         if (request.getParameter("load-" + i) == null) { // not ticked to save it . . .
                             fileLoadFlags.add(i);
                         }
-                        // todo - string literals . . . :|
-                        String rejectedLinesString = request.getParameter(i + "-lines");
-                        String identifiersString = request.getParameter(i + "-identifier");
-                        if (rejectedLinesString != null) {
-                            Map<Integer, String> rejectedLines = new HashMap<>(); // this is now going to hold the identifier too - this way I can have the comments available on rejected lines. If I don't get the identidifiers here it's difficult
-                            String[] split = rejectedLinesString.split(",");
-                            String[] identifiersSplit = identifiersString.split("||");
-                            if (split.length == identifiersSplit.length){
-                                for (int j = 0; j < split.length; j++) {
-                                    if (request.getParameter(i + "-" + split[j]) == null) { // if that line was selected then *don't* reject it
-                                        rejectedLines.put(Integer.parseInt(split[j]), identifiersSplit[j]);
+                        // so, we're allowing an excel file to define lines rejected, check if this was uploaded, and use it instead of the checkboxes if it was
+                        if (amendmentsFile == null) {
+                            // todo - string literals . . . :|
+                            String rejectedLinesString = request.getParameter(i + "-lines");
+                            String identifiersString = request.getParameter(i + "-identifier");
+                            if (rejectedLinesString != null) {
+                                Map<Integer, String> rejectedLines = new HashMap<>(); // this is now going to hold the identifier too - this way I can have the comments available on rejected lines. If I don't get the identidifiers here it's difficult
+                                String[] split = rejectedLinesString.split(",");
+                                String[] identifiersSplit = identifiersString.split("\\|\\|");
+                                if (split.length == identifiersSplit.length){
+                                    for (int j = 0; j < split.length; j++) {
+                                        if (request.getParameter(i + "-" + split[j]) == null) { // if that line was selected then *don't* reject it
+                                            rejectedLines.put(Integer.parseInt(split[j]), identifiersSplit[j]);
+                                        }
                                     }
+                                } // if it's not then what?
+                                if (!rejectedLines.isEmpty()) {
+                                    fileRejectLines.put(i, rejectedLines);
                                 }
-                            } // if it's not then what?
-                            if (!rejectedLines.isEmpty()) {
-                                fileRejectLines.put(i, rejectedLines);
                             }
                         }
                     }
                 }
 
                 if (session.getAttribute(ManageDatabasesController.IMPORTRESULT) != null) {
-                    // todo I need to make the interface available as Excel and for it to be uploadable again . . hhhhhnnnnnnngh, also I think the comments need to be on the rejected lines, need a pending upload config object I think
-
                     StringBuilder maintext = new StringBuilder();
                     @SuppressWarnings("unchecked")
                     List<UploadedFile> importResult = (List<UploadedFile>) request.getSession().getAttribute(ManageDatabasesController.IMPORTRESULT);
+
+                    // todo I need to make the interface available as Excel and for it to be uploadable again . . hhhhhnnnnnnngh
+                    // for the moment just jam a workbook against the session in case they want it. Need to remember to zap on submit or a new validation
+
+
+                    Workbook wb = new XSSFWorkbook();
+                    Sheet warnings = wb.createSheet("Warnings");
+                    int rowIndex = 0;
+                    // like below gathering errors for headings but this isn't per file, it's errors for all the files
+                    Set<String> errorsSet = new HashSet<>();
+                    for (UploadedFile uf : importResult) {
+                        for (UploadedFile.WarningLine warningLine : uf.getWarningLines()) {
+                            errorsSet.addAll(warningLine.getErrors().keySet());
+                        }
+                    }
+                    List<String> errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
+                    Set<String> paramsSet = new HashSet<>(); //
+                    for (UploadedFile uf : importResult) {
+                        paramsSet.addAll(uf.getParameters().keySet());
+                    }
+                    paramsSet.remove(ImportService.IMPORTVERSION);
+                    List<String> paramsForWarnings = new ArrayList<>(paramsSet);
+                    int fileIndex = 0;
+                    for (UploadedFile uf : importResult){
+                        rowIndex = lineWarningsForSheet(pu, uf, rowIndex, warnings,errors, rowIndex == 0, paramsForWarnings, fileIndex);
+                        fileIndex++;
+                    }
+                    request.getSession().setAttribute(WARNINGSWORKBOOK, wb);
+
                     request.getSession().removeAttribute(ManageDatabasesController.IMPORTRESULT);
                     String paramsPassThrough = (String) session.getAttribute(PARAMSPASSTHROUGH);
                     session.removeAttribute(PARAMSPASSTHROUGH);
@@ -359,6 +453,8 @@ public class PendingUploadController {
                     maintext.append("</script>\n");
                     maintext.append("<input name=\"finalsubmit\" id=\"finalsubmit\" value=\"finalsubmit\" type=\"hidden\" />\n");
                     maintext.append("<input name=\"maxcounter\" value=\"" + (importResult.size() - 1) + "\" type=\"hidden\" />\n");
+                    maintext.append("<a href=\"/api/Download?puid=" + id + "\" class=\"button\">Download Warning Report</a>" +
+                            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<label for=\"amendmentsFile\">Upload Amendments : </label> <input type=\"file\" name=\"amendmentsFile\">\n");
                     maintext.append("<table>\n");
                     maintext.append("<tr>\n");
                     maintext.append("<td>Name</td>\n");
@@ -529,10 +625,25 @@ public class PendingUploadController {
         return "redirect:/api/ManageDatabases";
     }
 
+    private static void dealWithComment(PendingUpload pu, String commentId, String commentSave) {
+        Comment forBusinessIdAndIdentifierAndTeam = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), commentId, pu.getTeam());
+        if (forBusinessIdAndIdentifierAndTeam != null) {
+            if (commentSave.isEmpty()){
+                CommentDAO.removeById(forBusinessIdAndIdentifierAndTeam);
+            } else {
+                forBusinessIdAndIdentifierAndTeam.setText(commentSave);
+                CommentDAO.store(forBusinessIdAndIdentifierAndTeam);
+            }
+        } else if (!commentSave.isEmpty()){
+            CommentDAO.store(new Comment(0, pu.getBusinessId(), commentId, pu.getTeam(), commentSave));
+        }
+    }
+
     // like the one in ManageDatabasesController but for sheets. Started by modifying that but it got messy quickly hence a new function in here . . .
     public static void formatUploadedFilesForSheet(PendingUpload pu, List<UploadedFile> uploadedFiles, Sheet sheet) {
         int rowIndex = 0;
         int cellIndex = 0;
+        int fileIndex = 0;
         for (UploadedFile uploadedFile : uploadedFiles) {
             Row row = sheet.createRow(rowIndex++);
             List<String> names = new ArrayList<>(uploadedFile.getFileNames()); // copy as I might change it
@@ -644,8 +755,6 @@ public class PendingUploadController {
                 row = sheet.createRow(rowIndex++);
                 row.createCell(cellIndex).setCellValue("Line Errors");
                 cellIndex = 0;
-
-
                 int maxHeadingsDepth = 0;
                 if (uploadedFile.getFileHeadings() != null) {
                     for (List<String> headingCol : uploadedFile.getFileHeadings()) {
@@ -706,98 +815,13 @@ public class PendingUploadController {
                 sheet.createRow(rowIndex++);
             }
             // now the warning lines that will be a little more complex and have tickboxes
-            // todo - factor later!
-            if (!uploadedFile.getWarningLines().isEmpty()) {
-                // We're going to need descriptions of the errors, put them all in a set
-                Set<String> errorsSet = new HashSet<>();
-                for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
-                    errorsSet.addAll(warningLine.getErrors().keySet());
-                }
-                List<String> errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
-                cellIndex = 0;
-                row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex).setCellValue("Line Warnings");
-                cellIndex = 0;
-                row = sheet.createRow(rowIndex++);
-                for (String error : errors) {
-                    row.createCell(cellIndex).setCellValue(error);
-                    cellIndex = 0;
-                    row = sheet.createRow(rowIndex++);
-                }
-
-
-                int maxHeadingsDepth = 0;
-                if (uploadedFile.getFileHeadings() != null) {
-                    for (List<String> headingCol : uploadedFile.getFileHeadings()) {
-                        if (headingCol.size() > maxHeadingsDepth) {
-                            maxHeadingsDepth = headingCol.size();
-                        }
-                    }
-                    // slightly janky looking, the key is to put in the headings as they are in the file - the catch is that the entries in file headings can be of variable size
-                    if (maxHeadingsDepth > 1) {
-                        for (int i = maxHeadingsDepth; i > 1; i--) {
-                            row = sheet.createRow(rowIndex++);
-                            row.createCell(cellIndex++).setCellValue("");
-                            row.createCell(cellIndex++).setCellValue("");
-                            for (List<String> headingCol : uploadedFile.getFileHeadings()) {
-                                if (headingCol.size() >= i) {
-                                    row.createCell(cellIndex++).setCellValue(headingCol.get(headingCol.size() - i));// think that's right . . .
-                                } else {
-                                    row.createCell(cellIndex++).setCellValue("");
-                                }
-                            }
-                        }
-                    }
-                    row = sheet.createRow(rowIndex++);
-                    row.createCell(cellIndex++).setCellValue("Comment");
-                    for (String error : errors) {
-                        if (error.contains("[") && error.indexOf("]", error.indexOf("[")) > 0) {
-                            error = error.substring(error.indexOf("[") + 1, error.indexOf("]", error.indexOf("[")));
-                        }
-                        row.createCell(cellIndex++).setCellValue(error);
-                    }
-
-                    row.createCell(cellIndex++).setCellValue("#");
-                    for (List<String> headingCol : uploadedFile.getFileHeadings()) {
-                        if (!headingCol.isEmpty()) {
-                            row.createCell(cellIndex++).setCellValue(headingCol.get(headingCol.size() - 1));// think that's right . . .
-                        } else {
-                            row.createCell(cellIndex++).setCellValue("");
-                        }
-                    }
-                } else {
-                    row.createCell(cellIndex++).setCellValue("Comment");
-                    for (String error : errors) {
-                        if (error.contains("[") && error.indexOf("]", error.indexOf("[")) > 0) {
-                            error = error.substring(error.indexOf("[") + 1, error.indexOf("]", error.indexOf("[")));
-                        }
-                        row.createCell(cellIndex++).setCellValue(error);
-                    }
-                    row.createCell(cellIndex).setCellValue("#");
-                }
-
-                cellIndex = 0;
-                row = sheet.createRow(rowIndex++);
-                for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
-                    String commentValue = "";
-                    Comment comment = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), warningLine.getIdentifier().replace("\"", ""), pu.getTeam());
-                    if (comment != null) {
-                        commentValue = comment.getText();
-                    }
-                    row.createCell(cellIndex++).setCellValue(commentValue);
-                    for (String error : errors) {
-                        row.createCell(cellIndex++).setCellValue(warningLine.getErrors().getOrDefault(error, ""));
-                    }
-                    row.createCell(cellIndex++).setCellValue(warningLine.getLineNo());
-                    String[] split = warningLine.getLine().split("\t");
-                    for (String cell : split) {
-                        row.createCell(cellIndex++).setCellValue(cell);
-                    }
-                    cellIndex = 0;
-                    row = sheet.createRow(rowIndex++);
-                }
+            // We're going to need descriptions of the errors, put them all in a set
+            Set<String> errorsSet = new HashSet<>();
+            for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
+                errorsSet.addAll(warningLine.getErrors().keySet());
             }
-
+            List<String> errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
+            rowIndex = lineWarningsForSheet(pu,uploadedFile,rowIndex,sheet, errors, true, null, fileIndex);
             if (uploadedFile.getError() != null) {
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
@@ -814,13 +838,15 @@ public class PendingUploadController {
                 cellIndex = 0;
                 sheet.createRow(rowIndex++);
             }
+            fileIndex++;
         }
     }
 
     // overview that will hopefully be useful to the user
-    public static void summaryUploadFeedbackForSheet(List<UploadedFile> uploadedFiles, Sheet sheet, PendingUpload pu) {
+    private static void summaryUploadFeedbackForSheet(List<UploadedFile> uploadedFiles, Sheet sheet, PendingUpload pu) {
         int rowIndex = 0;
         int cellIndex = 0;
+        int fileIndex = 0;
         for (UploadedFile uploadedFile : uploadedFiles) {
             cellIndex = 0;
             Row row = sheet.createRow(rowIndex++);
@@ -837,17 +863,51 @@ public class PendingUploadController {
 
             cellIndex = 0;
             sheet.createRow(rowIndex++);
-            row = sheet.createRow(rowIndex++);
-            List<String> errors = null;
-            if (!uploadedFile.getWarningLines().isEmpty()) {
-                // We're going to need descriptions of the errors, put them all in a set
-                Set<String> errorsSet = new HashSet<>();
-                for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
-                    errorsSet.addAll(warningLine.getErrors().keySet());
-                }
-                errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
+            sheet.createRow(rowIndex++);
+            // We're going to need descriptions of the errors, put them all in a set
+            Set<String> errorsSet = new HashSet<>();
+            for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
+                errorsSet.addAll(warningLine.getErrors().keySet());
+            }
+            List<String> errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
+            rowIndex = lineWarningsForSheet(pu,uploadedFile,rowIndex,sheet,errors, true, null,fileIndex);
+            if (uploadedFile.getIgnoreLinesValues() != null) {
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex).setCellValue("Line Warnings");
+                row.createCell(cellIndex).setCellValue("Manually Rejected Lines");
+                // jumping the cell index across align it with the table above
+                cellIndex = errors.size();
+                row = sheet.createRow(rowIndex++);
+                row.createCell(cellIndex++).setCellValue("Comment");
+                row.createCell(cellIndex).setCellValue("#");
+                cellIndex = errors.size();
+                row = sheet.createRow(rowIndex++);
+                ArrayList<Integer> sort = new ArrayList<>(uploadedFile.getIgnoreLinesValues().keySet());
+                Collections.sort(sort);
+                for (Integer lineNo : sort) {
+                    // ok try to get comments now we have a line reference
+                    // don't need to remove " from the identifier, it should have been zapped already
+                    Comment comment = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), uploadedFile.getIgnoreLines().get(lineNo), pu.getTeam());
+                    row.createCell(cellIndex++).setCellValue(comment != null ? comment.getText() : "");
+                    row.createCell(cellIndex++).setCellValue(lineNo);
+                    String[] split = uploadedFile.getIgnoreLinesValues().get(lineNo).split("\t");
+                    for (String cell : split) {
+                        row.createCell(cellIndex++).setCellValue(cell);
+                    }
+                    cellIndex = errors.size();
+                    row = sheet.createRow(rowIndex++);
+                }
+            }
+            fileIndex++;
+        }
+    }
+
+    private static int lineWarningsForSheet(PendingUpload pu, UploadedFile uploadedFile, int rowIndex, Sheet sheet, List<String> errors, boolean addHeadings, List<String> paramsHeadings, int fileIndex){
+        if (!uploadedFile.getWarningLines().isEmpty()) {
+            int cellIndex = 0;
+            Row row;
+            if (addHeadings){
+                row = sheet.createRow(rowIndex++);
+                row.createCell(cellIndex).setCellValue("Line Warnings" + (paramsHeadings != null ? ", sorting rows below the headings is fine but please do not modify data outside the first two columns, this may confuse the system." : ""));
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
                 for (String error : errors) {
@@ -855,7 +915,6 @@ public class PendingUploadController {
                     cellIndex = 0;
                     row = sheet.createRow(rowIndex++);
                 }
-
                 int maxHeadingsDepth = 0;
                 if (uploadedFile.getFileHeadings() != null) {
                     for (List<String> headingCol : uploadedFile.getFileHeadings()) {
@@ -879,15 +938,27 @@ public class PendingUploadController {
                         }
                     }
                     row = sheet.createRow(rowIndex++);
+                    if (paramsHeadings != null){
+                        row.createCell(cellIndex++).setCellValue("Load");
+                    }
                     row.createCell(cellIndex++).setCellValue("Comment");
+                    if (paramsHeadings != null){
+                        row.createCell(cellIndex++).setCellValue("File");
+                        for (String param : paramsHeadings){
+                            row.createCell(cellIndex++).setCellValue(param);
+                        }
+                        row.createCell(cellIndex++).setCellValue("Identifier");
+                    }
                     for (String error : errors) {
                         if (error.contains("[") && error.indexOf("]", error.indexOf("[")) > 0) {
                             error = error.substring(error.indexOf("[") + 1, error.indexOf("]", error.indexOf("[")));
                         }
                         row.createCell(cellIndex++).setCellValue(error);
                     }
-
-                    row.createCell(cellIndex++).setCellValue("#");
+                    if (paramsHeadings != null){
+                        row.createCell(cellIndex++).setCellValue("File Index");
+                    }
+                    row.createCell(cellIndex++).setCellValue("Line No");
                     for (List<String> headingCol : uploadedFile.getFileHeadings()) {
                         if (!headingCol.isEmpty()) {
                             row.createCell(cellIndex++).setCellValue(headingCol.get(headingCol.size() - 1));// think that's right . . .
@@ -896,60 +967,68 @@ public class PendingUploadController {
                         }
                     }
                 } else {
+                    row = sheet.createRow(rowIndex++);
+                    if (paramsHeadings != null){
+                        row.createCell(cellIndex++).setCellValue("Load");
+                    }
                     row.createCell(cellIndex++).setCellValue("Comment");
+                    if (paramsHeadings != null){
+                        row.createCell(cellIndex++).setCellValue("File");
+                        for (String param : paramsHeadings){
+                            row.createCell(cellIndex++).setCellValue(param);
+                        }
+                        row.createCell(cellIndex++).setCellValue("Identifier");
+                    }
                     for (String error : errors) {
                         if (error.contains("[") && error.indexOf("]", error.indexOf("[")) > 0) {
                             error = error.substring(error.indexOf("[") + 1, error.indexOf("]", error.indexOf("[")));
                         }
                         row.createCell(cellIndex++).setCellValue(error);
                     }
-                    row.createCell(cellIndex).setCellValue("#");
+                    if (paramsHeadings != null){
+                        row.createCell(cellIndex++).setCellValue("File Index");
+                    }
+                    row.createCell(cellIndex++).setCellValue("Line No");
                 }
-
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
-                    String commentValue = "";
-                    Comment comment = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), warningLine.getIdentifier().replace("\"", ""), pu.getTeam());
-                    if (comment != null) {
-                        commentValue = comment.getText();
-                    }
-                    row.createCell(cellIndex++).setCellValue(commentValue);
-                    for (String error : errors) {
-                        row.createCell(cellIndex++).setCellValue(warningLine.getErrors().getOrDefault(error, ""));
-                    }
-                    row.createCell(cellIndex++).setCellValue(warningLine.getLineNo());
-                    String[] split = warningLine.getLine().split("\t");
-                    for (String cell : split) {
-                        row.createCell(cellIndex++).setCellValue(cell);
-                    }
-                    cellIndex = 0;
-                    row = sheet.createRow(rowIndex++);
-                }
+            } else {
+                row = sheet.getRow(sheet.getLastRowNum());
             }
 
-            if (uploadedFile.getIgnoreLinesValues() != null) {
+            for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
+                if (paramsHeadings != null){
+                    row.createCell(cellIndex++).setCellValue(""); // empty load cell, expects a x or maybe anything?
+                }
+                String commentValue = "";
+                Comment comment = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), warningLine.getIdentifier().replace("\"", ""), pu.getTeam());
+                if (comment != null) {
+                    commentValue = comment.getText();
+                }
+                row.createCell(cellIndex++).setCellValue(commentValue);
+                if (paramsHeadings != null){
+                    row.createCell(cellIndex++).setCellValue(uploadedFile.getFileNamesAsString());
+                    for (String param : paramsHeadings){
+                        row.createCell(cellIndex++).setCellValue(uploadedFile.getParameter(param) != null ? uploadedFile.getParameter(param) : "");
+                    }
+                    row.createCell(cellIndex++).setCellValue(warningLine.getIdentifier().replace("\"", ""));
+                }
+
+                for (String error : errors) {
+                    row.createCell(cellIndex++).setCellValue(warningLine.getErrors().getOrDefault(error, ""));
+                }
+                if (paramsHeadings != null){
+                    row.createCell(cellIndex++).setCellValue(fileIndex);
+                }
+                row.createCell(cellIndex++).setCellValue(warningLine.getLineNo());
+                String[] split = warningLine.getLine().split("\t");
+                for (String cell : split) {
+                    row.createCell(cellIndex++).setCellValue(cell);
+                }
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex).setCellValue("Manually Rejected Lines");
-                // jumping the cell index across align it with the table above
-                cellIndex = errors != null ? errors.size() : 1;
-                row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex).setCellValue("#");
-                cellIndex = errors != null ? errors.size() : 1;
-                row = sheet.createRow(rowIndex++);
-                ArrayList<Integer> sort = new ArrayList<>(uploadedFile.getIgnoreLinesValues().keySet());
-                Collections.sort(sort);
-                for (Integer lineNo : sort) {
-                    row.createCell(cellIndex++).setCellValue(lineNo);
-                    String[] split = uploadedFile.getIgnoreLinesValues().get(lineNo).split("\t");
-                    for (String cell : split) {
-                        row.createCell(cellIndex++).setCellValue(cell);
-                    }
-                    cellIndex = errors != null ? errors.size() : 1;
-                    row = sheet.createRow(rowIndex++);
-                }
             }
         }
+        return rowIndex;
     }
 }

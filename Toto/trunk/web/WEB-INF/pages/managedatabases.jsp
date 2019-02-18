@@ -299,6 +299,7 @@ Created by IntelliJ IDEA.
                     <td>Database</td>
                     <td></td>
                     <td></td>
+                    <td></td>
                 </tr>
                 </thead>
                 <tbody>
@@ -316,6 +317,14 @@ Created by IntelliJ IDEA.
                             <a href="/api/DownloadFile?pendingUploadId=${pendingupload.id}"
                                class="button small" title="Download"><span
                                     class="fa fa-download" title="Download"></span> </a></td>
+                        <td>
+                            <c:if test="${!pendingupload.loaded}"><a onclick="showHideDiv('working');"
+                                                                     href="/api/PendingUpload?id=${pendingupload.id}&reject=true"
+                                                                     class="button"
+                                                                     title="Reject">
+                                Reject
+                            </a></c:if>
+                        </td>
                         <td>
                             <c:if test="${!pendingupload.loaded}"><a onclick="showHideDiv('working');"
                                                                      href="/api/PendingUpload?id=${pendingupload.id}"

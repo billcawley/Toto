@@ -976,7 +976,7 @@ public final class ImportService {
     // POI Version, used when converting sheets to csv. Essentially get a value of the cell as either an unformatted number or as a string similar to how it
     // is rendered in Excel, Some hacking to standardise date formats and remove escape characters
 
-    private static String getCellValue(Cell cell) {
+    public static String getCellValue(Cell cell) {
         String returnString = "";
         if (cell == null) {
             return "";

@@ -68,7 +68,7 @@
 </div>
 <main>
     <h1>Import Validation for ${filename}</h1>
-    <form action="/api/PendingUpload" method="post" id="theForm">
+    <form action="/api/PendingUpload" method="post" id="theForm" enctype="multipart/form-data">
         <input type="hidden" name="id" value="${id}"/>
         <c:choose>
             <c:when test="${dbselect == true}">

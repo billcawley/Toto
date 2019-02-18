@@ -99,6 +99,7 @@ public class UploadedFile implements Serializable {
     // what the ignored lines actually were - for user feedback
     private Map<Integer, String> ignoreLinesValues;
 
+    // should an uploaded file have an index which would indicate its place in a package (a zip or book or both)?
 
     public static class RejectedLine implements Serializable{
         final int lineNo;
