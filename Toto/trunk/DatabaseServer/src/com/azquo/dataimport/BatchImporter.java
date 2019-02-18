@@ -329,7 +329,6 @@ public class BatchImporter implements Callable<Void> {
 
 
     private static boolean resolveComposition(AzquoMemoryDBConnection azquoMemoryDBConnection, ImportCellWithHeading cell, String compositionPattern, List<ImportCellWithHeading> cells,  CompositeIndexResolver compositeIndexResolver, Map<String, Name> namesFoundCache, List<String> attributeNames)throws Exception{
-         boolean dependenciesOk = true;
          if (compositionPattern.equals("NOW")) {
              compositionPattern = LocalDateTime.now() + "";
          }
@@ -432,19 +431,14 @@ public class BatchImporter implements Callable<Void> {
                          if (doublequotes) headingMarker++;
                      } else {
                          // can't get the value . . .
-                         dependenciesOk = false;
-                         break;
-                     }
+                         return false;
+                      }
                  } else { // couldn't find the cell or the required cell is not yet resolved
-                     dependenciesOk = false;
-                     break;
+                     return false;
                  }
              }
              // try to find the start of the next column referenced
              headingMarker = compositionPattern.indexOf("`", ++headingMarker);
-             if (!dependenciesOk) {
-                 return false;
-             }
          }
         // single operator calculation after resolving the column names. 1*4.5, 76+345 etc. trim?
         if (compositionPattern.toLowerCase().startsWith("calc")) {
