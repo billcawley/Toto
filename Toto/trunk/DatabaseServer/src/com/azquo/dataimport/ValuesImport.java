@@ -122,6 +122,7 @@ public class ValuesImport {
                     }
                 }
             }
+            uploadedFile.setNoData(linesImported == 0);
             uploadedFile.setProcessingDuration((System.currentTimeMillis() - track) / 1000);
             uploadedFile.setNoLinesImported(linesImported - linesRejected.size());
             connection.addToUserLogNoException("Imported " + (linesImported - linesRejected.size()) + " lines", true); // does the user log require more details??

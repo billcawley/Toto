@@ -483,7 +483,11 @@ public class PendingUploadController {
                                 if (!quickFeedback.isEmpty()) {
                                     quickFeedback += ", ";
                                 }
-                                quickFeedback += "No Data Modified";
+                                if (uploadedFile.isNoData()){
+                                    quickFeedback += "No Data";
+                                } else {
+                                    quickFeedback += "No Data Modified";
+                                }
                             }
                         }
 
@@ -834,7 +838,11 @@ public class PendingUploadController {
             if (!uploadedFile.isDataModified()) {
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                row.createCell(cellIndex).setCellValue("NO DATA MODIFIED");
+                if (uploadedFile.isNoData()){
+                    row.createCell(cellIndex).setCellValue("NO DATA");
+                } else {
+                    row.createCell(cellIndex).setCellValue("NO DATA MODIFIED");
+                }
                 cellIndex = 0;
                 sheet.createRow(rowIndex++);
             }

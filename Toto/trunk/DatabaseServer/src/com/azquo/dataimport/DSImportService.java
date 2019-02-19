@@ -54,7 +54,7 @@ public class DSImportService {
     public static UploadedFile readPreparedFile(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile) throws Exception {
         // ok the thing he is to check if the memory db object lock is free, more specifically don't start an import if persisting is going on, since persisting never calls import there should be no chance of a deadlock from this
         // of course this doesn't currently stop the opposite, a persist being started while an import is going on.
-         azquoMemoryDBConnection.addToUserLog("Reading " + uploadedFile.getFullFileName());
+        azquoMemoryDBConnection.addToUserLog("Reading " + uploadedFile.getFullFileName());
         azquoMemoryDBConnection.lockTest();
         azquoMemoryDBConnection.getAzquoMemoryDB().clearCaches();
         if (uploadedFile.getFileName().toLowerCase().startsWith("sets")) { // typically from a sheet with that name in a book

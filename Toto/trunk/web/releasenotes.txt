@@ -1,4 +1,12 @@
-13-02-09
+18-02-19
+
+Manually add to pending uploads
+
+With conditional on composite values - if(condition, iftrue, iffalse)
+
+Allow downloading of the warnings for a pending upload which can be modified and then uploaded
+
+13-02-19
 
 Import templates linked to databases and backups, improved progress feedback during import/validation, reject button working, concurrent modification check, broaksure XML export changes
 

@@ -770,7 +770,11 @@ public class ManageDatabasesController {
             }
 
             if (!uploadedFile.isDataModified()) {
-                toReturn.append("NO DATA MODIFIED.\n<br/>");
+                if (uploadedFile.isNoData()){
+                    toReturn.append("NO DATA.\n<br/>");
+                } else {
+                    toReturn.append("NO DATA MODIFIED.\n<br/>");
+                }
             }
 
             if (uploadedFile.getReportName() != null) {

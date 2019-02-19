@@ -51,6 +51,8 @@ public class UploadedFile implements Serializable {
     private String error;
     // as in "was data modified?"
     private boolean dataModified;
+    // relevant where the file might have the correct headers but no data, like a more specific version of dataModified
+    private boolean noData;
     // if the upload was a report this was the name found in the excel file
     private String reportName;
     // was it an import template?
@@ -115,6 +117,7 @@ public class UploadedFile implements Serializable {
         public int getLineNo() {
             return lineNo;
         }
+
 
         public String getLine() {
             return line;
@@ -181,6 +184,7 @@ public class UploadedFile implements Serializable {
         errorHeadings = new HashSet<>();
         error = null;
         dataModified = false;
+        noData = false;
         reportName = null;
         importTemplate = false;
 
@@ -301,6 +305,14 @@ public class UploadedFile implements Serializable {
 
     public void setDataModified(boolean dataModified) {
         this.dataModified = dataModified;
+    }
+
+    public boolean isNoData() {
+        return noData;
+    }
+
+    public void setNoData(boolean noData) {
+        this.noData = noData;
     }
 
     public String getReportName() {
