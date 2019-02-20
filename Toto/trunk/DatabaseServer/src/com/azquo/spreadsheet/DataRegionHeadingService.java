@@ -301,7 +301,7 @@ class DataRegionHeadingService {
     /* ok, so, practically speaking the shared names if applicable are from context (probably the findAllChildren from one name)
     and the listToPermute is the contents of the permute function e.g. permute(`Product category`, `Product subcategory`) in Nisbets*/
 
-    private static List<List<DataRegionHeading>> findPermutedItems(final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute, boolean noPermuteTotals) throws Exception {
+    private static List<List<DataRegionHeading>> findPermutedItems(AzquoMemoryDBConnection azquoMemoryDBConnection, final Collection<Name> sharedNames, final List<DataRegionHeading> listToPermute, boolean noPermuteTotals) throws Exception {
         NumberFormat nf = NumberFormat.getInstance();
         long startTime = System.currentTimeMillis();
         List<Collection<Name>> sharedNamesSets = new ArrayList<>();
@@ -408,8 +408,35 @@ class DataRegionHeadingService {
             sortLists.add(sortList);
         }
         List<List<DataRegionHeading>> permuted = sortCombos(listToPermute, foundCombinations, 0, sortLists, noPermuteTotals);
+        for (List<DataRegionHeading> row : permuted) {
+            shuffleRow(azquoMemoryDBConnection, row);
+        }
         System.out.println("Headings sorted in " + nf.format((System.currentTimeMillis() - startTime)));
         return permuted;
+    }
+
+    private static void shuffleRow(AzquoMemoryDBConnection azquoMemoryDBConnection, List<DataRegionHeading>row)throws Exception{
+        //this routine is designed to speed up permutes - particularly when calculations are involved
+         Collection<Name> names = new ArrayList<>();
+         for (int i = 0;i <row.size();i++){
+            Name name = row.get(i).getName();
+
+            if (name!=null){
+                if (names == null){
+                     names.addAll(name.findAllChildren());
+                }else{
+                    names.retainAll(name.findAllChildren());
+                }
+            }
+
+            if (i == row.size()-1){
+                if (names.size()> 0 && names.size() < name.findAllChildren().size()){
+                    row.get(i).amendPermutedHeading(names);
+                }
+            }else{
+                row.get(i).amendPermutedHeading(null);
+            }
+        }
     }
 
     /*
@@ -561,11 +588,11 @@ class DataRegionHeadingService {
 
     */
 
-    static List<List<DataRegionHeading>> permuteHeadings(List<DataRegionHeading> mainHeading, List<List<List<DataRegionHeading>>> subHeadings, Collection<Name> sharedNames, boolean noPermuteTotals) throws Exception {
+    static List<List<DataRegionHeading>> permuteHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, List<DataRegionHeading> mainHeading, List<List<List<DataRegionHeading>>> subHeadings, Collection<Name> sharedNames, boolean noPermuteTotals) throws Exception {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
-        List<List<DataRegionHeading>> expandedSubheadings = expandHeadings(subHeadings, sharedNames, noPermuteTotals);
+        List<List<DataRegionHeading>> expandedSubheadings = expandHeadings(azquoMemoryDBConnection, subHeadings, sharedNames, noPermuteTotals);
         if (mainHeading != null && mainHeading.size() > 0 && mainHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) {
-            List<List<DataRegionHeading>> permuted = findPermutedItems(sharedNames, mainHeading, noPermuteTotals);
+            List<List<DataRegionHeading>> permuted = findPermutedItems(azquoMemoryDBConnection, sharedNames, mainHeading, noPermuteTotals);
             for (List<DataRegionHeading> permuteLine : permuted) {
                 for (List<DataRegionHeading> expandedSubheading : expandedSubheadings) {
                     List<DataRegionHeading> newHeadings = new ArrayList<>();
@@ -603,7 +630,7 @@ class DataRegionHeadingService {
     }
 
     // last 2 params only for permute - a concern?
-    static List<List<DataRegionHeading>> expandHeadings(final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames, boolean noPermuteTotals) throws Exception {
+    static List<List<DataRegionHeading>> expandHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, final List<List<List<DataRegionHeading>>> headingLists, Collection<Name> sharedNames, boolean noPermuteTotals) throws Exception {
         List<List<DataRegionHeading>> toReturn = new ArrayList<>();
         if (headingLists.size()==0) return toReturn;
         if (headingLists.get(0).size() > 1) {
@@ -614,7 +641,7 @@ class DataRegionHeadingService {
                 List<List<DataRegionHeading>> headingRow = it.next();
                 if (subHeadings == null || headingRow.get(0) != null) {
                     if (subHeadings != null) {
-                        toReturn.addAll(permuteHeadings(mainHeading, subHeadings, sharedNames, noPermuteTotals));
+                        toReturn.addAll(permuteHeadings(azquoMemoryDBConnection, mainHeading, subHeadings, sharedNames, noPermuteTotals));
                     }
                     mainHeading = headingRow.get(0);
                     subHeadings = new ArrayList<>();
@@ -628,12 +655,12 @@ class DataRegionHeadingService {
                 }
                 subHeadings.add(subHeadingRow);
             }
-            toReturn.addAll(permuteHeadings(mainHeading, subHeadings, sharedNames, noPermuteTotals));
+            toReturn.addAll(permuteHeadings(azquoMemoryDBConnection, mainHeading, subHeadings, sharedNames, noPermuteTotals));
         } else {
             Iterator<List<List<DataRegionHeading>>> headingRowIterator = headingLists.iterator();
             List<DataRegionHeading> nextHeading = headingRowIterator.next().get(0);
             if (nextHeading != null && nextHeading.size() > 0 && nextHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
-                toReturn.addAll(findPermutedItems(sharedNames, nextHeading, noPermuteTotals));//assumes only one row of headings, it's a list of the permute names
+                toReturn.addAll(findPermutedItems(azquoMemoryDBConnection, sharedNames, nextHeading, noPermuteTotals));//assumes only one row of headings, it's a list of the permute names
             } else {        //last column - simply expand, filling spaces where available.
                 List<DataRegionHeading> heading = null;
                 boolean workToDo = true;
