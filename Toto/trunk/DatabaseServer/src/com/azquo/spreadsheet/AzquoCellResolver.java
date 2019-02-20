@@ -185,30 +185,36 @@ public class AzquoCellResolver {
                 List<Collection<Name>> namesToResolve = new ArrayList<>();
                 List<Name> sharedNames = new ArrayList<>();
                 for (DataRegionHeading drh : contextHeadings){
-                    if (drh.getName() != null && !usedInExpression.contains(drh.getName())) {
+                    if (drh!=null && drh.getName() != null && !usedInExpression.contains(drh.getName())) {
                         sharedNames.add(drh.getName());
                     }
                 }
                 for (DataRegionHeading drh : rowHeadings){
-                    if (drh.getName() != null && !usedInExpression.contains(drh.getName())) {
+                    if (drh!=null && drh.getName() != null && !usedInExpression.contains(drh.getName())) {
                         sharedNames.add(drh.getName());
                     }
                 }
                 for (DataRegionHeading drh : columnHeadings){
-                    if (drh.getName() != null && !usedInExpression.contains(drh.getName())) {
+                    if (drh!=null && drh.getName() != null && !usedInExpression.contains(drh.getName())) {
                         sharedNames.add(drh.getName());
                     }
                 }
                 boolean expressionsValid = true;
-                for (String expression:expressions){
-                    try {
-                        Collection<Name> found = NameQueryParser.parseQuery(connection, expression, languages, null, true);// pretty sure a readonly collection returned is fine
-                        namesToResolve.add(found);
-                     }catch(Exception e){
-                       expressionsValid = false;
-                    }
+                Collection<Name> found = expressionFunctionHeadings.get(0).getValueFunctionSet();
+                if (found==null) {
+                    for (String expression : expressions) {
+                        try {
+                            found = NameQueryParser.parseQuery(connection, expression, languages, null, true);// pretty sure a readonly collection returned is fine
+                            namesToResolve.add(found);
+                        } catch (Exception e) {
+                            expressionsValid = false;
+                        }
 
-                 }
+                    }
+                }else{
+                    namesToResolve.add(found);
+                }
+
                  if (expressionsValid) {
                      // typically used to sort a from e.g. 2017 children from July
                      ValuesHook valuesHook = new ValuesHook(); // needed for the code to run currently, any
