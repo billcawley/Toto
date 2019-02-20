@@ -368,12 +368,11 @@ public final class ValueService {
                             debugInfo.append("\tApplies to ").append(name.getAttribute(APPLIESTO)).append("\n");
                         }
                         // will be being looked up by default display name for the moment
-                        if (name.getAttribute(APPLIESTO).trim().equalsIgnoreCase("lowest")) {
+                        if (name.getAttribute(APPLIESTO).trim().toLowerCase().endsWith("lowest")) {
                             lowest = true;
-                        } else {
-                            appliesToNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, name.getAttribute(APPLIESTO), attributeNames, false);
                         }
-                    }
+                        appliesToNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, name.getAttribute(APPLIESTO), attributeNames, false);
+                      }
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
                     calc = StringUtils.prepareStatement(calc, nameStrings, formulaStrings, attributeStrings);
@@ -394,29 +393,32 @@ public final class ValueService {
         }
         // lowest then there's no point running outer loops etc. Note we assume this is a calc!
         if (lowest) {
-            // prepare lists to permute - I can't just use the findAllChildrenSets as they're not level lowest
-            List<List<Name>> toPermute = new ArrayList<>();
-            for (Name calcName : calcnames) {
-                Set<Name> permutationDimension = new HashSet<>(); // could move to koloboke? I need to use sets here to stop duplicates
-                if (!calcName.hasChildren()) {
-                    permutationDimension.add(calcName);
-                } else {
-                    for (Name name : calcName.findAllChildren()) {
-                        if (!name.hasChildren()) {
-                            permutationDimension.add(name);
-                        }
+            List<Name> loopNames = new ArrayList<>(appliesToNames);
+            boolean hasList = false;
+
+            for (Name calcName:calcnames){
+
+                if (appliesToNames.contains(calcName)) {
+                    loopNames = new ArrayList<>();
+                    loopNames.add(calcName);
+                    hasList = true;
+                }else{
+                    if(!Collections.disjoint(appliesToNames, calcName.findAllChildren())) { // nagative on disjoint, there were elements in common
+                        loopNames.retainAll(calcName.findAllChildren());
+                        hasList = true;
                     }
+                    //System.out.println("Trim " + calcName.getDefaultDisplayName() + " : outer loop size : " + outerLoopNames.size());
                 }
-                toPermute.add(new ArrayList<>(permutationDimension)); // just wrap back to a lists,not that efficient but can use the existing permute function
             }
-            // now I think I can just use an existing function!
-            final List<List<Name>> permutationOfLists = MultidimensionalListUtils.get2DPermutationOfLists(toPermute);
+            if (!hasList) return 0;
             double toReturn = 0;
-            for (List<Name> lowLevelCalcNames : permutationOfLists) { // it's lowLevelCalcNames that we were after
+            for (Name calcName : loopNames) {
                 if (valuesHook.calcValues == null) {
                     valuesHook.calcValues = new ArrayList<>();
                 }
-                double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, lowLevelCalcNames, remainingCalcs, locked, valuesHook, attributeNames, function, exactName, nameComboValueCache, debugInfo);
+                calcnames.add(calcName);
+                double result = ValueCalculationService.resolveCalc(azquoMemoryDBConnection, calcString, formulaNames, calcnames, remainingCalcs, locked, valuesHook, attributeNames, function, exactName, nameComboValueCache, debugInfo);
+                calcnames.remove(calcName);
                 valuesHook.calcValues.add(result);
                 toReturn += result;
             }
