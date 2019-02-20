@@ -46,15 +46,15 @@ public class DataRegionHeading {
     /*
     Additional criteria. Existing locking stands but a new rule is to lock by default on a composite value
      */
-    private final Name name;
-    private final String attribute;
+    private Name name;
+    private String attribute;
     private final boolean writeAllowed;
-    private final FUNCTION function;
+    private FUNCTION function;
     private final SUFFIX suffix;
     // either the name (normally) or the function as written in the case of name count path count etc. Useful for debugging and for storing queries that cna only be resolved later e.g. with [ROWHEADING]
-    private final String description;
+    private String description;
     private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
-    private final Collection<Name> valueFunctionSet; // just used for valueparentcount
+    Collection<Name> valueFunctionSet; // just used for valueparentcount and valueset
     private final double doubleParameter; // initially used for percentile, could be others. I think this needs to be rearranged at some point but for the moment make percentile work.
     private final Collection<Name> attributeSet;
     private final String calculation; //the description having passed through the preparation routines
@@ -100,6 +100,18 @@ public class DataRegionHeading {
 
     public Name getName() {
         return name;
+    }
+
+    public void amendPermutedHeading(Collection<Name> names){
+        name = null;
+        if (names !=null){
+            description ="-";
+            function = FUNCTION.VALUESET;
+            valueFunctionSet = names;
+
+        }else{
+            attribute = ".";
+        }
     }
 
     public String getAttribute() {
