@@ -142,7 +142,7 @@ class AzquoCellService {
         if (time > threshold) System.out.println("Row headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
         Collection<Name> sharedNames = getSharedNames(contextHeadings);//sharedNames only required for permutations
-        final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames, regionOptions.noPermuteTotals);
+        final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(azquoMemoryDBConnection, rowHeadingLists, sharedNames, regionOptions.noPermuteTotals);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Row headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
@@ -155,7 +155,7 @@ class AzquoCellService {
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings parsed in " + time + "ms");
         track = System.currentTimeMillis();
-        final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames, regionOptions.noPermuteTotals);
+        final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(azquoMemoryDBConnection, MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames, regionOptions.noPermuteTotals);
         time = (System.currentTimeMillis() - track);
         if (time > threshold) System.out.println("Column headings expanded in " + time + "ms");
         track = System.currentTimeMillis();
