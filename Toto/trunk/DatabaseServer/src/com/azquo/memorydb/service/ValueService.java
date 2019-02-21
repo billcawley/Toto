@@ -367,11 +367,13 @@ public final class ValueService {
                         if (debugInfo != null) {
                             debugInfo.append("\tApplies to ").append(name.getAttribute(APPLIESTO)).append("\n");
                         }
-                        // will be being looked up by default display name for the moment
-                        if (name.getAttribute(APPLIESTO).trim().toLowerCase().endsWith("lowest")) {
+                        Name appliesTo = NameService.findByName(azquoMemoryDBConnection, name.getAttribute(APPLIESTO));
+                        if (appliesTo!=null){
                             lowest = true;
+                            appliesToNames = appliesTo.findAllChildren();
+                        }else{
+                            appliesToNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, name.getAttribute(APPLIESTO), attributeNames, false);
                         }
-                        appliesToNames = NameQueryParser.parseQuery(azquoMemoryDBConnection, name.getAttribute(APPLIESTO), attributeNames, false);
                       }
                     // then get the result of it, this used to be stored in RPCALC
                     // it does extra things we won't use but the simple parser before SYA should be fine here
@@ -393,17 +395,25 @@ public final class ValueService {
         }
         // lowest then there's no point running outer loops etc. Note we assume this is a calc!
         if (lowest) {
-            List<Name> loopNames = new ArrayList<>(appliesToNames);
+            List<Name> loopNames = null;
             boolean hasList = false;
 
             for (Name calcName:calcnames){
 
-                if (appliesToNames.contains(calcName)) {
-                    loopNames = new ArrayList<>();
-                    loopNames.add(calcName);
-                    hasList = true;
+                if (appliesToNames.contains(calcName) && !calcName.hasChildren()) {
+                    if (loopNames ==null || loopNames.contains(calcName)){
+                        loopNames = new ArrayList<>();
+                        loopNames.add(calcName);
+                        hasList = true;
+                    }
+                    else{
+                        return 0;
+                    }
                 }else{
                     if(!Collections.disjoint(appliesToNames, calcName.findAllChildren())) { // nagative on disjoint, there were elements in common
+                        if (loopNames == null){
+                            loopNames = new ArrayList<>(appliesToNames);
+                        }
                         loopNames.retainAll(calcName.findAllChildren());
                         hasList = true;
                     }
@@ -456,7 +466,7 @@ public final class ValueService {
                 if (function == DataRegionHeading.FUNCTION.ALLEXACT) { // match only the values that correspond to the names exactly
                     final List<Value> forNames = findForNames(names);
                     // need to check we don't have values with extra names
-                    forNames.removeIf(value -> value.getNames().size() > names.size()); // new syntax! Dunno about efficiency but this will be very rarely used
+                    //forNames.removeIf(value -> value.getNames().size() > names.size()); // new syntax! Dunno about efficiency but this will be very rarely used
                     return ValueCalculationService.resolveValues(forNames, valuesHook, function, locked);
                 } else {
                     return ValueCalculationService.resolveValues(findForNamesIncludeChildren(names, nameComboValueCache, exactName), valuesHook, function, locked);
