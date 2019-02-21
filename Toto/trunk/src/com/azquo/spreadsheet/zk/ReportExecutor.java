@@ -173,6 +173,7 @@ public class ReportExecutor {
                         book.getInternalBook().setAttribute(OnlineController.REPORT_ID, onlineReport.getId());
                         StringBuilder errorLog = new StringBuilder();
                         final boolean save = ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
+                        System.out.println("save flag : " + save);
                         if (errorLog.length() > 0) {
                             loopsLog.append(" ERROR : ").append(errorLog.toString());
                             return null;
@@ -195,6 +196,7 @@ public class ReportExecutor {
                                         noSave = userRegionOptions.getNoSave();
                                     }
                                     if (!noSave) {
+                                        System.out.println("saving for : " + region);
                                         SpreadsheetService.saveData(loggedInUser, onlineReport.getId(), onlineReport.getReportName(), name.getRefersToSheetName(), region.toLowerCase(), false); // to not persist right now
                                     }
                                 }

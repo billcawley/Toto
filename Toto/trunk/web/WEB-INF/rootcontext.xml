@@ -15,20 +15,12 @@
        http://www.springframework.org/schema/task/spring-task-3.0.xsd"
         >
     <!--
-
-     I wonder, looking at this config, if the old style static dao/services would be such a bad thing. We don't use dependency injection or unit testing etc.
-
-    -->
-    <!--
         Controllers are setup using annotations
         See   http://blog.springsource.org/2007/11/14/annotated-web-mvc-controllers-in-spring-25/
         for details of controller annotations
         -->
     <context:annotation-config/>
     <task:annotation-driven/>
-
-    <!-- NOTE : this is not a pooled connection! Not a problem for Azquo's purposes generally but one would want one for more intense MySQL hammering
-     something like -->
 
     <bean id="dataSource" class="org.apache.tomcat.jdbc.pool.DataSource" destroy-method="close">
         <property name="driverClassName" value="org.mariadb.jdbc.Driver" />

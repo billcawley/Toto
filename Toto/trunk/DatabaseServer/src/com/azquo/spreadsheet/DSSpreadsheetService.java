@@ -38,7 +38,7 @@ public class DSSpreadsheetService {
     // to try to force an exception to stop execution
     // todo - check interruption is not the thing here, probably not but check
 
-    public static void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) throws Exception {
+    public static void sendStopMessageToLog(DatabaseAccessToken databaseAccessToken) {
         AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken).setStopInUserLog();
     }
 

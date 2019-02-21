@@ -756,7 +756,9 @@ public final class ImportService {
         List<List<List<String>>> systemData2DArrays = new ArrayList<>();
         if (uploadedFile.getPostProcessor() != null) {
             // set user choices to file params, could be useful to the execute
+            System.out.println("setting usr choices");
             for (String choice : uploadedFile.getParameters().keySet()) {
+                System.out.println(choice + " : " + uploadedFile.getParameter(choice));
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
             }
             loggedInUser.copyMode = uploadedFile.isValidationTest();

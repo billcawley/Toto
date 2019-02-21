@@ -416,7 +416,6 @@ public class AzquoCellResolver {
                                 || function == DataRegionHeading.FUNCTION.BESTVALUEMATCH
                                 || function == DataRegionHeading.FUNCTION.BESTNAMEVALUEMATCH)&& valueFunctionSet != null && description!=null) { // last lookup: we're going to override the double value just set
                             // now, find all the parents and cross them with the valueParentCountHeading set
-                            String cutoffString = null;
                             String bestFit = "";
                             for (Value v : valuesHook.values) {
                                  for (Name n : v.getNames()) {

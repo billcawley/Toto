@@ -4,7 +4,6 @@ import com.azquo.MultidimensionalListUtils;
 import com.azquo.StringLiterals;
 import com.azquo.ThreadPools;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
-import com.azquo.StringLiterals;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameQueryParser;
 import com.azquo.memorydb.service.NameService;
@@ -177,6 +176,16 @@ class DataRegionHeadingService {
                             // maybe could have a "true" on returnReadOnlyCollection . . . todo
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
                             row.add(dataRegionHeadingsFromNames(mainSet, function, suffix, null, null, percentileDouble));
+                        } else if (function == DataRegionHeading.FUNCTION.DICTIONARY) {
+                            // first go means the the standard set, dictionary source and the attribute to use on that source
+                            // todo - confirm whether commas in the names is a problem
+                            String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
+                            String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();
+                            // maybe these two could have a "true" on returnReadOnlyCollection . . . todo
+                            final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
+                            final Collection<Name> selectionSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, false);
+                            row.add(dataRegionHeadingsFromNames(mainSet, function, suffix, null, selectionSet, 0));
+
                         } else if (DataRegionHeading.isBestMatchFunction(function)) {
                             // todo - this function parameter parsing needs to be factored and be aware of commas in names
                             int commaPos = sourceCell.indexOf(",");

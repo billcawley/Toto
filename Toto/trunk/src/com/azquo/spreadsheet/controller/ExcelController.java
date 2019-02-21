@@ -451,7 +451,9 @@ public class ExcelController {
                 } else {
                     for (String st : loggedInUser.getReportIdDatabaseIdPermissions().keySet()) {
                         TypedPair<OnlineReport, Database> tp = loggedInUser.getPermission(st);
-                        databaseReports.add(new DatabaseReport(st, tp.getFirst().getAuthor(), tp.getFirst().getUntaggedReportName(), tp.getSecond().getName()));
+                        if (tp.getFirst().getId() != loggedInUser.getUser().getReportId()){ // don't show the home menu to the Excel user, pointless!
+                            databaseReports.add(new DatabaseReport(st, tp.getFirst().getAuthor(), tp.getFirst().getUntaggedReportName(), tp.getSecond().getName()));
+                        }
                     }
                 }
                 return jacksonMapper.writeValueAsString(databaseReports);

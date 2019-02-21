@@ -1,6 +1,5 @@
 package com.azquo.dataimport;
 
-import com.azquo.StringLiterals;
 import com.azquo.TypedPair;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.DatabaseAccessToken;

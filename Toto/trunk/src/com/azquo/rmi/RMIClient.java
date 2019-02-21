@@ -23,6 +23,7 @@ public class RMIClient {
 
     public static RMIInterface getServerInterface(String ip) throws Exception {
         RMIInterface toReturn = rmiInterfaceMap.get(ip);
+        // todo - add double checked locking?
         if (toReturn == null) {
             // yes this could run a few times concurrently at the beginning, not sure it's a big problem
             Registry registry = LocateRegistry.getRegistry(ip, 12345);

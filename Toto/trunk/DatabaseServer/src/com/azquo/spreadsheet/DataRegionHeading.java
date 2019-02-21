@@ -21,27 +21,32 @@ import java.util.Set;
  */
 public class DataRegionHeading {
     // todo - average min and max use calculation?
-    public enum FUNCTION {COUNT, AVERAGE, MAX, MIN, VALUEPARENTCOUNT, VALUESET, PERCENTILE, PERCENTILENZ, STDEVA, SET, FIRST, LAST, NAMECOUNT, PATHCOUNT, PERMUTE, EXACT, ALLEXACT, AUDITDATE, AUDITCHANGEDBY, BESTMATCH, BESTNAMEMATCH, BESTVALUEMATCH, BESTNAMEVALUEMATCH}
-    /*
-    COUNT               Value function      The number of values rather than the sum
-    AVERAGE             Value function      The average value
-    MAX, MIN            Value functions     Max and min values found
-    VALUEPARENTCOUNT    Value/Name function The number of names in a given set that are parents of the values found by the other cell definition features (e.g customers buying a product) (customer set
-    VALUESET            Value function      a replacement for using 'as' <temporaryset>  - creates a set used for that heading only
-    PERCENTILE          Value function      <set, percentileInt>  gives the value in the set at that percentile
-    PERCENTILENZ        Value function       as above ignoring zero figures
-    STDEVA              Value function      Standard deviation
-    SET                 Name function       Comma separated list of elements of the set
-    FIRST, LAST         Name function       The first or last elements of the set
-    NAMECOUNT           Name function       The number of elements of the set
-    PATHCOUNT           Name function       The number of paths between the sets (e.g. the number of mailings sent to a specified group of customers)
-    PERMUTE             Heading function    The system will find all the combinations of the immediate children of the list to be permuted, selected on the basis of sharing common descendants
-    EXACT               Value function      exact meaning get only values that match exactly the name passed. Generally would only be one value
-    ALLEXACT            Value function      as above for all names in cell
-    AUDITDATE           Audit function      the provenance date of the latest value in the cell
-    AUDITCHANGEDBY      Audit function      the name of the person who last changed the value
-    BESTMATCH           Value function      the nearest value of the cell to the value given (e.g the latest date of change BESTMATCH(Change dates, 2018-01-01) for i
-     */
+    public enum FUNCTION {COUNT//               Value function      The number of values rather than the sum
+        , AVERAGE//                             Value function      The average value
+        , MAX//                                 Value functions     Max and min values found
+        , MIN
+        , VALUEPARENTCOUNT//                    Value/Name function The number of names in a given set that are parents of the values found by the other cell definition features (e.g customers buying a product) (customer set
+        , VALUESET//                            Value function      a replacement for using 'as' <temporaryset>  - creates a set used for that heading only
+        , PERCENTILE//                          Value function      <set, percentileInt>  gives the value in the set at that percentile
+        , PERCENTILENZ//                        Value function       as above ignoring zero figures
+        , STDEVA//                              Value function      Standard deviation
+        , SET//                                 Name function       Comma separated list of elements of the set
+        , FIRST//                               Name function       The first or last elements of the set
+        , LAST
+        , NAMECOUNT//                           Name function       The number of elements of the set
+        , PATHCOUNT//                           Name function       The number of paths between the sets (e.g. the number of mailings sent to a specified group of customers)
+        , PERMUTE//                             Heading function    The system will find all the combinations of the immediate children of the list to be permuted, selected on the basis of sharing common descendants
+        , EXACT//                               Value function      exact meaning get only values that match exactly the name passed. Generally would only be one value
+        , ALLEXACT//                            Value function      as above for all names in cell
+        , AUDITDATE//                           Audit function      the provenance date of the latest value in the cell
+        , AUDITCHANGEDBY//                      Audit function      the name of the person who last changed the value
+        , BESTMATCH//                           Value function      the nearest value of the cell to the value given (e.g the latest date of change BESTMATCH(Change dates, 2018-01-01) for i
+        , BESTVALUEMATCH//                      Value function      BESTVALUEMATCH(<set expression>,<value>) is equivalent to an Excel LOOKUP with the last parameter set to ‘true’.   It selects from the values found for a cell to find the value attached to the element of the set that best matches the value given.   As a typical example, if the price of a product changes sporadically, and the change dates are recorded in the set ‘Product price change dates’, the price that is in force at a particular day – e.g. 01/01/2018 will be: Bestvaluematch(`Product price change dates` children,2018-01-01)
+        , BESTNAMEMATCH//                       Value/Name function BESTNAMEMATCH(<set expression>,<value>) is similar to the above, but finds the name in the set which is most close to the value given.  In the above example it would show the last date on which any product changed price.
+        , BESTNAMEVALUEMATCH//                  Value/Name function BESTNAMEVALUEMATCH(<set expression>,<value>) is similar to ‘bestvaluematch’ in finding the values for the particular context, but then shows the name attached to the value found.  In the example above it would show the last date on which a particular product changed price.
+        , DICTIONARY//                          Name function       Replacing the dictionary on importing. Passed a set of names and an attribute to look for in those names which will be used to define dictionary criteria, see comments in the code itself for syntax
+    }
+
     enum SUFFIX {UNLOCKED, LOCKED, SPLIT}
     /*
     Additional criteria. Existing locking stands but a new rule is to lock by default on a composite value
@@ -54,7 +59,7 @@ public class DataRegionHeading {
     // either the name (normally) or the function as written in the case of name count path count etc. Useful for debugging and for storing queries that cna only be resolved later e.g. with [ROWHEADING]
     private String description;
     private final List<DataRegionHeading> offsetHeadings; // used when formatting hierarchy
-    Collection<Name> valueFunctionSet; // just used for valueparentcount and valueset
+    private Collection<Name> valueFunctionSet; // just used for valueparentcount and valueset
     private final double doubleParameter; // initially used for percentile, could be others. I think this needs to be rearranged at some point but for the moment make percentile work.
     private final Collection<Name> attributeSet;
     private final String calculation; //the description having passed through the preparation routines
@@ -172,7 +177,7 @@ public class DataRegionHeading {
     }
     // useful to be called outside if an instance
     static boolean isExpressionFunction(FUNCTION function){
-        return function != null && (function == FUNCTION.NAMECOUNT
+        return (function == FUNCTION.NAMECOUNT
                 || function == FUNCTION.PATHCOUNT
                 || function == FUNCTION.SET
                 || function == FUNCTION.FIRST
@@ -182,7 +187,7 @@ public class DataRegionHeading {
     }
 
     static boolean isBestMatchFunction(FUNCTION function){
-        return function != null && (function == FUNCTION.BESTMATCH
+        return (function == FUNCTION.BESTMATCH
                 || function == FUNCTION.BESTVALUEMATCH
                 || function == FUNCTION.BESTNAMEMATCH
                 || function == FUNCTION.BESTNAMEVALUEMATCH);

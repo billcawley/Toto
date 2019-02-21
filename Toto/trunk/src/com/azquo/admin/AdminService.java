@@ -452,7 +452,7 @@ this may now not work at all, perhaps delete?
                 }
             }
             // if there is a template associated with this database and no others then zap it
-            ImportTemplate importTemplate = loggedInUser.getDatabase().getImportTemplateId() != -1 ? ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId()) : null;
+            ImportTemplate importTemplate = db.getImportTemplateId() != -1 ? ImportTemplateDAO.findById(db.getImportTemplateId()) : null;
             if (importTemplate != null) {
                 if (DatabaseDAO.findForImportTemplateId(importTemplate.getId()).size() == 1){
                     ImportTemplateDAO.removeById(importTemplate);
