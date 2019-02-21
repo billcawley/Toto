@@ -185,7 +185,7 @@ public class DSSpreadsheetService {
     }
 
     // create a file to import from a populated region in the spreadsheet
-    private static int importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user, boolean persist) throws Exception {
+    private static int importDataFromSpreadsheet(AzquoMemoryDBConnection azquoMemoryDBConnection, CellsAndHeadingsForDisplay cellsAndHeadingsForDisplay, String user) throws Exception {
         //write the column headings and data to a temporary file, then import it
         String fileName = "temp_" + user;
         File temp = File.createTempFile(fileName + ".csv", "csv");
@@ -245,9 +245,11 @@ public class DSSpreadsheetService {
         UploadedFile uploadedFile = new UploadedFile(tempPath, Collections.singletonList("csv-" + cellsAndHeadingsForDisplay.getRegion()), false);
         DSImportService.readPreparedFile(azquoMemoryDBConnection, uploadedFile);
         // persist no longer automatic on importing so just do it here
+        /*
         if (!persist) {
             return uploadedFile.getNoValuesAdjusted().get();
         }
+        */
         new Thread(azquoMemoryDBConnection::persist).start();
         if (!temp.delete()) {// see no harm in this here. Delete on exit has a problem with Tomcat being killed from the command line. Why is intelliJ shirty about this?
             System.out.println("Unable to delete " + temp.getPath());
@@ -298,7 +300,7 @@ public class DSSpreadsheetService {
             azquoMemoryDBConnection.setProvenance(user, StringLiterals.IN_SPREADSHEET, reportName, context);
             if ((cellsAndHeadingsForDisplay.getRowHeadings().size()== 0 || cellsAndHeadingsForDisplay.getColumnHeadings().size() == 0) && cellsAndHeadingsForDisplay.getData().size() > 0) {
                 // todo - cen we get the number of values modified???
-                numberOfValuesModified = importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user, persist);
+                numberOfValuesModified = importDataFromSpreadsheet(azquoMemoryDBConnection, cellsAndHeadingsForDisplay, user);
                 if (persist) {
                     azquoMemoryDBConnection.persist();
                 }
@@ -732,7 +734,7 @@ public class DSSpreadsheetService {
         final List<List<List<DataRegionHeading>>> rowHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(
                 azquoMemoryDBCOnnection, rowHeadingsSource, languages, contextSuffix, true); // [don't] surpress errors, will this be a problem? YES - couldn't audit cells further down the region
         languages = defaultLanguages;
-        final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(azquoMemoryDBCOnnection, rowHeadingLists, sharedNames, regionOptionsForTransport.noPermuteTotals);
+        final List<List<DataRegionHeading>> rowHeadings = DataRegionHeadingService.expandHeadings(rowHeadingLists, sharedNames, regionOptionsForTransport.noPermuteTotals);
         if (regionOptionsForTransport.columnLanguage != null && regionOptionsForTransport.columnLanguage.length() > 0) {
             languages = new ArrayList<>();
             languages.add(regionOptionsForTransport.columnLanguage);
@@ -740,7 +742,7 @@ public class DSSpreadsheetService {
         final List<List<List<DataRegionHeading>>> columnHeadingLists = DataRegionHeadingService.createHeadingArraysFromSpreadsheetRegion(
                 azquoMemoryDBCOnnection, colHeadingsSource, languages, AzquoCellService.COL_HEADINGS_NAME_QUERY_LIMIT, contextSuffix, false); // same as standard limit for col headings
         languages = defaultLanguages;
-        final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(azquoMemoryDBCOnnection, MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames, regionOptionsForTransport.noPermuteTotals);
+        final List<List<DataRegionHeading>> columnHeadings = DataRegionHeadingService.expandHeadings(MultidimensionalListUtils.transpose2DList(columnHeadingLists), sharedNames, regionOptionsForTransport.noPermuteTotals);
         if (columnHeadings.size() == 0 || rowHeadings.size() == 0) {
             return null;
         }
