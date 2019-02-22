@@ -299,18 +299,18 @@
 
 
         function submitNameDetails(){
-            var json = "\"operation\":\"edit\",\"id\":" + nameChosenNo + ",\"attributes\":{\"DEFAULT_DISPLAY_NAME\":" + encodeURIComponent(JSON.stringify(document.getElementById("DEFAULT_DISPLAY_NAME").value));
+            var json = "\"operation\":\"edit\",\"id\":" + nameChosenNo + ",\"attributes\":{\"DEFAULT_DISPLAY_NAME\":" + JSON.stringify(document.getElementById("DEFAULT_DISPLAY_NAME").value);
             for (var i= 0; i<20;i++){//max number of attributes = 20 - arbitrary
                 var attname = document.getElementById("attname" + i);
                 if (attname != null) {
                     if (attname.value > ""){
-                        json += ",\"" + attname.value + "\":" + encodeURIComponent(JSON.stringify(document.getElementById("attvalue" + i).value)) + "";
+                        json += "," + JSON.stringify(attname.value) + ":" + JSON.stringify(document.getElementById("attvalue" + i).value) + "";
                     }
                 }
             }
             json +="}";
             hideDetails();
-            azquojson("Jstree", "json={" + json + "}");
+            azquojson("Jstree", "json=" +  encodeURIComponent("{" + json + "}"));
 //            var node = $('#js-container').jstree(true).get_node(nameChosenNo);
             $('#js-container').jstree('rename_node', nameChosenNo, document.getElementById("DEFAULT_DISPLAY_NAME").value);
         }
