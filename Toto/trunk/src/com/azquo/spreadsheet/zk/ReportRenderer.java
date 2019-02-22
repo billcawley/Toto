@@ -63,6 +63,7 @@ public class ReportRenderer {
     public static final String AZEMAILADDRESS = "az_emailaddress";
     public static final String AZEMAILSUBJECT = "az_emailsubject";
     public static final String AZEMAILTEXT = "az_emailtext";
+    static final String AZCURRENTUSER = "az_currentuser";
 
 
     public static boolean populateBook(Book book, int valueId) {
@@ -81,11 +82,14 @@ public class ReportRenderer {
     // todo - is it possible to extract some of this to a pre importer? Can't put it all in there . . .
     private static boolean populateBook(Book book, int valueId, boolean useSavedValuesOnFormulae, boolean executeMode, StringBuilder errors, boolean useRepeats) { // todo - make more elegant? error hack . . .
         BookUtils.removeNamesWithNoRegion(book); // should protect against some errors.
+
+
         book.getInternalBook().setAttribute(OnlineController.LOCKED, false); // by default
         long track = System.currentTimeMillis();
         String imageStoreName = "";
         boolean showSave = false;
         LoggedInUser loggedInUser = (LoggedInUser) book.getInternalBook().getAttribute(OnlineController.LOGGED_IN_USER);
+
         // unlock data on every report load. Maybe make this clear to the user?
         // is the exception a concern here?
         // also clear temporary names?
@@ -101,8 +105,15 @@ public class ReportRenderer {
         // why a sheet loop at the outside, why not just run all the names? Need to have a think . . .
         for (int sheetNumber = 0; sheetNumber < book.getNumberOfSheets(); sheetNumber++) {
             // I'd like to put this somewhere else but for the moment it must be per sheet to lessen the chances of overlapping repeat regions interfering with each other
+
             Set<String> repeatRegionTracker = new HashSet<>();
             Sheet sheet = book.getSheetAt(sheetNumber);
+
+            SName az_CurrentUser = BookUtils.getNameByName(AZCURRENTUSER, sheet);
+            if (az_CurrentUser != null){
+                BookUtils.getSnameCell(az_CurrentUser).setStringValue(loggedInUser.getUser().getEmail());
+            }
+
             // might give a little speed increase until the notifys get going . . .
             Ranges.range(sheet).setAutoRefresh(false);
 

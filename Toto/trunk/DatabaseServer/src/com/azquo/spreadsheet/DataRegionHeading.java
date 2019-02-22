@@ -72,7 +72,7 @@ public class DataRegionHeading {
         this(name, writeAllowed,function,suffix, description, offsetHeadings, valueFunctionSet, doubleParameter, null);
     }
 
-
+    // todo - maybe factor the constructors a little :)
     DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter, String calculation) {
         this.name = name;
         this.attribute = null;
@@ -87,7 +87,6 @@ public class DataRegionHeading {
         this.calculation = calculation;
      }
 
-    // no functions with attributes for the moment
     DataRegionHeading(String attribute, boolean writeAllowed, Collection<Name> attributeSet) {
         this.name = null;
         this.attribute = attribute;
@@ -100,7 +99,21 @@ public class DataRegionHeading {
         this.doubleParameter = 0;
         this.attributeSet = attributeSet;
         this.calculation = null;
+    }
 
+    // new thing - function with an attribute, initially just dictionary
+    DataRegionHeading(String attribute, boolean writeAllowed, FUNCTION function, SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter) {
+        this.name = null;
+        this.attribute = attribute;
+        this.writeAllowed = writeAllowed;
+        this.function = function;
+        this.suffix = suffix;
+        this.description = description;
+        this.offsetHeadings = offsetHeadings;
+        this.valueFunctionSet = valueFunctionSet;
+        this.doubleParameter = doubleParameter;
+        this.attributeSet = null;
+        this.calculation = null;
     }
 
     public Name getName() {

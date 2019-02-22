@@ -1,3 +1,13 @@
+21-02-19
+
+new syntax of 'applies to'. If a single name is specified (e.g. `Contract Reference` - this is now taken to mean `Contract reference` level lowest
+
+Tidying, bug fix to batch importer when name for attribute in composite is blank, bug fix when deleting databases, started on report based use of dictionary, Excel controller doensn't show the home menu as a linkable menu
+
+'valueset' adjusted to ignore attribute headings, and use pre-compiled set on the dataRegionHeading if available
+
+New message of "no data" if the file has the correct structure but is blank
+
 18-02-19
 
 Manually add to pending uploads

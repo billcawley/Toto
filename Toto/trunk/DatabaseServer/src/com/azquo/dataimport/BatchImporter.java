@@ -499,11 +499,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
     Also see note on MutableImportHeading dictionaryMap
 
     *** Following discussion 20/12/2018 this will be moved to reporting
-    *
-    * but how to define in the report? presumably the source '123 Auto Accident not relating to speed' is a name or specific attribute of a name, no probs there
-synonym is in the database already it seems, as are dictionary lookups also as in the terms themselves BUT we still need to know the name whose children to scan and the attribute
-so the function might look something like DICTIONARY (name, attribute, name expression for rows/columns), need to check how easily such a function could be added
-
+    * 22/02/19 - added to the report side, will be deleted from here when the reports use the new code
      */
 
     private static void resolveCategories(AzquoMemoryDBConnection azquoMemoryDBConnection, Map<String, Name> namesFoundCache, List<ImportCellWithHeading> cells) throws Exception {
@@ -619,7 +615,7 @@ so the function might look something like DICTIONARY (name, attribute, name expr
         }
     }
 
-    private static boolean containsSynonym(Map<String, List<String>> synonymList, String term, String value) {
+    public static boolean containsSynonym(Map<String, List<String>> synonymList, String term, String value) {
         if (value.contains(term)) {
             return true;
         }

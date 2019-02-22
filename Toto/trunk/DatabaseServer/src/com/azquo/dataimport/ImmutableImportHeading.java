@@ -14,7 +14,7 @@ import java.util.*;
  */
 
 
-class ImmutableImportHeading {
+public class ImmutableImportHeading {
 
     final String heading;
     final int indexForAttribute;
@@ -77,11 +77,11 @@ class ImmutableImportHeading {
         this.provisional = mutableImportHeading.provisional;
     }
 
-    static class DictionaryTerm {
-        final boolean exclude;
-        final List<String> items;
+    public static class DictionaryTerm {
+        public final boolean exclude;
+        public final List<String> items;
 
-        DictionaryTerm(boolean exclude, List<String> items) {
+        public DictionaryTerm(boolean exclude, List<String> items) {
             this.exclude = exclude;
             this.items = Collections.unmodifiableList(items);
         }

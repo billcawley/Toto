@@ -52,8 +52,29 @@ class DataRegionHeadingService {
                     if (sourceCell.endsWith("↕") || sourceCell.endsWith("↑") || sourceCell.endsWith("↓")) {
                         sourceCell = sourceCell.substring(0, sourceCell.length() - 2);
                     }
-                    // was just a name expression, now we allow an attribute also. May be more in future.
-                    if (sourceCell.startsWith(".")) { //
+                    // ok dictionary is slightly awkward as a function as it can work with a single name *or* an attribute
+                    // also it will not expand - it will be one row or column
+                    if (sourceCell.toUpperCase().startsWith(DataRegionHeading.FUNCTION.DICTIONARY.name())) {
+                        sourceCell = sourceCell.substring(sourceCell.indexOf("(") + 1, sourceCell.trim().length() - 1);
+                        // todo - this function parameter parsing needs to be factored and be aware of commas in names
+                        String[] split = sourceCell.split(",");
+                        if (split.length == 3){
+                            List<DataRegionHeading> single = new ArrayList<>();
+                            String nameOrAttribute = split[0];
+                            final Collection<Name> dictionarySet = NameQueryParser.parseQuery(azquoMemoryDBConnection, split[1], attributeNames, false);
+                            String dictionaryAttribute = split[2];
+                            if (nameOrAttribute.startsWith(".")){ // attribute
+//                                DataRegionHeading(Name name, boolean writeAllowed, FUNCTION function, DataRegionHeading.SUFFIX suffix, String description, List<DataRegionHeading> offsetHeadings, Collection<Name> valueFunctionSet, double doubleParameter, String calculation) {
+                                single.add(new DataRegionHeading(nameOrAttribute, false, DataRegionHeading.FUNCTION.DICTIONARY, null, dictionaryAttribute,null,dictionarySet, 0));// we say that an attribute heading defaults to writable, it will defer to the name
+                            } else {
+                                Name name = NameService.findByName(azquoMemoryDBConnection, sourceCell, attributeNames);
+                                if (name != null){
+                                    single.add(new DataRegionHeading(nameOrAttribute, false, DataRegionHeading.FUNCTION.DICTIONARY, null, dictionaryAttribute,null,dictionarySet, 0));// we say that an attribute heading defaults to writable, it will defer to the name
+                                }
+                            }
+                            row.add(single);
+                        }
+                    } else if (sourceCell.startsWith(".")) { //attribute
                         // currently only one attribute per cell, I suppose it could be many in future (available attributes for a name, a list maybe?)
                         // do NOT use singleton list as nice as the code looks! The list may be modified later . . .
                         List<DataRegionHeading> single = new ArrayList<>();
@@ -176,16 +197,6 @@ class DataRegionHeadingService {
                             // maybe could have a "true" on returnReadOnlyCollection . . . todo
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
                             row.add(dataRegionHeadingsFromNames(mainSet, function, suffix, null, null, percentileDouble));
-                        } else if (function == DataRegionHeading.FUNCTION.DICTIONARY) {
-                            // first go means the the standard set, dictionary source and the attribute to use on that source
-                            // todo - confirm whether commas in the names is a problem
-                            String firstSet = sourceCell.substring(0, sourceCell.indexOf(",")).trim();
-                            String secondSet = sourceCell.substring(sourceCell.indexOf(",") + 1).trim();
-                            // maybe these two could have a "true" on returnReadOnlyCollection . . . todo
-                            final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);
-                            final Collection<Name> selectionSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, secondSet, attributeNames, false);
-                            row.add(dataRegionHeadingsFromNames(mainSet, function, suffix, null, selectionSet, 0));
-
                         } else if (DataRegionHeading.isBestMatchFunction(function)) {
                             // todo - this function parameter parsing needs to be factored and be aware of commas in names
                             int commaPos = sourceCell.indexOf(",");
@@ -197,7 +208,7 @@ class DataRegionHeadingService {
                             // maybe these two could have a "true" on returnReadOnlyCollection . . . todo
                             final Collection<Name> mainSet = NameQueryParser.parseQuery(azquoMemoryDBConnection, firstSet, attributeNames, false);//returns the single name to find
                             List<DataRegionHeading> dataRegionHeadings = new ArrayList<>();
-                            dataRegionHeadings.add(new DataRegionHeading(null, true, function, suffix, description, null, mainSet, 0));
+                            dataRegionHeadings.add(new DataRegionHeading((Name) null, true, function, suffix, description, null, mainSet, 0));
                             row.add(dataRegionHeadings);
                             //row.add(dataRegionHeadingsFromNames(null, function, suffix, null, mainSet, 0,description));
                         } else {// most of the time it will be a vanilla query, there may be value functions that will be dealt with later

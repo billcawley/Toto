@@ -2,12 +2,15 @@ package com.azquo.spreadsheet;
 
 import com.azquo.StringLiterals;
 import com.azquo.StringUtils;
+import com.azquo.dataimport.BatchImporter;
+import com.azquo.dataimport.ImmutableImportHeading;
 import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.core.NameUtils;
 import com.azquo.memorydb.core.Value;
 import com.azquo.memorydb.service.MutableBoolean;
 import com.azquo.memorydb.service.NameQueryParser;
+import com.azquo.memorydb.service.NameService;
 import com.azquo.memorydb.service.ValueService;
 import net.openhft.koloboke.collect.set.hash.HashObjSets;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
@@ -357,6 +360,7 @@ public class AzquoCellResolver {
                 Name exactName = null;
                 for (DataRegionHeading heading : headingsForThisCell) {
                     if (heading.getFunction() != null) { // should NOT be a name function, that should have been caught before
+                        functionHeading = heading;
                         function = heading.getFunction();
                         if (function == DataRegionHeading.FUNCTION.EXACT) {
                             exactName = heading.getName();
@@ -629,6 +633,86 @@ But can use a library?
                         stringValue = attributeResult;
                     } else {
                         stringValue = "";
+                    }
+                }
+                // having resolved as usual we now check the dictionary function - it applies to the string after whether it came from an attribute or a value
+                // this is a paste and modify of code from the BatchImporter . . caching dictionaryMap may be required if there is a performance issue todo
+                if (function == DataRegionHeading.FUNCTION.DICTIONARY && !stringValue.isEmpty()){
+
+                    Map<Name, List<ImmutableImportHeading.DictionaryTerm>> dictionaryMap = new HashMap<>();
+                    for (Name name : functionHeading.getValueFunctionSet()) {
+                        String term = name.getAttribute(functionHeading.getDescription());
+                        if (term != null) {
+                            List<ImmutableImportHeading.DictionaryTerm> dictionaryTerms = new ArrayList<>();
+                            boolean exclude = false;
+                            while (term.length() > 0) {
+                                if (term.startsWith("{")) {
+                                    int endSet = term.indexOf("}");
+                                    if (endSet < 0) break;
+                                    String stringList = term.substring(1, endSet);
+                                    dictionaryTerms.add(new ImmutableImportHeading.DictionaryTerm(exclude, Arrays.asList(stringList.split(","))));
+                                    term = term.substring(endSet + 1).trim();
+                                } else {
+                                    int plusPos = (term + "+").indexOf("+");
+                                    int minusPos = (term + "-").indexOf("-");
+                                    int termEnd = plusPos;
+                                    if (minusPos < plusPos) termEnd = minusPos;
+                                    dictionaryTerms.add(new ImmutableImportHeading.DictionaryTerm(exclude, Arrays.asList(term.substring(0, termEnd).split(","))));
+                                    if (termEnd == term.length()) {
+                                        term = "";
+                                    } else {
+                                        term = term.substring(termEnd);
+                                    }
+                                }
+                                if (term.startsWith("+")) {
+                                    exclude = false;
+                                    term = term.substring(1).trim();
+                                } else if (term.startsWith("-")) {
+                                    exclude = true;
+                                    term = term.substring(1).trim();
+                                }
+                            }
+                            if (dictionaryTerms.size() > 0) {
+                                dictionaryMap.put(name, dictionaryTerms);
+                            }
+                        }
+                    }
+                    Name synonymList = NameService.findByName(connection, "synonyms");
+                    Map<String, List<String>> synonymsMap = new HashMap<>();
+
+                    if (synonymList != null) {
+                        for (Name synonym : synonymList.getChildren()) {
+                            String synonyms = synonym.getAttribute("synonyms");
+                            if (synonyms != null) {
+                                synonymsMap.put(synonym.getDefaultDisplayName(), Arrays.asList(synonyms.split(",")));
+                            }
+                        }
+                    }
+                    // so now we have the bits we need. On the importer this used to jam the column in certain categories, now it will just do a string conversion
+                    // if that kind of categoriseation is required then it can be done by an execute
+
+                    for (Name category : dictionaryMap.keySet()) {
+                        boolean found = true;
+                        List<ImmutableImportHeading.DictionaryTerm> dictionaryTerms = dictionaryMap.get(category);
+                        for (ImmutableImportHeading.DictionaryTerm dictionaryTerm : dictionaryTerms) {
+                            found = false; //the phrase now has to pass every one of the tests.  If it does so then the category is found.
+                            for (String item : dictionaryTerm.items) {
+                                if (dictionaryTerm.exclude) {
+                                    if (BatchImporter.containsSynonym(synonymsMap, item.toLowerCase().trim(), stringValue)) {
+                                        break;
+                                    }
+                                } else {
+                                    if (BatchImporter.containsSynonym(synonymsMap, item.toLowerCase().trim(), stringValue)) {
+                                        found = true;
+                                    }
+                                }
+                            }
+                            if (!found) break;
+                        }
+                        if (found) {
+                            stringValue = category.getDefaultDisplayName();
+                            break;
+                        }
                     }
                 }
             }
