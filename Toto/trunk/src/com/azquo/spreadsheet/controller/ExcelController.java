@@ -56,6 +56,8 @@ import static com.azquo.spreadsheet.controller.LoginController.LOGGED_IN_USER_SE
 @Controller
 @RequestMapping("/Excel")
 public class ExcelController {
+
+    // todo - get rid of this? There's an issue with the audit ergh . . .
     public static final Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
 
     // note : I'm now thinking dao objects are acceptable in controllers if moving the call to the service would just be a proxy
@@ -166,17 +168,6 @@ public class ExcelController {
 
             if (loggedInUser == null) {
                 loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, java.net.URLDecoder.decode(password, "UTF-8"), false);
-                if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getReportId() != 0) {// then we need to load in the permissions
-                    // typically loading in the permissions would be done in online report controller. I'm going to paste relevant code here, it might be factored later
-                    OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
-                    String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
-                            loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();
-                    Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
-                    // I think I need those two
-                    book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
-                    book.getInternalBook().setAttribute(REPORT_ID, or.getId());
-                    ReportRenderer.populateBook(book, 0);
-                }
                 if (loggedInUser == null) {
                     System.out.println("login attempt by " + logon + " password " + password);
                     return jsonError("incorrect login details");
@@ -198,8 +189,22 @@ public class ExcelController {
                     if (newUser) {
                         excelConnections.put(request.getSession().getId() + "", loggedInUser);
                     }
+
+                    if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getReportId() != 0) {// then we need to load in the permissions
+                        // typically loading in the permissions would be done in online report controller. I'm going to paste relevant code here, it might be factored later
+                        OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
+                        String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
+                                loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();
+                        Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                        // I think I need those two
+                        book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
+                        book.getInternalBook().setAttribute(REPORT_ID, or.getId());
+                        ReportRenderer.populateBook(book, 0);
+                    }
+
                     if (op.equals("logon")) {
                         LoginInfo li = new LoginInfo(request.getSession().getId(), loggedInUser.getUser().getStatus());
+                        System.out.println("login response : " + jacksonMapper.writeValueAsString(li));
                         return jacksonMapper.writeValueAsString(li);
                     }
                 }
@@ -399,13 +404,16 @@ public class ExcelController {
                         Workbook book = new XSSFWorkbook(opcPackage);
                         for (int i = 0; i < book.getNumberOfNames(); i++){
                             Name nameAt = book.getNameAt(i);
-                            if (!nameAt.getSheetName().isEmpty()){
-                                if (nameAt.getSheetIndex() == -1){
-                                    int lookup = book.getSheetIndex(nameAt.getSheetName());
-                                    if (lookup != -1){
-                                        nameAt.setSheetIndex(lookup);
+                            try {
+                                if (!nameAt.getSheetName().isEmpty()){
+                                    if (nameAt.getSheetIndex() == -1){
+                                        int lookup = book.getSheetIndex(nameAt.getSheetName());
+                                        if (lookup != -1){
+                                            nameAt.setSheetIndex(lookup);
+                                        }
                                     }
                                 }
+                            } catch (Exception ignored){ // maybe do something with it later but for the moment don't. Just want it to fix what names it can
                             }
                         }
                         ByteArrayOutputStream baos = new ByteArrayOutputStream();
