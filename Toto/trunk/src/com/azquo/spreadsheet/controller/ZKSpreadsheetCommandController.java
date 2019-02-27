@@ -196,6 +196,16 @@ public class ZKSpreadsheetCommandController {
                                 SName xmlHeadings = BookUtils.getNameByName(ReportRenderer.AZXML + region, ss.getSelectedSheet());
                                 Map<String,Integer> xmlToColMap = new HashMap<>();
                                 if (xmlHeadings != null) {
+                                    SName filePrefixName = BookUtils.getNameByName(ReportRenderer.AZXMLFILENAME, ss.getSelectedSheet());
+                                    String filePrefix = null;
+                                    if (filePrefixName != null){
+                                        SCell snameCell = BookUtils.getSnameCell(filePrefixName);
+                                        if (snameCell != null){
+                                            filePrefix = snameCell.getStringValue();
+                                        }
+                                    }
+
+
                                     for (int col = xmlHeadings.getRefersToCellRegion().column; col <= xmlHeadings.getRefersToCellRegion().lastColumn; col++){
                                         CellData cellData = Ranges.range(ss.getSelectedSheet(), xmlHeadings.getRefersToCellRegion().row,col).getCellData();
 //                                        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
@@ -277,7 +287,7 @@ public class ZKSpreadsheetCommandController {
                                                 //test.append(name).append(value).append("\n");
                                         }
                                         DOMSource source = new DOMSource(doc);
-                                        BufferedWriter bufferedWriter = Files.newBufferedWriter(zipforxmlfiles.resolve(count + ".xml"));
+                                        BufferedWriter bufferedWriter = Files.newBufferedWriter(zipforxmlfiles.resolve((filePrefix != null ? filePrefix + "-" : "") + count + ".xml"));
                                         StreamResult result = new StreamResult(bufferedWriter);
                                         transformer.transform(source, result);
                                         bufferedWriter.close();

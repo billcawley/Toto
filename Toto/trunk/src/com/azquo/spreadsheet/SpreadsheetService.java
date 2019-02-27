@@ -82,6 +82,8 @@ public class SpreadsheetService {
     private static final String ALIAS = "alias";
     private static final String SCANDIR = "scandir";
     private static final String SCANBUSINESS = "scanbusiness";
+    // where to scan the XML, initially a path
+    private static final String XMLSCANDIR = "xmlscandir";
 
     private static String getProperty(String key) {
         if (properties.get(key) == null) {
@@ -128,6 +130,10 @@ public class SpreadsheetService {
 
     public static String getScanDir() {
         return getProperty(SCANDIR);
+    }
+
+    public static String getXMLScanDir() {
+        return getProperty(XMLSCANDIR);
     }
 
     public static String getScanBusiness() {

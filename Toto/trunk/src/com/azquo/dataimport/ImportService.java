@@ -243,7 +243,9 @@ public final class ImportService {
                     int businessId = loggedInUser.getUser().getBusinessId();
                     int databaseId = loggedInUser.getDatabase().getId();
                     String pathName = loggedInUser.getBusinessDirectory();
-                    OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
+                    // used to only overwrite if uploaded by this user, we;ll go back to replacing one for the same business
+                    //OnlineReport or = OnlineReportDAO.findForNameAndUserId(reportName, loggedInUser.getUser().getId());
+                    OnlineReport or = OnlineReportDAO.findForNameAndBusinessId(reportName, loggedInUser.getUser().getBusinessId());
                     if (or != null) {
                         // zap the old one first
                         try {

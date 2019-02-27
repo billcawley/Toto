@@ -1,3 +1,9 @@
+26-02-19
+
+encode all of the json or newer versions of tomcat will complain in js tree
+
+bug fix which will refresh the permissions even when looking up a user that's logged in previously, this needs work
+
 21-02-19
 
 new syntax of 'applies to'. If a single name is specified (e.g. `Contract Reference` - this is now taken to mean `Contract reference` level lowest
