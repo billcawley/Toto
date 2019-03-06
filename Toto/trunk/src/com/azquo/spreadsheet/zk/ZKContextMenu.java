@@ -516,7 +516,7 @@ class ZKContextMenu {
             String debugString = SpreadsheetService.getDebugForCell(loggedInUser, reportId, sheetName, region, userRegionOptions, regionRow, regionColumn);
             Label debugLabel = new Label();
             debugLabel.setMultiline(true);
-            debugLabel.setValue("Debug\n");
+            debugLabel.setValue("Derivation\n");
             debugPopup.appendChild(debugLabel);
             debugLabel = new Label();
             debugLabel.setMultiline(true);
@@ -533,7 +533,7 @@ class ZKContextMenu {
                             for (SName sName : namesForSheet) {
                                 if (sName.getName().equalsIgnoreCase("Title")) {
                                     final SCell cell = sheet.getInternalSheet().getCell(sName.getRefersToCellRegion().getRow(), sName.getRefersToCellRegion().getColumn());
-                                    cell.setStringValue("Debug " + or.getReportName());
+                                    cell.setStringValue("Derivation " + or.getReportName());
                                 }
                                 if (sName.getName().equalsIgnoreCase("Data")) {
                                     // here we parse out the string into cells. It could be passed as arrays but I'm not sure how much help that is
@@ -557,10 +557,10 @@ class ZKContextMenu {
                         try (FileOutputStream fos = new FileOutputStream(file)) {
                             exporter.export(book1, fos);
                         }
-                        Filedownload.save(new AMedia("Debug " + or.getReportName() + ".xlsx", null, null, file, true));
+                        Filedownload.save(new AMedia("Derivation " + or.getReportName() + ".xlsx", null, null, file, true));
                     });
             debugPopup.appendChild(button);
-            Menuitem debugItem = new Menuitem("Debug");
+            Menuitem debugItem = new Menuitem("Derivation");
             editPopup.appendChild(debugItem);
             debugItem.setPopup(debugPopup);
             instructionsLabel.setValue("");

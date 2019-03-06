@@ -66,8 +66,9 @@ public class PendingUploadController {
             , @RequestParam(value = "commentsave", required = false) String commentSave
             , @RequestParam(value = "commentid", required = false) String commentId
     ) throws Exception {
-        return handleRequest(model,request,id,databaseId,paramssubmit,finalsubmit,reject,dbcheck,maxcounter,commentSave,commentId,null);
+        return handleRequest(model, request, id, databaseId, paramssubmit, finalsubmit, reject, dbcheck, maxcounter, commentSave, commentId, null);
     }
+
     //    private static final Logger logger = Logger.getLogger(ManageUsersController.class);
     @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(ModelMap model, HttpServletRequest request
@@ -84,17 +85,40 @@ public class PendingUploadController {
     ) throws Exception {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
-        if (loggedInUser == null || !loggedInUser.getUser().isAdministrator()) {
+        if (loggedInUser == null) {
             return "redirect:/api/Login";
         } else if (NumberUtils.isDigits(id)) {
+            model.put("pheader", "../includes/admin_header.jsp");
+            model.put("pfooter", "../includes/admin_footer.jsp");
+            model.put("cancelUrl", "ManageDatabases#tab4");
+            model.put("admin", loggedInUser.getUser().isAdministrator());
             AdminService.setBanner(model, loggedInUser);
             final PendingUpload pu = PendingUploadDAO.findById(Integer.parseInt(id));
             HttpSession session = request.getSession();
             // todo - pending upload security for non admin users?
             if (pu.getBusinessId() == loggedInUser.getUser().getBusinessId()) {
+                Set<Integer> nonAdminDBids = null;
+                ArrayList<Database> databaseList = null;
+                if (!loggedInUser.getUser().isAdministrator()) {
+                    // now a normal user can access this spacer
+                    model.put("pheader", "../includes/public_header.jsp");
+                    model.put("pfooter", "../includes/public_footer.jsp");
+                    model.put("cancelUrl", "UserUpload#tab2");
+                    nonAdminDBids = new HashSet<>();
+                    databaseList = new ArrayList<>();
+                    for (TypedPair<Integer, Integer> securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
+                        if (!nonAdminDBids.contains(securityPair.getSecond())) {
+                            databaseList.add(DatabaseDAO.findById(securityPair.getSecond()));
+                        }
+                        nonAdminDBids.add(securityPair.getSecond());
+                    }
+                    if (!nonAdminDBids.contains(pu.getDatabaseId())) {
+                        return "redirect:/api/Login";
+                    }
+                }
                 // on general principle
                 session.removeAttribute(WARNINGSWORKBOOK);
-                if ("true".equalsIgnoreCase(reject)){
+                if ("true".equalsIgnoreCase(reject)) {
                     Path loaded = Paths.get(SpreadsheetService.getScanDir() + "/loaded");
                     if (!Files.exists(loaded)) {
                         Files.createDirectories(loaded);
@@ -109,19 +133,23 @@ public class PendingUploadController {
                     pu.setProcessedByUserId(loggedInUser.getUser().getId());
                     pu.setProcessedDate(LocalDateTime.now());
                     PendingUploadDAO.store(pu);
-                    return "redirect:/api/ManageDatabases?uploadreports=true#tab4";
+                    if (nonAdminDBids != null){
+                        return "redirect:/api/UserUpload?uploadreports=true#tab2";
+                    } else {
+                        return "redirect:/api/ManageDatabases?uploadreports=true#tab4";
+                    }
                 }
                 if (commentSave != null && commentId != null) {
                     dealWithComment(pu, commentId, commentSave);
                     return "utf8page"; // stop it there, work is done
                 }
 
-                if ("true".equals(dbcheck)){
+                if ("true".equals(dbcheck)) {
                     String lastProvenance = (String) session.getAttribute(LATESTPROVENANCE);
                     // not actually going to remove the last provenance until we actually import - someone could close the dialog which calls this
                     String provenanceAfterValidation = RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getMostRecentProvenance(loggedInUser.getDatabase().getPersistenceName());
                     // what if last provenance is null? Can it be?
-                    if (lastProvenance != null && !lastProvenance.equals(provenanceAfterValidation)){ // then we need to warn the user, how to do this without losing any settings?
+                    if (lastProvenance != null && !lastProvenance.equals(provenanceAfterValidation)) { // then we need to warn the user, how to do this without losing any settings?
                         model.addAttribute("content", provenanceAfterValidation);
                     } else {
                         model.addAttribute("content", "ok");
@@ -133,6 +161,9 @@ public class PendingUploadController {
                 model.put("id", pu.getId());
                 model.put("filename", mainFileName);
                 if (NumberUtils.isDigits(databaseId)) {
+                    if (nonAdminDBids != null && !nonAdminDBids.contains(Integer.parseInt(databaseId))){
+                        return "redirect:/api/Login";
+                    }
                     pu.setDatabaseId(Integer.parseInt(databaseId));
                     PendingUploadDAO.store(pu);
                 }
@@ -155,7 +186,11 @@ public class PendingUploadController {
                 Database database = DatabaseDAO.findById(pu.getDatabaseId());
                 if (database == null) {
                     model.put("dbselect", "true");
-                    model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
+                    if (databaseList != null){
+                        model.put("databases", databaseList);
+                    } else {
+                        model.put("databases", AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser));
+                    }
                     return "pendingupload";
                 } else {
                     model.put("database", database.getName());
@@ -314,20 +349,19 @@ public class PendingUploadController {
                     // counter-linenumber checkbox is checked
                     // I guess grabbing in a map would be a starter, will need maxcounter to help I think
 
-                    if (amendmentsFile != null){
+                    if (amendmentsFile != null && !amendmentsFile.isEmpty()) {
                         // I need to collect comments and which lines to load
                         OPCPackage opcPackage = OPCPackage.open(amendmentsFile.getInputStream());
                         Workbook book = new XSSFWorkbook(opcPackage);
                         Sheet warnings = book.getSheet("Warnings");
-                        if (warnings != null){
+                        if (warnings != null) {
                             boolean inData = false;
                             // first two always load and comment, look up the other two
                             int fileIndexIndex = 0;
                             int lineIndexIndex = 0;
                             int identifierIndex = 0;
-                            for (Row row : warnings){
-                                if (inData){
-
+                            for (Row row : warnings) {
+                                if (inData) {
                                     int fileIndex = Integer.parseInt(ImportService.getCellValue(row.getCell(fileIndexIndex)));
                                     int lineIndex = Integer.parseInt(ImportService.getCellValue(row.getCell(lineIndexIndex)));
                                     String identifier = ImportService.getCellValue(row.getCell(identifierIndex));
@@ -337,22 +371,22 @@ public class PendingUploadController {
                                     // ok first deal with the comment
                                     dealWithComment(pu, identifier, comment);
                                     // now the line, the question being whether it's to be rejected
-                                    if (load.isEmpty()){
+                                    if (load.isEmpty()) {
                                         fileRejectLines.computeIfAbsent(fileIndex, HashMap::new).put(lineIndex, identifier);
                                     }
-                                } else if (row.getCell(0).getStringCellValue().equalsIgnoreCase("load")){
-                                    for (Cell cell : row){
-                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("file index")){
+                                } else if (row.getCell(0).getStringCellValue().equalsIgnoreCase("load")) {
+                                    for (Cell cell : row) {
+                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("file index")) {
                                             fileIndexIndex = cell.getColumnIndex();
                                         }
-                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("line no")){
+                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("line no")) {
                                             lineIndexIndex = cell.getColumnIndex();
                                         }
-                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("identifier")){
+                                        if (ImportService.getCellValue(cell).equalsIgnoreCase("identifier")) {
                                             identifierIndex = cell.getColumnIndex();
                                         }
                                     }
-                                    if (lineIndexIndex == 0 || fileIndexIndex == 0){
+                                    if (lineIndexIndex == 0 || fileIndexIndex == 0) {
                                         throw new Exception("couldn't find line no and file index headings in amended warnings upload");
                                     }
                                     inData = true;
@@ -374,7 +408,7 @@ public class PendingUploadController {
                                 Map<Integer, String> rejectedLines = new HashMap<>(); // this is now going to hold the identifier too - this way I can have the comments available on rejected lines. If I don't get the identidifiers here it's difficult
                                 String[] split = rejectedLinesString.split(",");
                                 String[] identifiersSplit = identifiersString.split("\\|\\|");
-                                if (split.length == identifiersSplit.length){
+                                if (split.length == identifiersSplit.length) {
                                     for (int j = 0; j < split.length; j++) {
                                         if (request.getParameter(i + "-" + split[j]) == null) { // if that line was selected then *don't* reject it
                                             rejectedLines.put(Integer.parseInt(split[j]), identifiersSplit[j]);
@@ -416,8 +450,8 @@ public class PendingUploadController {
                     paramsSet.remove(ImportService.IMPORTVERSION);
                     List<String> paramsForWarnings = new ArrayList<>(paramsSet);
                     int fileIndex = 0;
-                    for (UploadedFile uf : importResult){
-                        rowIndex = lineWarningsForSheet(pu, uf, rowIndex, warnings,errors, rowIndex == 0, paramsForWarnings, fileIndex);
+                    for (UploadedFile uf : importResult) {
+                        rowIndex = lineWarningsForSheet(pu, uf, rowIndex, warnings, errors, rowIndex == 0, paramsForWarnings, fileIndex);
                         fileIndex++;
                     }
                     request.getSession().setAttribute(WARNINGSWORKBOOK, wb);
@@ -483,7 +517,7 @@ public class PendingUploadController {
                                 if (!quickFeedback.isEmpty()) {
                                     quickFeedback += ", ";
                                 }
-                                if (uploadedFile.isNoData()){
+                                if (uploadedFile.isNoData()) {
                                     quickFeedback += "No Data";
                                 } else {
                                     quickFeedback += "No Data Modified";
@@ -541,7 +575,7 @@ public class PendingUploadController {
                 }
 
                 final Map<String, Map<String, String>> finalLookupValuesForFiles = lookupValuesForFiles;
-                if (!actuallyImport){ // before running validation grab the latest provenance - if it doesn't match when the actual import happens then warn the user about concurrent modification
+                if (!actuallyImport) { // before running validation grab the latest provenance - if it doesn't match when the actual import happens then warn the user about concurrent modification
                     session.setAttribute(LATESTPROVENANCE, RMIClient.getServerInterface(loggedInUser.getDatabaseServer().getIp()).getMostRecentProvenance(loggedInUser.getDatabase().getPersistenceName()));
                 } else {
                     session.removeAttribute(LATESTPROVENANCE);
@@ -553,7 +587,7 @@ public class PendingUploadController {
                     }
                     UploadedFile uploadedFile = new UploadedFile(pu.getFilePath(), Collections.singletonList(pu.getFileName()), params, false, !finalActuallyImport);
                     try {
-                        PendingUploadConfig puc = new PendingUploadConfig(finalLookupValuesForFiles,fileLoadFlags,fileRejectLines);
+                        PendingUploadConfig puc = new PendingUploadConfig(finalLookupValuesForFiles, fileLoadFlags, fileRejectLines);
                         List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, session, puc);
                         if (!finalActuallyImport) {
                             session.setAttribute(PARAMSPASSTHROUGH, lookupValuesForFilesHTML.toString());
@@ -607,7 +641,11 @@ public class PendingUploadController {
                             pu.setProcessedByUserId(loggedInUser.getUser().getId());
                             pu.setProcessedDate(LocalDateTime.now());
                             PendingUploadDAO.store(pu);
-                            session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab4"); // if actually importing will land back on the pending uploads page
+                            if (loggedInUser.getUser().isAdministrator()){
+                                session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab4"); // if actually importing will land back on the pending uploads page
+                            } else {
+                                session.setAttribute(ManageDatabasesController.IMPORTURLSUFFIX, "?uploadreports=true#tab2");
+                            }
                         }
                         session.setAttribute(ManageDatabasesController.IMPORTRESULT, uploadedFiles);
                     } catch (Exception e) {
@@ -620,6 +658,11 @@ public class PendingUploadController {
                 // will be nothing if there's no manual paramteres
                 model.put("paramspassthrough", lookupValuesForFilesHTML.toString());
                 if (actuallyImport) {
+                    if (loggedInUser.getUser().isAdministrator()){
+                        model.addAttribute("targetController", "ManageDatabases");
+                    } else {
+                        model.addAttribute("targetController", "UserUpload");
+                    }
                     return "importrunning";
                 } else {
                     return "validationready";
@@ -632,13 +675,13 @@ public class PendingUploadController {
     private static void dealWithComment(PendingUpload pu, String commentId, String commentSave) {
         Comment forBusinessIdAndIdentifierAndTeam = CommentDAO.findForBusinessIdAndIdentifierAndTeam(pu.getBusinessId(), commentId, pu.getTeam());
         if (forBusinessIdAndIdentifierAndTeam != null) {
-            if (commentSave.isEmpty()){
+            if (commentSave.isEmpty()) {
                 CommentDAO.removeById(forBusinessIdAndIdentifierAndTeam);
             } else {
                 forBusinessIdAndIdentifierAndTeam.setText(commentSave);
                 CommentDAO.store(forBusinessIdAndIdentifierAndTeam);
             }
-        } else if (!commentSave.isEmpty()){
+        } else if (!commentSave.isEmpty()) {
             CommentDAO.store(new Comment(0, pu.getBusinessId(), commentId, pu.getTeam(), commentSave));
         }
     }
@@ -825,7 +868,7 @@ public class PendingUploadController {
                 errorsSet.addAll(warningLine.getErrors().keySet());
             }
             List<String> errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
-            rowIndex = lineWarningsForSheet(pu,uploadedFile,rowIndex,sheet, errors, true, null, fileIndex);
+            rowIndex = lineWarningsForSheet(pu, uploadedFile, rowIndex, sheet, errors, true, null, fileIndex);
             if (uploadedFile.getError() != null) {
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
@@ -838,7 +881,7 @@ public class PendingUploadController {
             if (!uploadedFile.isDataModified()) {
                 cellIndex = 0;
                 row = sheet.createRow(rowIndex++);
-                if (uploadedFile.isNoData()){
+                if (uploadedFile.isNoData()) {
                     row.createCell(cellIndex).setCellValue("NO DATA");
                 } else {
                     row.createCell(cellIndex).setCellValue("NO DATA MODIFIED");
@@ -878,7 +921,7 @@ public class PendingUploadController {
                 errorsSet.addAll(warningLine.getErrors().keySet());
             }
             List<String> errors = new ArrayList<>(errorsSet);// consistent ordering - maybe not 100% necessary but best to be safe
-            rowIndex = lineWarningsForSheet(pu,uploadedFile,rowIndex,sheet,errors, true, null,fileIndex);
+            rowIndex = lineWarningsForSheet(pu, uploadedFile, rowIndex, sheet, errors, true, null, fileIndex);
             if (uploadedFile.getIgnoreLinesValues() != null) {
                 row = sheet.createRow(rowIndex++);
                 row.createCell(cellIndex).setCellValue("Manually Rejected Lines");
@@ -909,11 +952,11 @@ public class PendingUploadController {
         }
     }
 
-    private static int lineWarningsForSheet(PendingUpload pu, UploadedFile uploadedFile, int rowIndex, Sheet sheet, List<String> errors, boolean addHeadings, List<String> paramsHeadings, int fileIndex){
+    private static int lineWarningsForSheet(PendingUpload pu, UploadedFile uploadedFile, int rowIndex, Sheet sheet, List<String> errors, boolean addHeadings, List<String> paramsHeadings, int fileIndex) {
         if (!uploadedFile.getWarningLines().isEmpty()) {
             int cellIndex = 0;
             Row row;
-            if (addHeadings){
+            if (addHeadings) {
                 row = sheet.createRow(rowIndex++);
                 row.createCell(cellIndex).setCellValue("Line Warnings" + (paramsHeadings != null ? ", sorting rows below the headings is fine but please do not modify data outside the first two columns, this may confuse the system." : ""));
                 cellIndex = 0;
@@ -946,13 +989,13 @@ public class PendingUploadController {
                         }
                     }
                     row = sheet.createRow(rowIndex++);
-                    if (paramsHeadings != null){
+                    if (paramsHeadings != null) {
                         row.createCell(cellIndex++).setCellValue("Load");
                     }
                     row.createCell(cellIndex++).setCellValue("Comment");
-                    if (paramsHeadings != null){
+                    if (paramsHeadings != null) {
                         row.createCell(cellIndex++).setCellValue("File");
-                        for (String param : paramsHeadings){
+                        for (String param : paramsHeadings) {
                             row.createCell(cellIndex++).setCellValue(param);
                         }
                         row.createCell(cellIndex++).setCellValue("Identifier");
@@ -963,7 +1006,7 @@ public class PendingUploadController {
                         }
                         row.createCell(cellIndex++).setCellValue(error);
                     }
-                    if (paramsHeadings != null){
+                    if (paramsHeadings != null) {
                         row.createCell(cellIndex++).setCellValue("File Index");
                     }
                     row.createCell(cellIndex++).setCellValue("Line No");
@@ -976,13 +1019,13 @@ public class PendingUploadController {
                     }
                 } else {
                     row = sheet.createRow(rowIndex++);
-                    if (paramsHeadings != null){
+                    if (paramsHeadings != null) {
                         row.createCell(cellIndex++).setCellValue("Load");
                     }
                     row.createCell(cellIndex++).setCellValue("Comment");
-                    if (paramsHeadings != null){
+                    if (paramsHeadings != null) {
                         row.createCell(cellIndex++).setCellValue("File");
-                        for (String param : paramsHeadings){
+                        for (String param : paramsHeadings) {
                             row.createCell(cellIndex++).setCellValue(param);
                         }
                         row.createCell(cellIndex++).setCellValue("Identifier");
@@ -993,7 +1036,7 @@ public class PendingUploadController {
                         }
                         row.createCell(cellIndex++).setCellValue(error);
                     }
-                    if (paramsHeadings != null){
+                    if (paramsHeadings != null) {
                         row.createCell(cellIndex++).setCellValue("File Index");
                     }
                     row.createCell(cellIndex++).setCellValue("Line No");
@@ -1005,7 +1048,7 @@ public class PendingUploadController {
             }
 
             for (UploadedFile.WarningLine warningLine : uploadedFile.getWarningLines()) {
-                if (paramsHeadings != null){
+                if (paramsHeadings != null) {
                     row.createCell(cellIndex++).setCellValue(""); // empty load cell, expects a x or maybe anything?
                 }
                 String commentValue = "";
@@ -1014,9 +1057,9 @@ public class PendingUploadController {
                     commentValue = comment.getText();
                 }
                 row.createCell(cellIndex++).setCellValue(commentValue);
-                if (paramsHeadings != null){
+                if (paramsHeadings != null) {
                     row.createCell(cellIndex++).setCellValue(uploadedFile.getFileNamesAsString());
-                    for (String param : paramsHeadings){
+                    for (String param : paramsHeadings) {
                         row.createCell(cellIndex++).setCellValue(uploadedFile.getParameter(param) != null ? uploadedFile.getParameter(param) : "");
                     }
                     row.createCell(cellIndex++).setCellValue(warningLine.getIdentifier().replace("\"", ""));
@@ -1025,7 +1068,7 @@ public class PendingUploadController {
                 for (String error : errors) {
                     row.createCell(cellIndex++).setCellValue(warningLine.getErrors().getOrDefault(error, ""));
                 }
-                if (paramsHeadings != null){
+                if (paramsHeadings != null) {
                     row.createCell(cellIndex++).setCellValue(fileIndex);
                 }
                 row.createCell(cellIndex++).setCellValue(warningLine.getLineNo());

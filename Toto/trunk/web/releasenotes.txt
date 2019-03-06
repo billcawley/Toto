@@ -1,3 +1,7 @@
+27-02-19
+
+Reports with the same name will overwrite, Brokasure XML export and import work
+
 26-02-19
 
 encode all of the json or newer versions of tomcat will complain in js tree

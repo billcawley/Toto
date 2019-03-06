@@ -2,7 +2,12 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <c:set var="title" scope="request" value="Import Validation"/>
-<%@ include file="../includes/admin_header.jsp" %>
+<c:if test="${admin == true}">
+    <%@ include file="../includes/admin_header.jsp" %>
+</c:if>
+<c:if test="${admin == false}">
+    <%@ include file="../includes/public_header.jsp" %>
+</c:if>
 <script>
     function showHideDiv(div) {
         var x = document.getElementById(div);
@@ -92,8 +97,13 @@
         <div class="centeralign">
             <a href="#" class="button" onclick="dbCheck();return false;">OK</a>
             <a href="/api/PendingUpload?id=${id}&reject=true" class="button">Reject</a>
-            <a href="/api/ManageDatabases#tab4" class="button">Cancel</a>
+            <a href="/api/${cancelUrl}" class="button">Cancel</a>
         </div>
     </form>
 </main>
-<%@ include file="../includes/admin_footer.jsp" %>
+<c:if test="${admin == true}">
+    <%@ include file="../includes/admin_footer.jsp" %>
+</c:if>
+<c:if test="${admin == false}">
+    <%@ include file="../includes/public_footer.jsp" %>
+</c:if>

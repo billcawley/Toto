@@ -136,6 +136,11 @@ public class DBCron {
                         Path p = Paths.get(SpreadsheetService.getXMLScanDir());
                         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                         final DocumentBuilder builder = factory.newDocumentBuilder();
+                        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(System.currentTimeMillis() + "generatedfromxml.csv").toFile()));
+                        //if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
+                        // I'm going to allow for the possiblity that different files might have different fields
+                        Set<String> headings = new HashSet<>();
+                        List<Map<String, String>> filesValues = new ArrayList<>();
                         try (Stream<Path> list = Files.list(p)) {
                             list.forEach(path -> {
                                 // Do stuff
@@ -145,10 +150,6 @@ public class DBCron {
                                         FileTime lastModifiedTime = null;
                                         lastModifiedTime = Files.getLastModifiedTime(path);
                                         long timestamp = System.currentTimeMillis();
-                                        //if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
-                                        // I'm going to allow for the possiblity that different files might have different fields
-                                        Set<String> headings = new HashSet<>();
-                                        List<Map<String, String>> filesValues = new ArrayList<>();
                                         if (lastModifiedTime.toMillis() < (timestamp - 1_000)) {
                                             System.out.println("file : " + origName);
                                             // unlike the above, before moving it I need to read it
@@ -172,19 +173,6 @@ public class DBCron {
                                             }
 
                                             Files.move(path, tagged.resolve(timestamp + origName));
-                                            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(System.currentTimeMillis() + "generatedfromxml.csv").toFile()));
-                                            for (String heading : headings){
-                                                bufferedWriter.write(heading + "\t");
-                                            }
-                                            bufferedWriter.newLine();
-                                            for (Map<String, String> lineValues : filesValues){
-                                                for (String heading : headings){
-                                                    String value = lineValues.get(heading);
-                                                    bufferedWriter.write((value != null ? value : "") + "\t");
-                                                }
-                                                bufferedWriter.newLine();
-                                            }
-                                            bufferedWriter.close();
                                         } else {
                                             System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");
                                         }
@@ -194,6 +182,19 @@ public class DBCron {
                                 }
                             });
                         }
+                        for (String heading : headings){
+                            bufferedWriter.write(heading + "\t");
+                        }
+                        bufferedWriter.newLine();
+                        for (Map<String, String> lineValues : filesValues){
+                            for (String heading : headings){
+                                String value = lineValues.get(heading);
+                                bufferedWriter.write((value != null ? value : "") + "\t");
+                            }
+                            bufferedWriter.newLine();
+                        }
+                        bufferedWriter.close();
+
                     }
                 }
             }

@@ -343,7 +343,7 @@ public class ManageDatabasesController {
                                 isImportTemplate = true;
                             }
                             boolean assignTemplateToDatabase = false;
-                            if (database != null && !database.isEmpty()) {
+                            if (database != null && !database.isEmpty() && !database.equalsIgnoreCase("none")) {
                                 LoginService.switchDatabase(loggedInUser, database); // could be blank now
                                 assignTemplateToDatabase = true;
                             }
@@ -459,6 +459,7 @@ public class ManageDatabasesController {
         if (logo == null || logo.length() == 0) logo = "logo_alt.png";
         model.addAttribute("bannerColor", bannerColor);
         model.addAttribute("logo", logo);
+        model.addAttribute("targetController", "ManageDatabases");
         return "importrunning";
     }
 

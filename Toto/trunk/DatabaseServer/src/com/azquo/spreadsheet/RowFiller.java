@@ -67,6 +67,7 @@ class RowFiller implements Callable<List<AzquoCell>> {
             }
             return returnRow;
         } catch (Exception e) {
+            System.out.println("in row filler : " + e.getMessage());
             e.printStackTrace();
             throw e;
         }

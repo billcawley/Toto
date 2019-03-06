@@ -1,5 +1,6 @@
 package com.azquo.admin;
 
+import com.azquo.TypedPair;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
@@ -269,9 +270,9 @@ this may now not work at all, perhaps delete?
             reportList.add(notFound);
         } else {
             for (OnlineReport or : reportList) {
-                     User otherUser = UserDAO.findById(or.getUserId());
-                    or.setReportName(or.getReportName() + " uploaded by " + (otherUser != null ? otherUser.getName() : "?")); // I'm assuming the report isn't saved after - just for
-             }
+                User otherUser = UserDAO.findById(or.getUserId());
+                or.setReportName(or.getReportName() + " uploaded by " + (otherUser != null ? otherUser.getName() : "?")); // I'm assuming the report isn't saved after - just for
+            }
         }
         reportList.sort((o1, o2) -> {
             // adding isempty here as empty is the same as null for our sorting purposes
@@ -338,36 +339,42 @@ this may now not work at all, perhaps delete?
 
     // only short but perhaps logic could be cleaned up a little
     public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch, boolean allteams, boolean uploaded) {
-        if (loggedInUser.getUser().isAdministrator()) { // just admin for the mo - maybe will be changed
-            List<PendingUpload> pendingUploads;
-            if (fileSearch != null && fileSearch.length() > 0){
-                pendingUploads = PendingUploadDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        List<PendingUpload> pendingUploads;
+        if (fileSearch != null && fileSearch.length() > 0) {
+            pendingUploads = PendingUploadDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
+        } else {
+            if (uploaded) {
+                pendingUploads = PendingUploadDAO.findForBusinessIdAndProcessed(loggedInUser.getUser().getBusinessId());
             } else {
-                if (uploaded){
-                    pendingUploads = PendingUploadDAO.findForBusinessIdAndProcessed(loggedInUser.getUser().getBusinessId());
+                if (loggedInUser.getUser().getTeam() != null && loggedInUser.getUser().getTeam().length() > 0 && !allteams) {
+                    pendingUploads = PendingUploadDAO.findForBusinessIdAndTeamNotProcessed(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getTeam());
                 } else {
-                    if (loggedInUser.getUser().getTeam() != null && loggedInUser.getUser().getTeam().length() > 0 && !allteams){
-                        pendingUploads = PendingUploadDAO.findForBusinessIdAndTeamNotProcessed(loggedInUser.getUser().getBusinessId(), loggedInUser.getUser().getTeam());
-                    } else {
-                        pendingUploads = PendingUploadDAO.findForBusinessIdNotProcessed(loggedInUser.getUser().getBusinessId());
-                    }
+                    pendingUploads = PendingUploadDAO.findForBusinessIdNotProcessed(loggedInUser.getUser().getBusinessId());
                 }
             }
-
-            List<PendingUpload.PendingUploadForDisplay> pendingUploadForDisplays = new ArrayList<>();
-            int count = 0;
-            for (PendingUpload pendingUpload : pendingUploads) {
-                if (fileSearch == null || fileSearch.equals("") || (pendingUpload.getFileName().toLowerCase().contains(fileSearch.toLowerCase()))) {
-                    count++;
-                    pendingUploadForDisplays.add(new PendingUpload.PendingUploadForDisplay(pendingUpload));
-                    if (count > 100) {
-                        break;
-                    }
-                }
-            }
-            return pendingUploadForDisplays;
         }
-        return null;
+
+        // new logic - since all users can access this I'll now constrain the list if the user isn't admin
+        if (!loggedInUser.getUser().isAdministrator()){
+            List<Integer> okDatabaseIds = new ArrayList<>();
+            for (TypedPair<Integer, Integer> securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()){
+                okDatabaseIds.add(securityPair.getSecond()); // second is database but this is dangerous - needs to be properly typed really todo
+            }
+            pendingUploads.removeIf(next -> !okDatabaseIds.contains(next.getDatabaseId()));
+        }
+
+        List<PendingUpload.PendingUploadForDisplay> pendingUploadForDisplays = new ArrayList<>();
+        int count = 0;
+        for (PendingUpload pendingUpload : pendingUploads) {
+            if (fileSearch == null || fileSearch.equals("") || (pendingUpload.getFileName().toLowerCase().contains(fileSearch.toLowerCase()))) {
+                count++;
+                pendingUploadForDisplays.add(new PendingUpload.PendingUploadForDisplay(pendingUpload));
+                if (count > 100) {
+                    break;
+                }
+            }
+        }
+        return pendingUploadForDisplays;
     }
 
     public static void deleteUserById(int userId) {
@@ -454,7 +461,7 @@ this may now not work at all, perhaps delete?
             // if there is a template associated with this database and no others then zap it
             ImportTemplate importTemplate = db.getImportTemplateId() != -1 ? ImportTemplateDAO.findById(db.getImportTemplateId()) : null;
             if (importTemplate != null) {
-                if (DatabaseDAO.findForImportTemplateId(importTemplate.getId()).size() == 1){
+                if (DatabaseDAO.findForImportTemplateId(importTemplate.getId()).size() == 1) {
                     ImportTemplateDAO.removeById(importTemplate);
                     Files.deleteIfExists(Paths.get(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk()));
                 }

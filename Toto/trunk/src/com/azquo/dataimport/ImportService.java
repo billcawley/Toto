@@ -255,6 +255,7 @@ public final class ImportService {
                             e.printStackTrace();
                         }
                         or.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
+                        or.setUserId(loggedInUser.getUser().getId());
                     } else {
                         or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "");
                     }

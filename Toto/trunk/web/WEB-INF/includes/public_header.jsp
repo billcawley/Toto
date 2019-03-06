@@ -107,6 +107,7 @@
 								<li><a href="/api/CreateExcelForDownload?action=DOWNLOADUSERS" title="Download User List">Download User List</a></li>
 								<li><a href="/api/CreateExcelForDownload?action=DOWNLOADREPORTSCHEDULES" title="Download Report Schedules">Download Report Schedules</a></li>
 							</c:if>
+							<li><a href="/api/UserUpload#tab2" title="Upload Data">Data Validation</a></li>
 						</ul>
 					</li>
 				</ul>

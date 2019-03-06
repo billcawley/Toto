@@ -1,5 +1,7 @@
 package com.azquo.admin.controller;
 
+import com.azquo.TypedPair;
+import com.azquo.admin.database.DatabaseDAO;
 import com.azquo.dataimport.PendingUpload;
 import com.azquo.dataimport.PendingUploadDAO;
 import com.azquo.dataimport.UploadRecord;
@@ -16,6 +18,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Created by edward on 25/05/16.
@@ -61,9 +66,20 @@ public class DownloadFileController {
                     }
                 }
             }
-            if (pendingUploadId != null && !pendingUploadId.isEmpty() && loggedInUser.getUser().isAdministrator()){ // only admin on this stuff
+        }
+        if (loggedInUser != null){
+            if (pendingUploadId != null && !pendingUploadId.isEmpty()){ // only admin on this stuff
                 final PendingUpload byId = PendingUploadDAO.findById(Integer.parseInt(pendingUploadId));
                 if (byId != null && byId.getBusinessId() == loggedInUser.getUser().getBusinessId()){
+                    if (!loggedInUser.getUser().isAdministrator()){
+                        Set<Integer> nonAdminDBids = new HashSet<>();
+                        for (TypedPair<Integer, Integer> securityPair : loggedInUser.getReportIdDatabaseIdPermissions().values()) {
+                            nonAdminDBids.add(securityPair.getSecond());
+                        }
+                        if (!nonAdminDBids.contains(byId.getDatabaseId())){
+                            return;
+                        }
+                    }
                     Path filePath;
                     String name;
                     if (byId.getImportResultPath() != null){
@@ -80,6 +96,7 @@ public class DownloadFileController {
                     }
                 }
             }
+
         }
     }
 }

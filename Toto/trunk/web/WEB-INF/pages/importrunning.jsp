@@ -20,7 +20,7 @@
         if (something) {
             jq.post("/api/SpreadsheetStatus?action=importResult", function (data) {
                 if (data.indexOf("true") == 0) { // the sheet should be ready, note indexof not startswith, support for the former better
-                    location.replace("/api/ManageDatabases" + data.substring(4));// nothing added in most cases
+                    location.replace("/api/${targetController}" + data.substring(4));// nothing added in most cases
                     something = false;
                     return;
                 } else { // possible headline info
