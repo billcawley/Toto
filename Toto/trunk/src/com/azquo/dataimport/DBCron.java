@@ -136,67 +136,69 @@ public class DBCron {
                             Files.createDirectories(tagged);
                         }
                         Path p = Paths.get(SpreadsheetService.getXMLScanDir());
-                        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                        final DocumentBuilder builder = factory.newDocumentBuilder();
-                        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(System.currentTimeMillis() + "generatedfromxml.csv").toFile()));
-                        //if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
-                        // I'm going to allow for the possiblity that different files might have different fields
-                        Set<String> headings = new HashSet<>();
-                        List<Map<String, String>> filesValues = new ArrayList<>();
-                        try (Stream<Path> list = Files.list(p)) {
-                            list.forEach(path -> {
-                                // Do stuff
-                                if (!Files.isDirectory(path)) { // skip any directories
-                                    try {
-                                        String origName = path.getFileName().toString();
-                                        FileTime lastModifiedTime = null;
-                                        lastModifiedTime = Files.getLastModifiedTime(path);
-                                        long timestamp = System.currentTimeMillis();
-                                        if (lastModifiedTime.toMillis() < (timestamp - 1_000)) {
-                                            System.out.println("file : " + origName);
-                                            // unlike the above, before moving it I need to read it
+                        Stream<Path> dirlist = Files.list(p);
+                        if (dirlist.count() > 0){
+                            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                            final DocumentBuilder builder = factory.newDocumentBuilder();
+                            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(System.currentTimeMillis() + "generatedfromxml.csv").toFile()));
+                            //if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
+                            // I'm going to allow for the possiblity that different files might have different fields
+                            Set<String> headings = new HashSet<>();
+                            List<Map<String, String>> filesValues = new ArrayList<>();
+                            try (Stream<Path> list = dirlist) {
+                                list.forEach(path -> {
+                                    // Do stuff
+                                    if (!Files.isDirectory(path)) { // skip any directories
+                                        try {
+                                            String origName = path.getFileName().toString();
+                                            FileTime lastModifiedTime = null;
+                                            lastModifiedTime = Files.getLastModifiedTime(path);
+                                            long timestamp = System.currentTimeMillis();
+                                            if (lastModifiedTime.toMillis() < (timestamp - 1_000)) {
+                                                System.out.println("file : " + origName);
+                                                // unlike the above, before moving it I need to read it
 
-                                            try {
-                                                Map<String, String> thisFileValues = new HashMap<>();
-                                                Document workbookXML = builder.parse(path.toFile());
-                                                //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
-                                                Element documentElement = workbookXML.getDocumentElement();
-                                                // this criteria is currently suitable for the simple XML from Brokasure
-                                                for (int index = 0; index < documentElement.getChildNodes().getLength(); index++){
-                                                    Node node = documentElement.getChildNodes().item(index);
-                                                    if (node.hasChildNodes()){
-                                                        headings.add(node.getNodeName());
-                                                        thisFileValues.put(node.getNodeName(), node.getFirstChild().getNodeValue());
+                                                try {
+                                                    Map<String, String> thisFileValues = new HashMap<>();
+                                                    Document workbookXML = builder.parse(path.toFile());
+                                                    //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
+                                                    Element documentElement = workbookXML.getDocumentElement();
+                                                    // this criteria is currently suitable for the simple XML from Brokasure
+                                                    for (int index = 0; index < documentElement.getChildNodes().getLength(); index++){
+                                                        Node node = documentElement.getChildNodes().item(index);
+                                                        if (node.hasChildNodes()){
+                                                            headings.add(node.getNodeName());
+                                                            thisFileValues.put(node.getNodeName(), node.getFirstChild().getNodeValue());
+                                                        }
                                                     }
+                                                    filesValues.add(thisFileValues);
+                                                } catch (SAXException e) {
+                                                    e.printStackTrace();
                                                 }
-                                                filesValues.add(thisFileValues);
-                                            } catch (SAXException e) {
-                                                e.printStackTrace();
-                                            }
 
-                                            Files.move(path, tagged.resolve(timestamp + origName));
-                                        } else {
-                                            System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");
+                                                Files.move(path, tagged.resolve(timestamp + origName));
+                                            } else {
+                                                System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");
+                                            }
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
                                         }
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
                                     }
-                                }
-                            });
-                        }
-                        for (String heading : headings){
-                            bufferedWriter.write(heading + "\t");
-                        }
-                        bufferedWriter.newLine();
-                        for (Map<String, String> lineValues : filesValues){
+                                });
+                            }
                             for (String heading : headings){
-                                String value = lineValues.get(heading);
-                                bufferedWriter.write((value != null ? value : "") + "\t");
+                                bufferedWriter.write(heading + "\t");
                             }
                             bufferedWriter.newLine();
+                            for (Map<String, String> lineValues : filesValues){
+                                for (String heading : headings){
+                                    String value = lineValues.get(heading);
+                                    bufferedWriter.write((value != null ? value : "") + "\t");
+                                }
+                                bufferedWriter.newLine();
+                            }
+                            bufferedWriter.close();
                         }
-                        bufferedWriter.close();
-
                     }
                 }
             }
