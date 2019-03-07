@@ -497,6 +497,7 @@ public final class ImportService {
     private static final String PREPROCESSOR = "preprocessor";
     private static final String ADDITIONALDATAPROCESSOR = "additionaldataprocessor";
     private static final String POSTPROCESSOR = "postprocessor";
+    private static final String VALIDATION = "validation";
     private static final String NOFILEHEADINGS = "nofileheadings";
     private static final String LANGUAGE = "language";
     private static final String SKIPLINES = "skiplines";
@@ -574,6 +575,9 @@ public final class ImportService {
                     }
                     if (templateParameters.get(POSTPROCESSOR) != null) {
                         uploadedFile.setPostProcessor(templateParameters.get(POSTPROCESSOR));
+                    }
+                    if (templateParameters.get(VALIDATION) != null) {
+                        uploadedFile.setValidation(templateParameters.get(VALIDATION));
                     }
                     if (templateParameters.get(LANGUAGE) != null) {
                         String languages = templateParameters.get(LANGUAGE);
@@ -756,10 +760,10 @@ public final class ImportService {
                 , uploadedFile
                 , loggedInUser.getUser().getName());
         // run any executes defined in the file
+        // the 2d arrays should probably be removed from post processor but not just yet
         List<List<List<String>>> systemData2DArrays = new ArrayList<>();
         if (uploadedFile.getPostProcessor() != null) {
             // set user choices to file params, could be useful to the execute
-            System.out.println("setting usr choices");
             for (String choice : uploadedFile.getParameters().keySet()) {
                 System.out.println(choice + " : " + uploadedFile.getParameter(choice));
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
@@ -767,6 +771,21 @@ public final class ImportService {
             loggedInUser.copyMode = uploadedFile.isValidationTest();
             try{
                 uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getPostProcessor(), systemData2DArrays, uploadedFile.getProvenanceId(), false).toString());
+            } catch (Exception e){
+                loggedInUser.copyMode = false;
+                throw e;
+            }
+        }
+
+        if (uploadedFile.getValidation() != null && uploadedFile.isValidationTest()) {
+            // set user choices to file params, could be useful to the execute
+            for (String choice : uploadedFile.getParameters().keySet()) {
+                System.out.println(choice + " : " + uploadedFile.getParameter(choice));
+                SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
+            }
+            loggedInUser.copyMode = true;
+            try{
+                ReportExecutor.runExecute(loggedInUser, uploadedFile.getValidation(), systemData2DArrays, uploadedFile.getProvenanceId(), false);
             } catch (Exception e){
                 loggedInUser.copyMode = false;
                 throw e;

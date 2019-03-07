@@ -1,3 +1,7 @@
+06-03-19
+
+Add apache commons codec back in, XML scanning of files back from brokasure, standard user upload. Rename contextual menu Debug to Derivation.
+
 27-02-19
 
 Reports with the same name will overwrite, Brokasure XML export and import work

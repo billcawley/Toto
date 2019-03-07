@@ -127,6 +127,8 @@ public class DBCron {
                         }
                     }
                     // for brokasure, intially just scn the directory like
+                    // todo : date (simple), id brokasure adds e.g. CSJan1912.xml-19022815141117-Error the 19022815141117 here and a way to match back to the original XML which probably means timestamping it
+                    // matching  back to the original required as a file with an Error just has the error
                     if (SpreadsheetService.getXMLScanDir() != null && SpreadsheetService.getXMLScanDir().length() > 0) {
                         // make tagged as before but this time the plan is to parse all found XML files into a single CSV and upload it
                         Path tagged = Paths.get(SpreadsheetService.getXMLScanDir() + "/tagged");
