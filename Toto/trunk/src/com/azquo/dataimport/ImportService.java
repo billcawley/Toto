@@ -257,7 +257,7 @@ public final class ImportService {
                         or.setFilename(uploadedFile.getFileName()); // it might have changed, I don't think much else under these circumstances
                         or.setUserId(loggedInUser.getUser().getId());
                     } else {
-                        or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "");
+                        or = new OnlineReport(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), loggedInUser.getDatabase().getName(), reportName, uploadedFile.getFileName(), "", "");
                     }
                     OnlineReportDAO.store(or); // store before or.getFilenameForDisk() or the id will be wrong!
                     Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + onlineReportsDir + or.getFilenameForDisk());
@@ -1173,9 +1173,11 @@ public final class ImportService {
             importTemplate = new ImportTemplate(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), uploadedFile.getFileName(), uploadedFile.getFileName(), ""); // default to ZK now
         }
         ImportTemplateDAO.store(importTemplate);
-        Database database = loggedInUser.getDatabase();
-        database.setImportTemplateId(importTemplate.getId());
-        DatabaseDAO.store(database);
+        if (assignToLoggedInUserDB){
+            Database database = loggedInUser.getDatabase();
+            database.setImportTemplateId(importTemplate.getId());
+            DatabaseDAO.store(database);
+        }
         Path fullPath = Paths.get(SpreadsheetService.getHomeDir() + dbPath + pathName + importTemplatesDir + importTemplate.getFilenameForDisk());
         Files.createDirectories(fullPath.getParent()); // in case it doesn't exist
         Files.copy(Paths.get(uploadedFile.getPath()), fullPath); // and copy
@@ -1265,6 +1267,7 @@ public final class ImportService {
             // chunks of this will be factored off later when I want faster data file conversion
             ImportTemplateData importTemplateData = new ImportTemplateData();
             // I'm not supporting xls templates
+            System.out.println("template path : " + SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk());
             OPCPackage opcPackage = OPCPackage.open(new File(SpreadsheetService.getHomeDir() + dbPath + loggedInUser.getBusinessDirectory() + importTemplatesDir + importTemplate.getFilenameForDisk()));
             // we're going to event based reading, it will bypass errors that can jam poi
             XSSFReader xssfReader = new XSSFReader(opcPackage);

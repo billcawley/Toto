@@ -24,11 +24,9 @@ public class OnlineReportDAO {
     private static final String BUSINESSID = "business_id";
     private static final String USERID = "user_id";
     private static final String REPORTNAME = "report_name";
-    //    private static final String DATABASETYPE = "database_type";
-//    private static final String REPORTCATEGORY = "report_category";
-//    private static final String USERSTATUS = "user_status";
     private static final String FILENAME = "filename";
     private static final String EXPLANATION = "explanation";
+    private static final String CATEGORY = "category";
 
     public static Map<String, Object> getColumnNameValueMap(final OnlineReport onlineReport) {
         final Map<String, Object> toReturn = new HashMap<>();
@@ -39,6 +37,7 @@ public class OnlineReportDAO {
         toReturn.put(REPORTNAME, onlineReport.getReportName());
         toReturn.put(FILENAME, onlineReport.getFilename());
         toReturn.put(EXPLANATION, onlineReport.getExplanation());
+        toReturn.put(CATEGORY, onlineReport.getCategory());
         return toReturn;
     }
 
@@ -54,6 +53,7 @@ public class OnlineReportDAO {
                         , rs.getString(REPORTNAME)
                         , rs.getString(FILENAME)
                         , rs.getString(EXPLANATION)
+                        , rs.getString(CATEGORY)
                 );
             } catch (Exception e) {
                 e.printStackTrace();

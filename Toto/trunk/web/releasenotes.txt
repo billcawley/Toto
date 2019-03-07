@@ -1,3 +1,7 @@
+07-03-19
+
+Validation option on import templates should mean no validations run on a vanilla import
+
 06-03-19
 
 Add apache commons codec back in, XML scanning of files back from brokasure, standard user upload. Rename contextual menu Debug to Derivation.

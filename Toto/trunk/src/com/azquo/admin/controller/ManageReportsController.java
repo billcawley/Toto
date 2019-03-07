@@ -56,6 +56,7 @@ public class ManageReportsController {
             , @RequestParam(value = "databaseIdList", required = false) String[] databaseIdList // I think this is correct?
             , @RequestParam(value = "name", required = false) String name
             , @RequestParam(value = "explanation", required = false) String explanation
+            , @RequestParam(value = "category", required = false) String category
             , @RequestParam(value = "submit", required = false) String submit
     ) {
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
@@ -84,6 +85,7 @@ public class ManageReportsController {
                         }
                         theReport.setReportName(name);
                         theReport.setExplanation(explanation);
+                        theReport.setCategory(category);
                         OnlineReportDAO.store(theReport);
                         model.put("reports", AdminService.getReportList(loggedInUser));
                         AdminService.setBanner(model,loggedInUser);
@@ -102,6 +104,7 @@ public class ManageReportsController {
                     model.put("name", theReport.getReportName());
                     model.put("file", theReport.getFilename());
                     model.put("explanation", theReport.getExplanation() != null ? theReport.getExplanation() : "");
+                    model.put("category", theReport.getCategory() != null ? theReport.getCategory() : "");
                     AdminService.setBanner(model,loggedInUser);
                     return "editreport";
                 }

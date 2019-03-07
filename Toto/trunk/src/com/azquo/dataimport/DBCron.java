@@ -136,8 +136,7 @@ public class DBCron {
                             Files.createDirectories(tagged);
                         }
                         Path p = Paths.get(SpreadsheetService.getXMLScanDir());
-                        Stream<Path> dirlist = Files.list(p);
-                        if (dirlist.count() > 0){
+                        if (Files.list(p).count() > 0){
                             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                             final DocumentBuilder builder = factory.newDocumentBuilder();
                             BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(System.currentTimeMillis() + "generatedfromxml.csv").toFile()));
@@ -145,7 +144,7 @@ public class DBCron {
                             // I'm going to allow for the possiblity that different files might have different fields
                             Set<String> headings = new HashSet<>();
                             List<Map<String, String>> filesValues = new ArrayList<>();
-                            try (Stream<Path> list = dirlist) {
+                            try (Stream<Path> list = Files.list(p)) {
                                 list.forEach(path -> {
                                     // Do stuff
                                     if (!Files.isDirectory(path)) { // skip any directories

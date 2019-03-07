@@ -266,7 +266,7 @@ this may now not work at all, perhaps delete?
         }
         // was setting the database name for each report, this will be irrelevant
         if (reportList.size() == 0) {
-            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, loggedInUser.getUser().getId(), "", "No reports found", "", "");
+            OnlineReport notFound = new OnlineReport(0, LocalDateTime.now(), 0, loggedInUser.getUser().getId(), "", "No reports found", "", "", "");
             reportList.add(notFound);
         } else {
             for (OnlineReport or : reportList) {

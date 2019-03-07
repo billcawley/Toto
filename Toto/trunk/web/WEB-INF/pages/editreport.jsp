@@ -25,6 +25,10 @@
                             <input name="name" id="name" value="${name}">
                         </div>
                         <div>
+                            <label for="category">Category</label>
+                            <input name="category" id="category" value="${category}">
+                        </div>
+                        <div>
                             <label>Explanation</label>
                             <textarea name="explanation" rows="3">${explanation}</textarea>
                         </div>

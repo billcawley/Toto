@@ -21,6 +21,7 @@ public class OnlineReport extends StandardEntity implements Serializable {
     private String reportName;
     private String filename;
     private String explanation;
+    private String category;
 
     public OnlineReport(int id
             , LocalDateTime dateCreated
@@ -30,6 +31,7 @@ public class OnlineReport extends StandardEntity implements Serializable {
             , String reportName
             , String filename
             , String explanation
+            , String category
     ) {
         this.id = id;
         this.dateCreated = dateCreated;
@@ -39,6 +41,7 @@ public class OnlineReport extends StandardEntity implements Serializable {
         this.reportName = reportName;
         this.filename = filename;
         this.explanation = explanation;
+        this.category = category;
     }
 
     public int getBusinessId() {
@@ -105,6 +108,14 @@ public class OnlineReport extends StandardEntity implements Serializable {
         this.explanation = explanation;
     }
 
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
     public String getUntaggedReportName() {
         int pos = reportName.indexOf(" uploaded by ");
         if (pos < 0) return reportName;
@@ -120,14 +131,15 @@ public class OnlineReport extends StandardEntity implements Serializable {
     @Override
     public String toString() {
         return "OnlineReport{" +
-                "id=" + id +
-                ", dateCreated=" + dateCreated +
+                "dateCreated=" + dateCreated +
                 ", businessId=" + businessId +
                 ", userId=" + userId +
                 ", database='" + database + '\'' +
                 ", reportName='" + reportName + '\'' +
                 ", filename='" + filename + '\'' +
                 ", explanation='" + explanation + '\'' +
+                ", category='" + category + '\'' +
+                ", id=" + id +
                 '}';
     }
 }

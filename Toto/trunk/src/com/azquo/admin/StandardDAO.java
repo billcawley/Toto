@@ -78,8 +78,14 @@ public class StandardDAO {
                 "      AND (column_name = \"import_template_id\")", new HashMap<>(), Integer.class) == 0){
             jdbcTemplate.update("ALTER TABLE `master_db`.`database` ADD `import_template_id` int(11) NOT NULL DEFAULT '-1' ;", new HashMap<>());
         }
-
-        /*
+        // resuscitating the category
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"online_report\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"category\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`online_report` ADD `category` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
+        }        /*
         Update hack - yoinked from https://dba.stackexchange.com/questions/169458/mysql-how-to-create-column-if-not-exists
          */
 
