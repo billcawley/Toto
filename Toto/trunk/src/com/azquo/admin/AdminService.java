@@ -275,12 +275,16 @@ this may now not work at all, perhaps delete?
             }
         }
         reportList.sort((o1, o2) -> {
-            // adding isempty here as empty is the same as null for our sorting purposes
-            String o1Explanation = o1.getExplanation();
+            String cat1 = o1.getCategory();
+            if (cat1==null || cat1.isEmpty()) cat1 = "zzz";
+            String cat2 = o2.getCategory();
+            if (cat2==null || cat2.isEmpty()) cat2 = "zzz";
+             // adding isempty here as empty is the same as null for our sorting purposes
+            String o1Explanation = o1.getCategory() + o1.getExplanation();
             if (o1Explanation == null || o1Explanation.isEmpty()) o1Explanation = "zzz";
             String o2Explanation = o2.getExplanation();
             if (o2Explanation == null || o2Explanation.isEmpty()) o2Explanation = "zzz";
-            return (o1.getDatabase() + o1Explanation).compareTo(o2.getDatabase() + o2Explanation);
+            return (o1.getDatabase() + cat1 + " " + o1Explanation).compareTo(o2.getDatabase() + cat2 + " " + o2Explanation);
         });
         return reportList;
     }
