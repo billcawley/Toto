@@ -68,12 +68,14 @@ public class ExcelController {
         public String author;
         public String untaggedReportName;
         public String database;
+        public String category;
 
-        public DatabaseReport(String sheetName, String author, String untaggedReportName, String database) {
+        public DatabaseReport(String sheetName, String author, String untaggedReportName, String database, String category) {
             this.sheetName = sheetName;
             this.author = author;
             this.untaggedReportName = untaggedReportName;
             this.database = database;
+            this.category = category;
         }
 
         public String getSheetName() {
@@ -88,9 +90,9 @@ public class ExcelController {
             return this.untaggedReportName;
         }
 
-        public String getDatabase() {
-            return this.database;
-        }
+        public String getDatabase() { return this.database; }
+
+        public String getCategory(){ return category; }
     }
 
 
@@ -453,14 +455,14 @@ public class ExcelController {
                 if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
                     List<OnlineReport> reports = AdminService.getReportList(loggedInUser);
                     for (OnlineReport or : reports) {
-                        databaseReports.add(new DatabaseReport(or.getDatabase() + " :   " + or.getUntaggedReportName(), or.getAuthor(), or.getReportName(), or.getDatabase()));
+                        databaseReports.add(new DatabaseReport(or.getDatabase() + " :   " + or.getUntaggedReportName(), or.getAuthor(), or.getReportName(), or.getDatabase(), or.getCategory()));
                     }
 
                 } else {
                     for (String st : loggedInUser.getReportIdDatabaseIdPermissions().keySet()) {
                         TypedPair<OnlineReport, Database> tp = loggedInUser.getPermission(st);
                         if (tp.getFirst().getId() != loggedInUser.getUser().getReportId()){ // don't show the home menu to the Excel user, pointless!
-                            databaseReports.add(new DatabaseReport(st, tp.getFirst().getAuthor(), tp.getFirst().getUntaggedReportName(), tp.getSecond().getName()));
+                            databaseReports.add(new DatabaseReport(st, tp.getFirst().getAuthor(), tp.getFirst().getUntaggedReportName(), tp.getSecond().getName(), tp.getFirst().getCategory()));
                         }
                     }
                 }
