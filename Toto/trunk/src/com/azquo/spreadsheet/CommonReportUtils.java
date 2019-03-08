@@ -32,9 +32,10 @@ public class CommonReportUtils {
                 return toReturn;
             }
             return RMIClient.getServerInterface(loggedInUser.getDataAccessToken().getServerIp())
+
                     .getDropDownListForQuery(loggedInUser.getDataAccessToken(), query, user, justUser, provenenceId);
         } catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
             List<String> error = new ArrayList<>();
             error.add("Error : " + e.getMessage().substring(e.getMessage().lastIndexOf("Exception:")).trim());
             return error;
@@ -77,6 +78,7 @@ public class CommonReportUtils {
                 }
             }
         }
+
 
         return getDropdownListForQuery(loggedInUser, query, loggedInUser.getUser().getEmail(), false, -1);
     }
