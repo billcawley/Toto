@@ -452,19 +452,10 @@ public class ExcelController {
             }
             if (op.equals("allowedreports")) {
                 List<DatabaseReport> databaseReports = new ArrayList<>();
-                if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                    List<OnlineReport> reports = AdminService.getReportList(loggedInUser);
-                    for (OnlineReport or : reports) {
-                        databaseReports.add(new DatabaseReport(or.getDatabase() + " :   " + or.getUntaggedReportName(), or.getAuthor(), or.getReportName(), or.getDatabase(), or.getCategory()));
-                    }
+                List<OnlineReport> allowedReports = AdminService.getReportList(loggedInUser);
+                for (OnlineReport or:allowedReports){
+                    databaseReports.add(new DatabaseReport(or.getFilename(),or.getAuthor(),or.getUntaggedReportName(),or.getDatabase(),or.getCategory()));
 
-                } else {
-                    for (String st : loggedInUser.getReportIdDatabaseIdPermissions().keySet()) {
-                        TypedPair<OnlineReport, Database> tp = loggedInUser.getPermission(st);
-                        if (tp.getFirst().getId() != loggedInUser.getUser().getReportId()){ // don't show the home menu to the Excel user, pointless!
-                            databaseReports.add(new DatabaseReport(st, tp.getFirst().getAuthor(), tp.getFirst().getUntaggedReportName(), tp.getSecond().getName(), tp.getFirst().getCategory()));
-                        }
-                    }
                 }
                 return jacksonMapper.writeValueAsString(databaseReports);
             }
