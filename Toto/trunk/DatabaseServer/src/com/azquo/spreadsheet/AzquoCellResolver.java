@@ -80,9 +80,6 @@ public class AzquoCellResolver {
         if (lastHeading!=null && lastHeading.getAttribute()!=null && lastHeading.getAttribute().equals(".")){
                 hasData = false;
         }
-        if (colNo==42 || colNo==43){
-            int j=1;
-        }
         if (hasData) {
             hasData = false;
             for (DataRegionHeading heading : columnHeadings) {
