@@ -260,7 +260,7 @@ this may now not work at all, perhaps delete?
         if (loggedInUser.getUser().isAdministrator()) {
             List<OnlineReport> reports = OnlineReportDAO.findForBusinessIdWithNoDatabase(loggedInUser.getUser().getBusinessId());
             for (OnlineReport report : reports) {
-                report.setDatabase("None");
+                report.setDatabase("No database");
             }
             reportList.addAll(reports);
         }
