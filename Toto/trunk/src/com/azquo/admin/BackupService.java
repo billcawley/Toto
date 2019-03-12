@@ -30,6 +30,8 @@ import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvParser;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import org.apache.commons.lang.math.NumberUtils;
+import org.zeroturnaround.zip.FileSource;
+import org.zeroturnaround.zip.ZipEntrySource;
 import org.zeroturnaround.zip.ZipUtil;
 
 import java.io.*;
@@ -40,7 +42,10 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 
+
 public class BackupService {
+
+    public static final String CATEGORYBREAK = "|||"; // I'm not proud of this
 
     public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
@@ -61,20 +66,23 @@ public class BackupService {
         }
 
 
-        File[] filesToPack = new File[filesToPackSize];
-        filesToPack[0] = temp;
+        ZipEntrySource[] filesToPack = new ZipEntrySource[filesToPackSize];
+        filesToPack[0] = new FileSource(temp.getName(), temp);
         int index = 1;
         for (OnlineReport onlineReport : onlineReports) {
-            // todo - can we chop the id prefix?
-            filesToPack[index] = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk());
+            String category = null;
+            if (onlineReport.getCategory() != null && !onlineReport.getCategory().isEmpty()){
+                category = onlineReport.getCategory();
+            }
+            filesToPack[index] = new FileSource((category != null ? category + CATEGORYBREAK : "") + onlineReport.getFilename(), new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + onlineReport.getFilenameForDisk()));
             index++;
         }
         if (importTemplate != null){
-            filesToPack[index] = new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk());
+            filesToPack[index] = new FileSource(importTemplate.getFilenameForDisk(), new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk()));
         }
         File tempzip = File.createTempFile(loggedInUser.getDatabase().getName(), ".zip");
         System.out.println("temp zip " + tempzip.getPath());
-        ZipUtil.packEntries(filesToPack, tempzip);
+        ZipUtil.pack(filesToPack, tempzip);
         tempzip.deleteOnExit();
         return tempzip;
     }
@@ -102,8 +110,27 @@ public class BackupService {
                 } else {
                     fileName = f.getName();
                 }
-                toReturn.append(ManageDatabasesController.formatUploadedFiles(ImportService.importTheFile(loggedInUser
-                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null),-1, false, null)).append("<br/>");
+                // hacky way of dealing with categories
+                String category = null;
+                if (fileName.contains(CATEGORYBREAK)) {
+                    category = fileName.substring(0, fileName.indexOf(CATEGORYBREAK));
+                    fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAK) + CATEGORYBREAK.length());
+                }
+                List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser
+                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null);
+                // EFC : got to hack the category in, I don't like this . . .
+                if (category != null){
+                    for (UploadedFile uploadedFile : uploadedFiles){
+                        if (uploadedFile.getReportName() != null){
+                            OnlineReport or = OnlineReportDAO.findForNameAndUserId(uploadedFile.getReportName(), loggedInUser.getUser().getId());
+                            if (or != null){
+                                or.setCategory(category);
+                                OnlineReportDAO.store(or);
+                            }
+                        }
+                    }
+                }
+                toReturn.append(ManageDatabasesController.formatUploadedFiles(uploadedFiles,-1, false, null)).append("<br/>");
             }
         }
         return toReturn.toString();
