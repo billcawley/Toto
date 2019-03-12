@@ -105,7 +105,6 @@ public class ManageReportsController {
                     model.put("file", theReport.getFilename());
                     model.put("category", theReport.getCategory() != null ?theReport.getCategory() : "");
                     model.put("explanation", theReport.getExplanation() != null ? theReport.getExplanation() : "");
-                    model.put("category", theReport.getCategory() != null ? theReport.getCategory() : "");
                     AdminService.setBanner(model,loggedInUser);
                     return "editreport";
                 }
