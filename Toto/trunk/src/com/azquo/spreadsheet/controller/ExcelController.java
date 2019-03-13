@@ -453,11 +453,32 @@ public class ExcelController {
             if (op.equals("allowedreports")) {
                 List<DatabaseReport> databaseReports = new ArrayList<>();
                 List<OnlineReport> allowedReports = AdminService.getReportList(loggedInUser);
-                for (OnlineReport or:allowedReports){
-                    databaseReports.add(new DatabaseReport(or.getFilename(),or.getAuthor(),or.getUntaggedReportName(),or.getDatabase(),or.getCategory()));
+
+                if (allowedReports.size()==1){
+                    //OnlineReport or = allowedReports.get(0);
+                    //String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
+                    //        loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();
+                    //Book book = Importers.getImporter().imports(new File(bookPath), "Report name");
+                    //book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
+                    //book.getInternalBook().setAttribute(REPORT_ID, or.getId());
+                    //ReportRenderer.populateBook(book, 0);
+                    Map<String, TypedPair<Integer,Integer>>reports = loggedInUser.getReportIdDatabaseIdPermissions();
+                    for (String reportName2:reports.keySet()){
+                        TypedPair<Integer,Integer> tp = reports.get(reportName2);
+                        OnlineReport or = OnlineReportDAO.findById(tp.getFirst());
+                        Database db = DatabaseDAO.findById(tp.getSecond());
+                        databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(),or.getUntaggedReportName(),db.getName(), or.getCategory()));
+                        databaseReports.sort((o1, o2) -> ((o1.getCategory()+o1.getSheetName()).compareTo((o2.getCategory()+o2.getSheetName()))));
+
+                    }
+                }else{
+                    for (OnlineReport or:allowedReports){
+                        databaseReports.add(new DatabaseReport(or.getFilename(),or.getAuthor(),or.getUntaggedReportName(),or.getDatabase(),or.getCategory()));
+
+                    }
 
                 }
-                return jacksonMapper.writeValueAsString(databaseReports);
+                 return jacksonMapper.writeValueAsString(databaseReports);
             }
             if (op.equals("loadregion")) {
                 // since this expects a certain type of json format returned then we need to wrap the error in one of those objects
