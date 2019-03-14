@@ -60,7 +60,7 @@ public class UserUploadController {
         // I assume secure until we move to proper spring security
         if (loggedInUser != null) {
             if (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) {
-                return "redirect:/api/ManageDatabasesController";
+                return "redirect:/api/ManageDatabases";
             }
             StringBuilder error = new StringBuilder();
             // EFC - I can't see a way around this one currently. I want to use @SuppressWarnings very sparingly

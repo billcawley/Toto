@@ -220,6 +220,7 @@ public class AzquoCellResolver {
 
                  if (expressionsValid) {
                      // typically used to sort a from e.g. 2017 children from July
+                     //todo - valueshook values and calcvalues might NPE and do so in an annoying multi threaded no stack trace space. Check how they may or may not be null . . .
                      ValuesHook valuesHook = new ValuesHook(); // needed for the code to run currently, any
                      List<List<Name>> permutedNames = new ArrayList<>();
                      permuteNames(permutedNames, sharedNames, namesToResolve);
@@ -582,7 +583,7 @@ But can use a library?
                                 }
                             }
 
-                        } else if (valuesHook.values.size() == 1 && (!locked.isTrue//if there's only one value, treat it as text (it may be text, or may include £,$,%)
+                        } else if (valuesHook.values != null && valuesHook.values.size() == 1 && (!locked.isTrue//if there's only one value, treat it as text (it may be text, or may include £,$,%)
                                 || function == DataRegionHeading.FUNCTION.MAX
                                 || function == DataRegionHeading.FUNCTION.MIN
                                 || function == null)) { // locked conditional added back in by Edd, required or counts of one for example won't work. Also allowing null function to be a string now, logic added up here as a small refactor from a WFC change
@@ -593,7 +594,7 @@ But can use a library?
                                 stringValue = stringValue.replaceAll("\n", "<br/>");//this is unsatisfactory, but a quick fix.
                             }
                             // was isnumber test here to add a double to the
-                        } else if (valuesHook.values.size() > 0) {
+                        } else if (valuesHook.values != null && valuesHook.values.size() > 0) {
                             stringValue = doubleValue + "";
                         }
                     } else {

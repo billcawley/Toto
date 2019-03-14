@@ -1,6 +1,12 @@
+12-03-19
+
+Report Category work
+
 07-03-19
 
 Validation option on import templates should mean no validations run on a vanilla import
+
+Can set report categories (though they are not read yet) and bug fix when uploading databases without templates
 
 06-03-19
 

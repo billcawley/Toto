@@ -110,27 +110,29 @@ public class ReportUIUtils {
         //...and the column headings
         for (SName name : event.getSheet().getBook().getInternalBook().getNames()) {
             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZCOLUMNHEADINGS)) {
-                //surely there must be a better way of getting the first cell off a region!
-                SCell sCell = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn());
-                String firstItem = "";
-                try {
-                    firstItem = sCell.getStringValue();
-                } catch (Exception e) {
-                    //no need - firstItem = ""
-                }
-                if (firstItem.toLowerCase().startsWith("permute(")) {
-                    String[] colHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
-                    String displayColHeadingsString = ReportRenderer.AZDISPLAY + name.getName().substring(3);
-                    CellRegion displayColHeadings = BookUtils.getCellRegionForSheetAndName(event.getSheet(), displayColHeadingsString);
-                    if (displayColHeadings != null) {
-                        int hrow = displayColHeadings.getRow();
-                        int hcol = displayColHeadings.getColumn() - 1;
-                        for (String colHeading : colHeadings) {
-                            if (hrow++ == event.getRow() && hcol == event.getColumn()) {
-                                if (colHeading.contains(" sorted")) {
-                                    colHeading = colHeading.substring(0, colHeading.indexOf(" sorted")).trim();
+                if (name.getRefersToCellRegion() != null && name.getRefersToSheetName() != null){ // stop duff names NPE
+                    //surely there must be a better way of getting the first cell off a region!
+                    SCell sCell = name.getBook().getSheetByName(name.getRefersToSheetName()).getCell(name.getRefersToCellRegion().getRow(), name.getRefersToCellRegion().getColumn());
+                    String firstItem = "";
+                    try {
+                        firstItem = sCell.getStringValue();
+                    } catch (Exception e) {
+                        //no need - firstItem = ""
+                    }
+                    if (firstItem.toLowerCase().startsWith("permute(")) {
+                        String[] colHeadings = firstItem.substring("permute(".length(), firstItem.length() - 1).split(",");
+                        String displayColHeadingsString = ReportRenderer.AZDISPLAY + name.getName().substring(3);
+                        CellRegion displayColHeadings = BookUtils.getCellRegionForSheetAndName(event.getSheet(), displayColHeadingsString);
+                        if (displayColHeadings != null) {
+                            int hrow = displayColHeadings.getRow();
+                            int hcol = displayColHeadings.getColumn() - 1;
+                            for (String colHeading : colHeadings) {
+                                if (hrow++ == event.getRow() && hcol == event.getColumn()) {
+                                    if (colHeading.contains(" sorted")) {
+                                        colHeading = colHeading.substring(0, colHeading.indexOf(" sorted")).trim();
+                                    }
+                                    return colHeading.replace("`", "");
                                 }
-                                return colHeading.replace("`", "");
                             }
                         }
                     }

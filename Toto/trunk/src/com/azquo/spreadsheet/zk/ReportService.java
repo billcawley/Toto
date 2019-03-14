@@ -114,7 +114,8 @@ public class ReportService {
         for (int row = 0; row < cellRegion.getRowCount(); row++) {
             for (int col = 0; col < cellRegion.getColumnCount(); col++) {
                 SCell queryCell = sheet.getInternalSheet().getCell(cellRegion.getRow() + row, cellRegion.getColumn() + col);
-                if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || queryCell.getFormulaResultType() != SCell.CellType.ERROR && queryCell.getStringValue().length() > 0)) {
+                if (queryCell.getType() != SCell.CellType.ERROR && (queryCell.getType() != SCell.CellType.FORMULA || (queryCell.getFormulaResultType() != SCell.CellType.ERROR && queryCell.getFormulaResultType() == SCell.CellType.STRING))
+                        && queryCell.getType() != SCell.CellType.NUMBER && queryCell.getStringValue().length() > 0) {
                     // hack - on resolving a forumlae if the formula is a string but formatted as number get stirng can error unless you do this
                     if (queryCell.getType() == SCell.CellType.FORMULA) {
                         queryCell.clearFormulaResultCache();
