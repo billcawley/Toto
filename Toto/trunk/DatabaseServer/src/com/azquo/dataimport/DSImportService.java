@@ -496,11 +496,11 @@ public class DSImportService {
             if (columnIndex < row.length && valuesToCheck.contains(row[columnIndex].toLowerCase())){
                 StringBuilder sb = new StringBuilder();
                 // rebuild the line, seems a little stupid :P
-                for (int i = 0; i < row.length; i++){
-                    if (sb.length() > 0){
+                for (String s : row) {
+                    if (sb.length() > 0) {
                         sb.append(delimiter);
                     }
-                    sb.append(row[i]);
+                    sb.append(s);
                 }
                 toReturn.put(lineIterator.getCurrentLocation().getLineNr() - 1, new TypedPair<>(row[columnIndex], sb.toString()));
             }

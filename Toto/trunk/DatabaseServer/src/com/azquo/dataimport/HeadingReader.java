@@ -5,6 +5,7 @@ import com.azquo.memorydb.AzquoMemoryDBConnection;
 import com.azquo.memorydb.core.Name;
 import com.azquo.memorydb.service.NameService;
 import com.azquo.spreadsheet.transport.UploadedFile;
+import org.apache.commons.lang.math.NumberUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -165,7 +166,7 @@ todo - add classification here
         try {
             //WFC - I do not understand why we're trying to set up a name for an attribute!
             heading.name = NameService.findByName(azquoMemoryDBConnection, heading.heading, attributeNames); // at this stage, look for a name, but don't create it unless necessary
-        } catch (Exception e) {
+        } catch (Exception ignored) {
 
         }
         // loop over the clauses making sense and modifying the heading object as you go
@@ -274,7 +275,7 @@ todo - add classification here
                     try{
                         double d = Double.parseDouble(result.substring(0,result.length()-1)) /100;
                         result = d + "";
-                     }catch(Exception e){
+                     }catch(Exception ignored){
                      }
                 }
 
@@ -428,12 +429,7 @@ todo - add classification here
                             letterCheck = letterCheck.substring(1);
                         }
                         if (ok) {
-                            try {
-                                int i = Integer.parseInt(letterCheck.trim());
-
-                            } catch (Exception e) {
-                                ok = false;
-                            }
+                            ok = NumberUtils.isDigits(letterCheck.trim());
                         }
                     } else {
                         if (check.equals("number")) {

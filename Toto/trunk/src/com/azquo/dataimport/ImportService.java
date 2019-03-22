@@ -127,7 +127,7 @@ public final class ImportService {
     // deals with unzipping if required - recursive in case there's a zip in a zip
     private static List<UploadedFile> checkForCompressionAndImport(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws Exception {
         List<UploadedFile> processedUploadedFiles = new ArrayList<>();
-        if (uploadedFile.getFileName().endsWith(".zip") || uploadedFile.getFileName().endsWith(".7z")) {
+        if (uploadedFile.getFileName().toLowerCase().endsWith(".zip") || uploadedFile.getFileName().toLowerCase().endsWith(".7z")) {
             ZipUtil.explode(new File(uploadedFile.getPath()));
             // after exploding the original file is replaced with a directory
             File zipDir = new File(uploadedFile.getPath());

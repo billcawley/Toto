@@ -142,21 +142,13 @@ public class ManageDatabasesController {
                                 // todo - address whether we're still using such parameters and associated functions
             , @RequestParam(value = "fileSearch", required = false) String fileSearch
             , @RequestParam(value = "deleteUploadRecordId", required = false) String deleteUploadRecordId
-            , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "sort", required = false) String sort
             , @RequestParam(value = "pendingUploadSearch", required = false) String pendingUploadSearch
             , @RequestParam(value = "deleteTemplateId", required = false) String deleteTemplateId
             , @RequestParam(value = "templateassign", required = false) String templateassign
     ) {
-        LoggedInUser possibleUser = null;
-        if (sessionId != null) {
-            possibleUser = ExcelController.excelConnections.get(sessionId);
-        }
-        if (possibleUser == null) {
-            possibleUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-        }
         // I assume secure until we move to proper spring security
-        final LoggedInUser loggedInUser = possibleUser;
+        LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {
             StringBuilder error = new StringBuilder();
             // EFC - I can't see a way around this one currently. I want to use @SuppressWarnings very sparingly

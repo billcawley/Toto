@@ -267,7 +267,7 @@ public class PendingUploadController {
                     }
                     // now apply to the file names
                     // todo - standardize API calls?
-                    if (mainFileName.endsWith(".zip")) { // I'm going to go down one level for the moment
+                    if (mainFileName.toLowerCase().endsWith(".zip")) { // I'm going to go down one level for the moment
                         ZipFile zipFile = new ZipFile(pu.getFilePath());
                         zipFile.stream().map(ZipEntry::getName).forEach(files::add);
                     } else {

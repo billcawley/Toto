@@ -52,8 +52,7 @@ import java.util.*;
  * The main report online report viewing controller, deals with upload/save/execute and a more graceful loading of reports showing a loading screen online as opposed to simply
  * blocking the response until done.
  * <p>
- *     Notably it also contains the code for dealing with a report that has been downloaded, the data modified, then uploaded again - todo - move this to another controller
- *
+ * Notably it also contains the code for dealing with a report that has been downloaded, the data modified, then uploaded again - todo - move this to another controller
  */
 
 @Controller
@@ -143,18 +142,10 @@ public class OnlineController {
         try {
             //long startTime = System.currentTimeMillis();
             try {
-                LoggedInUser tempLoggedInUser = null;
-                if (sessionId != null && sessionId.length() > 0) {
-                    tempLoggedInUser = ExcelController.excelConnections.get(sessionId);
-                    request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, tempLoggedInUser); // so it keeps working as they click around!
-                }
-                if (tempLoggedInUser == null) {
-                    tempLoggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-                }
-                if (tempLoggedInUser == null) {
+                LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
+                if (loggedInUser == null) {
                     return "redirect:/api/Login";// I guess redirect to login page
                 }
-                final LoggedInUser loggedInUser = tempLoggedInUser;
                 // dealing with the report/database combo WAS below but I see no reason for this, try and resolve it now
                 OnlineReport onlineReport = null;
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper()) && reportId != null && reportId.length() > 0 && !reportId.equals("1")) { // admin, we allow a report and possibly db to be set

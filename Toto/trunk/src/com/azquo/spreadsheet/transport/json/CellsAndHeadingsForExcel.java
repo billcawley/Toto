@@ -60,7 +60,6 @@ public class CellsAndHeadingsForExcel implements Serializable {
                 }
                 commentRow.add(cell.getComment());
                 highlightRow.add(cell.isHighlighted());
-
             }
         }
 

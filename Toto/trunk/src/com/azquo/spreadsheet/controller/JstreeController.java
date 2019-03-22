@@ -53,17 +53,12 @@ public class JstreeController {
             , @RequestParam(value = "parents", required = false) String parents
             , @RequestParam(value = "attribute", required = false) String attribute //only for use at root.
             , @RequestParam(value = "itemschosen", required = false) String itemsChosen
-            , @RequestParam(value = "sessionId", required = false) String sessionId
     ) throws Exception {
         if (attribute == null || attribute.length() == 0) {
             attribute = StringLiterals.DEFAULT_DISPLAY_NAME;
         }
         String jsonFunction = "azquojsonfeed";
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-        if (loggedInUser == null && sessionId != null && sessionId.length() > 0){
-            loggedInUser = ExcelController.excelConnections.get(sessionId);
-            request.getSession().setAttribute(LoginController.LOGGED_IN_USER_SESSION, loggedInUser); // so it keeps working as they click around!
-        }
         if (loggedInUser == null) {
             model.addAttribute("content", "error:not logged in");
             return "utf8page";

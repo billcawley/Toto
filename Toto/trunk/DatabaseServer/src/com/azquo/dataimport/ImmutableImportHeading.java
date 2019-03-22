@@ -72,6 +72,7 @@ public class ImmutableImportHeading {
         this.synonyms = mutableImportHeading.synonyms;
         this.lookupFrom = mutableImportHeading.lookupFrom;
         this.lookupTo = mutableImportHeading.lookupTo;
+        // not being used - todo zap?
         this.checkList = mutableImportHeading.checkList;
         this.replace = mutableImportHeading.replace;
         this.provisional = mutableImportHeading.provisional;
