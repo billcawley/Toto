@@ -142,6 +142,7 @@ public class ReportService {
         if (query.startsWith(".")) {// attributes query
             return false;
         }
+        //System.out.println("Where query:" + query);
 
         int bracketCount = 1;
         int pos = 1;
@@ -151,8 +152,8 @@ public class ReportService {
             if (bracketCount == 0) {
                 String calc = query.substring(0, pos + 1);
                 String remainder = query.substring(pos + 1).trim();
-                if (remainder.toLowerCase().startsWith("as ")) {
-                    String target = remainder.substring(3);
+                if (remainder.toLowerCase().startsWith("as ")  || remainder.toLowerCase().startsWith("asglobal ")) {
+                    String target = remainder.substring(remainder.indexOf(" ") + 1);
                     List<List<String>> rowHeadingSource = new ArrayList<>();
                     List<List<String>> colHeadingSource = new ArrayList<>();
                     List<String> rowHeadingsLine = new ArrayList<>();
