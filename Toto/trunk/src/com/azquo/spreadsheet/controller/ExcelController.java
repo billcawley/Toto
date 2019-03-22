@@ -159,7 +159,7 @@ public class ExcelController {
 
         try {
             LoggedInUser loggedInUser = null;
-            if (sessionId != null) {
+            if (sessionId != null && logon==null && password==null) {
                 loggedInUser = excelConnections.get(sessionId);
                 if (loggedInUser == null) {
                     return "invalid sessionid";
@@ -203,13 +203,13 @@ public class ExcelController {
                         book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                         ReportRenderer.populateBook(book, 0);
                     }
-
-                    if (op.equals("logon")) {
-                        LoginInfo li = new LoginInfo(request.getSession().getId(), loggedInUser.getUser().getStatus());
-                        System.out.println("login response : " + jacksonMapper.writeValueAsString(li));
-                        return jacksonMapper.writeValueAsString(li);
-                    }
                 }
+            }
+
+            if (op.equals("logon")) {
+                LoginInfo li = new LoginInfo(request.getSession().getId(), loggedInUser.getUser().getStatus());
+                System.out.println("login response : " + jacksonMapper.writeValueAsString(li));
+                return jacksonMapper.writeValueAsString(li);
             }
 
             if (database != null && database.length() > 0) {
