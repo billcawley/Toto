@@ -139,8 +139,15 @@ public class ExcelController {
             }
         }
 
-        if ("logout".equals(op)) {
+        if ("logoff".equals(op)) {
             request.getSession().removeAttribute(LOGGED_IN_USER_SESSION);
+        }
+
+        if ("logincheck".equals(op)) {
+            if (request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION) != null){
+                return "ok";
+            }
+            return "not ok";
         }
 
         try {
