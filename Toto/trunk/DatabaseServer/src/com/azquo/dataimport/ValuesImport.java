@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /*
 This class batches up data to be loaded doing simple checks on cell values
@@ -40,6 +41,7 @@ public class ValuesImport {
             final Map<String, Name> namesFoundCache = new ConcurrentHashMap<>();
             // new format. Line number, the line itself and then a list of errors
             final Map<Integer, List<String>> linesRejected = new ConcurrentHashMap<>(); // track line numbers rejected
+            final AtomicInteger noLinesRejected = new AtomicInteger(); // track line numbers rejected
             int linesImported = 0; // just for some feedback at the end
             int lineNo = 0;
             while (lineIterator.hasNext()) { // the main line reading loop
@@ -98,11 +100,10 @@ public class ValuesImport {
                         // batch size is derived by getLineIteratorAndBatchSize
                         if (linesBatched.size() == batchSize) {
                             futureBatches.add(ThreadPools.getMainThreadPool().submit(
-
                                     new BatchImporter(connection
                                             , uploadedFile.getNoValuesAdjusted(), linesBatched
                                             , namesFoundCache, uploadedFile.getLanguages()
-                                            , linesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver))// line no should be the start
+                                            , linesRejected, noLinesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver))// line no should be the start
 
                             );
                             linesBatched = new ArrayList<>(batchSize);
@@ -115,7 +116,7 @@ public class ValuesImport {
                 }
             }
             futureBatches.add(ThreadPools.getMainThreadPool().submit(new BatchImporter(connection
-                    , uploadedFile.getNoValuesAdjusted(), linesBatched, namesFoundCache, uploadedFile.getLanguages(), linesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver)));
+                    , uploadedFile.getNoValuesAdjusted(), linesBatched, namesFoundCache, uploadedFile.getLanguages(), linesRejected, noLinesRejected, uploadedFile.getParameter("cleardata") != null, compositeIndexResolver)));
             // check all work is done and memory is in sync
             for (Future<?> futureBatch : futureBatches) {
                 futureBatch.get(1, TimeUnit.HOURS);
@@ -132,8 +133,8 @@ public class ValuesImport {
             }
             uploadedFile.setNoData(linesImported == 0);
             uploadedFile.setProcessingDuration((System.currentTimeMillis() - track) / 1000);
-            uploadedFile.setNoLinesImported(linesImported - linesRejected.size());
-            connection.addToUserLogNoException("Imported " + (linesImported - linesRejected.size()) + " lines", true); // does the user log require more details??
+            uploadedFile.setNoLinesImported(linesImported - noLinesRejected.get());
+            connection.addToUserLogNoException("Imported " + (linesImported - noLinesRejected.get()) + " lines", true); // does the user log require more details??
             if (!linesRejected.isEmpty()) {
                 // I'm going to have to go through the file and fine the rejected lines if they're there, can't really use the iterator before I don't think.
                 // I guess watch for possible performance issues . . .
@@ -162,6 +163,7 @@ public class ValuesImport {
                     }
                 }
                 System.out.println("millis to scan for error lines : " + (System.currentTimeMillis() - time));
+                uploadedFile.setNoLinesRejected(noLinesRejected.get());
                 uploadedFile.addToLinesRejected(rejectedLinesForUserFeedback);
             }
             System.out.println("---------- names found cache size " + namesFoundCache.size());

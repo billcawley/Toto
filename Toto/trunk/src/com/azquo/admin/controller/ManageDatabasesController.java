@@ -592,9 +592,9 @@ public class ManageDatabasesController {
 
             if (!uploadedFile.getLinesRejected().isEmpty()) {
                 if (noClickableHeadings) {
-                    toReturn.append("Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(uploadedFile.getLinesRejected().size() == 100 ? "+" : "").append("\n<br/>");
+                    toReturn.append("Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("\n<br/>");
                 } else {
-                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + id + "'); return false;\">Line Errors : ").append(uploadedFile.getLinesRejected().size()).append(uploadedFile.getLinesRejected().size() == 100 ? "+" : "").append("</a>\n<br/><div id=\"rejectedLines" + id + "\" style=\"display : none\">");
+                    toReturn.append("<a href=\"#\" onclick=\"showHideDiv('rejectedLines" + id + "'); return false;\">Line Errors : ").append(uploadedFile.getNoLinesRejected()).append("</a>\n<br/><div id=\"rejectedLines" + id + "\" style=\"display : none\">");
                 }
                 int maxLineWidth = 0;
                 for (UploadedFile.RejectedLine lineRejected : uploadedFile.getLinesRejected()) {
@@ -639,7 +639,7 @@ public class ManageDatabasesController {
                     }
                     toReturn.append("</tr>");
                 }
-                toReturn.append("\n</tbody></table></div><br/>");
+                toReturn.append("\n</tbody></table>" + (uploadedFile.getLinesRejected().size() > 1000 ? "Lines rejected greater than 1000, stopping list." : "") + "</div><br/>");
                 if (!noClickableHeadings) {
                     toReturn.append("</div>");
                 }

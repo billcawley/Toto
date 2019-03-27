@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -126,9 +127,7 @@ public class DBCron {
                             });
                         }
                     }
-                    // for brokasure, intially just scn the directory like
-                    // todo : date (simple), id brokasure adds e.g. CSJan1912.xml-19022815141117-Error the 19022815141117 here and a way to match back to the original XML which probably means timestamping it
-                    // matching  back to the original required as a file with an Error just has the error
+                    // todo : id brokasure adds e.g. CSJan1912.xml-19022815141117-Error the 19022815141117 here and a way to match back to the original XML which probably means timestamping it
                     if (SpreadsheetService.getXMLScanDir() != null && SpreadsheetService.getXMLScanDir().length() > 0) {
                         // make tagged as before but this time the plan is to parse all found XML files into a single CSV and upload it
                         Path tagged = Paths.get(SpreadsheetService.getXMLScanDir() + "/tagged");
@@ -143,41 +142,63 @@ public class DBCron {
                             //if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
                             // I'm going to allow for the possiblity that different files might have different fields
                             Set<String> headings = new HashSet<>();
-                            List<Map<String, String>> filesValues = new ArrayList<>();
+                            headings.add("Date");
+                            headings.add("Error");
+                            Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
                             try (Stream<Path> list = Files.list(p)) {
                                 list.forEach(path -> {
                                     // Do stuff
                                     if (!Files.isDirectory(path)) { // skip any directories
                                         try {
+                                            /*
+                                            files in pairs, need to grab Brokasure timestamp
+
+                     matching  back to the original required as a file with an Error just has the error
+                     let us take these as an example
+file:///home/edward/Downloads/test xml/cCSJan199.xml-19022815191202
+file:///home/edward/Downloads/test xml/cCSJan1912.xml-19022815141117
+file:///home/edward/Downloads/test xml/CSJan199.xml-19022815191202-7031063
+file:///home/edward/Downloads/test xml/CSJan1912.xml-19022815141117-Error
+
+cCSJan199.xml worked and seems identical
+CSJan1912.xml did not and has different fields, combining should work
+
+I shall assume that the original file ends in .xml so that's my "key" so to speak
+
+                                             */
+
                                             String origName = path.getFileName().toString();
-                                            FileTime lastModifiedTime = null;
-                                            lastModifiedTime = Files.getLastModifiedTime(path);
-                                            long timestamp = System.currentTimeMillis();
-                                            if (lastModifiedTime.toMillis() < (timestamp - 1_000)) {
-                                                System.out.println("file : " + origName);
-                                                // unlike the above, before moving it I need to read it
-
-                                                try {
-                                                    Map<String, String> thisFileValues = new HashMap<>();
-                                                    Document workbookXML = builder.parse(path.toFile());
-                                                    //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
-                                                    Element documentElement = workbookXML.getDocumentElement();
-                                                    // this criteria is currently suitable for the simple XML from Brokasure
-                                                    for (int index = 0; index < documentElement.getChildNodes().getLength(); index++){
-                                                        Node node = documentElement.getChildNodes().item(index);
-                                                        if (node.hasChildNodes()){
-                                                            headings.add(node.getNodeName());
-                                                            thisFileValues.put(node.getNodeName(), node.getFirstChild().getNodeValue());
+                                            if (origName.toLowerCase().contains(".xml")){
+                                                String fileKey = origName.substring(0, origName.indexOf(".xml") + 4);
+                                                FileTime lastModifiedTime = Files.getLastModifiedTime(path);
+                                                long timestamp = System.currentTimeMillis();
+                                                if (lastModifiedTime.toMillis() < (timestamp - 1_000)) {
+                                                    System.out.println("file : " + origName);
+                                                    // unlike the above, before moving it I need to read it
+                                                    try {
+                                                        Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
+                                                        Document workbookXML = builder.parse(path.toFile());
+                                                        //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
+                                                        Element documentElement = workbookXML.getDocumentElement();
+                                                        // this criteria is currently suitable for the simple XML from Brokasure
+                                                        for (int index = 0; index < documentElement.getChildNodes().getLength(); index++){
+                                                            Node node = documentElement.getChildNodes().item(index);
+                                                            if (node.hasChildNodes()){
+                                                                headings.add(node.getNodeName());
+                                                                thisFileValues.put(node.getNodeName(), node.getFirstChild().getNodeValue());
+                                                            }
                                                         }
+                                                        thisFileValues.put("Date", lastModifiedTime.toString());
+                                                    } catch (SAXException e) {
+                                                        e.printStackTrace();
                                                     }
-                                                    filesValues.add(thisFileValues);
-                                                } catch (SAXException e) {
-                                                    e.printStackTrace();
-                                                }
 
-                                                Files.move(path, tagged.resolve(timestamp + origName));
+                                                    Files.move(path, tagged.resolve(timestamp + origName));
+                                                } else {
+                                                    System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");
+                                                }
                                             } else {
-                                                System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");
+                                                System.out.println("non XML file found?? " + origName);
                                             }
                                         } catch (IOException e) {
                                             e.printStackTrace();
@@ -189,7 +210,7 @@ public class DBCron {
                                 bufferedWriter.write(heading + "\t");
                             }
                             bufferedWriter.newLine();
-                            for (Map<String, String> lineValues : filesValues){
+                            for (Map<String, String> lineValues : filesValues.values()){
                                 for (String heading : headings){
                                     String value = lineValues.get(heading);
                                     bufferedWriter.write((value != null ? value : "") + "\t");

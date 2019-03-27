@@ -504,7 +504,7 @@ public class PendingUploadController {
                             quickFeedback = uploadedFile.getError();
                         } else {
                             if (uploadedFile.getLinesRejected() != null && !uploadedFile.getLinesRejected().isEmpty()) {
-                                quickFeedback = uploadedFile.getLinesRejected().size() + " Lines Rejected";
+                                quickFeedback = uploadedFile.getNoLinesRejected() + " Lines Rejected";
                             }
                             if (uploadedFile.getWarningLines() != null && !uploadedFile.getWarningLines().isEmpty()) {
                                 if (!quickFeedback.isEmpty()) {

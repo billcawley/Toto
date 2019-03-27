@@ -46,6 +46,7 @@ public class UploadedFile implements Serializable {
     private int noLinesImported;
     private final AtomicInteger noValuesAdjusted;
     private final ArrayList<RejectedLine> linesRejected;
+    private int noLinesRejected;
     private final ArrayList<WarningLine> warningLines;
     private final Set<String> errorHeadings;
     private String error;
@@ -182,6 +183,7 @@ public class UploadedFile implements Serializable {
         noLinesImported = 0;
         noValuesAdjusted = new AtomicInteger(0);
         linesRejected = new ArrayList<>();
+        noLinesRejected = 0;
         warningLines = new ArrayList<>();
         errorHeadings = new HashSet<>();
         error = null;
@@ -276,6 +278,14 @@ public class UploadedFile implements Serializable {
 
     public void addToLinesRejected(Collection<RejectedLine> lines) {
         linesRejected.addAll(lines);
+    }
+
+    public int getNoLinesRejected() {
+        return noLinesRejected;
+    }
+
+    public void setNoLinesRejected(int noLinesRejected) {
+        this.noLinesRejected = noLinesRejected;
     }
 
     public List<WarningLine> getWarningLines() {

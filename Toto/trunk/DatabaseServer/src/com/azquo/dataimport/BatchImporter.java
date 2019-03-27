@@ -39,6 +39,7 @@ public class BatchImporter implements Callable<Void> {
     private final Map<String, Name> namesFoundCache;
     private final List<String> attributeNames;
     private final Map<Integer, List<String>> linesRejected;
+    private final AtomicInteger noLinesRejected;
     private final boolean clearData;
     private final CompositeIndexResolver compositeIndexResolver;
 
@@ -48,6 +49,7 @@ public class BatchImporter implements Callable<Void> {
             , Map<String, Name> namesFoundCache
             , List<String> attributeNames
             , Map<Integer, List<String>> linesRejected
+            , AtomicInteger noLinesRejected
             , boolean clearData
             , CompositeIndexResolver compositeIndexResolver) {
         this.azquoMemoryDBConnection = azquoMemoryDBConnection;
@@ -56,6 +58,7 @@ public class BatchImporter implements Callable<Void> {
         this.namesFoundCache = namesFoundCache;
         this.attributeNames = attributeNames;
         this.linesRejected = linesRejected;
+        this.noLinesRejected = noLinesRejected;
         this.clearData = clearData;
         this.compositeIndexResolver = compositeIndexResolver;
     }
@@ -112,17 +115,20 @@ public class BatchImporter implements Callable<Void> {
                             System.out.println("line no " + lineToLoadWithLineNumber.getFirst() + " time = " + (now - time) + "ms");
                         }
                         time = now;
-                    } else if (linesRejected.size() < 100 && !"ignored".equalsIgnoreCase(rejectionReason)) {
-                        linesRejected.computeIfAbsent(lineToLoadWithLineNumber.getFirst(),
-                                t -> new ArrayList<>()).add(rejectionReason);
+                    } else if (!"ignored".equalsIgnoreCase(rejectionReason)) {
+                        noLinesRejected.incrementAndGet();
+                        if (linesRejected.size() < 1000 ){
+                            linesRejected.computeIfAbsent(lineToLoadWithLineNumber.getFirst(),
+                                    t -> new ArrayList<>()).add(rejectionReason);
+                        }
                     }
                 }
-
             } catch (Exception e) {
-                if (linesRejected.size() < 100) {
+                if (linesRejected.size() < 1000) {
                     linesRejected.computeIfAbsent(lineToLoadWithLineNumber.getFirst()
                             , t -> new ArrayList<>()).add(e.getMessage());
                 }
+                noLinesRejected.incrementAndGet();
             }
         }
         azquoMemoryDBConnection.addToUserLogNoException("..Batch finishing : " + DecimalFormat.getInstance().format(dataToLoad.size()) + " imported.", true);
