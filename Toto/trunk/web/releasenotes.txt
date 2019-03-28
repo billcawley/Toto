@@ -1,3 +1,14 @@
+
+xls libreoffice convert - requires libreoffice to be installed
+
+27-03-19
+
+'asglobal' works with 'where (' statements
+
+better feedback on number of lines rejected
+
+Bug fixes and better session management on the Excel plugin
+
 12-03-19
 
 Report Category work

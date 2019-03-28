@@ -1,5 +1,6 @@
 package com.azquo.dataimport;
 
+import com.azquo.util.CommandLineCalls;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -54,7 +55,6 @@ import java.nio.file.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Copyright (C) 2016 Azquo Ltd. Public source releases are under the AGPLv3, see LICENSE.TXT
@@ -194,14 +194,108 @@ public final class ImportService {
         Workbook book;
         // we now use apache POI which is faster than ZK but it has different implementations for .xls and .xlsx files
         try {
-            FileInputStream fs = new FileInputStream(new File(uploadedFile.getPath()));
+            // so, the try catches are there in case the file extension is incorrect. This has happened!
             if (uploadedFile.getFileName().toLowerCase().endsWith("xlsx")) {
-                long quicktest = System.currentTimeMillis();
-                OPCPackage opcPackage = OPCPackage.open(fs);
-                book = new XSSFWorkbook(opcPackage);
-                System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
+                    long quicktest = System.currentTimeMillis();
+                    OPCPackage opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
+                    book = new XSSFWorkbook(opcPackage);
+                    System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
             } else {
-                book = new HSSFWorkbook(fs);
+                try{
+                    book = new HSSFWorkbook(new FileInputStream(new File(uploadedFile.getPath())));
+                } catch (Exception problem){
+                    try {
+                        System.out.println("POI can't read that " + uploadedFile.getPath() + ", attempting conversion with libre office . . .");
+                        System.out.println("libreoffice --headless --convert-to xlsx:\"Calc MS Excel 2007 XML\" --outdir \"" + Paths.get(uploadedFile.getPath()).getParent().toString() + "\" \"" + uploadedFile.getPath() + "\"");
+                        // so, the xls could be non standard, try to get libre office to convert it - requires of course that libre office is installed!
+                        String[] commandArray = new String[]{
+                                "libreoffice"
+                                ,"--headless"
+                                ,"--convert-to"
+                                ,"xlsx:Calc MS Excel 2007 XML"
+                                ,"--outdir"
+                                ,Paths.get(uploadedFile.getPath()).getParent().toString()
+                                ,uploadedFile.getPath()
+                        };
+
+                        CommandLineCalls.runCommand(null,commandArray, true, null);
+/*                    com.sun.star.uno.XComponentContext xContext = null;
+                    com.sun.star.frame.XComponentLoader xCompLoader = null;
+                    try {
+                        // get the remote office component context
+                        xContext = com.sun.star.comp.helper.Bootstrap.bootstrap();
+                        System.out.println("Connected to a running office ...");
+
+                        // get the remote office service manager
+                        com.sun.star.lang.XMultiComponentFactory xMCF =
+                                xContext.getServiceManager();
+
+                        Object oDesktop = xMCF.createInstanceWithContext(
+                                "com.sun.star.frame.Desktop", xContext);
+
+                        xCompLoader = UnoRuntime.queryInterface(com.sun.star.frame.XComponentLoader.class,
+                                oDesktop);
+
+                        String sUrl = "file:///" + uploadedFile.getPath().replace( '\\', '/' );
+
+                        // Loading the wanted document
+                        com.sun.star.beans.PropertyValue propertyValues[] =
+                                new com.sun.star.beans.PropertyValue[1];
+                        propertyValues[0] = new com.sun.star.beans.PropertyValue();
+                        propertyValues[0].Name = "Hidden";
+                        propertyValues[0].Value = Boolean.TRUE;
+
+                        Object oDocToStore = xCompLoader.loadComponentFromURL(sUrl, "_blank", 0, propertyValues);
+
+                        // Getting an object that will offer a simple way to store
+                        // a document to a URL.
+                        com.sun.star.frame.XStorable xStorable =
+                                UnoRuntime.queryInterface(
+                                        com.sun.star.frame.XStorable.class, oDocToStore );
+
+                        // Preparing properties for converting the document
+                        propertyValues = new com.sun.star.beans.PropertyValue[2];
+                        // Setting the flag for overwriting
+                        propertyValues[0] = new com.sun.star.beans.PropertyValue();
+                        propertyValues[0].Name = "Overwrite";
+                        propertyValues[0].Value = Boolean.TRUE;
+                        // Setting the filter name
+                        propertyValues[1] = new com.sun.star.beans.PropertyValue();
+                        propertyValues[1].Name = "FilterName";
+                        propertyValues[1].Value = "Calc MS Excel 2007 XML";
+
+                        // Storing and converting the document
+            //            xStorable.storeAsURL(sUrl + "x", propertyValues);
+                        xStorable.storeAsURL("file:////home/edward/Downloads/apache-tomcat-8.0.21/temp/convert.xlsx", propertyValues);
+
+                        // Closing the converted document. Use XCloseable.close if the
+                        // interface is supported, otherwise use XComponent.dispose
+                        com.sun.star.util.XCloseable xCloseable =
+                                UnoRuntime.queryInterface(
+                                        com.sun.star.util.XCloseable.class, xStorable);
+
+                        if ( xCloseable != null ) {
+                            xCloseable.close(false);
+                        } else {
+                            com.sun.star.lang.XComponent xComp =
+                                    UnoRuntime.queryInterface(
+                                            com.sun.star.lang.XComponent.class, xStorable);
+
+                            xComp.dispose();
+                        }
+
+                    } catch( Exception e ) {
+                        e.printStackTrace();
+                    }
+
+*/
+// ok try to read the converted file!
+                        OPCPackage opcPackage = OPCPackage.open(new File(uploadedFile.getPath() + "x"));
+                        book = new XSSFWorkbook(opcPackage);
+                    } catch (Exception e){
+                        throw new Exception("unable to fix irregular xls file");
+                    }
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
