@@ -45,7 +45,7 @@ import java.util.List;
 
 public class BackupService {
 
-    public static final String CATEGORYBREAK = "|||"; // I'm not proud of this
+    public static final String CATEGORYBREAK = "~~~"; // I'm not proud of this
 
     public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
