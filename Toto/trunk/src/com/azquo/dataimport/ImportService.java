@@ -90,7 +90,7 @@ public final class ImportService {
      parameters per file down to the file (not sheet!) check for parameters that have been set in a big chunk on the pending uploads screen
      */
     public static List<UploadedFile> importTheFile(final LoggedInUser loggedInUser, final UploadedFile uploadedFile, HttpSession session, PendingUploadConfig pendingUploadConfig) throws Exception { // setup just to flag it
-        if (session != null){
+        if (session != null) {
             session.removeAttribute(ManageDatabasesController.IMPORTSTATUS);
         }
         loggedInUser.copyMode = false; // an exception might have left it true
@@ -150,7 +150,7 @@ public final class ImportService {
             });
             int counter = 1;
             for (File f : files) {
-                if (files.size() > 1 && session != null){
+                if (files.size() > 1 && session != null) {
                     session.setAttribute(ManageDatabasesController.IMPORTSTATUS, counter + "/" + files.size());
                 }
                 // need new upload file object now!
@@ -181,7 +181,7 @@ public final class ImportService {
             } else if (uploadedFile.getFileName().toLowerCase().endsWith(".xls") || uploadedFile.getFileName().toLowerCase().endsWith(".xlsx")) {
                 processedUploadedFiles.addAll(readBook(loggedInUser, uploadedFile, pendingUploadConfig, templateCache));
             } else {
-                 processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, pendingUploadConfig, templateCache));
+                processedUploadedFiles.add(readPreparedFile(loggedInUser, uploadedFile, false, pendingUploadConfig, templateCache));
             }
         }
         return processedUploadedFiles;
@@ -196,29 +196,29 @@ public final class ImportService {
         try {
             // so, the try catches are there in case the file extension is incorrect. This has happened!
             if (uploadedFile.getFileName().toLowerCase().endsWith("xlsx")) {
-                    long quicktest = System.currentTimeMillis();
-                    OPCPackage opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
-                    book = new XSSFWorkbook(opcPackage);
-                    System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
+                long quicktest = System.currentTimeMillis();
+                OPCPackage opcPackage = OPCPackage.open(new FileInputStream(new File(uploadedFile.getPath())));
+                book = new XSSFWorkbook(opcPackage);
+                //System.out.println("book open time " + (System.currentTimeMillis() - quicktest));
             } else {
-                try{
+                try {
                     book = new HSSFWorkbook(new FileInputStream(new File(uploadedFile.getPath())));
-                } catch (Exception problem){
+                } catch (Exception problem) {
                     try {
                         System.out.println("POI can't read that " + uploadedFile.getPath() + ", attempting conversion with libre office . . .");
                         System.out.println("libreoffice --headless --convert-to xlsx:\"Calc MS Excel 2007 XML\" --outdir \"" + Paths.get(uploadedFile.getPath()).getParent().toString() + "\" \"" + uploadedFile.getPath() + "\"");
                         // so, the xls could be non standard, try to get libre office to convert it - requires of course that libre office is installed!
                         String[] commandArray = new String[]{
                                 "libreoffice"
-                                ,"--headless"
-                                ,"--convert-to"
-                                ,"xlsx:Calc MS Excel 2007 XML"
-                                ,"--outdir"
-                                ,Paths.get(uploadedFile.getPath()).getParent().toString()
-                                ,uploadedFile.getPath()
+                                , "--headless"
+                                , "--convert-to"
+                                , "xlsx:Calc MS Excel 2007 XML"
+                                , "--outdir"
+                                , Paths.get(uploadedFile.getPath()).getParent().toString()
+                                , uploadedFile.getPath()
                         };
 
-                        CommandLineCalls.runCommand(null,commandArray, true, null);
+                        CommandLineCalls.runCommand(null, commandArray, true, null);
 /*                    com.sun.star.uno.XComponentContext xContext = null;
                     com.sun.star.frame.XComponentLoader xCompLoader = null;
                     try {
@@ -292,7 +292,7 @@ public final class ImportService {
 // ok try to read the converted file!
                         OPCPackage opcPackage = OPCPackage.open(new File(uploadedFile.getPath() + "x"));
                         book = new XSSFWorkbook(opcPackage);
-                    } catch (Exception e){
+                    } catch (Exception e) {
                         throw new Exception("unable to fix irregular xls file");
                     }
                 }
@@ -300,7 +300,7 @@ public final class ImportService {
         } catch (Exception e) {
             e.printStackTrace();
             uploadedFile.setError(e.getMessage());
-            if (pendingUploadConfig != null){
+            if (pendingUploadConfig != null) {
                 pendingUploadConfig.incrementFileCounter();
             }
             return Collections.singletonList(uploadedFile);
@@ -578,7 +578,7 @@ public final class ImportService {
                 t = t.getCause();
             }
             uploadedFile.setError(t.getMessage());
-            if (pendingUploadConfig != null){
+            if (pendingUploadConfig != null) {
                 pendingUploadConfig.incrementFileCounter();
             }
             return Collections.singletonList(uploadedFile);
@@ -600,13 +600,13 @@ public final class ImportService {
     // copy the file to the database server if it's on a different physical machine then tell the database server to process it
     private static UploadedFile readPreparedFile(final LoggedInUser loggedInUser, UploadedFile uploadedFile, boolean importTemplateUsedAlready, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws
             Exception {
-        if (pendingUploadConfig != null){
-            if (pendingUploadConfig.isFileToReject()){
+        if (pendingUploadConfig != null) {
+            if (pendingUploadConfig.isFileToReject()) {
                 pendingUploadConfig.incrementFileCounter();
                 uploadedFile.setError("Rejected by user");
                 return uploadedFile;
             }
-            if (pendingUploadConfig.getFileRejectLines() != null){
+            if (pendingUploadConfig.getFileRejectLines() != null) {
                 uploadedFile.setIgnoreLines(pendingUploadConfig.getFileRejectLines());
             }
         }
@@ -631,7 +631,7 @@ public final class ImportService {
                 List<List<String>> standardHeadings = new ArrayList<>();
                 // scan first for the main model
                 for (String sheetName : importTemplateData.getSheets().keySet()) {
-                    if ((sheetName.equalsIgnoreCase("Import Model") && uploadedFile.getParameter(IMPORTVERSION)!=null)|| (uploadedFile.getParameter(IMPORTVERSION)==    null && sheetName.equalsIgnoreCase(templateName))) {
+                    if ((sheetName.equalsIgnoreCase("Import Model") && uploadedFile.getParameter(IMPORTVERSION) != null) || (uploadedFile.getParameter(IMPORTVERSION) == null && sheetName.equalsIgnoreCase(templateName))) {
                         importSheetScan(importTemplateData.getSheets().get(sheetName), null, standardHeadings, null, templateParameters, null);
                         break;
                     }
@@ -822,7 +822,7 @@ public final class ImportService {
                     uploadedFile.setPath((String) script.invokeMethod("fileProcess", groovyParams));
                 } catch (Exception e) {
                     uploadedFile.setError("Preprocessor error in " + uploadedFile.getPreProcessor() + " : " + e.getMessage());
-                    if (pendingUploadConfig != null){
+                    if (pendingUploadConfig != null) {
                         pendingUploadConfig.incrementFileCounter();
                     }
                     return uploadedFile;
@@ -836,7 +836,7 @@ public final class ImportService {
                 }
             } else {
                 uploadedFile.setError("unable to find preprocessor : " + uploadedFile.getPreProcessor());
-                if (pendingUploadConfig != null){
+                if (pendingUploadConfig != null) {
                     pendingUploadConfig.incrementFileCounter();
                 }
                 return uploadedFile;
@@ -863,9 +863,9 @@ public final class ImportService {
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
             }
             loggedInUser.copyMode = uploadedFile.isValidationTest();
-            try{
+            try {
                 uploadedFile.setPostProcessingResult(ReportExecutor.runExecute(loggedInUser, uploadedFile.getPostProcessor(), systemData2DArrays, uploadedFile.getProvenanceId(), false).toString());
-            } catch (Exception e){
+            } catch (Exception e) {
                 loggedInUser.copyMode = false;
                 throw e;
             }
@@ -878,9 +878,9 @@ public final class ImportService {
                 SpreadsheetService.setUserChoice(loggedInUser.getUser().getId(), choice, uploadedFile.getParameter(choice));
             }
             loggedInUser.copyMode = true;
-            try{
+            try {
                 ReportExecutor.runExecute(loggedInUser, uploadedFile.getValidation(), systemData2DArrays, uploadedFile.getProvenanceId(), false);
-            } catch (Exception e){
+            } catch (Exception e) {
                 loggedInUser.copyMode = false;
                 throw e;
             }
@@ -957,7 +957,7 @@ public final class ImportService {
                 }
             }
         }
-        if (pendingUploadConfig != null){
+        if (pendingUploadConfig != null) {
             pendingUploadConfig.incrementFileCounter();
         }
         return uploadedFile;
@@ -1267,7 +1267,7 @@ public final class ImportService {
             importTemplate = new ImportTemplate(0, LocalDateTime.now(), businessId, loggedInUser.getUser().getId(), uploadedFile.getFileName(), uploadedFile.getFileName(), ""); // default to ZK now
         }
         ImportTemplateDAO.store(importTemplate);
-        if (assignToLoggedInUserDB){
+        if (assignToLoggedInUserDB) {
             Database database = loggedInUser.getDatabase();
             database.setImportTemplateId(importTemplate.getId());
             DatabaseDAO.store(database);
@@ -1303,7 +1303,7 @@ public final class ImportService {
             }
         }
         // if no import template specified see if there is a database one - todo - could probably factor with above a little
-        if (loggedInUser.getDatabase().getImportTemplateId() != -1){
+        if (loggedInUser.getDatabase().getImportTemplateId() != -1) {
             if (templateCache != null) {
                 return templateCache.computeIfAbsent(loggedInUser.getDatabase().getImportTemplateId() + "", t -> {
                             try {

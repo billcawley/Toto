@@ -52,13 +52,6 @@ public class StandardDAO {
 
         if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
                 "    WHERE\n" +
-                "      (table_name = \"pending_upload\")\n" +
-                "      AND (table_schema = \"master_db\")\n" +
-                "      AND (column_name = \"team\")", new HashMap<>(), Integer.class) == 0){
-            jdbcTemplate.update("ALTER TABLE `master_db`.`pending_upload` ADD `team` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
-        }
-        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
-                "    WHERE\n" +
                 "      (table_name = \"user\")\n" +
                 "      AND (table_schema = \"master_db\")\n" +
                 "      AND (column_name = \"team\")", new HashMap<>(), Integer.class) == 0){
@@ -109,6 +102,15 @@ public class StandardDAO {
                     "                                              PRIMARY KEY (`id`)\n" +
                     ") ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;\n", new HashMap<>());
         }
+
+        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS\n" +
+                "    WHERE\n" +
+                "      (table_name = \"pending_upload\")\n" +
+                "      AND (table_schema = \"master_db\")\n" +
+                "      AND (column_name = \"team\")", new HashMap<>(), Integer.class) == 0){
+            jdbcTemplate.update("ALTER TABLE `master_db`.`pending_upload` ADD `team` VARCHAR(255) NULL DEFAULT NULL ;", new HashMap<>());
+        }
+
         StandardDAO.jdbcTemplate = jdbcTemplate; // I realise that this is "naughty", see comments at the top.
     }
 

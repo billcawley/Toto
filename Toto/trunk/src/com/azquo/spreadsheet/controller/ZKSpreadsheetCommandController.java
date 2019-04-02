@@ -53,6 +53,9 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.Month;
+import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -65,6 +68,26 @@ import java.util.*;
 @Controller
 @RequestMapping("/ZKSpreadsheetCommand")
 public class ZKSpreadsheetCommandController {
+
+    static String base64int(int input){
+        // I'm using tilda on the end
+        String base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+~";
+        // so I have my int - 4 bytes, should be able to represent that as 6 chars max. Normal base 64 encoding won't do it this way hence the manual fix.
+        char[] result = new char[6];
+        for (int i = 5; i >= 0; i--){
+            int charLookup = input%64;
+            result[i] = base64.charAt(charLookup);
+            input = input - (input%64);
+            input /= 64;
+        }
+        // equivalent or removing 0s at the beginning
+        String s = new String(result);
+        while (s.startsWith("A")){
+            s = s.substring(1);
+        }
+        return s;
+    }
+
 
     @RequestMapping
     public void handleRequest(final HttpServletRequest req, HttpServletResponse resp) throws Exception {
@@ -205,11 +228,14 @@ public class ZKSpreadsheetCommandController {
                                     Map<String,Integer> reportSelectionsColMap = new HashMap<>();
                                     String reportName = null;
                                     SName filePrefixName = BookUtils.getNameByName(ReportRenderer.AZXMLFILENAME + region, ss.getSelectedSheet());
+
                                     String filePrefix = null;
                                     if (filePrefixName != null){
                                         SCell snameCell = BookUtils.getSnameCell(filePrefixName);
                                         if (snameCell != null){
                                             filePrefix = snameCell.getStringValue();
+                                            // dash not allowed
+                                            filePrefix = filePrefix.replace("-","");
                                         }
                                     }
 
@@ -277,7 +303,24 @@ public class ZKSpreadsheetCommandController {
                                     transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
                                     // going for one file per line as per brokersure, zip at the end
                                     // tracking where we are in the xml, what elements we're in
+                                    // new criteria for filenames - do a base 64 hash
+                                    LocalDateTime start = LocalDateTime.of(2019, Month.JANUARY, 1,0,0);
+                                    LocalDateTime now = LocalDateTime.now();
+                                    int filePointer = (int) (now.toEpochSecond(ZoneOffset.UTC) - start.toEpochSecond(ZoneOffset.UTC));
+
                                     for (int row = name.getRefersToCellRegion().row; row <= name.getRefersToCellRegion().lastRow; row++) {
+                                        String fileName = base64int(filePointer) + ".xml";
+                                        if (filePrefix != null){
+                                            fileName = filePrefix + fileName;
+                                        }
+                                        //System.out.println("file name : " + fileName);
+                                        while (zipforxmlfiles.resolve(fileName).toFile().exists()){
+                                            filePointer++;
+                                            fileName = base64int(filePointer) + ".xml";
+                                            if (filePrefix != null){
+                                                fileName = filePrefix + fileName;
+                                            }
+                                        }
                                         count++;
                                         Document doc = docBuilder.newDocument();
                                         doc.setXmlStandalone(true);
@@ -313,7 +356,7 @@ public class ZKSpreadsheetCommandController {
                                                 //test.append(name).append(value).append("\n");
                                         }
                                         DOMSource source = new DOMSource(doc);
-                                        BufferedWriter bufferedWriter = Files.newBufferedWriter(zipforxmlfiles.resolve((filePrefix != null ? filePrefix + "-" : "") + count + ".xml"));
+                                        BufferedWriter bufferedWriter = Files.newBufferedWriter(zipforxmlfiles.resolve(fileName));
                                         StreamResult result = new StreamResult(bufferedWriter);
                                         transformer.transform(source, result);
                                         bufferedWriter.close();
@@ -363,7 +406,7 @@ public class ZKSpreadsheetCommandController {
                                                 }
                                             }
                                         }
-
+                                        filePointer++;
                                     }
                                 }
                             }
