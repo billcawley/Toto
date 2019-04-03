@@ -46,6 +46,7 @@ import java.util.List;
 public class BackupService {
 
     public static final String CATEGORYBREAK = "~~~"; // I'm not proud of this
+    public static final String CATEGORYBREAKOLD = "|||"; // tripped up windows
 
     public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
@@ -115,6 +116,10 @@ public class BackupService {
                 if (fileName.contains(CATEGORYBREAK)) {
                     category = fileName.substring(0, fileName.indexOf(CATEGORYBREAK));
                     fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAK) + CATEGORYBREAK.length());
+                }
+                if (fileName.contains(CATEGORYBREAKOLD)) {
+                    category = fileName.substring(0, fileName.indexOf(CATEGORYBREAKOLD));
+                    fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAKOLD) + CATEGORYBREAKOLD.length());
                 }
                 List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser
                         , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null);
