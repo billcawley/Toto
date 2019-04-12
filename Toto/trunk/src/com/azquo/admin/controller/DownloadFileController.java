@@ -39,11 +39,13 @@ public class DownloadFileController {
     ) {
         // deliver a pre prepared image. Are these names unique? Could images move between spreadsheets unintentionally?
         LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-        if (loggedInUser != null && (loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())){
+        if (loggedInUser != null){
             if (uploadRecordId != null && uploadRecordId.length() > 0) {
                 final UploadRecord byId = UploadRecordDAO.findById(Integer.parseInt(uploadRecordId));
                 if (byId != null && byId.getTempPath() != null && byId.getTempPath().length() > 0 && byId.getBusinessId() == loggedInUser.getUser().getBusinessId()
-                        && (loggedInUser.getUser().isAdministrator() || byId.getUserId() == loggedInUser.getUser().getId())){ // admin is all for the business, developer just for that user
+                        && (loggedInUser.getUser().isAdministrator()
+                        || (loggedInUser.getUser().isDeveloper() && byId.getUserId() == loggedInUser.getUser().getId()) ||
+                        (loggedInUser.getDatabase().getId() == byId.getDatabaseId() && byId.getFileType() != null && byId.getFileType().length() > 0))){ // admin is all for the business, developer just for that user, vanilla user allowed
                     if (byId.getTempPath().endsWith(".xls")){
                         response.setContentType("application/vnd.ms-excel");
                     }

@@ -112,7 +112,7 @@ public final class ImportService {
 
             UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
                     , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId()
-                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), "", ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, -1, true, null), originalFilePath);
+                    , uploadedFile.getFileName() + (processedUploadedFiles.size() == 1 && processedUploadedFiles.get(0).getReportName() != null ? " - (" + processedUploadedFiles.get(0).getReportName() + ")" : ""), uploadedFile.getFileType() != null ? uploadedFile.getFileType() : "", ManageDatabasesController.formatUploadedFiles(processedUploadedFiles, -1, true, null), originalFilePath);
             UploadRecordDAO.store(uploadRecord);
             // and update the counts on the manage database page
             AdminService.updateNameAndValueCounts(loggedInUser, loggedInUser.getDatabase());
@@ -187,7 +187,6 @@ public final class ImportService {
         return processedUploadedFiles;
     }
 
-    //302200K
     // a book will be a report to upload or a workbook which has to be converted into a csv for each sheet
     private static List<UploadedFile> readBook(LoggedInUser loggedInUser, UploadedFile uploadedFile, PendingUploadConfig pendingUploadConfig, HashMap<String, ImportTemplateData> templateCache) throws Exception {
         long time = System.currentTimeMillis();
@@ -322,13 +321,28 @@ public final class ImportService {
                 }
             }
 
+            // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
+            Name fileTypeRange = BookUtils.getName(book, ReportRenderer.AZFILETYPE);
+            if (fileTypeRange != null) {
+                CellReference sheetNameCell = BookUtils.getNameCell(fileTypeRange);
+                if (sheetNameCell != null){
+                    String fileType = book.getSheet(fileTypeRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
+                    if (fileType != null){
+                        // note - this means this will only kick in in s single XLSX upload not a zip of them
+                        uploadedFile.setFileType(fileType);
+                    }
+                }
+            }
+
 
             String reportName = null;
             // a misleading name now we have the ImportTemplate object
             Name reportRange = BookUtils.getName(book, ReportRenderer.AZREPORTNAME);
             if (reportRange != null) {
                 CellReference sheetNameCell = BookUtils.getNameCell(reportRange);
-                reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
+                if (sheetNameCell != null){
+                    reportName = book.getSheet(reportRange.getSheetName()).getRow(sheetNameCell.getRow()).getCell(sheetNameCell.getCol()).getStringCellValue();
+                }
             }
             if (reportName != null) {
                 if ((loggedInUser.getUser().isAdministrator() || loggedInUser.getUser().isDeveloper())) {

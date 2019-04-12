@@ -341,6 +341,37 @@ this may now not work at all, perhaps delete?
         return null;
     }
 
+    public static List<UploadRecord.UploadRecordForDisplay> getUploadRecordsForDisplayForUserWithBasicSecurity(LoggedInUser loggedInUser) {
+        List<UploadRecord> forDatabaseIdWithFileType = UploadRecordDAO.findForDatabaseIdWithFileType(loggedInUser.getDatabase().getId());// limited to 10k for the mo
+        // ducplication, factor later, todo
+        List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplay = new ArrayList<>();
+        for (UploadRecord uploadRecord : forDatabaseIdWithFileType){
+            String dbName = "";
+            if (uploadRecord.getDatabaseId() > 0) {
+                Database database = DatabaseDAO.findById(uploadRecord.getDatabaseId());
+                if (database != null) {
+                    dbName = database.getName();
+                }
+            }
+            String userName = "";
+            if (uploadRecord.getUserId() > 0) {
+                User user = UserDAO.findById(uploadRecord.getUserId());
+                if (user != null) {
+                    userName = user.getName();
+                }
+            }
+            boolean downloadable = false;
+            if (uploadRecord.getTempPath() != null && !uploadRecord.getTempPath().isEmpty()) {
+                File test = new File(uploadRecord.getTempPath());
+                if (test.exists() && test.isFile()) {
+                    downloadable = true;
+                }
+            }
+            uploadRecordsForDisplay.add(new UploadRecord.UploadRecordForDisplay(uploadRecord, BusinessDAO.findById(uploadRecord.getBusinessId()).getBusinessName(), dbName, userName, downloadable));
+        }
+        return uploadRecordsForDisplay;
+    }
+
     // only short but perhaps logic could be cleaned up a little
     public static List<PendingUpload.PendingUploadForDisplay> getPendingUploadsForDisplayForBusinessWithBasicSecurity(final LoggedInUser loggedInUser, String fileSearch, boolean allteams, boolean uploaded) {
         List<PendingUpload> pendingUploads;
@@ -585,4 +616,5 @@ this may now not work at all, perhaps delete?
             DatabaseDAO.store(db);
         }
     }
+
 }

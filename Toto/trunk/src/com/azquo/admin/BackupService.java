@@ -13,9 +13,7 @@ import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.User;
 import com.azquo.admin.user.UserDAO;
-import com.azquo.dataimport.ImportService;
-import com.azquo.dataimport.ImportTemplate;
-import com.azquo.dataimport.ImportTemplateDAO;
+import com.azquo.dataimport.*;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.memorydb.NameForBackup;
 import com.azquo.memorydb.ProvenanceForBackup;
@@ -37,16 +35,18 @@ import org.zeroturnaround.zip.ZipUtil;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.util.*;
 
 
 public class BackupService {
 
     public static final String CATEGORYBREAK = "~~~"; // I'm not proud of this
     public static final String CATEGORYBREAKOLD = "|||"; // tripped up windows
+    public static final String TYPEBREAK = "~~T~~"; // I'm not proud of this
 
     public static File createDBandReportsAndTemplateBackup(LoggedInUser loggedInUser) throws Exception {
         // ok, new code to dump a database and all reports. The former being the more difficult bit.
@@ -65,8 +65,29 @@ public class BackupService {
         if (importTemplate != null){
             filesToPackSize++; // we'll have the import template too!
         }
-
-
+        // ok now need to check for uploads with file types
+        List<UploadRecord> forDatabaseIdWithFileType = UploadRecordDAO.findForDatabaseIdWithFileType(loggedInUser.getDatabase().getId());
+        Map<String, List<UploadRecord>> groupedByFileType = new HashMap<>();
+        for (UploadRecord uploadRecord : forDatabaseIdWithFileType){
+            groupedByFileType.computeIfAbsent(uploadRecord.getFileType(), t->new ArrayList<>()).add(uploadRecord);
+        }
+        int limit = 4;
+        for (List<UploadRecord> forType : groupedByFileType.values()){
+            // check each file exists!
+            for (UploadRecord uploadRecord : forType){
+                if (!Files.exists(Paths.get(uploadRecord.getTempPath()))){
+                    forType.remove(uploadRecord);
+                }
+            }
+            // if greater than a certain length trim to the most recent
+            if (forType.size() > limit){
+                forType.sort((uploadRecord, t1) -> {
+                    return -uploadRecord.getDate().compareTo(t1.getDate()); // - as we want descending
+                });
+                forType = forType.subList(0, limit);
+            }
+            filesToPackSize += forType.size();
+        }
         ZipEntrySource[] filesToPack = new ZipEntrySource[filesToPackSize];
         filesToPack[0] = new FileSource(temp.getName(), temp);
         int index = 1;
@@ -80,7 +101,16 @@ public class BackupService {
         }
         if (importTemplate != null){
             filesToPack[index] = new FileSource(importTemplate.getFilenameForDisk(), new File(SpreadsheetService.getHomeDir() + ImportService.dbPath + loggedInUser.getBusinessDirectory() + ImportService.importTemplatesDir + importTemplate.getFilenameForDisk()));
+            index++;
         }
+        // now the typed uploads, need to clearly mark them as such
+        for (List<UploadRecord> forType : groupedByFileType.values()){
+            for (UploadRecord uploadRecord : forType){
+                filesToPack[index] = new FileSource(uploadRecord.getFileType() + TYPEBREAK + uploadRecord.getFileName(), new File(uploadRecord.getTempPath()));
+                index++;
+            }
+        }
+
         File tempzip = File.createTempFile(loggedInUser.getDatabase().getName(), ".zip");
         System.out.println("temp zip " + tempzip.getPath());
         ZipUtil.pack(filesToPack, tempzip);
@@ -104,38 +134,52 @@ public class BackupService {
         // now reports
         for (File f : files) {
             if (!f.getName().endsWith(".db")) {
-                // rename the xlsx file to get rid of the ID that will probably be in front in the backup zip
-                String fileName;
-                if (f.getName().contains("-") && NumberUtils.isNumber(f.getName().substring(0, f.getName().indexOf("-")))) {
-                    fileName = f.getName().substring(f.getName().indexOf("-") + 1);
-                } else {
-                    fileName = f.getName();
-                }
-                // hacky way of dealing with categories
-                String category = null;
-                if (fileName.contains(CATEGORYBREAK)) {
-                    category = fileName.substring(0, fileName.indexOf(CATEGORYBREAK));
-                    fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAK) + CATEGORYBREAK.length());
-                }
-                if (fileName.contains(CATEGORYBREAKOLD)) {
-                    category = fileName.substring(0, fileName.indexOf(CATEGORYBREAKOLD));
-                    fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAKOLD) + CATEGORYBREAKOLD.length());
-                }
-                List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser
-                        , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null);
-                // EFC : got to hack the category in, I don't like this . . .
-                if (category != null){
-                    for (UploadedFile uploadedFile : uploadedFiles){
-                        if (uploadedFile.getReportName() != null){
-                            OnlineReport or = OnlineReportDAO.findForNameAndUserId(uploadedFile.getReportName(), loggedInUser.getUser().getId());
-                            if (or != null){
-                                or.setCategory(category);
-                                OnlineReportDAO.store(or);
+                // deal with the moved (typed) uploads first
+                if (f.getName().contains(TYPEBREAK)){
+                    // fragments of the code to make an upload record without actually uploading
+                    String type = f.getName().substring(0, f.getName().indexOf(TYPEBREAK));
+                    String fileName = f.getName().substring(f.getName().indexOf(TYPEBREAK) + TYPEBREAK.length());
+                    String uploadFilePath = SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + fileName;
+                    Files.copy(Paths.get(f.getPath()), Paths.get(uploadFilePath));// timestamp to stop file overwriting
+                    UploadRecord uploadRecord = new UploadRecord(0, LocalDateTime.now(), loggedInUser.getUser().getBusinessId()
+                            , loggedInUser.getDatabase().getId(), loggedInUser.getUser().getId()
+                            , fileName, type, "From backup restore", uploadFilePath);
+                    UploadRecordDAO.store(uploadRecord);
+
+                } else { // report or template
+                    // rename the xlsx file to get rid of the ID that will probably be in front in the backup zip
+                    String fileName;
+                    if (f.getName().contains("-") && NumberUtils.isNumber(f.getName().substring(0, f.getName().indexOf("-")))) {
+                        fileName = f.getName().substring(f.getName().indexOf("-") + 1);
+                    } else {
+                        fileName = f.getName();
+                    }
+                    // hacky way of dealing with categories
+                    String category = null;
+                    if (fileName.contains(CATEGORYBREAK)) {
+                        category = fileName.substring(0, fileName.indexOf(CATEGORYBREAK));
+                        fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAK) + CATEGORYBREAK.length());
+                    }
+                    if (fileName.contains(CATEGORYBREAKOLD)) {
+                        category = fileName.substring(0, fileName.indexOf(CATEGORYBREAKOLD));
+                        fileName = f.getName().substring(fileName.indexOf(CATEGORYBREAKOLD) + CATEGORYBREAKOLD.length());
+                    }
+                    List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser
+                            , new UploadedFile(f.getAbsolutePath(), Collections.singletonList(fileName), false), null, null);
+                    // EFC : got to hack the category in, I don't like this . . .
+                    if (category != null){
+                        for (UploadedFile uploadedFile : uploadedFiles){
+                            if (uploadedFile.getReportName() != null){
+                                OnlineReport or = OnlineReportDAO.findForNameAndUserId(uploadedFile.getReportName(), loggedInUser.getUser().getId());
+                                if (or != null){
+                                    or.setCategory(category);
+                                    OnlineReportDAO.store(or);
+                                }
                             }
                         }
                     }
+                    toReturn.append(ManageDatabasesController.formatUploadedFiles(uploadedFiles,-1, false, null)).append("<br/>");
                 }
-                toReturn.append(ManageDatabasesController.formatUploadedFiles(uploadedFiles,-1, false, null)).append("<br/>");
             }
         }
         return toReturn.toString();

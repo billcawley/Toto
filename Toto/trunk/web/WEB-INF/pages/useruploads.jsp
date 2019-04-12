@@ -5,7 +5,7 @@ Stripped down managed databases
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<c:set var="title" scope="request" value="Manage Databases"/>
+<c:set var="title" scope="request" value="User Uploads"/>
 <%@ include file="../includes/public_header.jsp" %>
 <script>
     function showHideDiv(div) {
@@ -88,6 +88,44 @@ Stripped down managed databases
                     </table>
                 </form>
             </div>
+            <!-- Archive List -->
+            <table>
+                <thead>
+                <tr>
+                    <td><a href="/api/UserUpload?sort=${datesort}">Date</a></td>
+                    <td><a href="/api/UserUpload?sort=${businessnamesort}">Business Name</a></td>
+                    <td><a href="/api/UserUpload?sort=${dbsort}">Database Name</a></td>
+                    <td><a href="/api/UserUpload?sort=${usernamesort}">User Name</a></td>
+                    <td>
+File Name<!-- no search here for the mo -->
+                    </td>
+                    <td>File Type</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                </thead>
+                <tbody>
+                <c:forEach items="${uploads}" var="upload">
+                    <tr>
+                        <td>${upload.formattedDate}</td>
+                        <td>${upload.businessName}</td>
+                        <td>${upload.databaseName}</td>
+                        <td>${upload.userName}</td>
+                        <td>${upload.fileName}</td>
+                        <td>${upload.fileType}</td>
+                        <td><c:if test="${upload.comments.length() > 0}">
+                            <a href="/api/ImportResults?urid=${upload.id}" target="new"
+                               class="button inspect small" data-title="Import Results" title="View Import Results">Results</a>
+                        </c:if></td>
+
+                        <td><c:if test="${upload.downloadable}"><a href="/api/DownloadFile?uploadRecordId=${upload.id}"
+                                                                   class="button small" title="Download"><span
+                                class="fa fa-download" title="Download"></span> </a></c:if></td>
+                    </tr>
+                </c:forEach>
+                </tbody>
+            </table>
+
         </div>
         <!-- END Uploads -->
         <!-- Pending Uploads -->

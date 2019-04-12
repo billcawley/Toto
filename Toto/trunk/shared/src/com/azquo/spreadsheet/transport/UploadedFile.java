@@ -104,6 +104,8 @@ public class UploadedFile implements Serializable {
     // what the ignored lines actually were - for user feedback
     private Map<Integer, String> ignoreLinesValues;
 
+    private String fileType; // has the user given the file a type? should the file move with backups and be available to non admin users?
+
     // should an uploaded file have an index which would indicate its place in a package (a zip or book or both)?
 
     public static class RejectedLine implements Serializable{
@@ -209,6 +211,7 @@ public class UploadedFile implements Serializable {
         provenanceId = -1;
         ignoreLines = null;
         ignoreLinesValues = null;
+        fileType = null;
     }
 
 
@@ -480,6 +483,13 @@ public class UploadedFile implements Serializable {
         return ignoreLinesValues;
     }
 
+    public String getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(String fileType) {
+        this.fileType = fileType;
+    }
 
     public String getFullFileName(){
         List<String> fileNames = getFileNames();

@@ -67,6 +67,8 @@ public class ReportRenderer {
     public static final String AZEMAILSUBJECT = "az_emailsubject";
     public static final String AZEMAILTEXT = "az_emailtext";
     static final String AZCURRENTUSER = "az_currentuser";
+    // on an upload file, should this file be flagged as one that moves with backups and is available for non admin users to download
+    public static final String AZFILETYPE = "az_filetype";
 
 
     public static boolean populateBook(Book book, int valueId) {

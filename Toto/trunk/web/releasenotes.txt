@@ -1,3 +1,7 @@
+03-04-19
+
+Adjustment to how report categories are stored in backups
+
 02-04-19
 
 Changes to XML file name generation for Broaksure

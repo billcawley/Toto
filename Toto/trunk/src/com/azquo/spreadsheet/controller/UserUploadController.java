@@ -55,6 +55,7 @@ public class UserUploadController {
     @RequestMapping
     public String handleRequest(ModelMap model, HttpServletRequest request
             , @RequestParam(value = "pendingUploadSearch", required = false) String pendingUploadSearch
+            , @RequestParam(value = "sort", required = false) String sort
     ) {
         final LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
         // I assume secure until we move to proper spring security
@@ -85,6 +86,42 @@ public class UserUploadController {
                 model.put("error", exceptionError);
             }
             model.put("databases", databaseList);
+// ok adding back in the uploaded files list but constrained to this DB and with file type
+            List<UploadRecord.UploadRecordForDisplay> uploadRecordsForDisplayForBusiness = AdminService.getUploadRecordsForDisplayForUserWithBasicSecurity(loggedInUser);
+            if (uploadRecordsForDisplayForBusiness != null) {
+                if ("database".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDatabaseName));
+                }
+                if ("databasedown".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDatabaseName().compareTo(o1.getDatabaseName())));
+                }
+                if ("date".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getDate));
+                }
+                if ("datedown".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getDate().compareTo(o1.getDate())));
+                }
+                if ("businessname".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getBusinessName));
+                }
+                if ("businessnamedown".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getBusinessName().compareTo(o1.getBusinessName())));
+                }
+                if ("username".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort(Comparator.comparing(UploadRecord.UploadRecordForDisplay::getUserName));
+                }
+                if ("usernamedown".equals(sort)) {
+                    uploadRecordsForDisplayForBusiness.sort((o1, o2) -> (o2.getUserName().compareTo(o1.getUserName())));
+                }
+            }
+
+            model.put("dbsort", "database".equals(sort) ? "databasedown" : "database");
+            model.put("datesort", "date".equals(sort) ? "datedown" : "date");
+            model.put("businessnamesort", "businessname".equals(sort) ? "businessnamedown" : "businessname");
+            model.put("usernamesort", "username".equals(sort) ? "usernamedown" : "username");
+            model.put("uploads", uploadRecordsForDisplayForBusiness);
+
+
 
             if (error.length() > 0) {
                 String exceptionError = error.toString();

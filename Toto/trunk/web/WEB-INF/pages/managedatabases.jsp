@@ -106,7 +106,7 @@ Created by IntelliJ IDEA.
                     <td>
                         <form method="post"> File Name <input size="20" name="fileSearch"></form>
                     </td>
-                    <!--				<td>File Type</td> -->
+                    <td>File Type</td>
                     <td></td>
                     <td></td>
                     <td></td>
@@ -120,7 +120,7 @@ Created by IntelliJ IDEA.
                         <td>${upload.databaseName}</td>
                         <td>${upload.userName}</td>
                         <td>${upload.fileName}</td>
-                        <!--<td>${upload.fileType}</td>-->
+                        <td>${upload.fileType}</td>
                         <td><c:if test="${upload.comments.length() > 0}">
                             <a href="/api/ImportResults?urid=${upload.id}" target="new"
                                class="button inspect small" data-title="Import Results" title="View Import Results">Results</a>
