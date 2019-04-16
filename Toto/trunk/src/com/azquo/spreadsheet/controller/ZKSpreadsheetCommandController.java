@@ -215,9 +215,9 @@ public class ZKSpreadsheetCommandController {
                     }
                     if ("XML".equals(action)) {
                         // ok try to find the relevant regions
+                        Clients.showBusy("Processing ...");
                         List<SName> namesForSheet = BookUtils.getNamesForSheet(ss.getSelectedSheet());
                         Path zipforxmlfiles = Files.createTempDirectory("zipforxmlfiles");
-                        int count = 0;
                         for (SName name : namesForSheet) {
                             if (name.getName().toLowerCase().startsWith(ReportRenderer.AZDATAREGION)) { // then we have a data region to deal with here
                                 String region = name.getName().substring(ReportRenderer.AZDATAREGION.length()); // might well be an empty string
@@ -230,12 +230,16 @@ public class ZKSpreadsheetCommandController {
                                     SName filePrefixName = BookUtils.getNameByName(ReportRenderer.AZXMLFILENAME + region, ss.getSelectedSheet());
 
                                     String filePrefix = null;
+                                    boolean multiRowPrefix = false; // a multi row prefix means the prefix will be different for each line
                                     if (filePrefixName != null){
-                                        SCell snameCell = BookUtils.getSnameCell(filePrefixName);
-                                        if (snameCell != null){
-                                            filePrefix = snameCell.getStringValue();
-                                            // dash not allowed
-                                            filePrefix = filePrefix.replace("-","");
+                                        if ((filePrefixName.getRefersToCellRegion().lastRow - filePrefixName.getRefersToCellRegion().row) > 0){ // only one row normally
+                                            multiRowPrefix = true;
+                                        } else {
+                                            SCell snameCell = BookUtils.getSnameCell(filePrefixName);
+                                            if (snameCell != null){
+                                                // dash not allowed
+                                                filePrefix = snameCell.getStringValue().replace("-","");
+                                            }
                                         }
                                     }
 
@@ -310,6 +314,19 @@ public class ZKSpreadsheetCommandController {
 
                                     for (int row = name.getRefersToCellRegion().row; row <= name.getRefersToCellRegion().lastRow; row++) {
                                         String fileName = base64int(filePointer) + ".xml";
+                                        // if multi row try and find a prefix value in the range
+                                        if (multiRowPrefix){
+                                            CellRegion refersToCellRegion = filePrefixName.getRefersToCellRegion();
+                                            if (row >= refersToCellRegion.row && row <= refersToCellRegion.getLastRow()){
+                                                SCell cell = ss.getSelectedSheet().getInternalSheet().getCell(row, refersToCellRegion.column);
+                                                if (cell != null){
+                                                    // dash not allowed
+                                                    filePrefix = cell.getStringValue().replace("-","");
+                                                }
+
+                                            }
+                                        }
+
                                         if (filePrefix != null){
                                             fileName = filePrefix + fileName;
                                         }
@@ -321,7 +338,6 @@ public class ZKSpreadsheetCommandController {
                                                 fileName = filePrefix + fileName;
                                             }
                                         }
-                                        count++;
                                         Document doc = docBuilder.newDocument();
                                         doc.setXmlStandalone(true);
                                         Element rootElement = doc.createElement(rootInSheet ? rootCandidate.replace("/","") : "ROOT");
@@ -396,7 +412,7 @@ public class ZKSpreadsheetCommandController {
                                                 StringBuilder errorLog = new StringBuilder();
                                                 ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
                                                 Exporter exporter = Exporters.getExporter();
-                                                File file = zipforxmlfiles.resolve(reportName + "-" + base64int(filePointer) + ".xlsx").toFile();
+                                                File file = zipforxmlfiles.resolve(reportName + "-" + (filePrefix != null ? filePrefix : "") + base64int(filePointer) + ".xlsx").toFile();
                                                 try (FileOutputStream fos = new FileOutputStream(file)) {
                                                     exporter.export(book, fos);
                                                 }
@@ -413,6 +429,7 @@ public class ZKSpreadsheetCommandController {
                         }
                         ZipUtil.unexplode(zipforxmlfiles.toFile());
                         Filedownload.save(new AMedia(ss.getSelectedSheetName() + "xml.zip", "zip", "application/zip", zipforxmlfiles.toFile(), true));
+                        Clients.clearBusy();
                     }
 
                     String saveMessage = "";

@@ -1,3 +1,11 @@
+15-04-19
+
+Better xlsx file names in XML zip download
+
+12-04-19
+
+New file type functionality, files with a type are flagged, move with backups, and can be seen for download by normal users
+
 03-04-19
 
 Adjustment to how report categories are stored in backups
