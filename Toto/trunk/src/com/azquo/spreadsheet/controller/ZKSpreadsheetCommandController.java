@@ -412,7 +412,7 @@ public class ZKSpreadsheetCommandController {
                                                 StringBuilder errorLog = new StringBuilder();
                                                 ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
                                                 Exporter exporter = Exporters.getExporter();
-                                                File file = zipforxmlfiles.resolve(reportName + "-" + (filePrefix != null ? filePrefix : "") + base64int(filePointer) + ".xlsx").toFile();
+                                                File file = zipforxmlfiles.resolve((filePrefix != null ? filePrefix : "") + base64int(filePointer) + ".xlsx").toFile();
                                                 try (FileOutputStream fos = new FileOutputStream(file)) {
                                                     exporter.export(book, fos);
                                                 }
