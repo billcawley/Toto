@@ -53,6 +53,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneOffset;
@@ -86,6 +87,11 @@ public class ZKSpreadsheetCommandController {
             s = s.substring(1);
         }
         return s;
+    }
+
+    static DecimalFormat df = new DecimalFormat("00000000");
+    static String eightCharInt(int input){
+        return df.format(input);
     }
 
 
@@ -313,7 +319,8 @@ public class ZKSpreadsheetCommandController {
                                     int filePointer = (int) (now.toEpochSecond(ZoneOffset.UTC) - start.toEpochSecond(ZoneOffset.UTC));
 
                                     for (int row = name.getRefersToCellRegion().row; row <= name.getRefersToCellRegion().lastRow; row++) {
-                                        String fileName = base64int(filePointer) + ".xml";
+                                        //String fileName = base64int(filePointer) + ".xml";
+                                        String fileName = eightCharInt(filePointer) + ".xml";
                                         // if multi row try and find a prefix value in the range
                                         if (multiRowPrefix){
                                             CellRegion refersToCellRegion = filePrefixName.getRefersToCellRegion();
@@ -333,7 +340,8 @@ public class ZKSpreadsheetCommandController {
                                         //System.out.println("file name : " + fileName);
                                         while (zipforxmlfiles.resolve(fileName).toFile().exists()){
                                             filePointer++;
-                                            fileName = base64int(filePointer) + ".xml";
+//                                            fileName = base64int(filePointer) + ".xml";
+                                            fileName = eightCharInt(filePointer) + ".xml";
                                             if (filePrefix != null){
                                                 fileName = filePrefix + fileName;
                                             }
@@ -412,7 +420,8 @@ public class ZKSpreadsheetCommandController {
                                                 StringBuilder errorLog = new StringBuilder();
                                                 ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
                                                 Exporter exporter = Exporters.getExporter();
-                                                File file = zipforxmlfiles.resolve((filePrefix != null ? filePrefix : "") + base64int(filePointer) + ".xlsx").toFile();
+//                                                File file = zipforxmlfiles.resolve((filePrefix != null ? filePrefix : "") + base64int(filePointer) + ".xlsx").toFile();
+                                                File file = zipforxmlfiles.resolve((filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx").toFile();
                                                 try (FileOutputStream fos = new FileOutputStream(file)) {
                                                     exporter.export(book, fos);
                                                 }
