@@ -47,6 +47,7 @@ public class ReportRenderer {
     public static final String AZXML = "az_xml";
     public static final String AZXMLFILENAME = "az_xmlfilename";
     public static final String AZSUPPORTREPORTNAME = "az_supportreportname";
+    public static final String AZSUPPORTREPORTFILEXMLTAG = "az_supportreportfilexmltag";
     public static final String AZSUPPORTREPORTSELECTIONS = "az_supportreportselections";
     private static final String AZCONTEXT = "az_context";
     static final String AZPIVOTFILTERS = "az_pivotfilters";//old version - not to be continued

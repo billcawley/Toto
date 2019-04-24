@@ -888,7 +888,7 @@ Each lookup (e.g   '123 Auto Accident not relating to speed') is given a lookup 
         //so the categorisation must not override other categorisations
 
         for (Name grandparent:parent.getParents()){
-            if (child.getAttribute(grandparent.getDefaultDisplayName())!=null){
+            if (grandparent.getDefaultDisplayName() != null && child.getAttribute(grandparent.getDefaultDisplayName())!=null){
                 return true;
             }
         }

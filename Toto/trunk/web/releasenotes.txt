@@ -1,3 +1,15 @@
+23-04-19
+
+NPE bug fix
+
+18-04-19
+
+Instead of base 64 hashes use simple digits
+
+15-04-19
+
+More flexible file prefixes in XML export
+
 15-04-19
 
 Better xlsx file names in XML zip download

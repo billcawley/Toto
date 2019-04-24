@@ -84,6 +84,8 @@ public class SpreadsheetService {
     private static final String SCANBUSINESS = "scanbusiness";
     // where to scan the XML, initially a path
     private static final String XMLSCANDIR = "xmlscandir";
+    // where to put XML
+    private static final String XMLDESTINATIONDIR = "xmldestinationdir";
 
     private static String getProperty(String key) {
         if (properties.get(key) == null) {
@@ -134,6 +136,11 @@ public class SpreadsheetService {
 
     public static String getXMLScanDir() {
         return getProperty(XMLSCANDIR);
+    }
+
+    // where we'll put generated XML for Ed Broking
+    public static String getXMLDestinationDir() {
+        return getProperty(XMLDESTINATIONDIR);
     }
 
     public static String getScanBusiness() {
