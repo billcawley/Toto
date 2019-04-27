@@ -164,7 +164,9 @@ public class ProvenanceService {
             toReturn.append(", ").append(context.getName() != null ? context.getName().getDefaultDisplayName() : context.getDescription());
         }
         for (DataRegionHeading rowHeading : azquoCell.getRowHeadings()){
-            toReturn.append(", ").append(rowHeading.getName() != null ? rowHeading.getName().getDefaultDisplayName() : rowHeading.getDescription());
+            if (rowHeading!=null){
+                toReturn.append(", ").append(rowHeading.getName() != null ? rowHeading.getName().getDefaultDisplayName() : rowHeading.getDescription());
+            }
         }
         for (DataRegionHeading columnHeading : azquoCell.getColumnHeadings()){
             // could be a blank column heading, a gap on multi line
