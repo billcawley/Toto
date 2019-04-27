@@ -651,7 +651,11 @@ class DataRegionHeadingService {
             toReturn.addAll(permuteHeadings(mainHeading, subHeadings, sharedNames, noPermuteTotals));
         } else {
             Iterator<List<List<DataRegionHeading>>> headingRowIterator = headingLists.iterator();
-            List<DataRegionHeading> nextHeading = headingRowIterator.next().get(0);
+            List<DataRegionHeading> nextHeading = null;
+            List<List<DataRegionHeading>> headingList = headingRowIterator.next();
+            if (headingList!=null&& headingList.size()> 0 ){
+                nextHeading = headingList.get(0);
+            }
             if (nextHeading != null && nextHeading.size() > 0 && nextHeading.get(0).getFunction() == DataRegionHeading.FUNCTION.PERMUTE) { // if the first one is permute we assume the lot are
                 toReturn.addAll(findPermutedItems(sharedNames, nextHeading, noPermuteTotals));//assumes only one row of headings, it's a list of the permute names
             } else {        //last column - simply expand, filling spaces where available.
