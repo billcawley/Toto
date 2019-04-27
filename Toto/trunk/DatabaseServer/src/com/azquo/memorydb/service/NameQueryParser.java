@@ -125,7 +125,7 @@ public class NameQueryParser {
             return toReturn;
         }
         boolean sorted = false;
-
+        setFormula = replaceAttributes(azquoMemoryDBConnection, setFormula);//replaces quoted attributes as constants
         setFormula = StringUtils.prepareStatement(setFormula, nameStrings, attributeStrings, formulaStrings);
         if (!setFormula.contains(" + ") && setFormula.toLowerCase().endsWith(" " + StringLiterals.SORTED)) {
             sorted = true;
@@ -474,6 +474,35 @@ public class NameQueryParser {
         }
     }
 
+    static String replaceAttributes(AzquoMemoryDBConnection azquoMemoryDBConnection,String statement)throws Exception{
+        StringBuilder modifiedStatement = new StringBuilder();
+        Pattern p = Pattern.compile("" + StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE +"]*" + StringLiterals.QUOTE + "\\."+StringLiterals.QUOTE + "[^" + StringLiterals.QUOTE +"]*"+StringLiterals.QUOTE); //`name`.`attribute`
+        Matcher matcher = p.matcher(statement);
+        int lastEnd = 0;
+        while (matcher.find()) {
+            if (modifiedStatement.length() == 0) {
+                modifiedStatement.append(statement, 0, matcher.start());
+            } else {
+                modifiedStatement.append(statement, lastEnd, matcher.start());
+            }
+            lastEnd = matcher.end();
+            String attribute = statement.substring(matcher.start(), matcher.end());
+            int nameEnd = statement.indexOf(StringLiterals.QUOTE,matcher.start()+1);
+            String nameString = statement.substring(matcher.start() + 1, nameEnd);
+            String attributeString = statement.substring(nameEnd + 3,matcher.end() - 1);
+            Name name = NameService.findByName(azquoMemoryDBConnection,nameString);
+            if (name!=null){
+                String attVal = name.getAttribute(attributeString);
+                if (attVal!=null) {
+                    attribute = StringLiterals.QUOTE+ attVal + StringLiterals.QUOTE;//replaces with a name (an element of a string
+                }
+            }
+            modifiedStatement.append(attribute);
+        }
+        modifiedStatement.append(statement.substring(lastEnd, statement.length()));
+
+        return modifiedStatement.toString();
+    }
     // edd : I wonder a little about this but will leave it for the mo
 
     static int parseInt(final String string, int existing) {
