@@ -276,19 +276,15 @@ this may now not work at all, perhaps delete?
         }
         reportList.sort((o1, o2) -> {
             String cat1 = o1.getCategory();
-            if (cat1==null || cat1.isEmpty()) cat1 = "zzz";
-            String cat2 = o2.getCategory();
-            if (cat2==null || cat2.isEmpty()) cat2 = "zzz";
-             // adding isempty here as empty is the same as null for our sorting purposes
-           // String o1Explanation = o1.getCategory() + o1.getExplanation();
-            //if (o1Explanation == null || o1Explanation.isEmpty()) o1Explanation = "zzz";
-           // String o2Explanation = o2.getExplanation();
-           // if (o2Explanation == null || o2Explanation.isEmpty()) o2Explanation = "zzz";
-            return (o1.getDatabase() + cat1 + " " + o1.getReportName()).compareTo(o2.getDatabase() + cat2 + " " + o2.getReportName());
+            return (o1.getDatabase() + getVal(o1.getCategory()) + getVal(o1.getExplanation())).compareTo(o2.getDatabase() + getVal(o2.getCategory()) + getVal(o2.getExplanation()));
         });
         return reportList;
     }
 
+    private static String getVal(String value){
+        if (value==null || value.isEmpty()) return "zzz";
+        return value;
+    }
     public static List<ReportSchedule> getReportScheduleList(final LoggedInUser loggedInUser) {
         List<ReportSchedule> toReturn = new ArrayList<>();
         List<Database> databases = DatabaseDAO.findForBusinessId(loggedInUser.getUser().getBusinessId());
