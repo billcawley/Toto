@@ -118,7 +118,7 @@ public class ReportExecutor {
             }
             for (int lineNo = 0; lineNo < commands.size(); lineNo++) { // makes checking ahead easier
                 String line = commands.get(lineNo);
-                String trimmedLine = line.trim();
+                String trimmedLine = CommonReportUtils.replaceUserChoicesInQuery(loggedInUser, line);//replaces [choice] with chosen
                 if (trimmedLine.toLowerCase().startsWith("for each")) {
                     // gather following lines - what we'll be executing
                     int onwardLineNo = lineNo + 1;
