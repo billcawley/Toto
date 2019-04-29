@@ -104,7 +104,7 @@ public class CommonReportUtils {
                 if (endPos < 0) break;
                 String userChoice = query.substring(pos + 1, endPos);
                 String userChoiceBasic = userChoice;
-                if (userChoice.startsWith("az_")) {
+                if (userChoice.toLowerCase().startsWith("az_")) {
                     userChoiceBasic = userChoice.substring(3);
                 }
                 String replacement = userChoices.get(userChoiceBasic.toLowerCase());
@@ -121,7 +121,7 @@ public class CommonReportUtils {
             }
 
         }
-        return query;
+        return query.trim();
     }
 
     public static String resolveQuery(LoggedInUser loggedInUser, String query) {
