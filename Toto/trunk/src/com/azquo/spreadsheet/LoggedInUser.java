@@ -75,7 +75,8 @@ public class LoggedInUser implements Serializable {
     private static final DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter df2 = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"); // 24 hour
 
-    protected LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String imageStoreName, String businessDirectory) {
+    // public allowing hack for xml scanning - need to sort - todo
+    public LoggedInUser(String sessionId, final User user, DatabaseServer databaseServer, Database database, String imageStoreName, String businessDirectory) {
         this.sessionId = sessionId;
         this.user = user;
         this.businessDirectory = businessDirectory;

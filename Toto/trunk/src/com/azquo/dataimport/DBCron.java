@@ -1,21 +1,22 @@
 package com.azquo.dataimport;
 
+import com.azquo.admin.AdminService;
 import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
 import com.azquo.memorydb.DatabaseAccessToken;
+import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.transport.UploadedFile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -23,10 +24,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 /**
@@ -86,7 +87,7 @@ public class DBCron {
                 if (b != null) {
                     if (SpreadsheetService.getScanDir() != null && SpreadsheetService.getScanDir().length() > 0) {
                         //System.out.println("running file scan");
-                        // we'll move imported files into loaded when they have been entered into Pending Uploads
+                        // todo - move tagged out of here if the scan dir is a mapped drive as it may become
                         Path tagged = Paths.get(SpreadsheetService.getScanDir() + "/tagged");
                         if (!Files.exists(tagged)) {
                             Files.createDirectories(tagged);
@@ -127,101 +128,132 @@ public class DBCron {
                             });
                         }
                     }
-                    // todo : id brokasure adds e.g. CSJan1912.xml-19022815141117-Error the 19022815141117 here and a way to match back to the original XML which probably means timestamping it
+                    long millisOldThreshold = 300_000;
+
                     if (SpreadsheetService.getXMLScanDir() != null && SpreadsheetService.getXMLScanDir().length() > 0) {
                         // make tagged as before but this time the plan is to parse all found XML files into a single CSV and upload it
-                        Path tagged = Paths.get(SpreadsheetService.getXMLScanDir() + "/tagged");
+                        // note - have moved tagged to temp as on Ed Broking's servers the scan dir is a remote network drive, don't want to do "work" in there
+                        Path tagged = Paths.get(SpreadsheetService.getHomeDir() + "/temp/tagged");
                         if (!Files.exists(tagged)) {
                             Files.createDirectories(tagged);
                         }
+                        // extra bit of logic. It seems Brokasure process files *slow* so I need to check that the newest file is at least 5 mins old or it could be in the middle of a batch
+                        // fragment off t'internet to get the most recent file
                         Path p = Paths.get(SpreadsheetService.getXMLScanDir());
-                        if (Files.list(p).count() > 0){
+                        Optional<Path> lastFilePath = Files.list(p)    // here we get the stream with full directory listing
+                                .filter(f -> !Files.isDirectory(f))  // exclude subdirectories from listing
+                                .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
+                        // 300 seconds, 5 minutes, I want the most recent file to be at least that old before I start doing things to them
+                        if (lastFilePath.isPresent() && !Files.isDirectory(lastFilePath.get()) && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold && Files.list(p).count() > 0) {
                             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                             final DocumentBuilder builder = factory.newDocumentBuilder();
-                            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(System.currentTimeMillis() + "generatedfromxml.csv").toFile()));
+                            long fileMillis = System.currentTimeMillis();
                             //if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
                             // I'm going to allow for the possiblity that different files might have different fields
                             Set<String> headings = new HashSet<>();
                             headings.add("Date");
                             headings.add("Error");
                             Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
+                            AtomicReference<String> rootDocumentName = new AtomicReference<>();
                             try (Stream<Path> list = Files.list(p)) {
                                 list.forEach(path -> {
                                     // Do stuff
                                     if (!Files.isDirectory(path)) { // skip any directories
                                         try {
                                             /*
-                                            files in pairs, need to grab Brokasure timestamp
 
-                     matching  back to the original required as a file with an Error just has the error
-                     let us take these as an example
-file:///home/edward/Downloads/test xml/cCSJan199.xml-19022815191202
-file:///home/edward/Downloads/test xml/cCSJan1912.xml-19022815141117
-file:///home/edward/Downloads/test xml/CSJan199.xml-19022815191202-7031063
-file:///home/edward/Downloads/test xml/CSJan1912.xml-19022815141117-Error
-
-cCSJan199.xml worked and seems identical
-CSJan1912.xml did not and has different fields, combining should work
-
-I shall assume that the original file ends in .xml so that's my "key" so to speak
+                                            Note : I was assuming files being returned in pairs but it seems not,
+                                            if the file name contains error then look for the original in temp and load that as well
 
                                              */
 
                                             String origName = path.getFileName().toString();
-                                            if (origName.toLowerCase().contains(".xml")){
-                                                String fileKey = origName.substring(0, origName.indexOf(".xml") + 4);
+                                            if (origName.toLowerCase().contains(".xml")) {
+                                                String fileKey = origName.substring(0, origName.indexOf("-"));
                                                 FileTime lastModifiedTime = Files.getLastModifiedTime(path);
-                                                long timestamp = System.currentTimeMillis();
-                                                if (lastModifiedTime.toMillis() < (timestamp - 1_000)) {
-                                                    System.out.println("file : " + origName);
-                                                    // unlike the above, before moving it I need to read it
-                                                    try {
-                                                        Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
-                                                        Document workbookXML = builder.parse(path.toFile());
-                                                        //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
-                                                        Element documentElement = workbookXML.getDocumentElement();
-                                                        // this criteria is currently suitable for the simple XML from Brokasure
-                                                        for (int index = 0; index < documentElement.getChildNodes().getLength(); index++){
-                                                            Node node = documentElement.getChildNodes().item(index);
-                                                            if (node.hasChildNodes()){
-                                                                headings.add(node.getNodeName());
-                                                                thisFileValues.put(node.getNodeName(), node.getFirstChild().getNodeValue());
-                                                            }
-                                                        }
-                                                        thisFileValues.put("Date", lastModifiedTime.toString());
-                                                    } catch (SAXException e) {
-                                                        e.printStackTrace();
-                                                    }
+                                                // todo - match to the source file when it hits an error response
 
+                                                long timestamp = System.currentTimeMillis();
+                                                if (lastModifiedTime.toMillis() < (timestamp - millisOldThreshold)) {
+                                                    System.out.println("file : " + origName);
+                                                    readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime);
+                                                    // is it an error and do we have the original? If so mash 'em together
+                                                    if (origName.endsWith("Error.xml") && Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))){
+                                                        readXML(fileKey,filesValues,rootDocumentName,builder,Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"),headings,lastModifiedTime);
+                                                    }
                                                     Files.move(path, tagged.resolve(timestamp + origName));
                                                 } else {
-                                                    System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be 120 seconds old");
+                                                    System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be " + (millisOldThreshold / 1_000) + " seconds old");
                                                 }
                                             } else {
                                                 System.out.println("non XML file found?? " + origName);
                                             }
-                                        } catch (IOException e) {
+                                        } catch (Exception e) {
                                             e.printStackTrace();
                                         }
                                     }
                                 });
                             }
-                            for (String heading : headings){
+                            String csvFileName = fileMillis + "generatedfromxml (importversion=Brokasure" + rootDocumentName.get() + ").csv";
+                            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
+                            for (String heading : headings) {
                                 bufferedWriter.write(heading + "\t");
                             }
                             bufferedWriter.newLine();
-                            for (Map<String, String> lineValues : filesValues.values()){
-                                for (String heading : headings){
+                            for (Map<String, String> lineValues : filesValues.values()) {
+                                for (String heading : headings) {
                                     String value = lineValues.get(heading);
                                     bufferedWriter.write((value != null ? value : "") + "\t");
                                 }
                                 bufferedWriter.newLine();
                             }
                             bufferedWriter.close();
+                            Path newScannedDir = Files.createDirectories(tagged.resolve(fileMillis + "scanned"));
+                            try (Stream<Path> list = Files.list(tagged)) {
+                                list.forEach(path -> {
+                                    // Do stuff
+                                    if (!Files.isDirectory(path)) { // skip any directories
+                                        try {
+                                            Files.move(path, newScannedDir.resolve(path.getFileName()));
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                });
+                            }
+                            if (Files.exists(newScannedDir.resolve(csvFileName)) && SpreadsheetService.getXMLScanDB() != null && !SpreadsheetService.getXMLScanDB().isEmpty()){ // it should exist and a database should be set also
+                                // hacky, need to sort, todo
+                                Database db = DatabaseDAO.findForNameAndBusinessId(SpreadsheetService.getXMLScanDB(), b.getId());
+                                LoggedInUser loggedInUser = new LoggedInUser("", null, DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
+
+                                ImportService.importTheFile(loggedInUser, new UploadedFile( newScannedDir.resolve(csvFileName).toString()
+                                        , Collections.singletonList(newScannedDir.resolve(csvFileName).getFileName().toString()), false), null, null);
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    // factored as it will be called a second time for errors
+    private static void readXML(String fileKey, Map<String, Map<String, String>> filesValues, AtomicReference<String> rootDocumentName
+            , DocumentBuilder builder, Path path, Set<String> headings, FileTime lastModifiedTime) throws IOException, SAXException {
+        // unlike the above, before moving it I need to read it
+        Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
+        Document workbookXML = builder.parse(path.toFile());
+        //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
+        Element documentElement = workbookXML.getDocumentElement();
+        rootDocumentName.set(documentElement.getTagName());
+        // this criteria is currently suitable for the simple XML from Brokasure
+        for (int index = 0; index < documentElement.getChildNodes().getLength(); index++) {
+            Node node = documentElement.getChildNodes().item(index);
+            if (node.hasChildNodes()) {
+                headings.add(node.getNodeName());
+                thisFileValues.put(node.getNodeName(), node.getFirstChild().getNodeValue());
+            }
+        }
+        thisFileValues.put("Date", lastModifiedTime.toString());
+
     }
 }

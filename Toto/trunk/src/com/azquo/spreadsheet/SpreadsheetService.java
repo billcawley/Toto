@@ -86,6 +86,11 @@ public class SpreadsheetService {
     private static final String XMLSCANDIR = "xmlscandir";
     // where to put XML
     private static final String XMLDESTINATIONDIR = "xmldestinationdir";
+    // if XML is scanned which db to put it into
+    private static final String XMLSCANDB = "xmlscandb";
+
+    //Ed Broking Brokasure network prefix
+    private static final String BSINBOXPATH = "bsinboxpath";
 
     private static String getProperty(String key) {
         if (properties.get(key) == null) {
@@ -138,9 +143,18 @@ public class SpreadsheetService {
         return getProperty(XMLSCANDIR);
     }
 
+    public static String getXMLScanDB() {
+        return getProperty(XMLSCANDB);
+    }
+
     // where we'll put generated XML for Ed Broking
     public static String getXMLDestinationDir() {
         return getProperty(XMLDESTINATIONDIR);
+    }
+
+    // ok this is pure Ed Broking - Broaksure path prefix for XML feeds. Need to think about extracting at some point
+    public static String getBSInboxPath() {
+        return getProperty(BSINBOXPATH);
     }
 
     public static String getScanBusiness() {

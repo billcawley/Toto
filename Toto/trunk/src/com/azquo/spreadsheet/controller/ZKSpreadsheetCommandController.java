@@ -1,21 +1,17 @@
 package com.azquo.spreadsheet.controller;
 
-import com.azquo.DateUtils;
 import com.azquo.TypedPair;
-import com.azquo.admin.AdminService;
 import com.azquo.admin.database.Database;
 import com.azquo.admin.onlinereport.OnlineReport;
 import com.azquo.admin.onlinereport.OnlineReportDAO;
-import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.dataimport.ImportService;
-import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
 import com.azquo.spreadsheet.zk.ChoicesService;
 import com.azquo.spreadsheet.zk.ReportRenderer;
 import com.azquo.spreadsheet.zk.BookUtils;
 import com.azquo.spreadsheet.zk.ReportService;
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.pdfbox.util.PDFMergerUtility;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -229,6 +225,8 @@ public class ZKSpreadsheetCommandController {
                         int fileCount = 0;
                         // ok try to find the relevant regions
                         List<SName> namesForSheet = BookUtils.getNamesForSheet(ss.getSelectedSheet());
+                        Path azquoTempDir = Paths.get(SpreadsheetService.getHomeDir() + "/temp"); // do xml initially in here then copy across, we may need a capy of the file later to match back to errors
+
                         Path destdir;
                         if (SpreadsheetService.getXMLDestinationDir() != null && !SpreadsheetService.getXMLDestinationDir().isEmpty()){
                             destdir = Paths.get(SpreadsheetService.getXMLDestinationDir());
@@ -325,13 +323,16 @@ public class ZKSpreadsheetCommandController {
 
                                     List<String> xmlNames = new ArrayList<>(xmlToColMap.keySet());
                                     Collections.sort(xmlNames);
-
+                                    // then sort again jamming those with nested elements at the bottom
+                                    xmlNames.sort(Comparator.comparingInt(s -> StringUtils.countMatches(s, "/")));
                                     DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
                                     DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
                                     TransformerFactory transformerFactory = TransformerFactory.newInstance();
                                     Transformer transformer = transformerFactory.newTransformer();
                                     // matching brekasure example
                                     transformer.setOutputProperty(OutputKeys.STANDALONE, "yes");
+                                    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+                                    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
                                     // going for one file per line as per brokersure, zip at the end
                                     // tracking where we are in the xml, what elements we're in
                                     // new criteria for filenames - do a base 64 hash
@@ -353,9 +354,14 @@ public class ZKSpreadsheetCommandController {
                                             }
                                         }
 
-                                        // check the file pointer is fit for purpose for both xml
+                                        /* check the file pointer is fit for purpose for xml
+                                         note! I have to make the xml in azquo temp (which is not automatically cleared up - it may be manually periodically)
+                                         this is because in case of an error Brokasure is NOT currently returning the original file and will have zapped it from the
+                                         inbox. Hence I need a copy in temp, I'll use temp to check xml files are not duplicate names.
+                                         A moot point in the case of zips but no harm
+                                         */
                                         String fileName = eightCharInt(filePointer) + ".xml";
-                                        while (destdir.resolve(fileName).toFile().exists()){
+                                        while (azquoTempDir.resolve(fileName).toFile().exists()){
                                             filePointer++;
 //                                            fileName = base64int(filePointer) + ".xml";
                                             fileName = eightCharInt(filePointer) + ".xml";
@@ -396,7 +402,7 @@ public class ZKSpreadsheetCommandController {
                                             if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
                                                 reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
                                                 // check that the xlsx doesn't already exist - if it does then bump the pointer, also need to check xml for existing files at this point
-                                                while (destdir.resolve(reportFileName).toFile().exists() || destdir.resolve(fileName).toFile().exists()){
+                                                while (destdir.resolve(reportFileName).toFile().exists() || azquoTempDir.resolve(fileName).toFile().exists()){
                                                     filePointer++;
                                                     reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
                                                     fileName = eightCharInt(filePointer) + ".xml";
@@ -440,8 +446,8 @@ public class ZKSpreadsheetCommandController {
                                             int col = xmlToColMap.get(xmlName);
                                             String value = "";
                                             if (col == reportFileXMLTagIndex){
-                                                // we may need to add path info . . . perhaps from the scan dir? Todo
-                                                value = reportFileName;
+                                                // the path seems hacky but i can't see a way around that at the mo
+                                                value = SpreadsheetService.getBSInboxPath() + reportFileName;
                                             } else {
                                                 CellData cellData = Ranges.range(ss.getSelectedSheet(), row, col).getCellData();
                                                 if (cellData != null) {
@@ -470,12 +476,17 @@ public class ZKSpreadsheetCommandController {
                                             xmlContext.get(xmlContext.size() - 1).appendChild(doc.createTextNode(value));
                                         }
                                         DOMSource source = new DOMSource(doc);
-                                        BufferedWriter bufferedWriter = Files.newBufferedWriter(destdir.resolve(fileName));
+                                        BufferedWriter bufferedWriter = Files.newBufferedWriter(azquoTempDir.resolve(fileName));
                                         StreamResult result = new StreamResult(bufferedWriter);
                                         transformer.transform(source, result);
                                         bufferedWriter.close();
+                                        // now copy from the azquo temp dir
+                                        Files.copy(azquoTempDir.resolve(fileName), destdir.resolve(fileName));
                                         fileCount++;
                                         filePointer++;
+                                        if (fileCount > 8){
+                                            break;
+                                        }
                                     }
                                 }
                             }
