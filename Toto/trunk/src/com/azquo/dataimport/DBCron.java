@@ -5,6 +5,7 @@ import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
 import com.azquo.admin.database.*;
+import com.azquo.admin.user.User;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
@@ -128,7 +129,7 @@ public class DBCron {
                             });
                         }
                     }
-                    long millisOldThreshold = 300_000;
+                    long millisOldThreshold = 1_000;
 
                     if (SpreadsheetService.getXMLScanDir() != null && SpreadsheetService.getXMLScanDir().length() > 0) {
                         // make tagged as before but this time the plan is to parse all found XML files into a single CSV and upload it
@@ -176,11 +177,11 @@ public class DBCron {
                                                 long timestamp = System.currentTimeMillis();
                                                 if (lastModifiedTime.toMillis() < (timestamp - millisOldThreshold)) {
                                                     System.out.println("file : " + origName);
-                                                    readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime);
-                                                    // is it an error and do we have the original? If so mash 'em together
-                                                    if (origName.endsWith("Error.xml") && Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))){
+                                                    // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
+                                                    if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))){
                                                         readXML(fileKey,filesValues,rootDocumentName,builder,Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"),headings,lastModifiedTime);
                                                     }
+                                                    readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime);
                                                     Files.move(path, tagged.resolve(timestamp + origName));
                                                 } else {
                                                     System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be " + (millisOldThreshold / 1_000) + " seconds old");
@@ -224,10 +225,12 @@ public class DBCron {
                             if (Files.exists(newScannedDir.resolve(csvFileName)) && SpreadsheetService.getXMLScanDB() != null && !SpreadsheetService.getXMLScanDB().isEmpty()){ // it should exist and a database should be set also
                                 // hacky, need to sort, todo
                                 Database db = DatabaseDAO.findForNameAndBusinessId(SpreadsheetService.getXMLScanDB(), b.getId());
-                                LoggedInUser loggedInUser = new LoggedInUser("", null, DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
+                                LoggedInUser loggedInUser = new LoggedInUser(""
+                                        , new User(0,LocalDateTime.now(),0,"","","","","","",0,0,"","")
+                                        , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
 
-                                ImportService.importTheFile(loggedInUser, new UploadedFile( newScannedDir.resolve(csvFileName).toString()
-                                        , Collections.singletonList(newScannedDir.resolve(csvFileName).getFileName().toString()), false), null, null);
+/*                                ImportService.importTheFile(loggedInUser, new UploadedFile( newScannedDir.resolve(csvFileName).toString()
+                                        , Collections.singletonList(newScannedDir.resolve(csvFileName).getFileName().toString()), false), null, null);*/
                             }
                         }
                     }
@@ -250,7 +253,7 @@ public class DBCron {
             Node node = documentElement.getChildNodes().item(index);
             if (node.hasChildNodes()) {
                 headings.add(node.getNodeName());
-                thisFileValues.put(node.getNodeName(), node.getFirstChild().getNodeValue());
+                thisFileValues.put(node.getNodeName(), node.getFirstChild().getNodeValue().replace("\n", ""));
             }
         }
         thisFileValues.put("Date", lastModifiedTime.toString());

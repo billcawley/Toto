@@ -152,11 +152,6 @@ public class SpreadsheetService {
         return getProperty(XMLDESTINATIONDIR);
     }
 
-    // ok this is pure Ed Broking - Broaksure path prefix for XML feeds. Need to think about extracting at some point
-    public static String getBSInboxPath() {
-        return getProperty(BSINBOXPATH);
-    }
-
     public static String getScanBusiness() {
         return getProperty(SCANBUSINESS);
     }

@@ -447,7 +447,7 @@ public class ZKSpreadsheetCommandController {
                                             String value = "";
                                             if (col == reportFileXMLTagIndex){
                                                 // the path seems hacky but i can't see a way around that at the mo
-                                                value = SpreadsheetService.getBSInboxPath() + reportFileName;
+                                                value = reportFileName;
                                             } else {
                                                 CellData cellData = Ranges.range(ss.getSelectedSheet(), row, col).getCellData();
                                                 if (cellData != null) {

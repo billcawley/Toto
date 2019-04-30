@@ -1,3 +1,9 @@
+29-04-19
+
+Report list sort now on Category and Explanation
+
+Further Brokasure XML work, to read data back in. Currently untested.
+
 25-04-19
 
 XML work to export to a directory and for the XML to reference the XLSX file by name
