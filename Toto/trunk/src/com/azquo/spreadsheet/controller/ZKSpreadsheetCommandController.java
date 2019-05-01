@@ -449,7 +449,7 @@ public class ZKSpreadsheetCommandController {
                                         }
                                         // then I need to create a simple properties file with the extra info
                                         if (!xmlExtraInfoColMap.isEmpty()){
-                                            try (OutputStream output = new FileOutputStream((filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".properties")) {
+                                            try (OutputStream output = new FileOutputStream(azquoTempDir.resolve((filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".properties").toString())) {
                                                 Properties properties = new Properties();
                                                 for (String propertyName : xmlExtraInfoColMap.keySet()) {
                                                     CellData cellData = Ranges.range(ss.getSelectedSheet(), row, xmlExtraInfoColMap.get(propertyName)).getCellData();

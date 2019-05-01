@@ -8,6 +8,7 @@ import com.azquo.admin.user.User;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
+import com.azquo.spreadsheet.transport.UploadedFile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -186,12 +187,15 @@ public class DBCron {
                                                                 properties.load(is);
                                                                 Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
                                                                 for (String propertyName : properties.stringPropertyNames()){
+                                                                    headings.add(propertyName);
                                                                     thisFileValues.put(propertyName, properties.getProperty(propertyName));
                                                                 }
                                                             }
                                                         }
-                                                        readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime);
-                                                        Files.move(path, tagged.resolve(timestamp + origName));
+                                                        // ok I need to stop fiels of a different type mixing, read xml will return false if the root document name doens't match. Under those circumstances leave the file there
+                                                        if (readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime)){
+                                                            Files.move(path, tagged.resolve(timestamp + origName));
+                                                        }
                                                     } else {
                                                         System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be " + (millisOldThreshold / 1_000) + " seconds old");
                                                     }
@@ -238,8 +242,8 @@ public class DBCron {
                                             , new User(0,LocalDateTime.now(),0,"","","","","","",0,0,"","")
                                             , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
 
-/*                                ImportService.importTheFile(loggedInUser, new UploadedFile( newScannedDir.resolve(csvFileName).toString()
-                                        , Collections.singletonList(newScannedDir.resolve(csvFileName).getFileName().toString()), false), null, null);*/
+                                ImportService.importTheFile(loggedInUser, new UploadedFile( newScannedDir.resolve(csvFileName).toString()
+                                        , Collections.singletonList(newScannedDir.resolve(csvFileName).getFileName().toString()), false), null, null);
                                 }
                             }
                         }
@@ -250,14 +254,19 @@ public class DBCron {
     }
 
     // factored as it will be called a second time for errors
-    private static void readXML(String fileKey, Map<String, Map<String, String>> filesValues, AtomicReference<String> rootDocumentName
+    private static boolean readXML(String fileKey, Map<String, Map<String, String>> filesValues, AtomicReference<String> rootDocumentName
             , DocumentBuilder builder, Path path, Set<String> headings, FileTime lastModifiedTime) throws IOException, SAXException {
         // unlike the above, before moving it I need to read it
         Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
         Document workbookXML = builder.parse(path.toFile());
         //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
         Element documentElement = workbookXML.getDocumentElement();
-        rootDocumentName.set(documentElement.getTagName());
+        if (rootDocumentName.get() == null){
+            rootDocumentName.set(documentElement.getTagName());
+        } else if (!rootDocumentName.get().equals(documentElement.getTagName())){ // this file doens't match the others in this set, don't scan it into the file
+            filesValues.remove(fileKey); // get rid of that key
+            return false; // tells the code outside to leave the file there, we'lll process later
+        }
         // this criteria is currently suitable for the simple XML from Brokasure
         for (int index = 0; index < documentElement.getChildNodes().getLength(); index++) {
             Node node = documentElement.getChildNodes().item(index);
@@ -267,5 +276,6 @@ public class DBCron {
             }
         }
         thisFileValues.put("Date", lastModifiedTime.toString());
+        return true;
     }
 }
