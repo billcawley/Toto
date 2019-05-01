@@ -147,7 +147,7 @@ public class DBCron {
                                 .filter(f -> !Files.isDirectory(f))  // exclude subdirectories from listing
                                     .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
                             // 300 seconds, 5 minutes, I want the most recent file to be at least that old before I start doing things to them
-                            if (lastFilePath.isPresent() && !Files.isDirectory(lastFilePath.get()) && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold && Files.list(p).count() > 0) {
+                            if (lastFilePath.isPresent() && !Files.isDirectory(lastFilePath.get()) && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold) {
                                 DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                                 final DocumentBuilder builder = factory.newDocumentBuilder();
                                 long fileMillis = System.currentTimeMillis();
