@@ -79,6 +79,12 @@ public class BatchImporter implements Callable<Void> {
                 ImportCellWithHeading first = lineToLoad.get(0);
                 if (first.getLineValue().length() > 0 || first.getImmutableImportHeading().heading == null
                         || first.getImmutableImportHeading().compositionPattern != null || first.getImmutableImportHeading().attribute != null) {
+                    //check dates before resolving composite values
+                    for (ImportCellWithHeading importCellWithHeading : lineToLoad) {
+                        // this basic value checking was outside, I see no reason it shouldn't be in here
+                        // attempt to standardise date formats
+                        checkDate(importCellWithHeading);
+                     }
                     // composite might do things that affect only and existing hence do it before
                     String rejectionReason = null;
                     for (ImportCellWithHeading cell : lineToLoad) {
@@ -92,7 +98,7 @@ public class BatchImporter implements Callable<Void> {
                     }
                     if (rejectionReason == null) {
                         resolveCompositeValues(azquoMemoryDBConnection, namesFoundCache, attributeNames, lineToLoad, lineToLoadWithLineNumber.getFirst(), compositeIndexResolver);
-                        rejectionReason = checkExistingDateandOnly(azquoMemoryDBConnection, lineToLoad, attributeNames);
+                        rejectionReason = checkOnlyAndExisting(azquoMemoryDBConnection, lineToLoad, attributeNames);
                     }
                     if (rejectionReason == null) {
                         try {
@@ -153,32 +159,9 @@ public class BatchImporter implements Callable<Void> {
 
     }
 
-    private static String checkExistingDateandOnly(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
+    private static String checkOnlyAndExisting(AzquoMemoryDBConnection azquoMemoryDBConnection, List<ImportCellWithHeading> cells, List<String> languages) {
         //returns the error
         for (ImportCellWithHeading cell : cells) {
-            if (cell.getImmutableImportHeading().existing) {
-                boolean cellOk = false;
-                if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
-                    languages = new ArrayList<>();
-                    String newLanguages = cell.getImmutableImportHeading().attribute;
-                    languages.addAll(Arrays.asList(newLanguages.split(",")));
-                }
-                if (languages == null) { // same logic as used when creating the line names, not sure of this
-                    languages = Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME);
-                }
-                // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
-                for (Name parent : cell.getImmutableImportHeading().parentNames) { // try to find any names from anywhere
-                    if (!azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, cell.getLineValue(), parent).isEmpty()) { // NOT empty, we found one!
-                        cellOk = true;
-                        break; // no point continuing, we found one
-                    }
-                }
-                if (!cellOk) {
-                    return cell.getLineValue() + " not existing"; // none found break the line
-                }
-            }
-            //checking existing based on the original date format, but 'only' based on standardised format
-            checkDate(cell);
             if (cell.getImmutableImportHeading().only != null) {
                 //`only' can have wildcards  '*xxx*'
                 String only = cell.getImmutableImportHeading().only.toLowerCase();
@@ -203,7 +186,28 @@ public class BatchImporter implements Callable<Void> {
             }
             // this assumes composite has been run if reqired
             // note that the code assumes there can only be one "existing" per line, it will exit this function on the first one.
-          }
+            if (cell.getImmutableImportHeading().existing) {
+                boolean cellOk = false;
+                if (cell.getImmutableImportHeading().attribute != null && cell.getImmutableImportHeading().attribute.length() > 0) {
+                    languages = new ArrayList<>();
+                    String newLanguages = cell.getImmutableImportHeading().attribute;
+                    languages.addAll(Arrays.asList(newLanguages.split(",")));
+                }
+                if (languages == null) { // same logic as used when creating the line names, not sure of this
+                    languages = Collections.singletonList(StringLiterals.DEFAULT_DISPLAY_NAME);
+                }
+                // note I'm not going to check parentNames are not empty here, if someone put existing without specifying child of then I think it's fair to say the line isn't valid
+                for (Name parent : cell.getImmutableImportHeading().parentNames) { // try to find any names from anywhere
+                    if (!azquoMemoryDBConnection.getAzquoMemoryDBIndex().getNamesForAttributeNamesAndParent(languages, cell.getLineValue(), parent).isEmpty()) { // NOT empty, we found one!
+                        cellOk = true;
+                        break; // no point continuing, we found one
+                    }
+                }
+                if (!cellOk) {
+                    return cell.getLineValue() + " not existing"; // none found break the line
+                }
+            }
+        }
         return null;
     }
 
