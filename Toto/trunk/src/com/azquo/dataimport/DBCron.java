@@ -1,6 +1,5 @@
 package com.azquo.dataimport;
 
-import com.azquo.admin.AdminService;
 import com.azquo.admin.BackupService;
 import com.azquo.admin.business.Business;
 import com.azquo.admin.business.BusinessDAO;
@@ -9,7 +8,6 @@ import com.azquo.admin.user.User;
 import com.azquo.memorydb.DatabaseAccessToken;
 import com.azquo.spreadsheet.LoggedInUser;
 import com.azquo.spreadsheet.SpreadsheetService;
-import com.azquo.spreadsheet.transport.UploadedFile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -18,9 +16,7 @@ import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -101,7 +97,7 @@ public class DBCron {
                                 if (!Files.isDirectory(path)) { // skip any directories
                                     try {
                                         String origName = path.getFileName().toString();
-                                        FileTime lastModifiedTime = null;
+                                        FileTime lastModifiedTime;
                                         lastModifiedTime = Files.getLastModifiedTime(path);
                                         long timestamp = System.currentTimeMillis();
                                         if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
@@ -129,7 +125,7 @@ public class DBCron {
                             });
                         }
                     }
-                    long millisOldThreshold = 1_000;
+                    long millisOldThreshold = 300_000;
 
                     if (SpreadsheetService.getXMLScanDir() != null && SpreadsheetService.getXMLScanDir().length() > 0) {
                         // make tagged as before but this time the plan is to parse all found XML files into a single CSV and upload it
@@ -182,6 +178,17 @@ public class DBCron {
                                                         // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
                                                         if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))){
                                                             readXML(fileKey,filesValues,rootDocumentName,builder,Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"),headings,lastModifiedTime);
+                                                        }
+                                                        // add in extra info, initial reason it was required was for section info not suitable for Brokasure but required to load the data back in
+                                                        if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties"))){
+                                                            try(InputStream is = new FileInputStream(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties")){
+                                                                Properties properties = new Properties();
+                                                                properties.load(is);
+                                                                Map<String, String> thisFileValues = filesValues.computeIfAbsent(fileKey, t -> new HashMap<>());
+                                                                for (String propertyName : properties.stringPropertyNames()){
+                                                                    thisFileValues.put(propertyName, properties.getProperty(propertyName));
+                                                                }
+                                                            }
                                                         }
                                                         readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime);
                                                         Files.move(path, tagged.resolve(timestamp + origName));

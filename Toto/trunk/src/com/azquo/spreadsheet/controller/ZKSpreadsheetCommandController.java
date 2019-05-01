@@ -294,6 +294,20 @@ public class ZKSpreadsheetCommandController {
                                             }
                                         }
                                     }
+                                    // if there's extra info e.g. EdIT Section (not brokasure section) that needs to be hung on to to help identify data on the way back in.
+                                    // Adding extra fields to the XML sent to Brokasure would do this but I want to stick as closely to the spec as possible
+                                    SName xmlExtraInfo = BookUtils.getNameByName(ReportRenderer.AZXMLEXTRAINFO + region, ss.getSelectedSheet());
+                                    Map<String,Integer> xmlExtraInfoColMap = new HashMap<>();
+                                    if (xmlExtraInfo != null){
+                                        for (int col = xmlExtraInfo.getRefersToCellRegion().column; col <= xmlExtraInfo.getRefersToCellRegion().lastColumn; col++){
+                                            CellData cellData = Ranges.range(ss.getSelectedSheet(), xmlExtraInfo.getRefersToCellRegion().row,col).getCellData();
+//                                        String dataFormat = sheet.getInternalSheet().getCell(r, c).getCellStyle().getDataFormat();
+                                            //if (colCount++ > 0) bw.write('\t');
+                                            if (cellData != null && cellData.getFormatText().length() > 0) {
+                                                xmlExtraInfoColMap.put(cellData.getFormatText(), col);// I assume means formatted text
+                                            }
+                                        }
+                                    }
 
 
                                     boolean rootInSheet = true;
@@ -431,6 +445,25 @@ public class ZKSpreadsheetCommandController {
                                                 if (oldDatabase != null) {
                                                     loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), oldDatabase);
                                                 }
+                                            }
+                                        }
+                                        // then I need to create a simple properties file with the extra info
+                                        if (!xmlExtraInfoColMap.isEmpty()){
+                                            try (OutputStream output = new FileOutputStream((filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".properties")) {
+                                                Properties properties = new Properties();
+                                                for (String propertyName : xmlExtraInfoColMap.keySet()) {
+                                                    CellData cellData = Ranges.range(ss.getSelectedSheet(), row, xmlExtraInfoColMap.get(propertyName)).getCellData();
+                                                    String value = "";
+                                                    if (cellData != null) {
+                                                        value = cellData.getFormatText();// I assume means formatted text
+                                                    }
+                                                    if (!value.isEmpty()){
+                                                        properties.put(propertyName, value);
+                                                    }
+                                                }
+                                                properties.store(output, null);
+                                            } catch (IOException io) {
+                                                io.printStackTrace();
                                             }
                                         }
 

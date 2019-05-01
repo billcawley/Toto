@@ -1,3 +1,7 @@
+01-05-19
+
+! File handler leak fixed
+
 29-04-19
 
 Report list sort now on Category and Explanation
