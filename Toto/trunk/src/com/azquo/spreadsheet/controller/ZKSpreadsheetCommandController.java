@@ -87,7 +87,7 @@ public class ZKSpreadsheetCommandController {
     }
 
     static DecimalFormat df = new DecimalFormat("00000000");
-    static String eightCharInt(int input){
+    private static String eightCharInt(int input){
         return df.format(input);
     }
 
@@ -402,7 +402,7 @@ public class ZKSpreadsheetCommandController {
                                             if (onlineReport != null) { // need to prepare it as in the controller todo - factor?
                                                 reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
                                                 // check that the xlsx doesn't already exist - if it does then bump the pointer, also need to check xml for existing files at this point
-                                                while (destdir.resolve(reportFileName).toFile().exists() || azquoTempDir.resolve(fileName).toFile().exists()){
+                                                while (azquoTempDir.resolve(reportFileName).toFile().exists() || azquoTempDir.resolve(fileName).toFile().exists()){
                                                     filePointer++;
                                                     reportFileName = (filePrefix != null ? filePrefix : "") + eightCharInt(filePointer) + ".xlsx";
                                                     fileName = eightCharInt(filePointer) + ".xml";
@@ -420,12 +420,14 @@ public class ZKSpreadsheetCommandController {
                                                 ReportRenderer.populateBook(book, 0, false, true, errorLog); // note true at the end here - keep on logging so users can see changes as they happen
                                                 Exporter exporter = Exporters.getExporter();
 //                                                File file = zipforxmlfiles.resolve((filePrefix != null ? filePrefix : "") + base64int(filePointer) + ".xlsx").toFile();
-                                                File file = destdir.resolve(reportFileName).toFile();
+                                                // like the xml files we now want these to have  a copy in temp too
+                                                File file = azquoTempDir.resolve(reportFileName).toFile();
                                                 try (FileOutputStream fos = new FileOutputStream(file)) {
                                                     exporter.export(book, fos);
                                                     fileCount++;
                                                 }
-                                                // now get the file . . .
+                                                // now copy from the azquo temp dir
+                                                Files.copy(azquoTempDir.resolve(reportFileName), destdir.resolve(reportFileName));
                                                 if (oldDatabase != null) {
                                                     loggedInUser.setDatabaseWithServer(loggedInUser.getDatabaseServer(), oldDatabase);
                                                 }

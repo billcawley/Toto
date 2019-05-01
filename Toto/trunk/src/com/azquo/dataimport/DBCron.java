@@ -141,26 +141,28 @@ public class DBCron {
                         // extra bit of logic. It seems Brokasure process files *slow* so I need to check that the newest file is at least 5 mins old or it could be in the middle of a batch
                         // fragment off t'internet to get the most recent file
                         Path p = Paths.get(SpreadsheetService.getXMLScanDir());
-                        Optional<Path> lastFilePath = Files.list(p)    // here we get the stream with full directory listing
+                        // need to do try with resources or it leaks file handlers
+                        try (Stream<Path> list1 = Files.list(p)){
+                            Optional<Path> lastFilePath = list1    // here we get the stream with full directory listing
                                 .filter(f -> !Files.isDirectory(f))  // exclude subdirectories from listing
-                                .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
-                        // 300 seconds, 5 minutes, I want the most recent file to be at least that old before I start doing things to them
-                        if (lastFilePath.isPresent() && !Files.isDirectory(lastFilePath.get()) && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold && Files.list(p).count() > 0) {
-                            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                            final DocumentBuilder builder = factory.newDocumentBuilder();
-                            long fileMillis = System.currentTimeMillis();
-                            //if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
-                            // I'm going to allow for the possiblity that different files might have different fields
-                            Set<String> headings = new HashSet<>();
-                            headings.add("Date");
-                            headings.add("Error");
-                            Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
-                            AtomicReference<String> rootDocumentName = new AtomicReference<>();
-                            try (Stream<Path> list = Files.list(p)) {
-                                list.forEach(path -> {
-                                    // Do stuff
-                                    if (!Files.isDirectory(path)) { // skip any directories
-                                        try {
+                                    .max(Comparator.comparingLong(f -> f.toFile().lastModified()));  // finally get the last file using simple comparator by lastModified field
+                            // 300 seconds, 5 minutes, I want the most recent file to be at least that old before I start doing things to them
+                            if (lastFilePath.isPresent() && !Files.isDirectory(lastFilePath.get()) && (System.currentTimeMillis() - Files.getLastModifiedTime(lastFilePath.get()).toMillis()) > millisOldThreshold && Files.list(p).count() > 0) {
+                                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                                final DocumentBuilder builder = factory.newDocumentBuilder();
+                                long fileMillis = System.currentTimeMillis();
+                                //if (lastModifiedTime.toMillis() < (timestamp - 120_000)) {
+                                // I'm going to allow for the possiblity that different files might have different fields
+                                Set<String> headings = new HashSet<>();
+                                headings.add("Date");
+                                headings.add("Error");
+                                Map<String, Map<String, String>> filesValues = new HashMap<>();// filename, values
+                                AtomicReference<String> rootDocumentName = new AtomicReference<>();
+                                try (Stream<Path> list = Files.list(p)) {
+                                    list.forEach(path -> {
+                                        // Do stuff
+                                        if (!Files.isDirectory(path)) { // skip any directories
+                                            try {
                                             /*
 
                                             Note : I was assuming files being returned in pairs but it seems not,
@@ -168,69 +170,70 @@ public class DBCron {
 
                                              */
 
-                                            String origName = path.getFileName().toString();
-                                            if (origName.toLowerCase().contains(".xml")) {
-                                                String fileKey = origName.substring(0, origName.indexOf("-"));
-                                                FileTime lastModifiedTime = Files.getLastModifiedTime(path);
-                                                // todo - match to the source file when it hits an error response
+                                                String origName = path.getFileName().toString();
+                                                if (origName.toLowerCase().contains(".xml")) {
+                                                    String fileKey = origName.substring(0, origName.indexOf("-"));
+                                                    FileTime lastModifiedTime = Files.getLastModifiedTime(path);
+                                                    // todo - match to the source file when it hits an error response
 
-                                                long timestamp = System.currentTimeMillis();
-                                                if (lastModifiedTime.toMillis() < (timestamp - millisOldThreshold)) {
-                                                    System.out.println("file : " + origName);
-                                                    // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
-                                                    if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))){
-                                                        readXML(fileKey,filesValues,rootDocumentName,builder,Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"),headings,lastModifiedTime);
+                                                    long timestamp = System.currentTimeMillis();
+                                                    if (lastModifiedTime.toMillis() < (timestamp - millisOldThreshold)) {
+                                                        System.out.println("file : " + origName);
+                                                        // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
+                                                        if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))){
+                                                            readXML(fileKey,filesValues,rootDocumentName,builder,Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"),headings,lastModifiedTime);
+                                                        }
+                                                        readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime);
+                                                        Files.move(path, tagged.resolve(timestamp + origName));
+                                                    } else {
+                                                        System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be " + (millisOldThreshold / 1_000) + " seconds old");
                                                     }
-                                                    readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime);
-                                                    Files.move(path, tagged.resolve(timestamp + origName));
                                                 } else {
-                                                    System.out.println("file found for XML but it's only " + ((timestamp - lastModifiedTime.toMillis()) / 1_000) + " seconds old, needs to be " + (millisOldThreshold / 1_000) + " seconds old");
+                                                    System.out.println("non XML file found?? " + origName);
                                                 }
-                                            } else {
-                                                System.out.println("non XML file found?? " + origName);
+                                            } catch (Exception e) {
+                                                e.printStackTrace();
                                             }
-                                        } catch (Exception e) {
-                                            e.printStackTrace();
                                         }
-                                    }
-                                });
-                            }
-                            String csvFileName = fileMillis + "generatedfromxml (importversion=Brokasure" + rootDocumentName.get() + ").csv";
-                            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
-                            for (String heading : headings) {
-                                bufferedWriter.write(heading + "\t");
-                            }
-                            bufferedWriter.newLine();
-                            for (Map<String, String> lineValues : filesValues.values()) {
+                                    });
+                                }
+                                String csvFileName = fileMillis + "generatedfromxml (importtemplate=BrokasureTemplates;importversion=Brokasure" + rootDocumentName.get() + ").csv";
+                                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
                                 for (String heading : headings) {
-                                    String value = lineValues.get(heading);
-                                    bufferedWriter.write((value != null ? value : "") + "\t");
+                                    bufferedWriter.write(heading + "\t");
                                 }
                                 bufferedWriter.newLine();
-                            }
-                            bufferedWriter.close();
-                            Path newScannedDir = Files.createDirectories(tagged.resolve(fileMillis + "scanned"));
-                            try (Stream<Path> list = Files.list(tagged)) {
-                                list.forEach(path -> {
-                                    // Do stuff
-                                    if (!Files.isDirectory(path)) { // skip any directories
-                                        try {
-                                            Files.move(path, newScannedDir.resolve(path.getFileName()));
-                                        } catch (IOException e) {
-                                            e.printStackTrace();
-                                        }
+                                for (Map<String, String> lineValues : filesValues.values()) {
+                                    for (String heading : headings) {
+                                        String value = lineValues.get(heading);
+                                        bufferedWriter.write((value != null ? value : "") + "\t");
                                     }
-                                });
-                            }
-                            if (Files.exists(newScannedDir.resolve(csvFileName)) && SpreadsheetService.getXMLScanDB() != null && !SpreadsheetService.getXMLScanDB().isEmpty()){ // it should exist and a database should be set also
-                                // hacky, need to sort, todo
-                                Database db = DatabaseDAO.findForNameAndBusinessId(SpreadsheetService.getXMLScanDB(), b.getId());
-                                LoggedInUser loggedInUser = new LoggedInUser(""
-                                        , new User(0,LocalDateTime.now(),0,"","","","","","",0,0,"","")
-                                        , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
+                                    bufferedWriter.newLine();
+                                }
+                                bufferedWriter.close();
+                                Path newScannedDir = Files.createDirectories(tagged.resolve(fileMillis + "scanned"));
+                                try (Stream<Path> list = Files.list(tagged)) {
+                                    list.forEach(path -> {
+                                        // Do stuff
+                                        if (!Files.isDirectory(path)) { // skip any directories
+                                            try {
+                                                Files.move(path, newScannedDir.resolve(path.getFileName()));
+                                            } catch (IOException e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
+                                    });
+                                }
+                                if (Files.exists(newScannedDir.resolve(csvFileName)) && SpreadsheetService.getXMLScanDB() != null && !SpreadsheetService.getXMLScanDB().isEmpty()){ // it should exist and a database should be set also
+                                    // hacky, need to sort, todo
+                                    Database db = DatabaseDAO.findForNameAndBusinessId(SpreadsheetService.getXMLScanDB(), b.getId());
+                                    LoggedInUser loggedInUser = new LoggedInUser(""
+                                            , new User(0,LocalDateTime.now(),0,"","","","","","",0,0,"","")
+                                            , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
 
 /*                                ImportService.importTheFile(loggedInUser, new UploadedFile( newScannedDir.resolve(csvFileName).toString()
                                         , Collections.singletonList(newScannedDir.resolve(csvFileName).getFileName().toString()), false), null, null);*/
+                                }
                             }
                         }
                     }
@@ -257,6 +260,5 @@ public class DBCron {
             }
         }
         thisFileValues.put("Date", lastModifiedTime.toString());
-
     }
 }
