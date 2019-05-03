@@ -427,7 +427,12 @@ public class BatchImporter implements Callable<Void> {
                              }
                              if (function.equalsIgnoreCase("mid")) {
                                  //the second parameter of mid is the number of characters, not the end character
-                                 sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
+                                 // if the lenght goes off the end ignore it
+                                 if (((funcInt - 1) + funcInt2) >= sourceVal.length()){
+                                     sourceVal = sourceVal.substring(funcInt - 1);
+                                 } else {
+                                     sourceVal = sourceVal.substring(funcInt - 1, (funcInt - 1) + funcInt2);
+                                 }
                              }
                          }
                          // now replace and move the marker to the next possible place
