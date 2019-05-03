@@ -519,9 +519,9 @@ public class ZKSpreadsheetCommandController {
                                         Files.copy(azquoTempDir.resolve(fileName), destdir.resolve(fileName));
                                         fileCount++;
                                         filePointer++;
-                                        if (fileCount > 8){
+/*                                        if (fileCount > 8){
                                             break;
-                                        }
+                                        }*/
                                     }
                                 }
                             }

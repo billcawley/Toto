@@ -34,7 +34,7 @@ public class ImportResultsController {
             if (urid != null && urid.length() > 0){
                 UploadRecord ur = UploadRecordDAO.findById(Integer.parseInt(urid));
                 // not currently accomodating developers
-                if ((loggedInUser.getDatabase().getId() == ur.getDatabaseId() && ur.getFileType() != null && ur.getFileType().length() > 0) || (loggedInUser.getUser().isAdministrator() && ur.getBusinessId() == loggedInUser.getUser().getBusinessId())){ // ok we're allowed to see it
+                if ((loggedInUser.getDatabase() != null && loggedInUser.getDatabase().getId() == ur.getDatabaseId() && ur.getFileType() != null && ur.getFileType().length() > 0) || (loggedInUser.getUser().isAdministrator() && ur.getBusinessId() == loggedInUser.getUser().getBusinessId())){ // ok we're allowed to see it
                     result = ur.getComments();
                 }
                 modelMap.addAttribute("memoryReport", result);

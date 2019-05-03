@@ -204,11 +204,17 @@ public class DBCron {
                                                 }
                                             } catch (Exception e) {
                                                 e.printStackTrace();
+                                                // try to move the file if it failed - unclog the outbox
+                                                try{
+                                                    Files.move(path, Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + path.getFileName()));
+                                                } catch (IOException ex) {
+                                                    ex.printStackTrace();
+                                                }
                                             }
                                         }
                                     });
                                 }
-                                String csvFileName = fileMillis + "generatedfromxml (importtemplate=BrokasureTemplates;importversion=Brokasure" + rootDocumentName.get() + ").csv";
+                                String csvFileName = fileMillis + "generatedfromxml (importtemplate=BrokasureTemplates;importversion=Brokasure" + rootDocumentName.get() + ").tsv";
                                 BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(tagged.resolve(csvFileName).toFile()));
                                 for (String heading : headings) {
                                     bufferedWriter.write(heading + "\t");
@@ -239,11 +245,14 @@ public class DBCron {
                                     // hacky, need to sort, todo
                                     Database db = DatabaseDAO.findForNameAndBusinessId(SpreadsheetService.getXMLScanDB(), b.getId());
                                     LoggedInUser loggedInUser = new LoggedInUser(""
-                                            , new User(0,LocalDateTime.now(),0,"","","","","","",0,0,"","")
+                                            , new User(0,LocalDateTime.now(),b.getId(),"brokasure","","","","","",0,0,"","")
                                             , DatabaseServerDAO.findById(db.getDatabaseServerId()), db, null, b.getBusinessDirectory());
+                                    final Map<String, String> fileNameParams = new HashMap<>();
+                                    String fileName = newScannedDir.resolve(csvFileName).getFileName().toString();
+                                    ImportService.addFileNameParametersToMap(fileName, fileNameParams);
 
                                 ImportService.importTheFile(loggedInUser, new UploadedFile( newScannedDir.resolve(csvFileName).toString()
-                                        , Collections.singletonList(newScannedDir.resolve(csvFileName).getFileName().toString()), false), null, null);
+                                        , new ArrayList<>(Collections.singletonList(fileName)), fileNameParams, false,false), null, null);
                                 }
                             }
                         }
