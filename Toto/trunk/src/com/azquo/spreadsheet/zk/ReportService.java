@@ -40,7 +40,11 @@ public class ReportService {
         // a repeat call to this function - could be moved outside but I'm not too bothered about it at the moment
         List<SName> namesForSheet = BookUtils.getNamesForSheet(sheet);
         //current report is always allowable...
-        SName sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);
+        SName sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME, sheet.getSheetName());//try local to this sheet
+        if (sReportName==null){
+             sReportName = sheet.getBook().getInternalBook().getNameByName(ReportRenderer.AZREPORTNAME);//try global
+
+        }
         String thisReportName = BookUtils.getSnameCell(sReportName).getStringValue();
         // todo - null pointer when no database for user? Force db to be set? Or allow it not to?
         OnlineReport or = OnlineReportDAO.findForDatabaseIdAndName(loggedInUser.getDatabase().getId(), thisReportName);
