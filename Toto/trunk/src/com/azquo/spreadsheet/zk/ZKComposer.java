@@ -117,7 +117,11 @@ public class ZKComposer extends SelectorComposer<Component> {
         if (selectionList != null) {
             showMultiSelectionList(loggedInUser, selectionName, selectionList, event.getPageX(), event.getPageY());
         } else { // if not a multi check for a clickable report name
-            SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS);
+            SName allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS, myzss.getSelectedSheetName());//try local
+            if (allowableReports==null){
+                allowableReports = myzss.getBook().getInternalBook().getNameByName(ReportService.ALLOWABLE_REPORTS);//try global
+
+            }
             if (allowableReports != null) {
                 String cellValue = "";
                 final SCell cell = myzss.getSelectedSheet().getInternalSheet().getCell(event.getRow(), event.getColumn());// we care about the contents of the left most cell
