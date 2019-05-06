@@ -135,15 +135,17 @@ public class AzquoCellResolver {
                             String fillerAll = ROWHEADING + filler + "]";
                             if (cellQuery.contains(fillerAll)) {
                                 boolean inQuotes = StringUtils.isStringInQuotes(cellQuery, fillerAll, StringLiterals.QUOTE);
+                                String desc = rowHeadings.get(colNo1).getDescription();
                                 if (rowHeadings.get(colNo1).getName() == null) {
-                                    cellQuery = "";
-                                } else {
+                                     if (desc==null){
+                                        desc = "";
+                                     }
+                                }else{
+                                    desc = NameUtils.getFullyQualifiedDefaultDisplayName(rowHeadings.get(colNo).getName());
+                                }
+                                if (desc.length() > 0) {
                                     usedInExpression.add(rowHeadings.get(colNo1).getName());
-                                    if (inQuotes) {
-                                        cellQuery = cellQuery.replace(fillerAll, rowHeadings.get(colNo1).getName().getDefaultDisplayName());
-                                    } else {
-                                        cellQuery = cellQuery.replace(fillerAll, NameUtils.getFullyQualifiedDefaultDisplayName(rowHeadings.get(colNo1).getName()));
-                                    }
+                                    cellQuery = cellQuery.replace(fillerAll, desc);
                                 }
                             }
                             filler = (colNo1 + 2) + "";
