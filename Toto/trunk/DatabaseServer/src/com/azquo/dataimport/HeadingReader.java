@@ -107,7 +107,7 @@ todo - add classification here
     // Manages the context being assigned automatically to subsequent headings. Aside from that calls other functions to
     // produce a finished set of ImmutableImportHeadings to be used by the BatchImporter.
     static List<ImmutableImportHeading> readHeadings(AzquoMemoryDBConnection azquoMemoryDBConnection, UploadedFile uploadedFile, List<String> headingsAsStrings) throws Exception {
-        List<String> attributeNames = uploadedFile.getLanguages();
+        List<String> attributeNames = new ArrayList<>(uploadedFile.getLanguages());
         List<MutableImportHeading> headings = new ArrayList<>();
         List<MutableImportHeading> contextHeadings = new ArrayList<>();
         String lastClauses = "";
