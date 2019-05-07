@@ -178,7 +178,7 @@ public class DBCron {
                                                         System.out.println("file : " + origName);
                                                         // newer logic, start with the original sent data then add anything from brokasure on. Will help Bill/Nic to parse
                                                         if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))){
-                                                            readXML(fileKey,filesValues,rootDocumentName,builder,Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"),headings,lastModifiedTime);
+                                                            readXML(fileKey,filesValues,null,builder,Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"),headings,lastModifiedTime);
                                                         }
                                                         // todo what if root tags don't match between the existing file and the one from BS??
                                                         // add in extra info, initial reason it was required was for section info not suitable for Brokasure but required to load the data back in
@@ -193,7 +193,7 @@ public class DBCron {
                                                                 }
                                                             }
                                                         }
-                                                        // ok I need to stop fields of a different type mixing, read xml will return false if the root document name doens't match. Under those circumstances leave the file there
+                                                        // ok I need to stop fields of a different type mixing, read xml will return false if the root document name doesn't match. Under those circumstances leave the file there
                                                         if (readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime)){
                                                             Files.move(path, tagged.resolve(timestamp + origName));
                                                         }
@@ -271,11 +271,13 @@ public class DBCron {
         Document workbookXML = builder.parse(path.toFile());
         //workbookXML.getDocumentElement().normalize(); // probably fine on smaller XML, don't want to do on the big stuff
         Element documentElement = workbookXML.getDocumentElement();
-        if (rootDocumentName.get() == null){
-            rootDocumentName.set(documentElement.getTagName());
-        } else if (!rootDocumentName.get().equals(documentElement.getTagName())){ // this file doens't match the others in this set, don't scan it into the file
-            filesValues.remove(fileKey); // get rid of that key
-            return false; // tells the code outside to leave the file there, we'lll process later
+        if (rootDocumentName != null){ // when loading non brokasure files i.e. the originals generated then don't pay attention to the root name - it might be wrong
+            if (rootDocumentName.get() == null){
+                rootDocumentName.set(documentElement.getTagName());
+            } else if (!rootDocumentName.get().equals(documentElement.getTagName())){ // this file doens't match the others in this set, don't scan it into the file
+                filesValues.remove(fileKey); // get rid of that key
+                return false; // tells the code outside to leave the file there, we'lll process later
+            }
         }
         // this criteria is currently suitable for the simple XML from Brokasure
         for (int index = 0; index < documentElement.getChildNodes().getLength(); index++) {
