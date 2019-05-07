@@ -37,6 +37,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.azquo.spreadsheet.controller.LoginController.LOGGED_IN_USER_SESSION;
 
@@ -48,6 +49,9 @@ import static com.azquo.spreadsheet.controller.LoginController.LOGGED_IN_USER_SE
 @Controller
 @RequestMapping("/Excel")
 public class ExcelController {
+
+    // todo - get rid of this? There's an issue with the audit ergh . . .
+    public static final Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
 
     // note : I'm now thinking dao objects are acceptable in controllers if moving the call to the service would just be a proxy
     /* Parameters are sent as Json . . . posted via https should be secure enough for the moment */
@@ -79,13 +83,9 @@ public class ExcelController {
             return this.untaggedReportName;
         }
 
-        public String getDatabase() {
-            return this.database;
-        }
+        public String getDatabase() { return this.database; }
 
-        public String getCategory() {
-            return category;
-        }
+        public String getCategory(){ return category; }
     }
 
 
@@ -97,6 +97,16 @@ public class ExcelController {
         }
     }
 
+    public static class LoginInfo {
+        public String sessionId;
+        public String userType;
+
+        public LoginInfo(String sessionId, String userType) {
+            this.sessionId = sessionId;
+            this.userType = userType;
+        }
+    }
+
     private static final Logger logger = Logger.getLogger(OnlineController.class);
 
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
@@ -105,6 +115,7 @@ public class ExcelController {
     @ResponseBody
     @RequestMapping(headers = "content-type=multipart/*")
     public String handleRequest(HttpServletRequest request, HttpServletResponse response
+            , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "reportname", required = false) String reportName
@@ -130,7 +141,7 @@ public class ExcelController {
             op = "";
         }
         // hacky, fix later todo
-        if (reportName == null) {
+        if (reportName == null){
             reportName = "";
         } else {
             reportName = reportName.trim();
@@ -139,23 +150,41 @@ public class ExcelController {
             }
         }
 
-        if ("logoff".equals(op)) {
-            request.getSession().removeAttribute(LOGGED_IN_USER_SESSION);
-        }
-
-        if ("logincheck".equals(op)) {
-            if (request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION) != null){
-                return "ok";
-            }
-            return "not ok";
-        }
-
         try {
-            LoggedInUser loggedInUser = (LoggedInUser) request.getSession().getAttribute(LoginController.LOGGED_IN_USER_SESSION);
-            if (op.equals("logon")) {
-                loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, java.net.URLDecoder.decode(password, "UTF-8"), false);
-                if (loggedInUser != null) {
+            LoggedInUser loggedInUser = null;
+            if (sessionId != null) {
+                loggedInUser = excelConnections.get(sessionId);
+                if (loggedInUser == null) {
+                    return "invalid sessionid";
+                } else {
                     request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
+                }
+            }
+
+            if (loggedInUser == null) {
+                loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, java.net.URLDecoder.decode(password, "UTF-8"), false);
+                if (loggedInUser == null) {
+                    System.out.println("login attempt by " + logon + " password " + password);
+                    return jsonError("incorrect login details");
+                } else {
+                    //find existing if already logged in, and remember the current report, database, server
+                    boolean newUser = true;
+                    for (String existingSessionId : excelConnections.keySet()) {
+                        LoggedInUser existingUser = excelConnections.get(existingSessionId);
+                        if (existingUser.getUser().getId() == loggedInUser.getUser().getId()) {
+                            excelConnections.put(request.getSession().getId(), existingUser);
+                            if (!existingSessionId.equals(request.getSession().getId())) {
+                                excelConnections.remove(existingSessionId);
+                            }
+                            loggedInUser = existingUser;
+                            newUser = false;
+                        }
+                    }
+                    request.getSession().setAttribute(LOGGED_IN_USER_SESSION, loggedInUser);
+                    if (newUser) {
+                        excelConnections.put(request.getSession().getId() + "", loggedInUser);
+                    }
+
                     if (!loggedInUser.getUser().isAdministrator() && !loggedInUser.getUser().isDeveloper() && loggedInUser.getUser().getReportId() != 0) {// then we need to load in the permissions
                         // typically loading in the permissions would be done in online report controller. I'm going to paste relevant code here, it might be factored later
                         OnlineReport or = OnlineReportDAO.findById(loggedInUser.getUser().getReportId());
@@ -167,12 +196,13 @@ public class ExcelController {
                         book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                         ReportRenderer.populateBook(book, 0);
                     }
-                    return jacksonMapper.writeValueAsString("ok");
-                }
-            }
 
-            if (loggedInUser == null) {
-                return jsonError("incorrect login details");
+                    if (op.equals("logon")) {
+                        LoginInfo li = new LoginInfo(request.getSession().getId(), loggedInUser.getUser().getStatus());
+                        System.out.println("login response : " + jacksonMapper.writeValueAsString(li));
+                        return jacksonMapper.writeValueAsString(li);
+                    }
+                }
             }
 
             if (database != null && database.length() > 0) {
@@ -367,18 +397,18 @@ public class ExcelController {
                         // will this mess up the file?? who knows!
                         OPCPackage opcPackage = OPCPackage.open(file.getAbsolutePath());
                         Workbook book = new XSSFWorkbook(opcPackage);
-                        for (int i = 0; i < book.getNumberOfNames(); i++) {
+                        for (int i = 0; i < book.getNumberOfNames(); i++){
                             Name nameAt = book.getNameAt(i);
                             try {
-                                if (!nameAt.getSheetName().isEmpty()) {
-                                    if (nameAt.getSheetIndex() == -1) {
+                                if (!nameAt.getSheetName().isEmpty()){
+                                    if (nameAt.getSheetIndex() == -1){
                                         int lookup = book.getSheetIndex(nameAt.getSheetName());
-                                        if (lookup != -1) {
+                                        if (lookup != -1){
                                             nameAt.setSheetIndex(lookup);
                                         }
                                     }
                                 }
-                            } catch (Exception ignored) { // maybe do something with it later but for the moment don't. Just want it to fix what names it can
+                            } catch (Exception ignored){ // maybe do something with it later but for the moment don't. Just want it to fix what names it can
                             }
                         }
                         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -417,7 +447,7 @@ public class ExcelController {
                 List<DatabaseReport> databaseReports = new ArrayList<>();
                 List<OnlineReport> allowedReports = AdminService.getReportList(loggedInUser);
 
-                if (allowedReports.size() == 1) {
+                if (allowedReports.size()==1){
                     //OnlineReport or = allowedReports.get(0);
                     //String bookPath = SpreadsheetService.getHomeDir() + ImportService.dbPath +
                     //        loggedInUser.getBusinessDirectory() + ImportService.onlineReportsDir + or.getFilenameForDisk();
@@ -425,23 +455,23 @@ public class ExcelController {
                     //book.getInternalBook().setAttribute(LOGGED_IN_USER, loggedInUser);
                     //book.getInternalBook().setAttribute(REPORT_ID, or.getId());
                     //ReportRenderer.populateBook(book, 0);
-                    Map<String, TypedPair<Integer, Integer>> reports = loggedInUser.getReportIdDatabaseIdPermissions();
-                    for (String reportName2 : reports.keySet()) {
-                        TypedPair<Integer, Integer> tp = reports.get(reportName2);
+                    Map<String, TypedPair<Integer,Integer>>reports = loggedInUser.getReportIdDatabaseIdPermissions();
+                    for (String reportName2:reports.keySet()){
+                        TypedPair<Integer,Integer> tp = reports.get(reportName2);
                         OnlineReport or = OnlineReportDAO.findById(tp.getFirst());
                         Database db = DatabaseDAO.findById(tp.getSecond());
-                        databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(), or.getUntaggedReportName(), db.getName(), or.getCategory()));
-                        databaseReports.sort((o1, o2) -> ((o1.getCategory() + o1.getSheetName()).compareTo((o2.getCategory() + o2.getSheetName()))));
+                        databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(),or.getUntaggedReportName(),db.getName(), or.getCategory()));
+                        databaseReports.sort((o1, o2) -> ((o1.getCategory()+o1.getSheetName()).compareTo((o2.getCategory()+o2.getSheetName()))));
 
                     }
-                } else {
-                    for (OnlineReport or : allowedReports) {
-                        databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(), or.getUntaggedReportName(), or.getDatabase(), or.getCategory()));
+                }else{
+                    for (OnlineReport or:allowedReports){
+                        databaseReports.add(new DatabaseReport(or.getFilename(),or.getAuthor(),or.getUntaggedReportName(),or.getDatabase(),or.getCategory()));
 
                     }
 
                 }
-                return jacksonMapper.writeValueAsString(databaseReports);
+                 return jacksonMapper.writeValueAsString(databaseReports);
             }
             if (op.equals("loadregion")) {
                 // since this expects a certain type of json format returned then we need to wrap the error in one of those objects
@@ -529,7 +559,7 @@ public class ExcelController {
                 List<List<String>> data = excelJsonRequest.data;
                 List<List<CellForDisplay>> oldData = cellsAndHeadingsForDisplay.getData();
 
-                if (data.size() < oldData.size() || (data != null && oldData != null && data.size() > 0 && oldData.size() > 0 && data.get(0).size() != oldData.get(0).size()))
+                if ((data != null && oldData != null) && (data.size() < oldData.size() || (data.size() > 0 && oldData.size() > 0 && data.get(0).size() != oldData.get(0).size())))
                     return "error: data region " + excelJsonRequest.region + " on " + excelJsonRequest.sheetName + " has changed size.";
                 Iterator<List<String>> rowIt = data.iterator();
                 for (List<CellForDisplay> oldRow : oldData) {//for the moment, ignore any lines below old data - assume to be blank.....
@@ -579,6 +609,7 @@ public class ExcelController {
     @ResponseBody
     @RequestMapping
     public String handleRequest(HttpServletRequest request, HttpServletResponse response
+            , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "database", required = false) String database
             , @RequestParam(value = "reportname", required = false) String reportName
@@ -594,7 +625,6 @@ public class ExcelController {
             , @RequestParam(value = "json", required = false) String json
 
     ) {
-        return handleRequest(request, response, op, database, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, json, "true");
+        return handleRequest(request, response, sessionId, op, database, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, json, "true");
     }
-
 }

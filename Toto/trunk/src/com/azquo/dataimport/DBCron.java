@@ -180,6 +180,7 @@ public class DBCron {
                                                         if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"))){
                                                             readXML(fileKey,filesValues,rootDocumentName,builder,Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".xml"),headings,lastModifiedTime);
                                                         }
+                                                        // todo what if root tags don't match between the existing file and the one from BS??
                                                         // add in extra info, initial reason it was required was for section info not suitable for Brokasure but required to load the data back in
                                                         if (Files.exists(Paths.get(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties"))){
                                                             try(InputStream is = new FileInputStream(SpreadsheetService.getHomeDir() + "/temp/" + fileKey + ".properties")){
@@ -192,7 +193,7 @@ public class DBCron {
                                                                 }
                                                             }
                                                         }
-                                                        // ok I need to stop fiels of a different type mixing, read xml will return false if the root document name doens't match. Under those circumstances leave the file there
+                                                        // ok I need to stop fields of a different type mixing, read xml will return false if the root document name doens't match. Under those circumstances leave the file there
                                                         if (readXML(fileKey,filesValues,rootDocumentName,builder,path,headings,lastModifiedTime)){
                                                             Files.move(path, tagged.resolve(timestamp + origName));
                                                         }

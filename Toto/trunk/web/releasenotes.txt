@@ -1,3 +1,7 @@
+03-05-19
+
+Bug fixing, removing limit on number of xml files generated
+
 01-05-19
 
 ! File handler leak fixed
