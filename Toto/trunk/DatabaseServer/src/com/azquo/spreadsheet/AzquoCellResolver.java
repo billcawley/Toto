@@ -141,7 +141,7 @@ public class AzquoCellResolver {
                                         desc = "";
                                      }
                                 }else{
-                                    desc = NameUtils.getFullyQualifiedDefaultDisplayName(rowHeadings.get(colNo).getName());
+                                    desc = NameUtils.getFullyQualifiedDefaultDisplayName(rowHeadings.get(colNo1).getName());
                                 }
                                 if (desc.length() > 0) {
                                     usedInExpression.add(rowHeadings.get(colNo1).getName());
