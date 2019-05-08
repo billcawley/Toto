@@ -48,9 +48,9 @@
     <orderEntry type="library" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.2" level="project" />
     <orderEntry type="library" name="com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.2" level="project" />
     <orderEntry type="library" name="org.zeroturnaround:zt-zip:1.13" level="project" />
-    <orderEntry type="library" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.4.3" level="project" />
     <orderEntry type="library" name="org.codehaus.groovy:groovy-all:2.4.3" level="project" />
     <orderEntry type="library" name="org.mariadb.jdbc:mariadb-java-client:2.4.0" level="project" />
     <orderEntry type="library" name="commons-codec:commons-codec:1.11" level="project" />
+    <orderEntry type="library" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.9.2" level="project" />
   </component>
 </module>

@@ -28,7 +28,6 @@
           <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.2" />
           <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.2" />
           <element id="library" level="project" name="org.zeroturnaround:zt-zip:1.13" />
-          <element id="library" level="project" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.4.3" />
           <element id="library" level="project" name="org.apache.commons:commons-math3:3.6.1" />
           <element id="library" level="project" name="org.codehaus.groovy:groovy-all:2.4.3" />
           <element id="library" level="project" name="org.mariadb.jdbc:mariadb-java-client:2.4.0" />
