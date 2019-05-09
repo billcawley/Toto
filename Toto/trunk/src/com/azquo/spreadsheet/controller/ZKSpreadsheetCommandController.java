@@ -221,15 +221,21 @@ public class ZKSpreadsheetCommandController {
                         Clients.showBusy("Processing ...");
                         Clients.evalJavaScript("postAjax('ActuallyXML');");
                     }
-                    if ("ActuallyXML".equals(action)) {
+                    if ("XMLZIP".equals(action)) {
+                        Clients.showBusy("Processing ...");
+                        Clients.evalJavaScript("postAjax('ActuallyXMLZIP');");
+                    }
+                    if (action != null && action.startsWith("ActuallyXML")) {
                         int fileCount = 0;
                         // ok try to find the relevant regions
                         List<SName> namesForSheet = BookUtils.getNamesForSheet(ss.getSelectedSheet());
                         Path azquoTempDir = Paths.get(SpreadsheetService.getHomeDir() + "/temp"); // do xml initially in here then copy across, we may need a capy of the file later to match back to errors
 
                         Path destdir;
-                        if (SpreadsheetService.getXMLDestinationDir() != null && !SpreadsheetService.getXMLDestinationDir().isEmpty()){
+                        boolean zipMode = true;
+                        if (SpreadsheetService.getXMLDestinationDir() != null && !SpreadsheetService.getXMLDestinationDir().isEmpty() && !action.contains("ZIP")){
                             destdir = Paths.get(SpreadsheetService.getXMLDestinationDir());
+                            zipMode = false;
                         } else {
                             destdir = Files.createTempDirectory("zipforxmlfiles");
                         }
@@ -527,7 +533,7 @@ public class ZKSpreadsheetCommandController {
                             }
                         }
                         // it was building a zip, compress and set for download
-                        if (SpreadsheetService.getXMLDestinationDir() == null || SpreadsheetService.getXMLDestinationDir().isEmpty()){
+                        if (zipMode){
                             ZipUtil.unexplode(destdir.toFile());
                             Filedownload.save(new AMedia(ss.getSelectedSheetName() + "xml.zip", "zip", "application/zip", destdir.toFile(), true));
                             Clients.clearBusy();

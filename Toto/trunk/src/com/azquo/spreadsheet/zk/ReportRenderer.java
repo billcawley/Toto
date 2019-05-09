@@ -245,7 +245,10 @@ public class ReportRenderer {
                     // we don't actually need to do anything with this now but we need to switch on the XML button
                     SName xmlHeadings = BookUtils.getNameByName(AZXML + region, sheet);
                     if (xmlHeadings != null){
-                        sheet.getBook().getInternalBook().setAttribute(OnlineController.XML, true);
+                        sheet.getBook().getInternalBook().setAttribute(OnlineController.XMLZIP, true);
+                        if (SpreadsheetService.getXMLDestinationDir() != null && !SpreadsheetService.getXMLDestinationDir().isEmpty()){
+                            sheet.getBook().getInternalBook().setAttribute(OnlineController.XML, true);
+                        }
                     }
 
                     SName optionsRegion = BookUtils.getNameByName(AZOPTIONS + region, sheet);

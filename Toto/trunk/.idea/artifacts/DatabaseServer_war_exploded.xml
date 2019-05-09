@@ -20,6 +20,7 @@
           <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.2" />
           <element id="library" level="project" name="com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.2" />
           <element id="library" level="project" name="org.mariadb.jdbc:mariadb-java-client:2.4.0" />
+          <element id="library" level="project" name="com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.9.2" />
         </element>
       </element>
     </root>

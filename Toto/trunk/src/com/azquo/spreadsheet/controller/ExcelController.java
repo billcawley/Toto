@@ -164,7 +164,7 @@ public class ExcelController {
             if (loggedInUser == null) {
                 loggedInUser = LoginService.loginLoggedInUser(request.getSession().getId(), database, logon, java.net.URLDecoder.decode(password, "UTF-8"), false);
                 if (loggedInUser == null) {
-                    System.out.println("login attempt by " + logon + " password " + password);
+                    System.out.println("login attempt by " + logon + " with incorrect details");
                     return jsonError("incorrect login details");
                 } else {
                     //find existing if already logged in, and remember the current report, database, server
