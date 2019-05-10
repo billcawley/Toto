@@ -274,10 +274,7 @@ this may now not work at all, perhaps delete?
                 or.setReportName(or.getReportName() + " uploaded by " + (otherUser != null ? otherUser.getName() : "?")); // I'm assuming the report isn't saved after - just for
             }
         }
-        reportList.sort((o1, o2) -> {
-            String cat1 = o1.getCategory();
-            return (o1.getDatabase() + getVal(o1.getCategory()) + getVal(o1.getExplanation())).compareTo(o2.getDatabase() + getVal(o2.getCategory()) + getVal(o2.getExplanation()));
-        });
+        reportList.sort(Comparator.comparing(o -> (o.getDatabase() + getVal(o.getCategory()) + getVal(o.getExplanation()))));
         return reportList;
     }
 

@@ -9,6 +9,9 @@ import com.azquo.admin.onlinereport.OnlineReportDAO;
 import com.azquo.admin.user.UserRegionOptions;
 import com.azquo.admin.user.UserRegionOptionsDAO;
 import com.azquo.dataimport.ImportService;
+import com.azquo.dataimport.ImportTemplate;
+import com.azquo.dataimport.ImportTemplateDAO;
+import com.azquo.dataimport.ImportTemplateData;
 import com.azquo.rmi.RMIClient;
 import com.azquo.spreadsheet.*;
 import com.azquo.spreadsheet.transport.*;
@@ -53,7 +56,6 @@ public class ExcelController {
     // todo - get rid of this? There's an issue with the audit ergh . . .
     public static final Map<String, LoggedInUser> excelConnections = new ConcurrentHashMap<>();// simple, for the moment should do it
 
-    // note : I'm now thinking dao objects are acceptable in controllers if moving the call to the service would just be a proxy
     /* Parameters are sent as Json . . . posted via https should be secure enough for the moment */
 
     public static class DatabaseReport implements Serializable {
@@ -88,6 +90,24 @@ public class ExcelController {
         public String getCategory(){ return category; }
     }
 
+    public static class UserForm implements Serializable {
+        public String name;
+        public String database;
+
+        public UserForm(String name, String database) {
+            this.name = name;
+            this.database = database;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getDatabase() {
+            return database;
+        }
+    }
+
 
     public class Base64Return {
         public List<String> slices;
@@ -118,6 +138,8 @@ public class ExcelController {
             , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "database", required = false) String database
+            , @RequestParam(value = "form", required = false) String form
+            , @RequestParam(value = "formsubmit", required = false) String formsubmit
             , @RequestParam(value = "reportname", required = false) String reportName
             , @RequestParam(value = "sheetname", required = false) String sheetName
             , @RequestParam(value = "logon", required = false) String logon
@@ -461,18 +483,88 @@ public class ExcelController {
                         OnlineReport or = OnlineReportDAO.findById(tp.getFirst());
                         Database db = DatabaseDAO.findById(tp.getSecond());
                         databaseReports.add(new DatabaseReport(or.getFilename(), or.getAuthor(),or.getUntaggedReportName(),db.getName(), or.getCategory()));
-                        databaseReports.sort((o1, o2) -> ((o1.getCategory()+o1.getSheetName()).compareTo((o2.getCategory()+o2.getSheetName()))));
-
+                        databaseReports.sort(Comparator.comparing(o -> (o.getCategory() + o.getSheetName())));
                     }
                 }else{
+                    // admin
                     for (OnlineReport or:allowedReports){
                         databaseReports.add(new DatabaseReport(or.getFilename(),or.getAuthor(),or.getUntaggedReportName(),or.getDatabase(),or.getCategory()));
-
                     }
-
                 }
-                 return jacksonMapper.writeValueAsString(databaseReports);
+
+                return jacksonMapper.writeValueAsString(databaseReports);
             }
+            if (op.equals("allowedforms")) {
+                List<UserForm> userForms = new ArrayList<>();
+//                List<OnlineReport> allowedReports = AdminService.getReportList(loggedInUser);
+                if (loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isAdministrator())  {
+                    List<Database> databaseListForBusinessWithBasicSecurity = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
+                    if (databaseListForBusinessWithBasicSecurity != null){
+                        for (Database d : databaseListForBusinessWithBasicSecurity) {
+                            if (d.getImportTemplateId() != -1) {
+                                ImportTemplate importTemplate = ImportTemplateDAO.findById(d.getImportTemplateId());
+                                if (importTemplate != null){ // a duff id could mean it is
+                                    ImportTemplateData importTemplateData = ImportService.getImportTemplateData(importTemplate, loggedInUser);
+                                    for (String sheet : importTemplateData.getSheets().keySet()) {
+                                        if (sheet.toLowerCase().startsWith("form")) {
+//                                    List<List<String>> cellData = importTemplateData.getSheets().get(sheet);
+                                            userForms.add(new UserForm(sheet.substring(4), d.getName()));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } // todo non admin users, get em from the home menu?
+                return jacksonMapper.writeValueAsString(userForms);
+            }
+            if (form != null && !form.isEmpty() && database != null && !database.isEmpty()) {
+                List<String> formFields = new ArrayList<>();
+                if (loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isAdministrator())  {
+                    List<Database> databaseListForBusinessWithBasicSecurity = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
+                    if (databaseListForBusinessWithBasicSecurity != null){
+                        for (Database d : databaseListForBusinessWithBasicSecurity) {
+                            if (d.getImportTemplateId() != -1 && d.getName().equalsIgnoreCase(database)) {
+                                ImportTemplate importTemplate = ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId());
+                                ImportTemplateData importTemplateData = ImportService.getImportTemplateData(importTemplate, loggedInUser);
+                                for (String sheet : importTemplateData.getSheets().keySet()) {
+                                    if (sheet.toLowerCase().startsWith("form") && sheet.substring(4).equalsIgnoreCase(form)) {
+                                        // ok are we submitting data from the form or wanting the fields?
+                                        formFields = importTemplateData.getSheets().get(sheet).get(0); // top row is the field names
+                                        if ("true".equalsIgnoreCase(formsubmit)){
+                                            File target = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + "formsubmit" + form + "(" + ImportService.IMPORTTEMPLATE + "=" + importTemplate.getFilename() + ";" + ImportService.IMPORTVERSION + "=" + sheet + ").tsv"); // timestamp to stop file overwriting
+                                            try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(target))){
+                                                for (String name : formFields) {
+                                                    bufferedWriter.write(name + "\t");
+                                                }
+                                                bufferedWriter.newLine();
+                                                for (String name : formFields) {
+                                                    bufferedWriter.write(request.getParameter(name) + "\t");
+                                                }
+                                                bufferedWriter.newLine();
+                                            }
+                                            final Map<String, String> fileNameParams = new HashMap<>();
+                                            ImportService.addFileNameParametersToMap(target.getName(), fileNameParams);
+                                            UploadedFile uploadedFile = new UploadedFile(target.getAbsolutePath(), Collections.singletonList(target.getName()), fileNameParams, false, false);
+                                            List<UploadedFile> uploadedFiles = ImportService.importTheFile(loggedInUser, uploadedFile, null, null);
+                                            UploadedFile uploadedFile1 = uploadedFiles.get(0);
+                                            if (uploadedFile1.getError() != null && !uploadedFile1.getError().isEmpty()){
+                                                return uploadedFile1.getError();
+                                            }
+                                            return "ok";
+                                        }
+                                    }
+                                }
+                            }
+                            if (!formFields.isEmpty()){
+                                break;
+                            }
+                        }
+                    }
+                } // todo non admin users
+                return jacksonMapper.writeValueAsString(formFields);
+            }
+
             if (op.equals("loadregion")) {
                 // since this expects a certain type of json format returned then we need to wrap the error in one of those objects
                 System.out.println("json : " + json);
@@ -612,6 +704,8 @@ public class ExcelController {
             , @RequestParam(value = "sessionid", required = false) String sessionId
             , @RequestParam(value = "op", required = false) String op
             , @RequestParam(value = "database", required = false) String database
+            , @RequestParam(value = "form", required = false) String form
+            , @RequestParam(value = "formsubmit", required = false) String formsubmit
             , @RequestParam(value = "reportname", required = false) String reportName
             , @RequestParam(value = "sheetname", required = false) String sheetName
             , @RequestParam(value = "logon", required = false) String logon
@@ -625,6 +719,6 @@ public class ExcelController {
             , @RequestParam(value = "json", required = false) String json
 
     ) {
-        return handleRequest(request, response, sessionId, op, database, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, json, "true");
+        return handleRequest(request, response, sessionId, op, database, form, formsubmit, reportName, sheetName, logon, password, region, options, regionrow, regioncol, choice, chosen, json, "true");
     }
 }

@@ -78,7 +78,7 @@ public final class ImportService {
     public static final String onlineReportsDir = "/onlinereports/";
     public static final String importTemplatesDir = "/importtemplates/";
     public static String LOCALIP = "127.0.0.1";
-    private static final String IMPORTTEMPLATE = "importtemplate";
+    public static final String IMPORTTEMPLATE = "importtemplate";
     public static final String IMPORTVERSION = "importversion";
 
 
@@ -1160,7 +1160,7 @@ public final class ImportService {
             returnString = cell.getBooleanCellValue() + "";
         } else if (cell.getCellType() != Cell.CELL_TYPE_BLANK) {
             if (cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
-                System.out.println("other forumla cell type : " + cell.getCachedFormulaResultType());
+                System.out.println("other formula cell type : " + cell.getCachedFormulaResultType());
             }
             System.out.println("other cell type : " + cell.getCellType());
         }
@@ -1333,7 +1333,6 @@ public final class ImportService {
                 ImportTemplate importTemplate = ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId());
                 return getImportTemplateData(importTemplate, loggedInUser);
             }
-
         }
         return null;
     }
@@ -1369,9 +1368,8 @@ public final class ImportService {
     }
 
 
-    private static ImportTemplateData getImportTemplateData(ImportTemplate importTemplate, LoggedInUser loggedInUser) throws Exception {
+    public static ImportTemplateData getImportTemplateData(ImportTemplate importTemplate, LoggedInUser loggedInUser) throws Exception {
         if (importTemplate != null) {
-
             // chunks of this will be factored off later when I want faster data file conversion
             ImportTemplateData importTemplateData = new ImportTemplateData();
             // I'm not supporting xls templates

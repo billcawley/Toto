@@ -344,7 +344,7 @@ public class ZKSpreadsheetCommandController {
                                     List<String> xmlNames = new ArrayList<>(xmlToColMap.keySet());
                                     Collections.sort(xmlNames);
                                     // then sort again jamming those with nested elements at the bottom
-                                    xmlNames.sort(Comparator.comparingInt(s -> StringUtils.countMatches(s, "/")));
+                                    //xmlNames.sort(Comparator.comparingInt(s -> StringUtils.countMatches(s, "/")));
                                     DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
                                     DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
                                     TransformerFactory transformerFactory = TransformerFactory.newInstance();

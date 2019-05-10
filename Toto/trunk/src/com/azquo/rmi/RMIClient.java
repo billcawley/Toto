@@ -1,5 +1,7 @@
 package com.azquo.rmi;
 
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Map;
@@ -16,21 +18,22 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RMIClient {
 
-    private static Map<String, RMIInterface> rmiInterfaceMap = new ConcurrentHashMap<>();
+    private static final Map<String, RMIInterface> rmiInterfaceMap = new ConcurrentHashMap<>();
 
     // this perhaps could be more robust if an unused database is tried for the first time concurrently?
     // is it really a big problem? Computeifabsent swallows the exceptions, I'd rather they were chucked up . . .
 
-    public static RMIInterface getServerInterface(String ip) throws Exception {
-        RMIInterface toReturn = rmiInterfaceMap.get(ip);
-        // todo - add double checked locking?
-        if (toReturn == null) {
-            // yes this could run a few times concurrently at the beginning, not sure it's a big problem
-            Registry registry = LocateRegistry.getRegistry(ip, 12345);
-            toReturn = (RMIInterface) registry.lookup(RMIInterface.serviceName);
-            rmiInterfaceMap.put(ip, toReturn);
-            System.out.println("Rmi client set up for " + ip);
-        }
-        return toReturn;
+    public static RMIInterface getServerInterface(String ip) {
+        return rmiInterfaceMap.computeIfAbsent(ip, s -> {
+            RMIInterface toReturn = null;
+            try {
+                Registry registry = LocateRegistry.getRegistry(ip, 12345);
+                toReturn = (RMIInterface) registry.lookup(RMIInterface.serviceName);
+                System.out.println("Rmi client set up for " + ip);
+            } catch (RemoteException | NotBoundException e) {
+                e.printStackTrace();
+            }
+            return toReturn;
+        });
     }
 }
