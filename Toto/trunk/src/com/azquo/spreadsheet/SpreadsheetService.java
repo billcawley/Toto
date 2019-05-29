@@ -89,9 +89,6 @@ public class SpreadsheetService {
     // if XML is scanned which db to put it into
     private static final String XMLSCANDB = "xmlscandb";
 
-    //Ed Broking Brokasure network prefix
-    private static final String BSINBOXPATH = "bsinboxpath";
-
     private static String getProperty(String key) {
         if (properties.get(key) == null) {
             if (azquoProperties.getProperty(host + "." + key) != null) {

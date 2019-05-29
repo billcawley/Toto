@@ -127,6 +127,16 @@ public class ExcelController {
         }
     }
 
+    public static class FormSpec {
+        public List<String> formFields;
+        public Map<String, List<String>> formChoices;
+
+        public FormSpec(List<String> formFields, Map<String, List<String>> formChoices) {
+            this.formFields = formFields;
+            this.formChoices = formChoices;
+        }
+    }
+
     private static final Logger logger = Logger.getLogger(OnlineController.class);
 
     public static final String LOGGED_IN_USER = "LOGGED_IN_USER";
@@ -520,23 +530,84 @@ public class ExcelController {
             }
             if (form != null && !form.isEmpty() && database != null && !database.isEmpty()) {
                 List<String> formFields = new ArrayList<>();
+                // so we'll want dropdowns
+                Map<String, List<String>> choices = new HashMap<>();
                 if (loggedInUser.getUser().isDeveloper() || loggedInUser.getUser().isAdministrator())  {
                     List<Database> databaseListForBusinessWithBasicSecurity = AdminService.getDatabaseListForBusinessWithBasicSecurity(loggedInUser);
                     if (databaseListForBusinessWithBasicSecurity != null){
                         for (Database d : databaseListForBusinessWithBasicSecurity) {
                             if (d.getImportTemplateId() != -1 && d.getName().equalsIgnoreCase(database)) {
+                                // autocomplete going in here for the mo. May as well use these parameters
+                                if (choice != null && chosen != null && !choice.isEmpty()){
+                                    List<String> toReturn = new ArrayList<>();
+                                    try {
+                                        List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choice, null);
+                                        for (String value : dropdownListForQuery){
+                                            if (value.toLowerCase().startsWith(chosen.toLowerCase())){
+                                                toReturn.add(value);
+                                                if (toReturn.size() > 100){
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    } catch (Exception e){ // maybe do something more clever later . . .
+                                        e.printStackTrace();
+                                    }
+
+                                }
+
                                 ImportTemplate importTemplate = ImportTemplateDAO.findById(loggedInUser.getDatabase().getImportTemplateId());
                                 ImportTemplateData importTemplateData = ImportService.getImportTemplateData(importTemplate, loggedInUser);
                                 for (String sheet : importTemplateData.getSheets().keySet()) {
                                     if (sheet.toLowerCase().startsWith("form") && sheet.substring(4).equalsIgnoreCase(form)) {
                                         // ok are we submitting data from the form or wanting the fields?
                                         formFields = importTemplateData.getSheets().get(sheet).get(0); // top row is the field names
-                                        if ("true".equalsIgnoreCase(formsubmit)){
-                                            File target = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + "formsubmit" + form + "(" + ImportService.IMPORTTEMPLATE + "=" + importTemplate.getFilename() + ";" + ImportService.IMPORTVERSION + "=" + sheet + ").tsv"); // timestamp to stop file overwriting
-                                            try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(target))){
-                                                for (String name : formFields) {
-                                                    bufferedWriter.write(name + "\t");
+                                        for (int i = formFields.size() - 1; i >= 0; i--){
+                                            if (formFields.get(i).trim().isEmpty()){
+                                                formFields.remove(i);
+                                            } else {
+                                                break;
+                                            }
+                                        }
+                                        // need to get to the parameter bits, maybe could reuse code but I'm not sure
+                                        boolean hitBlank = false;
+                                        for (int row = 1; row < importTemplateData.getSheets().get(sheet).size(); row++){
+                                            if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()){
+                                                hitBlank = true;
+                                            } else if (hitBlank && importTemplateData.getSheets().get(sheet).get(row).size() >= 2){
+                                                String name = importTemplateData.getSheets().get(sheet).get(row).get(0);
+                                                String query = importTemplateData.getSheets().get(sheet).get(row).get(1);
+                                                List<String> dropdownListForQuery = null;
+                                                try {
+                                                    // todo - if the list is big we want to send a signal for autocomplete
+                                                    dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null);
+                                                    if (dropdownListForQuery.size() > 10){ // will be 100 alter, todo
+                                                        choices.put(name, Collections.singletonList("auto"));
+                                                    } else {
+                                                        choices.put(name, dropdownListForQuery);
+                                                    }
+                                                } catch (Exception e){
+                                                    e.printStackTrace(); // might want user feedback later
                                                 }
+                                            }
+                                        }
+
+                                        if ("true".equalsIgnoreCase(formsubmit)){
+                                            File target = new File(SpreadsheetService.getHomeDir() + "/temp/" + System.currentTimeMillis() + "formsubmit" + form + ".tsv"); // timestamp to stop file overwriting
+                                            try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(target))){
+                                                // new logic - not going to use the import template for importing - will copy the top bits off the import template
+                                                int row = 1;
+                                                while (importTemplateData.getSheets().get(sheet).size() > row){
+                                                    if (importTemplateData.getSheets().get(sheet).get(row).isEmpty()){
+                                                        break;
+                                                    }
+                                                    for (String cell : importTemplateData.getSheets().get(sheet).get(row)){
+                                                        bufferedWriter.write(cell + "\t");
+                                                    }
+                                                    bufferedWriter.newLine();
+                                                    row++;
+                                                }
+                                                // now put in our one line of data
                                                 bufferedWriter.newLine();
                                                 for (String name : formFields) {
                                                     bufferedWriter.write(request.getParameter(name) + "\t");
@@ -562,7 +633,8 @@ public class ExcelController {
                         }
                     }
                 } // todo non admin users
-                return jacksonMapper.writeValueAsString(formFields);
+                System.out.println(jacksonMapper.writeValueAsString(new FormSpec(formFields,choices)));
+                return jacksonMapper.writeValueAsString(new FormSpec(formFields,choices));
             }
 
             if (op.equals("loadregion")) {

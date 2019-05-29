@@ -1,3 +1,7 @@
+10-05-19
+
+Tightened RMI concurrency code, Excel controller work to enable the new manual entry forms in plugin
+
 09-05-19
 
 Add download option for XML, fix build error from CSV
