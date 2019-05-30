@@ -51,6 +51,8 @@ public interface RMIInterface extends Remote {
 
     List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser, int provenanceId) throws RemoteException;
 
+    List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, String searchTerm, boolean justUser, int provenanceId) throws RemoteException;
+
     int getNameQueryCount(DatabaseAccessToken databaseAccessToken, String query, String user) throws RemoteException;
 
     List<FilterTriple> getFilterListForQuery(DatabaseAccessToken databaseAccessToken, String query, String filterName, String userName) throws RemoteException;

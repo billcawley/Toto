@@ -140,7 +140,7 @@ public class UserChoiceService {
         return names.stream().map(uniqueName -> new FilterTriple(uniqueName.bottomName.getId(), uniqueName.description, filterSet.getChildren().contains(uniqueName.bottomName))).collect(Collectors.toList()); // return the descriptions, that's what we're after, in many cases this may have been copied into unique names, not modified and copied back but that's fine
     }
 
-    public static List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, boolean justUser, int provenanceId) throws Exception {
+    public static List<String> getDropDownListForQuery(DatabaseAccessToken databaseAccessToken, String query, String user, String searchTerm, boolean justUser, int provenanceId) throws Exception {
         //HACKING A CHECK FOR NAME.ATTRIBUTE (for default choices) - EFC, where is this used?
         int dotPos = query.indexOf(".");
         if (dotPos > 0) {//todo check that it's not part of a name
@@ -171,7 +171,18 @@ public class UserChoiceService {
             languages.add(StringLiterals.DEFAULT_DISPLAY_NAME);
         }
         Collection<Name> names = NameQueryParser.parseQuery(AzquoMemoryDBConnection.getConnectionFromAccessToken(databaseAccessToken), query, languages, false);
-        if (names.size() > 1000) { // don't even try, you're not getting the dropdown or multi select = SHOW THE FIRST 500!!!!!!!
+        if (searchTerm != null && !searchTerm.isEmpty()){ // new thing for autocomplete - maybe move later todo
+            List<Name> newNames = new ArrayList<>();
+            for (Name name : names){
+                if (name.getDefaultDisplayName().toLowerCase().startsWith(searchTerm.toLowerCase())){
+                    newNames.add(name);
+                }
+                if (newNames.size() > 100){ // limiting 100 server side, might chop more client side
+                    break;
+                }
+            }
+            names = newNames;
+        } else if (names.size() > 1000) { // don't even try, you're not getting the dropdown or multi select = SHOW THE FIRST 500!!!!!!!
             List<Name> newNames = new ArrayList<>();
             Iterator it = names.iterator();
             for (int i = 0; i < 1000; i++) newNames.add((Name) it.next());

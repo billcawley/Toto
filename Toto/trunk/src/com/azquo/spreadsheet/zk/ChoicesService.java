@@ -288,7 +288,7 @@ public class ChoicesService {
                                 String[] choices = query.split(",");
                                 Collections.addAll(choiceOptions, choices);
                             } else {
-                                choiceOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, fieldName);
+                                choiceOptions = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, fieldName, null);
                             }
                         } catch (Exception e) {
                             choiceOptions.add(e.getMessage());

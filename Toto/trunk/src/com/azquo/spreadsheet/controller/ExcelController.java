@@ -545,14 +545,12 @@ public class ExcelController {
                                 if (choice != null && chosen != null && !choice.isEmpty()) {
                                     List<String> toReturn = new ArrayList<>();
                                     try {
-                                        List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choice, null);
+                                        List<String> dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, choice, null, chosen);
                                         for (String value : dropdownListForQuery) {
-                                            if (chosen.isEmpty() || value.toLowerCase().startsWith(chosen.toLowerCase())) {
                                                 toReturn.add(value);
                                                 if (toReturn.size() > 30) { // arbitrary, need to test
                                                     break;
                                                 }
-                                            }
                                         }
                                     } catch (Exception e) { // maybe do something more clever later . . .
                                         e.printStackTrace();
@@ -585,7 +583,7 @@ public class ExcelController {
                                                 List<String> dropdownListForQuery = null;
                                                 try {
                                                     // todo - if the list is big we want to send a signal for autocomplete
-                                                    dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null);
+                                                    dropdownListForQuery = CommonReportUtils.getDropdownListForQuery(loggedInUser, query, null,null);
                                                     if (dropdownListForQuery.size() > 30) {
                                                         List<String> autoAndChoice = new ArrayList<>();
                                                         autoAndChoice.add("auto");
@@ -596,6 +594,15 @@ public class ExcelController {
                                                     }
                                                 } catch (Exception e) {
                                                     e.printStackTrace(); // might want user feedback later
+                                                }
+                                            } else { // check for language date in the bit above parameters
+                                                int col = 0;
+                                                for (String cellValue : importTemplateData.getSheets().get(sheet).get(row)){
+                                                    if (cellValue.toLowerCase().contains("language date")){
+                                                        // in theory it might index out of bounds but that would be quite odd. We've found language date - flag it up as a single choice
+                                                        choices.put(importTemplateData.getSheets().get(sheet).get(0).get(col), Collections.singletonList("date"));
+                                                    }
+                                                    col++;
                                                 }
                                             }
                                         }
